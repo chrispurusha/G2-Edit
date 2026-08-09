@@ -3556,6 +3556,12 @@ static int send_init_sequence_pull(void) {
 
 // Push all editor state to the G2. Not called on reconnection; reserved for
 // a future "push to device" menu action.
+//
+// MARKED UNUSED ON PURPOSE. It is finished code waiting for a caller, so it should not be deleted to
+// quieten -Wunused-function, and it should not leave a warning standing either — a real one would be
+// lost among a set of accepted ones.
+__attribute__((unused))
+
 static int send_init_sequence_push(void) {
     LOG_DEBUG("Init sequence: pushing editor data to G2\n");
     gCommsState = eCommsInitialising;

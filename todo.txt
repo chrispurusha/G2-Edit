@@ -371,7 +371,50 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 
 OPEN WORK
 
-- WARNINGS AS ERRORS — measured 2026-08-09, NOT DONE, and SMALLER THAN IT LOOKS. Prompted by a real
+- WARNINGS AS ERRORS — DONE 2026-08-09. Both builds are warning-free and both now treat warnings as
+  errors: GCC_TREAT_WARNINGS_AS_ERRORS = YES in the Xcode project (plus OTHER_CFLAGS
+  "-Werror=uninitialized"), and WARNFLAGS=(-Werror) on all four compile lines in do-vst3.
+  HOW THE ~610 CAME DOWN:
+    - Third-party headers moved from HEADER_SEARCH_PATHS to -isystem in OTHER_CFLAGS: 352
+      -Wdocumentation + 32 -Wdocumentation-deprecated-sync, ALL of them inside glfw3.h, gone at a
+      stroke while the check stays live for our own code. They had to LEAVE the -I list, or the -I copy
+      wins and nothing changes.
+    - GL_SILENCE_DEPRECATION=1 in GCC_PREPROCESSOR_DEFINITIONS (both configurations — the Release one
+      had no defs list at all and needed one adding): 224 -Wdeprecated-declarations, 188 of them in
+      utilsGraphics.c, from the deliberately fixed-function renderer.
+  THE ~30 THAT WERE LEFT, and what they turned out to be:
+    - THREE -Wstring-compare were ONE BUG IN COPY_STRING, not three at the call sites: its self-copy
+      guard compared `(const char *)(dst) != (const char *)(src)`, which is "unspecified" whenever src
+      is a literal. The comparison now goes through same_string_storage(const void *, const void *), so
+      the guard is unchanged and the literal has decayed before the comparison.
+    - TWO -Wgnu-folding-constant were STATIC ARRAYS SIZED BY A FLOAT CAST: REVERB_COMB_MAX and
+      REVERB_ALLPASS_MAX were (uint32_t)(base * 1.6) + 1, which is not an integer constant expression,
+      so clang accepted the array only as a GNU extension. Rewritten as (base * 16) / 10 + 1 — verified
+      identical: comb 4340, allpass 721.
+    - TWO -Wincompatible-pointer-types IN soundEngine.c WERE A REAL BUG. gSuperPhase is
+      [MAX_VOICES][MAX_ENGINE_NODES][2] and the Super waveform indexed it gSuperPhase[node][0] — node
+      in the VOICE position. Not out of bounds (28 nodes fits in 32 voices) but the voice was ignored,
+      so every voice sounding one node shared a pair of phase accumulators and two Super oscillators
+      trod on each other. osc_waveform() now takes `voice` and indexes [voice][node][0..1]. A single
+      voice with one Super oscillator is sonically unchanged; POLYPHONIC SUPER AND MULTI-SUPER PATCHES
+      NOW SOUND DIFFERENT, which is the fix. STILL WANTS AN EAR.
+    - tMenuItem::label is `const char *` now (SynthLib): nothing anywhere writes through it, and as
+      `char *` every caller passing a string map had to discard a qualifier. calc_crc16() likewise.
+    - The unused locals in renderParams.c moved INSIDE the disabled code that uses them, so those blocks
+      stay revivable in one step; topbarRender.c's two went for good with the strip they sized;
+      soundEngine.c's filterIn[] table was simply dead.
+    - send_init_sequence_push() is __attribute__((unused)): finished code reserved for a "push to
+      device" action, so neither deletable nor worth leaving a standing warning for.
+    - vst3/g2Patch.c's parse_patch() call casts away const EXPLICITLY now, with the reason: that
+      function never writes through the buffer, but const-correcting it would cascade through seven
+      sub-parsers and read_bit_stream, which is a protocol.c job and not a warnings sweep.
+  STILL TO DO: the same two build settings for SynthEdit and EmuUtility, which share utilsGraphics.c
+  and will therefore have the same 188 GL warnings and glfw3.h's documentation ones. Neither can be
+  built against the const label until SynthLib is committed and their pins advanced; a syntax check of
+  every .c in both against the new header reports zero qualifier warnings, so nothing is expected to
+  break.
+
+- (superseded, kept for the measurement) WARNINGS AS ERRORS — measured 2026-08-09, and SMALLER THAN IT LOOKS. Prompted by a real
   cost: `bool altHeld = (altHeld);` in canvasDrag.c (from eb26908) was reported by -Wuninitialized in
   EVERY build for months, went unread among the other warnings, and only became visible as a bug when
   an unrelated refactor changed the stack frame above it and every plain dial drag started writing the

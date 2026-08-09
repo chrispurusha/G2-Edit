@@ -489,11 +489,10 @@ tRectangle render_paramType1TimeClk(tModule * module, tRectangle rectangle, char
 }
 
 tRectangle render_paramType1ADRTime(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double time = 0.0;
-
-
+    // The table form, kept for comparison against ADRTimeStrMap below. `double time` lives in here with
+    // the code that uses it — left declared outside, it is simply an unused variable.
     // use table
-    //time = ADRTimeMap[(int)paramValue];
+    //double time = ADRTimeMap[(int)paramValue];
 
     //if (time < 0.1) {
     //    snprintf(buff, buffSize, "%.1fms", time * 1000);
@@ -509,11 +508,14 @@ tRectangle render_paramType1ADRTime(tModule * module, tRectangle rectangle, char
 }
 
 tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+#if 0
+    // Declared inside the disabled block, not above it: outside, they are three unused variables and
+    // three warnings, and the block is meant to be revivable in one step rather than needing its
+    // declarations put back by hand.
     double   time_to_display;
     uint32_t slot      = module->key.slot;
     uint32_t variation = gPatchDescr[slot].activeVariation;
 
-#if 0
     time_to_display = pulseLoTime[(int)paramValue]; // in s
 
     switch (module->param[variation][2].value) {

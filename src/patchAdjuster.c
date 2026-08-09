@@ -401,7 +401,7 @@ void render_patch_adjuster_panel(void) {
 
     colW                += PA_KNOB_GAP;
 
-    double boxW    = (margin * 2.0) + (colW * adjusterKnobMax);
+    double boxW    = (margin * 2.0) + (colW * (double)adjusterKnobMax);
     double boxH    = titleH + margin + textH + 4.0 + PA_KNOB_SIZE + 4.0 + textH + margin + btnH + margin;
     double boxX    = (renderW - boxW) / 2.0;
     double boxY    = (renderH - boxH) / 2.0;

@@ -732,8 +732,16 @@ static const double   kReverbTypeScale[REVERB_TYPE_COUNT] = {0.5, 0.75, 1.0, 1.6
 // AND by the type, hence the extra headroom for the largest type in the two MAX figures.
 #define REVERB_COMB_BASE       (1356 * ENGINE_OVERSAMPLE)
 #define REVERB_ALLPASS_BASE    (225 * ENGINE_OVERSAMPLE)
-#define REVERB_COMB_MAX        ((uint32_t)(REVERB_COMB_BASE * REVERB_SCALE_MAX) + 1)
-#define REVERB_ALLPASS_MAX     ((uint32_t)(REVERB_ALLPASS_BASE * REVERB_SCALE_MAX) + 1)
+// INTEGER ARITHMETIC, NOT A CAST OF A FLOAT PRODUCT. These size static arrays, and an array bound has
+// to be an integer constant expression — `(uint32_t)(base * 1.6)` is not one, so clang accepted it only
+// as a GNU extension, "variable length array folded to constant array". A static VLA is not something
+// to leave resting on an extension.
+//
+// x16/10 is REVERB_SCALE_MAX (1.6) exactly, and the truncating division matches what the cast did:
+// comb 2712 -> 4340 and allpass 450 -> 721, both identical to the float form. Change the scale here and
+// in REVERB_SCALE_MAX together.
+#define REVERB_COMB_MAX       (((REVERB_COMB_BASE * 16) / 10) + 1)
+#define REVERB_ALLPASS_MAX    (((REVERB_ALLPASS_BASE * 16) / 10) + 1)
 static const uint32_t kCombLen[REVERB_COMBS]              = {
     1116 * ENGINE_OVERSAMPLE, 1188 * ENGINE_OVERSAMPLE,
     1277 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
@@ -1576,7 +1584,6 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
     static uint32_t       derived[MAX_NODE_INPUTS];
     static const uint32_t oneIn[]       = {CONNECTOR_IN_A};
     static const uint32_t twoIn[]       = {CONNECTOR_IN_A, CONNECTOR_IN_B};
-    static const uint32_t filterIn[]    = {CONNECTOR_IN_A, FLT_CONNECTOR_ENV_IN};
     static const uint32_t mixIn[]       = {0, 1, 2, 3};
     // In1L, In1R .. In4L, In4R as RAW CONNECTOR indices: Mix4to1S's connector list really does run
     // Out, Out, then ten inputs, so the first eight input legs are connectors 2..9.
@@ -2971,7 +2978,18 @@ static double signal_in(const tEngineNode * spec, double value[][2], uint32_t in
 }
 
 // One sample of the raw waveform, at whatever rate the caller is stepping the phase.
-static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase, double dt, double shape) {
+// `voice` IS NEEDED HERE, and its absence was a bug rather than an omission. gSuperPhase is
+// [MAX_VOICES][MAX_ENGINE_NODES][2]; the Super branch below indexed it as gSuperPhase[node][0], which
+// puts the NODE number in the VOICE position and 0/1 in the node position. The compiler had been saying
+// so all along — passing `double (*)[2]` where a `double *` is expected is what a two-deep index into a
+// three-deep array produces.
+//
+// It was not out of bounds, by luck: 28 nodes fits inside 32 voices. What it did do was ignore the
+// voice entirely, so every voice sounding the same node shared one pair of phase accumulators, and two
+// different Super oscillators trod on each other's storage. A single voice with one Super oscillator
+// is unaffected — it read [node][0][0] and now reads [0][node][0], the same value in a different slot —
+// so what changes audibly is polyphonic Super and multi-Super patches, which is the point.
+static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * spec, double phase, double dt, double shape) {
     // The shape oscillators have their own eight waveforms, and Shape morphs each of them rather
     // than acting as a pulse width, so they do not share the switch below.
     if (spec->kind == eNodeOscShp) {
@@ -3003,8 +3021,8 @@ static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase
             double down = dt * 0.9941;    // about -10 cents
             double sum  = osc_saw(phase, dt);
 
-            sum += osc_saw(advance_phase(&gSuperPhase[node][0], up), up);
-            sum += osc_saw(advance_phase(&gSuperPhase[node][1], down), down);
+            sum += osc_saw(advance_phase(&gSuperPhase[voice][node][0], up), up);
+            sum += osc_saw(advance_phase(&gSuperPhase[voice][node][1], down), down);
             return sum / 3.0;
         }
         default:
@@ -3058,7 +3076,7 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
     for (step = 0; step < OSC_OVERSAMPLE; step++) {
         double phase = advance_phase(&gPhase[voice][node], dt);
 
-        gOscHistory[voice][node][gOscHistoryPos[voice][node]] = (float)osc_waveform(node, spec, phase, dt, shape);
+        gOscHistory[voice][node][gOscHistoryPos[voice][node]] = (float)osc_waveform(voice, node, spec, phase, dt, shape);
         gOscHistoryPos[voice][node]                           = (gOscHistoryPos[voice][node] + 1) % OSC_DECIMATE_TAPS;
     }
 
