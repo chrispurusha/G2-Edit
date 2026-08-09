@@ -114,6 +114,10 @@ tCanvasGesture canvas_gesture_motion(const tCanvasGestureEvent * event);
 // simple case and is what the plug-in does.
 tCanvasGesture canvas_gesture_release(const tCanvasGestureEvent * event, tCanvasGesture wanted);
 
+// Steps the parameter under the pointer by `delta` raw units and sends the change, returning true if
+// one was found there. This is what a shell's bare +/- key should call; the shell decodes the key.
+bool canvas_nudge_param_under_cursor(int delta);
+
 // ── Starting a drag: the logic half is shared, the platform half is optional ─────────────────────
 //
 // CALL THIS TO BEGIN ANY CURSOR-CAPTURING DRAG. It records the origin — which every incremental dial

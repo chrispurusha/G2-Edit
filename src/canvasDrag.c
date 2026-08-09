@@ -855,6 +855,119 @@ void canvas_hover_update(tCoord coord) {
     }
 }
 
+// ── Nudging the parameter under the pointer ─────────────────────────────────────────────────────
+//
+// Bare +/- steps the parameter under the pointer by one raw unit. Moved here from mouseHandle.c, where
+// both of these were statics and therefore application-only: the plug-in had no keyboard at all, so
+// the question never came up. It has one now, and this is the action behind it — the KEY DECODING
+// stays in each shell, because a GLFW key code and an NSEvent's characters are not the same thing,
+// and translating once at the boundary is the same split the modifier seam uses.
+static bool nudge_param_for_module(tModule * module, tCoord coord, uint32_t variation, int delta) {
+    uint32_t paramCount = 0;
+
+    if (module->key.location == locationMorph) {
+        paramCount = (module->key.index == 1) ? (NUM_MORPHS * 2) : 1;
+    } else {
+        paramCount = module_param_count(module->type);
+    }
+
+    for (uint32_t i = 0; i < paramCount; i++) {
+        tParam *   param = &module->param[variation][i];
+        tParamType type  = paramTypeCommonDial;
+        uint32_t   range = 128;
+        int        newValue;
+
+        if (!within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i])) {
+            continue;
+        }
+
+        if (module->key.location != locationMorph) {
+            type  = paramLocationList[param->paramRef].type;
+            range = paramLocationList[param->paramRef].range;
+        }
+
+        // Push is momentary and CustomData is not a scalar, so neither has a value to step. Return
+        // true regardless: the cursor IS over this parameter, and falling through to keep looking
+        // would let a widget behind it take the keypress instead.
+        if ((type == paramTypePush) || (type == paramTypeCustomData) || (range == 0)) {
+            return true;
+        }
+        newValue = (int)param->value + delta;
+
+        if (newValue < 0) {
+            newValue = 0;
+        } else if (newValue >= (int)range) {
+            newValue = (int)range - 1;
+        }
+
+        if ((uint32_t)newValue != param->value) {
+            param->value = (uint32_t)newValue;
+            send_param_value(module->key.slot, module->key, i, variation, (uint32_t)newValue);
+        }
+        return true;
+    }
+
+    // Mode selectors render as dials too, so hovering one and getting nothing would be the
+    // surprise. They carry their own range table and their own write command.
+    for (uint32_t i = 0; i < module->modeCount; i++) {
+        tMode *  mode  = &module->mode[i];
+        uint32_t range = modeLocationList[mode->modeRef].range;
+        int      newValue;
+
+        if (!within_rectangle(coord, mode->rectangle)) {
+            continue;
+        }
+
+        if (range == 0) {
+            return true;
+        }
+        newValue = (int)mode->value + delta;
+
+        if (newValue < 0) {
+            newValue = 0;
+        } else if (newValue >= (int)range) {
+            newValue = (int)range - 1;
+        }
+
+        if ((uint32_t)newValue != mode->value) {
+            mode->value = (uint32_t)newValue;
+            send_mode_value(module->key.slot, module->key, i, (uint32_t)newValue);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool canvas_nudge_param_under_cursor(int delta) {
+    tCoord   coord     = {0};
+    uint32_t slot      = gSlot;
+    uint32_t variation = gPatchDescr[slot].activeVariation;
+
+    get_global_gui_scaled_mouse_coord(&coord);
+
+    // Morph knobs are drawn on top of the canvas, so they have to win the hit test against a module
+    // param that happens to sit at the same place — hence the Morph location is walked first here.
+    // (The click path gets this ordering from the click-region layers instead; see the press handler.)
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
+
+        if (module->active && nudge_param_for_module(module, coord, variation, delta)) {
+            return true;
+        }
+    }
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, gLocation, i);
+
+        if (module->active && nudge_param_for_module(module, coord, variation, delta)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // ── The gesture table ───────────────────────────────────────────────────────────────────────────
 //
 // See canvasDrag.h for why this exists. One row per gesture, one column per phase: a gesture whose

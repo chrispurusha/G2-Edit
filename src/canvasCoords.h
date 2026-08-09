@@ -37,4 +37,12 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
 // Which module grid square a coordinate falls in. Was in menus.c; moved for the same reason.
 void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord);
 
+// One step of canvas zoom in either direction (pass +/-ZOOM_DELTA), anchored and saved to prefs.
+// Shared by the application's Cmd +/- and the plug-in's.
+void canvas_zoom_step(double delta);
+
+// The same step, zoomed around a given point — what Cmd + wheel wants, so the zoom lands where the
+// pointer is pointing.
+void canvas_zoom_step_at(double delta, tCoord anchor);
+
 #endif // __CANVAS_COORDS_H__

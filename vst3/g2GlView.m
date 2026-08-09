@@ -232,16 +232,52 @@ static __weak G2GlView * gCurrentView = nil;
     set_modifier_state(modifier_bits_from_ns([event modifierFlags]));
 }
 
-// Shift pressed with the pointer still: no mouse event, so without this the state would not change
-// until the next click. -acceptsFirstResponder is already YES for the key handling.
+// WITHOUT THIS THE VIEW RECEIVES NO KEY EVENTS AT ALL, and NSView's default is NO. An earlier comment
+// here claimed it was "already YES", which was simply wrong: -keyDown: and -flagsChanged: were both
+// dead code, so the plug-in had no keyboard shortcuts and could not see a modifier pressed while the
+// pointer sat still.
+- (BOOL)acceptsFirstResponder {
+    return YES;
+}
+
+// Shift or Alt pressed with the pointer still: no mouse event, so without this the state would not
+// change until the next click — which is precisely what an Alt-drag on a dial needs, since the Alt
+// often goes down after the button.
 - (void)flagsChanged:(NSEvent *)event {
     [self pushModifiersFor:event];
     [super flagsChanged:event];
 }
 
+// +/- steps the parameter under the pointer; Cmd +/- zooms the canvas. Both live in shared code — see
+// g2_input_key(), which returns false for anything it does not want.
+//
+// ANYTHING UNCLAIMED GOES TO super, and that is deliberate: the host owns shortcuts of its own (the
+// space bar for transport, most obviously) and a plug-in editor that swallowed every key would be a
+// worse neighbour than one that swallowed none.
+- (void)keyDown:(NSEvent *)event {
+    NSString * chars = [event charactersIgnoringModifiers];
+
+    [self pushModifiersFor:event];
+
+    if ([chars length] == 1) {
+        unichar character = [chars characterAtIndex:0];
+        BOOL    cmdHeld   = ([event modifierFlags] & NSEventModifierFlagCommand) != 0;
+
+        if (g2_input_key((int)character, cmdHeld == YES) == true) {
+            [self setNeedsDisplay:YES];
+            return;
+        }
+    }
+    [super keyDown:event];
+}
+
 - (void)mouseDown:(NSEvent *)event {
     NSPoint c = [self canvasPointFor:event];
 
+    // Claim the keyboard on a click IN the view rather than when the editor opens. Taking it at open
+    // time would pull the host's own key handling out from under the user for a window they may only
+    // have glanced at.
+    [[self window] makeFirstResponder:self];
     [self pushModifiersFor:event];
     g2_input_mouse_event(c.x, c.y, eClickPress);
     [self ensureTickTimer];
