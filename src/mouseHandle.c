@@ -90,35 +90,16 @@ static void send_master_clock_bpm(uint32_t bpm) {
     msg_send(&gToUsbThread, &messageContent);
 }
 
-// THE APPLICATION'S HALF OF SynthLib's MODIFIER SEAM: translate and push, nothing else. The
-// predicates themselves (shift_modifier_held() and friends) live in inputState.c and are shared with
-// the plug-in, which pushes the same bits from an NSEvent.
+// THE MODIFIER SEAM'S APPLICATION END IS ONE CALL PER EVENT, and both the translation and the
+// predicates are SynthLib's — set_modifier_state_from_glfw() in inputStateGlfw.c, shared with
+// SynthEdit, and shift_modifier_held() and friends in inputState.c, shared with the plug-in, which
+// pushes the same bits from an NSEvent.
 //
 // GLFW ALREADY HANDED US THIS ON EVERY EVENT and nobody read it. Both key_callback() and
 // mouse_button() take an `int mods` argument describing the modifier state AT THE MOMENT OF THE
 // EVENT, while three separate predicates polled glfwGetKey() for the same answer a little later.
 // Pushing the argument is not merely tidier, it is more correct: the poll answered "now", and "now"
 // is after the event has been queued.
-static uint32_t modifier_bits_from_glfw(int glfwMods) {
-    uint32_t bits = (uint32_t)eModifierNone;
-
-    if ((glfwMods & GLFW_MOD_SHIFT) != 0) {
-        bits |= (uint32_t)eModifierShift;
-    }
-
-    if ((glfwMods & GLFW_MOD_SUPER) != 0) {
-        bits |= (uint32_t)eModifierCmd;
-    }
-
-    if ((glfwMods & GLFW_MOD_ALT) != 0) {
-        bits |= (uint32_t)eModifierAlt;
-    }
-
-    if ((glfwMods & GLFW_MOD_CONTROL) != 0) {
-        bits |= (uint32_t)eModifierCtrl;
-    }
-    return bits;
-}
 
 // Registered with GLFW so a modifier released while another application has the keyboard cannot
 // leave one stuck on here — see set_modifier_state()'s note. There is nothing to restore on the way
@@ -693,7 +674,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     uint32_t     slot        = gSlot;
     uint32_t     location    = gLocation;
 
-    set_modifier_state(modifier_bits_from_glfw(mods));   // before any handler runs: they read the predicates
+    set_modifier_state_from_glfw(mods);   // before any handler runs: they read the predicates
 
     mouseButton = convert_to_mouse_button(button, action);
 
@@ -1373,7 +1354,7 @@ void char_event(GLFWwindow * window, unsigned int value) {
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     double zoomFactor = 0.0;
 
-    set_modifier_state(modifier_bits_from_glfw(mods));   // a modifier PRESS is a key event like any other
+    set_modifier_state_from_glfw(mods);   // a modifier PRESS is a key event like any other
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
 
