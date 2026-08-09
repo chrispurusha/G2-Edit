@@ -78,7 +78,12 @@ bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot
         return false;
     }
     clear_slot_data(slot);
-    parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+    // THE CAST IS DELIBERATE AND THE CONST IS NOT A LIE: parse_patch() never writes through this
+    // buffer (checked), but its signature and those of the seven sub-parsers and read_bit_stream()
+    // below it all take a non-const uint8_t *. Const-correcting that chain is a protocol.c-wide job,
+    // not part of a warnings sweep — so the discard happens here, once, visibly, instead of as an
+    // implicit conversion the compiler has to complain about on every build.
+    parse_patch(slot, (uint8_t *)(buff + byteOffset), (uint32_t)((fileSize - byteOffset) - 2));
     return true;
 }
 

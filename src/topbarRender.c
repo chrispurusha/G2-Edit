@@ -65,8 +65,6 @@ void render_top_bar(void) {
     bool        txActive                            = (txTime != 0) && ((nowMs - txTime) < 100);
     bool        rxActive                            = (rxTime != 0) && ((nowMs - rxTime) < 100);
     tRectangle  commsStateRect                      = {0};
-    double      indicatorX                          = 0.0;
-    double      indicatorW                          = 0.0;
 
     set_rgb_colour((tRgb)RGB_GREY_5);
     // Full width now. The strip on the right used to be reserved for the vertical scrollbar, which
