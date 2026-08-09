@@ -38,10 +38,40 @@
 #include "g2GlDraw.h"
 #include "g2GlView.h"
 #include "g2Input.h"
+#include "inputState.h"
 
 @interface G2GlView : NSOpenGLView
 @property (strong) NSTimer * dragTimer;
 @end
+
+// THE PLUG-IN'S HALF OF SynthLib's MODIFIER SEAM. The application translates GLFW's `mods`; this
+// translates an NSEvent's flags, and everything downstream reads the same predicates without knowing
+// which shell it is running in. Before the seam existed these were stubbed to false in
+// g2AppStubs.c — Shift and Command simply did nothing in the plug-in.
+//
+// Cmd is COMMAND, matching the application's GLFW_MOD_SUPER, and Alt is OPTION. NSEvent reports
+// several bits this UI has no use for (Caps Lock, the function key, the numeric-keypad flag), so the
+// translation is a whitelist rather than a cast — a stray bit must not read as a held modifier.
+static uint32_t modifier_bits_from_ns(NSEventModifierFlags flags) {
+    uint32_t bits = (uint32_t)eModifierNone;
+
+    if ((flags & NSEventModifierFlagShift) != 0) {
+        bits |= (uint32_t)eModifierShift;
+    }
+
+    if ((flags & NSEventModifierFlagCommand) != 0) {
+        bits |= (uint32_t)eModifierCmd;
+    }
+
+    if ((flags & NSEventModifierFlagOption) != 0) {
+        bits |= (uint32_t)eModifierAlt;
+    }
+
+    if ((flags & NSEventModifierFlagControl) != 0) {
+        bits |= (uint32_t)eModifierCtrl;
+    }
+    return bits;
+}
 
 // The view currently attached, for g2_gl_view_request_redraw() to find. A host can open more than
 // one instance of the plug-in, so this is "the most recently attached" rather than "the" view —
@@ -195,9 +225,24 @@ static __weak G2GlView * gCurrentView = nil;
     self.dragTimer = nil;
 }
 
+// Pushed from EVERY event that carries flags, before the event is acted on — a press must be judged
+// by the modifiers held when it happened. AppKit puts the flags on all of them, mouse events
+// included, so there is no polling to do and nothing to keep in step.
+- (void)pushModifiersFor:(NSEvent *)event {
+    set_modifier_state(modifier_bits_from_ns([event modifierFlags]));
+}
+
+// Shift pressed with the pointer still: no mouse event, so without this the state would not change
+// until the next click. -acceptsFirstResponder is already YES for the key handling.
+- (void)flagsChanged:(NSEvent *)event {
+    [self pushModifiersFor:event];
+    [super flagsChanged:event];
+}
+
 - (void)mouseDown:(NSEvent *)event {
     NSPoint c = [self canvasPointFor:event];
 
+    [self pushModifiersFor:event];
     g2_input_mouse_event(c.x, c.y, eClickPress);
     [self ensureTickTimer];
     [self setNeedsDisplay:YES];
@@ -206,6 +251,7 @@ static __weak G2GlView * gCurrentView = nil;
 - (void)mouseDragged:(NSEvent *)event {
     NSPoint c = [self canvasPointFor:event];
 
+    [self pushModifiersFor:event];
     g2_input_mouse_event(c.x, c.y, eClickDrag);
     [self setNeedsDisplay:YES];
 }
@@ -216,6 +262,7 @@ static __weak G2GlView * gCurrentView = nil;
     // NOT stopped here any more. The button coming up does not mean nothing needs ticking: a menu
     // opened by that very click stays open and its submenu dwell timer still has to run. The tick
     // itself stops the timer once nothing is left to do.
+    [self pushModifiersFor:event];
     g2_input_mouse_event(c.x, c.y, eClickRelease);
     [self ensureTickTimer];
     [self setNeedsDisplay:YES];
@@ -226,6 +273,7 @@ static __weak G2GlView * gCurrentView = nil;
 
     // No dispatch — a click nobody made. But the hover state must be advanced: menu highlighting
     // and the dwell timer that opens a submenu flyout both work off the pointer.
+    [self pushModifiersFor:event];
     g2_input_hover(c.x, c.y);
     [self ensureTickTimer];
     [self setNeedsDisplay:YES];
@@ -258,6 +306,7 @@ static __weak G2GlView * gCurrentView = nil;
     NSRect  backing = [self convertRectToBacking:bounds];
     double  scale  = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
 
+    [self pushModifiersFor:event];
     g2_input_scroll(c.x, c.y, [event scrollingDeltaX] * scale, [event scrollingDeltaY] * scale);
     [self setNeedsDisplay:YES];
 }
@@ -269,6 +318,7 @@ static __weak G2GlView * gCurrentView = nil;
 - (void)rightMouseUp:(NSEvent *)event {
     NSPoint c = [self canvasPointFor:event];
 
+    [self pushModifiersFor:event];
     g2_input_right_click(c.x, c.y);
     [self ensureTickTimer];
     [self setNeedsDisplay:YES];
