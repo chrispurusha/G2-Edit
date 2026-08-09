@@ -707,16 +707,30 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // fitted by ear. The endpoints were the only documented part and the measurement does not reach them:
 // Large tops out at 8.11 s. The manual's figure is left recorded here because it is still unexplained,
 // not because it is unused — nothing reads it now.
-// The Brightness dial's two constants, both FITTED against nine measured points of the hardware's dial
-// (see the table where they are used). The comb's one-pole coefficient is REVERB_BRIGHT_MAX times
-// brightness raised to REVERB_BRIGHT_CURVE:
+// How hard the Brightness dial damps the comb loop. The one-pole coefficient is _MAX times brightness
+// raised to _CURVE, and both are FITTED against nine measured points of the instrument's own dial.
 //
-//   _MAX below 1 is what stops the filter leaving the loop at the top of the dial. The instrument still
-//        damps at Brightness 127, by about 7 dB of high-frequency tail relative to no filter at all.
-//   _CURVE crowds the travel towards the dark end, because the hardware's colour moves most in the
-//        bottom quarter of the dial and hardly at all above the middle.
-#define REVERB_BRIGHT_MAX      (0.5)
-#define REVERB_BRIGHT_CURVE    (0.5)
+// WHAT TO MEASURE THIS AGAINST, because two other metrics sent me the wrong way first. The right target
+// is the ratio of HIGH-BAND to LOW-BAND DECAY RATE, which is what an in-loop lowpass actually controls.
+// Hall at Time 127, decay of 3-10 kHz over decay of 150-800 Hz:
+//
+//     Brightness       16     64    127
+//     hardware       0.54   0.75   0.95
+//     engine         0.53   0.70   1.00     (with the constants below)
+//
+//   - Broadband decay is NOT the target: it follows whichever band holds the energy, so it agreed with
+//     several quite different filters. It also made the engine look 40-60% short of its decay target
+//     when the low band was in fact within a second of the hardware; the shortfall was the measurement.
+//   - Absolute tail COLOUR at a fixed moment is not the target either: scored that way, an exponent of
+//     1.0 beat 0.15, which is the opposite of what the decay rates say. Colour at an instant mixes the
+//     loop's damping with everything outside the loop, so it cannot isolate this coefficient.
+//
+// _MAX stays at 1.0 because the hardware's loop is very nearly transparent at the top of its dial: its
+// HF and LF then decay within 0.6 s of each other, and its tail darkens by only 1-3 dB over three
+// seconds against 14-16 dB at mid dial. Anything below 1.0 damps at full brightness, which the
+// instrument does not do — a fitted 0.5 left every setting darkening and shortened the decay with it.
+#define REVERB_BRIGHT_MAX      (1.0)
+#define REVERB_BRIGHT_CURVE    (0.15)
 
 static const double kReverbDecayBase[REVERB_TYPE_COUNT]  = {0.045, 0.29, 0.39, 0.32};
 static const double kReverbDecaySlope[REVERB_TYPE_COUNT] = {0.02238, 0.04094, 0.06082, 0.08212};
@@ -2763,9 +2777,9 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
 // on the dullest part of the travel instead of the liveliest.
 static double reverb_step(double input, double timeSeconds, double timeNorm, double brightness,
                           double mix, uint32_t type) {
-    double          diffused  = input;
-    double          sum       = 0.0;
-    uint32_t        i         = 0;
+    double   diffused = input;
+    double   sum      = 0.0;
+    uint32_t i        = 0;
     // A one-pole lowpass inside each comb, so every pass round the loop loses more high end — which
     // is what makes a tail decay into a thump rather than ringing on with the same tone.
     //
@@ -2782,24 +2796,17 @@ static double reverb_step(double input, double timeSeconds, double timeNorm, dou
     // requested time to within 0.01 s once the filter is out of the loop. What was wrong is how much
     // filter a given dial position asks for.
     //
-    // MEASURED AGAINST NINE POINTS OF THE DIAL, and the shape that came back was not the one expected.
-    // Hardware Hall at Time 127, the tail's 3-16 kHz energy relative to its 100-1000 Hz:
+    // The dial drives the coefficient through a curve, both constants measured — see REVERB_BRIGHT_MAX
+    // for the numbers, and for why the obvious ways of scoring this are misleading. Taken linearly, as
+    // this was, the loop damped high frequency about twice as fast as the instrument does at any given
+    // dial position.
     //
-    //     Brightness    0     16     32     48     64     80     96    112    127
-    //     HF/LF     -21.9  -12.3   -4.5   -1.3   +2.2   +3.1   +3.8   +3.6   +4.5   dB
-    //
-    // Thirty-three decibels of colour across the dial, while the decay moves only from 77% to 100% of
-    // its longest — so COLOUR is what pins this filter and broadband decay barely constrains it at all.
-    // That is why the calibration scores colour: the decay measure follows whichever band happens to
-    // dominate, and it agreed with several quite different filters.
-    //
-    // THE INSTRUMENT'S DAMPING NEVER FULLY OPENS AND NEVER FULLY CLOSES. A plain 1 - brightness reaches
-    // a coefficient of exactly 1 at the top of the dial, which removes the filter from the loop
-    // altogether and left the engine's tail 7 dB brighter than the hardware's brightest setting; at the
-    // bottom it over-damped by 8 dB. Hence a maximum below unity and a curve, both fitted numerically
-    // against the nine points above rather than chosen. An earlier attempt used an exponent alone and
-    // made the colour match WORSE than the linear mapping it replaced, which is how the range rather
-    // than the shape turned out to be the problem.
+    // TWO THINGS THIS IS NOT, both of which I diagnosed wrongly before measuring properly. It is not a
+    // feedback-gain error: the one-pole has unity DC gain, so `fb` sets the low-frequency decay exactly
+    // right, and an offline render confirms the requested time to within 0.01 s once the filter is out
+    // of the loop. And the instrument's damping is not a fixed loss dressed up as a dial — its tail
+    // demonstrably darkens as it decays, by 14-16 dB over three seconds at mid dial, which only
+    // something inside the loop can do.
     double          damping   = 1.0 - (REVERB_BRIGHT_MAX * pow(brightness, REVERB_BRIGHT_CURVE));
     double          scale     = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
     double          diffusion = (REVERB_DIFFUSE_SLOPE * timeNorm) + REVERB_DIFFUSE_BASE;
