@@ -271,7 +271,7 @@ void g2_input_pointer_left(void) {
     gMouse = (tCoord){
         -1.0, -1.0
     };
-    canvas_hover_update(gMouse);   // clears gHoverConnector: it returns early on a negative coord
+    canvas_hover_update(gMouse);   // clears gHoverConnector: (-1, -1) is in no pane, so it returns early
     update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
 }
 
