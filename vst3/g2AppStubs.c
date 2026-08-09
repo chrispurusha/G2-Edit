@@ -57,31 +57,22 @@
 #include "g2Prefs.h"
 #include "canvasDrag.h"
 
-// ── Mouse position ──────────────────────────────────────────────────────────────────────────────
+// ── Mouse position and modifiers ────────────────────────────────────────────────────────────────
 //
-// There is no pointer to report. When the input path is eventually built, THESE are the functions
-// the plug-in's shell will implement for real, from the events the host delivers to the NSView —
-// which is why they are grouped rather than scattered.
-
-bool multi_select_modifier_held(void) {
-    return false;
-}
-
-// No modifier state from the host view yet. Shift-drag on a mutator slider and Cmd-click behave as
-// unmodified clicks until there is.
-bool shift_modifier_held(void) {
-    return false;
-}
-
-bool cmd_modifier_held(void) {
-    return false;
-}
-
-// NONE OF THE MOUSE-POSITION FUNCTIONS ARE STUBS ANY MORE, which is why the group is empty but for
-// the modifier below. get_global_gui_scaled_mouse_coord() is answered by g2Input.c from the host's
-// events, and both coordinate conversions moved into src/canvasCoords.c — out of mouseHandle.c and
-// menus.c respectively — because the arithmetic never needed a window in the first place.
-
+// THIS GROUP IS NOW EMPTY, and it is worth saying what used to be in it, because the reason it
+// emptied is the pattern the rest of this file is still waiting for.
+//
+// get_global_gui_scaled_mouse_coord() is answered by g2Input.c from the host's events, and both
+// coordinate conversions moved into src/canvasCoords.c — out of mouseHandle.c and menus.c
+// respectively — because the arithmetic never needed a window in the first place.
+//
+// multi_select_modifier_held(), shift_modifier_held() and cmd_modifier_held() were stubs returning
+// false, so Shift-drag on a mutator slider and Cmd-click behaved as unmodified clicks here. They are
+// now REAL, from SynthLib's inputState.c, because that seam holds pushed state instead of polling a
+// window: g2GlView.m translates each NSEvent's modifierFlags and pushes them exactly as the
+// application pushes GLFW's. A stub that answers false is a feature quietly missing; a shared piece
+// of state each shell fills in is the same code working in both.
+//
 // start_cursor_drag() is NOT here any more — it is real, in g2Input.c, because it needs the mouse.
 
 // ── Editing ─────────────────────────────────────────────────────────────────────────────────────

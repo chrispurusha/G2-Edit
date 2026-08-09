@@ -643,10 +643,40 @@ The four-key Shift-or-Cmd multi-select test appeared four times (now one:
 `multi_select_modifier_held()`); a Shift-only variant appears twice more; `mutatorUI.c` keeps private
 `shift_held()`/`cmd_held()`. Three predicates, seven-plus copies.
 
+DONE, and the last two copies went with lesson 6 below: the Shift-only variant survived as a written-out
+`glfwGetKey()` pair at two sites in `mouse_button()` (empty-canvas press and rubber-band release) long
+after the predicate existed. Both now call `shift_modifier_held()`.
+
 **6. `glfwGetKey` is a PULL api, used 25 times.**
 A plug-in only receives pushed events. An input-state struct updated by the shell would serve both,
 and is what the plug-in needs before vertical/horizontal dial modes can behave exactly as they do in
 the application.
+
+DONE 2026-08-09 — `SynthLib/src/inputState.c`, and it turned out to be a DELETION rather than an
+addition. **GLFW was already handing the application the answer and nobody read it:** `key_callback()`
+and `mouse_button()` both take an `int mods` argument giving the modifier state at the moment of the
+event, while three predicates polled `glfwGetKey()` for the same thing slightly later. Pushing the
+argument is not just tidier, it is more correct — the poll answered "now", and "now" is after the
+event was queued.
+
+One writer, many readers. Each shell translates its own toolkit (`modifier_bits_from_glfw()` in
+`mouseHandle.c`, `modifier_bits_from_ns()` in `g2GlView.m`) into `tModifierBits` and pushes; the
+predicates read state and know nothing about windows. Results:
+- `glfwGetKey` call sites in `src/`: **13 → 0.**
+- The three plug-in stubs in `g2AppStubs.c` are **gone, not reimplemented** — Shift and Command now
+  genuinely work in the plug-in (multi-select, Shift-drag on a mutator slider), where they had
+  silently done nothing.
+- Alt for morph dragging came off `glfwGetKey(window, ...)` too, which is what leaves `cursor_pos()`
+  with a `GLFWwindow *` it now provably never uses (lesson 3).
+- One correctness fix the poll could not have: `window_focus_callback()` clears the state on focus
+  loss, because a modifier released while another application owns the keyboard is a release this
+  process is never told about. A stuck modifier is worse than a missed one.
+
+NOT done, and deliberately: `mutatorUI.c` still includes GLFW for `GLFW_KEY_*` in its keyboard
+shortcuts. That is decoding a real key event, not polling for state, and it needs a shared key-code
+enum rather than this seam. `moduleGraphics.c`'s GLFW include is now its only one and is load-bearing
+for three raw `glEnable`/`glBlendFunc` calls (whose own TODO says they belong in the graphics
+routines), not for anything GLFW.
 
 **7. What is already right, and should not be "improved".**
 The click-region registry. Every widget registers as it is drawn and `dispatch_click_region()`

@@ -37,6 +37,7 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "globalVars.h"
 #include "alertDialog.h"
+#include "inputState.h"
 #include "mouseHandle.h"
 #include "graphics.h"
 

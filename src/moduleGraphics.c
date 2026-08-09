@@ -52,6 +52,7 @@ extern "C" {
 #include "undo.h"
 #include "canvasDrag.h"
 #include "clickRegion.h"
+#include "inputState.h"
 
 // ── Click-region registration ────────────────────────────────────────────────
 //
