@@ -628,15 +628,54 @@ drag, cable drag, rubber band, context menu and connector hover — each arm ind
 whichever `gXxxDragging` flag is set. With four arms now extracted, the rest reads as a list wanting
 to be a table keyed on an active-gesture enum.
 
+DONE IN PART 2026-08-09 — `cursor_pos()` is **207 → 104 lines**. Five arms turned out to be two
+gestures written out repeatedly: tempo and perf-tempo, identical but for a rectangle; and vibrato
+amount, vibrato rate and glide time, identical but for a module, a parameter index and a range. Those
+are now `sTempoDragTargets` / `sPatchParamDragTargets` plus two helpers, so a sixth such dial is a
+table row. Each entry points AT its rectangle, because those are filled at render time and a copy
+taken at start-up would be stale. Verified live in rotary mode (the only mode whose drags survive
+synthetic input, since the others hide the pointer): tempo 127→240 BPM, vibrato amount 26→69,
+vibrato rate 6.02→7.97 Hz, glide 80→6270 ms, with the untouched dials staying put.
+
+THE REST OF THE CHAIN IS NOT THIS. Scrollbar, module, cable and rubber-band drags do genuinely
+different work; collapsing them needs observation 1, not another table.
+
+A BUG THIS REFACTOR FLUSHED OUT, worth knowing because it was not caused by it: removing two
+now-unused locals from `cursor_pos()` changed the stack frame, and `canvas_param_drag_motion()`
+contained `bool altHeld = (altHeld);` — a local shadowing the parameter and initialised from itself,
+present since eb26908. The garbage byte it read had been zero and became non-zero, so every plain dial
+drag started writing the morph offset. `-Wuninitialized` had reported it in every build for months.
+`OTHER_CFLAGS = "-Werror=uninitialized"` is now set in both configurations and verified to reject that
+exact line; see todo.txt for what stands between here and a project-wide `-Werror`.
+
 **3. `cursor_pos()` never used its `GLFWwindow *` argument.**
 It read the pointer through `get_global_gui_scaled_mouse_coord()`. The signature implied a GLFW
 dependency the body did not have, which is the main reason the extraction looked daunting and turned
 out to be mechanical. Worth checking other signatures for the same lie.
 
+DONE 2026-08-09, and the audit found exactly one more. Of the twelve functions taking a
+`GLFWwindow *`, eleven are GLFW callbacks whose signature GLFW dictates — including `cursor_pos()`
+itself, which now genuinely never reads it since the Alt poll became `alt_modifier_held()`. The
+twelfth was `render_scrollbars(GLFWwindow *)`: not a callback, never read the window, called once as
+`render_scrollbars((GLFWwindow *)synthlib_window())`, and the plug-in already draws its own bars.
+Parameter removed.
+
 **4. `start_cursor_drag()` conflates logic with platform.**
 It records the drag origin AND hides/warps the cursor. Splitting it — `canvas_drag_set_origin()`
 plus an optional `cursor_capture()`/`cursor_release()` — makes the platform half genuinely optional
 instead of something a port can drop by accident, which is exactly what happened here.
+
+DONE 2026-08-09, in the shape this note proposed. `start_cursor_drag()` is gone; the shared
+`canvas_drag_begin()` (canvasDrag.c) records the origin and THEN calls the shell's `cursor_capture()`.
+The shell supplies three functions: `cursor_raw_coord()` (GLFW's raw window coordinates in the
+application, canvas coordinates in the plug-in — each only ever differenced against later positions
+from the same source), `cursor_capture()` and `cursor_release()`. The plug-in's capture pair are now
+DELIBERATE no-ops that cost it only pointer hiding, where before declining the platform half silently
+discarded the origin as well. All eleven call sites go through `canvas_drag_begin()`, three of them in
+`moduleGraphics.c`, which is the shared file that used to depend on each shell remembering the logic
+half. Both targets build; the ordering is mechanical and equivalent, but a vertical-mode dial drag
+(pointer hides, value moves, pointer returns) still wants an eye, since synthetic input cannot reach a
+drag that hides the cursor.
 
 **5. Modifier predicates are duplicated.**
 The four-key Shift-or-Cmd multi-select test appeared four times (now one:
@@ -682,8 +721,23 @@ routines), not for anything GLFW.
 The click-region registry. Every widget registers as it is drawn and `dispatch_click_region()`
 resolves a coordinate against it, with press-capture and layer priority. That design is why
 hit-testing needed NO work whatsoever to serve the plug-in — the single largest saving in this whole
-exercise. Note the application's own comment that `handle_morph_press()`/`handle_module_press()` are
-"pure legacy fallback... should be nothing today"; those are candidates for removal.
+exercise.
+
+THE FALLBACKS ARE GONE, 2026-08-09 — `handle_morph_press()`, `handle_module_press()`,
+`handle_morph_release()`, `handle_module_release()` and their two per-module helpers, 360 lines out of
+`mouseHandle.c`. Removed on evidence rather than on the "should be nothing today" hunch that had kept
+them:
+- Every rectangle they hit-tested is registered as a click region by the same render pass that
+  computes it — params (moduleGraphics.c:593), modes (622/664), connectors (820), body (1532), drag
+  handle (1569). The census is complete, not a sample.
+- Instrumented to log whenever either pair claimed a click: nothing, across 14 clicks over module
+  bodies, dials, toggles, mode selectors, connectors, morph labels and the patch-settings panel.
+- They were worse than dead. They tested the STORED rectangles, and for a module scrolled out of view
+  those are stale ones left from wherever it was last drawn — so the only case in which they could
+  still have fired is a case where firing would have been wrong. That is the same fault as the FX-pane
+  hover bug fixed the same week.
+`nudge_param_for_module()` and `nudge_param_under_cursor()` sat between them in the file and are live
+keyboard-nudge code, which is why this was a brace-matched removal rather than a line range.
 
 **Shape a shared API might take**, if it is ever worth doing:
 

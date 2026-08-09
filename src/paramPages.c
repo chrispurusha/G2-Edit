@@ -48,6 +48,7 @@ extern "C" {
 #include "undo.h"
 #include "utilsGraphics.h"
 #include "contextMenu.h"
+#include "canvasDrag.h"
 
 tParamPagesEdit          gParamPages                    = {0};
 
@@ -550,7 +551,7 @@ static bool press_knob_widget(tCoord coord) {
         gParamDragging.active          = true;
 
         if ((synthlib_dial_mode() != eDialModeRotary) || (paramType == paramTypeSlider)) {
-            start_cursor_drag();
+            canvas_drag_begin();
         }
         return true;
     }
@@ -559,7 +560,8 @@ static bool press_knob_widget(tCoord coord) {
 }
 
 // Mouse-up on a knob's widget, for the param types that aren't dragged: toggles cycle to their
-// next value, menus open their picker. Mirrors handle_module_release_for_module().
+// next value, menus open their picker. Mirrored handle_module_release_for_module(), which was the
+// canvas's legacy fallback release path — deleted 2026-08-09; see git history.
 static bool release_knob_widget(tCoord coord) {
     for (uint32_t pos = 0; pos < NUM_KNOBS_PER_BANK; pos++) {
         tKnobTarget target    = {0};

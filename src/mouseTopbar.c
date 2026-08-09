@@ -49,6 +49,7 @@ extern "C" {
 #include "menus.h"
 #include "mouseTopbar.h"
 #include "undo.h"
+#include "canvasDrag.h"
 
 static void handle_button(tTopbarControlId controlId) {
     uint32_t slot = gSlot;
@@ -170,7 +171,7 @@ bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
             gParamDragging.active     = true;
 
             if (synthlib_dial_mode() != eDialModeRotary) {
-                start_cursor_drag();
+                canvas_drag_begin();
             }
             found                     = true;
         }
@@ -181,7 +182,7 @@ bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
             gTempoDragging = true;
 
             if (synthlib_dial_mode() != eDialModeRotary) {
-                start_cursor_drag();
+                canvas_drag_begin();
             }
             found          = true;
         }

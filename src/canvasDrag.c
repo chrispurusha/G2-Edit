@@ -69,6 +69,32 @@ void canvas_drag_set_origin(double rawX, double rawY) {
     gDragPrevY  = rawY;
 }
 
+// Whole parameter units for a pointer movement of `pixels`, carrying the sub-unit remainder over to
+// the next call — see tParamDragging::unitAccum for why discarding it made slow drags do nothing.
+//
+// ONLY FOR THE INCREMENTAL FORM, where the reference point advances every event. An Alt (morph) drag
+// measures from the drag's fixed start instead, so its truncation loses nothing and it must NOT feed
+// this accumulator: adding an absolute displacement to a running total every event would race away.
+static int drag_whole_units(double pixels, uint32_t range) {
+    gParamDragging.unitAccum += pixels * (double)range / dial_drag_pixels_for_full_range(range);
+
+    int step = (int)gParamDragging.unitAccum;
+
+    gParamDragging.unitAccum -= (double)step;
+    return step;
+}
+
+// See canvasDrag.h: the origin FIRST, so that a shell whose cursor_capture() does nothing still gets
+// working incremental dial drags. That ordering is the whole lesson of this split.
+void canvas_drag_begin(void) {
+    double rawX = 0.0;
+    double rawY = 0.0;
+
+    cursor_raw_coord(&rawX, &rawY);
+    canvas_drag_set_origin(rawX, rawY);
+    cursor_capture();
+}
+
 bool canvas_drag_motion(tCoord coord) {
     if (gModuleDrag.active == true) {
         if (gModuleDrag.isMulti) {
@@ -227,22 +253,21 @@ bool canvas_module_drag_release(void) {
 //   rawX/rawY    the RAW cursor position, which the vertical and horizontal dial modes difference
 //                against their previous value. Rotary does not use them — it reads an absolute
 //                angle each event — which is why the plug-in works today reporting rotary while
-//                start_cursor_drag()'s cursor hiding and warping remains application-only.
+//                cursor_capture()'s pointer hiding remains application-only — see canvasDrag.h.
 //   altHeld      Alt drags the MORPH OFFSET rather than the value.
 //
 // Returns true if a parameter drag consumed the motion.
 bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHeld) {
-    double          x              = coord.x;
-    double          y              = coord.y;
-    double          xCoord         = rawX;
-    double          yCoord         = rawY;
-    double          angle          = 0.0;
-    uint32_t        range          = 0;
-    uint32_t        value          = 0;
-    tMessageContent messageContent = {0};
-    tParamType      paramType      = paramTypeCommonDial;
-    uint32_t        slot           = gSlot;
-    uint32_t        variation      = gPatchDescr[slot].activeVariation;
+    double     x         = coord.x;
+    double     y         = coord.y;
+    double     xCoord    = rawX;
+    double     yCoord    = rawY;
+    double     angle     = 0.0;
+    uint32_t   range     = 0;
+    uint32_t   value     = 0;
+    tParamType paramType = paramTypeCommonDial;
+    uint32_t   slot      = gSlot;
+    uint32_t   variation = gPatchDescr[slot].activeVariation;
 
     (void)angle;
     (void)value;
@@ -250,7 +275,7 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
     if (gParamDragging.active == false) {
         return false;
     }
-    tModule *       module         = get_module(gParamDragging.moduleKey);
+    tModule *  module    = get_module(gParamDragging.moduleKey);
 
     if (module != NULL) {
         // Read and write through the dragged module's own Slot rather than the on-screen
@@ -290,7 +315,14 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                     // instant the mouse isn't actively moving between two polls. Rotary
                     // doesn't have this problem since it reads an absolute angle each
                     // event instead of an incremental delta.
-                    bool    altHeld       = (altHeld);
+                    // NO LOCAL altHeld HERE. There used to be `bool altHeld = (altHeld);` — a local
+                    // shadowing the parameter and initialised FROM ITSELF, so it read an
+                    // uninitialised stack slot and the caller's answer was thrown away. Undefined
+                    // behaviour that looks stable: the garbage byte happens to be whatever the
+                    // previous call left at that stack offset, so it can read false for months and
+                    // then turn true when an unrelated change alters the frame above it. That is
+                    // exactly what happened — removing two now-unused locals from cursor_pos() made
+                    // every plain dial drag start writing the morph offset. Use the parameter.
 
                     // Continue adjusting from the morph offset that was already there at
                     // drag-start, rather than snapping it back to 0 the moment a new
@@ -303,9 +335,15 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                                             : (int32_t)gParamDragging.startMorphRange - 256;
                     }
 
+                    // SHIFT SLOWS THE DRAG DOWN — dial_drag_pixels_for_full_range() (SynthLib) is the
+                    // shared policy, the same one SynthEdit's dials use, so "finer" means the same
+                    // thing in both editors. Modes are left out below: a 2-to-4 position selector
+                    // gains nothing from a finer drag.
                     if (paramType == paramTypeSlider) {
                         double refY   = altHeld ? gDragStartY : gDragPrevY;
-                        int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset + (int)((refY - yCoord) * (double)range / 200.0);
+                        int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset
+                                        + (altHeld ? (int)((refY - yCoord) * (double)range / dial_drag_pixels_for_full_range(range))
+                                                   : drag_whole_units(refY - yCoord, range));
                         gDragPrevY = yCoord;
 
                         if (newVal < 0) {
@@ -318,7 +356,9 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                         value      = (uint32_t)newVal;
                     } else if (synthlib_dial_mode() == eDialModeVertical) {
                         double refY   = altHeld ? gDragStartY : gDragPrevY;
-                        int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset + (int)((refY - yCoord) * (double)range / 200.0);
+                        int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset
+                                        + (altHeld ? (int)((refY - yCoord) * (double)range / dial_drag_pixels_for_full_range(range))
+                                                   : drag_whole_units(refY - yCoord, range));
                         gDragPrevY = yCoord;
 
                         if (newVal < 0) {
@@ -331,7 +371,9 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                         value      = (uint32_t)newVal;
                     } else if (synthlib_dial_mode() == eDialModeHorizontal) {
                         double refX   = altHeld ? gDragStartX : gDragPrevX;
-                        int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset + (int)((xCoord - refX) * (double)range / 200.0);
+                        int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset
+                                        + (altHeld ? (int)((xCoord - refX) * (double)range / dial_drag_pixels_for_full_range(range))
+                                                   : drag_whole_units(xCoord - refX, range));
                         gDragPrevX = xCoord;
 
                         if (newVal < 0) {
@@ -365,16 +407,8 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                         if (module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] != newMorphRange) {
                             module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] = newMorphRange;
                             LOG_DEBUG("Write to module %u variation %u\n", module->key.index, variation);
-
-                            messageContent.cmd                                                          = eMsgCmdSetParamMorph;
-                            messageContent.slot                                                         = slot;
-                            messageContent.paramMorphData.moduleKey                                     = module->key;
-                            messageContent.paramMorphData.param                                         = gParamDragging.param;
-                            messageContent.paramMorphData.paramMorph                                    = gMorphGroupFocus;
-                            messageContent.paramMorphData.value                                         = module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus];
-                            messageContent.paramMorphData.negative                                      = 0;
-                            messageContent.paramMorphData.variation                                     = variation;
-                            msg_send(&gToUsbThread, &messageContent);
+                            send_param_morph(slot, module->key, gParamDragging.param, gMorphGroupFocus, variation,
+                                             module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus]);
                         }
                     }
                 }
@@ -386,7 +420,7 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                     uint32_t modeRange = modeLocationList[module->mode[gParamDragging.mode].modeRef].range;
 
                     if (synthlib_dial_mode() == eDialModeVertical) {
-                        int newVal = (int)module->mode[gParamDragging.mode].value + (int)((gDragPrevY - yCoord) * (double)modeRange / 200.0);
+                        int newVal = (int)module->mode[gParamDragging.mode].value + drag_whole_units(gDragPrevY - yCoord, modeRange);
                         gDragPrevY = yCoord;
 
                         if (newVal < 0) {
@@ -398,7 +432,7 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                         }
                         value      = (uint32_t)newVal;
                     } else if (synthlib_dial_mode() == eDialModeHorizontal) {
-                        int newVal = (int)module->mode[gParamDragging.mode].value + (int)((xCoord - gDragPrevX) * (double)modeRange / 200.0);
+                        int newVal = (int)module->mode[gParamDragging.mode].value + drag_whole_units(xCoord - gDragPrevX, modeRange);
                         gDragPrevX = xCoord;
 
                         if (newVal < 0) {
