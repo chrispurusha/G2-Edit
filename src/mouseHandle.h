@@ -39,23 +39,13 @@ extern "C" {
 #endif
 
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
-// Is a multi-select modifier — either Shift or either Command — held right now?
-//
-// One function rather than the four-way glfwGetKey() expression written out at each site, which it
-// was in four places. It is also the ONLY reason moduleGraphics.c reached for GLFW: extracting it
-// leaves that file able to link into a build with no GLFW in it at all, which is what lets the
-// canvas renderer be reused by the VST3 plug-in. See vst3/plugin-gui-notes.md.
-//
-// The implementation is therefore part of the PLATFORM, not of the drawing: the application answers
-// it from GLFW (below), and the plug-in answers it from whatever its host gives it — currently
-// nothing, so false.
-bool multi_select_modifier_held(void);
 
-// Shift and Command on their own. Same reasoning as above: these are the PLATFORM's answer, and the
-// only reason mutatorUI.c reached for GLFW. The application answers from GLFW; the plug-in answers
-// false until a host view gives it modifier state.
-bool shift_modifier_held(void);
-bool cmd_modifier_held(void);
+// shift_modifier_held(), cmd_modifier_held(), alt_modifier_held() and multi_select_modifier_held()
+// USED TO BE DECLARED HERE, each answered by a glfwGetKey() poll. They are now in SynthLib's
+// inputState.h, answered from state the shell pushes — see that header for why, and
+// modifier_bits_from_glfw() in mouseHandle.c for this application's end of it. Nothing that asks
+// about a modifier needs GLFW any more, which is what lets moduleGraphics.c and mutatorUI.c link
+// into the plug-in, and it means the plug-in gets real modifiers instead of a stub answering false.
 
 void start_cursor_drag(void);
 void stop_dragging(void);
@@ -86,6 +76,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 void cursor_pos(GLFWwindow * window, double x, double y);
 void mouse_button(GLFWwindow * window, int button, int action, int mods);
 void scroll_event(GLFWwindow * window, double x, double y);
+void window_focus_callback(GLFWwindow * window, int focused);
 
 #ifdef __cplusplus
 }

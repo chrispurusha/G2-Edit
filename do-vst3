@@ -75,6 +75,9 @@ SOURCES=(
     "$HERE/SynthLib/src/contextMenu.c"
     "$HERE/SynthLib/src/menuBar.c"
     "$HERE/SynthLib/src/utils.c"
+    # Modifier-key state. Platform-free by design, which is what lets the same predicates answer from
+    # GLFW's mods in the application and an NSEvent's flags here — see SynthLib/src/inputState.h.
+    "$HERE/SynthLib/src/inputState.c"
     # The application's renderer, unchanged. It includes GLFW's header for the GL declarations but
     # makes no GLFW CALL, so it needs the include path below and not the library — which is the
     # whole reason the editor's drawing can appear in a plug-in at all.

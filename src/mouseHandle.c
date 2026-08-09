@@ -66,6 +66,7 @@ extern "C" {
 #include "alertDialog.h"
 #include "clickRegion.h"
 #include "cableChain.h"
+#include "inputState.h"
 
 // Drag-start state moved to canvasDrag.c along with the parameter-drag arm that uses it.
 static int gDragSkipCount = 0;      // skip first N cursor_pos events after CURSOR_DISABLED — covers stale NORMAL-mode events + transition event
@@ -89,22 +90,45 @@ static void send_master_clock_bpm(uint32_t bpm) {
     msg_send(&gToUsbThread, &messageContent);
 }
 
-bool shift_modifier_held(void) {
-    return (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-           || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+// THE APPLICATION'S HALF OF SynthLib's MODIFIER SEAM: translate and push, nothing else. The
+// predicates themselves (shift_modifier_held() and friends) live in inputState.c and are shared with
+// the plug-in, which pushes the same bits from an NSEvent.
+//
+// GLFW ALREADY HANDED US THIS ON EVERY EVENT and nobody read it. Both key_callback() and
+// mouse_button() take an `int mods` argument describing the modifier state AT THE MOMENT OF THE
+// EVENT, while three separate predicates polled glfwGetKey() for the same answer a little later.
+// Pushing the argument is not merely tidier, it is more correct: the poll answered "now", and "now"
+// is after the event has been queued.
+static uint32_t modifier_bits_from_glfw(int glfwMods) {
+    uint32_t bits = (uint32_t)eModifierNone;
+
+    if ((glfwMods & GLFW_MOD_SHIFT) != 0) {
+        bits |= (uint32_t)eModifierShift;
+    }
+
+    if ((glfwMods & GLFW_MOD_SUPER) != 0) {
+        bits |= (uint32_t)eModifierCmd;
+    }
+
+    if ((glfwMods & GLFW_MOD_ALT) != 0) {
+        bits |= (uint32_t)eModifierAlt;
+    }
+
+    if ((glfwMods & GLFW_MOD_CONTROL) != 0) {
+        bits |= (uint32_t)eModifierCtrl;
+    }
+    return bits;
 }
 
-bool cmd_modifier_held(void) {
-    return (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
-           || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
-}
+// Registered with GLFW so a modifier released while another application has the keyboard cannot
+// leave one stuck on here — see set_modifier_state()'s note. There is nothing to restore on the way
+// back in: the next key or button event carries the truth with it.
+void window_focus_callback(GLFWwindow * window, int focused) {
+    (void)window;
 
-// The application's answer: ask GLFW directly. See mouseHandle.h for why this is a function.
-bool multi_select_modifier_held(void) {
-    return (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-           || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
-           || (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
-           || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
+    if (focused == 0) {
+        set_modifier_state((uint32_t)eModifierNone);
+    }
 }
 
 // WHETHER WE ACTUALLY HID THE CURSOR, tracked explicitly rather than inferred from the drag flags.
@@ -669,6 +693,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     uint32_t     slot        = gSlot;
     uint32_t     location    = gLocation;
 
+    set_modifier_state(modifier_bits_from_glfw(mods));   // before any handler runs: they read the predicates
+
     mouseButton = convert_to_mouse_button(button, action);
 
     get_global_gui_scaled_mouse_coord(&coord);
@@ -833,10 +859,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             // Click on empty module-area space: clear selection and start rubber-band. Shared with
             // the plug-in — see canvasDrag.h.
             if (!found && !gContextMenu.active) {
-                bool shiftHeld = (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-                                 || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
-
-                found = canvas_empty_press(coord, shiftHeld);
+                found = canvas_empty_press(coord, shift_modifier_held());
             }
         }
         break;
@@ -940,13 +963,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (!found) {
                 found = handle_module_release(coord, mouseButton);
             }
-            {
-                bool shiftHeld = (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-                                 || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
 
-                if (canvas_rubber_band_release(coord, slot, location, shiftHeld)) {
-                    found = true;
-                }
+            if (canvas_rubber_band_release(coord, slot, location, shift_modifier_held())) {
+                found = true;
             }
             finish_param_drag();
         }
@@ -1199,8 +1218,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                 send_param_value(slot, glideKey, GLIDE_SPEED, 0, value);
             }
         }
-    } else if (canvas_param_drag_motion(coord, xCoord, yCoord,
-                                        glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)) {
+    } else if (canvas_param_drag_motion(coord, xCoord, yCoord, alt_modifier_held())) {
         // Parameter dragging moved to canvasDrag.c so the plug-in shares it — see canvasDrag.h.
     } else if (gModuleDrag.active == true) {
         // Module drag motion moved to canvasDrag.c so the plug-in can share it — see canvasDrag.h.
@@ -1354,6 +1372,8 @@ void char_event(GLFWwindow * window, unsigned int value) {
 
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     double zoomFactor = 0.0;
+
+    set_modifier_state(modifier_bits_from_glfw(mods));   // a modifier PRESS is a key event like any other
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
 

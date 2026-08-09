@@ -258,6 +258,7 @@ void window_close_callback(GLFWwindow * window) {
     glfwSetCursorPosCallback((GLFWwindow *)synthlib_window(), NULL);
     glfwSetMouseButtonCallback((GLFWwindow *)synthlib_window(), NULL);
     glfwSetScrollCallback((GLFWwindow *)synthlib_window(), NULL);
+    glfwSetWindowFocusCallback((GLFWwindow *)synthlib_window(), NULL);
 
     glfwSetWindowShouldClose((GLFWwindow *)synthlib_window(), GLFW_TRUE);
     glfwPostEmptyEvent();
@@ -391,8 +392,9 @@ void init_graphics(void) {
     glfwSetCursorPosCallback((GLFWwindow *)synthlib_window(), cursor_pos);
     glfwSetMouseButtonCallback((GLFWwindow *)synthlib_window(), mouse_button);
     glfwSetScrollCallback((GLFWwindow *)synthlib_window(), scroll_event);
+    glfwSetWindowFocusCallback((GLFWwindow *)synthlib_window(), window_focus_callback); // clears held modifiers — see inputState.h
 
-    glEnable(GL_BLEND);  // TODO - since we're doing these 2 here, probably doesn't need to be in the text rendering in SynthLib
+    glEnable(GL_BLEND);                                                                 // TODO - since we're doing these 2 here, probably doesn't need to be in the text rendering in SynthLib
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     FT_Init_FreeType(&gLibrary);
