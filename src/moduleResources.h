@@ -1649,9 +1649,9 @@ const tConnectorLocation connectorLocationList[] = {
     // 10 Unknown
     // 11 Unknown
     // 12 Reverb
-    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{-12,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "L",            labelLocLeft },          // 12 Reberb InL
-    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "R",            labelLocLeft },          // 12 Reberb InR
-    {moduleTypeReverb,      connectorDirOut, connectorTypeAudio,   {{-12,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 12 Reberb OutL
+    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{-10,  6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "L",            labelLocLeft },          // 12 Reberb InL
+    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{ -3,  6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "R",            labelLocLeft },          // 12 Reberb InR
+    {moduleTypeReverb,      connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 12 Reberb OutL
     {moduleTypeReverb,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 12 Reberb InL
     // 13 OscString
     {moduleTypeOscString,   connectorDirIn,  connectorTypeAudio,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft },          // 13 OscString Audio In
@@ -2681,7 +2681,7 @@ const tLedLocation       ledLocationList[]       = {
     {moduleTypeEnvADR,     ledTypeYes,  {{  3, 12}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:18 H:3
     {moduleTypeEnvMulti,   ledTypeYes,  {{  3,  6}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:18 H:6
     {moduleTypeEnvADDSR,   ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:19 H:5
-    {moduleTypePulse,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:4  H:2
+    {moduleTypePulse,      ledTypeYes,  {{ 3,  8}, {3, 3}}, anchorTopLeft}, // XPos:242 YPos:4  H:2
     {moduleTypeDelay,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:4  H:2
     {moduleTypeDrumSynth,  ledTypeYes,  {{  9, 10}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:39 H:8
     {moduleTypeWindSw,     ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft }, // XPos:198 YPos:15 H:2
