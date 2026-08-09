@@ -572,6 +572,19 @@ typedef struct {
     uint32_t    startValue;      // value at drag-start, for undo
     uint32_t    startMorphRange; // morphRange[gMorphGroupFocus] at drag-start, so an Alt-drag
                                  // continues from the existing offset instead of resetting it
+
+    // SUB-UNIT REMAINDER CARRIED BETWEEN MOUSE-MOVE EVENTS, and the reason slow dragging used to do
+    // nothing at all. An incremental drag converts the movement since the PREVIOUS event into whole
+    // parameter units and then advances its reference point — so a movement worth less than one unit
+    // truncated to zero and was thrown away, every event, no matter how far the pointer travelled in
+    // total. Moving slowly therefore changed nothing, and a fine (Shift) drag changed nothing at all,
+    // because dividing by ten times as many pixels makes almost every event sub-unit.
+    //
+    // Keeping the fraction here and adding it to the next event's makes a slow drag advance smoothly
+    // instead of not at all. It lives in this struct rather than as a file static so it is zeroed for
+    // free by the memset that arms every drag — a leftover fraction from the last drag would otherwise
+    // be spent on the first event of the next one.
+    double unitAccum;
 } tParamDragging;
 
 // The parameter last clicked on the canvas. The original editor's MIDI Learn is "click a knob, then

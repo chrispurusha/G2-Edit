@@ -860,6 +860,52 @@ static void action_assign_knob(int index) {
     synthlib_request_redraw();
 }
 
+// Clears a parameter's morph RANGE and leaves its value alone. `index` is the morph group to clear,
+// or NUM_MORPHS for "all of them".
+//
+// WHY THIS EXISTS: an Alt-drag can put a morph offset on any dial, and until now nothing could take
+// it off again except another Alt-drag back to exactly zero, which is not a thing a mouse can be
+// relied upon to hit. The dial shows the morph as an arc, so a stray one is visible but not removable.
+//
+// Sending one message per cleared group is safe here even for all eight — eMsgCmdSetParamMorph is a
+// no-ack real-time write, in the same class as a dial drag, so there is no acknowledgement in the pipe
+// and no patch-version race of the sort the bulk MIDI CC tools have to avoid (see send_param_morph()).
+//
+// NOT UNDOABLE, and deliberately not pretending otherwise: morph edits have never been on the undo
+// stack — the Alt-drag that creates one is not either — and adding a morph entry type is a change to
+// undo.c rather than to this menu. Worth doing, but as its own piece of work.
+static void action_reset_param_morph(int index) {
+    uint32_t  slot       = gSlot;
+    uint32_t  variation  = gPatchDescr[slot].activeVariation;
+    tModule * module     = get_module(gMenuContext.moduleKey);
+    uint32_t  paramIndex = gMenuContext.paramIndex;
+
+    if ((module == NULL) || (paramIndex >= MAX_NUM_PARAMETERS)) {
+        return;
+    }
+    // `index` IS THE ITEM'S ROW IN THE MENU, NOT ITS PAYLOAD — contextMenu.c calls action(index) with
+    // the position it hit, and an item's own `param` field has to be read back out of
+    // gContextMenu.items[index], exactly as action_assign_midi_cc() does. Using `index` directly is
+    // the trap here, and a quiet one: this first version cleared "morph group 6" because the reset
+    // item happened to sit at row 6, so the menu appeared to do nothing at all.
+    uint32_t  group      = gContextMenu.items[index].param;
+    bool      all        = (group >= (uint32_t)NUM_MORPHS);
+
+    for (uint32_t m = 0; m < (uint32_t)NUM_MORPHS; m++) {
+        if (!all && (m != group)) {
+            continue;
+        }
+
+        if (module->param[variation][paramIndex].morphRange[m] == 0) {
+            continue;   // nothing to clear, so nothing to send
+        }
+        module->param[variation][paramIndex].morphRange[m] = 0;
+        send_param_morph(slot, module->key, paramIndex, m, variation, 0);
+    }
+
+    synthlib_request_redraw();
+}
+
 static void action_deassign_knob(int index) {
     uint32_t        slot        = gSlot;
     uint32_t        location    = gMenuContext.moduleKey.location;
@@ -1596,7 +1642,13 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     static tMenuItem ccMenuItems[NUM_MIDI_CC_GROUPS][MIDI_CC_GROUP_SIZE + 1];
     static char      ccLabels[NUM_MIDI_CC_GROUPS][MIDI_CC_GROUP_SIZE][20];
 
-    static tMenuItem menuItems[8];
+    // SIZED FOR EVERY ITEM AT ONCE PLUS THE NULL TERMINATOR, and it was not before: the worst case
+    // was already 8 entries — assign knob, deassign knob, global assign, deassign global, the CC-learn
+    // line, MIDI CC..., remove MIDI CC, rename — which wrote the terminator to menuItems[8], one past
+    // the end of an array of 8. Reachable by any paramTypeEnable parameter assigned to a knob, a
+    // global knob and a CC at the same time. The two morph-reset entries below take the worst case to
+    // 10, so this is 12: count the conditional items above before adding another.
+    static tMenuItem menuItems[12];
 
     uint32_t         slot           = gSlot;
     int32_t          assigned       = find_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
@@ -1819,6 +1871,31 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
             if (paramLocationList[mod->param[variation][paramIndex].paramRef].type == paramTypeEnable) {
                 menuItems[count++] = (tMenuItem){
                     "Rename", RGB_GREY_3, action_rename_param_label, 0, NULL
+                };
+            }
+            // Morph reset. Offered ONLY where there is a morph to remove, so the menu does not grow a
+            // permanently greyed entry on the great majority of dials that have none — and named after
+            // the group it clears, because "Reset morph" on a dial carrying two of them would be a
+            // guess. The focused group is the one an Alt-drag writes, so it is the one to offer first.
+            static char morphLabel[40];
+            uint32_t    morphsSet = 0;
+
+            for (uint32_t m = 0; m < (uint32_t)NUM_MORPHS; m++) {
+                if (mod->param[variation][paramIndex].morphRange[m] != 0) {
+                    morphsSet++;
+                }
+            }
+
+            if (mod->param[variation][paramIndex].morphRange[gMorphGroupFocus] != 0) {
+                snprintf(morphLabel, sizeof(morphLabel), "Reset %s morph", morphStrMap[gMorphGroupFocus]);
+                menuItems[count++] = (tMenuItem){
+                    morphLabel, RGB_GREY_3, action_reset_param_morph, gMorphGroupFocus, NULL
+                };
+            }
+
+            if (morphsSet > 1) {
+                menuItems[count++] = (tMenuItem){
+                    "Reset all morphs", RGB_GREY_3, action_reset_param_morph, (uint32_t)NUM_MORPHS, NULL
                 };
             }
         }

@@ -63,6 +63,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length);
 int parse_perf(uint8_t * buff, int length);
 void send_module_move_msg(tModule * module);
 void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t variation, uint32_t value);
+void send_param_morph(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t morphGroup, uint32_t variation, uint32_t value);
 void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint32_t value);
 void send_mutation_lock_value(uint32_t slot, tModuleKey moduleKey, uint32_t locked);
 void send_custom_data_value(uint32_t slot, tModuleKey moduleKey);

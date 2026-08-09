@@ -371,6 +371,45 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 
 OPEN WORK
 
+- WARNINGS AS ERRORS — measured 2026-08-09, NOT DONE, and SMALLER THAN IT LOOKS. Prompted by a real
+  cost: `bool altHeld = (altHeld);` in canvasDrag.c (from eb26908) was reported by -Wuninitialized in
+  EVERY build for months, went unread among the other warnings, and only became visible as a bug when
+  an unrelated refactor changed the stack frame above it and every plain dial drag started writing the
+  morph offset. GCC_WARN_UNINITIALIZED_AUTOS was already YES_AGGRESSIVE — the warning was never the
+  problem, the noise was.
+  DONE ALREADY: OTHER_CFLAGS = "-Werror=uninitialized" in both configurations, and verified to reject
+  that exact line. Everything below is what stands between here and the project-wide switch.
+  THE INVENTORY (Debug clean build, ~610 warnings) AND WHY IT IS NOT 610 PIECES OF WORK:
+    352  -Wdocumentation            ALL IN glfw3.h. Third-party. Include ThirdParty paths with
+     32  -Wdocumentation-deprecated-sync   -isystem rather than -I and every one of these goes, with
+                                     the check still live for our own code. One build setting.
+    224  -Wdeprecated-declarations  188 of them in utilsGraphics.c: legacy OpenGL, which is a
+                                     deliberate choice (see vst3/plugin-gui-notes.md on the
+                                     compatibility profile). GL_SILENCE_DEPRECATION is already
+                                     #defined in some files; putting it in GCC_PREPROCESSOR_DEFINITIONS
+                                     covers the rest. One build setting.
+  That is ~608 of them behind two settings. What remains is ~30, and these are the ones worth reading:
+    soundEngine.c:3006-3007  passing 'double (*)[2]' where 'double *' is expected. A genuine type
+                             error in the engine, not a style nit — worth understanding before
+                             "fixing", since whichever way it is wrong it is wrong about a stereo
+                             buffer, and the fix may change what is rendered. Do this one on its own.
+    dataBase.c:353, graphics.c:1125, topbarRender.c:85   -Wstring-compare: comparing a char array
+                             against a string literal, i.e. pointer comparison. Always a bug. Cheap.
+    menus.c:2138, 2236       const char * into char *. Benign, trivial.
+    patchAdjuster.c:404      arithmetic between double and tAdjusterKnob. Suspicious, cheap to read.
+    12 -Wunused-variable, 2 -Wunused-function, 4 -Wgnu-folding-constant   trivia.
+  SUGGESTED ORDER: the two settings first (the noise is what hid the bug, so removing it is the
+  point), then the string-compare trio, then the trivia, then GCC_TREAT_WARNINGS_AS_ERRORS = YES, and
+  leave the soundEngine.c pointer types as their own task with an ear on the result. The same sweep
+  applies to SynthEdit and EmuUtility, which share SynthLib and therefore share utilsGraphics.c.
+
+- The plug-in work produced SEVEN OBSERVATIONS ABOUT THIS APPLICATION'S MOUSE HANDLING, and they are
+  in vst3/plugin-gui-notes.md, not in this file — the section is headed "What sharing this code has
+  revealed about the application's mouse handling". Recorded here only because they were looked for in
+  this file first. 3, 5 and 6 are done (see that file); 2 is done as the two drag tables in
+  mouseHandle.c; 1, 4 and 7 remain, 4 being the one that unblocks vertical/horizontal dial modes in
+  the plug-in.
+
 === SOUND ENGINE HANDOVER 2026-08-07 ===
 (Say "read the SOUND ENGINE HANDOVER section in G2-Edit/todo.txt" to pick this up in a new session.)
 

@@ -47,7 +47,8 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord);
 // about a modifier needs GLFW any more, which is what lets moduleGraphics.c and mutatorUI.c link
 // into the plug-in, and it means the plug-in gets real modifiers instead of a stub answering false.
 
-void start_cursor_drag(void);
+// start_cursor_drag() is gone: call canvas_drag_begin() (canvasDrag.h). The application's own
+// cursor_raw_coord()/cursor_capture()/cursor_release() are implemented in mouseHandle.c.
 void stop_dragging(void);
 
 // stop_dragging() preceded by the undo push for a param/mode dial drag. Anything that starts a

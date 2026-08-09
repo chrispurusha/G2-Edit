@@ -131,7 +131,7 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
 
             if ((synthlib_dial_mode() != eDialModeRotary) || (paramType == paramTypeSlider)) {
-                start_cursor_drag();
+                canvas_drag_begin();
             }
         } else if (paramType == paramTypePush) {
             send_param_value(slot, module->key, ctx->paramIndex, variation, 0);
@@ -184,7 +184,7 @@ static void mode_click_handler(tCoord coord, eClickPhase phase, void * userData)
             gParamDragging.active     = true;
 
             if (synthlib_dial_mode() != eDialModeRotary) {
-                start_cursor_drag();
+                canvas_drag_begin();
             }
         }
     } else if (phase == eClickRelease) {
@@ -323,7 +323,7 @@ static void morph_param_click_handler(tCoord coord, eClickPhase phase, void * us
             gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
 
             if (synthlib_dial_mode() != eDialModeRotary) {
-                start_cursor_drag();
+                canvas_drag_begin();
             }
         }
     } else if (phase == eClickRelease) {

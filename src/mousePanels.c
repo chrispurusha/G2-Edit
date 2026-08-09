@@ -50,6 +50,7 @@ extern "C" {
 #include "perfSettingsResources.h"
 #include "undo.h"
 #include "mousePanels.h"
+#include "canvasDrag.h"
 
 // Suppresses a spurious leftUp event after dismissing the notes editor by
 // clicking outside it — prevents immediately re-triggering topbar controls.
@@ -164,7 +165,7 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
             gPerfTempoDragging = true;
 
             if (synthlib_dial_mode() != eDialModeRotary) {
-                start_cursor_drag();
+                canvas_drag_begin();
             }
         }
     }
@@ -255,19 +256,19 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
             gVibAmountDragging = true;
 
             if (synthlib_dial_mode() != eDialModeRotary) {
-                start_cursor_drag();
+                canvas_drag_begin();
             }
         } else if (within_rectangle(coord, gPatchParamRects[pPVibratoRate])) {
             gVibRateDragging = true;
 
             if (synthlib_dial_mode() != eDialModeRotary) {
-                start_cursor_drag();
+                canvas_drag_begin();
             }
         } else if (within_rectangle(coord, gPatchParamRects[pPGlideTime])) {
             gGlideTimeDragging = true;
 
             if (synthlib_dial_mode() != eDialModeRotary) {
-                start_cursor_drag();
+                canvas_drag_begin();
             }
         }
     }
