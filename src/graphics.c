@@ -281,7 +281,14 @@ void error_callback(int error, const char * description) {
     LOG_ERROR("GLFW error [%d]: %s\n", error, description);
 }
 
-void render_scrollbars(GLFWwindow * window) {
+// NO GLFWwindow * ARGUMENT ANY MORE, AND THERE NEVER SHOULD HAVE BEEN ONE. It took a window and read
+// nothing from it: the sizes come from get_render_width()/get_render_height() and the bars from the
+// split view. Every OTHER function here that takes a GLFWwindow * is a GLFW callback, whose signature
+// GLFW dictates — this was the only one advertising a dependency it did not have, which is
+// vst3/plugin-gui-notes.md's third observation. Worth removing rather than shrugging at: a signature
+// like that is what made the earlier extractions look daunting when they turned out to be mechanical,
+// and the plug-in already draws its own bars through render_pane_scrollbars().
+void render_scrollbars(void) {
     double renderWidth  = get_render_width() / gGlobalGuiScale;
     double renderHeight = get_render_height() / gGlobalGuiScale;
 
@@ -2006,7 +2013,7 @@ static void render_frame(void) {
     render_top_bar();
     render_menu_bar(gAppMenuBar, app_menu_bar_rect());
     render_morph_groups();
-    render_scrollbars((GLFWwindow *)synthlib_window());
+    render_scrollbars();
     render_patch_settings_panel();
     render_perf_settings_panel();
     render_patch_params_panel();
