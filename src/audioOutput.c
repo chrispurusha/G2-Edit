@@ -45,7 +45,7 @@ extern "C" {
 #define OUTPUT_CHANNELS      (2)
 #define MAX_AUDIO_DEVICES    (32)
 #define DEVICE_NAME_SIZE     (96)
-#define DEVICE_UID_SIZE      (160)
+#define DEVICE_UID_SIZE      AUDIO_DEVICE_UID_MAX   // audioOutput.h — one definition, since callers copy UIDs too
 
 #define PREF_KEY_DEVICE      "audioOutputDeviceUID"
 #define PREF_KEY_LEFT        "audioOutputLeftChannel"
@@ -228,6 +228,12 @@ bool audio_output_device_is_selected(uint32_t index) {
     return (int32_t)index == selected_device_index();
 }
 
+// Valid only until the next audio_output_device_count(), like every other index here — which is
+// exactly why a menu takes a COPY of this at build time rather than keeping the index.
+const char * audio_output_device_uid(uint32_t index) {
+    return (index < gDeviceCount) ? gDevice[index].uid : "";
+}
+
 uint32_t audio_output_buffer_frames(void) {
     return gBufferFrames;
 }
@@ -310,11 +316,27 @@ void audio_output_load_settings(void) {
     gBufferFrames = (uint32_t)prefs_get_int(PREF_KEY_BUFFER, 0);
 }
 
-void audio_output_select_device(uint32_t index) {
-    bool wasRunning = gRunning;
+// See audioOutput.h for why this takes a UID rather than an index, and why it has a return value.
+bool audio_output_select_device_by_uid(const char * uid) {
+    bool     wasRunning = gRunning;
+    uint32_t index      = 0;
+    bool     found      = false;
 
-    if (index >= gDeviceCount) {
-        return;
+    if ((uid == NULL) || (uid[0] == '\0')) {
+        return false;
+    }
+    // Against the CURRENT list, which is the point — the caller's list may be older than this one.
+    rebuild_device_list();
+
+    for (index = 0; index < gDeviceCount; index++) {
+        if (strcmp(gDevice[index].uid, uid) == 0) {
+            found = true;
+            break;
+        }
+    }
+
+    if (found == false) {
+        return false;   // unplugged between the menu being built and the item being clicked
     }
     strncpy(gSelectedUid, gDevice[index].uid, sizeof(gSelectedUid) - 1);
     prefs_set_string(PREF_KEY_DEVICE, gSelectedUid);
@@ -327,10 +349,14 @@ void audio_output_select_device(uint32_t index) {
         prefs_set_int(PREF_KEY_RIGHT, (long)gRightChannel);
     }
 
+    // The CHOICE is recorded above whether or not the device opens, deliberately: it is what the user
+    // asked for, it is what the tick should show, and a device that is busy now may be free later.
+    // Only the outcome of trying is reported.
     if (wasRunning == true) {
         audio_output_stop();
-        (void)audio_output_start();
+        return audio_output_start();
     }
+    return true;
 }
 
 static void reopen_if_running(void) {

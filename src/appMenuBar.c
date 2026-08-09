@@ -470,15 +470,38 @@ static void action_toggle_mutator(int index) {
 // can be left switched on while clicking around the patch.
 #ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
+// A 32-output interface is 16 pairs, and a machine can easily have half a dozen devices. At file
+// scope rather than inside open_experimental_menu(), because the UID snapshot below is sized by the
+// first of them and the action that reads it is not inside that function.
+#define MAX_AUDIO_DEVICE_ITEMS      (33)
+#define MAX_OUTPUT_CHANNEL_ITEMS    (65)
+#define MAX_MIDI_SOURCE_ITEMS       (34)
+
+// THE UID SNAPSHOT TAKEN WHEN THE MENU WAS BUILT, one per row. The row a user clicks means "the
+// device whose name I just read", and only the UID can still say which device that was: the list is
+// re-enumerated on every audio_output_device_count(), so by the time this action runs, row 3 may be a
+// different device — or the list may be shorter than the menu still on screen.
+static char          sDeviceUid[MAX_AUDIO_DEVICE_ITEMS][AUDIO_DEVICE_UID_MAX] = {0};
+
 static void action_select_audio_device(int index) {
-    audio_output_select_device((uint32_t)index);
+    if ((index < 0) || (index >= (int)MAX_AUDIO_DEVICE_ITEMS)) {
+        return;
+    }
+
+    if (audio_output_select_device_by_uid(sDeviceUid[index]) == false) {
+        // Said out loud rather than swallowed. A device can be listed and still refuse to open — in
+        // exclusive use by another application, or unable to offer the rate asked of it — and the
+        // previous version discarded that, leaving a ticked device making no sound and no way to tell
+        // why. It can also have been unplugged while this very menu was open.
+        show_alert("Audio device", "That output could not be opened. It may be in use by another application, or no longer connected.");
+    }
 }
 #endif // G2_VST3_BUILD
 
 
 // Output level. Attenuation only — see sound_engine_set_output_level_db() for why boosting into the
 // limiter is not offered.
-static const int32_t kOutputLevels[] = {0, -3, -6, -9, -12, -18, -24};
+static const int32_t kOutputLevels[]                                          = {0, -3, -6, -9, -12, -18, -24};
 
 #ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
@@ -635,10 +658,6 @@ void open_tools_menu(tCoord anchor) {
 #ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
 void open_experimental_menu(tCoord anchor) {
-    // A 32-output interface is 16 pairs, and a machine can easily have half a dozen devices.
-#define MAX_AUDIO_DEVICE_ITEMS      (33)
-#define MAX_OUTPUT_CHANNEL_ITEMS    (65)
-#define MAX_MIDI_SOURCE_ITEMS       (34)
     // Sized with room to spare, and deliberately generous: the entries here are conditional — the
     // status line only appears with the engine running, the output lists only on a multi-channel
     // device — so the real count varies, and overrunning this array corrupts whatever static
@@ -690,7 +709,10 @@ void open_experimental_menu(tCoord anchor) {
             snprintf(deviceLabel[d], sizeof(deviceLabel[d]), "%s%s (%u ch)",
                      audio_output_device_is_selected(d) ? "* " : "  ",
                      audio_output_device_name(d), (unsigned)audio_output_device_channels(d));
-            devices[d] = (tMenuItem){
+            // Pin what this row NAMES, not where it sits — see sDeviceUid.
+            strncpy(sDeviceUid[d], audio_output_device_uid(d), sizeof(sDeviceUid[d]) - 1);
+            sDeviceUid[d][sizeof(sDeviceUid[d]) - 1] = '\0';
+            devices[d]                               = (tMenuItem){
                 deviceLabel[d], (tRgb)RGB_GREY_3, action_select_audio_device, d, NULL, 0, 0.0
             };
         }

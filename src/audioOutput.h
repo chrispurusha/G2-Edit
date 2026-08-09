@@ -43,6 +43,9 @@ void audio_output_stop(void);
 // The device's sample rate once running, or 0 if it is not.
 double audio_output_sample_rate(void);
 
+// Longest device UID handled. CoreAudio UIDs are short in practice; this is simply generous.
+#define AUDIO_DEVICE_UID_MAX    (160)
+
 // Enumeration, for building the device menu. The list is rebuilt on each count() call, so call that
 // first and treat the indices as valid only until the next one.
 uint32_t audio_output_device_count(void);
@@ -50,13 +53,29 @@ const char * audio_output_device_name(uint32_t index);
 uint32_t audio_output_device_channels(uint32_t index);
 bool audio_output_device_is_selected(uint32_t index);
 
+// The UID of an enumerated device. A caller that will act on a choice LATER — a menu, whose items
+// outlive the list they were built from — must take this at build time and act on the UID, never on
+// the index. See audio_output_select_device_by_uid() below.
+const char * audio_output_device_uid(uint32_t index);
+
 // Selecting any of these restarts the audio device if it is running, so a change takes effect
 // immediately, and records the choice for next time.
 //
 // Left and right are chosen SEPARATELY rather than as a pair. On a desk the two legs of a monitor
 // path are not necessarily neighbours, and forcing 29/30 when the wiring wants 29/31 would mean
 // repatching the desk to suit the software.
-void audio_output_select_device(uint32_t index);
+// BY UID, NOT BY INDEX, and that is the whole point: the list is re-enumerated on every count()
+// call, so an index taken when a menu was built can name a different device by the time the item is
+// clicked — a Bluetooth device appearing, an aggregate device being created, a display waking up. The
+// remembered preference has always been a UID for exactly this reason (see the note at the top of
+// this file); the act of selecting used to be an index anyway, which left the robust half undermined
+// by the fragile one.
+//
+// Returns false if the UID names no current device, or if the device could not be started — a device
+// can be present and still refuse to open, being in exclusive use by something else or unable to
+// offer the rate asked of it. The old index-based call discarded that outcome, so a device that
+// failed to start looked selected and simply made no sound.
+bool audio_output_select_device_by_uid(const char * uid);
 void audio_output_select_left_channel(uint32_t channel);    // 0-based: 0 is output 1
 void audio_output_select_right_channel(uint32_t channel);
 
