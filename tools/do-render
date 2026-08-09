@@ -1,0 +1,49 @@
+#!/bin/bash
+#
+# Builds tools/render — the offline engine measurement harness. See render.c for what it is for.
+#
+# A script rather than an Xcode target, for the same reason do-vst3 is one: this links a handful of the
+# application's own sources with no GUI and no device, and a build system would only obscure which ones.
+#
+# THE FILE LIST IS THE POINT. The engine is platform-free by design, and the proof of that is exactly
+# this: soundEngine.c links against the patch database and the resource tables, and NOTHING that draws
+# or opens a device. If this list ever needs graphics.c or audioOutput.c to link, something has been
+# added to the engine that does not belong in it — the VST3 plug-in would break the same way and for the
+# same reason. Fix the dependency, do not extend the list.
+
+set -e
+set -u
+set -o pipefail
+
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+OUT="${1:-$HERE/tools/render}"
+
+SOURCES=(
+    "$HERE/tools/render.c"
+    "$HERE/src/soundEngine.c"
+    "$HERE/src/paramCurves.c"
+    "$HERE/src/dataBase.c"
+    "$HERE/src/globalVars.c"
+    "$HERE/src/cableChain.c"
+    "$HERE/src/moduleResourcesAccess.c"
+    "$HERE/src/patchParamsResources.c"
+    "$HERE/src/noteStack.c"
+    "$HERE/vst3/g2HostIo.c"
+)
+
+# Warnings as errors, as the application builds. Two suppressions, both about the SHARED sources rather
+# than about render.c:
+#
+#   -Wno-unused-parameter    the null platform layer in g2HostIo.c exists precisely to ignore its
+#                            arguments.
+#   -Wno-sign-compare        -Wextra is stricter than the Xcode target's warning set, and it fires on
+#                            five `for (int i = 0; i < array_size_*(); i++)` loops in
+#                            moduleResourcesAccess.c that predate this tool. They are worth tidying, but
+#                            a tool build is not the place to impose new rules on shared source and then
+#                            edit it to suit — that belongs with the progressive warnings work in
+#                            todo.txt, where the same change gets made once for every target.
+cc -O2 -std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sign-compare \
+   -I"$HERE/src" -I"$HERE/SynthLib/src" \
+   -o "$OUT" "${SOURCES[@]}" -lm
+
+echo "built $OUT"

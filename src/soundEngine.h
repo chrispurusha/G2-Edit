@@ -53,6 +53,14 @@ extern "C" {
 //     better) that aliasing stays well down; "saw" and "squ", which need it, do get polyBLEP.
 //   - The pitch, FM, shape and sync inputs are all unconnected by definition, so their
 //     modulation-amount knobs (Pitch M, FM, ShpM) have nothing to act on and are ignored.
+//   - THE REVERB IS MONO AND THE INSTRUMENT'S IS A DECORRELATED STEREO PAIR. Measured on hardware
+//     2026-08-09: its two outputs correlate at +0.012..+0.045 — statistically independent — and share
+//     almost no delay lengths, with different pre-delays per channel. reverb_step() returns one value
+//     from one comb/allpass bank, so this is not a tuning gap that a better coefficient closes; it
+//     needs a second tap set. The four ROOM SIZES are now measured and in (kReverbTypeScale), but the
+//     base lengths are still not the instrument's and the Time dial's curve is measurably wrong —
+//     RT60 is LINEAR in Time, not cubic. See the REVERB entry in todo.txt for the numbers and for why
+//     the measured lengths are deliberately not loaded into a parallel comb bank.
 
 // Whether the engine is running and holding the audio device.
 bool sound_engine_active(void);
@@ -76,6 +84,18 @@ void sound_engine_stop(void);
 // the audio device and drives sound_engine_render() itself. audioOutput.c is not involved.
 void sound_engine_start_hosted(double sampleRate);
 void sound_engine_stop_hosted(void);
+
+// MEASUREMENT ENTRY POINT: renders the Reverb's impulse response alone, with no patch, no voice and no
+// audio device. Fills `frames` interleaved STEREO pairs at deviceRate * ENGINE_OVERSAMPLE — pass 48000
+// for the 96 kHz the hardware measurements are expressed in, so a delay length is the same integer in
+// both. Fully wet, and the delay lines are cleared first, so two renders in one process cannot bleed
+// into one another.
+//
+// This exists so tools/render.c can put the SAME click through this code that tools/measure.py puts
+// through the instrument, and tools/analyse_ir.py can then produce the same numbers for both. The
+// reverb is mono, so the two channels are identical and their correlation reads 1.000 against the
+// instrument's +0.03 — the harness reporting the gap, not a fault in it.
+void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t timeValue, uint32_t brightValue, float * out, uint32_t frames);
 
 // A morph group's position, 0..1. The G2 has eight, each hard-wired to a source — group 0 is the
 // modulation wheel, and morphStrMap in moduleResources.h names the rest. Setting one sweeps every

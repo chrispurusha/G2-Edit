@@ -2242,7 +2242,7 @@ static bool backdoor_parse_cable(const char * arg, tCableKey * key, char * err, 
         snprintf(err, errMax, "ERROR: expected '<VA|FX> <from>:<out> <to>:<in> [link=<0|1>]'\n");
         return false;
     }
-    linkText = strstr(arg, "link=");
+    linkText                  = strstr(arg, "link=");
 
     if ((linkText != NULL) && (sscanf(linkText, "link=%u", &link) != 1)) {
         snprintf(err, errMax, "ERROR: link must be 0 or 1\n");
@@ -2354,9 +2354,9 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         // these with PUSH to send the whole slot to the device as ONE versioned command. Sending each
         // edit as it is made would race the G2's asynchronous patch-version notification and lose
         // some of them silently — see the note above send_whole_patch() in menus.c.
-        bool        removing = (cmd[0] == 'D');
-        tCableKey   key      = {0};
-        char        msg[160] = {0};
+        bool      removing      = (cmd[0] == 'D');
+        tCableKey key           = {0};
+        char      msg[160]      = {0};
 
         if (!backdoor_parse_cable(arg, &key, msg, sizeof(msg))) {
             backdoor_write_result(msg);
@@ -2373,15 +2373,15 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             backdoor_write_result("OK\n");
             return;
         }
-        tModule *   fromModule = get_module_slot(key.slot, key.location, key.moduleFromIndex);
-        tModule *   toModule   = get_module_slot(key.slot, key.location, key.moduleToIndex);
+        tModule * fromModule    = get_module_slot(key.slot, key.location, key.moduleFromIndex);
+        tModule * toModule      = get_module_slot(key.slot, key.location, key.moduleToIndex);
 
         if ((fromModule == NULL) || (fromModule->type == 0) || (toModule == NULL) || (toModule->type == 0)) {
             backdoor_write_result("ERROR: no module at that loc/index\n");
             return;
         }
-        int32_t     fromConnector = backdoor_connector_for_io_index(fromModule, key.linkType == (uint32_t)cableLinkTypeFromOutput, key.connectorFromIoCount);
-        int32_t     toConnector   = backdoor_connector_for_io_index(toModule, false, key.connectorToIoCount);
+        int32_t   fromConnector = backdoor_connector_for_io_index(fromModule, key.linkType == (uint32_t)cableLinkTypeFromOutput, key.connectorFromIoCount);
+        int32_t   toConnector   = backdoor_connector_for_io_index(toModule, false, key.connectorToIoCount);
 
         if ((fromConnector < 0) || (toConnector < 0)) {
             backdoor_write_result("ERROR: connector index out of range for that module type\n");
@@ -2392,7 +2392,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             backdoor_write_result("ERROR: that input already has a cable\n");
             return;
         }
-        tCable      cable         = {0};
+        tCable    cable         = {0};
 
         // The cable inherits the from-connector's CURRENT colour, up-rate promotion included — the
         // same rule cable-drag creation follows, so a scripted patch looks like a drawn one.
@@ -2450,28 +2450,43 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         //
         // Nothing here is destructive: this is a live parameter edit, exactly what the canvas does on
         // every drag, and it does not store to flash.
-        char      loc[8]    = {0};
-        uint32_t  index     = 0;
-        uint32_t  param     = 0;
-        uint32_t  value     = 0;
+        char      loc[8]     = {0};
+        uint32_t  index      = 0;
+        uint32_t  param      = 0;
+        uint32_t  value      = 0;
 
         if (sscanf(arg, "%7s %u %u %u", loc, &index, &param, &value) != 4) {
             backdoor_write_result("ERROR: expected 'DEVSET <VA|FX> <index> <param> <value>'\n");
             return;
         }
-        uint32_t  location  = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
-        tModule * module    = get_module_slot(gSlot, location, index);
+        uint32_t  location   = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        tModule * module     = get_module_slot(gSlot, location, index);
 
         if ((module == NULL) || (module->type == 0)) {
             backdoor_write_result("ERROR: no module at that loc/index\n");
             return;
         }
+        // VALIDATED AGAINST THE MODULE'S OWN PARAM COUNT, not against the array bound. MAX_NUM_PARAMETERS
+        // is the size of the store, not the number this module has, and a write past the real count goes
+        // out on the wire, gets dropped by the G2, and reports OK — the local copy has already changed,
+        // so nothing anywhere says the device disagreed.
+        //
+        // THAT COST THREE MEASUREMENT RUNS. The Reverb's Small/Medium/Large/Hall selector is a MODE, and
+        // a sweep that drove it as `DEVSET <index> 4` produced three files of the same room with no
+        // complaint from anything. The lengths only came out identical because they genuinely were.
+        uint32_t  paramCount = module_param_count(module->type);
 
-        if (param >= MAX_NUM_PARAMETERS) {
-            backdoor_write_result("ERROR: param index out of range\n");
+        if (param >= paramCount) {
+            char     msg[160];
+            uint32_t modeCount = module->modeCount;
+
+            snprintf(msg, sizeof(msg), "ERROR: param %u out of range (module has %u)%s\n",
+                     (unsigned)param, (unsigned)paramCount,
+                     (modeCount > 0) ? " — a drop-down selector is a MODE: try DEVMODE" : "");
+            backdoor_write_result(msg);
             return;
         }
-        uint32_t  variation = gPatchDescr[gSlot].activeVariation;
+        uint32_t  variation  = gPatchDescr[gSlot].activeVariation;
 
         module->param[variation][param].value = (uint8_t)value;
         send_param_value(gSlot, module->key, param, variation, value);

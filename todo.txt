@@ -2140,7 +2140,109 @@ PARTIALLY DONE / STILL OPEN:
   MEASURE WITH THE STATUS LINE. It reads "N/M voices, load N%" — peak render time as a percentage of
   the buffer deadline, cleared on read, so it is always the worst buffer since you last looked.
 
-- REVERB: a full match is a PROJECT, not a fix (2026-08-08). Three things were recovered exactly and
+- REVERB: MEASURED ON THE HARDWARE 2026-08-09. Read this before the 2026-08-08 notes below it, which
+  are still accurate about what is left but were written when the room sizes were guesses.
+
+  Method: a Pulse module's click through the Reverb, captured at 192 kHz with the dry click on a
+  second output pair, both stereo outputs recorded. tools/capture.c + measure.py + analyse_ir.py; the
+  captures are in ~/Documents/G2-Measurements/reverb/ (about 8 GB, not in the repo). Delay lengths come
+  from the tail's AUTOCORRELATION, not from peak-picking: a delay tank's early response is only sparse
+  for a few arrivals and dense after that, so a peak list changes with the threshold and is fiction. A
+  recirculating length shows as a lag the whole tail correlates at.
+
+  WHAT IS NOW MEASURED AND IMPLEMENTED:
+   * THE FOUR ROOM SIZES, which the note below asked for. kReverbTypeScale is now
+     {1.0, 1.2690, 1.5255, 1.6795}, referenced to SMALL rather than Large. Fitting one scale per room
+     against every lag Small shows lands within 0.1% on four independent lengths — e.g. Small 4215 ->
+     Large 6430 (predicted 6430.0) and -> Hall 7078 (predicted 7079.1). That also confirms the
+     single-factor assumption itself, short diffusion lags included (Small 216 -> Large 329, exact).
+     The old {0.5, 0.75, 1.0, 1.6} had Small at two thirds of its real size and Hall half again too big.
+   * REVERB_COMB_MAX/REVERB_ALLPASS_MAX hardcoded x16/10 to match the old 1.6 maximum, so raising the
+     scale to 1.6795 would have written 66 samples past the end of every comb. Now x18/10, with the two
+     tied together in a comment. If you change the scale table, check that pair.
+
+   * THE TIME DIAL IS LINEAR IN DECAY TIME, not cubic — implemented as kReverbDecayBase/Slope.
+     Measured seconds = base + slope*value, value being the raw 0..127:
+
+         room     Time 42   Time 85   Time 127    s per dial unit
+         Small          -    1.95 s    2.89 s     0.02238
+         Medium    2.01 s    3.72 s    5.49 s     0.04094
+         Large     2.94 s    5.49 s    8.11 s     0.06082
+         Hall      3.77 s    7.30 s   10.75 s     0.08212
+
+     r2 0.996-0.998, slope consistent across both halves of the range to three digits. The old
+     REVERB_TIME_CURVE cubic gave 17.58 s at Time 127 where Large measures 8.11 s, and its exponent was
+     openly fitted by ear. Only Small rests on two points rather than three.
+     THE SLOPE IS NOT PROPORTIONAL TO ROOM SIZE (Hall/Small 3.67 against a size ratio of 1.68), so Type
+     sets the feedback GAIN as well as the lengths — hence a table rather than the size scale doing it.
+
+   * BRIGHTNESS IS LOOP DAMPING, and this is the one parameter whose existing model was already right
+     (damping = 1 - brightness, one-pole inside each comb). Hall at Time 127, tail measured 200 ms in,
+     band energies relative to the whole:
+
+         Bright   decay      100-500Hz   0.5-2k    2-6k   6-20k
+              0   too damped to fit  -9.5    -24.6   -33.7   -30.9
+             64   10.76 s            -9.8     -4.3    -3.6   -14.4
+            127   11.83 s           -12.7     -5.7    -2.8    -9.8
+
+     At 0 the tail is essentially gone above 500 Hz. Raising it lifts 6-20 kHz by about 5 dB and
+     lengthens the decay by only ~10%, because broadband decay is dominated by the LF path.
+
+  WHAT IS MEASURED AND NOT YET IMPLEMENTED:
+   * THE REVERB IS A DECORRELATED STEREO PAIR AND OURS IS MONO. L/R correlation on the hardware is
+     +0.012 to +0.045 — statistically independent — and the two outputs have almost no delay length in
+     common (Small L 2338/2407/2420/4214/5022 against Small R 2378/2904/3903/3972/4046). Pre-delays
+     differ too: Small L 12.88 ms, R 7.54 ms. This is not a mono tail spread across two outputs, so no
+     amount of tuning reverb_step() reaches it; it needs two tap sets. 0.03 is the number to build to.
+   * Measured Small lags, 96 kHz samples, Out 3 at Time 127: 2192, 2338, 2407, 2420, 4214, 4600, 5022,
+     5054, 6937, 7476, 8285, 9343. DELIBERATELY NOT loaded into kCombLen — see the topology note below.
+     CORRECTION: an earlier version of this entry called the short lags (81, 125, 216, 246, 258, seen at
+     Time 0) "diffusion lengths". They are not. The offline harness settled it — see below.
+
+  THE OFFLINE HARNESS EXISTS NOW: tools/render.c + tools/do-render. It renders the engine's reverb
+  impulse response with no patch, voice or device, into a file shaped exactly like a hardware capture
+  (four channels, dry 1-2, wet 3-4, plus the .json sidecar), so ONE analyse_ir.py command line works on
+  both and the two answers are comparable rather than merely similar:
+
+      ./tools/do-render && ./tools/render --out engine.wav --sweep type --settings 0,1,2,3 --time 127
+      python3 tools/analyse_ir.py engine.wav --dry-channel 1 --wet-channel 3 --raw --skip 0
+
+  Its nine-file source list is also a standing check that the engine is platform-free: if it ever needs
+  graphics.c or audioOutput.c to link, something has been put in the engine that does not belong there
+  and the VST3 will break the same way.
+
+  IT IMMEDIATELY FALSIFIED TWO OF MY OWN READINGS, which is what a known-truth reference is for:
+   * ALLPASS LENGTHS DO NOT APPEAR IN A TAIL AUTOCORRELATION AT ALL. Rendering our own reverb — combs
+     2232/2376/2554/2712, allpasses 194/298/450 — gives lags of 144, 158, 178, 322, 336, 480, the four
+     comb lengths, and 2x two of them. Not one allpass length is present, at Time 0 or Time 127. A
+     diffuser is flat in magnitude and smears phase without repeating, so it leaves no lag. Every one of
+     those short lags is a DIFFERENCE between two comb lengths (2376-2232 = 144, 2712-2232 = 480). So the
+     hardware's short lags constrain its set of lengths without being members of it.
+   * "DROP THE LAGS THAT ARE SUMS OF OTHERS" IS NOT A VALID WAY TO FIND THE LENGTHS. A set closed under
+     sums and differences explains itself both ways: Small has 6937 = 2338 + 4600 and also
+     2338 = 6937 - 4600, so a filter labels one derived and keeps the other purely by iteration order,
+     and produces two different confident answers for one dataset. Replaced by generating_sets(), which
+     searches for the smallest set of lengths whose sums, differences and multiples explain every lag.
+     Validated on the render: it recovers 2232/2376/2554/2712 exactly, in all four rooms.
+
+  WHAT THE VALIDATED SEARCH SAYS ABOUT THE HARDWARE: not enough. Its power is in the ratio — 4 lengths
+  explaining 12 lags predicts 8 of them; the smallest set explaining Small's 12 lags is EIGHT of them,
+  which predicts 4 and proves little. The G2's tank has more lines than the lags above our noise floor
+  can pin, which agrees with the ~31 lines noted below. THE NEXT STEP IS SIGNAL-TO-NOISE, not more
+  analysis: the tail clears the floor by ~21 dB, and every extra 6 dB is four times the averaging or a
+  quieter input path.
+
+  A WARNING ABOUT DECAY MEASUREMENT, because it produced confident wrong answers twice: Schroeder
+  backward integration assumes the segment ends in SILENCE. When it ends on a noise floor the integral
+  is dominated by the noise's own energy falling off across the window, so an 8 s window reported ~15 s
+  for every room and a 20 s window reported ~39 s for every Time setting from 42 up. Both are twice the
+  window. analyse_ir.py now fits a line to the log envelope between a fixed drop below the peak and a
+  margin above the measured floor, and prints the fitted span, r2 and extrapolation factor so a bad fit
+  is visible. The G2's tail only clears our noise floor by about 21 dB, so every RT60 here is a x4
+  extrapolation from a 14 dB fit — straight (r2 0.997), but say so.
+
+  The 2026-08-08 assessment, still valid on what remains:
+  Three things were recovered exactly and
   are now implemented — the dry/wet law, the diffusion coefficient's slope and limits, and the fact
   that room Type scales every delay line by ONE factor. What is left is the part that would make it
   actually sound like the instrument, and it is large:
@@ -2156,11 +2258,14 @@ PARTIALLY DONE / STILL OPEN:
      wrong arrangement sounds plausible and is wrong, which is the hardest kind of error to find.
    * THE FOUR ROOM SIZES ARE DATA, not code, and are not in anything available. One hardware
      measurement pins them: the ratio of the decay of Small to Hall at the same Time setting.
+     DONE 2026-08-09 — see the top of this entry. In the event the lengths were read directly rather
+     than inferred from decay, which is stronger: four independent lengths fitting one scale factor.
   ALSO WORTH TRYING FIRST, and much cheaper: github.com/gleb812/pch2csd (MIT). It is an independent
   reimplementation with 116 parameter maps in resources/value_maps.json, already used to confirm the
   delay Time formula and ADRTimeStrMap. If it models the reverb at all, its topology is a far better
-  starting point than the decompile, and its value maps may hold the Time curve that is currently
-  fitted (see REVERB_TIME_CURVE) and the room sizes.
+  starting point, and its value maps may corroborate the Time curve and the room sizes — both of which
+  are now MEASURED (see the top of this entry), so it would be a cross-check rather than a source.
+  REVERB_TIME_CURVE and the two endpoint constants it interpolated no longer exist.
 
 - Mouse-up debounce while dragging — NOT BUILT, and probably not ours (2026-08-08). Owner reported
   drags occasionally ending on their own. DIAGNOSED AS HARDWARE, on the owner's own evidence: the
