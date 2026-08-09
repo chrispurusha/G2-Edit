@@ -324,14 +324,25 @@
 // The self-copy guard matters: strncpy takes restrict-qualified pointers, so copying a buffer onto
 // itself is undefined behaviour, not a no-op. It is easy to reach by accident whenever a "save back
 // to the remembered path" hands that same buffer in as the source.
-#define COPY_STRING(dst, src)                            \
-   do {                                                  \
-       if ((const char *)(dst) != (const char *)(src)) { \
-           pthread_mutex_lock(&(gStringCopyMutex));      \
-           strncpy((dst), (src), sizeof(dst) - 1);       \
-           (dst)[sizeof(dst) - 1] = '\0';                \
-           pthread_mutex_unlock(&(gStringCopyMutex));    \
-       }                                                 \
+// THE SELF-COPY GUARD GOES THROUGH THIS rather than comparing in the macro body. Written inline as
+// `(const char *)(dst) != (const char *)(src)` it tripped -Wstring-compare at every call site passing
+// a literal — "result of comparison against a string literal is unspecified" — which is three of this
+// project's warnings for a comparison that is deliberate and, with a literal, simply always true.
+// Taking void pointers means the literal has decayed before the comparison happens, so the check is
+// unchanged and the warning has nothing to fire on. Returns int, not bool: defs.h is included
+// before <stdbool.h> in some translation units and must not depend on it.
+static inline int same_string_storage(const void * dst, const void * src) {
+    return dst == src;
+}
+
+#define COPY_STRING(dst, src)                         \
+   do {                                               \
+       if (!same_string_storage((dst), (src))) {      \
+           pthread_mutex_lock(&(gStringCopyMutex));   \
+           strncpy((dst), (src), sizeof(dst) - 1);    \
+           (dst)[sizeof(dst) - 1] = '\0';             \
+           pthread_mutex_unlock(&(gStringCopyMutex)); \
+       }                                              \
    } while (0)
 
 #endif // #define __DEFS_H__

@@ -116,6 +116,16 @@ CXX_SOURCES=(
     "$SDK/pluginterfaces/base/conststringtable.cpp"
 )
 
+# WARNINGS ARE ERRORS HERE TOO. The Xcode project sets GCC_TREAT_WARNINGS_AS_ERRORS for the app, and a
+# plug-in build that stayed permissive would let a warning through on exactly the sources the two share
+# — which is how the uninitialised-read in canvasDrag.c survived for months.
+#
+# Plain -I is still fine for the SDK and ThirdParty headers below, unlike the Xcode project which had to
+# move them to -isystem: this build uses clang's default warning set, which does not include the
+# -Wdocumentation that glfw3.h trips 352 times under Xcode's. Switch them to -isystem here too if this
+# ever gains -Wall or -Weverything, or other people's headers will start failing our build.
+WARNFLAGS=(-Werror)
+
 INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/vst3" -I"$SDK"
           # Headers only. GLFW's is here because utilsGraphics.c includes it for the GL
           # declarations; freetype's because the text renderer is built on it. The bundled copies
@@ -145,25 +155,25 @@ OBJECTS=()
 
 for src in "${SOURCES[@]}"; do
     obj="$OBJDIR/$(basename "$src" .c).o"
-    clang $ARCHS $MIN -O2 -std=gnu11 -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -c "$src" -o "$obj"
+    clang $ARCHS $MIN -O2 -std=gnu11 "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
 
 for src in "${CXX_SOURCES[@]}"; do
     obj="$OBJDIR/$(basename "${src%.*}").oxx"
-    clang++ $ARCHS $MIN -O2 -std=gnu++17 -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -c "$src" -o "$obj"
+    clang++ $ARCHS $MIN -O2 -std=gnu++17 "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
 
 for src in "${OBJC_SOURCES[@]}"; do
     obj="$OBJDIR/$(basename "${src%.*}").om"
-    clang $ARCHS $MIN -O2 -std=gnu11 -fobjc-arc -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -x objective-c -c "$src" -o "$obj"
+    clang $ARCHS $MIN -O2 -std=gnu11 -fobjc-arc "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -x objective-c -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
 
 for src in "${OBJCXX_SOURCES[@]}"; do
     obj="$OBJDIR/$(basename "${src%.*}").omm"
-    clang++ $ARCHS $MIN -O2 -std=gnu++17 -fobjc-arc -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -x objective-c++ -c "$src" -o "$obj"
+    clang++ $ARCHS $MIN -O2 -std=gnu++17 -fobjc-arc "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -x objective-c++ -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
 
