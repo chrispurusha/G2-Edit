@@ -543,8 +543,15 @@ static void action_select_right_output(int index) {
 #ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_midi_source(int index) {
-    // The list is offered with "None" first, so item 0 is None and the rest are shifted by one.
-    midi_input_select_source((index == 0) ? MIDI_INPUT_NONE : (index - 1));
+    // The list is offered with "None" first and "All sources" second, so the real sources start at
+    // row 2 and are shifted by that much.
+    if (index == 0) {
+        midi_input_select_source(MIDI_INPUT_NONE);
+    } else if (index == 1) {
+        midi_input_select_source(MIDI_INPUT_ALL);
+    } else {
+        midi_input_select_source(index - 2);
+    }
 }
 #endif // G2_VST3_BUILD
 
@@ -838,15 +845,25 @@ void open_experimental_menu(tCoord anchor) {
             sourceLabel[0], (tRgb)RGB_GREY_3, action_select_midi_source, 0, NULL, 0, 0.0
         };
 
-        for (m = 0; (m < count) && ((m + 1) < (MAX_MIDI_SOURCE_ITEMS - 1)); m++) {
-            snprintf(sourceLabel[m + 1], sizeof(sourceLabel[m + 1]), "%s%s",
+        // ALL SOURCES AT ONCE, which is what a desk with a keyboard, a control surface and a DAW port
+        // on it actually wants, and it takes anything plugged in LATER too — the setup-changed
+        // notification reconnects. It was already the startup state, with no way back to it once a
+        // single source had been chosen.
+        snprintf(sourceLabel[1], sizeof(sourceLabel[1]), "%sAll sources",
+                 midi_input_all_sources_selected() ? "* " : "  ");
+        sources[1]     = (tMenuItem){
+            sourceLabel[1], (tRgb)RGB_GREY_3, action_select_midi_source, 1, NULL, 0, 0.0
+        };
+
+        for (m = 0; (m < count) && ((m + 2) < (MAX_MIDI_SOURCE_ITEMS - 1)); m++) {
+            snprintf(sourceLabel[m + 2], sizeof(sourceLabel[m + 2]), "%s%s",
                      midi_input_source_is_selected(m) ? "* " : "  ", midi_input_source_name(m));
-            sources[m + 1] = (tMenuItem){
-                sourceLabel[m + 1], (tRgb)RGB_GREY_3, action_select_midi_source, m + 1, NULL, 0, 0.0
+            sources[m + 2] = (tMenuItem){
+                sourceLabel[m + 2], (tRgb)RGB_GREY_3, action_select_midi_source, m + 2, NULL, 0, 0.0
             };
         }
 
-        sources[m + 1] = (tMenuItem){
+        sources[m + 2] = (tMenuItem){
             NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
         };
 

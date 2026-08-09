@@ -115,6 +115,13 @@ void cursor_capture(void) {
     gCursorRestore = CGPointMake(here.x, mainH - here.y);
     gCursorHidden  = YES;
     [NSCursor hide];
+
+    // DECOUPLED FROM THE HARDWARE, which is what makes the drag unbounded: the pointer stops moving
+    // while movement still arrives as deltas, so a dial can be turned further than the screen is wide.
+    // Its absolute position is frozen from here, which is why -mouseDragged: switches to
+    // g2_input_drag_by() while this is in force — differencing a frozen position reports no movement.
+    // The same pair of calls GLFW's disabled-cursor mode uses (ThirdParty/glfw cocoa_window.m).
+    CGAssociateMouseAndMouseCursorPosition(false);
 }
 
 void cursor_release(void) {
@@ -249,6 +256,42 @@ static __weak G2GlView * gCurrentView = nil;
     return NSMakePoint(p.x * scale, (bounds.size.height - p.y) * scale);
 }
 
+// The same conversion as canvasPointFor: but from a SCREEN point, for the recovery below — which has
+// no event to take a location from, only wherever the pointer actually is.
+- (NSPoint)canvasPointForScreenPoint:(NSPoint)screenPoint {
+    NSRect  screenRect = NSMakeRect(screenPoint.x, screenPoint.y, 1.0, 1.0);
+    NSPoint inWindow   = [[self window] convertRectFromScreen:screenRect].origin;
+    NSPoint p          = [self convertPoint:inWindow fromView:nil];
+    NSRect  bounds     = [self bounds];
+    NSRect  backing    = [self convertRectToBacking:bounds];
+    double  scale      = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
+
+    return NSMakePoint(p.x * scale, (bounds.size.height - p.y) * scale);
+}
+
+// THE MOUSE-UP THAT NEVER ARRIVED. A captured drag has the pointer hidden AND decoupled from the
+// hardware, so losing the release does not just leave a dial held — it leaves the user with no cursor
+// and a mouse that does not move, inside somebody else's DAW. Hosts do run their own event routing, and
+// -mouseUp: is not guaranteed to reach a plug-in's view.
+//
+// [NSEvent pressedMouseButtons] IS THE AUTHORITY. It reports the hardware, so it is true whether or not
+// we were told; every other candidate — our own drag flags, the last event we saw — is derived from the
+// thing that went missing. If the button is up while we still hold the pointer, the release is
+// synthesised through the ordinary path so the drag ends exactly as it would have, undo included.
+- (void)recoverLostRelease {
+    if (cursor_is_captured() == false) {
+        return;
+    }
+
+    if ([NSEvent pressedMouseButtons] != 0) {
+        return;
+    }
+    NSPoint c = [self canvasPointForScreenPoint:[NSEvent mouseLocation]];
+
+    g2_input_mouse_event(c.x, c.y, eClickRelease);
+    [self setNeedsDisplay:YES];
+}
+
 // Started when there is something to advance and stopped by the tick itself once there is not:
 // 60 Hz of doing nothing is a poor thing to leave running inside somebody else's host.
 //
@@ -268,6 +311,10 @@ static __weak G2GlView * gCurrentView = nil;
                                                      repeats:YES
                                                        block:^(NSTimer * t) {
         (void)t;
+
+        // BEFORE the tick, so a lost release is dealt with in the same frame it becomes detectable
+        // rather than one later.
+        [self recoverLostRelease];
 
         if (g2_input_drag_tick() == true) {
             [self setNeedsDisplay:YES];
@@ -342,10 +389,22 @@ static __weak G2GlView * gCurrentView = nil;
 }
 
 - (void)mouseDragged:(NSEvent *)event {
-    NSPoint c = [self canvasPointFor:event];
-
     [self pushModifiersFor:event];
-    g2_input_mouse_event(c.x, c.y, eClickDrag);
+
+    if (cursor_is_captured() == YES) {
+        // The pointer is frozen, so there is no position to report — only movement. Deltas arrive in
+        // POINTS; canvasPointFor: works in backing pixels, so they are scaled the same way to keep one
+        // space. deltaY is positive DOWNWARD, matching the canvas, which is how GLFW uses it too.
+        NSRect bounds  = [self bounds];
+        NSRect backing = [self convertRectToBacking:bounds];
+        double scale   = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
+
+        g2_input_drag_by([event deltaX] * scale, [event deltaY] * scale);
+    } else {
+        NSPoint c = [self canvasPointFor:event];
+
+        g2_input_mouse_event(c.x, c.y, eClickDrag);
+    }
     [self setNeedsDisplay:YES];
 }
 

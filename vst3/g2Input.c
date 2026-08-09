@@ -85,14 +85,11 @@ void g2_input_set_mouse(double x, double y) {
     gMouse.y = y / scale;
 }
 
-bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
-    bool handled = false;
-
-    g2_input_set_mouse(x, y);
-
-    // A drag in progress owns the motion outright — the click regions are not consulted, exactly as
-    // the application's cursor_pos() does not consult them while something is being dragged.
-    if (phase == eClickDrag) {
+// The drag half of g2_input_mouse_event(), reading gMouse rather than being handed a position. Split
+// out so a CONFINED drag can use it: while the pointer is captured it does not move, so there is no
+// absolute position to pass — gMouse is advanced by the event's deltas instead (g2_input_drag_by()).
+static bool dispatch_drag(void) {
+    {
         // Scrollbar and split-bar drags come first: both are chrome drawn over the canvas, and a
         // drag that began on one must not be handed to whatever module lies underneath.
         if (pane_scrollbar_dragging() == true) {
@@ -136,6 +133,34 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
             }
             return took != canvasGestureNone;
         }
+    }
+}
+
+// MOTION FROM DELTAS, for a drag whose pointer is confined. dx/dy are in the same pixel space
+// g2_input_set_mouse() takes, so the conversion to logical units is identical — see there.
+//
+// This is what makes an incremental dial drag unbounded: with the pointer decoupled from the hardware
+// (cursor_capture() in g2GlView.m), its absolute position is frozen, so differencing absolute positions
+// would report no movement at all. Accumulating the deltas into gMouse gives the same VIRTUAL pointer
+// GLFW's disabled-cursor mode hands the application — see cocoa_window.m in ThirdParty, which adds
+// [event deltaY] to a top-left-origin position exactly as this does, and is where the sign came from.
+bool g2_input_drag_by(double dxPixels, double dyPixels) {
+    double scale = (gGlobalGuiScale > 0.0) ? gGlobalGuiScale : 1.0;
+
+    gMouse.x += dxPixels / scale;
+    gMouse.y += dyPixels / scale;
+    return dispatch_drag();
+}
+
+bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
+    bool handled = false;
+
+    g2_input_set_mouse(x, y);
+
+    // A drag in progress owns the motion outright — the click regions are not consulted, exactly as
+    // the application's cursor_pos() does not consult them while something is being dragged.
+    if (phase == eClickDrag) {
+        return dispatch_drag();
     }
 
     // THE BROWSER IS MODAL. While it is open nothing behind it may act on a click — the application
@@ -349,13 +374,17 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
 bool g2_input_drag_tick(void) {
     bool busy = false;
 
-    // THE SAFETY NET FOR A HIDDEN POINTER, and the reason it is a poll rather than a tidy pairing:
-    // cursor_capture() hides the cursor for the whole HOST process, so a release that never arrives —
-    // an editor closed mid-drag, a mouse-up swallowed by the host — would leave the user with no
-    // pointer at all in their DAW. If nothing is dragging, the pointer must be visible. The
-    // application does exactly this from its render loop (recover_lost_cursor()).
-    if ((cursor_is_captured() == true) && (gParamDragging.active == false)) {
-        cursor_release();
+    // A CAPTURED POINTER KEEPS THIS TICKING, and that is the whole point of the line. cursor_capture()
+    // hides the pointer for the entire HOST process and decouples it from the hardware, so a mouse-up
+    // that never arrives leaves the user with no cursor and a frozen mouse in their DAW. The recovery
+    // that catches that lives in g2GlView.m (-recoverLostRelease), because the authority on whether the
+    // button is still down is [NSEvent pressedMouseButtons] and not anything visible from here — but it
+    // can only run while this timer is alive, and a parameter drag on its own never made it busy.
+    //
+    // The previous version of this net tested (captured && !gParamDragging.active) and was useless
+    // twice over: the timer had already stopped itself mid-drag, and only the release that went missing
+    // clears gParamDragging, so the condition could never come true in the case it was written for.
+    if (cursor_is_captured() == true) {
         busy = true;
     }
 

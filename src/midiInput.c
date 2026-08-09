@@ -363,11 +363,17 @@ const char * midi_input_source_name(uint32_t index) {
     return (index < gSourceListCount) ? gSource[index].name : "";
 }
 
+// ONE SPECIFIC SOURCE, not "is connected". With every source taken, this used to tick all of them,
+// which read as though each had been chosen individually; the All entry carries that now.
 bool midi_input_source_is_selected(uint32_t index) {
-    if ((gEnabled == false) || (index >= gSourceListCount)) {
+    if ((gEnabled == false) || (gSelectedId == 0) || (index >= gSourceListCount)) {
         return false;
     }
-    return (gSelectedId == 0) || (gSource[index].uniqueId == gSelectedId);
+    return gSource[index].uniqueId == gSelectedId;
+}
+
+bool midi_input_all_sources_selected(void) {
+    return (gEnabled == true) && (gSelectedId == 0);
 }
 
 bool midi_input_is_enabled(void) {
@@ -378,6 +384,12 @@ void midi_input_select_source(int32_t index) {
     if (index == MIDI_INPUT_NONE) {
         gEnabled = false;
         prefs_set_int(PREF_KEY_SOURCE, 0);
+    } else if (index == MIDI_INPUT_ALL) {
+        // -1 in prefs is "enabled, no specific source", which is what connect_selected_source() reads
+        // as take-everything and what an unset preference already meant. 0 is taken: it means None.
+        gEnabled    = true;
+        gSelectedId = 0;
+        prefs_set_int(PREF_KEY_SOURCE, -1);
     } else if ((uint32_t)index < gSourceListCount) {
         gEnabled    = true;
         gSelectedId = gSource[index].uniqueId;
@@ -422,6 +434,12 @@ void midi_input_load_settings(void) {
     } else if (stored > 0) {
         gEnabled    = true;
         gSelectedId = (SInt32)stored;
+    } else {
+        // -1, whether stored by the All entry or simply never set: enabled, no single source, so
+        // connect_selected_source() takes everything. Spelled out rather than left to the initialisers
+        // now that it is a choice a user can make and not only a default they inherit.
+        gEnabled    = true;
+        gSelectedId = 0;
     }
     atomic_store(&gChannel, (uint32_t)prefs_get_int(PREF_KEY_CHANNEL, MIDI_CHANNEL_OMNI));
     atomic_store(&gSendsToSynth, prefs_get_int(PREF_KEY_TO_SYNTH, 1) != 0);
