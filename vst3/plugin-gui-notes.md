@@ -309,8 +309,23 @@ origin was never the optional part.
 `View` offers all three dial-drag modes. Vertical and horizontal work here because they difference
 the pointer against its previous position, and canvas coordinates serve for that — they are simply
 scaled in points rather than backing pixels, so a little less sensitive than the application's on a
-Retina display. What is missing is `start_cursor_drag()`'s cursor hiding and warping: the pointer
-visibly travels away from the dial rather than staying put. Offered anyway, with rotary the default.
+Retina display. Rotary is the fallback default, but the choice persists in the plug-in's own prefs.
+
+**THE POINTER IS HIDDEN FOR A DRAG NOW** (2026-08-09), which this paragraph previously said was
+missing. `cursor_capture()`/`cursor_release()` in `g2GlView.m` hide it on a capturing drag and warp it
+back to where the drag started on release — without the warp it would reappear wherever the physical
+mouse had wandered to, which is most of the way across a screen after a long drag.
+
+`[NSCursor hide]` is process-wide and reference-counted, so an unbalanced hide leaves the HOST without
+a pointer. Hence a flag rather than trusting call pairing, a direct release on mouse-up, a poll in
+`g2_input_drag_tick()` for the mouse-up that never arrives, and a release in `-removeFromSuperview`
+for an editor closed mid-drag.
+
+STILL NOT CONFINED: a long drag can run the physical mouse off the edge of the screen and the value
+stops following. That needs `CGAssociateMouseAndMouseCursorPosition(false)` **and** feeding the drag
+from `-deltaX`/`-deltaY` rather than absolute positions, since decoupling freezes the absolute values
+the incremental modes currently difference. A change to how motion reaches the canvas, not one more
+line in the view.
 
 **Topbar space is RESERVED but empty** — `G2_PLUGIN_TOPBAR_HEIGHT`, a strip below the menu bar
 showing the loaded patch name. Reserved now so the canvas is laid out around it from the start;
