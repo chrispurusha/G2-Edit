@@ -242,13 +242,19 @@ if [[ -n ${G2_RELEASE_SKIP_VST3:-} ]]; then
 else
     echo "==> building the VST3"
 
-    if ! ./do-vst3 >/dev/null; then
+    # BUILT INSIDE THE RELEASE'S OWN TREE, not the shared build/ directory. build/ is where Xcode puts
+    # its IDE products too, so an IDE build or a Clean Build Folder running alongside a release can
+    # delete the bundle between do-vst3 creating it and linking into it — which is how a release failed
+    # with "lipo: can't create temporary output file ... (No such file or directory)". Keeping it in
+    # $DERIVED also means a release never overwrites the developer's own build/G2 Alike.vst3, which is
+    # the copy normally installed for testing.
+    if ! G2_VST3_OUT="$PWD/$DERIVED/vst3/G2 Alike.vst3" ./do-vst3 >/dev/null; then
         echo "error: the VST3 build failed - see ./do-vst3 for the reason" >&2
         echo "       (needs the VST3 SDK; set VST3_SDK if it is not in ~/Documents/vst3sdk)" >&2
         echo "       set G2_RELEASE_SKIP_VST3=1 to release the app without the plug-in" >&2
         exit 1
     fi
-    VST3_BUNDLE="build/G2 Alike.vst3"
+    VST3_BUNDLE="$DERIVED/vst3/G2 Alike.vst3"
 
     if [[ ! -d $VST3_BUNDLE ]]; then
         echo "error: do-vst3 reported success but $VST3_BUNDLE is not there" >&2

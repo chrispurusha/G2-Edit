@@ -7,6 +7,25 @@ are collected under "DO NOT RE-TRY" at the end of this file.
 
 AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless the check fails)
 
+- SUPER-SAW ("sup") PHASE FIX NEEDS AN EAR (2026-08-09). Fixed as part of the warnings sweep, because
+  the compiler had been pointing at it for months: gSuperPhase is [MAX_VOICES][MAX_ENGINE_NODES][2] and
+  osc_waveform() indexed it gSuperPhase[node][0], putting the NODE number in the VOICE position. Passing
+  a `double (*)[2]` where a `double *` was expected is exactly what a two-deep index into a three-deep
+  array produces, which is what -Wincompatible-pointer-types was saying. osc_waveform() now takes
+  `voice` and indexes [voice][node][0..1].
+  NOT out of bounds before the fix, by luck: 28 nodes fits inside 32 voices.
+  WHAT IT AFFECTS: "sup" is the fifth entry in OscB's Wave menu (sin/tri/saw/squ/sup,
+  moduleResources.h:450) and our engine approximates it as three saws at 0, +10 and -10 cents — see the
+  KNOWN GAPS list at the top of soundEngine.h. The two detuned saws are the only things in the engine
+  needing phase state beyond the main oscillator's, which is why this was the only place with the bug.
+  Only oscillator nodes reach it; LFOs take a different path and never touch gSuperPhase.
+  HOW TO CHECK: OscB with Wave = sup, then play a CHORD. Before the fix every voice in that chord shared
+  one pair of detune phases, so the voices were phase-locked to each other; each should now have its own
+  and the chord should sound thick rather than flat. Two OscB modules both on sup is the other case —
+  they used to tread on each other's storage. A single voice with one sup oscillator is unchanged by
+  construction (it read [node][0][0] and now reads [0][node][0] — same value, different slot), so if the
+  single note sounds different, something else is wrong.
+
 - render_dial_with_text() IS NOW DIAL-ANCHORED (2026-08-02) — SynthLib 17c1ee4, committed and
   pushed by the owner; ALL THREE PINS STILL NEED ADVANCING (all three worktrees are already at
   17c1ee4, only the recorded gitlinks are behind at 91a7a9f). The rect handed to it is now the

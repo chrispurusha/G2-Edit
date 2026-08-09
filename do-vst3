@@ -12,7 +12,13 @@ set -e
 
 SDK="${VST3_SDK:-$HOME/Documents/vst3sdk}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-OUT="$HERE/build/G2 Alike.vst3"
+# Overridable so a RELEASE can build the bundle inside its own private tree instead of the shared
+# build/ directory. That matters for more than tidiness: build/ is also where Xcode puts its IDE
+# products, so an IDE build or a Clean Build Folder running alongside a release can delete this bundle
+# between its creation and its link step — which is exactly the "lipo: can't create temporary output
+# file ... (No such file or directory)" failure a release hit. It also stops a release from clobbering
+# the developer's own build/G2 Alike.vst3, which is the copy usually installed for testing.
+OUT="${G2_VST3_OUT:-$HERE/build/G2 Alike.vst3}"
 BIN="$OUT/Contents/MacOS/G2 Alike"
 
 if [[ ! -d "$SDK/pluginterfaces" ]]; then
@@ -176,6 +182,10 @@ for src in "${OBJCXX_SOURCES[@]}"; do
     clang++ $ARCHS $MIN -O2 -std=gnu++17 -fobjc-arc "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -x objective-c++ -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
+
+# Re-created rather than assumed: the compile loop above takes a while, and anything that removed the
+# bundle directory in the meantime would otherwise surface as an unhelpful failure inside lipo.
+mkdir -p "$OUT/Contents/MacOS"
 
 clang++ $ARCHS $MIN -bundle "${OBJECTS[@]}" "$FREETYPE_LIB" \
     -framework CoreFoundation -framework Cocoa -framework OpenGL -o "$BIN"
