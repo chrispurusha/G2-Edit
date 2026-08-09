@@ -95,7 +95,9 @@ void canvas_drag_begin(void) {
     cursor_capture();
 }
 
-bool canvas_drag_motion(tCoord coord) {
+// One gesture, one function. These three were the three if-blocks of canvas_drag_motion(), which is
+// now a thin wrapper over them — see the gesture table below.
+static bool module_drag_motion(tCoord coord) {
     if (gModuleDrag.active == true) {
         if (gModuleDrag.isMulti) {
             uint32_t newCol = 0;
@@ -164,17 +166,29 @@ bool canvas_drag_motion(tCoord coord) {
         }
         return true;
     }
+    return false;
+}
 
+static bool cable_drag_motion(tCoord coord) {
     if (gCableDrag.active == true) {
         cable_drag_set_end(coord);
         return true;
     }
+    return false;
+}
 
+static bool rubber_band_motion(tCoord coord) {
     if (gRubberBand.active == true) {
         convert_mouse_coord_to_module_area_coord(&gRubberBand.current, coord);
         return true;
     }
     return false;
+}
+
+// KEPT for the callers that just want "carry whatever drag is in progress" without describing the
+// event — the plug-in's drag tick is one. New code should prefer canvas_gesture_motion().
+bool canvas_drag_motion(tCoord coord) {
+    return module_drag_motion(coord) || cable_drag_motion(coord) || rubber_band_motion(coord);
 }
 
 bool canvas_empty_press(tCoord coord, bool additive) {
@@ -839,4 +853,108 @@ void canvas_hover_update(tCoord coord) {
             break;
         }
     }
+}
+
+// ── The gesture table ───────────────────────────────────────────────────────────────────────────
+//
+// See canvasDrag.h for why this exists. One row per gesture, one column per phase: a gesture whose
+// release was never wired up is now a NULL sitting in plain sight rather than a phase that silently
+// never runs, which is how the plug-in came to leave dials held and modules un-re-ordered.
+//
+// PRESS IS NOT A COLUMN HERE, and that is not an oversight. A press is a hit test, and the click-region
+// registry already owns hit testing for the whole canvas (moduleGraphics.c registers every widget as it
+// draws it); a press column would mean a second, competing answer to "what is under the pointer". What
+// the press does have to do is call canvas_drag_begin(), and that is the one line each handler shares.
+
+typedef struct {
+    const char *   name;                                       // for a human reading a log or an assert
+    tCanvasGesture id;
+    bool (*motion)(const tCanvasGestureEvent * event);
+    bool (*release)(const tCanvasGestureEvent * event);
+} tCanvasGestureRow;
+
+static bool param_gesture_motion(const tCanvasGestureEvent * event) {
+    return canvas_param_drag_motion(event->coord, event->rawX, event->rawY, event->altHeld);
+}
+
+static bool module_gesture_motion(const tCanvasGestureEvent * event) {
+    return module_drag_motion(event->coord);
+}
+
+static bool cable_gesture_motion(const tCanvasGestureEvent * event) {
+    return cable_drag_motion(event->coord);
+}
+
+static bool rubber_band_gesture_motion(const tCanvasGestureEvent * event) {
+    return rubber_band_motion(event->coord);
+}
+
+static bool param_gesture_release(const tCanvasGestureEvent * event) {
+    (void)event;
+    return canvas_param_drag_release();
+}
+
+static bool module_gesture_release(const tCanvasGestureEvent * event) {
+    (void)event;
+    return canvas_module_drag_release();
+}
+
+// CONNECT IF IT LANDED ON A CONNECTOR, AND CLEAR THE DRAG EITHER WAY. The clearing is the part that was
+// diverging: handle_cable_connect() does not do it, so the plug-in memset gCableDrag by hand afterwards
+// while the application relied on stop_dragging() doing it later. Both are now this.
+static bool cable_gesture_release(const tCanvasGestureEvent * event) {
+    if (gCableDrag.active == false) {
+        return false;
+    }
+    (void)handle_cable_connect(event->coord, event->slot, event->location);
+    memset(&gCableDrag, 0, sizeof(gCableDrag));
+    return true;
+}
+
+static bool rubber_band_gesture_release(const tCanvasGestureEvent * event) {
+    return canvas_rubber_band_release(event->coord, event->slot, event->location, event->additive);
+}
+
+// ORDER IS THE ORDER THEY ARE OFFERED THE EVENT. A press starts exactly one gesture, so in practice no
+// two rows are ever active at once and the order is a tie-break that should never be needed — but it is
+// written down once here instead of being implicit in two different shells, which is the point.
+static const tCanvasGestureRow sGestures[] = {
+    {"param",      canvasGestureParam,      param_gesture_motion,       param_gesture_release      },
+    {"module",     canvasGestureModule,     module_gesture_motion,      module_gesture_release     },
+    {"cable",      canvasGestureCable,      cable_gesture_motion,       cable_gesture_release      },
+    {"rubberBand", canvasGestureRubberBand, rubber_band_gesture_motion, rubber_band_gesture_release},
+};
+
+tCanvasGesture canvas_gesture_motion(const tCanvasGestureEvent * event) {
+    if (event == NULL) {
+        return canvasGestureNone;
+    }
+
+    for (size_t i = 0; i < (sizeof(sGestures) / sizeof(sGestures[0])); i++) {
+        if ((sGestures[i].motion != NULL) && sGestures[i].motion(event)) {
+            return sGestures[i].id;
+        }
+    }
+
+    return canvasGestureNone;
+}
+
+tCanvasGesture canvas_gesture_release(const tCanvasGestureEvent * event, tCanvasGesture wanted) {
+    uint32_t acted = (uint32_t)canvasGestureNone;
+
+    if (event == NULL) {
+        return canvasGestureNone;
+    }
+
+    for (size_t i = 0; i < (sizeof(sGestures) / sizeof(sGestures[0])); i++) {
+        if (((uint32_t)wanted & (uint32_t)sGestures[i].id) == 0) {
+            continue;
+        }
+
+        if ((sGestures[i].release != NULL) && sGestures[i].release(event)) {
+            acted |= (uint32_t)sGestures[i].id;
+        }
+    }
+
+    return (tCanvasGesture)acted;
 }

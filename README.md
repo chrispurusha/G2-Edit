@@ -12,6 +12,53 @@ https://buymeacoffee.com/chrispurusha
 
 Thanks for any donations!
 
+## Installing a release
+
+Download the `.dmg` from the [releases page](https://github.com/chrispurusha/G2-Edit/releases). It
+contains two things: the editor, and an optional VST3 plug-in. The same instructions travel inside
+the `.dmg` as `Read Me First.txt`.
+
+Requirements: macOS 11.5 or later, Apple Silicon or Intel.
+
+### The editor
+
+1. Drag `G2 Editor.app` onto the Applications folder shown in the disk image window.
+2. Clear the quarantine flag — **do this after step 1**, because the command refers to the app in
+   Applications:
+
+```
+xattr -dr com.apple.quarantine "/Applications/G2 Editor.app"
+```
+
+There is no paid Apple Developer membership behind this project, so the app is **not notarized**.
+macOS blocks the first launch and may claim the app is damaged — it isn't; that is simply what macOS
+says about any app it cannot check with Apple. The command above prints nothing if it worked, and is
+needed once per install, including after each update.
+
+If you would rather not use Terminal: double-click the app, dismiss the warning, then open System
+Settings > Privacy & Security, scroll down and click **Open Anyway**.
+
+### The VST3 plug-in (optional)
+
+`G2 Alike.vst3` **plays** a patch rather than editing one, which is where the name comes from. It is
+experimental: it implements around 17 module types, so many patches load without complaint and make
+no sound. The editor does not need it, and it does not need the editor — skip this if you only want
+the editor.
+
+Copy it into your own VST3 folder and clear its quarantine flag too:
+
+```
+mkdir -p ~/Library/Audio/Plug-Ins/VST3
+cp -R "/Volumes/G2-Edit <version>/G2 Alike.vst3" ~/Library/Audio/Plug-Ins/VST3/
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
+```
+
+In Finder instead: choose **Go > Go to Folder**, enter `~/Library/Audio/Plug-Ins/VST3`, and drag the
+plug-in in — then still run the `xattr` line, or the host will refuse to load it without saying why.
+
+Rescan plug-ins in your host (most do it at startup). It appears as **G2 Alike** by Chris Purusha,
+as an instrument. It needs a VST3 host; it does not run on its own.
+
 ## Building
 
 ### Prerequisites
@@ -139,10 +186,11 @@ Writes `build/G2 Alike.vst3` — universal (arm64 + x86_64), ad-hoc signed. To i
 
 ```
 cp -R "build/G2 Alike.vst3" ~/Library/Audio/Plug-Ins/VST3/
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
 ```
 
 As with the application, there is no paid Apple Developer membership behind this, so a host may
-refuse to load the bundle until its quarantine flag is cleared.
+refuse to load the bundle until its quarantine flag is cleared — hence the second line.
 
 ### Which patch it plays
 
