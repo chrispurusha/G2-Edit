@@ -126,217 +126,49 @@ void window_focus_callback(GLFWwindow * window, int focused) {
 // A flag set where the cursor is hidden and cleared where it is restored cannot disagree with itself.
 static bool sCursorHidden = false;
 
-void start_cursor_drag(void) {
-    {
-        double startX = 0.0;
-        double startY = 0.0;
+// ── The application's half of the drag-begin seam (canvasDrag.h) ────────────────────────────────
+//
+// start_cursor_drag() USED TO BE HERE and did both jobs at once. It is now canvas_drag_begin() in
+// canvasDrag.c, which records the origin and then calls these — so the shared canvas code no longer
+// depends on a per-shell function remembering to do the logic half. See canvasDrag.h for the bug that
+// argues for the split.
 
-        glfwGetCursorPos(synthlib_window(), &startX, &startY);
-        canvas_drag_set_origin(startX, startY);
+// GLFW reports motion in raw window coordinates, so the origin is recorded in those.
+void cursor_raw_coord(double * rawX, double * rawY) {
+    double x = 0.0;
+    double y = 0.0;
+
+    glfwGetCursorPos(synthlib_window(), &x, &y);
+
+    if (rawX != NULL) {
+        *rawX = x;
     }
+
+    if (rawY != NULL) {
+        *rawY = y;
+    }
+}
+
+void cursor_capture(void) {
     gDragSkipCount = 3;
     glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     sCursorHidden  = true;
 }
 
-static bool handle_module_press_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t variation) {
-    bool       retVal     = false;
-    uint32_t   paramCount = 0;
-    tParamType paramType  = paramTypeCommonDial;
-    int        i          = 0;
-    bool       isSlider   = false;
-    tParam *   param      = NULL;
-    tMode *    mode       = NULL;
-
-    if (module->key.location == locationMorph) {
-        if (module->key.index == 1) {
-            paramCount = NUM_MORPHS * 2;
-        } else {
-            paramCount = 1;
-        }
-    } else {
-        paramCount = module_param_count(module->type);
+// Unconditional on the flag rather than on any drag state — see sCursorHidden above. Restoring a
+// pointer that is already visible costs nothing; failing to restore a hidden one costs the user their
+// pointer, which is why every restore funnels through here rather than calling GLFW directly.
+void cursor_release(void) {
+    if (sCursorHidden == true) {
+        glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        sCursorHidden = false;
     }
-
-    for (i = 0; (i < (int)paramCount) && (retVal == false); i++) {
-        param = &module->param[variation][i];
-
-        if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i]) && mouseButton == mouseButtonLeftDown) {
-            if (module->key.location == locationMorph) {
-                paramType = (i < NUM_MORPHS) ? paramTypeCommonDial : paramTypeToggle;
-            } else {
-                paramType = paramLocationList[param->paramRef].type;
-            }
-
-            if (  paramType != paramTypeToggle && paramType != paramTypeMenu
-               && paramType != paramTypeBypass && paramType != paramTypeEnable
-               && paramType != paramTypePush && paramType != paramTypeCustomData) {
-                gParamDragging.moduleKey       = module->key;
-                gParamDragging.type3           = paramType3Param;
-                gParamDragging.param           = i;
-                gParamDragging.startValue      = param->value;
-                gParamDragging.active          = true;
-
-                if (module->key.location == locationMorph) {
-                    gMorphGroupFocus = i;
-                }
-                gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
-                isSlider                       = (module->key.location != locationMorph)
-                                                 && (paramType == paramTypeSlider);
-
-                if (synthlib_dial_mode() != eDialModeRotary || isSlider) {
-                    start_cursor_drag();
-                }
-            } else if (paramType == paramTypePush) {
-                send_param_value(module->key.slot, module->key, (uint32_t)i, variation, 0);
-                param->value = 0;
-            }
-            retVal = true;
-        }
-    }
-
-    if (retVal == false) {
-        for (i = 0; (i < (int)module->modeCount) && (retVal == false); i++) {
-            mode = &module->mode[i];
-
-            if (within_rectangle(coord, module->mode[i].rectangle) && mouseButton == mouseButtonLeftDown) {
-                if (  modeLocationList[mode->modeRef].type != paramTypeToggle
-                   && modeLocationList[mode->modeRef].type != paramTypeMenu) {
-                    memset(&gParamDragging, 0, sizeof(gParamDragging));
-                    gParamDragging.moduleKey  = module->key;
-                    gParamDragging.type3      = paramType3Mode;
-                    gParamDragging.mode       = i;
-                    gParamDragging.startValue = mode->value;
-                    gParamDragging.active     = true;
-
-                    if (synthlib_dial_mode() != eDialModeRotary) {
-                        start_cursor_drag();
-                    }
-                    retVal                    = true;
-                }
-            }
-        }
-    }
-
-    if (retVal == false) {
-        for (i = 0; (i < (int)module_connector_count(module->type)) && (retVal == false); i++) {
-            if (within_rectangle(coord, module->connector[i].rectangle)) {
-                gCableDrag.fromModuleKey = module->key;
-
-                if (mouseButton == mouseButtonLeftDown) {
-                    gCableDrag.fromConnectorIndex = i;
-                    cable_drag_set_end(coord);
-                    gCableDrag.active             = true;
-                    retVal                        = true;
-                }
-            }
-        }
-    }
-
-    if (retVal == false) {
-        if (within_rectangle(coord, module->dragArea) && mouseButton == mouseButtonLeftDown) {
-            bool multiSelectHeld = multi_select_modifier_held();
-
-            if (multiSelectHeld) {
-                selection_toggle(module->key);
-            } else if (!is_selected(module->key)) {
-                selection_set_single(module->key);
-            }
-            gModuleDrag.moduleKey     = module->key;
-            gModuleDrag.isMulti       = is_selected(module->key) && gSelection.count > 1;
-            gModuleDrag.prevColumn    = module->column;
-            gModuleDrag.prevRow       = module->row;
-            gModuleDrag.active        = true;
-
-            // Snapshot starting positions for move undo
-            gModuleDrag.snapshotCount = 0;
-
-            if (gModuleDrag.isMulti) {
-                for (uint32_t si = 0; si < gSelection.count && si < MAX_NUM_MODULES; si++) {
-                    tModule * sel = get_module(gSelection.keys[si]);
-
-                    if (!sel) {
-                        continue;
-                    }
-                    gModuleDrag.snapshotKeys[gModuleDrag.snapshotCount]   = gSelection.keys[si];
-                    gModuleDrag.snapshotColumn[gModuleDrag.snapshotCount] = sel->column;
-                    gModuleDrag.snapshotRow[gModuleDrag.snapshotCount]    = sel->row;
-                    gModuleDrag.snapshotCount++;
-                }
-            } else {
-                gModuleDrag.snapshotKeys[0]   = module->key;
-                gModuleDrag.snapshotColumn[0] = module->column;
-                gModuleDrag.snapshotRow[0]    = module->row;
-                gModuleDrag.snapshotCount     = 1;
-            }
-            retVal                    = true;
-        }
-    }
-
-    // Clicking anywhere else on the module body selects without starting a drag
-    if (retVal == false) {
-        if (within_rectangle(coord, module->rectangle) && mouseButton == mouseButtonLeftDown) {
-            bool multiSelectHeld = multi_select_modifier_held();
-
-            if (multiSelectHeld) {
-                selection_toggle(module->key);
-            } else {
-                selection_set_single(module->key);
-            }
-            retVal = true;
-        }
-    }
-    return retVal;
 }
 
 // Pure legacy fallback now — morph group dials register their own click
 // region (eClickLayerPanel, moduleGraphics.cpp's morph_param_click_handler)
 // which dispatch_click_region() already checks, and wins over regular
 // modules, before this is ever reached. See mouse_button().
-static bool handle_morph_press(tCoord coord, tMouseButton mouseButton) {
-    uint32_t slot      = gSlot;
-    uint32_t variation = gPatchDescr[slot].activeVariation;
-
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
-
-        if (module->active && handle_module_press_for_module(module, coord, mouseButton, variation)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
-    uint32_t slot      = gSlot;
-    uint32_t location  = gLocation;
-    uint32_t variation = gPatchDescr[slot].activeVariation;
-
-    // Morph group knobs are drawn on top of the scrollable module canvas
-    // (render_morph_groups() runs after render_modules() each frame), so
-    // they must also win hit-testing first — otherwise a regular module
-    // param that happens to sit at the same screen location intercepts the
-    // click instead.
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
-
-        if (module->active && handle_module_press_for_module(module, coord, mouseButton, variation)) {
-            return true;
-        }
-    }
-
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, location, i);
-
-        if (module->active && handle_module_press_for_module(module, coord, mouseButton, variation)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 // Step the parameter under the cursor by one raw wire unit. A dial maps its whole range across a
 // few tens of pixels, so a drag cannot reliably land on a chosen value, let alone move by exactly
 // one - which is what identifying a parameter's real quantisation needs (where does the synth's own
@@ -426,8 +258,9 @@ static bool nudge_param_under_cursor(int delta) {
 
     get_global_gui_scaled_mouse_coord(&coord);
 
-    // Same precedence as handle_module_press(): morph knobs are drawn on top of the canvas, so they
-    // have to win the hit test against a module param that happens to sit at the same place.
+    // Morph knobs are drawn on top of the canvas, so they have to win the hit test against a module
+    // param that happens to sit at the same place — hence the Morph location is walked first here.
+    // (The click path gets this ordering from the click-region layers instead; see the press handler.)
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
 
@@ -440,131 +273,6 @@ static bool nudge_param_under_cursor(int delta) {
         tModule * module = get_module_slot(slot, gLocation, i);
 
         if (module->active && nudge_param_for_module(module, coord, variation, delta)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-static bool handle_module_release_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t slot, uint32_t variation) {
-    bool       retVal     = false;
-    uint32_t   paramCount = 0;
-    tParamType paramType  = paramTypeCommonDial;
-    uint32_t   range      = 0;
-    int        i          = 0;
-    tParam *   param      = NULL;
-    tMode *    mode       = NULL;
-
-    if (module->key.location == locationMorph) {
-        paramCount = (module->key.index == 1) ? (NUM_MORPHS * 2) : 1;
-    } else {
-        paramCount = module_param_count(module->type);
-    }
-
-    for (i = 0; (i < (int)paramCount) && (retVal == false); i++) {
-        param = &module->param[variation][i];
-
-        if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i]) && mouseButton == mouseButtonLeftUp) {
-            if (module->key.location == locationMorph) {
-                paramType = (i < NUM_MORPHS) ? paramTypeCommonDial : paramTypeToggle;
-            } else {
-                paramType = paramLocationList[param->paramRef].type;
-            }
-
-            if (paramType == paramTypeMenu || paramType == paramTypeCustomData) {
-                open_toggle_menu(coord, module->key, (uint32_t)i, param->paramRef);
-                retVal = true;
-            } else if (paramType == paramTypeToggle || paramType == paramTypeBypass || paramType == paramTypeEnable) {
-                range        = (module->key.location == locationMorph) ? 2 : paramLocationList[param->paramRef].range;
-                uint32_t oldParamVal = param->value;
-                param->value = (param->value + 1) % range;
-                send_param_value(slot, module->key, (uint32_t)i, variation, param->value);
-                undo_push_param_change(module->key, (uint32_t)i, variation, oldParamVal, param->value);
-                retVal       = true;
-            } else if (paramType == paramTypePush) {
-                uint32_t listSize = array_size_param_location_list();
-
-                for (uint32_t ref = 0; ref < listSize; ref++) {
-                    if (  paramLocationList[ref].moduleType == module->type
-                       && paramLocationList[ref].type == paramTypeCustomData) {
-                        send_custom_data_value(slot, module->key);
-                        break;
-                    }
-                }
-
-                send_param_value(slot, module->key, (uint32_t)i, variation, 1);
-                param->value = 0;
-                retVal       = true;
-            }
-        }
-    }
-
-    if (retVal == false) {
-        for (i = 0; (i < (int)module->modeCount) && (retVal == false); i++) {
-            mode = &module->mode[i];
-
-            if (within_rectangle(coord, module->mode[i].rectangle) && mouseButton == mouseButtonLeftUp) {
-                if (modeLocationList[mode->modeRef].type == paramTypeMenu) {
-                    open_mode_toggle_menu(coord, module->key, (uint32_t)i, mode->modeRef);
-                    retVal = true;
-                } else if (modeLocationList[mode->modeRef].type == paramTypeToggle) {
-                    uint32_t oldModeVal = mode->value;
-                    mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
-                    send_mode_value(slot, module->key, (uint32_t)i, mode->value);
-                    undo_push_mode_change(module->key, (uint32_t)i, oldModeVal, mode->value);
-                    retVal      = true;
-                }
-            }
-        }
-    }
-    return retVal;
-}
-
-// See handle_morph_press() — same reasoning, for the release side.
-static bool handle_morph_release(tCoord coord, tMouseButton mouseButton) {
-    uint32_t slot      = gSlot;
-    uint32_t variation = gPatchDescr[slot].activeVariation;
-
-    if (gParamDragging.active || gModuleDrag.active || gCableDrag.active) {
-        return false;
-    }
-
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
-
-        if (module->active && handle_module_release_for_module(module, coord, mouseButton, slot, variation)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
-    uint32_t slot      = gSlot;
-    uint32_t location  = gLocation;
-    uint32_t variation = gPatchDescr[slot].activeVariation;
-
-    // Only fire if we weren't dragging — dial drags are handled in cursor_pos
-    if (gParamDragging.active || gModuleDrag.active || gCableDrag.active) {
-        return false;
-    }
-
-    // Same priority as handle_module_press: morph knobs are drawn on top of
-    // the module canvas, so they must be hit-tested first.
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
-
-        if (module->active && handle_module_release_for_module(module, coord, mouseButton, slot, variation)) {
-            return true;
-        }
-    }
-
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, location, i);
-
-        if (module->active && handle_module_release_for_module(module, coord, mouseButton, slot, variation)) {
             return true;
         }
     }
@@ -596,9 +304,8 @@ bool handle_scrollbar_click(tCoord coord) {
 // frame, which is a better answer than debouncing the button — a debounce delays every real release
 // to guard against a rare bad one, and still loses if the event is dropped rather than repeated.
 void recover_lost_cursor(void) {
-    if ((sCursorHidden == true) && (is_cursor_hidden_dragging() == false)) {
-        glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        sCursorHidden = false;
+    if (is_cursor_hidden_dragging() == false) {
+        cursor_release();
     }
 }
 
@@ -639,12 +346,7 @@ void stop_dragging(void) {
     // of that was redundant, and two independent warps in a row can land a
     // pixel or two off from each other — enough, in SynthEdit's tightly
     // packed filter dials, to spill onto a neighbouring control.
-    // Unconditional on the flag, not on the drag state — see sCursorHidden. Restoring a cursor that
-    // is already visible costs nothing; failing to restore a hidden one costs the user their pointer.
-    if (sCursorHidden == true) {
-        glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        sCursorHidden = false;
-    }
+    cursor_release();
 }
 
 tMouseButton convert_to_mouse_button(int button, int action) {
@@ -817,24 +519,24 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 found = handle_scrollbar_click(coord);
             }
 
-            // Every clickable widget — module params/modes/connectors/body/drag-handle
-            // AND the morph group overlay — registers a click region at render time (see
-            // moduleGraphics.cpp). Morph registers at eClickLayerPanel, everything else at
-            // eClickLayerCanvas, so dispatch itself (not call order) guarantees morph wins
-            // over a scrolled regular module that happens to sit visually underneath it —
-            // see moduleGraphics.cpp's own top-of-file comment. handle_morph_press() and
-            // handle_module_press() below are now pure legacy fallback, kept for anything
-            // dispatch doesn't match (should be nothing today).
+            // Every clickable widget — module params/modes/connectors/body/drag-handle AND the morph
+            // group overlay — registers a click region at render time (see moduleGraphics.c). Morph
+            // registers at eClickLayerPanel, everything else at eClickLayerCanvas, so dispatch itself
+            // (not call order) guarantees morph wins over a scrolled regular module that happens to sit
+            // visually underneath it — see moduleGraphics.c's own top-of-file comment.
+            //
+            // handle_morph_press()/handle_module_press() USED TO FOLLOW THIS AS A FALLBACK, "kept for
+            // anything dispatch doesn't match (should be nothing today)". Deleted 2026-08-09, on
+            // evidence rather than on that hunch: every rectangle they hit-tested — params, modes,
+            // connectors, the body and the drag handle — is registered as a click region by the same
+            // render pass that computes it, and instrumenting both of them to log when they claimed a
+            // click produced nothing across the canvas widgets and the patch-settings panel. Worse than
+            // dead: they tested the STORED rectangles, which for a module scrolled out of view are the
+            // stale ones left from wherever it was last drawn, so the one case where they could still
+            // have fired is a case where firing would have been wrong (the same fault as the FX-pane
+            // hover bug). 318 lines, in git history if ever needed.
             if (!found && !gContextMenu.active) {
                 found = dispatch_click_region(coord, eClickPress);
-            }
-
-            if (!found && !gContextMenu.active) {
-                found = handle_morph_press(coord, mouseButton);
-            }
-
-            if (!found && !gContextMenu.active) {
-                found = handle_module_press(coord, mouseButton);
             }
 
             // Click on empty module-area space: clear selection and start rubber-band. Shared with
@@ -929,20 +631,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
-            // See the matching mouseButtonLeftDown case: dispatch is layer-ordered
-            // (morph's eClickLayerPanel beats everything else's eClickLayerCanvas), so
-            // call order here no longer matters — handle_morph_release()/
-            // handle_module_release() are pure legacy fallback.
+            // See the matching mouseButtonLeftDown case: dispatch is layer-ordered (morph's
+            // eClickLayerPanel beats everything else's eClickLayerCanvas). Its two legacy fallbacks
+            // went the same way, and for the same reasons.
             if (!found) {
                 found = dispatch_click_region(coord, eClickRelease);
-            }
-
-            if (!found) {
-                found = handle_morph_release(coord, mouseButton);
-            }
-
-            if (!found) {
-                found = handle_module_release(coord, mouseButton);
             }
 
             if (canvas_rubber_band_release(coord, slot, location, shift_modifier_held())) {

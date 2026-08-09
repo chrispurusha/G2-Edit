@@ -1658,6 +1658,27 @@ void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, ui
     msg_send(&gToUsbThread, &msg);
 }
 
+// A parameter's morph RANGE for one morph group, as distinct from its value. Same shape and the same
+// COMMAND_WRITE_NO_RESP class as send_param_value() above, so it carries no ack and cannot lose a
+// patch-version race — which is what makes it safe to send several in a row (clearing every group of
+// one parameter, say) rather than having to go through a whole-patch write.
+//
+// Extracted from canvasDrag.c, which built this message inline. It has a second caller now — the
+// param context menu's morph reset — and two hand-built copies of a wire message is one too many.
+void send_param_morph(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t morphGroup, uint32_t variation, uint32_t value) {
+    tMessageContent msg = {0};
+
+    msg.cmd                       = eMsgCmdSetParamMorph;
+    msg.slot                      = slot;
+    msg.paramMorphData.moduleKey  = moduleKey;
+    msg.paramMorphData.param      = paramIdx;
+    msg.paramMorphData.paramMorph = morphGroup;
+    msg.paramMorphData.value      = value;
+    msg.paramMorphData.negative   = 0;
+    msg.paramMorphData.variation  = variation;
+    msg_send(&gToUsbThread, &msg);
+}
+
 void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint32_t value) {
     tMessageContent msg = {0};
 

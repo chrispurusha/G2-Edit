@@ -104,7 +104,8 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         // The raw coordinates are the canvas ones here. That is correct ONLY because the plug-in
         // reports eDialModeRotary, which reads an absolute angle rather than differencing against
         // the previous event. Vertical and horizontal dial modes would need genuine raw cursor
-        // deltas AND start_cursor_drag()'s cursor hiding, neither of which a host view gives us yet.
+        // deltas AND a real cursor_capture(), neither of which a host view gives us yet — see the
+        // no-op cursor_capture() below.
         if (canvas_param_drag_motion(gMouse, gMouse.x, gMouse.y, false) == true) {
             return true;
         }
@@ -354,8 +355,37 @@ bool g2_input_drag_tick(void) {
 // so with no origin recorded, previousY was still 0 and the very first movement evaluated
 // (0 - currentY), a large negative number that drove every dial straight to zero. Rotary hid it by
 // reading an absolute angle and never touching these.
-void start_cursor_drag(void) {
-    canvas_drag_set_origin(gMouse.x, gMouse.y);
+// ── The plug-in's half of the drag-begin seam (canvasDrag.h) ────────────────────────────────────
+//
+// This WAS start_cursor_drag(), a per-shell function that had to remember to record the drag origin.
+// It is now two named jobs, and the one the plug-in cannot do is the one it is allowed to decline.
+//
+// The plug-in reports motion in canvas coordinates, so the origin is recorded in those — it is only
+// ever differenced against later positions from this same source, so the space just has to agree with
+// itself. Recording it in raw screen coordinates while reporting motion in canvas ones is precisely
+// the kind of mismatch this seam's comment warns about.
+void cursor_raw_coord(double * rawX, double * rawY) {
+    if (rawX != NULL) {
+        *rawX = gMouse.x;
+    }
+
+    if (rawY != NULL) {
+        *rawY = gMouse.y;
+    }
+}
+
+// DELIBERATE NO-OPS, and no longer silently damaging. An NSView owned by the host is not ours to
+// confine the pointer inside, and the previous arrangement meant declining that also discarded the
+// drag origin — vertical and horizontal dial drags collapsed to zero while rotary looked perfect,
+// because rotary reads an absolute angle and never touches the origin.
+//
+// Implementing them for real is what vertical/horizontal dial modes need here: NSCursor hide/unhide
+// plus CGAssociateMouseAndMouseCursorPosition, or CGDisplayHideCursor with warping. Until then the
+// plug-in reports eDialModeRotary and loses nothing but pointer hiding.
+void cursor_capture(void) {
+}
+
+void cursor_release(void) {
 }
 
 // The application reads this from GLFW; the plug-in reads it from whatever the host last delivered.

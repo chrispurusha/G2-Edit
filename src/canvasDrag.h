@@ -58,6 +58,33 @@ bool canvas_module_drag_release(void);
 // against it; Alt-held morph dragging measures from it rather than from the previous event.
 void canvas_drag_set_origin(double rawX, double rawY);
 
+// ── Starting a drag: the logic half is shared, the platform half is optional ─────────────────────
+//
+// CALL THIS TO BEGIN ANY CURSOR-CAPTURING DRAG. It records the origin — which every incremental dial
+// mode depends on — and THEN asks the shell to capture the pointer. It replaced start_cursor_drag(),
+// which did both jobs in one function per shell, and that is the point rather than tidiness:
+//
+// The application's version recorded the origin and hid the pointer. The plug-in's version was
+// briefly an empty stub, because "hide the pointer" is not something a host-owned NSView can simply
+// do — and stubbing it out silently took the ORIGIN with it, so vertical and horizontal dial drags
+// slammed to zero while rotary (which reads an absolute angle) looked perfect. See
+// vst3/plugin-gui-notes.md, observation 4. Splitting them means a shell can decline the platform half
+// and cannot drop the logic half by accident.
+void canvas_drag_begin(void);
+
+// Implemented by the SHELL, not here.
+//
+// cursor_raw_coord() reports the pointer in whatever space that shell reports MOTION in — raw window
+// coordinates for GLFW, canvas coordinates for the plug-in. It only has to agree with itself: the
+// origin is only ever differenced against later positions from the same source.
+//
+// cursor_capture()/cursor_release() hide and confine the pointer for the duration of a drag, so an
+// incremental drag is not limited by the edge of the screen. BOTH MAY BE NO-OPS — a plug-in in a host
+// window is entitled to decline, and declining now costs it only the pointer hiding.
+void cursor_raw_coord(double * rawX, double * rawY);
+void cursor_capture(void);
+void cursor_release(void);
+
 // Dial dragging. See the long note above the definition for what each argument replaces.
 bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHeld);
 

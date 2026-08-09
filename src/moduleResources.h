@@ -1039,7 +1039,14 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                        // 121 Evnt16
     {moduleTypeSeqNote,    paramTypeToggle,      {{  3,   9}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap},                        // 121 Cycle
     {moduleTypeSeqNote,    paramTypeMenu,        {{ 16,   9}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                        // 121 Length
-    {moduleTypeSeqNote,    paramTypeMenu,        {{ 88, -21}, { 7,  7}}, anchorBottomRight, NULL,             2,   0, trigGateStrMap,                        NULL          },                        // 121 T/G
+    // x WAS +88, WHICH PUT THIS BOX ALMOST A WHOLE MODULE WIDTH TO THE RIGHT OF THE MODULE, floating
+    // in empty canvas. For a right anchor, adjust_rectangle() computes x as an inset from the module's
+    // RIGHT edge (module.x + module.w + x - w), so a positive x pushes it outside — every other
+    // right-anchored SeqNote entry uses a small negative inset, and -3 is the one the Note and Trig
+    // outputs use. That lands it in the right-hand column directly above the Trig output, which is
+    // also where it belongs semantically: this selector is what makes that output a trigger or a gate.
+    // A sweep of the whole table found no other right-anchored entry with a positive x.
+    {moduleTypeSeqNote,    paramTypeMenu,        {{ -3, -21}, { 7,  7}}, anchorBottomRight, NULL,             2,   0, trigGateStrMap,                        NULL          },                        // 121 T/G
     {moduleTypeSeqNote,    paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          },                        // 121 Randomize
     {moduleTypeSeqNote,    paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          },                        // 121 Clear
     {moduleTypeSeqNote,    paramTypeCustomData,  {{  3,  59}, {10,  7}}, anchorTopLeft,     "Mag",            3,   0, seqNoteMagStrMap,                      NULL          },                        // 121 Magnifier (custom data)
