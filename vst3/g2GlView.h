@@ -49,6 +49,10 @@ extern "C" {
 // empty event to wake a blocked GLFW loop; here, AppKit schedules the frame.
 void g2_gl_view_request_redraw(void);
 
+// True while cursor_capture() has the pointer hidden. Polled by the drag tick so a release that never
+// arrives cannot leave the host without a pointer — see cursor_capture() in g2GlView.m.
+bool cursor_is_captured(void);
+
 #ifdef __cplusplus
 }
 #endif

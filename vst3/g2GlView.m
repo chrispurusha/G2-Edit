@@ -73,6 +73,62 @@ static uint32_t modifier_bits_from_ns(NSEventModifierFlags flags) {
     return bits;
 }
 
+// ── Hiding the pointer for a drag (canvasDrag.h's cursor_capture/cursor_release) ────────────────
+//
+// These were no-ops, on the reasoning that a host-owned view has no business confining the pointer.
+// Hiding it is a different question from confining it, and hiding is what an incremental dial drag
+// actually wants: the application hides the pointer for the same gesture, and a visible cursor
+// wandering off the dial it is turning looks broken.
+//
+// [NSCursor hide] IS PROCESS-WIDE AND REFERENCE-COUNTED. Process-wide means the HOST loses its pointer
+// too, so an unbalanced hide is not a cosmetic bug — it is a DAW with no cursor. Hence the flag rather
+// than trusting call pairing, the poll in g2_input_drag_tick(), and the release in
+// -removeFromSuperview below for an editor closed mid-drag.
+//
+// THE POINTER IS PUT BACK WHERE THE DRAG STARTED. Without confinement it keeps moving while hidden, so
+// on release it would otherwise reappear somewhere across the screen from the dial the user was just
+// turning. Warping it back is what makes this feel like the application, whose GLFW cursor mode does
+// the same thing by decoupling the pointer entirely.
+//
+// NOT CONFINED, still: a long drag can run the physical mouse off the edge of the screen and the value
+// stops following. Fixing that needs CGAssociateMouseAndMouseCursorPosition(false) and feeding the
+// drag from -deltaX/-deltaY instead of absolute positions, which is a change to how motion reaches the
+// canvas rather than one more line here.
+static BOOL     gCursorHidden  = NO;
+static CGPoint  gCursorRestore = {0.0, 0.0};
+
+bool cursor_is_captured(void) {
+    return gCursorHidden == YES;
+}
+
+void cursor_capture(void) {
+    if (gCursorHidden == YES) {
+        return;   // already hidden; a second hide would need a second unhide
+    }
+    // Cocoa reports the pointer with the origin at the BOTTOM left of the main screen, and
+    // CGWarpMouseCursorPosition() wants it at the TOP left. Flip against the MAIN screen's height —
+    // the one CG's global space is anchored to, which is not necessarily the screen the window is on.
+    NSPoint here   = [NSEvent mouseLocation];
+    NSArray * all  = [NSScreen screens];
+    CGFloat  mainH = ([all count] > 0) ? NSMaxY([[all objectAtIndex:0] frame]) : 0.0;
+
+    gCursorRestore = CGPointMake(here.x, mainH - here.y);
+    gCursorHidden  = YES;
+    [NSCursor hide];
+}
+
+void cursor_release(void) {
+    if (gCursorHidden == NO) {
+        return;
+    }
+    gCursorHidden = NO;
+    CGWarpMouseCursorPosition(gCursorRestore);
+    // The documented companion to warping: it resynchronises the window server's idea of where the
+    // pointer is with the hardware, so the jump is not followed by a delta that undoes it.
+    CGAssociateMouseAndMouseCursorPosition(true);
+    [NSCursor unhide];
+}
+
 // The view currently attached, for g2_gl_view_request_redraw() to find. A host can open more than
 // one instance of the plug-in, so this is "the most recently attached" rather than "the" view —
 // enough while the editor is a single window per instance, and the thing to revisit when a redraw
@@ -143,6 +199,7 @@ static __weak G2GlView * gCurrentView = nil;
 // was only ever updated on a click. AppKit delivers mouse-moved events to a view solely on the
 // strength of a tracking area covering it, and the area has to be rebuilt whenever the view resizes.
 - (void)removeFromSuperview {
+    cursor_release();        // an editor closed mid-drag must not leave the host without a pointer
     [self stopDragTimer];    // the timer retains self through its block; leaving it running leaks the view
     [super removeFromSuperview];
 }
