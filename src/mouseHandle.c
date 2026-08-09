@@ -1017,14 +1017,122 @@ static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, do
     return value;
 }
 
+// ── The named-rect dial drags, as data ──────────────────────────────────────────────────────────
+//
+// FIVE ARMS OF cursor_pos()'s IF/ELSE CHAIN WERE TWO GESTURES WRITTEN OUT REPEATEDLY: the tempo dial
+// and the performance-settings tempo dial, identical but for which rectangle they sit in; and the
+// vibrato amount, vibrato rate and glide time dials, identical but for a module, a parameter index
+// and a range. About 100 lines in which the only things that varied were the four values now in the
+// tables below. That is the whole of what vst3/plugin-gui-notes.md's second observation asks for —
+// the chain reads as a list wanting to be a table — applied to the part of it that is genuinely
+// repetition rather than genuinely different work.
+//
+// Each entry points AT its rectangle rather than copying it: these rectangles are filled in at
+// render time, so a copy taken here would be a stale one from start-up. The addresses are constant
+// because the rectangles are globals, which is what lets the tables be static.
+//
+// The remaining arms of the chain are NOT candidates for this. A scrollbar drag, a module drag, a
+// cable drag and a rubber band each do genuinely different work; collapsing those would need a
+// gesture object, which is observation 1 in that file and a much larger change.
+
+typedef struct {
+    bool *       active;       // which gXxxDragging flag arms this drag
+    tRectangle * rotaryRect;   // dial position, for rotary mode's absolute angle
+} tTempoDragTarget;
+
+static const tTempoDragTarget      sTempoDragTargets[]      = {
+    {&gTempoDragging,     &gTopbarControls[topbarTempoDialId].rectangle},
+    {&gPerfTempoDragging, &gPerfSettingsPanelRects.masterClock         },
+};
+
+typedef struct {
+    bool *       active;
+    uint32_t     moduleIndex;  // the patchModule* inside the Morph location
+    uint32_t     param;
+    uint32_t     range;        // number of values the dial has; the clamp is 0 .. range - 1
+    tRectangle * rotaryRect;
+} tPatchParamDragTarget;
+
+static const tPatchParamDragTarget sPatchParamDragTargets[] = {
+    {&gVibAmountDragging, patchModuleVibrato, VIBRATO_DEPTH, 101, &gPatchParamRects[pPVibratoAmount]},
+    {&gVibRateDragging,   patchModuleVibrato, VIBRATO_RATE,  128, &gPatchParamRects[pPVibratoRate]  },
+    {&gGlideTimeDragging, patchModuleGlide,   GLIDE_SPEED,   128, &gPatchParamRects[pPGlideTime]    },
+};
+
+// Returns true if one of these drags was active and consumed the motion, so the caller's chain can
+// carry on to the next gesture exactly as the separate arms did.
+static bool handle_tempo_drag_motion(double xCoord, double yCoord, double x, double y) {
+    for (size_t i = 0; i < (sizeof(sTempoDragTargets) / sizeof(sTempoDragTargets[0])); i++) {
+        if (*sTempoDragTargets[i].active == false) {
+            continue;
+        }
+        uint32_t value = calc_tempo_drag_value(xCoord, yCoord, x, y, *sTempoDragTargets[i].rotaryRect);
+
+        if (gGlobalSettings.masterClock != value) {
+            gGlobalSettings.masterClock = (uint8_t)value;
+            send_master_clock_bpm(value);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+static bool handle_patch_param_drag_motion(uint32_t slot, double xCoord, double yCoord, double x, double y) {
+    for (size_t i = 0; i < (sizeof(sPatchParamDragTargets) / sizeof(sPatchParamDragTargets[0])); i++) {
+        const tPatchParamDragTarget * target = &sPatchParamDragTargets[i];
+
+        if (*target->active == false) {
+            continue;
+        }
+        // The KEY names gPatchParamsEdit.slot while the message is addressed to the slot the caller
+        // passes, which is gSlot. Both of the arms this replaces did exactly that, so it is preserved
+        // rather than tidied — the two are kept in step whenever the slot changes (see the patch
+        // screen's own slot handling), and making them agree here would hide it rather than settle it.
+        tModuleKey                    key    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, target->moduleIndex};
+        tModule *                     module = get_module(key);
+
+        if (module == NULL) {
+            return true;   // armed on a module that is not there: consumed, as the original's NULL check was
+        }
+        uint8_t *                     param  = &module->param[0][target->param].value;
+        int                           newVal = (int)*param;
+
+        if (synthlib_dial_mode() == eDialModeHorizontal) {
+            newVal    += (int)((xCoord - gDragPrevX) * (double)target->range / 200.0);
+            gDragPrevX = xCoord;
+        } else if (synthlib_dial_mode() == eDialModeRotary) {
+            // Absolute angle, so no previous position to update — the incremental modes own gDragPrev*.
+            newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, *target->rotaryRect), target->range);
+        } else {
+            newVal    += (int)((gDragPrevY - yCoord) * (double)target->range / 200.0);
+            gDragPrevY = yCoord;
+        }
+
+        if (newVal < 0) {
+            newVal = 0;
+        }
+
+        if (newVal > (int)(target->range - 1)) {
+            newVal = (int)(target->range - 1);
+        }
+
+        if (*param != (uint8_t)newVal) {
+            *param = (uint8_t)newVal;
+            send_param_value(slot, key, target->param, 0, (uint32_t)newVal);
+        }
+        return true;
+    }
+
+    return false;
+}
+
 void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     // Several locals went with the parameter-drag arm when it moved to canvasDrag.c; what is left is
     // what the remaining arms actually use.
-    tCoord   coord = {0};
-    uint32_t value = 0;
-    uint32_t slot  = gSlot;
-    double   x     = 0;
-    double   y     = 0;
+    tCoord coord = {0};
+    double x     = 0;
+    double y     = 0;
 
 
     get_global_gui_scaled_mouse_coord(&coord);
@@ -1095,110 +1203,10 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         //messageContent.cmd           = eMsgCmdWritePatchDescr;
         // messageContent.slot          = slot;
         // msg_send(&gToUsbThread, &messageContent);
-    } else if (gTempoDragging == true) {
-        value = calc_tempo_drag_value(xCoord, yCoord, x, y, gTopbarControls[topbarTempoDialId].rectangle);
-
-        if (gGlobalSettings.masterClock != value) {
-            gGlobalSettings.masterClock = (uint8_t)value;
-            send_master_clock_bpm(value);
-        }
-    } else if (gPerfTempoDragging == true) {
-        value = calc_tempo_drag_value(xCoord, yCoord, x, y, gPerfSettingsPanelRects.masterClock);
-
-        if (gGlobalSettings.masterClock != value) {
-            gGlobalSettings.masterClock = (uint8_t)value;
-            send_master_clock_bpm(value);
-        }
-    } else if (gVibAmountDragging == true) {
-        tModuleKey vibKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleVibrato};
-        tModule *  vibModule = get_module(vibKey);
-        int        newVal    = 0;
-
-        if (vibModule != NULL) {
-            if (synthlib_dial_mode() == eDialModeHorizontal) {
-                newVal     = (int)vibModule->param[0][VIBRATO_DEPTH].value + (int)((xCoord - gDragPrevX) * 101.0 / 200.0);
-                gDragPrevX = xCoord;
-            } else if (synthlib_dial_mode() == eDialModeRotary) {
-                newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, gPatchParamRects[pPVibratoAmount]), 101);
-            } else {
-                newVal     = (int)vibModule->param[0][VIBRATO_DEPTH].value + (int)((gDragPrevY - yCoord) * 101.0 / 200.0);
-                gDragPrevY = yCoord;
-            }
-
-            if (newVal < 0) {
-                newVal = 0;
-            }
-
-            if (newVal > 100) {
-                newVal = 100;
-            }
-            value = (uint32_t)newVal;
-
-            if (vibModule->param[0][VIBRATO_DEPTH].value != value) {
-                vibModule->param[0][VIBRATO_DEPTH].value = (uint8_t)value;
-                send_param_value(slot, vibKey, VIBRATO_DEPTH, 0, value);
-            }
-        }
-    } else if (gVibRateDragging == true) {
-        tModuleKey vibKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleVibrato};
-        tModule *  vibModule = get_module(vibKey);
-        int        newVal    = 0;
-
-        if (vibModule != NULL) {
-            if (synthlib_dial_mode() == eDialModeHorizontal) {
-                newVal     = (int)vibModule->param[0][VIBRATO_RATE].value + (int)((xCoord - gDragPrevX) * 128.0 / 200.0);
-                gDragPrevX = xCoord;
-            } else if (synthlib_dial_mode() == eDialModeRotary) {
-                newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, gPatchParamRects[pPVibratoRate]), 128);
-            } else {
-                newVal     = (int)vibModule->param[0][VIBRATO_RATE].value + (int)((gDragPrevY - yCoord) * 128.0 / 200.0);
-                gDragPrevY = yCoord;
-            }
-
-            if (newVal < 0) {
-                newVal = 0;
-            }
-
-            if (newVal > 127) {
-                newVal = 127;
-            }
-            value = (uint32_t)newVal;
-
-            if (vibModule->param[0][VIBRATO_RATE].value != value) {
-                vibModule->param[0][VIBRATO_RATE].value = (uint8_t)value;
-                send_param_value(slot, vibKey, VIBRATO_RATE, 0, value);
-            }
-        }
-    } else if (gGlideTimeDragging == true) {
-        tModuleKey glideKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleGlide};
-        tModule *  glideModule = get_module(glideKey);
-        int        newVal      = 0;
-
-        if (glideModule != NULL) {
-            if (synthlib_dial_mode() == eDialModeHorizontal) {
-                newVal     = (int)glideModule->param[0][GLIDE_SPEED].value + (int)((xCoord - gDragPrevX) * 128.0 / 200.0);
-                gDragPrevX = xCoord;
-            } else if (synthlib_dial_mode() == eDialModeRotary) {
-                newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, gPatchParamRects[pPGlideTime]), 128);
-            } else {
-                newVal     = (int)glideModule->param[0][GLIDE_SPEED].value + (int)((gDragPrevY - yCoord) * 128.0 / 200.0);
-                gDragPrevY = yCoord;
-            }
-
-            if (newVal < 0) {
-                newVal = 0;
-            }
-
-            if (newVal > 127) {
-                newVal = 127;
-            }
-            value = (uint32_t)newVal;
-
-            if (glideModule->param[0][GLIDE_SPEED].value != value) {
-                glideModule->param[0][GLIDE_SPEED].value = (uint8_t)value;
-                send_param_value(slot, glideKey, GLIDE_SPEED, 0, value);
-            }
-        }
+    } else if (handle_tempo_drag_motion(xCoord, yCoord, x, y)) {
+        // The tempo dial and the performance-settings tempo dial — see sTempoDragTargets.
+    } else if (handle_patch_param_drag_motion(gSlot, xCoord, yCoord, x, y)) {
+        // Vibrato amount, vibrato rate and glide time — see sPatchParamDragTargets.
     } else if (canvas_param_drag_motion(coord, xCoord, yCoord, alt_modifier_held())) {
         // Parameter dragging moved to canvasDrag.c so the plug-in shares it — see canvasDrag.h.
     } else if (gModuleDrag.active == true) {
