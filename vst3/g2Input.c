@@ -57,6 +57,7 @@
 #include "mouseTopbar.h"
 #include "topbarResourcesAccess.h"
 
+#include "g2GlView.h"      // cursor_is_captured() — the hidden-pointer safety net
 #include "g2Input.h"
 
 // The last position the host told us about, in the canvas's logical units with a top-left origin —
@@ -244,6 +245,11 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
                                }, canvasGestureAll) != canvasGestureNone) {
         handled = true;
     }
+
+    // PAIRED WITH cursor_capture() HERE, not left to the tick's safety poll. The poll exists for the
+    // release that never arrives; this is the one that does, and going through it directly means the
+    // pointer comes back the instant the button does rather than up to a tick later.
+    cursor_release();
     return handled;
 }
 
@@ -343,6 +349,16 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
 bool g2_input_drag_tick(void) {
     bool busy = false;
 
+    // THE SAFETY NET FOR A HIDDEN POINTER, and the reason it is a poll rather than a tidy pairing:
+    // cursor_capture() hides the cursor for the whole HOST process, so a release that never arrives —
+    // an editor closed mid-drag, a mouse-up swallowed by the host — would leave the user with no
+    // pointer at all in their DAW. If nothing is dragging, the pointer must be visible. The
+    // application does exactly this from its render loop (recover_lost_cursor()).
+    if ((cursor_is_captured() == true) && (gParamDragging.active == false)) {
+        cursor_release();
+        busy = true;
+    }
+
     // A DRAG needs ticking so auto-scroll keeps running with the pointer held still past a pane
     // edge; see adjust_scroll_for_drag().
     if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
@@ -403,11 +419,8 @@ void cursor_raw_coord(double * rawX, double * rawY) {
 // what a real implementation would add is NSCursor hide/unhide plus
 // CGAssociateMouseAndMouseCursorPosition (or CGDisplayHideCursor with warping), so that the pointer
 // stays put on the dial instead of travelling away from it and eventually running out of screen.
-void cursor_capture(void) {
-}
-
-void cursor_release(void) {
-}
+// cursor_capture()/cursor_release() are NOT here — they need NSCursor, so they live in g2GlView.m
+// with the rest of this shell's Cocoa. See there for how the pointer is hidden and put back.
 
 // The application reads this from GLFW; the plug-in reads it from whatever the host last delivered.
 // This is the function whose absence made every canvas interaction impossible, and it is four lines.
