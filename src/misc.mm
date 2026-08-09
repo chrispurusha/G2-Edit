@@ -63,3 +63,17 @@ void register_sleep_wake_notifications(void) {
          usb_signal_reconnect();
      }];
 }
+
+// WHETHER ANY MOUSE BUTTON IS PHYSICALLY DOWN, asked of the window server rather than of our own
+// event history.
+//
+// This exists for one failure: the mouse-up that never arrives. A captured dial drag has the pointer
+// hidden and decoupled from the hardware, so losing the release does not merely leave a dial held —
+// it leaves the user with no pointer at all. Every other way of answering "is a drag still going"
+// is derived from the event that went missing: our drag flags were set by the press and cleared by
+// the release, and glfwGetMouseButton() reports the last event GLFW was handed, which is the same
+// stream. [NSEvent pressedMouseButtons] reports the hardware, so it is true whether or not we were
+// told — and it is what the VST3 shell already uses for the same job (vst3/g2GlView.m).
+bool platform_any_mouse_button_down(void) {
+    return [NSEvent pressedMouseButtons] != 0;
+}
