@@ -429,6 +429,24 @@ OPEN WORK
   render - and only generalise once that round trip is proven end to end.
   AND POINT EVERY NEW ANALYSIS AT THE RENDER BEFORE THE HARDWARE. It is the only case where the
   answer is known in advance.
+  WHAT A FIRST PASS AT OSCILLATOR SPECTRA GOT WRONG (2026-08-10) — a harmonic analyser needs all
+  three of these before its numbers mean anything, and every one of them produced a confident,
+  completely wrong answer first time:
+    - THE FUNDAMENTAL IS NOT THE LARGEST BIN. For a rectified or pulse waveform it is not even
+      close: a peak-picker returned 2f0 or 3f0, and every harmonic after it was then read at the
+      wrong frequency. Refine f0 from a HIGH harmonic, or pin it when the pitch is known.
+    - A FIXED SEARCH WINDOW FAILS AT HIGH k. An f0 that is 2.6 Hz out is 165 Hz out by the 64th
+      harmonic — 28 bins — so a +/-2 bin window measures noise floor and reports a rolloff that is
+      not there. This nearly became a bug report against the instrument's DACs.
+    - DO NOT NORMALISE BY THE FUNDAMENTAL. Sine3 (rectified: even harmonics only) and DblSaw (two
+      half-cycle-offset saws, which cancel at f0) have almost no energy there, so dividing by it
+      sends every level to +100 dB and over. Normalise by the strongest harmonic; the comparison is
+      of spectral SHAPE.
+  FIRST RESULTS, ALL NEEDING CONFIRMATION: against OscShpB at Shape 99%, TriSaw/Sine1/Sine2 agree
+  with the instrument to 4-7 dB mean across k=1..64. Sine4 differs in balance (the G2's third
+  harmonic is its strongest, ours is the fundamental). Pulse is the clearest gap — ours is nearly
+  flat to 29 kHz where the instrument rolls off steadily from the third harmonic — and SymPulse is
+  the one soundEngine.c already admits is not band limited.
 
 - ZOOM TO FIT FROM A RIGHT CLICK, FITTING THE AREA UNDER THE CURSOR (2026-08-10, owner's idea).
   Zoom to Fit is currently a menu item only, and it fits EVERY pane at once: split_view_zoom_to_fit()
