@@ -2266,6 +2266,24 @@ static bool backdoor_parse_cable(const char * arg, tCableKey * key, char * err, 
 // An input connector takes at most one incoming cable — the same invariant cable-drag creation
 // enforces before it commits. Checked here too, because the device silently keeps whichever it
 // likes when told otherwise.
+// Is this connector already serving as the input end of some cable? An input takes exactly one
+// cable, so this is what stops a scripted CABLE from stacking a second one on top of an existing
+// connection - which looks like nothing at all on screen, because the two are drawn along the same
+// path, and only shows itself when you pull one off and the sound stays.
+//
+// BOTH ENDS OF A cableLinkTypeFromInput CABLE ARE INPUTS (see cableChain.h): that link type is the
+// G2's input-to-input daisy chain, so its from-end is an input just as much as its to-end is. This
+// used to test the to-end alone, so an input already spoken for as the FROM-end of such a chain
+// read as free and got a second cable.
+static bool backdoor_connector_is_input_end(const tCableKey * cableKey, uint32_t moduleIndex, uint32_t ioCount) {
+    if ((cableKey->moduleToIndex == moduleIndex) && (cableKey->connectorToIoCount == ioCount)) {
+        return true;
+    }
+    return (cableKey->linkType == (uint32_t)cableLinkTypeFromInput)
+           && (cableKey->moduleFromIndex == moduleIndex)
+           && (cableKey->connectorFromIoCount == ioCount);
+}
+
 static bool backdoor_input_is_taken(const tCableKey * key) {
     for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
         tCable * cable = get_cable_slot(key->slot, key->location, i);
@@ -2274,7 +2292,14 @@ static bool backdoor_input_is_taken(const tCableKey * key) {
             continue;
         }
 
-        if ((cable->key.moduleToIndex == key->moduleToIndex) && (cable->key.connectorToIoCount == key->connectorToIoCount)) {
+        // The new cable's to-end is always an input; its from-end is one too when it is itself an
+        // input-to-input link, and either would be a second cable on an already-occupied input.
+        if (backdoor_connector_is_input_end(&cable->key, key->moduleToIndex, key->connectorToIoCount)) {
+            return true;
+        }
+
+        if (  (key->linkType == (uint32_t)cableLinkTypeFromInput)
+           && backdoor_connector_is_input_end(&cable->key, key->moduleFromIndex, key->connectorFromIoCount)) {
             return true;
         }
     }
