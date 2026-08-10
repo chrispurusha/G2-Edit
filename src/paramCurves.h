@@ -44,6 +44,10 @@ double osc_freq_factor(double paramValue);      // PitchType 2 "Factor": 0.0248x
 double osc_fine_cents(double paramValue);       // Cent dial:            -50 .. +50 cents
 double osc_shape_percent(double paramValue);    // Shape dial:           50% .. 99%
 
+// PitchType 4 "Sub": the same note scale as Semi, eleven octaves down. fineSemitones is the Cent
+// dial's offset, (cent - 64) / 128 of a semitone; pass 0.0 if it is not to hand.
+double osc_sub_freq_hz(double paramValue, double fineSemitones);
+
 // The same idea for the filters: one definition of the cutoff, resonance and slope curves, shared
 // by the dial text, the response curve drawn on the module, and the sound engine.
 double flt_cutoff_hz(double paramValue);                   // Freq dial:  13.75 Hz .. ~21 kHz
