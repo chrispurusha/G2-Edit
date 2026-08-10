@@ -390,6 +390,46 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 
 OPEN WORK
 
+- MEASURE THE REST OF THE INSTRUMENT THE WAY THE REVERB WAS MEASURED (2026-08-10, owner's idea).
+  Extend tools/ from "characterise the reverb" to "characterise any module we implement", so that
+  every engine algorithm can be checked against the instrument instead of against an ear. The
+  reverb work already proved the method: a plausible-sounding wrong arrangement is the hardest kind
+  of error to find by listening, and two confident readings of the hardware data were overturned by
+  pointing the analyser at our own render first.
+  WHAT ALREADY EXISTS AND MUST NOT BE REBUILT:
+    - measure.py is ALREADY module-agnostic. --loc/--index/--param/--values sweep any parameter,
+      --sweep-mode does the drop-down selectors, --gate plays a note for anything needing an
+      envelope, and --pre/--pre-mode set the rest of the module up first.
+    - capture.c records; analyse_ir.py measures pre-delay, arrivals, recirculating delays, decay
+      and spectra, and has a --selftest against a synthetic response with known answers.
+    - render.c/do-render render OUR engine into the same file shape, so ONE analyser command line
+      measures both and the comparison is a diff rather than a judgement.
+  WHAT IS ACTUALLY MISSING (in rough order of value):
+    1. A PER-MODULE RECIPE. Each module needs its patch built and its stimulus chosen: what to
+       connect, what to feed it, which channels are dry and wet. Today that is done by hand through
+       the backdoor. A recipe file per module - module, cables, stimulus, sweep, analysis - is what
+       turns this from an afternoon per module into a batch.
+    2. STIMULI BEYOND THE CLICK. An impulse answers filters, delays and reverbs. Oscillators want a
+       steady tone and a spectrum; shapers and the static transfer curves want a slow DC ramp;
+       envelopes want the gate measure.py already has. Each is a different analysis, not just a
+       different capture.
+    3. render.c COVERING MORE THAN THE REVERB. Its value is the identical-shape output; the moment a
+       module has no render path, the comparison goes back to being a judgement call.
+    4. ANALYSES TO MATCH: magnitude/phase response for filters, harmonic amplitudes for oscillators,
+       input-vs-output curve for shapers. analyse_ir.py is impulse-response shaped and should stay
+       that way; these are siblings, not extensions of it.
+  THE TARGETS ARE ALREADY WRITTEN DOWN: soundEngine.h's KNOWN GAPS is the list - "sup" approximated
+  by three detuned saws, Shape doing nothing to sin/saw/sup, sin and tri not band-limited, the
+  reverb being mono where the instrument is a decorrelated stereo pair with different per-channel
+  pre-delays, and the Time dial's curve being measurably wrong (RT60 is LINEAR in Time, not cubic).
+  ON EFFORT: this is a large piece of work and the way to keep it affordable is to make each run a
+  SCRIPTED BATCH that writes data files, rather than something driven a capture at a time. Design
+  the recipe, run the batch unattended, read the numbers. Do ONE module class first - filters are
+  the best candidate, being impulse-friendly, already half-implemented and easy to check against a
+  render - and only generalise once that round trip is proven end to end.
+  AND POINT EVERY NEW ANALYSIS AT THE RENDER BEFORE THE HARDWARE. It is the only case where the
+  answer is known in advance.
+
 - ZOOM TO FIT FROM A RIGHT CLICK, FITTING THE AREA UNDER THE CURSOR (2026-08-10, owner's idea).
   Zoom to Fit is currently a menu item only, and it fits EVERY pane at once: split_view_zoom_to_fit()
   walks the panes and returns the SMALLEST zoom any of them asks for, so a sparse FX area drags the
