@@ -321,8 +321,15 @@ tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char * la
             LOG_ERROR("paramType1dB missing module->type implementation");
         }
     }
-    dB = round(((double)paramValue - 64.0) / 64.0 * dB_range);
-    snprintf(buff, buffSize, "%+.0fdB", dB);
+    // ONE DECIMAL, UNSIGNED. Rounding to a whole dB quantised the whole dial to 37 distinct
+    // readings where the synth shows 128, so a nudge of the Gain knob appeared to do nothing until
+    // it crossed a decibel boundary - and it printed "+0dB" for every value from 62 to 66.
+    //
+    // The top step is 128, not 127, which is what makes the dial reach exactly +18.0 rather than
+    // the +17.72 that 127 gives. Confirmed for the Eq bands; LevScaler's smaller 8 dB range is
+    // assumed to share the shape, not verified.
+    dB = ((paramValue >= 127.0) ? 64.0 : ((double)paramValue - 64.0)) / 64.0 * dB_range;
+    snprintf(buff, buffSize, "%.1fdB", dB);
 
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
