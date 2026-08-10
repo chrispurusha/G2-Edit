@@ -2878,6 +2878,28 @@ static double reverb_step(double input, double timeSeconds, double timeNorm, dou
     // reads as the dry signal leaking back through a send that is supposed to be fully wet.
     sum = (sum * 0.25) + (diffused * 0.12);
 
+    // THE WET PATH IS QUIETER THAN THE DRY ONE, by about 11 dB, and this engine had it at almost
+    // unity — which is why its reverb sat so much more prominently in a patch than the instrument's
+    // does at the same settings.
+    //
+    // MEASURED BOTH SIDES THE SAME WAY, at the module's own defaults (Type 0, Time 64, Bright 64):
+    //
+    //   the instrument   full wet is 11.3 dB below full dry. A saw was fed through a real Reverb and
+    //                    the oscillator cut mid-recording, so the tail could be measured on its own;
+    //                    the DryWet dial was then swept and the steady output read at each step.
+    //   this engine      the wet impulse response carries -1.1 dB of energy against the impulse that
+    //                    produced it (tools/render, sqrt(sum h^2)), i.e. 10.2 dB too much.
+    //
+    // The dial's SHAPE was already right and is unchanged — sweeping DryWet on the instrument gives
+    // 0.0 / 0.0 / +0.3 / -10.0 / -11.3 dB at 0/32/64/96/127, which the ramps below reproduce to
+    // within 0.6 dB once this scale is applied. It was only ever the wet level that was wrong.
+    //
+    // RE-MEASURE IF THE COMB SET OR THEIR COUNT CHANGES: this is the sum of REVERB_COMBS parallel
+    // combs, so its level moves with how many there are.
+#define REVERB_WET_GAIN    (0.31)
+
+    sum *= REVERB_WET_GAIN;
+
     // DRY/WET IS NOT A CROSSFADE, and this was the largest single difference from the instrument.
     // The two gains are independent, each a ramp CUBED, and the ramps overlap: the dry side holds
     // full scale until the knob passes the middle and only then falls, while the wet side reaches
