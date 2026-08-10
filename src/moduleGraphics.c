@@ -845,7 +845,7 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
         render_text(moduleArea, textRectangle, (char *)connectorLocationList[connectorListIndex].label);
     }
     // Per the G2 manual ("Control signals, blue connectors" / "Logic or gate signals, yellow and
-    // orange connectors", g2manual.txt p.135) and confirmed against the original editor
+    // orange connectors", g2manual.txt p.135) and confirmed against the original editor's behaviour
     // the reference and
     // the original editor's code/OutHole::GetColor(), both bandwidth-dependent; ECableColor's own
     // TurboLogic entry, RGB (1.0, 0.75, 0.31), confirms the exact orange): a module running at the
@@ -948,11 +948,11 @@ static void render_module_connectors(tRectangle rectangle, tModule * module) {
 //
 // The manual describes "Waveform Drop-Down Selectors With Graphs" on the G2's
 // Shape Oscillators. This was originally built against OscB, using per-
-// waveform routines recovered from the binary
+// waveform routines recovered by inspection
 // (the original editor's code/DrawTri/DrawSaw/DrawSquare/DrawDsf) - but
 // on real hardware, Shape turned out to make no audible difference to OscB's
 // sin/tri/saw at all (only squ and sup). the original editor's code, the one
-// graph-widget class with "Shape" in its name, also never quite
+// reference graph-widget class with "Shape" in its name, also never quite
 // matched OscB's 5 waveforms - its Draw() dispatches to DrawDualSine/
 // DrawDsf/DrawTweekTri/DrawPulse, which fits OscShpB's 8-option waveform
 // mode (Sine1-4, TriSaw, DblSaw, Pulse, SymPulse - oscShpBStrMap) far

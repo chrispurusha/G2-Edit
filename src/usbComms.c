@@ -3068,7 +3068,7 @@ static int send_deassign_midi_cc(uint32_t slot, uint32_t midiCC) {
 // THE FLAG IS INVERTED FROM THE OBVIOUS READING, AND THIS IS HARDWARE-CONFIRMED (owner, 2026-08-02,
 // by ear): ZERO SOUNDS THE NOTE, ONE RELEASES IT. Sending 1 for on gave a keyboard that was exactly
 // backwards — silent on press, sounding on release. So the original editor's code's value 1 is the
-// note-OFF action, and the `action == 1` is asking "is this a release?", not "is this a
+// note-OFF action, and the reference's `action == 1` is asking "is this a release?", not "is this a
 // press?". Nothing in the reference says which way round the enum runs; only the hardware did.
 //
 // COMMAND_WRITE_NO_RESP rather than COMMAND_REQ deliberately, and no send_and_receive(). A held
