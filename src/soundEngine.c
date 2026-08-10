@@ -3492,16 +3492,28 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     // the sample rate — so the rate at which the loop actually reaches oscillation moved when the
     // engine started running oversampled, and the resonance went quiet with it.
     //
-    // Measured at ENGINE_OVERSAMPLE 2, peak gain from Res 0 to Res 127 at a 1.4 kHz cutoff:
+    // 4.3 IS MEASURED AGAINST THE INSTRUMENT, not chosen by ear. A saw was put through a real
+    // FltClassic and through this ladder, and both responses taken the same way — output over input
+    // at each harmonic of a 98 Hz saw, so the source spectrum cancels and only the filter is left.
+    // Peak height above the passband at Res 127, a displayed cutoff of 1397 Hz:
     //
-    //     k 3.9 -> +16/+21/+24 dB      k 5.0 -> +79/+81/+73 dB      k 6.0 -> +82/+85/+86 dB
-    //             (12/18/24 dB slopes)
+    //                       12 dB      18 dB      24 dB
+    //     the instrument    +31.5      +28.7      +25.9
+    //     k = 4.3           +31.6      +28.5      +25.4      <- 0.3 dB mean error
+    //     k = 5.0           +37.0      +33.9      +30.7      <- what this used to be
     //
-    // 3.9 barely resonated. Past about 6 the knob's useful travel collapses into its last few
-    // steps, since the peak is already enormous at Res 100. 5.0 resonates properly and still sweeps
-    // progressively. RE-MEASURE THIS IF ENGINE_OVERSAMPLE CHANGES — it is a property of the rate,
-    // not of the filter.
-#define LADDER_K_MAX    (5.0)
+    // The previous note here recorded k 5.0 as "+79/+81/+73 dB". That was a different measurement,
+    // not this one, and the two are not comparable — which is precisely why it read as though the
+    // engine were 50 dB out when it was really about 5.
+    //
+    // THE ANSWER DEPENDS ON INPUT LEVEL, because ladder_saturate() does. At a quarter of full scale
+    // the same k peaks some 6 dB higher, the loop being driven less deeply into the knee. 4.3 is
+    // right for a full-scale oscillator straight into the filter, which is how the instrument was
+    // measured; a much quieter source will resonate more sharply here than it does there.
+    //
+    // RE-MEASURE IF ENGINE_OVERSAMPLE CHANGES — the loop's phase, and so the k at which it reaches
+    // oscillation, is a property of the rate rather than of the filter.
+#define LADDER_K_MAX    (4.3)
 
     return ladder_filter(gLadder[voice][node], input, g, LADDER_K_MAX * resonance, 1 + spec->extraPoles);
 }
