@@ -138,7 +138,7 @@ double flt_cutoff_hz(double paramValue) {
 }
 
 // An envelope segment's length in seconds — the 0.5 ms to 45 s scale the manual quotes for the Decay
-// knobs (p.196) and that ADRTimeStrMap prints.
+// knobs (p.196).
 //
 // COMPUTED, not looked up. The scale is an exact EIGHTH POWER of the dial value shifted by a
 // constant, and pinning the exponent at a whole 8 fits better than letting it float (which lands on
@@ -146,19 +146,29 @@ double flt_cutoff_hz(double paramValue) {
 // hardware would evaluate it: powers there are built by repeated squaring, so an integer exponent is
 // what the machine wants, and 8 is three squarings.
 //
-// Reproduces every entry of the printed scale that carries three significant figures to within
-// 0.33%, median 0.078% — i.e. to the limit of what the printed table can confirm. The wider gap at
-// the very short end (5% at raw 2) is against entries printed to ONE significant figure: "0.7ms"
-// admits anything from 0.65 to 0.75, and this lands at 0.736 well inside that.
+// REPRODUCES ALL 128 PRINTED ENTRIES EXACTLY, digit for digit, once formatted the way the synth
+// formats them (see render_paramType1ADRTime). That is what retired the lookup table: a curve that
+// agrees with every entry is not an approximation of the table, it IS the table, and it keeps
+// working between the entries.
+//
+// Only ONE constant is fitted. The scale is not free — it is pinned so that the top of the dial
+// lands on exactly the 45 s the manual quotes, which leaves the offset as the single unknown. The
+// window of offsets that reproduces all 128 entries is only 0.0018 wide (40.1664 to 40.1682), so
+// there is very little room left to be wrong in; 40.167 sits in the middle of it.
 //
 // Computing rather than tabulating also handles the fractional dial values that morphs and the
 // engine's parameter smoothing produce. A table index truncates those, so a morphed attack would
 // step between whole dial positions instead of sweeping; a curve just passes through them.
 //
-// Supersedes an earlier fit of the same shape (offset 39.55, exponent 7.9421) which was twice as
-// far out — 0.72% worst, 0.36% median.
-#define ADR_TIME_SCALE     (7.385186e-17)
-#define ADR_TIME_OFFSET    (40.150)
+// Supersedes two earlier fits of the same shape: offset 39.55 with exponent 7.9421, and offset
+// 40.150, which reproduced 108 of the 128 printed entries — every miss being the last digit low
+// by one, which is what said the constant was fractionally small rather than the shape wrong.
+#define ADR_TIME_OFFSET    (40.167)
+#define ADR_TIME_MAX_S     (45.0)      // The manual's stated maximum, and what raw 127 must give
+#define ADR_TIME_SCALE     (ADR_TIME_MAX_S / (127.0 + ADR_TIME_OFFSET) / (127.0 + ADR_TIME_OFFSET) \
+                            / (127.0 + ADR_TIME_OFFSET) / (127.0 + ADR_TIME_OFFSET)                \
+                            / (127.0 + ADR_TIME_OFFSET) / (127.0 + ADR_TIME_OFFSET)                \
+                            / (127.0 + ADR_TIME_OFFSET) / (127.0 + ADR_TIME_OFFSET))
 
 double adr_time_seconds(double paramValue) {
     double value = paramValue;
@@ -184,7 +194,7 @@ double adr_time_seconds(double paramValue) {
 // fitted: an earlier exponential matched only at the two endpoints and was out by as much as 245%
 // in between, reading Q 10.9 where the dial showed 3.16.
 //
-// This replaces reading filter_resonanceStrMap through atof(). The table was right - it agrees
+// This replaces reading a 128-entry table through atof(). The table was right - it agreed
 // with this to the printed precision at 126 of its 128 entries - but an index truncates, so a
 // morphed or smoothed Res swept in whole dial steps instead of gliding, and every lookup cost a
 // string parse on the audio thread.
@@ -414,6 +424,82 @@ double clk_sync_beats(double paramValue) {
     };
 
     return beats[clk_sync_index(paramValue)];
+}
+
+// A flanger's sweep rate in hertz. COUNTED IN A 24-BIT FRACTION, not in hertz: the step is
+// 384000/2^24, an exact binary fraction, so the whole scale is a straight line of 2^-24 units and
+// the top of the dial lands on 2.91 Hz. The bottom step is HALF a step rather than nothing, which
+// is why raw 0 reads 0.01 Hz and not 0.00.
+#define FLANGER_RATE_STEP    (384000.0 / 16777216.0)
+
+double flanger_rate_hz(double paramValue) {
+    if (paramValue <= 0.0) {
+        return FLANGER_RATE_STEP / 2.0;
+    }
+    return paramValue * FLANGER_RATE_STEP;
+}
+
+// A phaser's sweep rate in hertz. SQUARE IN THE DIAL VALUE, and counted in the same 24-bit fraction
+// as the flanger: half of raw² whole steps of 24000, offset by 768000 so the bottom of the dial sits
+// at 0.05 Hz rather than at nothing. The square is why the top of the dial moves so much faster per
+// step than the bottom - 0.05 Hz to 11.6 Hz, with most of that in the last quarter of the travel.
+//
+// The halving truncates, so this must floor rather than round: at odd dial values the two differ by
+// a whole 24000-unit step.
+#define PHASER_RATE_STEP      (24000.0 / 16777216.0)
+#define PHASER_RATE_OFFSET    (768000.0 / 16777216.0)
+
+double phaser_rate_hz(double paramValue) {
+    double value = paramValue;
+
+    if (value < 0.0) {
+        value = 0.0;
+    } else if (value > 127.0) {
+        value = 127.0;
+    }
+    return (floor((value * value) / 2.0) * PHASER_RATE_STEP) + PHASER_RATE_OFFSET;
+}
+
+// A mixer level in decibels, for the channels whose Curve is set to dB.
+//
+// A CUBIC BLENDED WITH A LINE, not a plain logarithm: with x the dial as a fraction of full scale,
+// the amplitude is x³ with 1% of a straight line mixed in, and the reading is 20·log10 of that. The
+// 1% is what keeps the very bottom of the dial from diving to minus infinity as fast as a pure cube
+// would, and it is why the scale cannot be written as so many dB per step.
+//
+// The three lowest steps are named rather than computed - silence, then two values the curve itself
+// would place slightly differently - and naming them is the renderer's job, so this returns a plain
+// -infinity at the bottom and leaves the wording alone. Reproduces every other reading of the
+// printed scale exactly.
+#define MIX_LEVEL_CUBIC_MIX    (0.99)
+
+double mix_level_db(double paramValue) {
+    double x = paramValue / 127.0;
+
+    if (x <= 0.0) {
+        return -1.0 / 0.0;    // Silence - the dial's bottom step, shown as "-oo"
+    }
+    return 20.0 * log10((x * (1.0 - MIX_LEVEL_CUBIC_MIX)) + (x * x * x * MIX_LEVEL_CUBIC_MIX));
+}
+
+// The patch's master volume in decibels: -78 dB at the bottom of the dial up to 0 at the top.
+//
+// The dial is exponential in the ATTENUATION rather than in the gain - (16/3) raised to how far
+// DOWN the dial you are, scaled to 18 and shifted so the top reads exactly 0 - which is why the
+// numbers crowd together at the quiet end and spread out near unity. Reproduces all 128 readings
+// of the printed scale exactly.
+#define PATCH_VOLUME_BASE    (16.0 / 3.0)
+#define PATCH_VOLUME_SPAN    (18.0)
+
+double patch_volume_db(double paramValue) {
+    double value = paramValue;
+
+    if (value < 0.0) {
+        value = 0.0;
+    } else if (value > 127.0) {
+        value = 127.0;
+    }
+    return -((pow(PATCH_VOLUME_BASE, (127.0 - value) / 127.0) * PATCH_VOLUME_SPAN) - PATCH_VOLUME_SPAN);
 }
 
 // LevAmp's amplification, as a multiplier. The manual (p.227) gives the range as "0.25 to 4.0 times
