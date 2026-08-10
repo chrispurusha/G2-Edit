@@ -1714,7 +1714,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeControl, {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 20
     {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeLogic,   {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",         labelLocRight},
     {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",           labelLocRight},
-    {moduleTypeEnvADSR,     connectorDirOut, connectorTypeControl, {{-3,  -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocLeft   },
+    {moduleTypeEnvADSR,     connectorDirOut, connectorTypeControl, {{ -3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocLeft },
     {moduleTypeEnvADSR,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 21 Mux1-8
     {moduleTypeMux1to8,     connectorDirIn,  connectorTypeControl, {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 21 In
