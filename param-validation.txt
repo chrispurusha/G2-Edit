@@ -9,7 +9,7 @@ been checked against the value the G2 itself shows.
   GAP   the renderer has no branch for this module, so it shows an error
   --    not yet checked
 
-378 of 918 parameters validated (0 flagged GAP).
+408 of 918 parameters validated (0 flagged GAP).
 
 ==============================================================================
 
@@ -271,9 +271,9 @@ FltVoice   [module type 45]
    2. Vowel3    Menu          --   enumerated selector - name list not yet cross-checked
    3. Level     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Vowel     BipLevel      --   
-   5. VowelMod  CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   5. VowelMod  Bipolar       OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
    6. Freq      BipLevel      --   
-   7. FreqMod   CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   7. FreqMod   Bipolar       OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
    8. Res       BipLevel      --   
    9. Bypass    Bypass        OK   confirmed by the owner
 
@@ -290,7 +290,7 @@ EnvAHD   [module type 46]
 Pan   [module type 47]
 ----------------------
    0. PanMod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
-   1. Pan     LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   1. Pan     LRDial        OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
    2. LogLin  Menu          OK   selector names match the G2 exactly
 
 MixStereo   [module type 48]
@@ -301,12 +301,12 @@ MixStereo   [module type 48]
    3. Lvl4       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Lvl5       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    5. Lvl6       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
-   6. Pan1       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
-   7. Pan2       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
-   8. Pan3       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
-   9. Pan4       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
-  10. Pan5       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
-  11. Pan6       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   6. Pan1       LRDial        OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
+   7. Pan2       LRDial        OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
+   8. Pan3       LRDial        OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
+   9. Pan4       LRDial        OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
+  10. Pan5       LRDial        OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
+  11. Pan6       LRDial        OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
   12. LvlMaster  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
 
 FltMulti   [module type 49]
@@ -382,8 +382,8 @@ Resonator (Not in Clavia editor)   [module type 56]
 
 Automate *** We lack an UI element for the CTRL selector   [module type 57]
 ---------------------------------------------------------------------------
-   0. Ctrl  CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
-   1. Val   CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
+   0. Ctrl  Int           OK   plain 0..127 integer, one-to-one with the value sent
+   1. Val   Int           OK   plain 0..127 integer, one-to-one with the value sent
    2. Ch    Menu          --   enumerated selector - name list not yet cross-checked
    3. Echo  Menu          OK   selector names match the G2 exactly
 
@@ -591,7 +591,7 @@ FltPhase   [module type 102]
    0. Pitch     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    1. Freq      Freq          OK   Hz = 13.75 * 2^(v/12)
    2. Spread M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
-   3. FB        CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   3. FB        Bipolar       OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
    4. Notch     Menu          --   enumerated selector - name list not yet cross-checked
    5. Spread    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    6. Bypass    Bypass        OK   confirmed by the owner
@@ -784,18 +784,18 @@ Mix4-1S   [module type 140]
 
 CtrlSend   [module type 141]
 ----------------------------
-   0. Ctrl   CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
-   1. Value  CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
+   0. Ctrl   Int           OK   plain 0..127 integer, one-to-one with the value sent
+   1. Value  Int           OK   plain 0..127 integer, one-to-one with the value sent
    2. Chan   Menu          --   enumerated selector - name list not yet cross-checked
 
 PCSend   [module type 142]
 --------------------------
-   0. Program  CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
+   0. Program  Int           OK   plain 0..127 integer, one-to-one with the value sent
    1. Chan     Menu          --   enumerated selector - name list not yet cross-checked
 
 NoteSend   [module type 143]
 ----------------------------
-   0. Vel   CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
+   0. Vel   Int           OK   plain 0..127 integer, one-to-one with the value sent
    1. Note  NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
    2. Chan  Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -922,7 +922,7 @@ SeqLev   [module type 146]
 
 CtrRcv   [module type 147]
 --------------------------
-   0. Ctrl  CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
+   0. Ctrl  Int           OK   plain 0..127 integer, one-to-one with the value sent
    1. Chan  Menu          --   enumerated selector - name list not yet cross-checked
 
 NoteRcv   [module type 148]
@@ -935,7 +935,7 @@ NoteZone   [module type 149]
    0. RChan  Menu          --   enumerated selector - name list not yet cross-checked
    1. Min    NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
    2. Max    NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
-   3. Trans  CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   3. Trans  Bipolar       OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
    4. SChan  Menu          --   enumerated selector - name list not yet cross-checked
    5. Thru   Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -1047,7 +1047,7 @@ FltComb   [module type 162]
    0. Freq    Freq          OK   Hz = 13.75 * 2^(v/12)
    1. Pitch   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Kbt     Menu          --   enumerated selector - name list not yet cross-checked
-   3. FB      CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   3. FB      Bipolar       OK   raw - 64, so -64 to +63 with 0 at the centre   [hardware-confirmed 2026-08-10]
    4. FB Mod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    5. Type    Menu          OK   selector names match the G2 exactly
    6. Level   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
@@ -1171,7 +1171,7 @@ DelayB   [module type 177]
 
 DlyClock   [module type 178]
 ----------------------------
-   0. Sample delay  Int           --   
+   0. Sample delay  Int           OK   plain 0..127 integer, one-to-one with the value sent
 
 Operator   [module type 180]
 ----------------------------
@@ -1179,25 +1179,25 @@ Operator   [module type 180]
    1. Sync         Menu          OK   selector names match the G2 exactly
    2. RatioFixes   Menu          OK   selector names match the G2 exactly
    3. Coarse       Freq          OK   Hz = 13.75 * 2^(v/12)
-   4. Fine         CommonDial    --   declared as OpFreqFine, but rendered as the plain percent dial - check
+   4. Fine         Int           OK   plain 0..127 integer, one-to-one with the value sent
    5. Detune       Menu          --   enumerated selector - name list not yet cross-checked
    6. Vel          Menu          --   enumerated selector - name list not yet cross-checked
    7. RateScale    Menu          --   enumerated selector - name list not yet cross-checked
-   8. R1           CommonDial    --   declared as OpTime, but rendered as the plain percent dial - check
-   9. L1           CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
-  10. R2           CommonDial    --   declared as OpTime, but rendered as the plain percent dial - check
-  11. L2           CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
-  12. R3           CommonDial    --   declared as OpTime, but rendered as the plain percent dial - check
-  13. L3           CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
-  14. R4           CommonDial    --   declared as OpTime, but rendered as the plain percent dial - check
-  15. L4           CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
+   8. R1           Int           OK   plain 0..127 integer, one-to-one with the value sent
+   9. L1           Int           OK   plain 0..127 integer, one-to-one with the value sent
+  10. R2           Int           OK   plain 0..127 integer, one-to-one with the value sent
+  11. L2           Int           OK   plain 0..127 integer, one-to-one with the value sent
+  12. R3           Int           OK   plain 0..127 integer, one-to-one with the value sent
+  13. L3           Int           OK   plain 0..127 integer, one-to-one with the value sent
+  14. R4           Int           OK   plain 0..127 integer, one-to-one with the value sent
+  15. L4           Int           OK   plain 0..127 integer, one-to-one with the value sent
   16. AMod         Menu          --   enumerated selector - name list not yet cross-checked
   17. BrPt         NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
   18. LDepth Mode  Menu          OK   selector names match the G2 exactly
   19. Ldepth       Menu          --   enumerated selector - name list not yet cross-checked
   20. RDepth Mode  Menu          OK   selector names match the G2 exactly
   21. Rdepth       Menu          --   enumerated selector - name list not yet cross-checked
-  22. Level        CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
+  22. Level        Int           OK   plain 0..127 integer, one-to-one with the value sent
   23. Bypass       Bypass        OK   confirmed by the owner
   24. KBEnv        Toggle        OK   selector names match the G2 exactly
 

@@ -637,9 +637,9 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFltVoice,   paramTypeMenu,        {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   2, vowelStrMap,                           NULL          },                         // 45 Vowel3
     {moduleTypeFltVoice,   paramTypeCommonDial,  {{-15, -17}, { 7,  7}}, anchorBottomRight, NULL,           128,  80, NULL,                                  NULL          },                         // 45 Level
     {moduleTypeFltVoice,   paramTypeBipLevel,    {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 45 Vowel
-    {moduleTypeFltVoice,   paramTypeCommonDial,  {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 45 VowelMod
+    {moduleTypeFltVoice,   paramTypeBipolar,     {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 45 VowelMod
     {moduleTypeFltVoice,   paramTypeBipLevel,    {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  80, NULL,                                  NULL          },                         // 45 Freq
-    {moduleTypeFltVoice,   paramTypeCommonDial,  {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 45 FreqMod
+    {moduleTypeFltVoice,   paramTypeBipolar,     {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 45 FreqMod
     {moduleTypeFltVoice,   paramTypeBipLevel,    {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  "Res",          128,   0, NULL,                                  NULL          },                         // 45 Res
     {moduleTypeFltVoice,   paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 45 Bypass
     // 46 EnvAHD
@@ -727,8 +727,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeResonator,  paramTypeUniPol,      {{ 75, -17}, { 7,  7}}, anchorBottomLeft,  "Pos",          128,   0, NULL,                                  NULL          },                      // 56 Pos
     {moduleTypeResonator,  paramTypeMenu,        {{ 30,  23}, { 7,  7}}, anchorTopLeft,     "Alg",            5,   0, resonAlgStrMap,                        NULL          },                      // 56 Algorithm
     // 57 Automate *** We lack an UI element for the CTRL selector
-    {moduleTypeAutomate,   paramTypeCommonDial,  {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Ctrl",         128,   7, NULL,                                  NULL          },                      // 57 Ctrl CC
-    {moduleTypeAutomate,   paramTypeCommonDial,  {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  "Val",          128,  64, NULL,                                  NULL          },                      // 57 Val
+    {moduleTypeAutomate,   paramTypeInt,         {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Ctrl",         128,   7, NULL,                                  NULL          },                      // 57 Ctrl CC
+    {moduleTypeAutomate,   paramTypeInt,         {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  "Val",          128,  64, NULL,                                  NULL          },                      // 57 Val
     {moduleTypeAutomate,   paramTypeMenu,        {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Ch",            17,   0, midiChanAutomateStrMap,                NULL          },                      // 57 Channel
     {moduleTypeAutomate,   paramTypeMenu,        {{ 33,   0}, { 7,  7}}, anchorBottomLeft,  "Echo",           2,   0, offOnStrMap,                           NULL          },                      // 57 Echo
     // 58 Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Bend/Click/Noise(y=65)
@@ -901,7 +901,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                         // 102 Pitch M
     {moduleTypeFltPhase,   paramTypeFreq,        {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          },                         // 102 Freq
     {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 42,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 102 Spread M
-    {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 57, -17}, { 7,  7}}, anchorBottomLeft,  "FB",           128,  64, NULL,                                  NULL          },                         // 102 FB
+    {moduleTypeFltPhase,   paramTypeBipolar,     {{ 57, -17}, { 7,  7}}, anchorBottomLeft,  "FB",           128,  64, NULL,                                  NULL          },                         // 102 FB
     {moduleTypeFltPhase,   paramTypeMenu,        {{ 70,   0}, { 7,  7}}, anchorBottomLeft,  "Notch",          6,   4, int16StrMap,                           NULL          },                         // 102 Notch count
     {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 38, -17}, { 7,  7}}, anchorBottomLeft,  "Spread",       128,  64, NULL,                                  NULL          },                         // 102 Spread
     {moduleTypeFltPhase,   paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                         // 102 Bypass
@@ -1104,14 +1104,14 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMix4to1S,   paramTypeEnable,      {{ 65,  -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable4
     {moduleTypeMix4to1S,   paramTypeMenu,        {{  3,   9}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },                      // 123 Exp
     // 141 CtrlSend
-    {moduleTypeCtrlSend,   paramTypeCommonDial,  {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Ctrl",         128,   1, NULL,                                  NULL          },                      // 141 Ctrl
-    {moduleTypeCtrlSend,   paramTypeCommonDial,  {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  "Value",        128,   1, NULL,                                  NULL          },                      // 141 Ctrl
+    {moduleTypeCtrlSend,   paramTypeInt,         {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Ctrl",         128,   1, NULL,                                  NULL          },                      // 141 Ctrl
+    {moduleTypeCtrlSend,   paramTypeInt,         {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  "Value",        128,   1, NULL,                                  NULL          },                      // 141 Ctrl
     {moduleTypeCtrlSend,   paramTypeMenu,        {{ 85,   0}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          },                      // 141 Channel
     // 142 PCSend
-    {moduleTypePCSend,     paramTypeCommonDial,  {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  "Program",      128,   1, NULL,                                  NULL          },                      // 142 Program
+    {moduleTypePCSend,     paramTypeInt,         {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  "Program",      128,   1, NULL,                                  NULL          },                      // 142 Program
     {moduleTypePCSend,     paramTypeMenu,        {{ 85,   0}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          },                      // 142 Channel
     // 143 NoteSend
-    {moduleTypeNoteSend,   paramTypeCommonDial,  {{ 42,  -3}, { 7,  7}}, anchorBottomLeft,  "Vel",          128, 100, NULL,                                  NULL          },                      // 143 Vel
+    {moduleTypeNoteSend,   paramTypeInt,         {{ 42,  -3}, { 7,  7}}, anchorBottomLeft,  "Vel",          128, 100, NULL,                                  NULL          },                      // 143 Vel
     {moduleTypeNoteSend,   paramTypeNoteDial,    {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          },                      // 143 Ctrl
     {moduleTypeNoteSend,   paramTypeMenu,        {{ 85,   0}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          },                      // 143 Channel
     // 144 SeqEvent
@@ -1231,7 +1231,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqLev,     paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          },                      // 146 Clear
 
     // 147 CtrRcv
-    {moduleTypeCtrlRcv,    paramTypeCommonDial,  {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                                  NULL          },                        // 147 Ctrl
+    {moduleTypeCtrlRcv,    paramTypeInt,         {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                                  NULL          },                        // 147 Ctrl
     {moduleTypeCtrlRcv,    paramTypeMenu,        {{ 60,   0}, { 7,  7}}, anchorBottomLeft,  "Chan",          18,  17, midiChanRcvStrMap,                     NULL          },                        // 147 Channel
     // 148 NoteRcv
     {moduleTypeNoteRcv,    paramTypeNoteDial,    {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          },                        // 148 Note
@@ -1240,7 +1240,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeNoteZone,   paramTypeMenu,        {{  3,   0}, { 7,  7}}, anchorBottomLeft,  "RChan",         18,  17, midiChanRcvStrMap,                     NULL          },                        // 149 Receive Channel
     {moduleTypeNoteZone,   paramTypeNoteDial,    {{ 23,  -3}, { 7,  7}}, anchorBottomLeft,  "Min",          128,   0, NULL,                                  NULL          },                        // 149 Min note
     {moduleTypeNoteZone,   paramTypeNoteDial,    {{ 43,  -3}, { 7,  7}}, anchorBottomLeft,  "Max",          128, 127, NULL,                                  NULL          },                        // 149 Max note
-    {moduleTypeNoteZone,   paramTypeCommonDial,  {{ 63,  -3}, { 7,  7}}, anchorBottomLeft,  "Trans",        128,  64, NULL,                                  NULL          },                        // 149 Transpose
+    {moduleTypeNoteZone,   paramTypeBipolar,     {{ 63,  -3}, { 7,  7}}, anchorBottomLeft,  "Trans",        128,  64, NULL,                                  NULL          },                        // 149 Transpose
     {moduleTypeNoteZone,   paramTypeMenu,        {{ 83,   0}, { 7,  7}}, anchorBottomLeft,  "SChan",         21,   0, midiChanStrMap,                        NULL          },                        // 149 Send Channel
     {moduleTypeNoteZone,   paramTypeMenu,        {{ 60, -14}, { 7,  7}}, anchorBottomLeft,  "Thru",           2,   0, thruStrMap,                            NULL          },                        // 149 Thru mode
     // 150 Compress
@@ -1341,7 +1341,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFltComb,    paramTypeFreq,        {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          },                   // 102 Freq
     {moduleTypeFltComb,    paramTypeCommonDial,  {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                   // 102 Pitch M
     {moduleTypeFltComb,    paramTypeMenu,        {{  3, -19}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          },                   // 102 Kbt
-    {moduleTypeFltComb,    paramTypeCommonDial,  {{ 57, -17}, { 7,  7}}, anchorBottomLeft,  "FB",           128,  64, NULL,                                  NULL          },                   // 102 FB
+    {moduleTypeFltComb,    paramTypeBipolar,     {{ 57, -17}, { 7,  7}}, anchorBottomLeft,  "FB",           128,  64, NULL,                                  NULL          },                   // 102 FB
     {moduleTypeFltComb,    paramTypeCommonDial,  {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                   // 102 FB Mod
     {moduleTypeFltComb,    paramTypeMenu,        {{ 68, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, fltPhaseTypeStrMap,                    NULL          },                   // 102 Type
     {moduleTypeFltComb,    paramTypeCommonDial,  {{ 83,  -3}, { 7,  7}}, anchorBottomLeft,  "Level",        128,   0, NULL,                                  NULL          },                   // 162 Level
@@ -1446,25 +1446,25 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOperator,   paramTypeMenu,        {{ 30, -57}, { 7,  7}}, anchorBottomLeft,  "Sync",           2,   0, offOnStrMap,                           NULL          },                 // 180 Sync *** Check values
     {moduleTypeOperator,   paramTypeMenu,        {{ 40, -60}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, ratioFixedStrMap,                      NULL          },                 // 180 RatioFixes
     {moduleTypeOperator,   paramTypeFreq,        {{ 60, -60}, { 7,  7}}, anchorBottomLeft,  "Coarse",       128,   0, NULL,                                  NULL          },                 // 180 Freq
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 50, -60}, { 7,  7}}, anchorBottomLeft,  "Fine",         128,   0, NULL,                                  NULL          },                 // 180 Freq
+    {moduleTypeOperator,   paramTypeInt,         {{ 50, -60}, { 7,  7}}, anchorBottomLeft,  "Fine",         128,   0, NULL,                                  NULL          },                 // 180 Freq
     {moduleTypeOperator,   paramTypeMenu,        {{ 70, -57}, { 7,  7}}, anchorBottomLeft,  "Detune",        15,   7, detuneStrMap,                          NULL          },                 // 180 FreqDetune
     {moduleTypeOperator,   paramTypeMenu,        {{ 70, -47}, { 7,  7}}, anchorBottomLeft,  "Vel",            8,   0, operator07StrMap,                      NULL          },                 // 180 Vel
     {moduleTypeOperator,   paramTypeMenu,        {{ 83, -47}, { 7,  7}}, anchorBottomLeft,  "RateScale",      8,   0, operator07StrMap,                      NULL          },                 // 180 RateScale
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 20, -30}, { 7,  7}}, anchorBottomLeft,  "R1",           128, 127, NULL,                                  NULL          },                 // 180 R1
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 30, -30}, { 7,  7}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          },                 // 180 L1
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 40, -30}, { 7,  7}}, anchorBottomLeft,  "R2",           128, 127, NULL,                                  NULL          },                 // 180 R2
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 50, -30}, { 7,  7}}, anchorBottomLeft,  "L2",           128, 127, NULL,                                  NULL          },                 // 180 L2
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 60, -30}, { 7,  7}}, anchorBottomLeft,  "R3",           128, 127, NULL,                                  NULL          },                 // 180 R3
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 70, -30}, { 7,  7}}, anchorBottomLeft,  "L3",           128, 127, NULL,                                  NULL          },                 // 180 L3
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 80, -30}, { 7,  7}}, anchorBottomLeft,  "R4",           128, 127, NULL,                                  NULL          },                 // 180 R4
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 90, -30}, { 7,  7}}, anchorBottomLeft,  "L4",           128, 127, NULL,                                  NULL          },                 // 180 L4
+    {moduleTypeOperator,   paramTypeInt,         {{ 20, -30}, { 7,  7}}, anchorBottomLeft,  "R1",           128, 127, NULL,                                  NULL          },                 // 180 R1
+    {moduleTypeOperator,   paramTypeInt,         {{ 30, -30}, { 7,  7}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          },                 // 180 L1
+    {moduleTypeOperator,   paramTypeInt,         {{ 40, -30}, { 7,  7}}, anchorBottomLeft,  "R2",           128, 127, NULL,                                  NULL          },                 // 180 R2
+    {moduleTypeOperator,   paramTypeInt,         {{ 50, -30}, { 7,  7}}, anchorBottomLeft,  "L2",           128, 127, NULL,                                  NULL          },                 // 180 L2
+    {moduleTypeOperator,   paramTypeInt,         {{ 60, -30}, { 7,  7}}, anchorBottomLeft,  "R3",           128, 127, NULL,                                  NULL          },                 // 180 R3
+    {moduleTypeOperator,   paramTypeInt,         {{ 70, -30}, { 7,  7}}, anchorBottomLeft,  "L3",           128, 127, NULL,                                  NULL          },                 // 180 L3
+    {moduleTypeOperator,   paramTypeInt,         {{ 80, -30}, { 7,  7}}, anchorBottomLeft,  "R4",           128, 127, NULL,                                  NULL          },                 // 180 R4
+    {moduleTypeOperator,   paramTypeInt,         {{ 90, -30}, { 7,  7}}, anchorBottomLeft,  "L4",           128, 127, NULL,                                  NULL          },                 // 180 L4
     {moduleTypeOperator,   paramTypeMenu,        {{ 17, -17}, { 7,  7}}, anchorBottomLeft,  "AMod",           8,   0, operator07StrMap,                      NULL          },                 // 180 AMod
     {moduleTypeOperator,   paramTypeNoteDial,    {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "BrPt",         128,  64, NULL,                                  NULL          },                 // 180 AMod
     {moduleTypeOperator,   paramTypeMenu,        {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, operatorDepthStrMap,                   NULL          },                 // 180 LDepth Mode
     {moduleTypeOperator,   paramTypeMenu,        {{ 45,   0}, { 7,  7}}, anchorBottomLeft,  "Ldepth",         8,   0, operator07StrMap,                      NULL          },                 // 180 LDepth
     {moduleTypeOperator,   paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, operatorDepthStrMap,                   NULL          },                 // 180 RDepth Mode
     {moduleTypeOperator,   paramTypeMenu,        {{ 70,   0}, { 7,  7}}, anchorBottomLeft,  "Rdepth",         8,   0, operator07StrMap,                      NULL          },                 // 180 RDepth
-    {moduleTypeOperator,   paramTypeCommonDial,  {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          },                 // 180 Level
+    {moduleTypeOperator,   paramTypeInt,         {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          },                 // 180 Level
     {moduleTypeOperator,   paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                 // 180 On/Off
     {moduleTypeOperator,   paramTypeToggle,      {{ 20, -47}, { 7,  7}}, anchorBottomLeft,  "KBEnv",          2,   1, offOnStrMap,                           offOnColourMap},                 // 180 EnvLB
     // 181 DlyEight
