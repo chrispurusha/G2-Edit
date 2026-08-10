@@ -103,6 +103,28 @@ double osc_fine_cents(double paramValue) {
     return (paramValue - 64.0) / 64.0 * 50.0;
 }
 
+// A sub-oscillator's frequency, for the Pitch Type setting named "Sub".
+//
+// It is the ordinary note scale ELEVEN OCTAVES DOWN: the dial value is a MIDI note number, exactly
+// as it is for Semi, and the result is that note's frequency divided by 2048. That is where the
+// 0.21484375 in the arithmetic comes from - it is 440/2048, the A eleven octaves below concert
+// pitch - so nothing here is a new curve, only the familiar one shifted.
+//
+// The bottom of the dial is silence rather than a very low note, which is why 0 returns 0 rather
+// than 0.0001 Hz.
+//
+// fineSemitones is the Cent dial's contribution, (cent - 64) / 128 of a semitone. Callers that
+// cannot reach that parameter pass 0.0, which is exactly right at the dial's default of 64 and
+// wrong by at most half a semitone at either extreme.
+#define OSC_SUB_OCTAVES_DOWN    (11.0)
+
+double osc_sub_freq_hz(double paramValue, double fineSemitones) {
+    if (paramValue <= 0.0) {
+        return 0.0;
+    }
+    return 440.0 * exp2(((paramValue + fineSemitones - 69.0) / 12.0) - OSC_SUB_OCTAVES_DOWN);
+}
+
 double osc_shape_percent(double paramValue) {
     return paramValue * 49.0 / 127.0 + 50.0;
 }

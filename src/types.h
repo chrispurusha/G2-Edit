@@ -347,6 +347,7 @@ typedef enum {
     paramTypeLevAmpDial,
     paramTypeNoteDial,
     paramTypePan,
+    paramTypePhase,
     paramTypeSlider,
     paramTypeCommonDial,
     paramTypeLRDial,

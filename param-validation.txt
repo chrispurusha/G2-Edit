@@ -9,20 +9,20 @@ been checked against the value the G2 itself shows.
   GAP   the renderer has no branch for this module, so it shows an error
   --    not yet checked
 
-156 of 918 parameters validated (0 flagged GAP).
+233 of 918 parameters validated (0 flagged GAP).
 
 ==============================================================================
 
 4-Out   [module type 3]
 -----------------------
    0. Out to  Menu          OK   selector names match the G2 exactly
-   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   1. Bypass  Bypass        OK   confirmed by the owner
    2. Pad     Menu          --   enumerated selector - name list not yet cross-checked
 
 2-Out   [module type 4]
 -----------------------
    0. Out to  Menu          OK   selector names match the G2 exactly
-   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   1. Bypass  Bypass        OK   confirmed by the owner
    2. Pad     Menu          --   enumerated selector - name list not yet cross-checked
 
 OscB   [module type 7]
@@ -35,8 +35,8 @@ OscB   [module type 7]
    5. FM          CommonDial    --   
    6. Shape       Shape         OK   percent = v*49/127 + 50
    7. ShpM        CommonDial    --   
-   8. Waveform    Menu          --   enumerated selector - name list not yet cross-checked
-   9. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   8. Waveform    Menu          OK   selector names match the G2 exactly
+   9. Bypass      Bypass        OK   confirmed by the owner
   10. FM Type     Menu          OK   selector names match the G2 exactly
 
 OscShpB   [module type 8]
@@ -49,7 +49,7 @@ OscShpB   [module type 8]
    5. FM          CommonDial    --   
    6. Shape       Shape         OK   percent = v*49/127 + 50
    7. ShpCtrl     CommonDial    --   
-   8. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   8. Bypass      Bypass        OK   confirmed by the owner
    9. FM Type     Menu          OK   selector names match the G2 exactly
 
 OscC   [module type 9]
@@ -59,7 +59,7 @@ OscC   [module type 9]
    2. Kbt        Toggle        --   
    3. Tune Mode  Menu          --   enumerated selector - name list not yet cross-checked
    4. FM         CommonDial    --   
-   5. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   5. Bypass     Bypass        OK   confirmed by the owner
    6. FM Type    Menu          OK   selector names match the G2 exactly
    7. Pitch      CommonDial    --   
 
@@ -68,7 +68,7 @@ Reverb   [module type 12]
    0. Time        CommonDial    --   
    1. Brightness  CommonDial    --   
    2. DryWet      CommonDial    --   
-   3. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass      Bypass        OK   confirmed by the owner
 
 OscString   [module type 13]
 ----------------------------
@@ -79,7 +79,7 @@ OscString   [module type 13]
    4. OscString Pitch mode  Menu          --   enumerated selector - name list not yet cross-checked
    5. Decay                 CommonDial    --   
    6. Damp                  CommonDial    --   
-   7. Bypass                Bypass        --   enumerated selector - name list not yet cross-checked
+   7. Bypass                Bypass        OK   confirmed by the owner
 
 Sw8-1 *** Needs more resources   [module type 15]
 -------------------------------------------------
@@ -108,7 +108,7 @@ EnvvADSR   [module type 20]
    0. Env Shape     Menu          OK   selector names match the G2 exactly
    1. Attack        ADRTime       --   envelope time scale - reference values needed from the hardware
    2. Decay         ADRTime       --   envelope time scale - reference values needed from the hardware
-   3. Sus           UniPol        --   
+   3. Sus           UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
    4. Rel           ADRTime       --   envelope time scale - reference values needed from the hardware
    5. Output Type   Menu          --   enumerated selector - name list not yet cross-checked
    6. KB Active     Toggle        --   
@@ -116,7 +116,7 @@ EnvvADSR   [module type 20]
 
 PartQuant   [module type 22]
 ----------------------------
-   0. Range  Partials      --   
+   0. Range  Partials      OK   raw - 64, signed; '*' past +/-32 per the manual
 
 ModADSR   [module type 23]
 --------------------------
@@ -137,7 +137,7 @@ LfoC   [module type 24]
    1. Mode     Menu          OK   selector names match the G2 exactly
    2. OutType  Menu          --   enumerated selector - name list not yet cross-checked
    3. Range    Menu          --   enumerated selector - name list not yet cross-checked
-   4. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   4. Bypass   Bypass        OK   confirmed by the owner
 
 LfoShpA   [module type 25]
 --------------------------
@@ -145,10 +145,10 @@ LfoShpA   [module type 25]
    1. Range    Menu          --   enumerated selector - name list not yet cross-checked
    2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
    3. Rate M   CommonDial    --   
-   4. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   4. Bypass   Bypass        OK   confirmed by the owner
    5. Shape    CommonDial    --   
    6. Phase M  CommonDial    --   
-   7. Phase    CommonDial    --   
+   7. Phase    Phase         OK   degrees = raw*360/128, 0 to 357   [was showing the raw number, 2026-08-10]
    8. Shape M  CommonDial    --   
    9. Mode     Menu          OK   selector names match the G2 exactly
   10. OutType  Menu          --   enumerated selector - name list not yet cross-checked
@@ -161,7 +161,7 @@ LfoA   [module type 26]
    2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
    3. Rate M   CommonDial    --   
    4. Wave     Menu          --   enumerated selector - name list not yet cross-checked
-   5. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   5. Bypass   Bypass        OK   confirmed by the owner
    6. OutType  Menu          --   enumerated selector - name list not yet cross-checked
    7. Range    Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -177,28 +177,28 @@ Saturate   [module type 28]
 ---------------------------
    0. Amount     CommonDial    --   
    1. AmountMod  CommonDial    --   
-   2. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Bypass     Bypass        OK   confirmed by the owner
    3. Curve      Menu          --   enumerated selector - name list not yet cross-checked
 
 MetNoise   [module type 29]
 ---------------------------
    0. Color    CommonDial    --   
    1. Freq     CommonDial    --   
-   2. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Bypass   Bypass        OK   confirmed by the owner
    3. Freq M   CommonDial    --   
    4. Color M  CommonDial    --   
 
 Noise   [module type 31]
 ------------------------
    0. Color   CommonDial    --   
-   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   1. Bypass  Bypass        OK   confirmed by the owner
 
 Eq2Band   [module type 32]
 --------------------------
    0. Lo       dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
    1. Hi       dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
    2. Level    CommonDial    --   
-   3. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass   Bypass        OK   confirmed by the owner
    4. Lo Freq  Menu          --   enumerated selector - name list not yet cross-checked
    5. Hi Freq  Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -209,7 +209,7 @@ Eq3Band   [module type 33]
    2. Freq     GeneralFreq   OK   Hz = 100 * 80^(v/127)
    3. Hi       dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
    4. Level    CommonDial    --   
-   5. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   5. Bypass   Bypass        OK   confirmed by the owner
    6. Lo Freq  Menu          --   enumerated selector - name list not yet cross-checked
    7. Hi Freq  Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -217,7 +217,7 @@ ShpExp   [module type 34]
 -------------------------
    0. Amount     CommonDial    --   
    1. AmountMod  CommonDial    --   
-   2. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Bypass     Bypass        OK   confirmed by the owner
    3. Curve      Menu          OK   selector names match the G2 exactly
 
 Driver (Not in the Clavia editor)   [module type 35]
@@ -275,7 +275,7 @@ FltVoice   [module type 45]
    6. Freq      BipLevel      --   
    7. FreqMod   CommonDial    --   
    8. Res       BipLevel      --   
-   9. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+   9. Bypass    Bypass        OK   confirmed by the owner
 
 EnvAHD   [module type 46]
 -------------------------
@@ -317,7 +317,7 @@ FltMulti   [module type 49]
    3. GC      Toggle        --   
    4. Res     StrMap        OK   Q = 0.5/(1 - 0.9v/127)^2; raw 17 and 33 still disputed
    5. dB      Menu          OK   selector names match the G2 exactly
-   6. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   6. Bypass  Bypass        OK   confirmed by the owner
 
 ConstSwT   [module type 50]
 ---------------------------
@@ -333,7 +333,7 @@ FltNord   [module type 51]
    3. GC          Toggle        --   
    4. Res         StrMap        OK   Q = 0.5/(1 - 0.9v/127)^2; raw 17 and 33 still disputed
    5. dB/Oct      Menu          OK   selector names match the G2 exactly
-   6. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   6. Bypass      Bypass        OK   confirmed by the owner
    7. Fm Lin      CommonDial    --   
    8. FilterType  Menu          OK   selector names match the G2 exactly
    9. Res M       CommonDial    --   
@@ -357,9 +357,9 @@ EnvMulti   [module type 52]
 FltStatic   [module type 54]
 ----------------------------
    0. Freq        Freq          OK   Hz = 13.75 * 2^(v/12)
-   1. Res         Resonance     OK   Q = 0.5/(1 - 0.9v/127)^2   [closed form 2026-08-10]
+   1. Res         Resonance     OK   percent = v*100/128, no decimal at 0/25/50/75/100  [corrected 2026-08-10]
    2. FilterType  Menu          OK   selector names match the G2 exactly
-   3. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass      Bypass        OK   confirmed by the owner
    4. GC          Toggle        --   
 
 EnvD   [module type 55]
@@ -376,7 +376,7 @@ Resonator (Not in Clavia editor)   [module type 56]
    4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
    5. Decay       CommonDial    --   
    6. Damp        CommonDial    --   
-   7. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   7. Bypass      Bypass        OK   confirmed by the owner
    8. Pos         CommonDial    --   
    9. Alg         Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -396,7 +396,7 @@ Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Ben
    4. Lev               CommonDial    --   
    5. Lev               CommonDial    --   
    6. Freq              Freq          OK   Hz = 13.75 * 2^(v/12)
-   7. Res               Resonance     OK   Q = 0.5/(1 - 0.9v/127)^2   [closed form 2026-08-10]
+   7. Res               Resonance     OK   percent = v*100/128, no decimal at 0/25/50/75/100  [corrected 2026-08-10]
    8. Swp               CommonDial    --   
    9. Dcy               ADRTime       --   envelope time scale - reference values needed from the hardware
   10. Noise FilterType  Menu          OK   selector names match the G2 exactly
@@ -419,13 +419,13 @@ Clip   [module type 61]
    0. Clip level M  CommonDial    --   
    1. Clip level    CommonDial    --   
    2. Shape         Menu          OK   selector names match the G2 exactly
-   3. Bypass        Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass        Bypass        OK   confirmed by the owner
 
 OverDrive   [module type 62]
 ----------------------------
    0. Amount M  CommonDial    --   
    1. Amount    CommonDial    --   
-   2. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Bypass    Bypass        OK   confirmed by the owner
    3. Type      Menu          OK   selector names match the G2 exactly
    4. Shape     Menu          OK   selector names match the G2 exactly
 
@@ -434,7 +434,7 @@ Scratch   [module type 63]
    0. Ratio      CommonDial    --   
    1. Ratio Mod  CommonDial    --   
    2. Delay      Menu          --   enumerated selector - name list not yet cross-checked
-   3. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass     Bypass        OK   confirmed by the owner
 
 Mix2-1B   [module type 66]
 --------------------------
@@ -447,7 +447,7 @@ Mix2-1B   [module type 66]
 ClkGen   [module type 68]
 -------------------------
    0. Tempo *** needs new dial 24-214 BPM  CommonDial    --   
-   1. Bypass                               Bypass        --   enumerated selector - name list not yet cross-checked
+   1. Bypass                               Bypass        OK   confirmed by the owner
    2. Source                               Menu          --   enumerated selector - name list not yet cross-checked
    3. Sync every                           Menu          --   enumerated selector - name list not yet cross-checked
    4. Swing                                CommonDial    --   
@@ -469,7 +469,7 @@ WaveWrap   [module type 74]
 ---------------------------
    0. Amount Mod  CommonDial    --   
    1. Amount      CommonDial    --   
-   2. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Bypass      Bypass        OK   confirmed by the owner
 
 NoteQuant   [module type 75]
 ----------------------------
@@ -495,13 +495,13 @@ LevAmp   [module type 81]
 
 Rect   [module type 82]
 -----------------------
-   0. Mode    Menu          --   enumerated selector - name list not yet cross-checked
-   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   0. Mode    Menu          OK   selector names match the G2 exactly
+   1. Bypass  Bypass        OK   confirmed by the owner
 
 ShpStatic   [module type 83]
 ----------------------------
    0. Mode    Menu          OK   selector names match the G2 exactly
-   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   1. Bypass  Bypass        OK   confirmed by the owner
 
 EnvADR   [module type 84]
 -------------------------
@@ -525,7 +525,7 @@ FltLP   [module type 87]
    1. FreqMod  CommonDial    --   
    2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
    3. Slope    Menu          --   enumerated selector - name list not yet cross-checked
-   4. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   4. Bypass   Bypass        OK   confirmed by the owner
 
 Sw1-4   [module type 88]
 ------------------------
@@ -536,7 +536,7 @@ Flanger   [module type 89]
    0. Rate      StrMap        OK   Hz = v*384000/2^24, all 128 entries
    1. Range     CommonDial    --   
    2. Feedback  CommonDial    --   
-   3. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass    Bypass        OK   confirmed by the owner
 
 Sw1-2   [module type 90]
 ------------------------
@@ -549,13 +549,13 @@ FltClassic   [module type 92]
    2. Kbt        Menu          --   enumerated selector - name list not yet cross-checked
    3. Res        StrMap        OK   Q = 0.5/(1 - 0.9v/127)^2; raw 17 and 33 still disputed
    4. (unnamed)  Menu          OK   selector names match the G2 exactly
-   5. (unnamed)  Bypass        --   enumerated selector - name list not yet cross-checked
+   5. (unnamed)  Bypass        OK   confirmed by the owner
 
 StChorus   [module type 94]
 ---------------------------
    0. Detune     CommonDial    --   
    1. Amount     CommonDial    --   
-   2. (unnamed)  Bypass        --   enumerated selector - name list not yet cross-checked
+   2. (unnamed)  Bypass        OK   confirmed by the owner
 
 OscD   [module type 96]
 -----------------------
@@ -563,7 +563,7 @@ OscD   [module type 96]
    1. Cent    CommonDial    --   
    2. Kbt     Toggle        OK   selector names match the G2 exactly
    3. Pitch   CommonDial    --   
-   4. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   4. Bypass  Bypass        OK   confirmed by the owner
 
 OscA   [module type 97]
 -----------------------
@@ -572,7 +572,7 @@ OscA   [module type 97]
    2. Kbt         Toggle        --   
    3. Pitch       CommonDial    --   
    4. Waveform    Menu          --   enumerated selector - name list not yet cross-checked
-   5. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   5. Bypass      Bypass        OK   confirmed by the owner
    6. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
 
 FreqShift   [module type 98]
@@ -580,7 +580,7 @@ FreqShift   [module type 98]
    0. FreqShift  FreqShift     --   
    1. Mod        CommonDial    --   
    2. Range      Menu          --   enumerated selector - name list not yet cross-checked
-   3. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass     Bypass        OK   confirmed by the owner
 
 Sw2-1   [module type 100]
 -------------------------
@@ -594,7 +594,7 @@ FltPhase   [module type 102]
    3. FB        CommonDial    --   
    4. Notch     Menu          --   enumerated selector - name list not yet cross-checked
    5. Spread    CommonDial    --   
-   6. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+   6. Bypass    Bypass        OK   confirmed by the owner
    7. Level     CommonDial    --   
    8. FB Mod    CommonDial    --   
    9. Type      Menu          OK   selector names match the G2 exactly
@@ -605,7 +605,7 @@ EqPeak   [module type 103]
    0. Freq    Freq          OK   Hz = 13.75 * 2^(v/12)
    1. Gain    BipLevel      --   
    2. BW      CommonDial    --   
-   3. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass  Bypass        OK   confirmed by the owner
    4. Level   CommonDial    --   
 
 ValSw2-1   [module type 105]
@@ -621,7 +621,7 @@ OscNoise   [module type 106]
    4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
    5. Width       CommonDial    --   
    6. Width M     CommonDial    --   
-   7. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   7. Bypass      Bypass        OK   confirmed by the owner
 
 Vocoder   [module type 108]
 ---------------------------
@@ -680,7 +680,7 @@ Digitizer   [module type 118]
    0. Bits         Menu          --   enumerated selector - name list not yet cross-checked
    1. Sample Rate  CommonDial    --   
    2. Rate         CommonDial    --   
-   3. Bypass       Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass       Bypass        OK   confirmed by the owner
 
 EnvADDSR   [module type 119]
 ----------------------------
@@ -755,12 +755,12 @@ WahWah   [module type 125]
 --------------------------
    0. Sweep M  Freq          OK   Hz = 13.75 * 2^(v/12)
    1. Sweep    CommonDial    --   
-   2. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Bypass   Bypass        OK   confirmed by the owner
 
 Fx-In   [module type 127]
 -------------------------
    0. In from  Menu          OK   selector names match the G2 exactly
-   1. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   1. Bypass   Bypass        OK   confirmed by the owner
    2. Pad      Menu          --   enumerated selector - name list not yet cross-checked
 
 FltHP   [module type 134]
@@ -768,7 +768,7 @@ FltHP   [module type 134]
    0. Freq     Freq          OK   Hz = 13.75 * 2^(v/12)
    1. FreqMod  CommonDial    --   
    2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
-   3. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass   Bypass        OK   confirmed by the owner
 
 Mix4-1S   [module type 140]
 ---------------------------
@@ -796,7 +796,7 @@ PCSend   [module type 142]
 NoteSend   [module type 143]
 ----------------------------
    0. Vel   CommonDial    --   
-   1. Note  NoteDial      --   
+   1. Note  NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
    2. Chan  Menu          --   enumerated selector - name list not yet cross-checked
 
 SeqEvent   [module type 144]
@@ -927,14 +927,14 @@ CtrRcv   [module type 147]
 
 NoteRcv   [module type 148]
 ---------------------------
-   0. Note  NoteDial      --   
+   0. Note  NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
    1. Chan  Menu          --   enumerated selector - name list not yet cross-checked
 
 NoteZone   [module type 149]
 ----------------------------
    0. RChan  Menu          --   enumerated selector - name list not yet cross-checked
-   1. Min    NoteDial      --   
-   2. Max    NoteDial      --   
+   1. Min    NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
+   2. Max    NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
    3. Trans  CommonDial    --   
    4. SChan  Menu          --   enumerated selector - name list not yet cross-checked
    5. Thru   Menu          --   enumerated selector - name list not yet cross-checked
@@ -947,7 +947,7 @@ Compress   [module type 150]
    3. Rel        StrMap        --   compressor time scale - reference values needed from the hardware
    4. RefLvl     CommonDial    --   
    5. (unnamed)  Toggle        --   
-   6. (unnamed)  Bypass        --   enumerated selector - name list not yet cross-checked
+   6. (unnamed)  Bypass        OK   confirmed by the owner
 
 KeyQuant   [module type 152]
 ----------------------------
@@ -1008,7 +1008,7 @@ SeqCtr   [module type 154]
 
 NoteDet   [module type 156]
 ---------------------------
-   0. Note  NoteDial      --   
+   0. Note  NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
 
 LevConv   [module type 157]
 ---------------------------
@@ -1051,7 +1051,7 @@ FltComb   [module type 162]
    4. FB Mod  CommonDial    --   
    5. Type    Menu          OK   selector names match the G2 exactly
    6. Level   CommonDial    --   
-   7. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   7. Bypass  Bypass        OK   confirmed by the owner
 
 OscShpA   [module type 163]
 ---------------------------
@@ -1065,7 +1065,7 @@ OscShpA   [module type 163]
    7. Shape           CommonDial    --   
    8. ShpCtrl         CommonDial    --   
    9. Wave            Menu          --   enumerated selector - name list not yet cross-checked
-  10. Bypass          Bypass        --   enumerated selector - name list not yet cross-checked
+  10. Bypass          Bypass        OK   confirmed by the owner
 
 OscDual   [module type 164]
 ---------------------------
@@ -1077,9 +1077,9 @@ OscDual   [module type 164]
    5. SqrLvl  CommonDial    --   
    6. PW      CommonDial    --   
    7. SawLvl  CommonDial    --   
-   8. Phase   CommonDial    --   
+   8. Phase   Phase         OK   degrees = raw*360/128, 0 to 357   [was showing the raw number, 2026-08-10]
    9. ubLvl   CommonDial    --   
-  10. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+  10. Bypass  Bypass        OK   confirmed by the owner
   11. Sqr M   CommonDial    --   
   12. Saw M   CommonDial    --   
   13. Soft    Menu          OK   selector names match the G2 exactly
@@ -1095,7 +1095,7 @@ PShift   [module type 167]
    1. Fine     CommonDial    --   
    2. Shift M  CommonDial    --   
    3. Delay    Menu          --   enumerated selector - name list not yet cross-checked
-   4. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   4. Bypass   Bypass        OK   confirmed by the owner
 
 ModAHD   [module type 169]
 --------------------------
@@ -1111,13 +1111,13 @@ ModAHD   [module type 169]
 2-In   [module type 170]
 ------------------------
    0. In from  Menu          OK   selector names match the G2 exactly
-   1. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   1. Bypass   Bypass        OK   confirmed by the owner
    2. Pad      Menu          --   enumerated selector - name list not yet cross-checked
 
 4-In   [module type 171]
 ------------------------
    0. In from  Menu          OK   selector names match the G2 exactly
-   1. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   1. Bypass   Bypass        OK   confirmed by the owner
    2. Pad      Menu          --   enumerated selector - name list not yet cross-checked
 
 DlySingleA   [module type 172]
@@ -1154,7 +1154,7 @@ DelayA   [module type 176]
    1. FB        CommonDial    --   
    2. Filter    CommonDial    --   
    3. Dry/Wet   CommonDial    --   
-   4. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+   4. Bypass    Bypass        OK   confirmed by the owner
    5. Time/Clk  Menu          --   enumerated selector - name list not yet cross-checked
 
 DelayB   [module type 177]
@@ -1166,7 +1166,7 @@ DelayB   [module type 177]
    4. Time/Clk     Menu          --   enumerated selector - name list not yet cross-checked
    5. FB Mod       CommonDial    --   
    6. Dry/Wet Mod  CommonDial    --   
-   7. Bypass       Bypass        --   enumerated selector - name list not yet cross-checked
+   7. Bypass       Bypass        OK   confirmed by the owner
    8. HP           Freq          OK   Hz = 13.75 * 2^(v/12)
 
 DlyClock   [module type 178]
@@ -1192,13 +1192,13 @@ Operator   [module type 180]
   14. R4           CommonDial    --   
   15. L4           CommonDial    --   
   16. AMod         Menu          --   enumerated selector - name list not yet cross-checked
-  17. BrPt         NoteDial      --   
+  17. BrPt         NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
   18. LDepth Mode  Menu          OK   selector names match the G2 exactly
   19. Ldepth       Menu          --   enumerated selector - name list not yet cross-checked
   20. RDepth Mode  Menu          OK   selector names match the G2 exactly
   21. Rdepth       Menu          --   enumerated selector - name list not yet cross-checked
   22. Level        CommonDial    --   
-  23. Bypass       Bypass        --   enumerated selector - name list not yet cross-checked
+  23. Bypass       Bypass        OK   confirmed by the owner
   24. KBEnv        Toggle        OK   selector names match the G2 exactly
 
 DlyEight   [module type 181]
@@ -1216,7 +1216,7 @@ DlyStereo   [module type 182]
    6. Time/Clk  Menu          --   enumerated selector - name list not yet cross-checked
    7. LP        Freq          OK   Hz = 13.75 * 2^(v/12)
    8. Dry/Wet   CommonDial    --   
-   9. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+   9. Bypass    Bypass        OK   confirmed by the owner
   10. HP        Freq          OK   Hz = 13.75 * 2^(v/12)
 
 OscPM   [module type 183]
@@ -1226,7 +1226,7 @@ OscPM   [module type 183]
    2. Kbt        Toggle        OK   selector names match the G2 exactly
    3. Tune Mode  Menu          --   enumerated selector - name list not yet cross-checked
    4. PhM        CommonDial    --   
-   5. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   5. Bypass     Bypass        OK   confirmed by the owner
    6. Pitch      CommonDial    --   
 
 Mix1-1A   [module type 184]
@@ -1260,7 +1260,7 @@ NoiseGate   [module type 189]
    0. Threshold  StrMap        --   
    1. Attack     StrMap        --   
    2. Release    StrMap        --   derived from an internal coefficient table - reference values needed from the hardware
-   3. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass     Bypass        OK   confirmed by the owner
 
 LfoB   [module type 190]
 ------------------------
@@ -1270,8 +1270,8 @@ LfoB   [module type 190]
    3. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
    4. Wave     Menu          --   enumerated selector - name list not yet cross-checked
    5. Mode     Menu          OK   selector names match the G2 exactly
-   6. Phase    CommonDial    --   
-   7. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   6. Phase    Phase         OK   degrees = raw*360/128, 0 to 357   [was showing the raw number, 2026-08-10]
+   7. Bypass   Bypass        OK   confirmed by the owner
    8. OutType  Menu          --   enumerated selector - name list not yet cross-checked
    9. Phase M  CommonDial    --   
 
@@ -1280,7 +1280,7 @@ Phaser   [module type 192]
    0. Type    Menu          OK   selector names match the G2 exactly
    1. Rate    StrMap        OK   Hz = (floor(v^2/2)*24000 + 768000)/2^24   [corrected 2026-08-10]
    2. FB      CommonDial    --   
-   3. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Bypass  Bypass        OK   confirmed by the owner
 
 Mix2-1A   [module type 194]
 ---------------------------
@@ -1307,7 +1307,7 @@ OscPerc   [module type 196]
    5. Decay      ADRTime       --   envelope time scale - reference values needed from the hardware
    6. Click      CommonDial    --   
    7. Punch      Toggle        OK   selector names match the G2 exactly
-   8. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   8. Bypass     Bypass        OK   confirmed by the owner
 
 PitchTrack   [module type 198]
 ------------------------------
@@ -1323,7 +1323,7 @@ RandomA   [module type 200]
    1. Poly/Mono mode  Menu          OK   selector names match the G2 exactly
    2. OutType         Menu          OK   selector names match the G2 exactly
    3. Range           Menu          --   enumerated selector - name list not yet cross-checked
-   4. Bypass          Bypass        --   enumerated selector - name list not yet cross-checked
+   4. Bypass          Bypass        OK   confirmed by the owner
    5. Edge            Menu          --   enumerated selector - name list not yet cross-checked
    6. Step            Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -1334,7 +1334,7 @@ RandomB   [module type 202]
    2. Kbt             Toggle        OK   selector names match the G2 exactly
    3. Rate            CommonDial    --   
    4. Step            CommonDial    --   
-   5. Bypass          Bypass        --   enumerated selector - name list not yet cross-checked
+   5. Bypass          Bypass        OK   confirmed by the owner
    6. OutType         Menu          OK   selector names match the G2 exactly
    7. Range           Menu          --   enumerated selector - name list not yet cross-checked
    8. Edge            Menu          --   enumerated selector - name list not yet cross-checked
@@ -1345,20 +1345,20 @@ RndClkA   [module type 204]
    1. Mode    Menu          --   enumerated selector - name list not yet cross-checked
    2. Dice    Menu          --   enumerated selector - name list not yet cross-checked
    3. Out     Menu          --   enumerated selector - name list not yet cross-checked
-   4. On/Off  Bypass        --   enumerated selector - name list not yet cross-checked
+   4. On/Off  Bypass        OK   confirmed by the owner
 
 RndTrig   [module type 205]
 ---------------------------
    0. Step    CommonDial    --   
    1. StepM   CommonDial    --   
-   2. On/Off  Bypass        --   enumerated selector - name list not yet cross-checked
+   2. On/Off  Bypass        OK   confirmed by the owner
    3. Mode    Menu          --   enumerated selector - name list not yet cross-checked
 
 RndClkB   [module type 206]
 ---------------------------
    0. Step    CommonDial    --   
    1. Out     Menu          --   enumerated selector - name list not yet cross-checked
-   2. On/Off  Bypass        --   enumerated selector - name list not yet cross-checked
+   2. On/Off  Bypass        OK   confirmed by the owner
    3. Mode    Menu          --   enumerated selector - name list not yet cross-checked
    4. StepM   CommonDial    --   
 
@@ -1370,5 +1370,5 @@ RndPattern   [module type 208]
    3. Loop    CommonDial    --   
    4. StepM   CommonDial    --   
    5. Out     Menu          --   enumerated selector - name list not yet cross-checked
-   6. On/Off  Bypass        --   enumerated selector - name list not yet cross-checked
+   6. On/Off  Bypass        OK   confirmed by the owner
 

@@ -563,6 +563,9 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     break;
                 case paramTypeLevAmpDial:     render_param_function = &render_paramType1LevAmpDial;
                     break;
+                case paramTypePhase:          render_param_function = &render_paramType1Phase;
+                    break;
+
                 case paramTypePan:            render_param_function = &render_paramType1Pan;
                     break;
                 case paramTypeNoteDial:       render_param_function = &render_paramType1NoteDial;

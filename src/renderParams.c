@@ -136,6 +136,26 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
             }
             break;
         }
+        case 4:   // Sub. The Semi note scale, eleven octaves down; the bottom step is silence.
+        {
+            // The Cent dial's offset is not applied: which parameter carries it varies by module
+            // and there is no per-module map for it here yet. It is zero at Cent's default of 64.
+            double res = osc_sub_freq_hz(paramValue, 0.0);
+
+            if (res == 0.0) {
+                snprintf(buff, buffSize, "0 Hz");
+            } else {
+                snprintf(buff, buffSize, "%.4fHz", res);
+            }
+            break;
+        }
+        default:
+        {
+            // No module offers a fifth Pitch Type yet, but a patch written on the synth can carry
+            // one. Print the raw value rather than leaving buff holding whatever was in it last.
+            snprintf(buff, buffSize, "%.0f", paramValue);
+            break;
+        }
     }
     return render_dial_with_text(gParamRenderArea, rectangle, label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
@@ -668,6 +688,17 @@ tRectangle render_paramType1LevAmpDial(tModule * module, tRectangle rectangle, c
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// A Phase dial, in DEGREES - the whole 0..127 dial is one full turn, so the step is 360/128 and the
+// readout runs 0 to 357. The three dials that carry it (LfoShpA, LfoB, OscDual) were rendering the
+// raw number instead, so a phase of half a cycle read "64" rather than "180".
+//
+// The synth prints no degree sign, and rounds to a whole degree, which the odd step size makes
+// visible: consecutive dial positions can differ by 2 or by 3.
+tRectangle render_paramType1Phase(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    snprintf(buff, buffSize, "%.0f", paramValue * 360.0 / 128.0);
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
 tRectangle render_paramType1Pan(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     return render_dial(gParamRenderArea, rectangle, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
@@ -688,15 +719,28 @@ tRectangle render_paramType1NoteDial(tModule * module, tRectangle rectangle, cha
 }
 
 tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double res    = 0.0;
+    // FltStatic's and DrumSynth's Res read as a PERCENTAGE, not as the Q that FltMulti, FltNord and
+    // FltClassic show — two different controls that happen to share the label.
+    //
+    // 100/128 rather than 100/127 is what makes the scale land exactly on 25, 50 and 75 at raw 32,
+    // 64 and 96, and the synth prints those three — along with 0, and the clipped top — with no
+    // decimal place at all, one decimal everywhere else. The curve already agreed; showing "50.0"
+    // where the hardware shows "50" was the whole of the difference.
+    int    raw    = (int)paramValue;
     double maxVal = 100.0;
+    double res    = 0.0;
 
-    if (paramValue < 127) {
+    if (raw < 127) {
         res = round(((double)paramValue * maxVal * 10.0) / 128.0) / 10.0;
     } else {
         res = maxVal;             // Clip
     }
-    snprintf(buff, buffSize, "%.1f", res);
+
+    if ((raw == 0) || (raw == 32) || (raw == 64) || (raw == 96) || (raw >= 127)) {
+        snprintf(buff, buffSize, "%.0f", res);
+    } else {
+        snprintf(buff, buffSize, "%.1f", res);
+    }
     return render_dial_with_text(gParamRenderArea, rectangle, label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 

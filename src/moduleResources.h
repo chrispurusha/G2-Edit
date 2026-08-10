@@ -48,7 +48,13 @@ const char *             db12BPadStrMap[]                        = {"0dB", "-6dB
 const char *             gcStrMap[]                              = {"GC", "GC", NULL};
 const char *             kbStrMap[]                              = {"KB", "KB", NULL};
 const char *             sideChainStrMap[]                       = {"Side Chain", "Side Chain", NULL};
-const char *             pitchTypeStrMap[]                       = {"Semi", "Freq", "Factor", "Partial", NULL};
+const char *             // The Tune dial reads in whichever of these the Pitch Type selector is set to, which is why
+// render_paramType1OscFreq switches on that parameter rather than on the module. Sub is the fifth
+// setting and no module here declares a range that reaches it yet - each oscillator offers its own
+// subset through the range field (OscMaster stops at Factor, most stop at Partial), and which of
+// them also offer Sub is not established. The name is here so the fifth setting reads correctly
+// wherever it does turn up, e.g. in a patch built on the synth itself.
+                         pitchTypeStrMap[]                       = {"Semi", "Freq", "Factor", "Partial", "Sub", NULL};
 const char *             fmTypeStrMap[]                          = {"FM Lin", "FM Trk", NULL};
 const char *             envShapeStrMap[]                        = {"LogExp", "LinExp", "ExpExp", "LinLin", NULL};
 const char *             normalResetStrMap[]                     = {"Normal", "Reset", NULL};
@@ -60,8 +66,10 @@ const char *             resonAlgStrMap[]                        = {"String1", "
 const char *             outToStrMap[]                           = {"Out 1/2", "Out 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
 const char *             outTo4OutStrMap[]                       = {"Out", "Fx", "Bus", NULL};
 const char *             inFxStrMap[]                            = {"FX 1/2", "FX 3/4", NULL};
-const char *             shapeTypeStrMap[]                       = {"sin", "tri", "saw", "squ", "sup", NULL};
-const char *             shapeOscATypeStrMap[]                   = {"sin", "tri", "saw", "squ", "p25", "p10", NULL};
+const char *             shapeTypeStrMap[]                       = {"Sine", "Tri", "Saw", "Sqr", "DualSaw", NULL};
+const char *             // Sqr50/25/10 are the three pulse widths; the synth names them that way rather than as "p25"/"p10",
+// and Sqr50 says what "squ" left implicit - a square IS the 50% pulse.
+                         shapeOscATypeStrMap[]                   = {"Sine", "Tri", "Saw", "Sqr50", "Sqr25", "Sqr10", NULL};
 const char *             reverbTypeStrMap[]                      = {"Small", "Medium", "Large", "Hall", NULL};
 const char *             polyMonoStrMap[]                        = {"Poly", "Mono", NULL};
 const char *             rangeStrMap[]                           = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", "Clk", NULL};   // TODO: RandomA/B only — wire order UNVERIFIED (no ParamText::RandomRange in decompile); LFOs moved to rangeLfoStrMap below
@@ -93,7 +101,7 @@ const char *             int16StrMap[]                           = {"1", "2", "3
 const char *             divModeStrMap[]                         = {"Gated", "Toggled", NULL};
 const char *             out8StrMap[]                            = {"Out 1", "Out 2", "Out 3", "Out 4", "Out 5", "Out 6", "Out 7", "Out 8", NULL};
 const char *             in8StrMap[]                             = {"In 1", "In 2", "In 3", "In 4", "In 5", "In 6", "In 7", "In 8", NULL};
-const char *             rectStrMap[]                            = {"Half wave pos.", "Half wave neg.", "Full wave pos.", "Full wave neg.", NULL};
+const char *             rectStrMap[]                            = {"HalfPos", "HalfNeg", "FullPos", "FullNeg", NULL};
 const char *             shpStaticStrMap[]                       = {"Inv x3", "Inv x2", "x2", "x3", NULL};
 const char *             trigGateStrMap[]                        = {"Trig", "Gate", NULL};
 const char *             decayReleaseStrMap[]                    = {"Decay", "Release", NULL};
@@ -134,8 +142,8 @@ const char *             vocoderStrMap[]                         = {"Off", "1", 
 const char *             sw8to1SelStrMap[]                       = {"Lo", "64'", "32'", "16'", "8'", "4'", "2'", "1'", NULL};
 const char *             seqXFadeStrMap[]                        = {"Off", "25%", "50%", "100%", NULL};
 const char *             clkSyncStrMap[]                         = {"64/1", "48/1",  "32/1",  "24/1", "16/1",  "12/1",  "8/1",  "6/1",   "4/1",  "3/1", "2/1",   "1/1D",
-                                                                    "1/1",                                      "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D",  "1/4T", "1/8", "1/16D", "1/8T",
-                                                                    "1/16",                                     "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T", NULL};
+                                                                     "1/1",                                      "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D",  "1/4T", "1/8", "1/16D", "1/8T",
+                                                                     "1/16",                                     "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T", NULL};
 const char *             noteNameStrMap[]                        = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", NULL};
 const char *             morphStrMap[]                           = {"Wheel", "Vel", "Keyb", "Aft.Tch", "Sust.Pd", "Ctrl.Pd", "P.Stick", "G.Wh", NULL};
 const char *             env_timesStrMap[]                       = {"0.0005ms", "0.0006ms", "0.0007ms", "0.0009ms", "0.0011ms", "0.0013ms", "0.0015ms", "0.0018ms", "0.0021ms", "0.0025ms", "0.0030ms", "0.0035ms", "0.0040ms", "0.0047ms", "0.0055ms", "0.0063ms", "0.0073ms", "0.0084ms", "0.0097ms", "0.0111ms", "0.0127ms", "0.0145ms", "0.0165ms", "0.0187ms", "0.0212ms", "0.0240ms", "0.0271ms", "0.0306ms", "0.0344ms", "0.0387ms", "0.0434ms", "0.0486ms", "0.0543ms", "0.0606ms", "0.0676ms", "0.0752ms", "0.0836ms", "0.0928ms", "0.1030ms", "0.1140ms", "0.1260ms", "0.1390ms", "0.1530ms", "0.1690ms", "0.1860ms", "0.2040ms", "0.2240ms", "0.2460ms", "0.2690ms", "0.2950ms", "0.3220ms", "0.3520ms", "0.3840ms", "0.4190ms", "0.4560ms", "0.4960ms", "0.5400ms", "0.5860ms", "0.6360ms", "0.6900ms", "0.7480ms", "0.8100ms", "0.8760ms", "0.9470ms", "1.0200ms", "1.1000ms", "1.1900ms", "1.2800ms", "1.3800ms", "1.4900ms", "1.6000ms", "1.7200ms", "1.8500ms", "1.9900ms", "2.1300ms", "2.2800ms", "2.4600ms", "2.6200ms", "2.8100ms", "3.0000ms", "3.2100ms", "3.4300ms", "3.6600ms", "3.9100ms", "4.1700ms", "4.4500ms", "4.7400ms", "5.0500ms", "5.3700ms", "5.7200ms", "6.0800ms", "6.4700ms", "6.8700ms", "7.3000ms", "7.7500ms", "8.2200ms", "8.7200ms", "9.2500ms", "9.8000ms", "10.400ms", "11.000ms", "11.600ms", "12.300ms", "13.000ms", "13.800ms", "14.600ms", "15.400ms", "16.200ms", "17.100ms", "18.100ms", "19.100ms", "20.100ms", "21.200ms", "22.400ms", "23.500ms", "24.800ms", "26.100ms", "27.500ms", "28.900ms", "30.400ms", "32.000ms", "33.600ms", "35.300ms", "37.100ms", "38.900ms", "40.900ms", "42.900ms", "45.000ms", NULL};
@@ -175,30 +183,30 @@ const tRgb               gCableColourMap[cableColourMax]         = {
 };
 
 const tRgb               gModuleColourMap[]                      = {MODULE_STANDARD_GREY,
-                                                                    MODULE_RED_4,
-                                                                    MODULE_GREEN_4,
-                                                                    MODULE_BLUE_4,
-                                                                    MODULE_YELLOW_4,
-                                                                    MODULE_BLUE_1,
-                                                                    MODULE_RED_1,
-                                                                    MODULE_CYAN_2,
-                                                                    MODULE_GREEN_2,
-                                                                    MODULE_YELLOW_1,
-                                                                    MODULE_GREEN_1,
-                                                                    MODULE_YELLOW_2,
-                                                                    MODULE_BLUE_3,
-                                                                    MODULE_RED_2,
-                                                                    MODULE_RED_3,
-                                                                    MODULE_YELLOW_3,
-                                                                    MODULE_GREEN_3,
-                                                                    MODULE_CYAN_1,
-                                                                    MODULE_CYAN_3,
-                                                                    MODULE_CYAN_4,
-                                                                    MODULE_BLUE_2,
-                                                                    MODULE_PURPLE_1,
-                                                                    MODULE_PURPLE_2,
-                                                                    MODULE_PURPLE_3,
-                                                                    MODULE_PURPLE_4};
+                                                                     MODULE_RED_4,
+                                                                     MODULE_GREEN_4,
+                                                                     MODULE_BLUE_4,
+                                                                     MODULE_YELLOW_4,
+                                                                     MODULE_BLUE_1,
+                                                                     MODULE_RED_1,
+                                                                     MODULE_CYAN_2,
+                                                                     MODULE_GREEN_2,
+                                                                     MODULE_YELLOW_1,
+                                                                     MODULE_GREEN_1,
+                                                                     MODULE_YELLOW_2,
+                                                                     MODULE_BLUE_3,
+                                                                     MODULE_RED_2,
+                                                                     MODULE_RED_3,
+                                                                     MODULE_YELLOW_3,
+                                                                     MODULE_GREEN_3,
+                                                                     MODULE_CYAN_1,
+                                                                     MODULE_CYAN_3,
+                                                                     MODULE_CYAN_4,
+                                                                     MODULE_BLUE_2,
+                                                                     MODULE_PURPLE_1,
+                                                                     MODULE_PURPLE_2,
+                                                                     MODULE_PURPLE_3,
+                                                                     MODULE_PURPLE_4};
 
 // Indices match tConnectorType (types.h): Audio, Control, Logic, TurboLogic. TurboLogic's RGB
 // (1.0, 0.75, 0.31) is the real value recovered from the original decompiled editor
@@ -539,7 +547,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeLfoShpA,    paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 25 Bypass
     {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 57, -17}, { 7,  7}}, anchorBottomLeft,  "Shape",        128,   0, NULL,                                  NULL          },                         // 25 Shape
     {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 74,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 25 Phase M
-    {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 74, -17}, { 7,  7}}, anchorBottomLeft,  "Phase",        128,  64, NULL,                                  NULL          },                         // 25 Phase
+    {moduleTypeLfoShpA,    paramTypePhase,       {{ 74, -17}, { 7,  7}}, anchorBottomLeft,  "Phase",        128,  64, NULL,                                  NULL          },                         // 25 Phase
     {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 57,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 25 Shape M
     {moduleTypeLfoShpA,    paramTypeMenu,        {{ 25, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                         // 25 Mode
     {moduleTypeLfoShpA,    paramTypeMenu,        {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },                         // 25 OutType
@@ -1365,7 +1373,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscDual,    paramTypeCommonDial,  {{ 75, -17}, { 7,  7}}, anchorBottomLeft,  "SqrLvl",       128, 100, NULL,                                  NULL          },                         // 164 SqrLvl
     {moduleTypeOscDual,    paramTypeCommonDial,  {{ 65, -17}, { 7,  7}}, anchorBottomLeft,  "PW",           128,   0, NULL,                                  NULL          },                         // 164 PW
     {moduleTypeOscDual,    paramTypeCommonDial,  {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  "SawLvl",       128, 100, NULL,                                  NULL          },                         // 164 SawLvl
-    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Phase",        128,   0, NULL,                                  NULL          },                         // 164 Phase
+    {moduleTypeOscDual,    paramTypePhase,       {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Phase",        128,   0, NULL,                                  NULL          },                         // 164 Phase
     {moduleTypeOscDual,    paramTypeCommonDial,  {{ 90, -17}, { 7,  7}}, anchorBottomLeft,  "ubLvl",        128, 100, NULL,                                  NULL          },                         // 164 Suboct Lvl
     {moduleTypeOscDual,    paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },
     {moduleTypeOscDual,    paramTypeCommonDial,  {{ 55, -17}, { 7,  7}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 164 Sqr M
@@ -1379,7 +1387,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypePShift,     paramTypeCommonDial,  {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  "Semi",         128,  64, NULL,                                  NULL          },                         // 167 Semi
     {moduleTypePShift,     paramTypeCommonDial,  {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Fine",         128,  64, NULL,                                  NULL          },                         // 167 Fine
     {moduleTypePShift,     paramTypeCommonDial,  {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 167 Shift M
-    {moduleTypePShift,     paramTypeMenu,        {{ 75,  -7}, { 7,  7}}, anchorBottomLeft,  "Delay",          5,   0, pShiftDelayStrMod,                     NULL          },                         // 167 Delay *** CHeck param vals
+    {moduleTypePShift,     paramTypeMenu,        {{ 75,  -7}, { 7,  7}}, anchorBottomLeft,  "Delay",          4,   0, pShiftDelayStrMod,                     NULL          },                         // 167 Delay (four settings, 12.5/25/50/100 ms; was declared as five, one past the end of the name list)
     {moduleTypePShift,     paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 167 On/Off
     // 168 Unknown
     // 169 ModAHD
@@ -1515,7 +1523,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeLfoB,       paramTypeMenu,        {{ 50, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                 // 26 Kbt
     {moduleTypeLfoB,       paramTypeMenu,        {{ 60, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, lfoWaveStrMap,                         NULL          },                 // 26 Wave
     {moduleTypeLfoB,       paramTypeMenu,        {{ 30, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                 // 26 Mode
-    {moduleTypeLfoB,       paramTypeCommonDial,  {{ 77,  -3}, { 7,  7}}, anchorBottomLeft,  "Phase",        128,  64, NULL,                                  NULL          },                 // 26 Phase
+    {moduleTypeLfoB,       paramTypePhase,       {{ 77,  -3}, { 7,  7}}, anchorBottomLeft,  "Phase",        128,  64, NULL,                                  NULL          },                 // 26 Phase
     {moduleTypeLfoB,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                 // 26 Bypass
     {moduleTypeLfoB,       paramTypeMenu,        {{-17, -17}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },                 // 26 OutType
     {moduleTypeLfoB,       paramTypeCommonDial,  {{ 67,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                 // 26 Phase M
