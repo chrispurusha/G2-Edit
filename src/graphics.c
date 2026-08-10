@@ -2073,6 +2073,9 @@ static void render_frame(void) {
 //   DEVMODE <VA|FX> <index> <mode> <value> — a MODE write to the G2 (the drop-down selectors: the
 //                       Reverb's room size, a filter's slope, an oscillator's waveform). Modes travel
 //                       on their own wire command, so DEVSET cannot reach them.
+//   DEVKNOB <knob 0-119> <VA|FX> <index> <param> — assign a parameter to a patch knob, on the G2 as
+//                       well as locally. Needed before the synth's own display can be asked what a
+//                       dial reads: an unassigned parameter has nowhere to show itself on the panel.
 //   DEVNOTE <note> <vel> on|off — a Virtual Keyboard note to the G2, for a patch that needs a gate
 //                       rather than a free-running clock (envelope times, for instance)
 //   SAVEFILE <path>   — write the current slot to a path (no save panel)
@@ -2515,6 +2518,68 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
         module->param[variation][param].value = (uint8_t)value;
         send_param_value(gSlot, module->key, param, variation, value);
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "DEVKNOB") == 0) {
+        // DEVKNOB <knob 0-119> <VA|FX> <index> <param> — assign a parameter to one of the patch's
+        // knobs, on the G2 as well as locally. The same thing the canvas's Assign Knob menu does.
+        //
+        // This is what makes a hardware reading possible at all: a parameter the panel has not been
+        // pointed at cannot be shown on the synth's display, so a question of the form "what does
+        // this dial actually read" needs the assignment before it needs the value.
+        //
+        // Knob numbering is the 0-119 the patch stores: 24 to a page, 8 to a bank within it, so
+        // knob 0 is page 1 bank A position 1 — the first knob of the first page.
+        char            loc[8]    = {0};
+        uint32_t        knobIndex = 0;
+        uint32_t        index     = 0;
+        uint32_t        param     = 0;
+
+        if (sscanf(arg, "%u %7s %u %u", &knobIndex, loc, &index, &param) != 4) {
+            backdoor_write_result("ERROR: expected 'DEVKNOB <knob 0-119> <VA|FX> <index> <param>'\n");
+            return;
+        }
+
+        if (knobIndex >= MAX_NUM_KNOBS) {
+            backdoor_write_result("ERROR: knob index out of range (0-119)\n");
+            return;
+        }
+        uint32_t        location  = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        tModule *       module    = get_module_slot(gSlot, location, index);
+
+        if ((module == NULL) || (module->type == 0)) {
+            backdoor_write_result("ERROR: no module at that loc/index\n");
+            return;
+        }
+
+        if (param >= module_param_count(module->type)) {
+            backdoor_write_result("ERROR: param out of range for that module type\n");
+            return;
+        }
+        tMessageContent msg       = {0};
+
+        // Free the knob first if something is already on it, exactly as the menu does - the G2 keeps
+        // one parameter per knob and a bare assign over an occupied one is not the way to replace it.
+        if (gKnobArray[gSlot].knob[knobIndex].assigned) {
+            msg.cmd                        = eMsgCmdDeassignKnob;
+            msg.slot                       = gSlot;
+            msg.knobDeassignData.knobIndex = knobIndex;
+            msg_send(&gToUsbThread, &msg);
+            memset(&msg, 0, sizeof(msg));
+        }
+        gKnobArray[gSlot].knob[knobIndex].assigned    = true;
+        gKnobArray[gSlot].knob[knobIndex].location    = location;
+        gKnobArray[gSlot].knob[knobIndex].moduleIndex = index;
+        gKnobArray[gSlot].knob[knobIndex].isLed       = 0;
+        gKnobArray[gSlot].knob[knobIndex].paramIndex  = param;
+
+        msg.cmd                                       = eMsgCmdAssignKnob;
+        msg.slot                                      = gSlot;
+        msg.knobAssignData.moduleKey                  = module->key;
+        msg.knobAssignData.paramIndex                 = param;
+        msg.knobAssignData.knobIndex                  = knobIndex;
+        msg_send(&gToUsbThread, &msg);
+
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "DEVMODE") == 0) {

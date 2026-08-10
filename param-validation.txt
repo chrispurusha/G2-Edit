@@ -9,7 +9,7 @@ been checked against the value the G2 itself shows.
   GAP   the renderer has no branch for this module, so it shows an error
   --    not yet checked
 
-408 of 918 parameters validated (0 flagged GAP).
+419 of 918 parameters validated (0 flagged GAP).
 
 ==============================================================================
 
@@ -431,7 +431,7 @@ OverDrive   [module type 62]
 
 Scratch   [module type 63]
 --------------------------
-   0. Ratio      CommonDial    --   declared as ScratchRatio, but rendered as the plain percent dial - check
+   0. Ratio      ScratchRatio  OK   signed multiple (raw-64)/16, 0 is a standstill, top pinned to 4.00   [hardware-read 2026-08-10]
    1. Ratio Mod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Delay      Menu          --   enumerated selector - name list not yet cross-checked
    3. Bypass     Bypass        OK   confirmed by the owner
@@ -463,7 +463,7 @@ EnvFollow   [module type 71]
 
 NoteScaler   [module type 72]
 -----------------------------
-   0. Range  CommonDial    --   declared as NoteRange, but rendered as the plain percent dial - check
+   0. Range  PlusMinusUnits OK   +/- (raw/2) units, top step 64.0   [hardware-read 2026-08-10]
 
 WaveWrap   [module type 74]
 ---------------------------
@@ -473,8 +473,8 @@ WaveWrap   [module type 74]
 
 NoteQuant   [module type 75]
 ----------------------------
-   0. Range  CommonDial    --   declared as NoteRange, but rendered as the plain percent dial - check
-   1. Notes  CommonDial    --   declared as NoteQuantNotes, but rendered as the plain percent dial - check
+   0. Range  PlusMinusUnits OK   +/- (raw/2) units, top step 64.0   [hardware-read 2026-08-10]
+   1. Notes  OffNum        OK   0 reads Off, otherwise the plain count   [hardware-read 2026-08-10]
 
 SwOnOffT   [module type 76]
 ---------------------------
@@ -516,8 +516,8 @@ EnvADR   [module type 84]
 
 WindSw   [module type 85]
 -------------------------
-   0. From  CommonDial    --   declared as Range_64, but rendered as the plain percent dial - check
-   1. To    CommonDial    --   declared as Range_64, but rendered as the plain percent dial - check
+   0. From  UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
+   1. To    UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
 
 FltLP   [module type 87]
 ------------------------
@@ -678,7 +678,7 @@ LevMod   [module type 117]
 Digitizer   [module type 118]
 -----------------------------
    0. Bits         Menu          --   enumerated selector - name list not yet cross-checked
-   1. Sample Rate  CommonDial    --   declared as DigitizerRate, but rendered as the plain percent dial - check
+   1. Sample Rate  SampleRate    OK   Hz = 1760*2^((raw-69)/12), a pitch scale   [hardware-read 2026-08-10]
    2. Rate         CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    3. Bypass       Bypass        OK   confirmed by the owner
 
@@ -951,7 +951,7 @@ Compress   [module type 150]
 
 KeyQuant   [module type 152]
 ----------------------------
-   0. Range    CommonDial    --   declared as NoteRange, but rendered as the plain percent dial - check
+   0. Range    PlusMinusUnits OK   +/- (raw/2) units, top step 64.0   [hardware-read 2026-08-10]
    1. Capture  Menu          OK   selector names match the G2 exactly
    2. Note E   Enable        --   enumerated selector - name list not yet cross-checked
    3. Note F   Enable        --   enumerated selector - name list not yet cross-checked
@@ -1091,8 +1091,8 @@ DXRouter   [module type 165]
 
 PShift   [module type 167]
 --------------------------
-   0. Semi     CommonDial    --   declared as PShiftCoarse, but rendered as the plain percent dial - check
-   1. Fine     CommonDial    --   declared as PShiftFine, but rendered as the plain percent dial - check
+   0. Semi     PShiftSemi    OK   semitones = (raw-64)/4, so -16.0 to +15.75   [hardware-read 2026-08-10]
+   1. Fine     BipolarPinned OK   raw - 64, top step pinned to 64   [hardware-read 2026-08-10]
    2. Shift M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    3. Delay    Menu          --   enumerated selector - name list not yet cross-checked
    4. Bypass   Bypass        OK   confirmed by the owner
@@ -1311,7 +1311,7 @@ OscPerc   [module type 196]
 
 PitchTrack   [module type 198]
 ------------------------------
-   0. Threshold  CommonDial    --   declared as Treshold_127, but rendered as the plain percent dial - check
+   0. Threshold  ThresholdDb   OK   dB = 20*log10(raw/127), silent at the bottom   [hardware-read 2026-08-10]
 
 MonoKey   [module type 199]
 ---------------------------

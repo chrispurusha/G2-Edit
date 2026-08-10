@@ -725,6 +725,96 @@ tRectangle render_paramType1Phase(tModule * module, tRectangle rectangle, char *
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// PShift's Semi, in semitones: a quarter of one per dial step, so ±16 rather than the ±64 the name
+// suggests. The top step is not rounded up - the panel reads +15.8 there.
+tRectangle render_paramType1PShiftSemi(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    snprintf(buff, buffSize, "%+.1f", pshift_semitones(paramValue));
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// The OTHER bipolar 128-step dial: raw - 64 again, but with the top step pinned to a round 64 rather
+// than left at 63, and no '+' on positives. Both variants exist on the synth and they differ only at
+// that one step, which is exactly the sort of thing that cannot be inferred from the middle of the
+// scale - a pan knob reads +63 at the top where PShift's Fine reads 64.
+tRectangle render_paramType1BipolarPinned(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    int value = (paramValue >= 127.0) ? 64 : ((int)paramValue - 64);
+
+    snprintf(buff, buffSize, "%d", value);
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// A SYMMETRIC range: the 0..64 units scale, but shown as the ± span it sets rather than as a single
+// bound, so a quantiser's Range reads "+/-32.0" and covers that far either side of centre.
+tRectangle render_paramType1PlusMinusUnits(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    int raw = (int)paramValue;
+
+    if (raw >= 127) {
+        snprintf(buff, buffSize, "+/-64.0");
+    } else {
+        snprintf(buff, buffSize, "+/-%d.%c", raw >> 1, ((raw & 1) == 0) ? '0' : '5');
+    }
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// A count whose zero is a state rather than a quantity - "Off", not "0".
+tRectangle render_paramType1OffNum(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    int raw = (int)paramValue;
+
+    if (raw <= 0) {
+        snprintf(buff, buffSize, "Off");
+    } else {
+        snprintf(buff, buffSize, "%d", raw);
+    }
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// Scratch's Ratio: playback speed as a signed multiple through a standstill at the centre. The synth
+// writes the sign ahead of the 'x' and drops the decimals at zero entirely - "- x4.00", "x0",
+// "x4.00" - so this is not simply a signed number with a prefix.
+tRectangle render_paramType1ScratchRatio(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    double ratio = scratch_ratio(paramValue);
+
+    if (ratio == 0.0) {
+        snprintf(buff, buffSize, "x0");
+    } else if (ratio < 0.0) {
+        snprintf(buff, buffSize, "- x%.2f", -ratio);
+    } else {
+        snprintf(buff, buffSize, "x%.2f", ratio);
+    }
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// The Digitizer's Sample Rate: a pitch scale in disguise, twelve dial steps to a doubling.
+tRectangle render_paramType1SampleRate(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    double hz = digitizer_rate_hz(paramValue);
+
+    // Three significant figures the whole way up, so the reading loses a decimal each time the
+    // number gains a digit: 32.70 Hz, 1.32 kHz, 50.2 kHz.
+    if (hz < 1000.0) {
+        snprintf(buff, buffSize, "%.2fHz", hz);
+    } else if (hz < 10000.0) {
+        snprintf(buff, buffSize, "%.2fkHz", hz / 1000.0);
+    } else {
+        snprintf(buff, buffSize, "%.1fkHz", hz / 1000.0);
+    }
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// PitchTrack's Threshold in dB, silent at the bottom of the dial. The panel spells that step out as
+// "- Infinity" rather than showing a very large negative number.
+tRectangle render_paramType1ThresholdDb(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    int raw = (int)paramValue;
+
+    if (raw <= 0) {
+        snprintf(buff, buffSize, "-oo");
+    } else if (raw >= 127) {
+        snprintf(buff, buffSize, "-0dB");
+    } else {
+        snprintf(buff, buffSize, "%.1fdB", pitchtrack_threshold_db(paramValue));
+    }
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
 // A bipolar 128-step dial, counted from the centre: raw 64 reads 0, the bottom of the dial reads
 // -64 and the top +63. Confirmed on the hardware against a MixStereo Pan knob.
 //

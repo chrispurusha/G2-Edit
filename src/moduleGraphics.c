@@ -525,79 +525,100 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             render_param_function = NULL;
 
             switch (paramLocationList[paramRef].type) {
-                case paramTypeFreq:           render_param_function     = &render_paramType1Freq;
+                case paramTypeFreq:           render_param_function      = &render_paramType1Freq;
                     break;
-                case paramTypeOscFreq:        render_param_function     = &render_paramType1OscFreq;
+                case paramTypeOscFreq:        render_param_function      = &render_paramType1OscFreq;
                     break;
-                case paramTypeFine:           render_param_function     = &render_paramType1Fine;
+                case paramTypeFine:           render_param_function      = &render_paramType1Fine;
                     break;
-                case paramTypeGeneralFreq:    render_param_function     = &render_paramType1GeneralFreq;
+                case paramTypeGeneralFreq:    render_param_function      = &render_paramType1GeneralFreq;
                     break;
-                case paramTypeShape:          render_param_function     = &render_paramType1Shape;
+                case paramTypeShape:          render_param_function      = &render_paramType1Shape;
                     break;
-                case paramTypeFreqDrum:       render_param_function     = &render_paramType1FreqDrum;
+                case paramTypeFreqDrum:       render_param_function      = &render_paramType1FreqDrum;
                     break;
-                case paramTypeLFORate:        render_param_function     = &render_paramType1LFORate;
+                case paramTypeLFORate:        render_param_function      = &render_paramType1LFORate;
                     break;
-                case paramTypeInt:            render_param_function     = &render_paramType1Int;
+                case paramTypeInt:            render_param_function      = &render_paramType1Int;
                     break;
-                case paramTypedB:             render_param_function     = &render_paramType1dB;
+                case paramTypedB:             render_param_function      = &render_paramType1dB;
                     break;
-                case paramTypeMixLevel:       render_param_function     = &render_paramType1MixLevel;
+                case paramTypeMixLevel:       render_param_function      = &render_paramType1MixLevel;
                     break;
-                case paramTypeTime:           render_param_function     = &render_paramType1Time;
+                case paramTypeTime:           render_param_function      = &render_paramType1Time;
                     break;
-                case paramTypeTimeClk:        render_param_function     = &render_paramType1TimeClk;
+                case paramTypeTimeClk:        render_param_function      = &render_paramType1TimeClk;
                     break;
-                case paramTypeADRTime:        render_param_function     = &render_paramType1ADRTime;
+                case paramTypeADRTime:        render_param_function      = &render_paramType1ADRTime;
                     break;
-                case paramTypePulseTime:      render_param_function     = &render_paramType1PulseTime;
+                case paramTypePulseTime:      render_param_function      = &render_paramType1PulseTime;
                     break;
-                case paramTypePitch:          render_param_function     = &render_paramType1Pitch;
+                case paramTypePitch:          render_param_function      = &render_paramType1Pitch;
                     break;
-                case paramTypeBipLevel:       render_param_function     = &render_paramType1BipLevel;
+                case paramTypeBipLevel:       render_param_function      = &render_paramType1BipLevel;
                     break;
-                case paramTypePartials:       render_param_function     = &render_paramType1Partials;
+                case paramTypePartials:       render_param_function      = &render_paramType1Partials;
                     break;
-                case paramTypeUniPol:         render_param_function     = &render_paramType1UniPol;
+                case paramTypeUniPol:         render_param_function      = &render_paramType1UniPol;
                     break;
-                case paramTypeLevAmpDial:     render_param_function     = &render_paramType1LevAmpDial;
+                case paramTypeLevAmpDial:     render_param_function      = &render_paramType1LevAmpDial;
                     break;
-                case paramTypeResonanceQ:         render_param_function = &render_paramType1ResonanceQ;
-                    break;
-
-                case paramTypeFlangerRate:        render_param_function = &render_paramType1FlangerRate;
+                case paramTypeResonanceQ:         render_param_function  = &render_paramType1ResonanceQ;
                     break;
 
-                case paramTypePhaserRate:         render_param_function = &render_paramType1PhaserRate;
+                case paramTypeFlangerRate:        render_param_function  = &render_paramType1FlangerRate;
                     break;
 
-                case paramTypeSwing:          render_param_function     = &render_paramType1Swing;
+                case paramTypePhaserRate:         render_param_function  = &render_paramType1PhaserRate;
                     break;
 
-                case paramTypeBandwidth:      render_param_function     = &render_paramType1Bandwidth;
+                case paramTypeSwing:          render_param_function      = &render_paramType1Swing;
                     break;
 
-                case paramTypePhase:          render_param_function     = &render_paramType1Phase;
+                case paramTypeBandwidth:      render_param_function      = &render_paramType1Bandwidth;
                     break;
 
-                case paramTypePan:            render_param_function     = &render_paramType1Pan;
+                case paramTypePhase:          render_param_function      = &render_paramType1Phase;
                     break;
-                case paramTypeNoteDial:       render_param_function     = &render_paramType1NoteDial;
+
+                case paramTypePan:            render_param_function      = &render_paramType1Pan;
                     break;
+                case paramTypeNoteDial:       render_param_function      = &render_paramType1NoteDial;
+                    break;
+                case paramTypePShiftSemi:          render_param_function = &render_paramType1PShiftSemi;
+                    break;
+
+                case paramTypeBipolarPinned:       render_param_function = &render_paramType1BipolarPinned;
+                    break;
+
+                case paramTypePlusMinusUnits:      render_param_function = &render_paramType1PlusMinusUnits;
+                    break;
+
+                case paramTypeOffNum:              render_param_function = &render_paramType1OffNum;
+                    break;
+
+                case paramTypeScratchRatio:        render_param_function = &render_paramType1ScratchRatio;
+                    break;
+
+                case paramTypeSampleRate:          render_param_function = &render_paramType1SampleRate;
+                    break;
+
+                case paramTypeThresholdDb:         render_param_function = &render_paramType1ThresholdDb;
+                    break;
+
                 case paramTypeBipolar:        // -64..+63, zero at the centre
                 case paramTypeLRDial:         // pan dial, same bipolar reading
-                    render_param_function                               = &render_paramType1Bipolar;
+                    render_param_function                                = &render_paramType1Bipolar;
                     break;
 
                 case paramTypeCommonDial:     // default percent dial
-                case paramTypeResonance:      render_param_function     = &render_paramType1Resonance;
+                case paramTypeResonance:      render_param_function      = &render_paramType1Resonance;
                     break;
-                case paramTypeSlider:         render_param_function     = &render_paramType1Slider;
+                case paramTypeSlider:         render_param_function      = &render_paramType1Slider;
                     break;
-                case paramTypeStrMap:         render_param_function     = &render_paramType1StrMap;
+                case paramTypeStrMap:         render_param_function      = &render_paramType1StrMap;
                     break;
-                case paramTypeFreqShift:      render_param_function     = &render_paramType1FreqShift;
+                case paramTypeFreqShift:      render_param_function      = &render_paramType1FreqShift;
                     break;
                 default:                      LOG_ERROR("Unrecognised paramType %d\n", paramLocationList[paramRef].type);
                     break;
