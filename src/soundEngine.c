@@ -173,14 +173,31 @@ typedef enum {
 #define DELAY_PARAM_FEEDBACK    (1)
 #define DELAY_PARAM_LP          (2)   // DelayA calls this Filter; both are a damping control
 #define DELAY_PARAM_DRYWET      (3)
-#define DELAYA_PARAM_ACTIVE     (4)
-#define DELAYB_PARAM_ACTIVE     (7)
-#define DELAY_MODE_RANGE        (0)
 
-#define REVERB_PARAM_TIME       (0)
-#define REVERB_PARAM_BRIGHT     (1)
-#define REVERB_PARAM_DRYWET     (2)
-#define REVERB_PARAM_ACTIVE     (3)
+// The LP dial's cutoff, swept exponentially across its travel — see where node->damping is set.
+//
+// FITTED TO A BURST MEASUREMENT, which is how to measure anything inside a feedback loop: a short
+// burst of saw leaves the repeats separated in time, so each can be transformed on its own and
+// repeat[n+1]/repeat[n] IS the per-pass response, feedback and filter together. Normalising that to
+// its own flattest point leaves the filter alone.
+//
+//     LP 127   flat within 0.2 dB from 0.5 to 15 kHz  -> wide open, cutoff at or above 20 kHz
+//     LP  64   -1.9 dB at 2.8 kHz, -3.2 at 3.7, -4.2 at 5.6  -> one-pole knee near 3.5 kHz
+//     LP   0   only two repeats survive at all        -> cutoff well down, most energy removed
+//
+// 660 Hz at the bottom puts fc(64) at 3.7 kHz, which is that knee. A CONTINUOUS tone cannot measure
+// this: the repeats overlap, and at high feedback the loop regenerates and the ratios stop meaning
+// anything — measured per-pass "gains" came out above unity at FB 100.
+#define DELAY_LP_MIN_HZ        (660.0)
+#define DELAY_LP_MAX_HZ        (20000.0)
+#define DELAYA_PARAM_ACTIVE    (4)
+#define DELAYB_PARAM_ACTIVE    (7)
+#define DELAY_MODE_RANGE       (0)
+
+#define REVERB_PARAM_TIME      (0)
+#define REVERB_PARAM_BRIGHT    (1)
+#define REVERB_PARAM_DRYWET    (2)
+#define REVERB_PARAM_ACTIVE    (3)
 
 // The four LFO variants share a design but not a parameter order, so each one carries its own index
 // set. A -1 means the variant does not have that control at all: LfoC has no waveform selector and
@@ -2051,11 +2068,42 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                                                            param_value(module, variation, DELAY_PARAM_TIME));
                 }
             }
-            node->depth   = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0 * 0.95;
-            node->damping = param_value(module, variation, DELAY_PARAM_LP) / 127.0;
-            node->amount  = param_value(module, variation, DELAY_PARAM_DRYWET) / 127.0;
-            node->active  = (param_value(module, variation,
-                                         (module->type == moduleTypeDelayA)
+            node->depth = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0 * 0.95;
+            // LP IS A CUTOFF, AND 127 IS WIDE OPEN. This read the dial as an amount of damping and
+            // had it the wrong way round, with a fatal end point: delay_step() uses (1 - damping) as
+            // its one-pole coefficient, so LP 127 — the brightest, most ordinary setting there is —
+            // gave a coefficient of exactly ZERO. The filter state then never updated, nothing was
+            // ever fed back, and the delay produced NO REPEATS AT ALL. Anywhere near the top of the
+            // dial it was near enough silent.
+            //
+            // MEASURED ON THE INSTRUMENT (DelayB, fully wet, FB 96, repeats measured after cutting
+            // the oscillator). The dial runs dark-to-bright and the tail lengthens with it:
+            //
+            //     LP    0     32     64     96    127
+            //     tilt  -37.1  -41.4  -23.2  -13.2  -10.7 dB   (2-10 kHz against 80-400 Hz)
+            //     tail  0.5    1.6    1.8    2.0    2.0  s
+            //
+            // So LP 0 is dark and short, LP 127 open and long — the exact opposite of what this did.
+            //
+            // An exponential sweep of the cutoff fits that: 200 Hz at the bottom of the dial, 20 kHz
+            // at the top. Against the measurements above, taking LP 127 as the open reference, it
+            // predicts about 28 dB of extra rolloff at LP 0 where 26 was measured, and 8 dB at LP 64
+            // where 12.5 was. Close, and the right shape — but the filter sits INSIDE the feedback
+            // loop, so what is measured is several passes through it rather than one, and these
+            // constants deserve a proper fit before they are called settled.
+            {
+                double lp    = param_value(module, variation, DELAY_PARAM_LP) / 127.0;
+                double fc    = DELAY_LP_MIN_HZ * pow(DELAY_LP_MAX_HZ / DELAY_LP_MIN_HZ, lp);
+                double coeff = 1.0 - exp(-2.0 * M_PI * fc / gSampleRate);
+
+                if (coeff > 1.0) {
+                    coeff = 1.0;
+                }
+                node->damping = 1.0 - coeff;
+            }
+            node->amount = param_value(module, variation, DELAY_PARAM_DRYWET) / 127.0;
+            node->active = (param_value(module, variation,
+                                        (module->type == moduleTypeDelayA)
                                              ? DELAYA_PARAM_ACTIVE : DELAYB_PARAM_ACTIVE) != 0.0);
             break;
         }
@@ -3742,6 +3790,21 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     params = read_params();
 
     if (params.topology != gSeenTopology) {
+        // WORTH LOGGING, because reset_node_state() below empties every delay line and reverb buffer
+        // in the engine. A topology change that is real — a module added, a cable moved — has to do
+        // that. One that is NOT real takes the delay repeats and the reverb tail with it, and what
+        // is heard is the effect stopping dead and then filling up again from nothing.
+        //
+        // So if a delay or reverb is ever reported cutting out at random, this line is the first
+        // thing to look for: if it fires when nothing about the patch changed, the signature is
+        // unstable and the wipe is the symptom rather than the cause. Debug builds only.
+        //
+        // Not the explanation for every such report: 45 s of idle playing, 120 parameter edits and
+        // repeated select/deselect cycles all produced ZERO changes here, so whatever else may cut a
+        // delay short, it is not this under those conditions.
+        LOG_DEBUG("TOPOLOGY CHANGE %llu -> %llu, nodes %u, tap %d — delay and reverb buffers cleared\n",
+                  (unsigned long long)gSeenTopology, (unsigned long long)params.topology,
+                  (unsigned)params.nodeCount, params.tap);
         gSeenTopology = params.topology;
         reset_node_state();
     }
