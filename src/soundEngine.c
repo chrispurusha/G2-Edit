@@ -173,6 +173,7 @@ typedef enum {
 #define DELAY_PARAM_FEEDBACK    (1)
 #define DELAY_PARAM_LP          (2)   // DelayA calls this Filter; both are a damping control
 #define DELAY_PARAM_DRYWET      (3)
+#define DELAY_PARAM_HP          (8)
 
 // The LP dial's cutoff, swept exponentially across its travel — see where node->damping is set.
 //
@@ -188,7 +189,31 @@ typedef enum {
 // 660 Hz at the bottom puts fc(64) at 3.7 kHz, which is that knee. A CONTINUOUS tone cannot measure
 // this: the repeats overlap, and at high feedback the loop regenerates and the ratios stop meaning
 // anything — measured per-pass "gains" came out above unity at FB 100.
-#define DELAY_LP_MIN_HZ        (660.0)
+#define DELAY_LP_MIN_HZ    (660.0)
+
+// The HP dial's cutoff, as a QUADRATIC IN THE DIAL VALUE — log fc = a + b*hp + c*hp^2, not the
+// exponential the LP uses. That is not a preference, it is what the instrument does: an exponential
+// fitted to the two ends misses the middle of this dial by a factor of 2.4.
+//
+// MEASURED with the burst method — short saw burst, repeats separated in time, repeat[n+1]/repeat[n]
+// per harmonic, each row referenced to the 6-12 kHz band which sits above every cutoff here:
+//
+//     HP    32     64     96    127
+//     -3dB  92    841   2342   4561 Hz        fit error  +0.4  -1.1  +1.1  -0.4 dB
+//
+// VALIDATED at three settings that were NOT used to fit it:
+//
+//     HP    48     80    112
+//     meas 313   1208   3696 Hz               error      -0.6  +2.1  +0.1 dB
+//
+// HP 0 is the filter switched out rather than its lowest cutoff — it measures flat within 0.9 dB.
+//
+// The reference band matters more than it looks: taking it at 1.5-4.5 kHz, as a first attempt did,
+// puts the reference INSIDE the transition band at high settings, which flattens the measured curve
+// and hides the filter completely. HP 127 looked unmeasurable until the reference moved above it.
+#define DELAY_HP_LOG_A         (1.74224)
+#define DELAY_HP_LOG_B         (0.100227)
+#define DELAY_HP_LOG_C         (-0.000377517)
 #define DELAY_LP_MAX_HZ        (20000.0)
 #define DELAYA_PARAM_ACTIVE    (4)
 #define DELAYB_PARAM_ACTIVE    (7)
@@ -408,6 +433,7 @@ typedef struct {
     double   amount;         // chorus wet amount, delay/reverb dry-wet
     double   timeSeconds;    // delay time
     double   damping;        // delay LP / reverb brightness, 0..1
+    double   hpCoeff;        // delay HP in the feedback loop; 0 = filter off
     double   threshold;      // compressor
     double   ratio;
     double   attackCoeff;
@@ -693,6 +719,7 @@ static double   gLadder[MAX_VOICES][MAX_ENGINE_NODES][LADDER_POLES];
 static float    gDelayLine[MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
 static uint32_t gDelayWrite[MAX_DELAY_LINES];
 static double   gDelayDamp[MAX_DELAY_LINES];
+static double   gDelayHp[MAX_DELAY_LINES];   // the HP's lowpass half; the filter is x - this
 
 // The chorus's own short sweep, one per node, plus its LFO phase.
 #define CHORUS_SAMPLES    (2048 * ENGINE_OVERSAMPLE)
@@ -1032,6 +1059,7 @@ static void reset_node_state(void) {
     memset(gDelayLine, 0, sizeof(gDelayLine));
     memset(gDelayWrite, 0, sizeof(gDelayWrite));
     memset(gDelayDamp, 0, sizeof(gDelayDamp));
+    memset(gDelayHp, 0, sizeof(gDelayHp));
     memset(gComb, 0, sizeof(gComb));
     memset(gCombPos, 0, sizeof(gCombPos));
     memset(gCombStore, 0, sizeof(gCombStore));
@@ -2101,6 +2129,22 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 }
                 node->damping = 1.0 - coeff;
             }
+            {
+                // HP 0 is the filter switched out, not merely its lowest cutoff — measured flat.
+                double hp = param_value(module, variation, DELAY_PARAM_HP);
+
+                if (hp <= 0.0) {
+                    node->hpCoeff = 0.0;
+                } else {
+                    double fc = exp(DELAY_HP_LOG_A + (DELAY_HP_LOG_B * hp) + (DELAY_HP_LOG_C * hp * hp));
+
+                    node->hpCoeff = 1.0 - exp(-2.0 * M_PI * fc / gSampleRate);
+
+                    if (node->hpCoeff > 1.0) {
+                        node->hpCoeff = 1.0;
+                    }
+                }
+            }
             node->amount = param_value(module, variation, DELAY_PARAM_DRYWET) / 127.0;
             node->active = (param_value(module, variation,
                                         (module->type == moduleTypeDelayA)
@@ -2736,7 +2780,7 @@ static double osc_shp_wave(uint32_t waveform, double phase, double dt, double sh
 // A delay line with feedback and a one-pole damping filter in the loop — the usual arrangement, and
 // what the LP knob on the module controls.
 static double delay_step(uint32_t line, double input, double timeSeconds, double feedback,
-                         double damping, double mix) {
+                         double damping, double hpCoeff, double mix) {
     uint32_t samples = (uint32_t)(timeSeconds * gSampleRate);
     uint32_t readPos = 0;
     double   wet     = 0.0;
@@ -2756,8 +2800,17 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
     // Damping in the feedback path, so each repeat is duller than the last rather than the dry
     // signal being filtered once.
     gDelayDamp[line]                   += (1.0 - damping) * (wet - gDelayDamp[line]);
+    double   fed     = gDelayDamp[line];
 
-    gDelayLine[line][gDelayWrite[line]] = (float)(input + (gDelayDamp[line] * feedback));
+    // Then the high-pass, also in the loop, so each repeat loses more low end than the last — the
+    // counterpart to the LP above. Built as a one-pole lowpass subtracted from the signal, which is
+    // the cheapest honest one-pole high-pass there is. A coefficient of zero is the dial at 0,
+    // where the filter measures flat and is simply switched out.
+    if (hpCoeff > 0.0) {
+        gDelayHp[line] += hpCoeff * (fed - gDelayHp[line]);
+        fed             = fed - gDelayHp[line];
+    }
+    gDelayLine[line][gDelayWrite[line]] = (float)(input + (fed * feedback));
     gDelayWrite[line]                   = (gDelayWrite[line] + 1) % DELAY_LINE_SAMPLES;
 
     return (input * (1.0 - mix)) + (wet * mix);
@@ -3690,7 +3743,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             value[n][0] = (spec->active == true)
                               ? delay_step(spec->line, a, spec->timeSeconds, spec->depth,
-                                           spec->damping, spec->amount) : a;
+                                           spec->damping, spec->hpCoeff, spec->amount) : a;
             value[n][1] = value[n][0];
             break;
         }
