@@ -348,6 +348,7 @@ typedef enum {
     paramTypeNoteDial,
     paramTypePan,
     paramTypePhase,
+    paramTypeBipolar,
     paramTypeResonanceQ,
     paramTypeFlangerRate,
     paramTypePhaserRate,
