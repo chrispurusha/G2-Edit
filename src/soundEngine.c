@@ -138,32 +138,67 @@ typedef enum {
 // parameter list entirely because, unlike a knob, they cannot be assigned to a morph group or a
 // controller and hold one setting across every variation (manual p.20). It lives in
 // modeLocationList, so it is read from module->mode[] and reading param[10] found nothing.
-#define SHPB_MODE_WAVEFORM       (0)
+#define SHPB_MODE_WAVEFORM          (0)
 
 // Mix4to1C: one level per input, then a pad and a curve.
-#define MIX_PARAM_LEVEL_BASE     (0)
+#define MIX_PARAM_LEVEL_BASE        (0)
 // The four Channel Mute buttons sit directly after the four level dials. offOnColourMap indexes
 // them {grey, green}, so NON-ZERO IS ENABLED — a lit button is a channel that sounds.
-#define MIX_PARAM_ENABLE_BASE    (4)
-#define MIX_CHANNELS             (4)
+#define MIX_PARAM_ENABLE_BASE       (4)
+#define MIX_CHANNELS                (4)
 // The two mixers put Curve in different places: Mix4to1C has a Pad at 8 and Curve at 9, Mix4to1S
 // has no Pad and Curve at 8.
-#define MIX_PARAM_PAD            (8)  // Mix4to1C only: 0 dB or -6 dB on every input at once
-#define MIX_PARAM_CURVE          (9)
-#define MIXS_PARAM_CURVE         (8)
-#define MIX_CURVE_LIN            (1)  // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
+#define MIX_PARAM_PAD               (8) // Mix4to1C only: 0 dB or -6 dB on every input at once
+#define MIX_PARAM_CURVE             (9)
+#define MIXS_PARAM_CURVE            (8)
+#define MIX_CURVE_LIN               (1) // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
 
 // StChorus: a detune depth and an amount, then its power button.
-#define CHORUS_PARAM_DETUNE      (0)
-#define CHORUS_PARAM_AMOUNT      (1)
-#define CHORUS_PARAM_ACTIVE      (2)
+#define CHORUS_PARAM_DETUNE         (0)
+#define CHORUS_PARAM_AMOUNT         (1)
+#define CHORUS_PARAM_ACTIVE         (2)
 
 // Compress: threshold and reference level run 0..42, ratio 0..66.
-#define COMP_PARAM_THRESHOLD     (0)
-#define COMP_PARAM_RATIO         (1)
-#define COMP_PARAM_ATTACK        (2)
-#define COMP_PARAM_RELEASE       (3)
-#define COMP_PARAM_ACTIVE        (6)
+#define COMP_PARAM_THRESHOLD        (0)
+#define COMP_PARAM_RATIO            (1)
+#define COMP_PARAM_ATTACK           (2)
+#define COMP_PARAM_RELEASE          (3)
+#define COMP_PARAM_ACTIVE           (6)
+
+// Read off the instrument's own dial displays, not guessed. See where they are used.
+#define COMP_THRESHOLD_OFFSET_DB    (30.0)      // displayed dB = raw - this
+#define COMP_THRESHOLD_OFF          (42.0)      // the dial reads "Off" here
+#define COMP_THRESHOLD_NONE         (1.0e9)     // an amplitude nothing reaches
+#define COMP_ATTACK_MIN_S           (0.00053)   // raw 1; raw 0 is "Fast", i.e. instant
+#define COMP_ATTACK_MAX_S           (0.767)
+#define COMP_RELEASE_MIN_S          (0.125)
+#define COMP_RELEASE_MAX_S          (10.2)
+
+// The Ratio dial, in three straight runs that repeat a decade higher above raw 34 — 1.0:1 up to
+// about 95:1. Transcribed from the instrument's own formatter rather than fitted.
+static double compressor_ratio(double rawValue) {
+    int  raw    = (int)rawValue;
+    bool decade = (raw > 34);
+    int  p      = decade ? (raw - 35) : raw;
+    int  tenths = 0;
+
+    if (p < 0) {
+        p = 0;
+    }
+
+    if (p <= 9) {
+        tenths = p + 10;
+    } else if (p < 25) {
+        tenths = p * 2;
+    } else {
+        tenths = (p * 5) - 75;
+    }
+
+    if (decade) {
+        tenths *= 10;
+    }
+    return (double)tenths / 10.0;
+}
 
 // DelayB. Its range is a MODE, like the shape oscillators' waveform.
 // The two delays share their first four parameters but NOT their Bypass: DelayA has six parameters
@@ -2037,17 +2072,40 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeCompress:
         {
-            // Threshold and reference run 0..42 on the dial, ratio 0..66. Read as dB below 0 and as
-            // a ratio from 1:1 upwards — an approximation of the curve, not a reading of it.
-            double thrDb = -42.0 + param_value(module, variation, COMP_PARAM_THRESHOLD);
-            double att   = param_value(module, variation, COMP_PARAM_ATTACK) / 127.0;
-            double rel   = param_value(module, variation, COMP_PARAM_RELEASE) / 127.0;
+            // ALL FOUR OF THESE WERE WRONG, and none of it needed the hardware: the instrument's own
+            // dial readings settle every one. The note that used to sit here called the curve "an
+            // approximation, not a reading of it", which was honest and is now unnecessary.
+            //
+            //   THRESHOLD  the dial reads raw - 30 dB, and raw 42 reads "Off". This had raw - 42,
+            //              putting every setting 12 dB too low, and had no Off at all — so the
+            //              compressor was still working where the instrument stops.
+            //   RATIO      three straight runs, reaching about 95:1. This was 1 + raw/8, which tops
+            //              out at 9.6:1 — a tenth of the range, so the hardest settings barely
+            //              compressed.
+            //   ATTACK     0.53 ms to 767 ms, and raw 0 is "Fast", i.e. instant. This was
+            //              0.1 ms to 300 ms.
+            //   RELEASE    125 ms to 10.2 s. This was 10 ms to 3 s.
+            //
+            // Attack and release are pure exponentials across the dial — fitted to the printed
+            // scales, worst error 0.07 dB and 0.04 dB respectively, so the shape is not in doubt.
+            double thrRaw = param_value(module, variation, COMP_PARAM_THRESHOLD);
+            double att    = param_value(module, variation, COMP_PARAM_ATTACK);
+            double rel    = param_value(module, variation, COMP_PARAM_RELEASE) / 127.0;
 
-            node->threshold    = pow(10.0, thrDb / 20.0);
-            node->ratio        = 1.0 + (param_value(module, variation, COMP_PARAM_RATIO) / 8.0);
-            // 0.1 ms .. 300 ms attack, 10 ms .. 3 s release, as one-pole coefficients.
-            node->attackCoeff  = 1.0 - exp(-1.0 / (gSampleRate * (0.0001 * pow(3000.0, att))));
-            node->releaseCoeff = 1.0 - exp(-1.0 / (gSampleRate * (0.01 * pow(300.0, rel))));
+            if (thrRaw >= COMP_THRESHOLD_OFF) {
+                node->threshold = COMP_THRESHOLD_NONE;   // "Off": nothing ever reaches it
+            } else {
+                node->threshold = pow(10.0, (thrRaw - COMP_THRESHOLD_OFFSET_DB) / 20.0);
+            }
+            node->ratio        = compressor_ratio(param_value(module, variation, COMP_PARAM_RATIO));
+
+            // Raw 0 is "Fast" — a coefficient of 1 follows the input with no lag at all.
+            node->attackCoeff  = (att <= 0.0) ? 1.0
+                                 : (1.0 - exp(-1.0 / (gSampleRate * (COMP_ATTACK_MIN_S
+                                                                     * pow(COMP_ATTACK_MAX_S / COMP_ATTACK_MIN_S,
+                                                                           (att - 1.0) / 126.0)))));
+            node->releaseCoeff = 1.0 - exp(-1.0 / (gSampleRate * (COMP_RELEASE_MIN_S
+                                                                  * pow(COMP_RELEASE_MAX_S / COMP_RELEASE_MIN_S, rel))));
             node->active       = (param_value(module, variation, COMP_PARAM_ACTIVE) != 0.0);
             break;
         }
