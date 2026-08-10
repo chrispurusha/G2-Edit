@@ -32,7 +32,7 @@
 // on the owner's instruction, consistent with Parameter Pages and Parameter Overview.
 //
 // THE NOTE ITSELF GOES OUT OVER SUB_COMMAND_PLAY_NOTE (0x56), whose wire format is
-// REVERSE-ENGINEERED FROM THE REFERENCE DECOMPILE AND UNCONFIRMED ON HARDWARE — see
+// REVERSE-ENGINEERED AND UNCONFIRMED ON HARDWARE — see
 // send_play_note() in usbComms.c for the derivation. If nothing sounds, that function is the thing
 // to doubt, not this file: everything here is ordinary panel drawing and hit-testing.
 //

@@ -187,7 +187,7 @@
 
 // CONFIRMED on real hardware 2026-07-15: location(8)/moduleIndex(8)/locked-bool(8) payload,
 // verified by toggling live then restarting the app to force a fresh patch redump from the
-// device - the bit came back correctly changed. Derived from the decompiled original editor
+// device - the bit came back correctly changed. Derived from the original editor
 // (Original Editor/G2Editor.c): CMMutaLock::WriteStream calls
 // CMIDIOutStream::Initialize(stream, 0x90, 0, 0), the same pattern used by CMParamChange (tag
 // 0x40 == our confirmed SUB_COMMAND_SET_PARAM) and CMModuleMove (tag 0x34 == our confirmed

@@ -77,7 +77,7 @@ tCable * cable_chain_feeding_cable(uint32_t slot, uint32_t location, tCableNode 
 bool cable_chain_find_root(uint32_t slot, uint32_t location, tCableNode node, tCableNode * root);
 
 // The colour the whole chain containing `node` should carry, per the invariant established
-// from the decompile: every cable in a chain shares ONE colour — the source output's
+// every cable in a chain shares ONE colour — the source output's
 // signal-type colour, or white when the chain has no source output at all.
 tCableColour cable_chain_colour(uint32_t slot, uint32_t location, tCableNode node);
 

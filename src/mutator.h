@@ -73,7 +73,7 @@ tMutatorCategory classify_param(tModuleType moduleType, tLocation location, tPar
 // written (capped at maxEntries).
 uint32_t mutator_build_schema(uint32_t slot, tMutatorSchemaEntry * entries, uint32_t maxEntries);
 
-// Builds the "chromosome" turtle-walk path, ported from the original Clavia editor's decompiled
+// Builds the "chromosome" turtle-walk path, following the original Clavia editor's
 // CDialogMutaBox::DrawChromosome: walks the genome two entries at a time - the first (even index)
 // turns a running heading in degrees (raw byte value minus 63, i.e. centered on a mid-range dial
 // value), the second (odd index) steps forward by its own raw byte value in that heading. One
@@ -94,7 +94,7 @@ void mutator_read_genome(const tMutatorSchemaEntry * schema, uint32_t count, uin
 // IMPORTANT: real G2 firmware only understands variation indices 0-7 (confirmed on hardware
 // 2026-07-15) - there is no live "ninth variation" on the wire. The original Clavia editor's own
 // "ninth internal variation" is purely a local in-memory scratch slot (never serialized - see
-// CMMutaParamDump in the decompiled original editor, which has no ReadStream/GetId/BuildMolecule).
+// CMMutaParamDump in the original editor, which has no ReadStream/GetId/BuildMolecule).
 // So: audition must target whichever variation is presently active on the front panel
 // (gPatchDescr[slot].activeVariation, 0-7) so hardware actually plays it, exactly like an ordinary
 // live knob tweak. Before the first audition write, back up that variation's real values (e.g. via

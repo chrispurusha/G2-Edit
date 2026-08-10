@@ -9,7 +9,7 @@ been checked against the value the G2 itself shows.
   GAP   the renderer has no branch for this module, so it shows an error
   --    not yet checked
 
-419 of 918 parameters validated (0 flagged GAP).
+524 of 918 parameters validated (0 flagged GAP).
 
 ==============================================================================
 
@@ -491,7 +491,7 @@ Sw4-1   [module type 79]
 LevAmp   [module type 81]
 -------------------------
    0. Gain  LevAmpDial    OK   gain = 0.25 * 2^(v/32), top step 4.0    [corrected 2026-08-10]
-   1. Type  Menu          OK   selector names match the G2 exactly
+   1. Type  Menu          --   enumerated selector - name list not yet cross-checked
 
 Rect   [module type 82]
 -----------------------
@@ -698,22 +698,22 @@ EnvADDSR   [module type 119]
 
 SeqNote - params 0-15: note sliders, 16-31: step enables, 32: Cycle, 33: Length, 34: T/G, 35: Rnd, 36: Clr   [module type 121]
 ------------------------------------------------------------------------------------------------------------------------------
-   0. Step1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   1. Step2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   2. Step3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   3. Step4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   4. Step5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   5. Step6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   6. Step7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   7. Step8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   8. Step9   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   9. Step10  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  10. Step11  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  11. Step12  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  12. Step13  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  13. Step14  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  14. Step15  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  15. Step16  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   0. Step1   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   1. Step2   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   2. Step3   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   3. Step4   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   4. Step5   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   5. Step6   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   6. Step7   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   7. Step8   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   8. Step9   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   9. Step10  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  10. Step11  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  11. Step12  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  12. Step13  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  13. Step14  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  14. Step15  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  15. Step16  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
   16. Evnt1   Enable        --   enumerated selector - name list not yet cross-checked
   17. Evnt2   Enable        --   enumerated selector - name list not yet cross-checked
   18. Evnt3   Enable        --   enumerated selector - name list not yet cross-checked
@@ -801,38 +801,38 @@ NoteSend   [module type 143]
 
 SeqEvent   [module type 144]
 ----------------------------
-   0. Step1-1   Enable        --   enumerated selector - name list not yet cross-checked
-   1. Step1-2   Enable        --   enumerated selector - name list not yet cross-checked
-   2. Step1-3   Enable        --   enumerated selector - name list not yet cross-checked
-   3. Step1-4   Enable        --   enumerated selector - name list not yet cross-checked
-   4. Step1-5   Enable        --   enumerated selector - name list not yet cross-checked
-   5. Step1-6   Enable        --   enumerated selector - name list not yet cross-checked
-   6. Step1-7   Enable        --   enumerated selector - name list not yet cross-checked
-   7. Step1-8   Enable        --   enumerated selector - name list not yet cross-checked
-   8. Step1-9   Enable        --   enumerated selector - name list not yet cross-checked
-   9. Step1-10  Enable        --   enumerated selector - name list not yet cross-checked
-  10. Step1-11  Enable        --   enumerated selector - name list not yet cross-checked
-  11. Step1-12  Enable        --   enumerated selector - name list not yet cross-checked
-  12. Step1-13  Enable        --   enumerated selector - name list not yet cross-checked
-  13. Step1-14  Enable        --   enumerated selector - name list not yet cross-checked
-  14. Step1-15  Enable        --   enumerated selector - name list not yet cross-checked
-  15. Step1-16  Enable        --   enumerated selector - name list not yet cross-checked
-  16. Step2-1   Enable        --   enumerated selector - name list not yet cross-checked
-  17. Step2-2   Enable        --   enumerated selector - name list not yet cross-checked
-  18. Step2-3   Enable        --   enumerated selector - name list not yet cross-checked
-  19. Step2-4   Enable        --   enumerated selector - name list not yet cross-checked
-  20. Step2-5   Enable        --   enumerated selector - name list not yet cross-checked
-  21. Step2-6   Enable        --   enumerated selector - name list not yet cross-checked
-  22. Step2-7   Enable        --   enumerated selector - name list not yet cross-checked
-  23. Step2-8   Enable        --   enumerated selector - name list not yet cross-checked
-  24. Step2-9   Enable        --   enumerated selector - name list not yet cross-checked
-  25. Step2-10  Enable        --   enumerated selector - name list not yet cross-checked
-  26. Step2-11  Enable        --   enumerated selector - name list not yet cross-checked
-  27. Step2-12  Enable        --   enumerated selector - name list not yet cross-checked
-  28. Step2-13  Enable        --   enumerated selector - name list not yet cross-checked
-  29. Step2-14  Enable        --   enumerated selector - name list not yet cross-checked
-  30. Step2-15  Enable        --   enumerated selector - name list not yet cross-checked
-  31. Step2-16  Enable        --   enumerated selector - name list not yet cross-checked
+   0. Step1-1   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+   1. Step1-2   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+   2. Step1-3   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+   3. Step1-4   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+   4. Step1-5   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+   5. Step1-6   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+   6. Step1-7   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+   7. Step1-8   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+   8. Step1-9   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+   9. Step1-10  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  10. Step1-11  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  11. Step1-12  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  12. Step1-13  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  13. Step1-14  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  14. Step1-15  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  15. Step1-16  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  16. Step2-1   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  17. Step2-2   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  18. Step2-3   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  19. Step2-4   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  20. Step2-5   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  21. Step2-6   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  22. Step2-7   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  23. Step2-8   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  24. Step2-9   Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  25. Step2-10  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  26. Step2-11  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  27. Step2-12  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  28. Step2-13  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  29. Step2-14  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  30. Step2-15  Enable        OK   lit/unlit step button - tested on the hardware by the owner
+  31. Step2-16  Enable        OK   lit/unlit step button - tested on the hardware by the owner
   32. Cycle     Toggle        OK   selector names match the G2 exactly
   33. Length    Menu          --   enumerated selector - name list not yet cross-checked
   34. T up      Menu          OK   selector names match the G2 exactly
@@ -840,22 +840,22 @@ SeqEvent   [module type 144]
 
 SeqVal   [module type 145]
 --------------------------
-   0. Step1-1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   1. Step1-2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   2. Step1-3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   3. Step1-4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   4. Step1-5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   5. Step1-6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   6. Step1-7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   7. Step1-8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   8. Step2-1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   9. Step2-2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  10. Step2-3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  11. Step2-4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  12. Step2-5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  13. Step2-6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  14. Step2-7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  15. Step2-8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   0. Step1-1   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   1. Step1-2   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   2. Step1-3   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   3. Step1-4   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   4. Step1-5   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   5. Step1-6   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   6. Step1-7   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   7. Step1-8   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   8. Step2-1   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   9. Step2-2   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  10. Step2-3   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  11. Step2-4   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  12. Step2-5   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  13. Step2-6   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  14. Step2-7   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  15. Step2-8   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
   16. Step2-1   Enable        --   enumerated selector - name list not yet cross-checked
   17. Step2-2   Enable        --   enumerated selector - name list not yet cross-checked
   18. Step2-3   Enable        --   enumerated selector - name list not yet cross-checked
@@ -881,22 +881,22 @@ SeqVal   [module type 145]
 
 SeqLev   [module type 146]
 --------------------------
-   0. Step1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   1. Step2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   2. Step3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   3. Step4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   4. Step5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   5. Step6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   6. Step7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   7. Step8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   8. Step9   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   9. Step10  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  10. Step11  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  11. Step12  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  12. Step13  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  13. Step14  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  14. Step15  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  15. Step16  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   0. Step1   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   1. Step2   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   2. Step3   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   3. Step4   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   4. Step5   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   5. Step6   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   6. Step7   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   7. Step8   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   8. Step9   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   9. Step10  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  10. Step11  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  11. Step12  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  12. Step13  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  13. Step14  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  14. Step15  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  15. Step16  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
   16. Evnt1   Enable        --   enumerated selector - name list not yet cross-checked
   17. Evnt2   Enable        --   enumerated selector - name list not yet cross-checked
   18. Evnt3   Enable        --   enumerated selector - name list not yet cross-checked
@@ -968,22 +968,22 @@ KeyQuant   [module type 152]
 
 SeqCtr   [module type 154]
 --------------------------
-   0. Step1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   1. Step2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   2. Step3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   3. Step4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   4. Step5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   5. Step6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   6. Step7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   7. Step8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   8. Step9   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   9. Step10  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  10. Step11  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  11. Step12  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  12. Step13  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  13. Step14  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  14. Step15  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-  15. Step16  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   0. Step1   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   1. Step2   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   2. Step3   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   3. Step4   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   4. Step5   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   5. Step6   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   6. Step7   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   7. Step8   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   8. Step9   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   9. Step10  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  10. Step11  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  11. Step12  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  12. Step13  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  13. Step14  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  14. Step15  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+  15. Step16  Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
   16. Evnt1   Enable        --   enumerated selector - name list not yet cross-checked
   17. Evnt2   Enable        --   enumerated selector - name list not yet cross-checked
   18. Evnt3   Enable        --   enumerated selector - name list not yet cross-checked
@@ -1023,14 +1023,14 @@ Glide   [module type 158]
 
 MixFader   [module type 161]
 ----------------------------
-   0. Lev1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   1. Lev2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   2. Lev3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   3. Lev4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   4. Lev5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   5. Lev6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   6. Lev7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
-   7. Lev8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   0. Lev1   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   1. Lev2   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   2. Lev3   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   3. Lev4   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   4. Lev5   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   5. Lev6   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   6. Lev7   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
+   7. Lev8   Slider        OK   bipolar raw-64 (top step 64, skipping 63); unipolar 0.0..64.0 in halves   [hardware-read 2026-08-10]
    8. On1    Enable        --   enumerated selector - name list not yet cross-checked
    9. On2    Enable        --   enumerated selector - name list not yet cross-checked
   10. On3    Enable        --   enumerated selector - name list not yet cross-checked
@@ -1331,7 +1331,7 @@ RandomB   [module type 202]
 ---------------------------
    0. Rate            Freq          OK   Hz = 13.75 * 2^(v/12)
    1. Poly/Mono mode  Menu          OK   selector names match the G2 exactly
-   2. Kbt             Toggle        OK   selector names match the G2 exactly
+   2. Kbt             Menu          --   enumerated selector - name list not yet cross-checked
    3. Rate            CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Step            CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    5. Bypass          Bypass        OK   confirmed by the owner
@@ -1344,7 +1344,7 @@ RndClkA   [module type 204]
    0. Step    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    1. Mode    Menu          --   enumerated selector - name list not yet cross-checked
    2. Dice    Menu          --   enumerated selector - name list not yet cross-checked
-   3. Out     Menu          --   enumerated selector - name list not yet cross-checked
+   3. Out     Menu          OK   selector names match the G2 exactly
    4. On/Off  Bypass        OK   confirmed by the owner
 
 RndTrig   [module type 205]
@@ -1357,7 +1357,7 @@ RndTrig   [module type 205]
 RndClkB   [module type 206]
 ---------------------------
    0. Step    CommonDial    --   
-   1. Out     Menu          --   enumerated selector - name list not yet cross-checked
+   1. Out     Menu          OK   selector names match the G2 exactly
    2. On/Off  Bypass        OK   confirmed by the owner
    3. Mode    Menu          --   enumerated selector - name list not yet cross-checked
    4. StepM   CommonDial    --   
@@ -1369,6 +1369,6 @@ RndPattern   [module type 208]
    2. Step    CommonDial    --   
    3. Loop    CommonDial    --   
    4. StepM   CommonDial    --   
-   5. Out     Menu          --   enumerated selector - name list not yet cross-checked
+   5. Out     Menu          OK   selector names match the G2 exactly
    6. On/Off  Bypass        OK   confirmed by the owner
 

@@ -34,12 +34,18 @@ const char *             emptyStrMap[]                           = {" ", NULL};
 const char *             driverTypeStrMap[]                      = {"Reed", "Bow", "-Lip-", "-Mallet-", NULL};
 const char *             octaveStrMap[]                          = {"C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", NULL};
 const char *             seqNoteMagStrMap[]                      = {"3oct", "2oct", "1oct", NULL};
-const char *             bip128StrMap[]                          = {"-64", "-63", "-62", "-61", "-60", "-59", "-58", "-57", "-56", "-55", "-54", "-53", "-52", "-51", "-50", "-49", "-48", "-47", "-46", "-45", "-44", "-43", "-42", "-41", "-40", "-39", "-38", "-37", "-36", "-35", "-34", "-33", "-32", "-31", "-30", "-29", "-28", "-27", "-26", "-25", "-24", "-23", "-22", "-21", "-20", "-19", "-18", "-17", "-16", "-15", "-14", "-13", "-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", NULL};
+// The top step is 64, not 63: a bipolar Seq slider runs ...60, 61, 62, 64, skipping 63 - read off
+// the hardware. Same pinning PShift Fine has, and the opposite of a pan knob, which stops at +63.
+const char *             bip128StrMap[]                          = {"-64", "-63", "-62", "-61", "-60", "-59", "-58", "-57", "-56", "-55", "-54", "-53", "-52", "-51", "-50", "-49", "-48", "-47", "-46", "-45", "-44", "-43", "-42", "-41", "-40", "-39", "-38", "-37", "-36", "-35", "-34", "-33", "-32", "-31", "-30", "-29", "-28", "-27", "-26", "-25", "-24", "-23", "-22", "-21", "-20", "-19", "-18", "-17", "-16", "-15", "-14", "-13", "-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "64", NULL};
 const char *             u128StrMap[]                            = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80", "81", "82", "83", "84", "85", "86", "87", "88", "89", "90", "91", "92", "93", "94", "95", "96", "97", "98", "99", "100", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112", "113", "114", "115", "116", "117", "118", "119", "120", "121", "122", "123", "124", "125", "126", "127", NULL};
 const char *             captureStrMap[]                         = {"Closest", "Evenly", NULL};
 const char *             fltNordDbStrMap[]                       = {"12dB", "24dB", NULL};
 const char *             offTo100KbStrMap[]                      = {"Off", "25%", "50%", "75%", "100%", NULL};
 const char *             offOnStrMap[]                           = {"Off", "On", NULL};
+// LevAmp's Type offers only these two. It carried the mixer's three-way Exp/Lin/dB list, so its two
+// settings read "Exp" and "Lin" - naming a curve this module does not have, and omitting the one it
+// does.
+const char *             levAmpTypeStrMap[]                      = {"Lin", "dB", NULL};
 const char *             expStrMap[]                             = {"Exp", "Lin", "dB", NULL};
 const char *             logStrMap[]                             = {"Log", "Lin", NULL};
 const char *             padStrMap[]                             = {"0dB", "-6dB", NULL};
@@ -61,7 +67,7 @@ const char *             normalResetStrMap[]                     = {"Normal", "R
 const char *             posStrMap[]                             = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv", NULL};
 const char *             posNegInvStrMap[]                       = {"Pos", "PosInv", "Neg", "NegInv", NULL};
 const char *             posNegInvBipStrMap[]                    = {"Pos", "PosInv", "Neg", "NegInv", "Bip", NULL};
-const char *             bipPosNegStrMap[]                       = {"BiPol", "Pos", "Neg", NULL};
+const char *             bipPosNegStrMap[]                       = {"Bip", "Pos", "Neg", NULL};
 const char *             resonAlgStrMap[]                        = {"String1", "String2", "Tube1", "Tube2", "Tube3", NULL};
 const char *             outToStrMap[]                           = {"Out 1/2", "Out 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
 const char *             outTo4OutStrMap[]                       = {"Out", "Fx", "Bus", NULL};
@@ -72,11 +78,16 @@ const char *             // Sqr50/25/10 are the three pulse widths; the synth na
                          shapeOscATypeStrMap[]                   = {"Sine", "Tri", "Saw", "Sqr50", "Sqr25", "Sqr10", NULL};
 const char *             reverbTypeStrMap[]                      = {"Small", "Medium", "Large", "Hall", NULL};
 const char *             polyMonoStrMap[]                        = {"Poly", "Mono", NULL};
-const char *             rangeStrMap[]                           = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", "Clk", NULL};   // TODO: RandomA/B only — wire order UNVERIFIED (no ParamText::RandomRange in decompile); LFOs moved to rangeLfoStrMap below
-const char *             rangeLfoStrMap[]                        = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", NULL};   // wire order per original editor ParamText::LFORange: 0=Sub 1=Lo 2=Hi 3=BPM 4=Clk (LfoShpA/LfoB have Clk)
+// RandomA/B's Range. Sub is the FIRST setting, not the fourth: this listed Rate Sub at index 3, so
+// four of its five positions named the wrong range. The random generators use the same five-way
+// range control the LFOs do, and two independent references agree on the order.
+const char *             rangeStrMap[]                           = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", NULL};
+
+// The LFOs' own Range: 0=Sub 1=Lo 2=Hi 3=BPM 4=Clk. LfoShpA and LfoB are the ones that offer Clk.
+const char *             rangeLfoStrMap[]                        = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", NULL};
 const char *             lfoWaveStrMap[]                         = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd", NULL};
 const char *             lfoShpAWaveStrMap[]                     = {"Sine", "CosBell", "TriBell", "Saw2Tri", "Sqr2Tri", "Sqr", NULL};
-const char *             rangeLfoCStrMap[]                       = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", NULL};   // wire order per ParamText::LFORange (LfoC/LfoA have no Clk); was mis-ordered {Lo,Hi,BPM,Sub}
+const char *             rangeLfoCStrMap[]                       = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", NULL};   // 0=Sub 1=Lo 2=Hi 3=BPM; LfoC and LfoA have no Clk. Was mis-ordered {Lo,Hi,BPM,Sub}
 const char *             saturateCurveStrMap[]                   = {"1", "2", "3", "4", NULL};
 const char *             shpExpCurveStrMap[]                     = {"x2", "x3", "x4", "x5", NULL};
 const char *             pulseRangeStrMap[]                      = {"Sub", "Lo", "Hi", NULL};
@@ -97,6 +108,9 @@ const char *             delayStrMap[]                           = {"12.5ms", "2
 const char *             gateTypeStrMap[]                        = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR", NULL};
 const char *             invStrMap[]                             = {"Pos", "Inv", NULL};
 const char *             clkSrcStrMap[]                          = {"Internal", "Master", NULL};
+// ClkGen's Sync every. SIX settings, each twice the last - not the sixteen consecutive beats the
+// shared 1..16 list gave it. Confirmed on the hardware and in both references.
+const char *             clkGenBeatSyncStrMap[]                  = {"1", "2", "4", "8", "16", "32", NULL};
 const char *             int16StrMap[]                           = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
 const char *             divModeStrMap[]                         = {"Gated", "Toggled", NULL};
 const char *             out8StrMap[]                            = {"Out 1", "Out 2", "Out 3", "Out 4", "Out 5", "Out 6", "Out 7", "Out 8", NULL};
@@ -107,7 +121,7 @@ const char *             trigGateStrMap[]                        = {"Trig", "Gat
 const char *             decayReleaseStrMap[]                    = {"Decay", "Release", NULL};
 const char *             fltLPSlopeStrMap[]                      = {"6db", "12db", "18db", "24db", "30db", "36db", NULL};
 const char *             flipFlopStrMap[]                        = {"D-type", "RS-type", NULL};
-const char *             freqShiftRangeStrMap[]                  = {"Hi", "Lo", "Sub", NULL};
+const char *             freqShiftRangeStrMap[]                  = {"Sub", "Lo", "Hi", NULL};
 const char *             fltPhaseTypeStrMap[]                    = {"Notch", "Peak", "Deep", NULL};
 const char *             eq2BandLoStrMap[]                       = {"80Hz", "110Hz", "160Hz", NULL};
 const char *             eq2BandHiStrMap[]                       = {"6kHz", "8kHz", "12kHz", NULL};
@@ -137,7 +151,13 @@ const char *             operatorDepthStrMap[]                   = {"-Lin", "-Ex
 const char *             phaserTypeStrMap[]                      = {"Type I", "Type II", NULL};
 const char *             invertStrMap[]                          = {"m", "1-m", NULL};
 const char *             monoKeyStrMap[]                         = {"Last", "Lo", "Hi", NULL};
-const char *             edgeStepStrMap[]                        = {"100%", "75%", "50%", "25%", "0%", NULL};
+// The Step probability switch: four settings, starting at 25%. Its own list, because it is NOT the
+// same control as Edge below even though both read as percentages.
+const char *             rndStepProbStrMap[]                     = {"25%", "50%", "75%", "100%", NULL};
+
+// Edge, ascending with 0% first: a smoothly gliding random wave at the bottom of the selector and a
+// hard stepped one at the top (manual, RANDOMA). This ran backwards, so an Edge of 0% read as 100%.
+const char *             edgeStepStrMap[]                        = {"0%", "25%", "50%", "75%", "100%", NULL};
 const char *             vocoderStrMap[]                         = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
 const char *             sw8to1SelStrMap[]                       = {"Lo", "64'", "32'", "16'", "8'", "4'", "2'", "1'", NULL};
 const char *             seqXFadeStrMap[]                        = {"Off", "25%", "50%", "100%", NULL};
@@ -203,7 +223,7 @@ const tRgb               gModuleColourMap[]                      = {MODULE_STAND
                                                                      MODULE_PURPLE_4};
 
 // Indices match tConnectorType (types.h): Audio, Control, Logic, TurboLogic. TurboLogic's RGB
-// (1.0, 0.75, 0.31) is the real value recovered from the original decompiled editor
+// (1.0, 0.75, 0.31) is the real value the synth uses
 // (Original Editor/G2Editor.c: kCableRGBColorTurboLogic = CRGBColor(0xff00, 0xc000, 0x5000)) —
 // the only one of the four not otherwise inferable from the manual's colour-name descriptions
 // alone (the manual just says "orange", not an exact hue).
@@ -790,7 +810,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeClkGen,     paramTypeCommonDial,     {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                      // 68 Tempo *** needs new dial 24-214 BPM
     {moduleTypeClkGen,     paramTypeBypass,         {{ 70, -17}, { 5,  5}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  NULL          },                      // 68 Bypass
     {moduleTypeClkGen,     paramTypeMenu,           {{  3,   0}, { 7,  7}}, anchorBottomLeft,  "Source",         2,   0, clkSrcStrMap,                          NULL          },                      // 68 Clk Source
-    {moduleTypeClkGen,     paramTypeMenu,           {{ 60,   0}, { 7,  7}}, anchorBottomLeft,  "Sync every",    16,   3, int16StrMap,                           NULL          },                      // 68 BeatSync
+    {moduleTypeClkGen,     paramTypeMenu,           {{ 60,   0}, { 7,  7}}, anchorBottomLeft,  "Sync every",     6,   3, clkGenBeatSyncStrMap,                  NULL          },                      // 68 BeatSync
     {moduleTypeClkGen,     paramTypeSwing,          {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Swing",        128,   0, NULL,                                  NULL          },                      // 68 Swing
     // 69 ClkDiv
     {moduleTypeClkDiv,     paramTypeCommonDial,     {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                      // 69 Divider *** needs other UI element
@@ -819,7 +839,7 @@ const tParamLocation     paramLocationList[] = {
     // 80 Unknown
     // 81 LevAmp
     {moduleTypeLevAmp,     paramTypeLevAmpDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                      // 81 Gain
-    {moduleTypeLevAmp,     paramTypeMenu,           {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, expStrMap,                             NULL          },                      // 81 Type
+    {moduleTypeLevAmp,     paramTypeMenu,           {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, levAmpTypeStrMap,                      NULL          },                      // 81 Type
     // 82 Rect
     {moduleTypeRect,       paramTypeMenu,           {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rectStrMap,                            NULL          },                      // 82 Mode
     {moduleTypeRect,       paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                      // 82 Bypass
@@ -1561,12 +1581,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeRandomA,    paramTypeMenu,           {{ 30,  -9}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          },                      // 200 Range
     {moduleTypeRandomA,    paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                      // 26 Bypass
     {moduleTypeRandomA,    paramTypeMenu,           {{ 65,   1}, { 7,  7}}, anchorBottomLeft,  "Edge",           5,   0, edgeStepStrMap,                        NULL          },                      // 200 edge
-    {moduleTypeRandomA,    paramTypeMenu,           {{ 65,  -7}, { 7,  7}}, anchorBottomLeft,  "Step",           5,   0, edgeStepStrMap,                        NULL          },                      // 200 step
+    {moduleTypeRandomA,    paramTypeMenu,           {{ 65,  -7}, { 7,  7}}, anchorBottomLeft,  "Step",           4,   0, rndStepProbStrMap,                     NULL          },                      // 200 step
     // 201 Red2Blue
     // 202 RandomB
     {moduleTypeRandomB,    paramTypeFreq,           {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                      // 202 Rate
     {moduleTypeRandomB,    paramTypeMenu,           {{ 30,   0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                      // 202 Poly/Mono mode
-    {moduleTypeRandomB,    paramTypeToggle,         {{ 40,  -7}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap},                      // 202  Kbt
+    {moduleTypeRandomB,    paramTypeMenu,           {{ 40,  -7}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                      // 202 Kbt (five-way keyboard tracking, as the LFOs have - was a two-state toggle that could not reach the other three)
     {moduleTypeRandomB,    paramTypeCommonDial,     {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Rate",         128,  64, NULL,                                  NULL          },                      // 202 Rate M
     {moduleTypeRandomB,    paramTypeCommonDial,     {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  "Step",         128,  64, NULL,                                  NULL          },                      // 202 Rate M
     {moduleTypeRandomB,    paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                      // 202 Bypass
@@ -1578,7 +1598,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeRndClkA,    paramTypeCommonDial,     {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          },                      // 204 Step
     {moduleTypeRndClkA,    paramTypeMenu,           {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          },                      // 204 Mode
     {moduleTypeRndClkA,    paramTypeMenu,           {{ 30,   0}, { 7,  7}}, anchorBottomLeft,  "Dice",           4,   0, NULL,                                  NULL          },                      // 204 Dice
-    {moduleTypeRndClkA,    paramTypeMenu,           {{ 65,   0}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, posNegInvStrMap,                       NULL          },                      // 204 OutType
+    {moduleTypeRndClkA,    paramTypeMenu,           {{ 65,   0}, { 7,  7}}, anchorBottomLeft,  "Out",            3,   0, bipPosNegStrMap,                       NULL          },                      // 204 OutType
     {moduleTypeRndClkA,    paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                      // 204 On/Off
     // 205 RndTrig
     {moduleTypeRndTrig,    paramTypeCommonDial,     {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  "Step",         128,  64, NULL,                                  NULL          },                      // 205 Step
@@ -1588,7 +1608,7 @@ const tParamLocation     paramLocationList[] = {
 
     // 206 RndClkB
     {moduleTypeRndClkB,    paramTypeCommonDial,     {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          },                      // 206 Step
-    {moduleTypeRndClkB,    paramTypeMenu,           {{ 65,   0}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, posNegInvStrMap,                       NULL          },                      // 206 OutType
+    {moduleTypeRndClkB,    paramTypeMenu,           {{ 65,   0}, { 7,  7}}, anchorBottomLeft,  "Out",            3,   0, bipPosNegStrMap,                       NULL          },                      // 206 OutType
     {moduleTypeRndClkB,    paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                      // 206 On/Off
     {moduleTypeRndClkB,    paramTypeMenu,           {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          },                      // 206 Mode
     {moduleTypeRndClkB,    paramTypeCommonDial,     {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          },                      // 206 Step M
@@ -1599,7 +1619,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeRndPattern, paramTypeCommonDial,     {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          },                      // 208 Step
     {moduleTypeRndPattern, paramTypeCommonDial,     {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  "Loop",          16,  15, NULL,                                  NULL          },                      // 208 LoopCount
     {moduleTypeRndPattern, paramTypeCommonDial,     {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          },                      // 208 Step M
-    {moduleTypeRndPattern, paramTypeMenu,           {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, posNegInvStrMap,                       NULL          },                      // 208 OutType
+    {moduleTypeRndPattern, paramTypeMenu,           {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Out",            3,   0, bipPosNegStrMap,                       NULL          },                      // 208 OutType
     {moduleTypeRndPattern, paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                      // 208 On/Off
 };
 

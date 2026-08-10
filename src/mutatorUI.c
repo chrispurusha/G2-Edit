@@ -49,7 +49,7 @@ static const char *const kCategoryLabel[mutatorCatNone] = {
 
 static const char *const kOperatorLabel[4]              = {"Mutate", "Randomise", "Interpolate", "Cross"};
 
-// Per-role palette ported from the decompiled original editor's Mutator dialog constructor
+// Per-role palette matching the original editor's Mutator dialog
 // (CDialogMutaBackground::CDialogMutaBackground: Mother/Children built with
 // _kSingleLineColor/_kSingleBackColor, Father with _kCoupleLineColor/_kCoupleBackColor, the Patch
 // Variations row with _kVariationLineColor/_kVariationBackColor, Temporary Storage - "Gene Bank" -

@@ -832,7 +832,13 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         moduleLength = read_bit_stream(buff, subOffset, 8);
         LOG_MODULE_DATA("Module length     %d\n\n", moduleLength);
 
-        for (j = 0; j < moduleLength;) {
+        // AN ENTRY IS THREE BYTES OF HEADER PLUS ITS PAYLOAD, so there has to be room for all three
+        // before another one is read. This used to loop on `j < moduleLength`, which reads a whole
+        // header out of whatever is left even when that is a single byte - and the two bytes it
+        // takes beyond the section belong to the NEXT one. That is where a length of 241 and a param
+        // index of 108 came from on a perfectly ordinary patch: not data, just the following
+        // section misread. Whatever the trailing byte is for, it is not the start of an entry.
+        for (j = 0; (j + 3) <= (int)moduleLength;) {
             isString    = read_bit_stream(buff, subOffset, 8);
             LOG_MODULE_DATA("IsString     %d\n", isString);
             paramLength = read_bit_stream(buff, subOffset, 8);
@@ -840,30 +846,52 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             paramIndex  = read_bit_stream(buff, subOffset, 8);
             LOG_MODULE_DATA("Param Index  %d\n", paramIndex);
             j          += 3;
+
+            // A payload that would run past the section is equally a misread. Stop rather than
+            // consume the following section's bytes; the tail is squared up after the loop.
+            if ((paramLength > 0) && ((j + (int)(paramLength - 1)) > (int)moduleLength)) {
+                LOG_ERROR("param name payload %u overruns module section (%d of %u used), stopping\n",
+                          paramLength - 1, j, moduleLength);
+                break;
+            }
             LOG_MODULE_DATA("Param name: ");
 
             if (paramLength > 0) {
                 numLabels = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
 
-                if (numLabels > MAX_NUM_LABELS) {
-                    LOG_ERROR("numLabels %u exceeds maximum %u for param %u\n", numLabels, MAX_NUM_LABELS, paramIndex);
-                    exit(1);
+                // A NAME SECTION WE CANNOT STORE IS SKIPPED, NOT FATAL. These three bounds used to
+                // call exit(1), so one unexpected patch took the whole editor down - losing whatever
+                // else was open - when the section is self-delimiting and the rest of the patch
+                // parses perfectly well without it. Names are cosmetic; the modules and cables are
+                // not, and they come later in the same stream.
+                //
+                // Every branch consumes exactly paramLength - 1 bytes so the stream stays in step,
+                // which is what lets parsing carry on rather than desynchronising from here on.
+                bool skipParam = false;
+
+                if (module == NULL) {
+                    // A name for a module the patch never declared. The section still has to be
+                    // stepped over; storing it has nowhere to go.
+                    LOG_WARNING("param names for absent module index %u, skipping\n", key.index);
+                    skipParam = true;
+                } else if (numLabels > MAX_NUM_LABELS) {
+                    LOG_ERROR("numLabels %u exceeds maximum %u for param %u, skipping\n", numLabels, MAX_NUM_LABELS, paramIndex);
+                    skipParam = true;
+                } else if (paramIndex >= MAX_NUM_PARAMETERS) {
+                    LOG_WARNING("paramIndex %u exceeds maximum %u, skipping\n", paramIndex, MAX_NUM_PARAMETERS);
+                    skipParam = true;
+                } else if (sizeof(module->paramName[0]) < (numLabels * PROTOCOL_PARAM_NAME_SIZE)) {
+                    LOG_ERROR("paramName array too small for %u labels, skipping\n", numLabels);
+                    skipParam = true;
                 }
 
-                if (paramIndex >= MAX_NUM_PARAMETERS) {
-                    LOG_WARNING("paramIndex %u exceeds maximum %u, skipping\n", paramIndex, MAX_NUM_PARAMETERS);
-
+                if (skipParam) {
                     for (k = 0; k < (int)(paramLength - 1); k++) {
                         read_bit_stream(buff, subOffset, 8);
                     }
 
                     j += paramLength - 1;
                     continue;
-                }
-
-                if (sizeof(module->paramName[0]) < (numLabels * PROTOCOL_PARAM_NAME_SIZE)) {
-                    LOG_ERROR("paramName array too small for %u labels\n", numLabels);
-                    exit(1);
                 }
                 memset(&module->paramName[paramIndex], 0, sizeof(module->paramName[0]));
 
@@ -887,6 +915,13 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                 j                                 += paramLength - 1;
             }
             LOG_MODULE_DATA_DIRECT(";\n");
+        }
+
+        // Square the section up. The entries need not account for every byte the module declared -
+        // this patch leaves one over - and the next section starts at moduleLength regardless, so
+        // anything unread has to be stepped past rather than left to shift everything after it.
+        for ( ; j < (int)moduleLength; j++) {
+            read_bit_stream(buff, subOffset, 8);
         }
     }
 }
@@ -1800,7 +1835,7 @@ void update_module_up_rates(void) {
             msg_send(&gToUsbThread, &messageContent);
 
             // Retroactively recolour any cable already attached to one of this module's OUTPUTS,
-            // matching the decompiled original editor's CPatchData::GenerateBandwidthChangeMolecules()
+            // matching the original editor's bandwidth-change molecule generation
             // — it walks a bandwidth-changed module's outputs (GetNoOfOutputs) and recolours any
             // connected cable (GetRecolorCableMolecules) right when the change happens, not only at
             // cable-creation time. Without this, a cable drawn before its source module up-rated (or

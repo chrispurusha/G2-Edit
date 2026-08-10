@@ -674,7 +674,7 @@ tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, cha
 
 tRectangle render_paramType1Partials(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // PartQuant Range — bipolar partial count. Per the original editor's
-    // ParamText::Sym: value = raw - 64 (raw 64 = 0 centre, 127 = +63, 0 = -64),
+    // the original: value = raw - 64 (raw 64 = 0 centre, 127 = +63, 0 = -64),
     // with a leading '+' on positives. The manual (PARTQUANT / RANGE KNOB) adds a
     // '*' once the magnitude exceeds +/-32, flagging that the practical output
     // limit (the 32nd harmonic) has been passed.
@@ -690,7 +690,7 @@ tRectangle render_paramType1Partials(tModule * module, tRectangle rectangle, cha
 }
 
 tRectangle render_paramType1UniPol(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    // 0 to 64 'units' level, per the original editor's ParamText::UniPol: raw/2
+    // 0 to 64 'units' level, as the original editor shows it: raw/2
     // shown as N.0 (even raw) or N.5 (odd raw), with raw 127 special-cased to
     // "64.0". Used for EnvADSR Sustain etc. (manual: "Range: 0 to 64 units").
     int raw = (int)paramValue;
@@ -957,24 +957,30 @@ tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char 
             hasBipolar  = true;
         }
 
+        // BOTH READINGS COME FROM THE HARDWARE, a SeqVal slider swept in each mode.
+        //
+        // Bipolar: raw - 64, and the top step is 64 rather than 63 - the slider really does run
+        // ...60, 61, 62, 64, skipping 63 entirely. Same top-step pinning PShift's Fine has.
+        //
+        // Unipolar: the 0 to 64 UNITS scale, in halves - 0.0, 0.5 ... 64.0 - not the raw 0..127 this
+        // used to print.
+        //
+        // "64.0" is four characters where a slider is only wide enough for two or three, so it is
+        // SPLIT OVER TWO ROWS at the decimal point - the whole units above, the half below. That is
+        // the same two-row treatment the old three-digit readings used, and the reason it is still
+        // here now that a three-digit reading can no longer occur.
         if (hasBipolar && module->param[variation][bipParamIdx].value == 0) {
-            int displayValue = (int)paramValue - 64;
+            int displayValue = (paramValue >= 127.0) ? 64 : ((int)paramValue - 64);
 
-            if (displayValue == 0) {
-                snprintf(buff, buffSize, "0");
-            } else {
-                snprintf(buff, buffSize, "%+d", displayValue);
-            }
+            snprintf(buff, buffSize, "%d", displayValue);
+        } else if (hasBipolar) {
+            int raw = (int)paramValue;
+
+            twoRow = true;
+            snprintf(topStr, sizeof(topStr), "%d", (raw >= 127) ? 64 : (raw >> 1));
+            snprintf(bottomStr, sizeof(bottomStr), ".%c", ((raw >= 127) || ((raw & 1) == 0)) ? '0' : '5');
         } else {
             snprintf(buff, buffSize, "%u", (uint32_t)paramValue);
-
-            // Unipolar SeqVal/SeqLev/SeqCtr values of 100-127 are the only 3-digit case here
-            if (hasBipolar && buff[0] == '1' && buff[1] >= '0' && buff[1] <= '9' && buff[2] >= '0' && buff[2] <= '9' && buff[3] == '\0') {
-                twoRow       = true;
-                topStr[0]    = buff[0];
-                bottomStr[0] = buff[1];
-                bottomStr[1] = buff[2];
-            }
         }
     }
     set_rgb_colour(black);
@@ -1009,14 +1015,19 @@ tRectangle render_paramType1FreqShift(tModule * module, tRectangle rectangle, ch
     uint32_t     variation = gPatchDescr[slot].activeVariation;
     const char * s         = NULL;
 
+    // SUB IS THE FIRST RANGE, NOT THE LAST. The selector reads Sub / Lo / Hi in that order - checked
+    // on the hardware - and both this switch and freqShiftRangeStrMap had it the other way round.
+    // The two errors agreed with each other, so the module looked self-consistent while showing the
+    // widest range's frequencies for the narrowest setting: a shifter set to Sub read up to 1568 Hz
+    // where it actually reaches 8.78.
     switch (module->param[variation][2].value) {
-        case 0:  s = freq_shift_hiStrMap[(int)paramValue];
+        case 0:  s = freq_shift_subStrMap[(int)paramValue];
             break;
 
         case 1:  s = freq_shift_loStrMap[(int)paramValue];
             break;
 
-        case 2:  s = freq_shift_subStrMap[(int)paramValue];
+        case 2:  s = freq_shift_hiStrMap[(int)paramValue];
             break;
     }
 

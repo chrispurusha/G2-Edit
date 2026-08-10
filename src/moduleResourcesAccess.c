@@ -251,7 +251,7 @@ uint32_t module_led_count(tModuleType moduleType) {
     return cache[moduleType];
 }
 
-// Patch Mutator "Exclude From Mutation" default per module type, recovered from the decompiled
+// Patch Mutator "Exclude From Mutation" default per module type, recovered from the original editor's own defaults,
 // original editor's GetDefaultMutationLock() and confirmed against 395 real captured patches (see
 // mutator.c). Applied to newly created modules. (Previously also reapplied on every patch reparse
 // for old-format patches - removed 2026-07-15 once live writes via SUB_COMMAND_SET_MUTATION_LOCK

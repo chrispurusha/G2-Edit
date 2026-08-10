@@ -528,7 +528,7 @@ typedef struct {
     uint32_t    upRate;
     uint32_t    newUpRate;                       // Only used for mass uprate re-assessing
     uint32_t    excludeFromMutation;             // Patch Mutator "Exclude From Mutation" flag (wire bit long
-                                                 // mislabeled isLed - confirmed against decompiled original
+                                                 // mislabeled isLed - confirmed against the original
                                                  // editor source and real captured patches, see mutator.c)
     uint32_t    unknown1;                        // Guess we should store this, to write back if necessary. Might not be needed
     uint32_t    modeCount;                       // Don't yet know what this is for. Might need modes array adding
