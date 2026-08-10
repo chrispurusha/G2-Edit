@@ -9,7 +9,7 @@ been checked against the value the G2 itself shows.
   GAP   the renderer has no branch for this module, so it shows an error
   --    not yet checked
 
-524 of 918 parameters validated (0 flagged GAP).
+532 of 918 parameters validated (0 flagged GAP).
 
 ==============================================================================
 
@@ -733,8 +733,8 @@ SeqNote - params 0-15: note sliders, 16-31: step enables, 32: Cycle, 33: Length,
   32. Cycle   Toggle        OK   selector names match the G2 exactly
   33. Length  Menu          --   enumerated selector - name list not yet cross-checked
   34. T/G     Menu          OK   selector names match the G2 exactly
-  35. Rnd     Push          --   enumerated selector - name list not yet cross-checked
-  36. Clr     Push          --   enumerated selector - name list not yet cross-checked
+  35. Rnd     Push          OK   Rnd / Clr one-shot buttons - tested on the hardware by the owner
+  36. Clr     Push          OK   Rnd / Clr one-shot buttons - tested on the hardware by the owner
   37. Mag     CustomData    --   enumerated selector - name list not yet cross-checked
   38. Oct     CustomData    --   enumerated selector - name list not yet cross-checked
 
@@ -876,8 +876,8 @@ SeqVal   [module type 145]
   33. Length    Menu          --   enumerated selector - name list not yet cross-checked
   34. Cycle     Menu          --   enumerated selector - name list not yet cross-checked
   35. T down    Menu          OK   selector names match the G2 exactly
-  36. Rnd       Push          --   enumerated selector - name list not yet cross-checked
-  37. Clr       Push          --   enumerated selector - name list not yet cross-checked
+  36. Rnd       Push          OK   Rnd / Clr one-shot buttons - tested on the hardware by the owner
+  37. Clr       Push          OK   Rnd / Clr one-shot buttons - tested on the hardware by the owner
 
 SeqLev   [module type 146]
 --------------------------
@@ -917,8 +917,8 @@ SeqLev   [module type 146]
   33. Length  Menu          --   enumerated selector - name list not yet cross-checked
   34. Cycle   Menu          --   enumerated selector - name list not yet cross-checked
   35. T down  Menu          OK   selector names match the G2 exactly
-  36. Rnd     Push          --   enumerated selector - name list not yet cross-checked
-  37. Clr     Push          --   enumerated selector - name list not yet cross-checked
+  36. Rnd     Push          OK   Rnd / Clr one-shot buttons - tested on the hardware by the owner
+  37. Clr     Push          OK   Rnd / Clr one-shot buttons - tested on the hardware by the owner
 
 CtrRcv   [module type 147]
 --------------------------
@@ -1003,8 +1003,8 @@ SeqCtr   [module type 154]
   32. T/G     Menu          OK   selector names match the G2 exactly
   33. Pol     Menu          --   enumerated selector - name list not yet cross-checked
   34. XFade   Menu          OK   selector names match the G2 exactly
-  35. Rnd     Push          --   enumerated selector - name list not yet cross-checked
-  36. Clr     Push          --   enumerated selector - name list not yet cross-checked
+  35. Rnd     Push          OK   Rnd / Clr one-shot buttons - tested on the hardware by the owner
+  36. Clr     Push          OK   Rnd / Clr one-shot buttons - tested on the hardware by the owner
 
 NoteDet   [module type 156]
 ---------------------------
