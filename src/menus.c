@@ -715,6 +715,23 @@ int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool s
     // were silently dropped on save. Offline that is every module in the patch.
     module.actualParamCount                       = module_param_count(module.type);
 
+    // The same omission, one field over: modeCount was only ever set by parse_module_list(), so a
+    // module created here had none. Modes are the drop-down selectors — an oscillator's waveform, a
+    // filter's slope, the reverb's room — and every place that reads them is bounded by this count,
+    // so at zero they cannot be drawn, cannot be clicked, and write_module() stores none of them.
+    // Add a module in the editor, set its waveform, save, and the waveform was gone.
+    //
+    // The values themselves start at each mode's own default rather than at zero, which is not the
+    // same thing: a filter's slope default is not its first entry.
+    module.modeCount                              = module_mode_count(module.type);
+
+    for (uint32_t i = 0, seen = 0; i < (uint32_t)array_size_mode_location_list(); i++) {
+        if (modeLocationList[i].moduleType == module.type) {
+            module.mode[seen].value = modeLocationList[i].defaultValue;
+            seen++;
+        }
+    }
+
     COPY_STRING(module.name, gModuleProperties[module.type].name);
 
     messageContent.cmd                            = eMsgCmdWriteModule;
