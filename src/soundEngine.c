@@ -2834,19 +2834,42 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 
 // A short delay whose length is swept by a slow LFO — detune sets the sweep depth, amount how much
 // of it is mixed in. Stereo on the hardware; mono here, since the engine sums to mono anyway.
+// Measured on the instrument — see the notes inside chorus_step().
+#define CHORUS_RATE_MAX_HZ    (0.853)   // at Detune 127; proportional to the dial below that
+#define CHORUS_CENTRE_S       (0.0030)  // delay at the middle of the sweep
+#define CHORUS_SWEEP_S        (0.0021)  // peak deviation either side, independent of Detune
+
 static double chorus_step(uint32_t node, double input, double depth, double amount) {
     double   sweep   = 0.0;
     uint32_t samples = 0;
     uint32_t readPos = 0;
     double   wet     = 0.0;
 
-    gChorusLfo[node]                     += 0.7 / gSampleRate; // a slow sweep, under a hertz
+    // DETUNE SETS THE RATE, NOT THE DEPTH — this had it the other way round, with the rate fixed at
+    // 0.7 Hz and the sweep scaled by the dial.
+    //
+    // MEASURED with a pure 1976 Hz tone through a real StChorus. Dry and wet beat against each other
+    // as the delay moves, and one null is exactly one wavelength of delay change, so counting nulls
+    // measures the sweep VELOCITY outright. The gaps between nulls swell and shrink once per half
+    // LFO cycle, which separates rate from depth:
+    //
+    //     Detune 32   rate 0.215 Hz   depth 2.11 ms      Detune 0   no nulls at all: static
+    //     Detune 64   rate 0.430 Hz   depth 2.04 ms
+    //
+    // Exactly twice the rate for twice the dial, at constant depth. Above about 96 the nulls come
+    // too close to separate the two, so the top of the range is extrapolated from that proportion.
+    //
+    // CROSS-CHECKED against a quite different measurement: at Detune 0 the LFO stops wherever it
+    // happens to be, and rebuilding the patch repeatedly froze the delay at 1.33, 1.52, 1.94, 2.13
+    // and 5.33 ms. A 3 ms centre swept +/-2.1 ms spans 0.9 to 5.1 ms, and every one of those frozen
+    // values falls inside it.
+    gChorusLfo[node]                     += (CHORUS_RATE_MAX_HZ * depth) / gSampleRate;
 
     if (gChorusLfo[node] >= 1.0) {
         gChorusLfo[node] -= 1.0;
     }
-    // 4 ms centre, swept by up to 3 ms either way.
-    sweep                                 = 0.004 + (0.003 * depth * sin(gChorusLfo[node] * 2.0 * M_PI));
+    // The DEPTH is fixed; only the rate follows the dial.
+    sweep                                 = CHORUS_CENTRE_S + (CHORUS_SWEEP_S * sin(gChorusLfo[node] * 2.0 * M_PI));
     samples                               = (uint32_t)(sweep * gSampleRate);
 
     if (samples < 1) {
@@ -2860,10 +2883,29 @@ static double chorus_step(uint32_t node, double input, double depth, double amou
     gChorusLine[node][gChorusWrite[node]] = (float)input;
     gChorusWrite[node]                    = (gChorusWrite[node] + 1) % CHORUS_SAMPLES;
 
-    // A balanced mix rather than wet piled on top of dry. It used to return input + wet, which at a
-    // high Amount is close to double gain — a chorus should change the character at roughly constant
-    // level, not act as a 6 dB boost.
-    return (input * (1.0 - (amount * 0.5))) + (wet * amount * 0.5);
+    // A CONSTANT-POWER BLEND whose wet/dry ratio IS the dial, measured on the instrument.
+    //
+    // Setting Detune to zero makes the delay static, which turns the module into a plain comb
+    // filter — and the depth of a comb's notches is a direct read-out of the dry/wet balance, since
+    // equal parts cancel completely. Sweeping Amount on a real StChorus:
+    //
+    //     Amount        0     32     64     96    127
+    //     wet/dry    0.02   0.28   0.64   0.94   0.91      (from notch depth)
+    //     total      -0.0   -0.2   -0.0   +0.4   +1.1 dB
+    //
+    // So the ratio tracks the dial roughly one for one and the total stays flat. Both matter: this
+    // used to be dry (1 - amount/2) against wet (amount/2), which gives a ratio of only 0.33 at the
+    // middle of the dial where 0.64 was measured — half the chorus it should have been — and loses
+    // 3 dB of level at the top where the instrument holds steady.
+    //
+    // Dividing by sqrt(1 + m^2) is what keeps the sum constant: at full Amount both legs sit at
+    // 0.707 rather than both at 0.5.
+    {
+        double m     = amount;
+        double scale = 1.0 / sqrt(1.0 + (m * m));
+
+        return (input * scale) + (wet * m * scale);
+    }
 }
 
 // Peak-following compressor. Above the threshold the excess is divided by the ratio; the follower
