@@ -3298,7 +3298,12 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec) 
                 wave = osc_triangle(phase, 0.5 + (0.49 * spec->shape));
                 break;
             }                                                                           // Saw>Tri
-            case 4:                                                                     // Tri>Squ
+            // The synth names this shape Sqr2Tri, i.e. square AT one end of Shape and triangle at
+            // the other. This runs the other way round - Shape at 0 gives very nearly a triangle
+            // and winding it up drives the tanh into a square - so either the name reads
+            // right-to-left or the morph is inverted. Nobody has listened to it against the
+            // hardware, and a label is not enough to justify flipping a waveform, so it stands.
+            case 4:                                                                     // Sqr2Tri
             {
                 double tri = osc_triangle(phase, 0.5);
                 double dry = 1.0 + (20.0 * spec->shape);

@@ -35,12 +35,10 @@ extern "C" {
 #endif
 
 #include <math.h>
-#include <stdlib.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
 #include "types.h"
-#include "moduleResourcesAccess.h"
 #include "paramCurves.h"
 
 // The oscillator dial curves, kept apart from the renderers that print them so the sound engine
@@ -151,27 +149,41 @@ double adr_time_seconds(double paramValue) {
     return ADR_TIME_SCALE * pow(value + ADR_TIME_OFFSET, 8.0);
 }
 
-// 0.5 at the bottom of the dial up to 50 at the top, which is the range filter_resonanceStrMap
-// prints.
+// A filter's resonance, as Q - 0.5 at the bottom of the dial up to 50 at the top, the range the
+// Res dial prints.
+// THE DAMPING FALLS LINEARLY AND Q IS ITS INVERSE SQUARE. Write d for the damping,
+//
+//     d = 1 - 0.9 * value / 127        1 at the bottom of the dial, 0.1 at the top
+//     Q = 0.5 / d²                     0.5 at the bottom, 50 at the top
+//
+// which is the resonance of a two-pole section whose damping term the dial sets directly - the
+// knob moves the pole towards the unit circle in a straight line, and the Q that results is not
+// linear at all. That is why neither an exponential nor a straight line between 0.5 and 50 ever
+// fitted: an earlier exponential matched only at the two endpoints and was out by as much as 245%
+// in between, reading Q 10.9 where the dial showed 3.16.
+//
+// This replaces reading filter_resonanceStrMap through atof(). The table was right - it agrees
+// with this to the printed precision at 126 of its 128 entries - but an index truncates, so a
+// morphed or smoothed Res swept in whole dial steps instead of gliding, and every lookup cost a
+// string parse on the audio thread.
+//
+// The two entries that disagree are raw 17 and 33, where the table reads 0.64 and 0.84 against
+// this formula's 0.65 and 0.85. Both sit far from a rounding boundary, so one of the two is
+// genuinely wrong rather than differently rounded; that is a question for the hardware, and one
+// step of Q at the very bottom of the knob is not worth holding up the change for.
+#define FLT_RESONANCE_DAMPING_SPAN    (0.9)
+
 double flt_resonance_q(double paramValue) {
-    int    index = (int)paramValue;
-    double value = 0.0;
+    double value = paramValue;
+    double damping;
 
-    if (index < 0) {
-        index = 0;
-    } else if (index > 127) {
-        index = 127;
+    if (value < 0.0) {
+        value = 0.0;
+    } else if (value > 127.0) {
+        value = 127.0;
     }
-
-    // Read the dial's own table. It was an exponential between the endpoints, which matched at 0.5
-    // and 50 and was wrong by as much as 245% in between — the table reads Q 3.16 where the curve
-    // gave 10.9 — so the engine had far more resonance than the module was showing across most of
-    // the knob's travel. The Res dial is a paramTypeStrMap, i.e. it PRINTS this table, so the two
-    // were visibly disagreeing.
-    if (filter_resonanceStrMap[index] != NULL) {
-        value = atof(filter_resonanceStrMap[index]);
-    }
-    return (value > 0.0) ? value : 0.5;
+    damping = 1.0 - (FLT_RESONANCE_DAMPING_SPAN * value / 127.0);
+    return 0.5 / (damping * damping);
 }
 
 // The dB scroll button selects how many one-pole stages sit on top of the base two: 12, 18 or 24 dB
@@ -385,8 +397,27 @@ double clk_sync_beats(double paramValue) {
 // LevAmp's amplification, as a multiplier. The manual (p.227) gives the range as "0.25 to 4.0 times
 // the input level"; the dial walks that range exponentially, passing through unity at 64. Shared
 // with the sound engine so what is heard and what the dial reads cannot drift apart.
+//
+// FOUR OCTAVES OVER 128 STEPS, which is why this is exp2(v / 32) and not a fitted exponential: the
+// scale is 0.25 * 16^(v/128), and 16^(v/128) is 2^(4v/128), i.e. 2^(v/32). Thirty-two dial steps to
+// a doubling. Reading it that way says what the control is — the same "the dial is really a pitch"
+// shape the oscillators and the two fast LFO ranges have — rather than leaving a decimal constant
+// that has to be taken on trust.
+//
+// This replaces exp(v * 0.0218), an exponential fitted between the endpoints. The true exponent is
+// log(16) / 128 = 0.02166085, so the fit ran 1.77% high by the top of the dial — 3.898 where the
+// scale gives 3.830 at raw 126.
+//
+// The curve reaches 4.0 at 128, one step past the end of a 0..127 dial, so the top step is pinned
+// to 4.0 rather than the 3.966 the formula alone would give. That matches the manual's stated
+// maximum, and it is the same top-step correction the Freq dial needs (see osc_freq_semitones).
+#define LEV_AMP_STEPS_PER_OCTAVE    (32.0)
+
 double lev_amp_gain(double paramValue) {
-    return exp(paramValue * 0.0218) * 0.25;
+    if (paramValue >= 127.0) {
+        return 4.0;    // Clip - the dial's top step is 4.0, which the curve only reaches at 128
+    }
+    return exp2(paramValue / LEV_AMP_STEPS_PER_OCTAVE) * 0.25;
 }
 
 #ifdef __cplusplus

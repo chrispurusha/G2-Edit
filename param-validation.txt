@@ -1,0 +1,1374 @@
+G2-Edit  parameter display-mapping validation
+==============================================================================
+generated 2026-08-10
+
+Each parameter of each module, with how the value G2-Edit displays for it has
+been checked against the value the G2 itself shows.
+
+  OK    display mapping validated against reference values for the G2
+  GAP   the renderer has no branch for this module, so it shows an error
+  --    not yet checked
+
+156 of 918 parameters validated (0 flagged GAP).
+
+==============================================================================
+
+4-Out   [module type 3]
+-----------------------
+   0. Out to  Menu          OK   selector names match the G2 exactly
+   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Pad     Menu          --   enumerated selector - name list not yet cross-checked
+
+2-Out   [module type 4]
+-----------------------
+   0. Out to  Menu          OK   selector names match the G2 exactly
+   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Pad     Menu          --   enumerated selector - name list not yet cross-checked
+
+OscB   [module type 7]
+----------------------
+   0. Tune        OscFreq       --   
+   1. Cent        Fine          OK   cents = (v-64)*50/64
+   2. Kbt         Toggle        --   
+   3. Pitch       CommonDial    --   
+   4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
+   5. FM          CommonDial    --   
+   6. Shape       Shape         OK   percent = v*49/127 + 50
+   7. ShpM        CommonDial    --   
+   8. Waveform    Menu          --   enumerated selector - name list not yet cross-checked
+   9. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+  10. FM Type     Menu          OK   selector names match the G2 exactly
+
+OscShpB   [module type 8]
+-------------------------
+   0. Tune        OscFreq       --   
+   1. Cent        Fine          OK   cents = (v-64)*50/64
+   2. Kbt         Toggle        --   
+   3. Pitch       CommonDial    --   
+   4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
+   5. FM          CommonDial    --   
+   6. Shape       Shape         OK   percent = v*49/127 + 50
+   7. ShpCtrl     CommonDial    --   
+   8. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   9. FM Type     Menu          OK   selector names match the G2 exactly
+
+OscC   [module type 9]
+----------------------
+   0. Tune       OscFreq       --   
+   1. Cent       Fine          OK   cents = (v-64)*50/64
+   2. Kbt        Toggle        --   
+   3. Tune Mode  Menu          --   enumerated selector - name list not yet cross-checked
+   4. FM         CommonDial    --   
+   5. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   6. FM Type    Menu          OK   selector names match the G2 exactly
+   7. Pitch      CommonDial    --   
+
+Reverb   [module type 12]
+-------------------------
+   0. Time        CommonDial    --   
+   1. Brightness  CommonDial    --   
+   2. DryWet      CommonDial    --   
+   3. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+
+OscString   [module type 13]
+----------------------------
+   0. OscString Tune        OscFreq       --   
+   1. Cent                  CommonDial    --   
+   2. OscString Kbt         Toggle        --   
+   3. Pitch                 CommonDial    --   
+   4. OscString Pitch mode  Menu          --   enumerated selector - name list not yet cross-checked
+   5. Decay                 CommonDial    --   
+   6. Damp                  CommonDial    --   
+   7. Bypass                Bypass        --   enumerated selector - name list not yet cross-checked
+
+Sw8-1 *** Needs more resources   [module type 15]
+-------------------------------------------------
+   0. Sel  Menu          --   enumerated selector - name list not yet cross-checked
+
+ValSw1-2   [module type 17]
+---------------------------
+   0. Val  Menu          --   enumerated selector - name list not yet cross-checked
+
+X-Fade   [module type 18]
+-------------------------
+   0. Mod        CommonDial    --   
+   1. X-fade     Pan           --   
+   2. (unnamed)  Menu          OK   selector names match the G2 exactly
+
+Mix4-1B   [module type 19]
+--------------------------
+   0. Lev1      CommonDial    --   
+   1. Lev2      CommonDial    --   
+   2. Lev3      CommonDial    --   
+   3. Lev4      CommonDial    --   
+   4. ExpLinDB  Menu          OK   selector names match the G2 exactly
+
+EnvvADSR   [module type 20]
+---------------------------
+   0. Env Shape     Menu          OK   selector names match the G2 exactly
+   1. Attack        ADRTime       --   envelope time scale - reference values needed from the hardware
+   2. Decay         ADRTime       --   envelope time scale - reference values needed from the hardware
+   3. Sus           UniPol        --   
+   4. Rel           ADRTime       --   envelope time scale - reference values needed from the hardware
+   5. Output Type   Menu          --   enumerated selector - name list not yet cross-checked
+   6. KB Active     Toggle        --   
+   7. Normal/Reset  Menu          OK   selector names match the G2 exactly
+
+PartQuant   [module type 22]
+----------------------------
+   0. Range  Partials      --   
+
+ModADSR   [module type 23]
+--------------------------
+   0. A            ADRTime       --   envelope time scale - reference values needed from the hardware
+   1. D            ADRTime       --   envelope time scale - reference values needed from the hardware
+   2. S            CommonDial    --   
+   3. R            ADRTime       --   envelope time scale - reference values needed from the hardware
+   4. Attack M     CommonDial    --   
+   5. Decay M      CommonDial    --   
+   6. Sustain M    CommonDial    --   
+   7. Release M    CommonDial    --   
+   8. Output Type  Menu          --   enumerated selector - name list not yet cross-checked
+   9. KB           Toggle        --   
+
+LfoC   [module type 24]
+-----------------------
+   0. Rate     LFORate       OK   all four Range settings; BPM confirmed twice, independently
+   1. Mode     Menu          OK   selector names match the G2 exactly
+   2. OutType  Menu          --   enumerated selector - name list not yet cross-checked
+   3. Range    Menu          --   enumerated selector - name list not yet cross-checked
+   4. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+
+LfoShpA   [module type 25]
+--------------------------
+   0. Rate     LFORate       OK   all four Range settings; BPM confirmed twice, independently
+   1. Range    Menu          --   enumerated selector - name list not yet cross-checked
+   2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
+   3. Rate M   CommonDial    --   
+   4. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   5. Shape    CommonDial    --   
+   6. Phase M  CommonDial    --   
+   7. Phase    CommonDial    --   
+   8. Shape M  CommonDial    --   
+   9. Mode     Menu          OK   selector names match the G2 exactly
+  10. OutType  Menu          --   enumerated selector - name list not yet cross-checked
+  11. Wave     Menu          OK   selector names match the G2 exactly
+
+LfoA   [module type 26]
+-----------------------
+   0. Rate     LFORate       OK   all four Range settings; BPM confirmed twice, independently
+   1. Mode     Menu          OK   selector names match the G2 exactly
+   2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
+   3. Rate M   CommonDial    --   
+   4. Wave     Menu          --   enumerated selector - name list not yet cross-checked
+   5. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   6. OutType  Menu          --   enumerated selector - name list not yet cross-checked
+   7. Range    Menu          --   enumerated selector - name list not yet cross-checked
+
+OscMaster   [module type 27]
+----------------------------
+   0. Pitch      OscFreq       --   
+   1. Cent       Fine          OK   cents = (v-64)*50/64
+   2. Kbt        Toggle        --   
+   3. Tune mode  Menu          --   enumerated selector - name list not yet cross-checked
+   4. Pitch M    CommonDial    --   
+
+Saturate   [module type 28]
+---------------------------
+   0. Amount     CommonDial    --   
+   1. AmountMod  CommonDial    --   
+   2. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Curve      Menu          --   enumerated selector - name list not yet cross-checked
+
+MetNoise   [module type 29]
+---------------------------
+   0. Color    CommonDial    --   
+   1. Freq     CommonDial    --   
+   2. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Freq M   CommonDial    --   
+   4. Color M  CommonDial    --   
+
+Noise   [module type 31]
+------------------------
+   0. Color   CommonDial    --   
+   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+
+Eq2Band   [module type 32]
+--------------------------
+   0. Lo       dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
+   1. Hi       dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
+   2. Level    CommonDial    --   
+   3. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   4. Lo Freq  Menu          --   enumerated selector - name list not yet cross-checked
+   5. Hi Freq  Menu          --   enumerated selector - name list not yet cross-checked
+
+Eq3Band   [module type 33]
+--------------------------
+   0. Lo       dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
+   1. MidGn    dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
+   2. Freq     GeneralFreq   OK   Hz = 100 * 80^(v/127)
+   3. Hi       dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
+   4. Level    CommonDial    --   
+   5. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   6. Lo Freq  Menu          --   enumerated selector - name list not yet cross-checked
+   7. Hi Freq  Menu          --   enumerated selector - name list not yet cross-checked
+
+ShpExp   [module type 34]
+-------------------------
+   0. Amount     CommonDial    --   
+   1. AmountMod  CommonDial    --   
+   2. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Curve      Menu          OK   selector names match the G2 exactly
+
+Driver (Not in the Clavia editor)   [module type 35]
+----------------------------------------------------
+   0. Stiffness   CommonDial    --   
+   1. Embouchure  CommonDial    --   
+
+SwOnOffM   [module type 36]
+---------------------------
+   0. On  Menu          OK   selector names match the G2 exactly
+
+Pulse   [module type 38]
+------------------------
+   0. Time     PulseTime     --   
+   1. TimeMod  CommonDial    --   
+   2. Range    Menu          --   enumerated selector - name list not yet cross-checked
+
+Mix8-1B   [module type 40]
+--------------------------
+   0. In1       MixLevel      --   
+   1. In2       MixLevel      --   
+   2. In3       MixLevel      --   
+   3. In4       MixLevel      --   
+   4. In5       MixLevel      --   
+   5. In6       MixLevel      --   
+   6. In7       MixLevel      --   
+   7. In8       MixLevel      --   
+   8. ExpLinDB  Menu          OK   selector names match the G2 exactly
+   9. Pad       Menu          OK   selector names match the G2 exactly
+
+EnvH   [module type 41]
+-----------------------
+   0. Hold  ADRTime       --   envelope time scale - reference values needed from the hardware
+   1. Pos   Menu          --   enumerated selector - name list not yet cross-checked
+
+Delay (Logic Delay)   [module type 42]
+--------------------------------------
+   0. Time     PulseTime     --   
+   1. TimeMod  CommonDial    --   
+   2. Range    Menu          --   enumerated selector - name list not yet cross-checked
+
+Constant   [module type 43]
+---------------------------
+   0. Value    BipLevel      --   
+   1. Bip/Uni  Menu          --   enumerated selector - name list not yet cross-checked
+
+FltVoice   [module type 45]
+---------------------------
+   0. Vowel1    Menu          --   enumerated selector - name list not yet cross-checked
+   1. Vowel2    Menu          --   enumerated selector - name list not yet cross-checked
+   2. Vowel3    Menu          --   enumerated selector - name list not yet cross-checked
+   3. Level     CommonDial    --   
+   4. Vowel     BipLevel      --   
+   5. VowelMod  CommonDial    --   
+   6. Freq      BipLevel      --   
+   7. FreqMod   CommonDial    --   
+   8. Res       BipLevel      --   
+   9. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+
+EnvAHD   [module type 46]
+-------------------------
+   0. Shape      Menu          OK   selector names match the G2 exactly
+   1. Attack     ADRTime       --   envelope time scale - reference values needed from the hardware
+   2. Hold       ADRTime       --   envelope time scale - reference values needed from the hardware
+   3. Reset      Menu          OK   selector names match the G2 exactly
+   4. Release    ADRTime       --   envelope time scale - reference values needed from the hardware
+   5. OutType    Menu          --   enumerated selector - name list not yet cross-checked
+   6. (unnamed)  Toggle        --   
+
+Pan   [module type 47]
+----------------------
+   0. PanMod  CommonDial    --   
+   1. Pan     LRDial        --   
+   2. LogLin  Menu          OK   selector names match the G2 exactly
+
+MixStereo   [module type 48]
+----------------------------
+   0. Lvl1       CommonDial    --   
+   1. Lvl2       CommonDial    --   
+   2. Lvl3       CommonDial    --   
+   3. Lvl4       CommonDial    --   
+   4. Lvl5       CommonDial    --   
+   5. Lvl6       CommonDial    --   
+   6. Pan1       LRDial        --   
+   7. Pan2       LRDial        --   
+   8. Pan3       LRDial        --   
+   9. Pan4       LRDial        --   
+  10. Pan5       LRDial        --   
+  11. Pan6       LRDial        --   
+  12. LvlMaster  CommonDial    --   
+
+FltMulti   [module type 49]
+---------------------------
+   0. Freq    Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Pitch   Pitch         --   
+   2. Kbt     Menu          --   enumerated selector - name list not yet cross-checked
+   3. GC      Toggle        --   
+   4. Res     StrMap        OK   Q = 0.5/(1 - 0.9v/127)^2; raw 17 and 33 still disputed
+   5. dB      Menu          OK   selector names match the G2 exactly
+   6. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+
+ConstSwT   [module type 50]
+---------------------------
+   0. Value    CommonDial    --   
+   1. Switch   Toggle        OK   selector names match the G2 exactly
+   2. Bip/Uni  Menu          --   enumerated selector - name list not yet cross-checked
+
+FltNord   [module type 51]
+--------------------------
+   0. Freq        Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Pitch       CommonDial    --   
+   2. Kbt         Menu          --   enumerated selector - name list not yet cross-checked
+   3. GC          Toggle        --   
+   4. Res         StrMap        OK   Q = 0.5/(1 - 0.9v/127)^2; raw 17 and 33 still disputed
+   5. dB/Oct      Menu          OK   selector names match the G2 exactly
+   6. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   7. Fm Lin      CommonDial    --   
+   8. FilterType  Menu          OK   selector names match the G2 exactly
+   9. Res M       CommonDial    --   
+
+EnvMulti   [module type 52]
+---------------------------
+   0. L1       CommonDial    --   
+   1. L2       CommonDial    --   
+   2. L3       CommonDial    --   
+   3. L4       CommonDial    --   
+   4. T1       ADRTime       --   envelope time scale - reference values needed from the hardware
+   5. T2       ADRTime       --   envelope time scale - reference values needed from the hardware
+   6. T3       ADRTime       --   envelope time scale - reference values needed from the hardware
+   7. T4       ADRTime       --   envelope time scale - reference values needed from the hardware
+   8. Reset    Menu          OK   selector names match the G2 exactly
+   9. Sust     Menu          OK   selector names match the G2 exactly
+  10. OutType  Menu          --   enumerated selector - name list not yet cross-checked
+  11. Kbt      Toggle        --   
+  12. Shape    Menu          OK   selector names match the G2 exactly
+
+FltStatic   [module type 54]
+----------------------------
+   0. Freq        Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Res         Resonance     OK   Q = 0.5/(1 - 0.9v/127)^2   [closed form 2026-08-10]
+   2. FilterType  Menu          OK   selector names match the G2 exactly
+   3. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   4. GC          Toggle        --   
+
+EnvD   [module type 55]
+-----------------------
+   0. Decay    ADRTime       --   envelope time scale - reference values needed from the hardware
+   1. OutType  Menu          --   enumerated selector - name list not yet cross-checked
+
+Resonator (Not in Clavia editor)   [module type 56]
+---------------------------------------------------
+   0. Tune        OscFreq       --   
+   1. Cent        Fine          OK   cents = (v-64)*50/64
+   2. Kbt         Toggle        --   
+   3. Pitch       CommonDial    --   
+   4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
+   5. Decay       CommonDial    --   
+   6. Damp        CommonDial    --   
+   7. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   8. Pos         CommonDial    --   
+   9. Alg         Menu          --   enumerated selector - name list not yet cross-checked
+
+Automate *** We lack an UI element for the CTRL selector   [module type 57]
+---------------------------------------------------------------------------
+   0. Ctrl  CommonDial    --   
+   1. Val   CommonDial    --   
+   2. Ch    Menu          --   enumerated selector - name list not yet cross-checked
+   3. Echo  Menu          OK   selector names match the G2 exactly
+
+Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Bend/Click/Noise(y=65)   [module type 58]
+--------------------------------------------------------------------------------------------------------------------
+   0. Master Freq       FreqDrum      --   
+   1. Slave Ratio       CommonDial    --   
+   2. Dcy               ADRTime       --   envelope time scale - reference values needed from the hardware
+   3. Dcy               ADRTime       --   envelope time scale - reference values needed from the hardware
+   4. Lev               CommonDial    --   
+   5. Lev               CommonDial    --   
+   6. Freq              Freq          OK   Hz = 13.75 * 2^(v/12)
+   7. Res               Resonance     OK   Q = 0.5/(1 - 0.9v/127)^2   [closed form 2026-08-10]
+   8. Swp               CommonDial    --   
+   9. Dcy               ADRTime       --   envelope time scale - reference values needed from the hardware
+  10. Noise FilterType  Menu          OK   selector names match the G2 exactly
+  11. Amt               CommonDial    --   
+  12. Dcy               ADRTime       --   envelope time scale - reference values needed from the hardware
+  13. Click             CommonDial    --   
+  14. Noise             CommonDial    --   
+  15. Preset            Menu          --   enumerated selector - name list not yet cross-checked
+
+CompLev   [module type 59]
+--------------------------
+   0. C  BipLevel      --   
+
+Mux8-1X   [module type 60]
+--------------------------
+   0. X-fade  CommonDial    --   
+
+Clip   [module type 61]
+-----------------------
+   0. Clip level M  CommonDial    --   
+   1. Clip level    CommonDial    --   
+   2. Shape         Menu          OK   selector names match the G2 exactly
+   3. Bypass        Bypass        --   enumerated selector - name list not yet cross-checked
+
+OverDrive   [module type 62]
+----------------------------
+   0. Amount M  CommonDial    --   
+   1. Amount    CommonDial    --   
+   2. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Type      Menu          OK   selector names match the G2 exactly
+   4. Shape     Menu          OK   selector names match the G2 exactly
+
+Scratch   [module type 63]
+--------------------------
+   0. Ratio      CommonDial    --   
+   1. Ratio Mod  CommonDial    --   
+   2. Delay      Menu          --   enumerated selector - name list not yet cross-checked
+   3. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+
+Mix2-1B   [module type 66]
+--------------------------
+   0. Inv1      Menu          --   enumerated selector - name list not yet cross-checked
+   1. Lvl1      CommonDial    --   
+   2. Inv2      Menu          --   enumerated selector - name list not yet cross-checked
+   3. Lvl2      CommonDial    --   
+   4. ExpLinDB  Menu          OK   selector names match the G2 exactly
+
+ClkGen   [module type 68]
+-------------------------
+   0. Tempo *** needs new dial 24-214 BPM  CommonDial    --   
+   1. Bypass                               Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Source                               Menu          --   enumerated selector - name list not yet cross-checked
+   3. Sync every                           Menu          --   enumerated selector - name list not yet cross-checked
+   4. Swing                                CommonDial    --   
+
+ClkDiv   [module type 69]
+-------------------------
+   0. Divider *** needs other UI element  CommonDial    --   
+
+EnvFollow   [module type 71]
+----------------------------
+   0. Attack   StrMap        --   derived from an internal coefficient table - reference values needed from the hardware
+   1. Release  StrMap        --   derived from an internal coefficient table - reference values needed from the hardware
+
+NoteScaler   [module type 72]
+-----------------------------
+   0. Range  CommonDial    --   
+
+WaveWrap   [module type 74]
+---------------------------
+   0. Amount Mod  CommonDial    --   
+   1. Amount      CommonDial    --   
+   2. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+
+NoteQuant   [module type 75]
+----------------------------
+   0. Range  CommonDial    --   
+   1. Notes  CommonDial    --   
+
+SwOnOffT   [module type 76]
+---------------------------
+   0. On  Menu          OK   selector names match the G2 exactly
+
+Sw1-8   [module type 78]
+------------------------
+   0. Selector  Menu          --   enumerated selector - name list not yet cross-checked
+
+Sw4-1   [module type 79]
+------------------------
+   0. Selector  Menu          --   enumerated selector - name list not yet cross-checked
+
+LevAmp   [module type 81]
+-------------------------
+   0. Gain  LevAmpDial    OK   gain = 0.25 * 2^(v/32), top step 4.0    [corrected 2026-08-10]
+   1. Type  Menu          OK   selector names match the G2 exactly
+
+Rect   [module type 82]
+-----------------------
+   0. Mode    Menu          --   enumerated selector - name list not yet cross-checked
+   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+
+ShpStatic   [module type 83]
+----------------------------
+   0. Mode    Menu          OK   selector names match the G2 exactly
+   1. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+
+EnvADR   [module type 84]
+-------------------------
+   0. Shape                 Menu          OK   selector names match the G2 exactly
+   1. Attack                ADRTime       --   envelope time scale - reference values needed from the hardware
+   2. Reset                 Menu          OK   selector names match the G2 exactly
+   3. Release/Decay time    ADRTime       --   envelope time scale - reference values needed from the hardware
+   4. Trig/Gate             Menu          OK   selector names match the G2 exactly
+   5. OutType               Menu          --   enumerated selector - name list not yet cross-checked
+   6. (unnamed)             Toggle        --   
+   7. Decay/Release toggle  Menu          --   enumerated selector - name list not yet cross-checked
+
+WindSw   [module type 85]
+-------------------------
+   0. From  CommonDial    --   
+   1. To    CommonDial    --   
+
+FltLP   [module type 87]
+------------------------
+   0. Freq     Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. FreqMod  CommonDial    --   
+   2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
+   3. Slope    Menu          --   enumerated selector - name list not yet cross-checked
+   4. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+
+Sw1-4   [module type 88]
+------------------------
+   0. Selector  Menu          --   enumerated selector - name list not yet cross-checked
+
+Flanger   [module type 89]
+--------------------------
+   0. Rate      StrMap        OK   Hz = v*384000/2^24, all 128 entries
+   1. Range     CommonDial    --   
+   2. Feedback  CommonDial    --   
+   3. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+
+Sw1-2   [module type 90]
+------------------------
+   0. Selector  Menu          --   enumerated selector - name list not yet cross-checked
+
+FltClassic   [module type 92]
+-----------------------------
+   0. Freq       Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Env        Pitch         --   
+   2. Kbt        Menu          --   enumerated selector - name list not yet cross-checked
+   3. Res        StrMap        OK   Q = 0.5/(1 - 0.9v/127)^2; raw 17 and 33 still disputed
+   4. (unnamed)  Menu          OK   selector names match the G2 exactly
+   5. (unnamed)  Bypass        --   enumerated selector - name list not yet cross-checked
+
+StChorus   [module type 94]
+---------------------------
+   0. Detune     CommonDial    --   
+   1. Amount     CommonDial    --   
+   2. (unnamed)  Bypass        --   enumerated selector - name list not yet cross-checked
+
+OscD   [module type 96]
+-----------------------
+   0. Tune    Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Cent    CommonDial    --   
+   2. Kbt     Toggle        OK   selector names match the G2 exactly
+   3. Pitch   CommonDial    --   
+   4. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+
+OscA   [module type 97]
+-----------------------
+   0. Tune        OscFreq       --   
+   1. Cent        CommonDial    --   
+   2. Kbt         Toggle        --   
+   3. Pitch       CommonDial    --   
+   4. Waveform    Menu          --   enumerated selector - name list not yet cross-checked
+   5. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+   6. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
+
+FreqShift   [module type 98]
+----------------------------
+   0. FreqShift  FreqShift     --   
+   1. Mod        CommonDial    --   
+   2. Range      Menu          --   enumerated selector - name list not yet cross-checked
+   3. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+
+Sw2-1   [module type 100]
+-------------------------
+   0. Selector  Menu          --   enumerated selector - name list not yet cross-checked
+
+FltPhase   [module type 102]
+----------------------------
+   0. Pitch     CommonDial    --   
+   1. Freq      Freq          OK   Hz = 13.75 * 2^(v/12)
+   2. Spread M  CommonDial    --   
+   3. FB        CommonDial    --   
+   4. Notch     Menu          --   enumerated selector - name list not yet cross-checked
+   5. Spread    CommonDial    --   
+   6. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+   7. Level     CommonDial    --   
+   8. FB Mod    CommonDial    --   
+   9. Type      Menu          OK   selector names match the G2 exactly
+  10. Kbt       Menu          --   enumerated selector - name list not yet cross-checked
+
+EqPeak   [module type 103]
+--------------------------
+   0. Freq    Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Gain    BipLevel      --   
+   2. BW      CommonDial    --   
+   3. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+   4. Level   CommonDial    --   
+
+ValSw2-1   [module type 105]
+----------------------------
+   0. Val  Menu          --   enumerated selector - name list not yet cross-checked
+
+OscNoise   [module type 106]
+----------------------------
+   0. Tune        OscFreq       --   
+   1. Cent        CommonDial    --   
+   2. Kbt         Toggle        OK   selector names match the G2 exactly
+   3. Pitch       CommonDial    --   
+   4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
+   5. Width       CommonDial    --   
+   6. Width M     CommonDial    --   
+   7. Bypass      Bypass        --   enumerated selector - name list not yet cross-checked
+
+Vocoder   [module type 108]
+---------------------------
+   0. 1    Menu          --   enumerated selector - name list not yet cross-checked
+   1. 2    Menu          --   enumerated selector - name list not yet cross-checked
+   2. 3    Menu          --   enumerated selector - name list not yet cross-checked
+   3. 4    Menu          --   enumerated selector - name list not yet cross-checked
+   4. 5    Menu          --   enumerated selector - name list not yet cross-checked
+   5. 6    Menu          --   enumerated selector - name list not yet cross-checked
+   6. 7    Menu          --   enumerated selector - name list not yet cross-checked
+   7. 8    Menu          --   enumerated selector - name list not yet cross-checked
+   8. 9    Menu          --   enumerated selector - name list not yet cross-checked
+   9. 10   Menu          --   enumerated selector - name list not yet cross-checked
+  10. 11   Menu          --   enumerated selector - name list not yet cross-checked
+  11. 12   Menu          --   enumerated selector - name list not yet cross-checked
+  12. 13   Menu          --   enumerated selector - name list not yet cross-checked
+  13. 14   Menu          --   enumerated selector - name list not yet cross-checked
+  14. 15   Menu          --   enumerated selector - name list not yet cross-checked
+  15. 16   Menu          --   enumerated selector - name list not yet cross-checked
+  16. Emp  Menu          OK   selector names match the G2 exactly
+  17. Mon  Menu          OK   selector names match the G2 exactly
+
+LevAdd   [module type 112]
+--------------------------
+   0. Constant  CommonDial    --   
+   1. Bip/Uni   Menu          --   enumerated selector - name list not yet cross-checked
+
+Fade1-2   [module type 113]
+---------------------------
+   0. Mix    CommonDial    --   
+   1. Mix M  CommonDial    --   
+
+Fade2-1   [module type 114]
+---------------------------
+   0. Mix    CommonDial    --   
+   1. Mix M  CommonDial    --   
+
+LevScaler   [module type 115]
+-----------------------------
+   0. L    dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
+   1. BP   CommonDial    --   
+   2. R    dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
+   3. Kbt  Toggle        OK   selector names match the G2 exactly
+
+Mix8-1A   [module type 116]
+---------------------------
+   0. Pad  Menu          OK   selector names match the G2 exactly
+
+LevMod   [module type 117]
+--------------------------
+   0. ModDepth  CommonDial    --   
+   1. ModType   CommonDial    --   
+
+Digitizer   [module type 118]
+-----------------------------
+   0. Bits         Menu          --   enumerated selector - name list not yet cross-checked
+   1. Sample Rate  CommonDial    --   
+   2. Rate         CommonDial    --   
+   3. Bypass       Bypass        --   enumerated selector - name list not yet cross-checked
+
+EnvADDSR   [module type 119]
+----------------------------
+   0. Kb       Toggle        --   
+   1. Shape    Menu          OK   selector names match the G2 exactly
+   2. A        ADRTime       --   envelope time scale - reference values needed from the hardware
+   3. D1       ADRTime       --   envelope time scale - reference values needed from the hardware
+   4. L1       CommonDial    --   
+   5. D2       ADRTime       --   envelope time scale - reference values needed from the hardware
+   6. L2       CommonDial    --   
+   7. R        ADRTime       --   envelope time scale - reference values needed from the hardware
+   8. Sustain  Menu          OK   selector names match the G2 exactly
+   9. Pos      Menu          --   enumerated selector - name list not yet cross-checked
+  10. Reset    Menu          OK   selector names match the G2 exactly
+
+SeqNote - params 0-15: note sliders, 16-31: step enables, 32: Cycle, 33: Length, 34: T/G, 35: Rnd, 36: Clr   [module type 121]
+------------------------------------------------------------------------------------------------------------------------------
+   0. Step1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   1. Step2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   2. Step3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   3. Step4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   4. Step5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   5. Step6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   6. Step7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   7. Step8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   8. Step9   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   9. Step10  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  10. Step11  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  11. Step12  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  12. Step13  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  13. Step14  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  14. Step15  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  15. Step16  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  16. Evnt1   Enable        --   enumerated selector - name list not yet cross-checked
+  17. Evnt2   Enable        --   enumerated selector - name list not yet cross-checked
+  18. Evnt3   Enable        --   enumerated selector - name list not yet cross-checked
+  19. Evnt4   Enable        --   enumerated selector - name list not yet cross-checked
+  20. Evnt5   Enable        --   enumerated selector - name list not yet cross-checked
+  21. Evnt6   Enable        --   enumerated selector - name list not yet cross-checked
+  22. Evnt7   Enable        --   enumerated selector - name list not yet cross-checked
+  23. Evnt8   Enable        --   enumerated selector - name list not yet cross-checked
+  24. Evnt9   Enable        --   enumerated selector - name list not yet cross-checked
+  25. Evnt10  Enable        --   enumerated selector - name list not yet cross-checked
+  26. Evnt11  Enable        --   enumerated selector - name list not yet cross-checked
+  27. Evnt12  Enable        --   enumerated selector - name list not yet cross-checked
+  28. Evnt13  Enable        --   enumerated selector - name list not yet cross-checked
+  29. Evnt14  Enable        --   enumerated selector - name list not yet cross-checked
+  30. Evnt15  Enable        --   enumerated selector - name list not yet cross-checked
+  31. Evnt16  Enable        --   enumerated selector - name list not yet cross-checked
+  32. Cycle   Toggle        OK   selector names match the G2 exactly
+  33. Length  Menu          --   enumerated selector - name list not yet cross-checked
+  34. T/G     Menu          OK   selector names match the G2 exactly
+  35. Rnd     Push          --   enumerated selector - name list not yet cross-checked
+  36. Clr     Push          --   enumerated selector - name list not yet cross-checked
+  37. Mag     CustomData    --   enumerated selector - name list not yet cross-checked
+  38. Oct     CustomData    --   enumerated selector - name list not yet cross-checked
+
+Mix4-1C   [module type 123]
+---------------------------
+   0. L1       CommonDial    --   
+   1. L2       CommonDial    --   
+   2. L3       CommonDial    --   
+   3. L4       CommonDial    --   
+   4. Enable1  Enable        --   enumerated selector - name list not yet cross-checked
+   5. Enable2  Enable        --   enumerated selector - name list not yet cross-checked
+   6. Enable3  Enable        --   enumerated selector - name list not yet cross-checked
+   7. Enable4  Enable        --   enumerated selector - name list not yet cross-checked
+   8. Pad      Menu          --   enumerated selector - name list not yet cross-checked
+   9. Curve    Menu          OK   selector names match the G2 exactly
+
+WahWah   [module type 125]
+--------------------------
+   0. Sweep M  Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Sweep    CommonDial    --   
+   2. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+
+Fx-In   [module type 127]
+-------------------------
+   0. In from  Menu          OK   selector names match the G2 exactly
+   1. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Pad      Menu          --   enumerated selector - name list not yet cross-checked
+
+FltHP   [module type 134]
+-------------------------
+   0. Freq     Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. FreqMod  CommonDial    --   
+   2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
+   3. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+
+Mix4-1S   [module type 140]
+---------------------------
+   0. L1       CommonDial    --   
+   1. L2       CommonDial    --   
+   2. L3       CommonDial    --   
+   3. L4       CommonDial    --   
+   4. Enable1  Enable        --   enumerated selector - name list not yet cross-checked
+   5. Enable2  Enable        --   enumerated selector - name list not yet cross-checked
+   6. Enable3  Enable        --   enumerated selector - name list not yet cross-checked
+   7. Enable4  Enable        --   enumerated selector - name list not yet cross-checked
+   8. Curve    Menu          OK   selector names match the G2 exactly
+
+CtrlSend   [module type 141]
+----------------------------
+   0. Ctrl   CommonDial    --   
+   1. Value  CommonDial    --   
+   2. Chan   Menu          --   enumerated selector - name list not yet cross-checked
+
+PCSend   [module type 142]
+--------------------------
+   0. Program  CommonDial    --   
+   1. Chan     Menu          --   enumerated selector - name list not yet cross-checked
+
+NoteSend   [module type 143]
+----------------------------
+   0. Vel   CommonDial    --   
+   1. Note  NoteDial      --   
+   2. Chan  Menu          --   enumerated selector - name list not yet cross-checked
+
+SeqEvent   [module type 144]
+----------------------------
+   0. Step1-1   Enable        --   enumerated selector - name list not yet cross-checked
+   1. Step1-2   Enable        --   enumerated selector - name list not yet cross-checked
+   2. Step1-3   Enable        --   enumerated selector - name list not yet cross-checked
+   3. Step1-4   Enable        --   enumerated selector - name list not yet cross-checked
+   4. Step1-5   Enable        --   enumerated selector - name list not yet cross-checked
+   5. Step1-6   Enable        --   enumerated selector - name list not yet cross-checked
+   6. Step1-7   Enable        --   enumerated selector - name list not yet cross-checked
+   7. Step1-8   Enable        --   enumerated selector - name list not yet cross-checked
+   8. Step1-9   Enable        --   enumerated selector - name list not yet cross-checked
+   9. Step1-10  Enable        --   enumerated selector - name list not yet cross-checked
+  10. Step1-11  Enable        --   enumerated selector - name list not yet cross-checked
+  11. Step1-12  Enable        --   enumerated selector - name list not yet cross-checked
+  12. Step1-13  Enable        --   enumerated selector - name list not yet cross-checked
+  13. Step1-14  Enable        --   enumerated selector - name list not yet cross-checked
+  14. Step1-15  Enable        --   enumerated selector - name list not yet cross-checked
+  15. Step1-16  Enable        --   enumerated selector - name list not yet cross-checked
+  16. Step2-1   Enable        --   enumerated selector - name list not yet cross-checked
+  17. Step2-2   Enable        --   enumerated selector - name list not yet cross-checked
+  18. Step2-3   Enable        --   enumerated selector - name list not yet cross-checked
+  19. Step2-4   Enable        --   enumerated selector - name list not yet cross-checked
+  20. Step2-5   Enable        --   enumerated selector - name list not yet cross-checked
+  21. Step2-6   Enable        --   enumerated selector - name list not yet cross-checked
+  22. Step2-7   Enable        --   enumerated selector - name list not yet cross-checked
+  23. Step2-8   Enable        --   enumerated selector - name list not yet cross-checked
+  24. Step2-9   Enable        --   enumerated selector - name list not yet cross-checked
+  25. Step2-10  Enable        --   enumerated selector - name list not yet cross-checked
+  26. Step2-11  Enable        --   enumerated selector - name list not yet cross-checked
+  27. Step2-12  Enable        --   enumerated selector - name list not yet cross-checked
+  28. Step2-13  Enable        --   enumerated selector - name list not yet cross-checked
+  29. Step2-14  Enable        --   enumerated selector - name list not yet cross-checked
+  30. Step2-15  Enable        --   enumerated selector - name list not yet cross-checked
+  31. Step2-16  Enable        --   enumerated selector - name list not yet cross-checked
+  32. Cycle     Toggle        OK   selector names match the G2 exactly
+  33. Length    Menu          --   enumerated selector - name list not yet cross-checked
+  34. T up      Menu          OK   selector names match the G2 exactly
+  35. T down    Menu          OK   selector names match the G2 exactly
+
+SeqVal   [module type 145]
+--------------------------
+   0. Step1-1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   1. Step1-2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   2. Step1-3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   3. Step1-4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   4. Step1-5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   5. Step1-6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   6. Step1-7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   7. Step1-8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   8. Step2-1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   9. Step2-2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  10. Step2-3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  11. Step2-4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  12. Step2-5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  13. Step2-6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  14. Step2-7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  15. Step2-8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  16. Step2-1   Enable        --   enumerated selector - name list not yet cross-checked
+  17. Step2-2   Enable        --   enumerated selector - name list not yet cross-checked
+  18. Step2-3   Enable        --   enumerated selector - name list not yet cross-checked
+  19. Step2-4   Enable        --   enumerated selector - name list not yet cross-checked
+  20. Step2-5   Enable        --   enumerated selector - name list not yet cross-checked
+  21. Step2-68  Enable        --   enumerated selector - name list not yet cross-checked
+  22. Step2-7   Enable        --   enumerated selector - name list not yet cross-checked
+  23. Step2-8   Enable        --   enumerated selector - name list not yet cross-checked
+  24. Step2-9   Enable        --   enumerated selector - name list not yet cross-checked
+  25. Step2-10  Enable        --   enumerated selector - name list not yet cross-checked
+  26. Step2-11  Enable        --   enumerated selector - name list not yet cross-checked
+  27. Step2-12  Enable        --   enumerated selector - name list not yet cross-checked
+  28. Step2-13  Enable        --   enumerated selector - name list not yet cross-checked
+  29. Step2-14  Enable        --   enumerated selector - name list not yet cross-checked
+  30. Step2-15  Enable        --   enumerated selector - name list not yet cross-checked
+  31. Step2-16  Enable        --   enumerated selector - name list not yet cross-checked
+  32. Cycle     Toggle        OK   selector names match the G2 exactly
+  33. Length    Menu          --   enumerated selector - name list not yet cross-checked
+  34. Cycle     Menu          --   enumerated selector - name list not yet cross-checked
+  35. T down    Menu          OK   selector names match the G2 exactly
+  36. Rnd       Push          --   enumerated selector - name list not yet cross-checked
+  37. Clr       Push          --   enumerated selector - name list not yet cross-checked
+
+SeqLev   [module type 146]
+--------------------------
+   0. Step1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   1. Step2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   2. Step3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   3. Step4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   4. Step5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   5. Step6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   6. Step7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   7. Step8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   8. Step9   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   9. Step10  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  10. Step11  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  11. Step12  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  12. Step13  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  13. Step14  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  14. Step15  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  15. Step16  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  16. Evnt1   Enable        --   enumerated selector - name list not yet cross-checked
+  17. Evnt2   Enable        --   enumerated selector - name list not yet cross-checked
+  18. Evnt3   Enable        --   enumerated selector - name list not yet cross-checked
+  19. Evnt4   Enable        --   enumerated selector - name list not yet cross-checked
+  20. Evnt5   Enable        --   enumerated selector - name list not yet cross-checked
+  21. Evnt6   Enable        --   enumerated selector - name list not yet cross-checked
+  22. Evnt7   Enable        --   enumerated selector - name list not yet cross-checked
+  23. Evnt8   Enable        --   enumerated selector - name list not yet cross-checked
+  24. Evnt9   Enable        --   enumerated selector - name list not yet cross-checked
+  25. Evnt10  Enable        --   enumerated selector - name list not yet cross-checked
+  26. Evnt11  Enable        --   enumerated selector - name list not yet cross-checked
+  27. Evnt12  Enable        --   enumerated selector - name list not yet cross-checked
+  28. Evnt13  Enable        --   enumerated selector - name list not yet cross-checked
+  29. Evnt14  Enable        --   enumerated selector - name list not yet cross-checked
+  30. Evnt15  Enable        --   enumerated selector - name list not yet cross-checked
+  31. Evnt16  Enable        --   enumerated selector - name list not yet cross-checked
+  32. Cycle   Toggle        OK   selector names match the G2 exactly
+  33. Length  Menu          --   enumerated selector - name list not yet cross-checked
+  34. Cycle   Menu          --   enumerated selector - name list not yet cross-checked
+  35. T down  Menu          OK   selector names match the G2 exactly
+  36. Rnd     Push          --   enumerated selector - name list not yet cross-checked
+  37. Clr     Push          --   enumerated selector - name list not yet cross-checked
+
+CtrRcv   [module type 147]
+--------------------------
+   0. Ctrl  CommonDial    --   
+   1. Chan  Menu          --   enumerated selector - name list not yet cross-checked
+
+NoteRcv   [module type 148]
+---------------------------
+   0. Note  NoteDial      --   
+   1. Chan  Menu          --   enumerated selector - name list not yet cross-checked
+
+NoteZone   [module type 149]
+----------------------------
+   0. RChan  Menu          --   enumerated selector - name list not yet cross-checked
+   1. Min    NoteDial      --   
+   2. Max    NoteDial      --   
+   3. Trans  CommonDial    --   
+   4. SChan  Menu          --   enumerated selector - name list not yet cross-checked
+   5. Thru   Menu          --   enumerated selector - name list not yet cross-checked
+
+Compress   [module type 150]
+----------------------------
+   0. Thr        CommonDial    --   
+   1. Ratio      CommonDial    --   
+   2. Att        StrMap        --   compressor time scale - reference values needed from the hardware
+   3. Rel        StrMap        --   compressor time scale - reference values needed from the hardware
+   4. RefLvl     CommonDial    --   
+   5. (unnamed)  Toggle        --   
+   6. (unnamed)  Bypass        --   enumerated selector - name list not yet cross-checked
+
+KeyQuant   [module type 152]
+----------------------------
+   0. Range    CommonDial    --   
+   1. Capture  Menu          OK   selector names match the G2 exactly
+   2. Note E   Enable        --   enumerated selector - name list not yet cross-checked
+   3. Note F   Enable        --   enumerated selector - name list not yet cross-checked
+   4. Note F#  Enable        --   enumerated selector - name list not yet cross-checked
+   5. Note G   Enable        --   enumerated selector - name list not yet cross-checked
+   6. Note G#  Enable        --   enumerated selector - name list not yet cross-checked
+   7. Note A   Enable        --   enumerated selector - name list not yet cross-checked
+   8. Note A#  Enable        --   enumerated selector - name list not yet cross-checked
+   9. Note B   Enable        --   enumerated selector - name list not yet cross-checked
+  10. Note C   Enable        --   enumerated selector - name list not yet cross-checked
+  11. Note C#  Enable        --   enumerated selector - name list not yet cross-checked
+  12. Note D   Enable        --   enumerated selector - name list not yet cross-checked
+  13. Note D#  Enable        --   enumerated selector - name list not yet cross-checked
+
+SeqCtr   [module type 154]
+--------------------------
+   0. Step1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   1. Step2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   2. Step3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   3. Step4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   4. Step5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   5. Step6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   6. Step7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   7. Step8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   8. Step9   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   9. Step10  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  10. Step11  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  11. Step12  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  12. Step13  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  13. Step14  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  14. Step15  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  15. Step16  Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+  16. Evnt1   Enable        --   enumerated selector - name list not yet cross-checked
+  17. Evnt2   Enable        --   enumerated selector - name list not yet cross-checked
+  18. Evnt3   Enable        --   enumerated selector - name list not yet cross-checked
+  19. Evnt4   Enable        --   enumerated selector - name list not yet cross-checked
+  20. Evnt5   Enable        --   enumerated selector - name list not yet cross-checked
+  21. Evnt6   Enable        --   enumerated selector - name list not yet cross-checked
+  22. Evnt7   Enable        --   enumerated selector - name list not yet cross-checked
+  23. Evnt8   Enable        --   enumerated selector - name list not yet cross-checked
+  24. Evnt9   Enable        --   enumerated selector - name list not yet cross-checked
+  25. Evnt10  Enable        --   enumerated selector - name list not yet cross-checked
+  26. Evnt11  Enable        --   enumerated selector - name list not yet cross-checked
+  27. Evnt12  Enable        --   enumerated selector - name list not yet cross-checked
+  28. Evnt13  Enable        --   enumerated selector - name list not yet cross-checked
+  29. Evnt14  Enable        --   enumerated selector - name list not yet cross-checked
+  30. Evnt15  Enable        --   enumerated selector - name list not yet cross-checked
+  31. Evnt16  Enable        --   enumerated selector - name list not yet cross-checked
+  32. T/G     Menu          OK   selector names match the G2 exactly
+  33. Pol     Menu          --   enumerated selector - name list not yet cross-checked
+  34. XFade   Menu          OK   selector names match the G2 exactly
+  35. Rnd     Push          --   enumerated selector - name list not yet cross-checked
+  36. Clr     Push          --   enumerated selector - name list not yet cross-checked
+
+NoteDet   [module type 156]
+---------------------------
+   0. Note  NoteDial      --   
+
+LevConv   [module type 157]
+---------------------------
+   0. OutType  Menu          --   enumerated selector - name list not yet cross-checked
+   1. Input    Menu          OK   selector names match the G2 exactly
+
+Glide   [module type 158]
+-------------------------
+   0. Time          StrMap        --   derived from an internal coefficient table - reference values needed from the hardware
+   1. Glide on/off  Menu          OK   selector names match the G2 exactly
+   2. Shape         Menu          OK   selector names match the G2 exactly
+
+MixFader   [module type 161]
+----------------------------
+   0. Lev1   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   1. Lev2   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   2. Lev3   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   3. Lev4   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   4. Lev5   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   5. Lev6   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   6. Lev7   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   7. Lev8   Slider        --   Seq sliders read bip128StrMap; the top step may be 64 rather than 63 - unresolved
+   8. On1    Enable        --   enumerated selector - name list not yet cross-checked
+   9. On2    Enable        --   enumerated selector - name list not yet cross-checked
+  10. On3    Enable        --   enumerated selector - name list not yet cross-checked
+  11. On4    Enable        --   enumerated selector - name list not yet cross-checked
+  12. On5    Enable        --   enumerated selector - name list not yet cross-checked
+  13. On6    Enable        --   enumerated selector - name list not yet cross-checked
+  14. On7    Enable        --   enumerated selector - name list not yet cross-checked
+  15. On8    Enable        --   enumerated selector - name list not yet cross-checked
+  16. Curve  Menu          OK   selector names match the G2 exactly
+  17. Pad    Menu          OK   selector names match the G2 exactly
+
+FltComb   [module type 162]
+---------------------------
+   0. Freq    Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Pitch   CommonDial    --   
+   2. Kbt     Menu          --   enumerated selector - name list not yet cross-checked
+   3. FB      CommonDial    --   
+   4. FB Mod  CommonDial    --   
+   5. Type    Menu          OK   selector names match the G2 exactly
+   6. Level   CommonDial    --   
+   7. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+
+OscShpA   [module type 163]
+---------------------------
+   0. Pitch           OscFreq       --   
+   1. Cent            CommonDial    --   
+   2. Kbt             Toggle        OK   selector names match the G2 exactly
+   3. Pitch           CommonDial    --   
+   4. Tune M          Menu          --   enumerated selector - name list not yet cross-checked
+   5. FM              CommonDial    --   
+   6. FM Pitch Track  Menu          OK   selector names match the G2 exactly
+   7. Shape           CommonDial    --   
+   8. ShpCtrl         CommonDial    --   
+   9. Wave            Menu          --   enumerated selector - name list not yet cross-checked
+  10. Bypass          Bypass        --   enumerated selector - name list not yet cross-checked
+
+OscDual   [module type 164]
+---------------------------
+   0. Pitch   OscFreq       --   
+   1. Cent    CommonDial    --   
+   2. Kbt     Toggle        OK   selector names match the G2 exactly
+   3. Pitch   CommonDial    --   
+   4. Tune M  Menu          --   enumerated selector - name list not yet cross-checked
+   5. SqrLvl  CommonDial    --   
+   6. PW      CommonDial    --   
+   7. SawLvl  CommonDial    --   
+   8. Phase   CommonDial    --   
+   9. ubLvl   CommonDial    --   
+  10. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+  11. Sqr M   CommonDial    --   
+  12. Saw M   CommonDial    --   
+  13. Soft    Menu          OK   selector names match the G2 exactly
+
+DXRouter   [module type 165]
+----------------------------
+   0. Algorithm  Menu          --   enumerated selector - name list not yet cross-checked
+   1. Feedback   Menu          --   enumerated selector - name list not yet cross-checked
+
+PShift   [module type 167]
+--------------------------
+   0. Semi     CommonDial    --   
+   1. Fine     CommonDial    --   
+   2. Shift M  CommonDial    --   
+   3. Delay    Menu          --   enumerated selector - name list not yet cross-checked
+   4. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+
+ModAHD   [module type 169]
+--------------------------
+   0. Attack     ADRTime       --   envelope time scale - reference values needed from the hardware
+   1. Hold       ADRTime       --   envelope time scale - reference values needed from the hardware
+   2. Decay      ADRTime       --   envelope time scale - reference values needed from the hardware
+   3. Attack M   CommonDial    --   
+   4. Hold M     CommonDial    --   
+   5. Attack M   CommonDial    --   
+   6. (unnamed)  Menu          --   enumerated selector - name list not yet cross-checked
+   7. (unnamed)  Toggle        --   
+
+2-In   [module type 170]
+------------------------
+   0. In from  Menu          OK   selector names match the G2 exactly
+   1. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Pad      Menu          --   enumerated selector - name list not yet cross-checked
+
+4-In   [module type 171]
+------------------------
+   0. In from  Menu          OK   selector names match the G2 exactly
+   1. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   2. Pad      Menu          --   enumerated selector - name list not yet cross-checked
+
+DlySingleA   [module type 172]
+------------------------------
+   0. Time  Time          --   
+
+DlySingleB   [module type 173]
+------------------------------
+   0. Time    Time          --   
+   1. Time M  CommonDial    --   
+
+DelayDual   [module type 174]
+-----------------------------
+   0. Time1   Time          --   
+   1. Time M  CommonDial    --   
+   2. Time2   Time          --   
+   3. Time M  CommonDial    --   
+
+DelayQuad   [module type 175]
+-----------------------------
+   0. Time1     TimeClk       OK   confirmed on the hardware (DelayB, Range 1.0s + all 32 Clk slots)
+   1. Time1 M   CommonDial    --   
+   2. Time2     TimeClk       OK   confirmed on the hardware (DelayB, Range 1.0s + all 32 Clk slots)
+   3. Time2 M   CommonDial    --   
+   4. Time3     TimeClk       OK   confirmed on the hardware (DelayB, Range 1.0s + all 32 Clk slots)
+   5. Time3 M   CommonDial    --   
+   6. Time4     TimeClk       OK   confirmed on the hardware (DelayB, Range 1.0s + all 32 Clk slots)
+   7. Time4 M   CommonDial    --   
+   8. Time/Clk  Menu          --   enumerated selector - name list not yet cross-checked
+
+DelayA   [module type 176]
+--------------------------
+   0. Time      TimeClk       OK   confirmed on the hardware (DelayB, Range 1.0s + all 32 Clk slots)
+   1. FB        CommonDial    --   
+   2. Filter    CommonDial    --   
+   3. Dry/Wet   CommonDial    --   
+   4. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+   5. Time/Clk  Menu          --   enumerated selector - name list not yet cross-checked
+
+DelayB   [module type 177]
+--------------------------
+   0. Time         TimeClk       OK   confirmed on the hardware (DelayB, Range 1.0s + all 32 Clk slots)
+   1. FB           CommonDial    --   
+   2. LP           Freq          OK   Hz = 13.75 * 2^(v/12)
+   3. Dry/Wet      CommonDial    --   
+   4. Time/Clk     Menu          --   enumerated selector - name list not yet cross-checked
+   5. FB Mod       CommonDial    --   
+   6. Dry/Wet Mod  CommonDial    --   
+   7. Bypass       Bypass        --   enumerated selector - name list not yet cross-checked
+   8. HP           Freq          OK   Hz = 13.75 * 2^(v/12)
+
+DlyClock   [module type 178]
+----------------------------
+   0. Sample delay  Int           --   
+
+Operator   [module type 180]
+----------------------------
+   0. Kbt          Toggle        OK   selector names match the G2 exactly
+   1. Sync         Menu          OK   selector names match the G2 exactly
+   2. RatioFixes   Menu          OK   selector names match the G2 exactly
+   3. Coarse       Freq          OK   Hz = 13.75 * 2^(v/12)
+   4. Fine         CommonDial    --   
+   5. Detune       Menu          --   enumerated selector - name list not yet cross-checked
+   6. Vel          Menu          --   enumerated selector - name list not yet cross-checked
+   7. RateScale    Menu          --   enumerated selector - name list not yet cross-checked
+   8. R1           CommonDial    --   
+   9. L1           CommonDial    --   
+  10. R2           CommonDial    --   
+  11. L2           CommonDial    --   
+  12. R3           CommonDial    --   
+  13. L3           CommonDial    --   
+  14. R4           CommonDial    --   
+  15. L4           CommonDial    --   
+  16. AMod         Menu          --   enumerated selector - name list not yet cross-checked
+  17. BrPt         NoteDial      --   
+  18. LDepth Mode  Menu          OK   selector names match the G2 exactly
+  19. Ldepth       Menu          --   enumerated selector - name list not yet cross-checked
+  20. RDepth Mode  Menu          OK   selector names match the G2 exactly
+  21. Rdepth       Menu          --   enumerated selector - name list not yet cross-checked
+  22. Level        CommonDial    --   
+  23. Bypass       Bypass        --   enumerated selector - name list not yet cross-checked
+  24. KBEnv        Toggle        OK   selector names match the G2 exactly
+
+DlyEight   [module type 181]
+----------------------------
+   0. Time  Time          --   
+
+DlyStereo   [module type 182]
+-----------------------------
+   0. Left      TimeClk       OK   confirmed on the hardware (DelayB, Range 1.0s + all 32 Clk slots)
+   1. Right     TimeClk       OK   confirmed on the hardware (DelayB, Range 1.0s + all 32 Clk slots)
+   2. FB L      CommonDial    --   
+   3. FB R      CommonDial    --   
+   4. X-FB L    CommonDial    --   
+   5. X-FB R    CommonDial    --   
+   6. Time/Clk  Menu          --   enumerated selector - name list not yet cross-checked
+   7. LP        Freq          OK   Hz = 13.75 * 2^(v/12)
+   8. Dry/Wet   CommonDial    --   
+   9. Bypass    Bypass        --   enumerated selector - name list not yet cross-checked
+  10. HP        Freq          OK   Hz = 13.75 * 2^(v/12)
+
+OscPM   [module type 183]
+-------------------------
+   0. Tune       OscFreq       --   
+   1. Cent       CommonDial    --   
+   2. Kbt        Toggle        OK   selector names match the G2 exactly
+   3. Tune Mode  Menu          --   enumerated selector - name list not yet cross-checked
+   4. PhM        CommonDial    --   
+   5. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+   6. Pitch      CommonDial    --   
+
+Mix1-1A   [module type 184]
+---------------------------
+   0. Level    CommonDial    --   
+   1. Enable1  Enable        --   enumerated selector - name list not yet cross-checked
+   2. Exp      Menu          OK   selector names match the G2 exactly
+
+Mix1-1S   [module type 185]
+---------------------------
+   0. Level    CommonDial    --   
+   1. Enable1  Enable        --   enumerated selector - name list not yet cross-checked
+   2. Exp      Menu          OK   selector names match the G2 exactly
+
+Sw1-2M   [module type 186]
+--------------------------
+   0. Selector *** Needs new UI element  Menu          OK   selector names match the G2 exactly
+
+Sw2-1M   [module type 187]
+--------------------------
+   0. Selector *** Needs new UI element  Menu          OK   selector names match the G2 exactly
+
+ConstSwM   [module type 188]
+----------------------------
+   0. Level                              CommonDial    --   
+   1. Selector *** needs new UI element  Menu          OK   selector names match the G2 exactly
+   2. Bip/Uni                            Menu          --   enumerated selector - name list not yet cross-checked
+
+NoiseGate   [module type 189]
+-----------------------------
+   0. Threshold  StrMap        --   
+   1. Attack     StrMap        --   
+   2. Release    StrMap        --   derived from an internal coefficient table - reference values needed from the hardware
+   3. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+
+LfoB   [module type 190]
+------------------------
+   0. Rate     CommonDial    --   
+   1. Rate M   CommonDial    --   
+   2. Range    Menu          --   enumerated selector - name list not yet cross-checked
+   3. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
+   4. Wave     Menu          --   enumerated selector - name list not yet cross-checked
+   5. Mode     Menu          OK   selector names match the G2 exactly
+   6. Phase    CommonDial    --   
+   7. Bypass   Bypass        --   enumerated selector - name list not yet cross-checked
+   8. OutType  Menu          --   enumerated selector - name list not yet cross-checked
+   9. Phase M  CommonDial    --   
+
+Phaser   [module type 192]
+--------------------------
+   0. Type    Menu          OK   selector names match the G2 exactly
+   1. Rate    StrMap        OK   Hz = (floor(v^2/2)*24000 + 768000)/2^24   [corrected 2026-08-10]
+   2. FB      CommonDial    --   
+   3. Bypass  Bypass        --   enumerated selector - name list not yet cross-checked
+
+Mix2-1A   [module type 194]
+---------------------------
+   0. L1       CommonDial    --   
+   1. Enable1  Enable        --   enumerated selector - name list not yet cross-checked
+   2. L2       CommonDial    --   
+   3. Enable2  Enable        --   enumerated selector - name list not yet cross-checked
+   4. Exp      Menu          OK   selector names match the G2 exactly
+
+ModAmt   [module type 195]
+--------------------------
+   0. Depth    CommonDial    --   
+   1. Enable   Toggle        OK   selector names match the G2 exactly
+   2. Exp/Lin  Menu          OK   selector names match the G2 exactly
+   3. m/1-m    Menu          OK   selector names match the G2 exactly
+
+OscPerc   [module type 196]
+---------------------------
+   0. Tune       OscFreq       --   
+   1. Cent       CommonDial    --   
+   2. Tune Mode  Menu          --   enumerated selector - name list not yet cross-checked
+   3. Kbt        Toggle        OK   selector names match the G2 exactly
+   4. Pitch      CommonDial    --   
+   5. Decay      ADRTime       --   envelope time scale - reference values needed from the hardware
+   6. Click      CommonDial    --   
+   7. Punch      Toggle        OK   selector names match the G2 exactly
+   8. Bypass     Bypass        --   enumerated selector - name list not yet cross-checked
+
+PitchTrack   [module type 198]
+------------------------------
+   0. Threshold  CommonDial    --   
+
+MonoKey   [module type 199]
+---------------------------
+   0. Priority  Menu          --   enumerated selector - name list not yet cross-checked
+
+RandomA   [module type 200]
+---------------------------
+   0. Rate            Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Poly/Mono mode  Menu          OK   selector names match the G2 exactly
+   2. OutType         Menu          OK   selector names match the G2 exactly
+   3. Range           Menu          --   enumerated selector - name list not yet cross-checked
+   4. Bypass          Bypass        --   enumerated selector - name list not yet cross-checked
+   5. Edge            Menu          --   enumerated selector - name list not yet cross-checked
+   6. Step            Menu          --   enumerated selector - name list not yet cross-checked
+
+RandomB   [module type 202]
+---------------------------
+   0. Rate            Freq          OK   Hz = 13.75 * 2^(v/12)
+   1. Poly/Mono mode  Menu          OK   selector names match the G2 exactly
+   2. Kbt             Toggle        OK   selector names match the G2 exactly
+   3. Rate            CommonDial    --   
+   4. Step            CommonDial    --   
+   5. Bypass          Bypass        --   enumerated selector - name list not yet cross-checked
+   6. OutType         Menu          OK   selector names match the G2 exactly
+   7. Range           Menu          --   enumerated selector - name list not yet cross-checked
+   8. Edge            Menu          --   enumerated selector - name list not yet cross-checked
+
+RndClkA   [module type 204]
+---------------------------
+   0. Step    CommonDial    --   
+   1. Mode    Menu          --   enumerated selector - name list not yet cross-checked
+   2. Dice    Menu          --   enumerated selector - name list not yet cross-checked
+   3. Out     Menu          --   enumerated selector - name list not yet cross-checked
+   4. On/Off  Bypass        --   enumerated selector - name list not yet cross-checked
+
+RndTrig   [module type 205]
+---------------------------
+   0. Step    CommonDial    --   
+   1. StepM   CommonDial    --   
+   2. On/Off  Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Mode    Menu          --   enumerated selector - name list not yet cross-checked
+
+RndClkB   [module type 206]
+---------------------------
+   0. Step    CommonDial    --   
+   1. Out     Menu          --   enumerated selector - name list not yet cross-checked
+   2. On/Off  Bypass        --   enumerated selector - name list not yet cross-checked
+   3. Mode    Menu          --   enumerated selector - name list not yet cross-checked
+   4. StepM   CommonDial    --   
+
+RndPattern   [module type 208]
+------------------------------
+   0. PatA    CommonDial    --   
+   1. PatB    CommonDial    --   
+   2. Step    CommonDial    --   
+   3. Loop    CommonDial    --   
+   4. StepM   CommonDial    --   
+   5. Out     Menu          --   enumerated selector - name list not yet cross-checked
+   6. On/Off  Bypass        --   enumerated selector - name list not yet cross-checked
+
