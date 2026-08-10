@@ -27,6 +27,27 @@
 // SynthLib's own source files get it too, without needing to include this
 // header — see contextMenu.c/utilsGraphics.cpp).
 //#define ENABLE_LOG_MODULE_DATA    // Uncomment for module-data logging in any configuration
+
+// Stop dead on something that should not be possible — but only while developing.
+//
+// A malformed patch section is worth halting for on this side of a release: the log line alone
+// scrolls past unnoticed, and the point of finding it is to fix it. It is NOT worth taking a user's
+// editor down for, along with whatever else they had open, when the parse can carry on and lose
+// nothing more than a few cosmetic names. So a Release build logs and continues where a Debug build
+// exits at the first sign of trouble.
+//
+// DEBUG comes from the Debug configuration's Preprocessor Macros in the Xcode project, alongside
+// ENABLE_LOG_DEBUG. It says "this is a development build", which is the question being asked here —
+// logging being on is a separate matter.
+//
+// Always pair it with a LOG_ERROR that says what happened, and always leave the Release path able
+// to continue: this macro compiles to nothing there, so whatever follows it has to be a real
+// recovery, not a fall-through into the case it was meant to prevent.
+#ifdef DEBUG
+#define EXIT_IN_DEBUG()    exit(1)
+#else
+#define EXIT_IN_DEBUG()    ((void)0)
+#endif
 // Scroll rates, in CONTENT pixels — see pane_scroll_by() in splitView.c. Expressed in content
 // rather than scrollbar units so the feel stays constant as the zoom and the pane's height change.
 #define WHEEL_SCROLL_STEP    (40.0)         // roughly one module row per wheel notch

@@ -337,7 +337,7 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   Reordered; Range defaults bumped 0->1 (Rate Lo). NEEDS HARDWARE:
     (1) confirm a fresh LFO really defaults to Rate Lo;
     (2) RandomA(200)/RandomB(202) STILL use the old-order rangeStrMap — there is no
-        ParamText::RandomRange in the decompile to confirm their wire order, so they were left
+        no matching formatter in the reference to confirm their wire order, so they were left
         unchanged. Verify whether Random shares {Sub,Lo,Hi,BPM,Clk} and reorder if so.
 
 - param-names section-count fix — push_slot_to_device() and write_perf_to_file() no longer write a
@@ -389,6 +389,28 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 
 
 OPEN WORK
+
+- ZOOM TO FIT FROM A RIGHT CLICK, FITTING THE AREA UNDER THE CURSOR (2026-08-10, owner's idea).
+  Zoom to Fit is currently a menu item only, and it fits EVERY pane at once: split_view_zoom_to_fit()
+  walks the panes and returns the SMALLEST zoom any of them asks for, so a sparse FX area drags the
+  Voice Area down with it. Offering it on the canvas right-click, applied to whichever pane the
+  cursor is over, is the cheap two-thirds of the per-pane zoom idea WITHOUT making the zoom per-pane:
+  there is still one global zoom, it is just chosen to suit the area you asked about.
+  WHY IT IS SMALL:
+    - split_view_pane_at(coord) already resolves a coordinate to a pane, so "which area am I over"
+      needs nothing new.
+    - The canvas right-click already has a home: mouseButtonRightUp -> canvas_right_click(), falling
+      back to handle_module_area_click(). An item on the empty-canvas menu is the natural place.
+    - split_view_zoom_to_fit() needs only to take a pane (or gain a single-pane variant); its body
+      is already a per-pane loop that keeps the smallest. Fitting one pane is that loop's body.
+    - action_zoom_to_fit() in appMenuBar.c shows the whole call shape already: set_zoom_factor() then
+      the paired scroll-to-content. Both must still be called, and in that order.
+  WATCH FOR: the menu item should stay as it is (fit everything) so the two are not confused, and
+  the right-click wording needs to say which area it means - "Zoom to Fit Voice Area" reads better
+  than a bare "Zoom to Fit" that silently does something different from the menu of the same name.
+  NOT the same as separate VA/FX zoom, which was raised and SHELVED the same day: that one promotes
+  gZoomFactor into tModulePane and is a much larger change (see utilsGraphics.h, which argues matched
+  scale between the two areas is worth keeping).
 
 - WARNINGS AS ERRORS — DONE 2026-08-09. Both builds are warning-free and both now treat warnings as
   errors: GCC_TREAT_WARNINGS_AS_ERRORS = YES in the Xcode project (plus OTHER_CFLAGS
@@ -589,10 +611,10 @@ Reading the Compute() bodies (CDspEmulator = SHARC fixed point emulated in softw
     DAT_0031xxxx            coefficient constants — the actual magic numbers
     repeated x = a*x >> 0x17  successive powers, i.e. a polynomial
 Worked example: CNativeSaturatePart::Compute builds successive powers, so Saturate is a polynomial
-waveshaper. Also present: 229 ParamText:: functions giving parameter->real-unit meanings
+waveshaper. Also present: 229 text-formatter functions giving parameter->real-unit meanings
 authoritatively (that family is what fixed the delay Clk mapping).
 Cross-check DSP against github.com/gleb812/pch2csd (MIT) — its resources/value_maps.json has 116
-parameter maps, 113 still unchecked. Do not cite decompilation in committed material.
+parameter maps, 113 still unchecked. Do not cite the reverse-engineering source in committed material.
 
 --- 5. KEEP: connector indices are now derived from moduleResources ---
 
@@ -862,11 +884,11 @@ resources already hold.
 - Sw8-1(15), ValSw1-2(17) — need more resources.
 
 - Seq* park-LED (SeqNote/SeqEvent/SeqVal/SeqLev/SeqCtr) — DEFERRED pending a look at the REAL
-  original editor. Confirmed from the decompile that the park LED is NOT in the hardware LED stream
+  original editor. Confirmed from the reference that the park LED is NOT in the hardware LED stream
   (CLedDataList::PopulateList, G2Editor.c:103614, only enrols LEDs with GroupId/CodeRef >= 0; the
   park LED is GroupId=-1, rendered but stream-excluded), so G2-Edit's exclusion is CORRECT and must
   STAY. Its lit state is editor-computed. Owner observed the real editor lights it when the Park
-  input is patched, but the exact trigger isn't provable from the opaque decompile. G2-Edit paints a
+  input is patched, but the exact trigger isn't provable from the reference. G2-Edit paints a
   permanent dim green (RGB_GREEN_3, render_led_common ledTypePark) — likely wrong. Once we can watch
   the real editor, confirm the rule (probably "green when Park input has a cable, else off") and
   implement it. NOTE: the live sequencer step-position indicator WORKS — owner confirmed 2026-08-05
@@ -888,7 +910,7 @@ resources already hold.
   real regression risk if rushed, since these primitives are reused everywhere.
 
 - Compress(150) — module height may be 1 row too many (currently 5 rows, moduleResources.h). The
-  original editor's module-info structs are opaque in the decompile (SModuleInfo/CBuildModule are
+  original editor's module-info structs are opaque in the reference (SModuleInfo/CBuildModule are
   placeholder structs, heights not recoverable as readable data); needs validation by running the
   original editor and comparing.
 
@@ -903,13 +925,13 @@ resources already hold.
   when all three projects can be built/committed together.
 
 - BIG / long-term idea — add a built-in sound-generation (DSP) engine so the editor can produce
-  audio itself, not just edit/drive the hardware G2. Reference: the decompiled DEMO editor (the
+  audio itself, not just edit/drive the hardware G2. Reference: the DEMO editor (the
   standalone editor that ran patches without hardware) — its DSP/voice code is the model. (That
-  decompile may not be on hand; the Original Editor/G2Editor.c reference here is the HARDWARE
+  reference may not be on hand; the one here is the HARDWARE
   editor, whose module-info/DSP internals come through as opaque placeholder structs — CVoice/
   CVoiceMap/CPatchData symbols survive but bodies don't.) Would let module waveform/response
   graphics be driven by real DSP instead of hand-derived approximations, and enable offline
-  auditioning. Very large effort; capture the demo-editor decompile alongside this note when
+  auditioning. Very large effort; capture the demo-editor reference alongside this note when
   starting.
 
 - Cross-platform build — Linux + Windows, with a CMake build derived from the Xcode project as the
@@ -1233,9 +1255,9 @@ none of these exist in G2-Edit at all, confirmed by source search)
   NOTE ON/OFF CONFIRMED ON HARDWARE 2026-08-02, after one real bug: THE FLAG BYTE IS INVERTED FROM
   THE OBVIOUS READING. ZERO SOUNDS THE NOTE, ONE RELEASES IT. Sent as 1-for-on first, which gave a
   keyboard that was exactly backwards — silent on press, sounding on release. So CMPlayNote::
-  EAction's value 1 is the note-OFF action and the decompiled `action == 1` is asking "is this a
-  release?", not "is this a press?". Nothing in the decompile says which way round the enum runs;
-  only the hardware did. A good example of why a decompile settles the SHAPE of a message but not
+  EAction's value 1 is the note-OFF action and the reference's `action == 1` is asking "is this a
+  release?", not "is this a press?". Nothing in the reference says which way round the enum runs;
+  only the hardware did. A good example of why a reference settles the SHAPE of a message but not
   its polarity.
   Worth recording how it was found, since the same confusion could recur: the symptom looked like a
   missing note-off, and the UI path was suspected first. It was traced and cleared —
@@ -1247,7 +1269,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
   OWNER CONFIRMED 2026-08-02: the keyboard and all six of its buttons work on hardware — keys,
   the four scroll buttons, Drone and Repeat.
   THE WIRE FORMAT IS REVERSE-ENGINEERED. SUB_COMMAND_PLAY_NOTE (0x56) was already
-  in defs.h but had never been sent. CMPlayNote::WriteStream() in the Ghidra decompile is:
+  in defs.h but had never been sent. CMPlayNote::WriteStream() in the reference is:
       CMIDIOutStream::Initialize(stream, 0x56, 0, 1);
       <write>(stream, action == 1);      // note-on/note-off flag
       <write>(stream, note);             // MIDI note number
@@ -1280,7 +1302,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
 - WHILE DECODING PLAY NOTE, A QUESTION ABOUT send_deassign_midi_cc() TURNED UP. CMCtrlDeassign::
   WriteStream() (0x23) writes a 1-bit field of value 1 (vtable +0x44) followed by the CC number as
   SEVEN bits (+0x3c, which takes an explicit width) — i.e. a byte of 0x80|cc. G2-Edit writes eight
-  bits of cc, so 0x00|cc. CMCtrlAssign (0x22) ends the same way. If the decompile's widths are read
+  bits of cc, so 0x00|cc. CMCtrlAssign (0x22) ends the same way. If the reference's widths are read
   right, both our assign and deassign have the top bit clear where the original sets it. DELIBERATELY
   NOT CHANGED: the vtable-slot widths are inferred, per-param assign is believed to work, and this
   wants a USB-log comparison against the real editor rather than a guess. Worth settling, since it
@@ -1667,7 +1689,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
      needs to start honouring it.
      CONFIRMED AGAINST THE REFERENCE: NSFile_V11::CPatchHeaderData_11::Get/SetSplitterPos, a short
      clamped to 0..0x3fff — the same 14 bits.
-     THE UNIT IS PIXELS, not a fraction. The decompile's layout code (G2Editor.c ~171252) computes
+     THE UNIT IS PIXELS, not a fraction. The reference's layout code computes
      the top pane's bottom edge as toolbarHeight + scrollBarHeight + splitterPos, clamps it to the
      window less the scrollbar less 11, and gives the bar itself a height of 0xb = 11 px. So
      splitterPos IS THE VOICE AREA PANE'S HEIGHT IN PIXELS.
@@ -1765,7 +1787,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
    1. Whether the branch scope really includes the cable feeding the clicked connector. We include
       it for COLOR and DELETE (cable_chain_collect_branch), inferred from the manual rather than
       proven: CCompleteBranchIterator's end sentinel is the tree end, not next_tree(node), and the
-      iteration bound is not cleanly recoverable from the decompile. Easy to check in the real
+      iteration bound is not cleanly recoverable from the reference. Easy to check in the real
       editor: right-click a mid-chain input, pick a colour, and see whether the cable ARRIVING at
       that connector changes too.
    2. Whether COLOR really is refused on a sourceless (white) chain. That is an inference from
@@ -1789,7 +1811,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
       METHOD WORTH REUSING: decode the device's OWN cable list out of the patch dump in the USB
       log rather than trusting the editor's view — find the newest EX message with data[1]&7 ==
       slot, scan for a `52 00 LL` section, then parse per protocol.c parse_cable_list(). A one-off
-      script settled in seconds what days of reasoning from the decompile could not.
+      script settled in seconds what days of reasoning from the reference could not.
    5. Far more cables will now come out white than before (any input-to-input link with no source).
       The topbar has a white visibility toggle (gPatchDescr[slot].visible[6]), so hiding white is
       now a much more destructive-looking action than it used to be.
@@ -1799,7 +1821,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
   selection.c), and inside Disconnect/Break. Per the design note below this is a conditional
   recompute keyed on source-reachability, so over-calling it is harmless and idempotent; the
   failure mode is a MISSED trigger, which strands a coloured sourceless chain.
-  STILL UNATTRIBUTED in the decompile: GetRecolorCableMolecules call sites 159914 and 162378. Worth
+  STILL UNATTRIBUTED in the reference: GetRecolorCableMolecules call sites. Worth
   walking backwards to their enclosing functions to see whether they are triggers we have missed
   (cable move / drag-an-end-elsewhere and paste are the obvious candidates — neither recolours in
   G2-Edit today). 151152 is now attributed: CPatch::InternalRecolorCable, the COLOR menu entry.

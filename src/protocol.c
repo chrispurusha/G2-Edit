@@ -401,8 +401,14 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                 LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module->type, gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
             }
 
+            // A module carrying more parameters than our table lists is a gap in the table, and one
+            // worth stopping for while developing — that is exactly how a missing row gets noticed.
+            // In a Release build it is survivable and not worth a user's whole session: the count is
+            // 7 bits so it cannot exceed 127, and module->param is MAX_NUM_PARAMETERS (128) wide, so
+            // every one of them is read into bounds either way. The mismatch is logged immediately
+            // above whichever build this is.
             if (paramCount > module_param_count(module->type)) {
-                exit(1);
+                EXIT_IN_DEBUG();
             }
         }
 
@@ -852,6 +858,7 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             if ((paramLength > 0) && ((j + (int)(paramLength - 1)) > (int)moduleLength)) {
                 LOG_ERROR("param name payload %u overruns module section (%d of %u used), stopping\n",
                           paramLength - 1, j, moduleLength);
+                EXIT_IN_DEBUG();
                 break;
             }
             LOG_MODULE_DATA("Param name: ");
@@ -876,12 +883,14 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                     skipParam = true;
                 } else if (numLabels > MAX_NUM_LABELS) {
                     LOG_ERROR("numLabels %u exceeds maximum %u for param %u, skipping\n", numLabels, MAX_NUM_LABELS, paramIndex);
+                    EXIT_IN_DEBUG();
                     skipParam = true;
                 } else if (paramIndex >= MAX_NUM_PARAMETERS) {
                     LOG_WARNING("paramIndex %u exceeds maximum %u, skipping\n", paramIndex, MAX_NUM_PARAMETERS);
                     skipParam = true;
                 } else if (sizeof(module->paramName[0]) < (numLabels * PROTOCOL_PARAM_NAME_SIZE)) {
                     LOG_ERROR("paramName array too small for %u labels, skipping\n", numLabels);
+                    EXIT_IN_DEBUG();
                     skipParam = true;
                 }
 
