@@ -238,6 +238,11 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
             rateModeParamIndex = 7;
             break;
         }
+        case moduleTypeLfoB:
+        {
+            rateModeParamIndex = 2;
+            break;
+        }
         default:
         {
             rateModeParamIndex = 0;
@@ -326,6 +331,7 @@ tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char * la
     switch (module->type) {
         case moduleTypeEq2Band:
         case moduleTypeEq3band:
+        case moduleTypeEqPeak:
         {
             dB_range = 18.0;
             break;
