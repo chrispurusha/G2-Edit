@@ -9,7 +9,7 @@ been checked against the value the G2 itself shows.
   GAP   the renderer has no branch for this module, so it shows an error
   --    not yet checked
 
-233 of 918 parameters validated (0 flagged GAP).
+264 of 918 parameters validated (0 flagged GAP).
 
 ==============================================================================
 
@@ -106,10 +106,10 @@ Mix4-1B   [module type 19]
 EnvvADSR   [module type 20]
 ---------------------------
    0. Env Shape     Menu          OK   selector names match the G2 exactly
-   1. Attack        ADRTime       --   envelope time scale - reference values needed from the hardware
-   2. Decay         ADRTime       --   envelope time scale - reference values needed from the hardware
+   1. Attack        ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   2. Decay         ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    3. Sus           UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
-   4. Rel           ADRTime       --   envelope time scale - reference values needed from the hardware
+   4. Rel           ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    5. Output Type   Menu          --   enumerated selector - name list not yet cross-checked
    6. KB Active     Toggle        --   
    7. Normal/Reset  Menu          OK   selector names match the G2 exactly
@@ -120,10 +120,10 @@ PartQuant   [module type 22]
 
 ModADSR   [module type 23]
 --------------------------
-   0. A            ADRTime       --   envelope time scale - reference values needed from the hardware
-   1. D            ADRTime       --   envelope time scale - reference values needed from the hardware
+   0. A            ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   1. D            ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    2. S            CommonDial    --   
-   3. R            ADRTime       --   envelope time scale - reference values needed from the hardware
+   3. R            ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    4. Attack M     CommonDial    --   
    5. Decay M      CommonDial    --   
    6. Sustain M    CommonDial    --   
@@ -250,7 +250,7 @@ Mix8-1B   [module type 40]
 
 EnvH   [module type 41]
 -----------------------
-   0. Hold  ADRTime       --   envelope time scale - reference values needed from the hardware
+   0. Hold  ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    1. Pos   Menu          --   enumerated selector - name list not yet cross-checked
 
 Delay (Logic Delay)   [module type 42]
@@ -280,10 +280,10 @@ FltVoice   [module type 45]
 EnvAHD   [module type 46]
 -------------------------
    0. Shape      Menu          OK   selector names match the G2 exactly
-   1. Attack     ADRTime       --   envelope time scale - reference values needed from the hardware
-   2. Hold       ADRTime       --   envelope time scale - reference values needed from the hardware
+   1. Attack     ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   2. Hold       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    3. Reset      Menu          OK   selector names match the G2 exactly
-   4. Release    ADRTime       --   envelope time scale - reference values needed from the hardware
+   4. Release    ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    5. OutType    Menu          --   enumerated selector - name list not yet cross-checked
    6. (unnamed)  Toggle        --   
 
@@ -315,7 +315,7 @@ FltMulti   [module type 49]
    1. Pitch   Pitch         --   
    2. Kbt     Menu          --   enumerated selector - name list not yet cross-checked
    3. GC      Toggle        --   
-   4. Res     StrMap        OK   Q = 0.5/(1 - 0.9v/127)^2; raw 17 and 33 still disputed
+   4. Res     ResonanceQ    OK   Q = 0.5/(1 - 0.9v/127)^2   [computed, table retired 2026-08-10]
    5. dB      Menu          OK   selector names match the G2 exactly
    6. Bypass  Bypass        OK   confirmed by the owner
 
@@ -331,7 +331,7 @@ FltNord   [module type 51]
    1. Pitch       CommonDial    --   
    2. Kbt         Menu          --   enumerated selector - name list not yet cross-checked
    3. GC          Toggle        --   
-   4. Res         StrMap        OK   Q = 0.5/(1 - 0.9v/127)^2; raw 17 and 33 still disputed
+   4. Res         ResonanceQ    OK   Q = 0.5/(1 - 0.9v/127)^2   [computed, table retired 2026-08-10]
    5. dB/Oct      Menu          OK   selector names match the G2 exactly
    6. Bypass      Bypass        OK   confirmed by the owner
    7. Fm Lin      CommonDial    --   
@@ -344,10 +344,10 @@ EnvMulti   [module type 52]
    1. L2       CommonDial    --   
    2. L3       CommonDial    --   
    3. L4       CommonDial    --   
-   4. T1       ADRTime       --   envelope time scale - reference values needed from the hardware
-   5. T2       ADRTime       --   envelope time scale - reference values needed from the hardware
-   6. T3       ADRTime       --   envelope time scale - reference values needed from the hardware
-   7. T4       ADRTime       --   envelope time scale - reference values needed from the hardware
+   4. T1       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   5. T2       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   6. T3       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   7. T4       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    8. Reset    Menu          OK   selector names match the G2 exactly
    9. Sust     Menu          OK   selector names match the G2 exactly
   10. OutType  Menu          --   enumerated selector - name list not yet cross-checked
@@ -364,7 +364,7 @@ FltStatic   [module type 54]
 
 EnvD   [module type 55]
 -----------------------
-   0. Decay    ADRTime       --   envelope time scale - reference values needed from the hardware
+   0. Decay    ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    1. OutType  Menu          --   enumerated selector - name list not yet cross-checked
 
 Resonator (Not in Clavia editor)   [module type 56]
@@ -391,17 +391,17 @@ Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Ben
 --------------------------------------------------------------------------------------------------------------------
    0. Master Freq       FreqDrum      --   
    1. Slave Ratio       CommonDial    --   
-   2. Dcy               ADRTime       --   envelope time scale - reference values needed from the hardware
-   3. Dcy               ADRTime       --   envelope time scale - reference values needed from the hardware
+   2. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   3. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    4. Lev               CommonDial    --   
    5. Lev               CommonDial    --   
    6. Freq              Freq          OK   Hz = 13.75 * 2^(v/12)
    7. Res               Resonance     OK   percent = v*100/128, no decimal at 0/25/50/75/100  [corrected 2026-08-10]
    8. Swp               CommonDial    --   
-   9. Dcy               ADRTime       --   envelope time scale - reference values needed from the hardware
+   9. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
   10. Noise FilterType  Menu          OK   selector names match the G2 exactly
   11. Amt               CommonDial    --   
-  12. Dcy               ADRTime       --   envelope time scale - reference values needed from the hardware
+  12. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
   13. Click             CommonDial    --   
   14. Noise             CommonDial    --   
   15. Preset            Menu          --   enumerated selector - name list not yet cross-checked
@@ -450,7 +450,7 @@ ClkGen   [module type 68]
    1. Bypass                               Bypass        OK   confirmed by the owner
    2. Source                               Menu          --   enumerated selector - name list not yet cross-checked
    3. Sync every                           Menu          --   enumerated selector - name list not yet cross-checked
-   4. Swing                                CommonDial    --   
+   4. Swing                                Swing         OK   percent = raw/5.08 + 50, so 50.0 to 75.0   [was raw, 2026-08-10]
 
 ClkDiv   [module type 69]
 -------------------------
@@ -458,8 +458,8 @@ ClkDiv   [module type 69]
 
 EnvFollow   [module type 71]
 ----------------------------
-   0. Attack   StrMap        --   derived from an internal coefficient table - reference values needed from the hardware
-   1. Release  StrMap        --   derived from an internal coefficient table - reference values needed from the hardware
+   0. Attack   StrMap        --   cross-checked against a second independent editor, all 128 entries
+   1. Release  StrMap        --   cross-checked against a second independent editor, all 128 entries
 
 NoteScaler   [module type 72]
 -----------------------------
@@ -506,9 +506,9 @@ ShpStatic   [module type 83]
 EnvADR   [module type 84]
 -------------------------
    0. Shape                 Menu          OK   selector names match the G2 exactly
-   1. Attack                ADRTime       --   envelope time scale - reference values needed from the hardware
+   1. Attack                ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    2. Reset                 Menu          OK   selector names match the G2 exactly
-   3. Release/Decay time    ADRTime       --   envelope time scale - reference values needed from the hardware
+   3. Release/Decay time    ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    4. Trig/Gate             Menu          OK   selector names match the G2 exactly
    5. OutType               Menu          --   enumerated selector - name list not yet cross-checked
    6. (unnamed)             Toggle        --   
@@ -533,7 +533,7 @@ Sw1-4   [module type 88]
 
 Flanger   [module type 89]
 --------------------------
-   0. Rate      StrMap        OK   Hz = v*384000/2^24, all 128 entries
+   0. Rate      FlangerRate   OK   Hz = v*384000/2^24, half a step at v=0   [computed, table retired 2026-08-10]
    1. Range     CommonDial    --   
    2. Feedback  CommonDial    --   
    3. Bypass    Bypass        OK   confirmed by the owner
@@ -547,7 +547,7 @@ FltClassic   [module type 92]
    0. Freq       Freq          OK   Hz = 13.75 * 2^(v/12)
    1. Env        Pitch         --   
    2. Kbt        Menu          --   enumerated selector - name list not yet cross-checked
-   3. Res        StrMap        OK   Q = 0.5/(1 - 0.9v/127)^2; raw 17 and 33 still disputed
+   3. Res        ResonanceQ    OK   Q = 0.5/(1 - 0.9v/127)^2   [computed, table retired 2026-08-10]
    4. (unnamed)  Menu          OK   selector names match the G2 exactly
    5. (unnamed)  Bypass        OK   confirmed by the owner
 
@@ -604,7 +604,7 @@ EqPeak   [module type 103]
 --------------------------
    0. Freq    Freq          OK   Hz = 13.75 * 2^(v/12)
    1. Gain    BipLevel      --   
-   2. BW      CommonDial    --   
+   2. BW      Bandwidth     OK   octaves = (128-raw)/64, 2.00 down to 0.02 - runs backwards   [was raw, 2026-08-10]
    3. Bypass  Bypass        OK   confirmed by the owner
    4. Level   CommonDial    --   
 
@@ -686,12 +686,12 @@ EnvADDSR   [module type 119]
 ----------------------------
    0. Kb       Toggle        --   
    1. Shape    Menu          OK   selector names match the G2 exactly
-   2. A        ADRTime       --   envelope time scale - reference values needed from the hardware
-   3. D1       ADRTime       --   envelope time scale - reference values needed from the hardware
+   2. A        ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   3. D1       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    4. L1       CommonDial    --   
-   5. D2       ADRTime       --   envelope time scale - reference values needed from the hardware
+   5. D2       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    6. L2       CommonDial    --   
-   7. R        ADRTime       --   envelope time scale - reference values needed from the hardware
+   7. R        ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    8. Sustain  Menu          OK   selector names match the G2 exactly
    9. Pos      Menu          --   enumerated selector - name list not yet cross-checked
   10. Reset    Menu          OK   selector names match the G2 exactly
@@ -943,8 +943,8 @@ Compress   [module type 150]
 ----------------------------
    0. Thr        CommonDial    --   
    1. Ratio      CommonDial    --   
-   2. Att        StrMap        --   compressor time scale - reference values needed from the hardware
-   3. Rel        StrMap        --   compressor time scale - reference values needed from the hardware
+   2. Att        StrMap        --   cross-checked against a second independent editor, all 128 entries
+   3. Rel        StrMap        --   cross-checked against a second independent editor, all 128 entries
    4. RefLvl     CommonDial    --   
    5. (unnamed)  Toggle        --   
    6. (unnamed)  Bypass        OK   confirmed by the owner
@@ -1017,7 +1017,7 @@ LevConv   [module type 157]
 
 Glide   [module type 158]
 -------------------------
-   0. Time          StrMap        --   derived from an internal coefficient table - reference values needed from the hardware
+   0. Time          StrMap        --   cross-checked against a second independent editor, all 128 entries
    1. Glide on/off  Menu          OK   selector names match the G2 exactly
    2. Shape         Menu          OK   selector names match the G2 exactly
 
@@ -1099,9 +1099,9 @@ PShift   [module type 167]
 
 ModAHD   [module type 169]
 --------------------------
-   0. Attack     ADRTime       --   envelope time scale - reference values needed from the hardware
-   1. Hold       ADRTime       --   envelope time scale - reference values needed from the hardware
-   2. Decay      ADRTime       --   envelope time scale - reference values needed from the hardware
+   0. Attack     ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   1. Hold       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
+   2. Decay      ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    3. Attack M   CommonDial    --   
    4. Hold M     CommonDial    --   
    5. Attack M   CommonDial    --   
@@ -1259,7 +1259,7 @@ NoiseGate   [module type 189]
 -----------------------------
    0. Threshold  StrMap        --   
    1. Attack     StrMap        --   
-   2. Release    StrMap        --   derived from an internal coefficient table - reference values needed from the hardware
+   2. Release    StrMap        --   cross-checked against a second independent editor, all 128 entries
    3. Bypass     Bypass        OK   confirmed by the owner
 
 LfoB   [module type 190]
@@ -1278,7 +1278,7 @@ LfoB   [module type 190]
 Phaser   [module type 192]
 --------------------------
    0. Type    Menu          OK   selector names match the G2 exactly
-   1. Rate    StrMap        OK   Hz = (floor(v^2/2)*24000 + 768000)/2^24   [corrected 2026-08-10]
+   1. Rate    PhaserRate    OK   Hz = (floor(v^2/2)*24000 + 768000)/2^24   [computed, table retired 2026-08-10]
    2. FB      CommonDial    --   
    3. Bypass  Bypass        OK   confirmed by the owner
 
@@ -1304,7 +1304,7 @@ OscPerc   [module type 196]
    2. Tune Mode  Menu          --   enumerated selector - name list not yet cross-checked
    3. Kbt        Toggle        OK   selector names match the G2 exactly
    4. Pitch      CommonDial    --   
-   5. Decay      ADRTime       --   envelope time scale - reference values needed from the hardware
+   5. Decay      ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    6. Click      CommonDial    --   
    7. Punch      Toggle        OK   selector names match the G2 exactly
    8. Bypass     Bypass        OK   confirmed by the owner

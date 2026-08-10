@@ -375,7 +375,23 @@ tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, cha
     //level = paramValue;
 
     if (module->param[variation][expLinDBparam].value == 2) { // display dB
-        snprintf(buff, buffSize, "%s", dbLvlStrMap[(int)paramValue]);
+        // COMPUTED, not looked up - mix_level_db() reproduces the printed scale exactly except at
+        // the three lowest steps, which the synth names rather than derives: silence, and two
+        // values pinned just under -99. Computing the rest means a morphed level slides through the
+        // decibels instead of stepping between whole dial positions.
+        int raw = (int)paramValue;
+
+        if (raw <= 0) {
+            snprintf(buff, buffSize, "-oo");
+        } else if (raw == 1) {
+            snprintf(buff, buffSize, "-99.9dB");
+        } else if (raw == 2) {
+            snprintf(buff, buffSize, "-99.0dB");
+        } else if (raw >= 127) {
+            snprintf(buff, buffSize, "-0dB");
+        } else {
+            snprintf(buff, buffSize, "%.1fdB", mix_level_db(paramValue));
+        }
     }
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
@@ -516,21 +532,25 @@ tRectangle render_paramType1TimeClk(tModule * module, tRectangle rectangle, char
 }
 
 tRectangle render_paramType1ADRTime(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    // The table form, kept for comparison against ADRTimeStrMap below. `double time` lives in here with
-    // the code that uses it — left declared outside, it is simply an unused variable.
-    // use table
-    //double time = ADRTimeMap[(int)paramValue];
+    // COMPUTED, not looked up. adr_time_seconds() reproduces all 128 readings of the printed scale
+    // exactly under the four print rules below, so nothing is lost by dropping the table - and a
+    // morphed or smoothed envelope now sweeps instead of stepping, because an index truncated the
+    // fractional dial values a morph produces and a curve does not.
+    //
+    // The rules are what the scale itself asks for: milliseconds until the value reaches a second,
+    // seconds after that, and one fewer decimal each time the number grows a digit, so the reading
+    // stays three significant figures wide the whole way up the dial.
+    double time = adr_time_seconds(paramValue);
 
-    //if (time < 0.1) {
-    //    snprintf(buff, buffSize, "%.1fms", time * 1000);
-    //} else if (time < 1.0) {
-    //    snprintf(buff, buffSize, "%.0fms", time * 1000);
-    //} else if (time < 10.0) {
-    //    snprintf(buff, buffSize, "%.2fs", time);
-    //} else {
-    //    snprintf(buff, buffSize, "%.1fs", time);
-    //}
-    snprintf(buff, buffSize, "%s", ADRTimeStrMap[(int)paramValue]);
+    if (time < 0.1) {
+        snprintf(buff, buffSize, "%.1fms", time * 1000.0);
+    } else if (time < 1.0) {
+        snprintf(buff, buffSize, "%.0fms", time * 1000.0);
+    } else if (time < 10.0) {
+        snprintf(buff, buffSize, "%.2fs", time);
+    } else {
+        snprintf(buff, buffSize, "%.1fs", time);
+    }
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
@@ -696,6 +716,45 @@ tRectangle render_paramType1LevAmpDial(tModule * module, tRectangle rectangle, c
 // visible: consecutive dial positions can differ by 2 or by 3.
 tRectangle render_paramType1Phase(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     snprintf(buff, buffSize, "%.0f", paramValue * 360.0 / 128.0);
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// A filter's resonance as Q, for the filters that read in Q rather than as a percentage. The synth
+// drops the decimals once Q reaches 10, which keeps the reading three characters wide across the
+// whole dial.
+tRectangle render_paramType1ResonanceQ(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    double q = flt_resonance_q(paramValue);
+
+    snprintf(buff, buffSize, (q >= 10.0) ? "%.0f" : "%.2f", q);
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+tRectangle render_paramType1FlangerRate(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    snprintf(buff, buffSize, "%.2fHz", flanger_rate_hz(paramValue));
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// The phaser's rate loses a decimal from raw 119 up, where the reading passes 10 Hz.
+#define PHASER_RATE_ONE_DECIMAL_FROM    (119.0)
+
+tRectangle render_paramType1PhaserRate(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    snprintf(buff, buffSize, (paramValue >= PHASER_RATE_ONE_DECIMAL_FROM) ? "%.1fHz" : "%.2fHz", phaser_rate_hz(paramValue));
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// ClkGen's Swing, as a percentage. 50% is no swing - every second step lands exactly halfway - and
+// the dial reaches 75% at the top, which is a hard shuffle. The scale is raw/5.08 + 50, so the
+// useful half of the control is the bottom third of the knob's travel.
+tRectangle render_paramType1Swing(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    snprintf(buff, buffSize, "%.1f%%", (paramValue / 5.08) + 50.0);
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// EqPeak's bandwidth, in OCTAVES, and it runs BACKWARDS: (128 - raw)/64, so the bottom of the dial
+// is the widest bell at 2.00 octaves and the top is the narrowest at 0.02. Turning the knob up
+// narrows the band rather than widening it, which the raw number gave no hint of.
+tRectangle render_paramType1Bandwidth(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    snprintf(buff, buffSize, "%.2fOct", (128.0 - paramValue) / 64.0);
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 

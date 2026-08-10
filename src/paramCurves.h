@@ -57,7 +57,18 @@ double flt_kbt_amount(uint32_t kbtValue);                  // Kbt scroll: 0, 0.2
 double lev_amp_gain(double paramValue);                    // LevAmp multiplier: 0.25x .. 4.0x, unity at 64
 double lfo_rate_hz(uint32_t rangeMode, double paramValue); // LFO speed in Hz for a Range setting
 
-// An envelope segment's length: the 0.5 ms .. 45 s scale ADRTimeStrMap prints, as seconds.
+double flanger_rate_hz(double paramValue);                 // Flanger Rate: 0.01 Hz .. 2.91 Hz, linear
+double phaser_rate_hz(double paramValue);                  // Phaser Rate:  0.05 Hz .. 11.6 Hz, square in the dial
+
+// A mixer channel's level in dB, for a channel whose Curve is dB. Returns -infinity at the bottom
+// of the dial, where the printed scale reads "-oo"; the two steps above it are named rather than
+// computed. Both are the caller's business - this half of the split stays numeric.
+double mix_level_db(double paramValue);
+
+// The patch's master volume in dB: -78 at the bottom of the dial, 0 at the top.
+double patch_volume_db(double paramValue);
+
+// An envelope segment's length in seconds: the 0.5 ms .. 45 s scale the manual quotes.
 double adr_time_seconds(double paramValue);
 
 // A delay's Time/Clk selector index, which differs per module type; -1 if it has none.

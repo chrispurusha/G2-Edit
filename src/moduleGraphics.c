@@ -525,60 +525,75 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             render_param_function = NULL;
 
             switch (paramLocationList[paramRef].type) {
-                case paramTypeFreq:           render_param_function = &render_paramType1Freq;
+                case paramTypeFreq:           render_param_function     = &render_paramType1Freq;
                     break;
-                case paramTypeOscFreq:        render_param_function = &render_paramType1OscFreq;
+                case paramTypeOscFreq:        render_param_function     = &render_paramType1OscFreq;
                     break;
-                case paramTypeFine:           render_param_function = &render_paramType1Fine;
+                case paramTypeFine:           render_param_function     = &render_paramType1Fine;
                     break;
-                case paramTypeGeneralFreq:    render_param_function = &render_paramType1GeneralFreq;
+                case paramTypeGeneralFreq:    render_param_function     = &render_paramType1GeneralFreq;
                     break;
-                case paramTypeShape:          render_param_function = &render_paramType1Shape;
+                case paramTypeShape:          render_param_function     = &render_paramType1Shape;
                     break;
-                case paramTypeFreqDrum:       render_param_function = &render_paramType1FreqDrum;
+                case paramTypeFreqDrum:       render_param_function     = &render_paramType1FreqDrum;
                     break;
-                case paramTypeLFORate:        render_param_function = &render_paramType1LFORate;
+                case paramTypeLFORate:        render_param_function     = &render_paramType1LFORate;
                     break;
-                case paramTypeInt:            render_param_function = &render_paramType1Int;
+                case paramTypeInt:            render_param_function     = &render_paramType1Int;
                     break;
-                case paramTypedB:             render_param_function = &render_paramType1dB;
+                case paramTypedB:             render_param_function     = &render_paramType1dB;
                     break;
-                case paramTypeMixLevel:       render_param_function = &render_paramType1MixLevel;
+                case paramTypeMixLevel:       render_param_function     = &render_paramType1MixLevel;
                     break;
-                case paramTypeTime:           render_param_function = &render_paramType1Time;
+                case paramTypeTime:           render_param_function     = &render_paramType1Time;
                     break;
-                case paramTypeTimeClk:        render_param_function = &render_paramType1TimeClk;
+                case paramTypeTimeClk:        render_param_function     = &render_paramType1TimeClk;
                     break;
-                case paramTypeADRTime:        render_param_function = &render_paramType1ADRTime;
+                case paramTypeADRTime:        render_param_function     = &render_paramType1ADRTime;
                     break;
-                case paramTypePulseTime:      render_param_function = &render_paramType1PulseTime;
+                case paramTypePulseTime:      render_param_function     = &render_paramType1PulseTime;
                     break;
-                case paramTypePitch:          render_param_function = &render_paramType1Pitch;
+                case paramTypePitch:          render_param_function     = &render_paramType1Pitch;
                     break;
-                case paramTypeBipLevel:       render_param_function = &render_paramType1BipLevel;
+                case paramTypeBipLevel:       render_param_function     = &render_paramType1BipLevel;
                     break;
-                case paramTypePartials:       render_param_function = &render_paramType1Partials;
+                case paramTypePartials:       render_param_function     = &render_paramType1Partials;
                     break;
-                case paramTypeUniPol:         render_param_function = &render_paramType1UniPol;
+                case paramTypeUniPol:         render_param_function     = &render_paramType1UniPol;
                     break;
-                case paramTypeLevAmpDial:     render_param_function = &render_paramType1LevAmpDial;
+                case paramTypeLevAmpDial:     render_param_function     = &render_paramType1LevAmpDial;
                     break;
-                case paramTypePhase:          render_param_function = &render_paramType1Phase;
+                case paramTypeResonanceQ:         render_param_function = &render_paramType1ResonanceQ;
                     break;
 
-                case paramTypePan:            render_param_function = &render_paramType1Pan;
+                case paramTypeFlangerRate:        render_param_function = &render_paramType1FlangerRate;
                     break;
-                case paramTypeNoteDial:       render_param_function = &render_paramType1NoteDial;
+
+                case paramTypePhaserRate:         render_param_function = &render_paramType1PhaserRate;
+                    break;
+
+                case paramTypeSwing:          render_param_function     = &render_paramType1Swing;
+                    break;
+
+                case paramTypeBandwidth:      render_param_function     = &render_paramType1Bandwidth;
+                    break;
+
+                case paramTypePhase:          render_param_function     = &render_paramType1Phase;
+                    break;
+
+                case paramTypePan:            render_param_function     = &render_paramType1Pan;
+                    break;
+                case paramTypeNoteDial:       render_param_function     = &render_paramType1NoteDial;
                     break;
                 case paramTypeCommonDial:     // default percent dial
                 case paramTypeLRDial:         // pan-type dial
-                case paramTypeResonance:      render_param_function = &render_paramType1Resonance;
+                case paramTypeResonance:      render_param_function     = &render_paramType1Resonance;
                     break;
-                case paramTypeSlider:         render_param_function = &render_paramType1Slider;
+                case paramTypeSlider:         render_param_function     = &render_paramType1Slider;
                     break;
-                case paramTypeStrMap:         render_param_function = &render_paramType1StrMap;
+                case paramTypeStrMap:         render_param_function     = &render_paramType1StrMap;
                     break;
-                case paramTypeFreqShift:      render_param_function = &render_paramType1FreqShift;
+                case paramTypeFreqShift:      render_param_function     = &render_paramType1FreqShift;
                     break;
                 default:                      LOG_ERROR("Unrecognised paramType %d\n", paramLocationList[paramRef].type);
                     break;
@@ -1151,7 +1166,7 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
 // A small live graph of the classic Attack/Decay/Sustain/Release envelope shape, same spirit
 // and roughly the same size as the OscShpB waveform preview above. Segment WIDTHS are drawn
 // from each knob's own raw value independently (not real time - Attack/Decay/Release span
-// 0.5ms to 45s each, per ADRTimeStrMap, far too wide a dynamic range to draw to scale in a
+// 0.5ms to 45s each, far too wide a dynamic range to draw to scale in a
 // small box; and not normalised against each other either, since dividing by the sum of all
 // three made each segment's width depend on the OTHER two as well as its own knob, saturating
 // quickly enough that sweeping one knob only looked like it had two states). The Sustain
@@ -1355,7 +1370,7 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
 // single smooth curve. 18/24 dB/octave are modelled as extra plain one-pole rolloff stages
 // cascaded onto the base 2-pole (12dB) response, which also naturally narrows the peak further
 // at higher slopes, matching real higher-order filter behaviour. Q itself uses the real 0.5..50
-// range from filter_resonanceStrMap (as an exponential approximation, not a table lookup). The
+// range from flt_resonance_q(). The
 // X axis is ~10 octaves of relative frequency (roughly matching Freq's own real ~14Hz..21kHz
 // exponential range) rather than a literal Hz-calibrated Bode plot - the box is too small to be
 // literal about that regardless of curve shape. The cutoff is inset into a band across the box
@@ -1817,6 +1832,19 @@ void render_cables(void) {
     }
 }
 
+// Which source a morph group is taking, given its selector value. Every group offers the knob at 0
+// and one named alternative at 1 - except the FIFTH, which has a third: the first global wheel.
+// Treating any non-zero value as "the" named source showed a group 5 morph assigned to G.Wh 1 as
+// Sust.Pd instead.
+#define MORPH_GROUP_WITH_THIRD_SOURCE    (4)     // zero-based, i.e. the fifth group
+
+static const char * morph_source_name(uint32_t group, uint32_t sourceValue) {
+    if ((group == MORPH_GROUP_WITH_THIRD_SOURCE) && (sourceValue > 1)) {
+        return "G.Wh 1";
+    }
+    return morphStrMap[group];
+}
+
 void render_morph_groups(void) {
     tRectangle rectangle        = {{840, 4 + MENU_BAR_HEIGHT}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
     char       dialValueStr[16] = {0};
@@ -1853,7 +1881,7 @@ void render_morph_groups(void) {
                     snprintf(label, sizeof(label), "Knob");
                 }
             } else {
-                snprintf(label, sizeof(label), "%s", morphStrMap[i]);
+                snprintf(label, sizeof(label), "%s", morph_source_name(i, module->param[variation][i + NUM_MORPHS].value));
             }
             textHeight                                                                                 = rectangle.size.h / 4.0;
 
