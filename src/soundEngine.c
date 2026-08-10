@@ -2813,7 +2813,23 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
     gDelayLine[line][gDelayWrite[line]] = (float)(input + (fed * feedback));
     gDelayWrite[line]                   = (gDelayWrite[line] + 1) % DELAY_LINE_SAMPLES;
 
-    return (input * (1.0 - mix)) + (wet * mix);
+    // DRY/WET IS THE SAME NON-CROSSFADE THE REVERB USES, and this was a plain linear blend. The two
+    // gains are independent, each a ramp cubed, and they overlap: dry holds full scale until the
+    // knob passes the middle and only then falls, while wet reaches full AT the middle and stays.
+    //
+    // MEASURED ON THE INSTRUMENT — a saw through a real DelayB with the oscillator cut, so the
+    // repeats could be read on their own. The repeat level came out IDENTICAL at DryWet 64 and 127,
+    // both -12.2 dB against the dry reference, where a linear crossfade would put 64 a full 6 dB
+    // below 127. Total output stayed flat within 0.8 dB across the whole dial.
+    //
+    // Unlike the reverb, the delay's wet needs NO overall attenuation: fully wet measures -0.3 dB
+    // against fully dry, where the reverb needed -11.3. REVERB_WET_GAIN does not belong here.
+    {
+        double wetRamp = (mix >= 0.5) ? 1.0 : (mix * 2.0);
+        double dryRamp = (mix <= 0.5) ? 1.0 : ((1.0 - mix) * 2.0);
+
+        return (input * dryRamp * dryRamp * dryRamp) + (wet * wetRamp * wetRamp * wetRamp);
+    }
 }
 
 // A short delay whose length is swept by a slow LFO — detune sets the sweep depth, amount how much
