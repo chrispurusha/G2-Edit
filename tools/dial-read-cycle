@@ -1,0 +1,52 @@
+#!/bin/bash
+# ASKING THE SYNTH WHAT A DIAL ACTUALLY READS.
+#
+# The G2 shows a parameter's value on its panel only for a moment after the value changes, and only
+# for a parameter that has been ASSIGNED TO A KNOB. So a reading needs three things: the assignment,
+# a value change to trigger the display, and enough dwell to write the answer down.
+#
+#   1. G2_EDIT_BACKDOOR=1 "G2 Editor.app/Contents/MacOS/G2 Editor"
+#   2. NEWPATCH, ADDMODULE <name> per module, SLOT <n>, PUSH        - the patch, onto the synth
+#   3. DEVKNOB <knob 0-119> <VA|FX> <index> <param>                 - one per parameter to be read
+#   4. this script                                                  - the change/read cycle
+#
+# It nudges EVERY assigned knob away from the target together, settles them all back on it together,
+# then holds. Stepping them one at a time does not work in practice: each value is on screen for only
+# its own few seconds and they are easy to miss. Refreshing the whole knob page at once lets it be
+# read across at leisure. A 3 second hold proved about right.
+#
+# Read each dial at raw 0, 64 and 127. The middle one separates a bipolar scale from a percentage;
+# the top one catches a step pinned to a round number, which several dials do and several do not -
+# and which nothing in the middle of the scale reveals.
+#
+#   tools/dial-read-cycle 64 3 60        # settle on raw 64, hold 3s, 60 times
+TARGET="${1:-64}"
+HOLD="${2:-25}"
+CYCLES="${3:-12}"
+CMD=/tmp/g2edit_cmd.txt
+RES=/tmp/g2edit_result.txt
+
+send() {
+    printf '%s\n' "$1" > "$CMD"
+    for _ in $(seq 1 60); do
+        [ -f "$RES" ] && { rm -f "$RES"; return 0; }
+        perl -e 'select(undef,undef,undef,0.15)'
+    done
+    return 1
+}
+
+# The parameters to cycle, as DEVSET addresses: "<VA|FX> <module index> <param index>". Edit these
+# to match whatever DEVKNOB assignments were made in step 3.
+ADDRS=("VA 1 0" "VA 1 1" "VA 2 0" "VA 3 0" "VA 3 1" "VA 4 0"
+       "VA 5 9" "VA 5 22" "VA 6 0" "VA 7 0" "VA 8 1" "VA 9 0")
+
+NUDGE=$(( TARGET > 63 ? 10 : 110 ))
+
+for c in $(seq 1 "$CYCLES"); do
+    for a in "${ADDRS[@]}"; do send "DEVSET $a $NUDGE"; done
+    sleep 1
+    for a in "${ADDRS[@]}"; do send "DEVSET $a $TARGET"; done
+    echo "cycle $c/$CYCLES: all twelve settled on raw $TARGET, holding ${HOLD}s"
+    sleep "$HOLD"
+done
+echo "finished"
