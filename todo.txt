@@ -390,6 +390,22 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 
 OPEN WORK
 
+- STEREO REVERB, AND STEREO CHORUS BEHIND IT (next session, 2026-08-10). Both effects are MONO in
+  this engine and both are a decorrelated pair on the instrument. Neither is a tuning gap.
+  REVERB, measured 2026-08-09: the two outputs correlate at +0.012..+0.045 — statistically
+  independent — share almost no delay lengths, and have different pre-delays per channel.
+  reverb_step() returns one value from one comb/allpass bank, so it needs a SECOND TAP SET: its own
+  lengths and pre-delay, reverb_step() returning a pair, and stereo carried through the node
+  evaluation. The measured lengths are deliberately NOT to be dropped into a parallel comb bank
+  without more thought — see the REVERB entry below for why.
+  CHORUS is the easier one and should probably go first: measured 2026-08-10, it is the SAME
+  algorithm on both channels differing only in LFO PHASE, not a second structure. Proven by
+  rebuilding the patch repeatedly at Detune 0, where the LFO freezes wherever it happens to be: the
+  comb pattern changed completely between runs but was identical within a run. So a stereo chorus is
+  one delay line per channel with the LFO offset, most likely by a quarter or a half cycle — worth
+  measuring which, by capturing both channels at Detune 0 in the same run and comparing their frozen
+  delays over several runs.
+
 - MEASURE THE REST OF THE INSTRUMENT THE WAY THE REVERB WAS MEASURED (2026-08-10, owner's idea).
   Extend tools/ from "characterise the reverb" to "characterise any module we implement", so that
   every engine algorithm can be checked against the instrument instead of against an ear. The
