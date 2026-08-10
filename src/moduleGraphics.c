@@ -585,8 +585,12 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     break;
                 case paramTypeNoteDial:       render_param_function     = &render_paramType1NoteDial;
                     break;
+                case paramTypeBipolar:        // -64..+63, zero at the centre
+                case paramTypeLRDial:         // pan dial, same bipolar reading
+                    render_param_function                               = &render_paramType1Bipolar;
+                    break;
+
                 case paramTypeCommonDial:     // default percent dial
-                case paramTypeLRDial:         // pan-type dial
                 case paramTypeResonance:      render_param_function     = &render_paramType1Resonance;
                     break;
                 case paramTypeSlider:         render_param_function     = &render_paramType1Slider;

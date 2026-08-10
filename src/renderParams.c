@@ -725,6 +725,23 @@ tRectangle render_paramType1Phase(tModule * module, tRectangle rectangle, char *
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// A bipolar 128-step dial, counted from the centre: raw 64 reads 0, the bottom of the dial reads
+// -64 and the top +63. Confirmed on the hardware against a MixStereo Pan knob.
+//
+// The top step is +63 and NOT +64, so this is a plain raw - 64 with no correction at the end - the
+// opposite of the Gain and LevAmp dials, which do pin their top step to a round number. Worth
+// stating because the same shape appears in three places and only some of them do that.
+//
+// Positives carry a '+' so that the centre reads "0" rather than "+0" and the two halves of the
+// dial are told apart at a glance. These were rendering as a 0-100% percentage, which put the
+// centre of a pan knob at "50%" and gave no sign at all.
+tRectangle render_paramType1Bipolar(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    int value = (int)paramValue - 64;
+
+    snprintf(buff, buffSize, (value > 0) ? "+%d" : "%d", value);
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
 // A filter's resonance as Q, for the filters that read in Q rather than as a percentage. The synth
 // drops the decimals once Q reaches 10, which keeps the reading three characters wide across the
 // whole dial.
