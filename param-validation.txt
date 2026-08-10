@@ -9,7 +9,7 @@ been checked against the value the G2 itself shows.
   GAP   the renderer has no branch for this module, so it shows an error
   --    not yet checked
 
-264 of 918 parameters validated (0 flagged GAP).
+378 of 918 parameters validated (0 flagged GAP).
 
 ==============================================================================
 
@@ -30,11 +30,11 @@ OscB   [module type 7]
    0. Tune        OscFreq       --   
    1. Cent        Fine          OK   cents = (v-64)*50/64
    2. Kbt         Toggle        --   
-   3. Pitch       CommonDial    --   
+   3. Pitch       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
-   5. FM          CommonDial    --   
+   5. FM          CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    6. Shape       Shape         OK   percent = v*49/127 + 50
-   7. ShpM        CommonDial    --   
+   7. ShpM        CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    8. Waveform    Menu          OK   selector names match the G2 exactly
    9. Bypass      Bypass        OK   confirmed by the owner
   10. FM Type     Menu          OK   selector names match the G2 exactly
@@ -73,12 +73,12 @@ Reverb   [module type 12]
 OscString   [module type 13]
 ----------------------------
    0. OscString Tune        OscFreq       --   
-   1. Cent                  CommonDial    --   
+   1. Cent                  Fine          OK   cents = (v-64)*50/64
    2. OscString Kbt         Toggle        --   
-   3. Pitch                 CommonDial    --   
+   3. Pitch                 CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. OscString Pitch mode  Menu          --   enumerated selector - name list not yet cross-checked
-   5. Decay                 CommonDial    --   
-   6. Damp                  CommonDial    --   
+   5. Decay                 CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   6. Damp                  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    7. Bypass                Bypass        OK   confirmed by the owner
 
 Sw8-1 *** Needs more resources   [module type 15]
@@ -122,12 +122,12 @@ ModADSR   [module type 23]
 --------------------------
    0. A            ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    1. D            ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
-   2. S            CommonDial    --   
+   2. S            UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
    3. R            ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
-   4. Attack M     CommonDial    --   
-   5. Decay M      CommonDial    --   
-   6. Sustain M    CommonDial    --   
-   7. Release M    CommonDial    --   
+   4. Attack M     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   5. Decay M      CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   6. Sustain M    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   7. Release M    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    8. Output Type  Menu          --   enumerated selector - name list not yet cross-checked
    9. KB           Toggle        --   
 
@@ -144,12 +144,12 @@ LfoShpA   [module type 25]
    0. Rate     LFORate       OK   all four Range settings; BPM confirmed twice, independently
    1. Range    Menu          --   enumerated selector - name list not yet cross-checked
    2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
-   3. Rate M   CommonDial    --   
+   3. Rate M   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Bypass   Bypass        OK   confirmed by the owner
-   5. Shape    CommonDial    --   
-   6. Phase M  CommonDial    --   
+   5. Shape    CommonDial    --   declared as LfoShpAPW, but rendered as the plain percent dial - check
+   6. Phase M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    7. Phase    Phase         OK   degrees = raw*360/128, 0 to 357   [was showing the raw number, 2026-08-10]
-   8. Shape M  CommonDial    --   
+   8. Shape M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    9. Mode     Menu          OK   selector names match the G2 exactly
   10. OutType  Menu          --   enumerated selector - name list not yet cross-checked
   11. Wave     Menu          OK   selector names match the G2 exactly
@@ -159,7 +159,7 @@ LfoA   [module type 26]
    0. Rate     LFORate       OK   all four Range settings; BPM confirmed twice, independently
    1. Mode     Menu          OK   selector names match the G2 exactly
    2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
-   3. Rate M   CommonDial    --   
+   3. Rate M   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Wave     Menu          --   enumerated selector - name list not yet cross-checked
    5. Bypass   Bypass        OK   confirmed by the owner
    6. OutType  Menu          --   enumerated selector - name list not yet cross-checked
@@ -171,33 +171,33 @@ OscMaster   [module type 27]
    1. Cent       Fine          OK   cents = (v-64)*50/64
    2. Kbt        Toggle        --   
    3. Tune mode  Menu          --   enumerated selector - name list not yet cross-checked
-   4. Pitch M    CommonDial    --   
+   4. Pitch M    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
 
 Saturate   [module type 28]
 ---------------------------
-   0. Amount     CommonDial    --   
-   1. AmountMod  CommonDial    --   
+   0. Amount     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. AmountMod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Bypass     Bypass        OK   confirmed by the owner
    3. Curve      Menu          --   enumerated selector - name list not yet cross-checked
 
 MetNoise   [module type 29]
 ---------------------------
-   0. Color    CommonDial    --   
-   1. Freq     CommonDial    --   
+   0. Color    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. Freq     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Bypass   Bypass        OK   confirmed by the owner
-   3. Freq M   CommonDial    --   
-   4. Color M  CommonDial    --   
+   3. Freq M   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   4. Color M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
 
 Noise   [module type 31]
 ------------------------
-   0. Color   CommonDial    --   
+   0. Color   CommonDial    --   declared as NoiseColor, but rendered as the plain percent dial - check
    1. Bypass  Bypass        OK   confirmed by the owner
 
 Eq2Band   [module type 32]
 --------------------------
    0. Lo       dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
    1. Hi       dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
-   2. Level    CommonDial    --   
+   2. Level    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    3. Bypass   Bypass        OK   confirmed by the owner
    4. Lo Freq  Menu          --   enumerated selector - name list not yet cross-checked
    5. Hi Freq  Menu          --   enumerated selector - name list not yet cross-checked
@@ -215,8 +215,8 @@ Eq3Band   [module type 33]
 
 ShpExp   [module type 34]
 -------------------------
-   0. Amount     CommonDial    --   
-   1. AmountMod  CommonDial    --   
+   0. Amount     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. AmountMod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Bypass     Bypass        OK   confirmed by the owner
    3. Curve      Menu          OK   selector names match the G2 exactly
 
@@ -269,11 +269,11 @@ FltVoice   [module type 45]
    0. Vowel1    Menu          --   enumerated selector - name list not yet cross-checked
    1. Vowel2    Menu          --   enumerated selector - name list not yet cross-checked
    2. Vowel3    Menu          --   enumerated selector - name list not yet cross-checked
-   3. Level     CommonDial    --   
+   3. Level     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Vowel     BipLevel      --   
-   5. VowelMod  CommonDial    --   
+   5. VowelMod  CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
    6. Freq      BipLevel      --   
-   7. FreqMod   CommonDial    --   
+   7. FreqMod   CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
    8. Res       BipLevel      --   
    9. Bypass    Bypass        OK   confirmed by the owner
 
@@ -289,25 +289,25 @@ EnvAHD   [module type 46]
 
 Pan   [module type 47]
 ----------------------
-   0. PanMod  CommonDial    --   
-   1. Pan     LRDial        --   
+   0. PanMod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. Pan     LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
    2. LogLin  Menu          OK   selector names match the G2 exactly
 
 MixStereo   [module type 48]
 ----------------------------
-   0. Lvl1       CommonDial    --   
-   1. Lvl2       CommonDial    --   
-   2. Lvl3       CommonDial    --   
-   3. Lvl4       CommonDial    --   
-   4. Lvl5       CommonDial    --   
-   5. Lvl6       CommonDial    --   
-   6. Pan1       LRDial        --   
-   7. Pan2       LRDial        --   
-   8. Pan3       LRDial        --   
-   9. Pan4       LRDial        --   
-  10. Pan5       LRDial        --   
-  11. Pan6       LRDial        --   
-  12. LvlMaster  CommonDial    --   
+   0. Lvl1       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. Lvl2       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   2. Lvl3       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   3. Lvl4       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   4. Lvl5       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   5. Lvl6       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   6. Pan1       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   7. Pan2       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   8. Pan3       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   9. Pan4       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
+  10. Pan5       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
+  11. Pan6       LRDial        --   declared as Bipolar_127, but rendered as the plain percent dial - check
+  12. LvlMaster  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
 
 FltMulti   [module type 49]
 ---------------------------
@@ -321,29 +321,29 @@ FltMulti   [module type 49]
 
 ConstSwT   [module type 50]
 ---------------------------
-   0. Value    CommonDial    --   
+   0. Value    CommonDial    --   declared as LevBipUni, but rendered as the plain percent dial - check
    1. Switch   Toggle        OK   selector names match the G2 exactly
    2. Bip/Uni  Menu          --   enumerated selector - name list not yet cross-checked
 
 FltNord   [module type 51]
 --------------------------
    0. Freq        Freq          OK   Hz = 13.75 * 2^(v/12)
-   1. Pitch       CommonDial    --   
+   1. Pitch       Pitch         --   
    2. Kbt         Menu          --   enumerated selector - name list not yet cross-checked
    3. GC          Toggle        --   
    4. Res         ResonanceQ    OK   Q = 0.5/(1 - 0.9v/127)^2   [computed, table retired 2026-08-10]
    5. dB/Oct      Menu          OK   selector names match the G2 exactly
    6. Bypass      Bypass        OK   confirmed by the owner
-   7. Fm Lin      CommonDial    --   
+   7. Fm Lin      CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    8. FilterType  Menu          OK   selector names match the G2 exactly
-   9. Res M       CommonDial    --   
+   9. Res M       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
 
 EnvMulti   [module type 52]
 ---------------------------
-   0. L1       CommonDial    --   
-   1. L2       CommonDial    --   
-   2. L3       CommonDial    --   
-   3. L4       CommonDial    --   
+   0. L1       UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
+   1. L2       UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
+   2. L3       UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
+   3. L4       UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
    4. T1       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    5. T2       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    6. T3       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
@@ -357,7 +357,7 @@ EnvMulti   [module type 52]
 FltStatic   [module type 54]
 ----------------------------
    0. Freq        Freq          OK   Hz = 13.75 * 2^(v/12)
-   1. Res         Resonance     OK   percent = v*100/128, no decimal at 0/25/50/75/100  [corrected 2026-08-10]
+   1. Res         ResonanceQ    OK   Q = 0.5/(1 - 0.9v/127)^2   [computed, table retired 2026-08-10]
    2. FilterType  Menu          OK   selector names match the G2 exactly
    3. Bypass      Bypass        OK   confirmed by the owner
    4. GC          Toggle        --   
@@ -372,38 +372,38 @@ Resonator (Not in Clavia editor)   [module type 56]
    0. Tune        OscFreq       --   
    1. Cent        Fine          OK   cents = (v-64)*50/64
    2. Kbt         Toggle        --   
-   3. Pitch       CommonDial    --   
+   3. Pitch       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
-   5. Decay       CommonDial    --   
-   6. Damp        CommonDial    --   
+   5. Decay       UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
+   6. Damp        UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
    7. Bypass      Bypass        OK   confirmed by the owner
-   8. Pos         CommonDial    --   
+   8. Pos         UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
    9. Alg         Menu          --   enumerated selector - name list not yet cross-checked
 
 Automate *** We lack an UI element for the CTRL selector   [module type 57]
 ---------------------------------------------------------------------------
-   0. Ctrl  CommonDial    --   
-   1. Val   CommonDial    --   
+   0. Ctrl  CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
+   1. Val   CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
    2. Ch    Menu          --   enumerated selector - name list not yet cross-checked
    3. Echo  Menu          OK   selector names match the G2 exactly
 
 Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Bend/Click/Noise(y=65)   [module type 58]
 --------------------------------------------------------------------------------------------------------------------
    0. Master Freq       FreqDrum      --   
-   1. Slave Ratio       CommonDial    --   
+   1. Slave Ratio       CommonDial    --   declared as DrumSynthRatio, but rendered as the plain percent dial - check
    2. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    3. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
-   4. Lev               CommonDial    --   
-   5. Lev               CommonDial    --   
+   4. Lev               CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   5. Lev               CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    6. Freq              Freq          OK   Hz = 13.75 * 2^(v/12)
    7. Res               Resonance     OK   percent = v*100/128, no decimal at 0/25/50/75/100  [corrected 2026-08-10]
-   8. Swp               CommonDial    --   
+   8. Swp               CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    9. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
   10. Noise FilterType  Menu          OK   selector names match the G2 exactly
-  11. Amt               CommonDial    --   
+  11. Amt               CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
   12. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
-  13. Click             CommonDial    --   
-  14. Noise             CommonDial    --   
+  13. Click             CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+  14. Noise             CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
   15. Preset            Menu          --   enumerated selector - name list not yet cross-checked
 
 CompLev   [module type 59]
@@ -416,23 +416,23 @@ Mux8-1X   [module type 60]
 
 Clip   [module type 61]
 -----------------------
-   0. Clip level M  CommonDial    --   
-   1. Clip level    CommonDial    --   
+   0. Clip level M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. Clip level    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Shape         Menu          OK   selector names match the G2 exactly
    3. Bypass        Bypass        OK   confirmed by the owner
 
 OverDrive   [module type 62]
 ----------------------------
-   0. Amount M  CommonDial    --   
-   1. Amount    CommonDial    --   
+   0. Amount M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. Amount    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Bypass    Bypass        OK   confirmed by the owner
    3. Type      Menu          OK   selector names match the G2 exactly
    4. Shape     Menu          OK   selector names match the G2 exactly
 
 Scratch   [module type 63]
 --------------------------
-   0. Ratio      CommonDial    --   
-   1. Ratio Mod  CommonDial    --   
+   0. Ratio      CommonDial    --   declared as ScratchRatio, but rendered as the plain percent dial - check
+   1. Ratio Mod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Delay      Menu          --   enumerated selector - name list not yet cross-checked
    3. Bypass     Bypass        OK   confirmed by the owner
 
@@ -446,7 +446,7 @@ Mix2-1B   [module type 66]
 
 ClkGen   [module type 68]
 -------------------------
-   0. Tempo *** needs new dial 24-214 BPM  CommonDial    --   
+   0. Tempo *** needs new dial 24-214 BPM  CommonDial    --   declared as RateBpm, but rendered as the plain percent dial - check
    1. Bypass                               Bypass        OK   confirmed by the owner
    2. Source                               Menu          --   enumerated selector - name list not yet cross-checked
    3. Sync every                           Menu          --   enumerated selector - name list not yet cross-checked
@@ -463,18 +463,18 @@ EnvFollow   [module type 71]
 
 NoteScaler   [module type 72]
 -----------------------------
-   0. Range  CommonDial    --   
+   0. Range  CommonDial    --   declared as NoteRange, but rendered as the plain percent dial - check
 
 WaveWrap   [module type 74]
 ---------------------------
-   0. Amount Mod  CommonDial    --   
-   1. Amount      CommonDial    --   
+   0. Amount Mod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. Amount      CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Bypass      Bypass        OK   confirmed by the owner
 
 NoteQuant   [module type 75]
 ----------------------------
-   0. Range  CommonDial    --   
-   1. Notes  CommonDial    --   
+   0. Range  CommonDial    --   declared as NoteRange, but rendered as the plain percent dial - check
+   1. Notes  CommonDial    --   declared as NoteQuantNotes, but rendered as the plain percent dial - check
 
 SwOnOffT   [module type 76]
 ---------------------------
@@ -516,13 +516,13 @@ EnvADR   [module type 84]
 
 WindSw   [module type 85]
 -------------------------
-   0. From  CommonDial    --   
-   1. To    CommonDial    --   
+   0. From  CommonDial    --   declared as Range_64, but rendered as the plain percent dial - check
+   1. To    CommonDial    --   declared as Range_64, but rendered as the plain percent dial - check
 
 FltLP   [module type 87]
 ------------------------
    0. Freq     Freq          OK   Hz = 13.75 * 2^(v/12)
-   1. FreqMod  CommonDial    --   
+   1. FreqMod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
    3. Slope    Menu          --   enumerated selector - name list not yet cross-checked
    4. Bypass   Bypass        OK   confirmed by the owner
@@ -534,8 +534,8 @@ Sw1-4   [module type 88]
 Flanger   [module type 89]
 --------------------------
    0. Rate      FlangerRate   OK   Hz = v*384000/2^24, half a step at v=0   [computed, table retired 2026-08-10]
-   1. Range     CommonDial    --   
-   2. Feedback  CommonDial    --   
+   1. Range     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   2. Feedback  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    3. Bypass    Bypass        OK   confirmed by the owner
 
 Sw1-2   [module type 90]
@@ -553,8 +553,8 @@ FltClassic   [module type 92]
 
 StChorus   [module type 94]
 ---------------------------
-   0. Detune     CommonDial    --   
-   1. Amount     CommonDial    --   
+   0. Detune     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. Amount     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. (unnamed)  Bypass        OK   confirmed by the owner
 
 OscD   [module type 96]
@@ -568,9 +568,9 @@ OscD   [module type 96]
 OscA   [module type 97]
 -----------------------
    0. Tune        OscFreq       --   
-   1. Cent        CommonDial    --   
+   1. Cent        Fine          OK   cents = (v-64)*50/64
    2. Kbt         Toggle        --   
-   3. Pitch       CommonDial    --   
+   3. Pitch       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Waveform    Menu          --   enumerated selector - name list not yet cross-checked
    5. Bypass      Bypass        OK   confirmed by the owner
    6. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
@@ -578,7 +578,7 @@ OscA   [module type 97]
 FreqShift   [module type 98]
 ----------------------------
    0. FreqShift  FreqShift     --   
-   1. Mod        CommonDial    --   
+   1. Mod        CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Range      Menu          --   enumerated selector - name list not yet cross-checked
    3. Bypass     Bypass        OK   confirmed by the owner
 
@@ -588,25 +588,25 @@ Sw2-1   [module type 100]
 
 FltPhase   [module type 102]
 ----------------------------
-   0. Pitch     CommonDial    --   
+   0. Pitch     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    1. Freq      Freq          OK   Hz = 13.75 * 2^(v/12)
-   2. Spread M  CommonDial    --   
-   3. FB        CommonDial    --   
+   2. Spread M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   3. FB        CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
    4. Notch     Menu          --   enumerated selector - name list not yet cross-checked
-   5. Spread    CommonDial    --   
+   5. Spread    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    6. Bypass    Bypass        OK   confirmed by the owner
-   7. Level     CommonDial    --   
-   8. FB Mod    CommonDial    --   
+   7. Level     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   8. FB Mod    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    9. Type      Menu          OK   selector names match the G2 exactly
   10. Kbt       Menu          --   enumerated selector - name list not yet cross-checked
 
 EqPeak   [module type 103]
 --------------------------
    0. Freq    Freq          OK   Hz = 13.75 * 2^(v/12)
-   1. Gain    BipLevel      --   
+   1. Gain    dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
    2. BW      Bandwidth     OK   octaves = (128-raw)/64, 2.00 down to 0.02 - runs backwards   [was raw, 2026-08-10]
    3. Bypass  Bypass        OK   confirmed by the owner
-   4. Level   CommonDial    --   
+   4. Level   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
 
 ValSw2-1   [module type 105]
 ----------------------------
@@ -615,12 +615,12 @@ ValSw2-1   [module type 105]
 OscNoise   [module type 106]
 ----------------------------
    0. Tune        OscFreq       --   
-   1. Cent        CommonDial    --   
+   1. Cent        Fine          OK   cents = (v-64)*50/64
    2. Kbt         Toggle        OK   selector names match the G2 exactly
-   3. Pitch       CommonDial    --   
+   3. Pitch       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
-   5. Width       CommonDial    --   
-   6. Width M     CommonDial    --   
+   5. Width       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   6. Width M     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    7. Bypass      Bypass        OK   confirmed by the owner
 
 Vocoder   [module type 108]
@@ -646,7 +646,7 @@ Vocoder   [module type 108]
 
 LevAdd   [module type 112]
 --------------------------
-   0. Constant  CommonDial    --   
+   0. Constant  CommonDial    --   declared as LevBipUni, but rendered as the plain percent dial - check
    1. Bip/Uni   Menu          --   enumerated selector - name list not yet cross-checked
 
 Fade1-2   [module type 113]
@@ -662,7 +662,7 @@ Fade2-1   [module type 114]
 LevScaler   [module type 115]
 -----------------------------
    0. L    dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
-   1. BP   CommonDial    --   
+   1. BP   CommonDial    --   declared as FreqCoarse, but rendered as the plain percent dial - check
    2. R    dB            OK   dB = (v-64)*18/64, one decimal, top step 128  [corrected 2026-08-10]
    3. Kbt  Toggle        OK   selector names match the G2 exactly
 
@@ -672,14 +672,14 @@ Mix8-1A   [module type 116]
 
 LevMod   [module type 117]
 --------------------------
-   0. ModDepth  CommonDial    --   
-   1. ModType   CommonDial    --   
+   0. ModDepth  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. ModType   CommonDial    --   declared as LevModAmRm, but rendered as the plain percent dial - check
 
 Digitizer   [module type 118]
 -----------------------------
    0. Bits         Menu          --   enumerated selector - name list not yet cross-checked
-   1. Sample Rate  CommonDial    --   
-   2. Rate         CommonDial    --   
+   1. Sample Rate  CommonDial    --   declared as DigitizerRate, but rendered as the plain percent dial - check
+   2. Rate         CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    3. Bypass       Bypass        OK   confirmed by the owner
 
 EnvADDSR   [module type 119]
@@ -688,9 +688,9 @@ EnvADDSR   [module type 119]
    1. Shape    Menu          OK   selector names match the G2 exactly
    2. A        ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    3. D1       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
-   4. L1       CommonDial    --   
+   4. L1       UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
    5. D2       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
-   6. L2       CommonDial    --   
+   6. L2       UniPol        OK   raw/2 shown as N.0 / N.5, top step 64.0
    7. R        ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    8. Sustain  Menu          OK   selector names match the G2 exactly
    9. Pos      Menu          --   enumerated selector - name list not yet cross-checked
@@ -754,7 +754,7 @@ Mix4-1C   [module type 123]
 WahWah   [module type 125]
 --------------------------
    0. Sweep M  Freq          OK   Hz = 13.75 * 2^(v/12)
-   1. Sweep    CommonDial    --   
+   1. Sweep    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Bypass   Bypass        OK   confirmed by the owner
 
 Fx-In   [module type 127]
@@ -784,18 +784,18 @@ Mix4-1S   [module type 140]
 
 CtrlSend   [module type 141]
 ----------------------------
-   0. Ctrl   CommonDial    --   
-   1. Value  CommonDial    --   
+   0. Ctrl   CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
+   1. Value  CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
    2. Chan   Menu          --   enumerated selector - name list not yet cross-checked
 
 PCSend   [module type 142]
 --------------------------
-   0. Program  CommonDial    --   
+   0. Program  CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
    1. Chan     Menu          --   enumerated selector - name list not yet cross-checked
 
 NoteSend   [module type 143]
 ----------------------------
-   0. Vel   CommonDial    --   
+   0. Vel   CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
    1. Note  NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
    2. Chan  Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -922,7 +922,7 @@ SeqLev   [module type 146]
 
 CtrRcv   [module type 147]
 --------------------------
-   0. Ctrl  CommonDial    --   
+   0. Ctrl  CommonDial    --   declared as MidiData, but rendered as the plain percent dial - check
    1. Chan  Menu          --   enumerated selector - name list not yet cross-checked
 
 NoteRcv   [module type 148]
@@ -935,7 +935,7 @@ NoteZone   [module type 149]
    0. RChan  Menu          --   enumerated selector - name list not yet cross-checked
    1. Min    NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
    2. Max    NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
-   3. Trans  CommonDial    --   
+   3. Trans  CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
    4. SChan  Menu          --   enumerated selector - name list not yet cross-checked
    5. Thru   Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -951,7 +951,7 @@ Compress   [module type 150]
 
 KeyQuant   [module type 152]
 ----------------------------
-   0. Range    CommonDial    --   
+   0. Range    CommonDial    --   declared as NoteRange, but rendered as the plain percent dial - check
    1. Capture  Menu          OK   selector names match the G2 exactly
    2. Note E   Enable        --   enumerated selector - name list not yet cross-checked
    3. Note F   Enable        --   enumerated selector - name list not yet cross-checked
@@ -1045,43 +1045,43 @@ MixFader   [module type 161]
 FltComb   [module type 162]
 ---------------------------
    0. Freq    Freq          OK   Hz = 13.75 * 2^(v/12)
-   1. Pitch   CommonDial    --   
+   1. Pitch   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Kbt     Menu          --   enumerated selector - name list not yet cross-checked
-   3. FB      CommonDial    --   
-   4. FB Mod  CommonDial    --   
+   3. FB      CommonDial    --   declared as Bipolar_127, but rendered as the plain percent dial - check
+   4. FB Mod  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    5. Type    Menu          OK   selector names match the G2 exactly
-   6. Level   CommonDial    --   
+   6. Level   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    7. Bypass  Bypass        OK   confirmed by the owner
 
 OscShpA   [module type 163]
 ---------------------------
    0. Pitch           OscFreq       --   
-   1. Cent            CommonDial    --   
+   1. Cent            Fine          OK   cents = (v-64)*50/64
    2. Kbt             Toggle        OK   selector names match the G2 exactly
-   3. Pitch           CommonDial    --   
+   3. Pitch           CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Tune M          Menu          --   enumerated selector - name list not yet cross-checked
-   5. FM              CommonDial    --   
+   5. FM              CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    6. FM Pitch Track  Menu          OK   selector names match the G2 exactly
-   7. Shape           CommonDial    --   
-   8. ShpCtrl         CommonDial    --   
+   7. Shape           Shape         OK   percent = v*49/127 + 50
+   8. ShpCtrl         CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    9. Wave            Menu          --   enumerated selector - name list not yet cross-checked
   10. Bypass          Bypass        OK   confirmed by the owner
 
 OscDual   [module type 164]
 ---------------------------
    0. Pitch   OscFreq       --   
-   1. Cent    CommonDial    --   
+   1. Cent    Fine          OK   cents = (v-64)*50/64
    2. Kbt     Toggle        OK   selector names match the G2 exactly
-   3. Pitch   CommonDial    --   
+   3. Pitch   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Tune M  Menu          --   enumerated selector - name list not yet cross-checked
-   5. SqrLvl  CommonDial    --   
-   6. PW      CommonDial    --   
-   7. SawLvl  CommonDial    --   
+   5. SqrLvl  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   6. PW      CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   7. SawLvl  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    8. Phase   Phase         OK   degrees = raw*360/128, 0 to 357   [was showing the raw number, 2026-08-10]
-   9. ubLvl   CommonDial    --   
+   9. ubLvl   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
   10. Bypass  Bypass        OK   confirmed by the owner
-  11. Sqr M   CommonDial    --   
-  12. Saw M   CommonDial    --   
+  11. Sqr M   CommonDial    --   declared as PW, but rendered as the plain percent dial - check
+  12. Saw M   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
   13. Soft    Menu          OK   selector names match the G2 exactly
 
 DXRouter   [module type 165]
@@ -1091,9 +1091,9 @@ DXRouter   [module type 165]
 
 PShift   [module type 167]
 --------------------------
-   0. Semi     CommonDial    --   
-   1. Fine     CommonDial    --   
-   2. Shift M  CommonDial    --   
+   0. Semi     CommonDial    --   declared as PShiftCoarse, but rendered as the plain percent dial - check
+   1. Fine     CommonDial    --   declared as PShiftFine, but rendered as the plain percent dial - check
+   2. Shift M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    3. Delay    Menu          --   enumerated selector - name list not yet cross-checked
    4. Bypass   Bypass        OK   confirmed by the owner
 
@@ -1102,9 +1102,9 @@ ModAHD   [module type 169]
    0. Attack     ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    1. Hold       ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    2. Decay      ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
-   3. Attack M   CommonDial    --   
-   4. Hold M     CommonDial    --   
-   5. Attack M   CommonDial    --   
+   3. Attack M   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   4. Hold M     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   5. Attack M   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    6. (unnamed)  Menu          --   enumerated selector - name list not yet cross-checked
    7. (unnamed)  Toggle        --   
 
@@ -1179,25 +1179,25 @@ Operator   [module type 180]
    1. Sync         Menu          OK   selector names match the G2 exactly
    2. RatioFixes   Menu          OK   selector names match the G2 exactly
    3. Coarse       Freq          OK   Hz = 13.75 * 2^(v/12)
-   4. Fine         CommonDial    --   
+   4. Fine         CommonDial    --   declared as OpFreqFine, but rendered as the plain percent dial - check
    5. Detune       Menu          --   enumerated selector - name list not yet cross-checked
    6. Vel          Menu          --   enumerated selector - name list not yet cross-checked
    7. RateScale    Menu          --   enumerated selector - name list not yet cross-checked
-   8. R1           CommonDial    --   
-   9. L1           CommonDial    --   
-  10. R2           CommonDial    --   
-  11. L2           CommonDial    --   
-  12. R3           CommonDial    --   
-  13. L3           CommonDial    --   
-  14. R4           CommonDial    --   
-  15. L4           CommonDial    --   
+   8. R1           CommonDial    --   declared as OpTime, but rendered as the plain percent dial - check
+   9. L1           CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
+  10. R2           CommonDial    --   declared as OpTime, but rendered as the plain percent dial - check
+  11. L2           CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
+  12. R3           CommonDial    --   declared as OpTime, but rendered as the plain percent dial - check
+  13. L3           CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
+  14. R4           CommonDial    --   declared as OpTime, but rendered as the plain percent dial - check
+  15. L4           CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
   16. AMod         Menu          --   enumerated selector - name list not yet cross-checked
   17. BrPt         NoteDial      OK   note = raw mod 12, octave = raw/12 - 1; C-1 at raw 0
   18. LDepth Mode  Menu          OK   selector names match the G2 exactly
   19. Ldepth       Menu          --   enumerated selector - name list not yet cross-checked
   20. RDepth Mode  Menu          OK   selector names match the G2 exactly
   21. Rdepth       Menu          --   enumerated selector - name list not yet cross-checked
-  22. Level        CommonDial    --   
+  22. Level        CommonDial    --   declared as OpLevel, but rendered as the plain percent dial - check
   23. Bypass       Bypass        OK   confirmed by the owner
   24. KBEnv        Toggle        OK   selector names match the G2 exactly
 
@@ -1251,7 +1251,7 @@ Sw2-1M   [module type 187]
 
 ConstSwM   [module type 188]
 ----------------------------
-   0. Level                              CommonDial    --   
+   0. Level                              CommonDial    --   declared as LevBipUni, but rendered as the plain percent dial - check
    1. Selector *** needs new UI element  Menu          OK   selector names match the G2 exactly
    2. Bip/Uni                            Menu          --   enumerated selector - name list not yet cross-checked
 
@@ -1264,8 +1264,8 @@ NoiseGate   [module type 189]
 
 LfoB   [module type 190]
 ------------------------
-   0. Rate     CommonDial    --   
-   1. Rate M   CommonDial    --   
+   0. Rate     LFORate       OK   all four Range settings; BPM confirmed twice, independently
+   1. Rate M   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. Range    Menu          --   enumerated selector - name list not yet cross-checked
    3. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
    4. Wave     Menu          --   enumerated selector - name list not yet cross-checked
@@ -1273,13 +1273,13 @@ LfoB   [module type 190]
    6. Phase    Phase         OK   degrees = raw*360/128, 0 to 357   [was showing the raw number, 2026-08-10]
    7. Bypass   Bypass        OK   confirmed by the owner
    8. OutType  Menu          --   enumerated selector - name list not yet cross-checked
-   9. Phase M  CommonDial    --   
+   9. Phase M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
 
 Phaser   [module type 192]
 --------------------------
    0. Type    Menu          OK   selector names match the G2 exactly
    1. Rate    PhaserRate    OK   Hz = (floor(v^2/2)*24000 + 768000)/2^24   [computed, table retired 2026-08-10]
-   2. FB      CommonDial    --   
+   2. FB      CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    3. Bypass  Bypass        OK   confirmed by the owner
 
 Mix2-1A   [module type 194]
@@ -1292,7 +1292,7 @@ Mix2-1A   [module type 194]
 
 ModAmt   [module type 195]
 --------------------------
-   0. Depth    CommonDial    --   
+   0. Depth    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    1. Enable   Toggle        OK   selector names match the G2 exactly
    2. Exp/Lin  Menu          OK   selector names match the G2 exactly
    3. m/1-m    Menu          OK   selector names match the G2 exactly
@@ -1300,18 +1300,18 @@ ModAmt   [module type 195]
 OscPerc   [module type 196]
 ---------------------------
    0. Tune       OscFreq       --   
-   1. Cent       CommonDial    --   
+   1. Cent       Fine          OK   cents = (v-64)*50/64
    2. Tune Mode  Menu          --   enumerated selector - name list not yet cross-checked
    3. Kbt        Toggle        OK   selector names match the G2 exactly
-   4. Pitch      CommonDial    --   
+   4. Pitch      CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    5. Decay      ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
-   6. Click      CommonDial    --   
+   6. Click      CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    7. Punch      Toggle        OK   selector names match the G2 exactly
    8. Bypass     Bypass        OK   confirmed by the owner
 
 PitchTrack   [module type 198]
 ------------------------------
-   0. Threshold  CommonDial    --   
+   0. Threshold  CommonDial    --   declared as Treshold_127, but rendered as the plain percent dial - check
 
 MonoKey   [module type 199]
 ---------------------------
@@ -1332,8 +1332,8 @@ RandomB   [module type 202]
    0. Rate            Freq          OK   Hz = 13.75 * 2^(v/12)
    1. Poly/Mono mode  Menu          OK   selector names match the G2 exactly
    2. Kbt             Toggle        OK   selector names match the G2 exactly
-   3. Rate            CommonDial    --   
-   4. Step            CommonDial    --   
+   3. Rate            CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   4. Step            CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    5. Bypass          Bypass        OK   confirmed by the owner
    6. OutType         Menu          OK   selector names match the G2 exactly
    7. Range           Menu          --   enumerated selector - name list not yet cross-checked
@@ -1341,7 +1341,7 @@ RandomB   [module type 202]
 
 RndClkA   [module type 204]
 ---------------------------
-   0. Step    CommonDial    --   
+   0. Step    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    1. Mode    Menu          --   enumerated selector - name list not yet cross-checked
    2. Dice    Menu          --   enumerated selector - name list not yet cross-checked
    3. Out     Menu          --   enumerated selector - name list not yet cross-checked
@@ -1349,8 +1349,8 @@ RndClkA   [module type 204]
 
 RndTrig   [module type 205]
 ---------------------------
-   0. Step    CommonDial    --   
-   1. StepM   CommonDial    --   
+   0. Step    CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   1. StepM   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    2. On/Off  Bypass        OK   confirmed by the owner
    3. Mode    Menu          --   enumerated selector - name list not yet cross-checked
 
