@@ -57,6 +57,12 @@ double flt_kbt_amount(uint32_t kbtValue);                  // Kbt scroll: 0, 0.2
 double lev_amp_gain(double paramValue);                    // LevAmp multiplier: 0.25x .. 4.0x, unity at 64
 double lfo_rate_hz(uint32_t rangeMode, double paramValue); // LFO speed in Hz for a Range setting
 
+// These four were read off the hardware at raw 0, 64 and 127 rather than inferred.
+double pshift_semitones(double paramValue);                // PShift Semi:  -16.0 .. +15.75, quarter semitones
+double scratch_ratio(double paramValue);                   // Scratch Ratio: -4.00 .. +4.00, 0 is a standstill
+double digitizer_rate_hz(double paramValue);               // Digitizer Rate: 32.70 Hz .. 50.2 kHz, a pitch scale
+double pitchtrack_threshold_db(double paramValue);         // PitchTrack Threshold: -inf .. 0 dB
+
 double flanger_rate_hz(double paramValue);                 // Flanger Rate: 0.01 Hz .. 2.91 Hz, linear
 double phaser_rate_hz(double paramValue);                  // Phaser Rate:  0.05 Hz .. 11.6 Hz, square in the dial
 

@@ -426,6 +426,53 @@ double clk_sync_beats(double paramValue) {
     return beats[clk_sync_index(paramValue)];
 }
 
+// The curves below were read off the hardware directly - the dial set to raw 0, 64 and 127 in turn
+// and the synth's own panel display recorded - so each is anchored at three points rather than
+// inferred. Where the top step is pinned to a round number that is noted, because the dials are not
+// consistent about it and it is invisible from the middle of the scale.
+
+// PShift's Semi: a QUARTER of a semitone per dial step, so the whole dial spans -16.0 to +15.75
+// rather than the ±64 its name suggests. Read -16.0 / +0.0 / +15.8 at raw 0 / 64 / 127, and that
+// last one says the top step is NOT rounded up to +16.
+#define PSHIFT_SEMI_STEPS_PER_SEMITONE    (4.0)
+
+double pshift_semitones(double paramValue) {
+    return (paramValue - 64.0) / PSHIFT_SEMI_STEPS_PER_SEMITONE;
+}
+
+// Scratch's Ratio: playback speed as a signed multiple, -4.00 through 0 to +4.00, sixteen dial steps
+// to each whole multiple. Zero is a standstill and the negative half plays backwards, which is what
+// the control is for. Read -x4.00 / x0 / x4.00, and the top step IS pinned - the curve alone would
+// give 3.94 at raw 127.
+#define SCRATCH_STEPS_PER_MULTIPLE    (16.0)
+#define SCRATCH_MAX_MULTIPLE          (4.0)
+
+double scratch_ratio(double paramValue) {
+    if (paramValue >= 127.0) {
+        return SCRATCH_MAX_MULTIPLE;
+    }
+    return (paramValue - 64.0) / SCRATCH_STEPS_PER_MULTIPLE;
+}
+
+// The Digitizer's Sample Rate, in hertz. A PITCH SCALE, not a linear rate: twelve dial steps to a
+// doubling, from 32.70 Hz - which is C1 - up to 50.2 kHz. Read 32.70 Hz / 1.32 kHz / 50.2 kHz at
+// raw 0 / 64 / 127, all three matching to the printed precision.
+double digitizer_rate_hz(double paramValue) {
+    return 1760.0 * exp2((paramValue - 69.0) / 12.0);
+}
+
+// PitchTrack's Threshold, in decibels: a plain amplitude ratio against full scale, 20*log10(raw/127).
+// Silence at the bottom of the dial and 0 dB at the top. Read as "- Infinity" / -6.0 dB / -0 dB.
+//
+// NOT the cubic-blended curve the mixer levels use - that one gives -17.6 dB at the middle of the
+// dial where this reads -6.0, so the two are nothing like each other despite both being decibels.
+double pitchtrack_threshold_db(double paramValue) {
+    if (paramValue <= 0.0) {
+        return -1.0 / 0.0;    // Silence - the panel shows this step as "- Infinity"
+    }
+    return 20.0 * log10(paramValue / 127.0);
+}
+
 // A flanger's sweep rate in hertz. COUNTED IN A 24-BIT FRACTION, not in hertz: the step is
 // 384000/2^24, an exact binary fraction, so the whole scale is a straight line of 2^-24 units and
 // the top of the dial lands on 2.91 Hz. The bottom step is HALF a step rather than nothing, which
