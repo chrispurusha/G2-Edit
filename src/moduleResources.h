@@ -2443,8 +2443,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDelayA,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 177 DelayB
     {moduleTypeDelayB,      connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },     // 177
-    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 29,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },     // 169 E
-    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 63,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },     // 169 E
+    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 29,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight },     // 169 E
+    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 63,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight },     // 169 E
     {moduleTypeDelayB,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 178 DlyClock
     {moduleTypeDlyClock,    connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft }, // 178 In
