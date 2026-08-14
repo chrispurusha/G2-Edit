@@ -430,7 +430,27 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     // Focus follows the pane a press lands in, BEFORE the click is interpreted: everything below
     // reads gLocation, and in a split view that has to mean "the half you just clicked in" or a
     // module in the FX pane would be looked up in the Voice Area.
-    if (mouseButton == mouseButtonLeftDown || mouseButton == mouseButtonRightDown) {
+    //
+    // A LEFT press while a context menu is open is exempt, and that exemption is why "create module"
+    // in the FX area used to create it in the Voice Area. The menu is raised on right-UP at the click
+    // position, but clamp_menu_to_screen() (SynthLib's contextMenu.c) slides a frame back UP the
+    // window when it would overrun the bottom — and the module menu is tall. Right-click low in the
+    // FX pane, which is the LOWER of the two, and most of its items are drawn over the Voice Area.
+    // Selecting one is a left press landing in pane 0, which re-pointed gLocation at the Voice Area
+    // before menu_action_create() read it. The ROW came out wrong with it: the position does come
+    // from gContextMenu.originCoord, the unclamped right-click, but
+    // convert_mouse_coord_to_module_column_row() resolves it against whichever pane is current, and
+    // the FX pane starts further down the window. Measured, one right-click at the same point: FX
+    // col 3 row 2 with this guard, VA col 3 row 14 without it. Every other menu action reading
+    // gLocation had the same hole — the cable-chain commands test it against the location the menu
+    // was RAISED against (cable_menu_node()) and so silently did nothing at all.
+    //
+    // Nothing is lost by skipping it: every left-press handler below is already gated on
+    // !gContextMenu.active, so while a menu is open the press has no other effect to be focused for.
+    // A RIGHT press is NOT exempt — it always begins a fresh menu, replacing any open one on
+    // right-up, so it must point focus at the pane it landed in.
+    if (  (mouseButton == mouseButtonRightDown)
+       || ((mouseButton == mouseButtonLeftDown) && !gContextMenu.active)) {
         split_view_focus_at(coord);
         location = gLocation;
     }

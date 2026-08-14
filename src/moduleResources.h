@@ -461,53 +461,53 @@ const tParamLocation     paramLocationList[] = {
     //  5 Invert -- No params
     //  6 Unknown
     //  7 OscB
-    {moduleTypeOscB,       paramTypeOscFreq,        {{ 29,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                    // 7 Tune
-    {moduleTypeOscB,       paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                    // 7 Cent
-    {moduleTypeOscB,       paramTypeToggle,         {{ 12,   -15}, { 7,  7}}, anchorBottomLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap},                    // 7 Kbt
-    {moduleTypeOscB,       paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                    // 7 Pitch M
-    {moduleTypeOscB,       paramTypeMenu,           {{ 29,  -15}, { 7,  7}}, anchorBottomLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                    // 7 Pitch Type
-    {moduleTypeOscB,       paramTypeCommonDial,     {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },                    // FM M
-    {moduleTypeOscB,       paramTypeShape,          {{56,  13}, { 7,  7}}, anchorTopLeft,    "Shape",        128,   0, NULL,                                  NULL          },                    // 7 Shape 50% to 99%, not decimals
-    {moduleTypeOscB,       paramTypeCommonDial,     {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "ShpM",         128,   0, NULL,                                  NULL          },                    // 7 Shape M
-    {moduleTypeOscB,       paramTypeMenu,           {{35,   10}, { 7,  7}}, anchorTopLeft,    "Wave",             5,   2, shapeTypeStrMap,                       NULL          },                    // 7 Waveform
-    {moduleTypeOscB,       paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                    // 7 Bypass
-    {moduleTypeOscB,       paramTypeMenu,           {{ 62,  -15}, { 7,  7}}, anchorBottomLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          },                    // 7 FM Type
+    {moduleTypeOscB,       paramTypeOscFreq,        {{ 29,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                  // 7 Tune
+    {moduleTypeOscB,       paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                  // 7 Cent
+    {moduleTypeOscB,       paramTypeToggle,         {{ 12, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                  // 7 Kbt
+    {moduleTypeOscB,       paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                  // 7 Pitch M
+    {moduleTypeOscB,       paramTypeMenu,           {{ 29, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },                  // 7 Pitch Type
+    {moduleTypeOscB,       paramTypeCommonDial,     {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },                  // FM M
+    {moduleTypeOscB,       paramTypeShape,          {{ 56,  13}, { 7,  7}}, anchorTopLeft,     "Shape",        128,   0, NULL,                                  NULL          },                  // 7 Shape 50% to 99%, not decimals
+    {moduleTypeOscB,       paramTypeCommonDial,     {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "ShpM",         128,   0, NULL,                                  NULL          },                  // 7 Shape M
+    {moduleTypeOscB,       paramTypeMenu,           {{ 35,  10}, { 7,  7}}, anchorTopLeft,     "Wave",           5,   2, shapeTypeStrMap,                       NULL          },                  // 7 Waveform
+    {moduleTypeOscB,       paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                  // 7 Bypass
+    {moduleTypeOscB,       paramTypeMenu,           {{ 62, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fmTypeStrMap,                          NULL          },                  // 7 FM Type
     // 8 OscShpB
-    {moduleTypeOscShpB,    paramTypeOscFreq,        {{ 29,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                    // 8 Tune  (nudged left so wide Freq/Factor value clears Cent)
-    {moduleTypeOscShpB,    paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                    // 8 Cent
-    {moduleTypeOscShpB,    paramTypeToggle,         {{ 12,  -15}, { 7,  7}}, anchorBottomLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap},                    // 8 Kbt
-    {moduleTypeOscShpB,    paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                    // 8 Pitch M
-    {moduleTypeOscShpB,    paramTypeMenu,           {{ 29,  -15}, { 7,  7}}, anchorBottomLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                    // 8 Pitch Type  (moved left to stay above the Tune dial)
-    {moduleTypeOscShpB,    paramTypeCommonDial,     {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },                    // FM M
-    {moduleTypeOscShpB,    paramTypeShape,          {{ 56,  13}, { 7,  7}}, anchorTopLeft,     "Shape",        128,   0, NULL,                                  NULL          },                    // 8 Shape 50% to 99%, not decimals
-    {moduleTypeOscShpB,    paramTypeCommonDial,     {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "ShpCtrl",      128,   0, NULL,                                  NULL          },                    // 8 Shape M
-    {moduleTypeOscShpB,    paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                    // 8 Bypass
-    {moduleTypeOscShpB,    paramTypeMenu,           {{ 62,  -15}, { 7,  7}}, anchorBottomLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          },                    // 8 FM Type
+    {moduleTypeOscShpB,    paramTypeOscFreq,        {{ 29,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                  // 8 Tune  (nudged left so wide Freq/Factor value clears Cent)
+    {moduleTypeOscShpB,    paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                  // 8 Cent
+    {moduleTypeOscShpB,    paramTypeToggle,         {{ 12, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                  // 8 Kbt
+    {moduleTypeOscShpB,    paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                  // 8 Pitch M
+    {moduleTypeOscShpB,    paramTypeMenu,           {{ 29, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },                  // 8 Pitch Type  (moved left to stay above the Tune dial)
+    {moduleTypeOscShpB,    paramTypeCommonDial,     {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },                  // FM M
+    {moduleTypeOscShpB,    paramTypeShape,          {{ 56,  13}, { 7,  7}}, anchorTopLeft,     "Shape",        128,   0, NULL,                                  NULL          },                  // 8 Shape 50% to 99%, not decimals
+    {moduleTypeOscShpB,    paramTypeCommonDial,     {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "ShpCtrl",      128,   0, NULL,                                  NULL          },                  // 8 Shape M
+    {moduleTypeOscShpB,    paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                  // 8 Bypass
+    {moduleTypeOscShpB,    paramTypeMenu,           {{ 62, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fmTypeStrMap,                          NULL          },                  // 8 FM Type
     //  9 OscC
-    {moduleTypeOscC,       paramTypeOscFreq,        {{ 29,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                    // 9 Coarse  (nudged left so wide Freq/Factor value clears Cent)
-    {moduleTypeOscC,       paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                    // 9 Fine
-    {moduleTypeOscC,       paramTypeToggle,         {{ 12,   -15}, { 7,  7}}, anchorBottomLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap},                    // 9 Kbt
-    {moduleTypeOscC,       paramTypeMenu,           {{ 29,   -15}, { 7,  7}}, anchorBottomLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                    // 9 Tune Mode  (was y15 over the Tune label; moved up + left to sit above the Tune dial)
-    {moduleTypeOscC,       paramTypeCommonDial,     {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },                    // FM
-    {moduleTypeOscC,       paramTypeBypass,         {{-3,  0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                    // 9 Bypass
-    {moduleTypeOscC,       paramTypeMenu,           {{ 62,  -15}, { 7,  7}}, anchorBottomLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          },                    // 9 FM Type
-    {moduleTypeOscC,       paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                    // Pitch Mode
+    {moduleTypeOscC,       paramTypeOscFreq,        {{ 29,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                  // 9 Coarse  (nudged left so wide Freq/Factor value clears Cent)
+    {moduleTypeOscC,       paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                  // 9 Fine
+    {moduleTypeOscC,       paramTypeToggle,         {{ 12, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                  // 9 Kbt
+    {moduleTypeOscC,       paramTypeMenu,           {{ 29, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },                  // 9 Tune Mode  (was y15 over the Tune label; moved up + left to sit above the Tune dial)
+    {moduleTypeOscC,       paramTypeCommonDial,     {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },                  // FM
+    {moduleTypeOscC,       paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                  // 9 Bypass
+    {moduleTypeOscC,       paramTypeMenu,           {{ 62, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fmTypeStrMap,                          NULL          },                  // 9 FM Type
+    {moduleTypeOscC,       paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                  // Pitch Mode
     // 10 Unknown
     // 11 Unknown
     // 12 Reverb
-    {moduleTypeReverb,     paramTypeCommonDial,     {{ 26,  -3}, { 7,  7}}, anchorBottomLeft,  "Time",         128,  64, NULL,                                  NULL          },                      // 12 Time. Needs to check range
-    {moduleTypeReverb,     paramTypeCommonDial,     {{ 46,  -3}, { 7,  7}}, anchorBottomLeft,  "Brightness",   128,  64, NULL,                                  NULL          },                      // 12 Brightness
-    {moduleTypeReverb,     paramTypeCommonDial,     {{ 66,  -3}, { 7,  7}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                                  NULL          },                      // 12 DryWet
-    {moduleTypeReverb,     paramTypeBypass,         {{-3,  0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                      // 12 Bypass
+    {moduleTypeReverb,     paramTypeCommonDial,     {{ 26,  -3}, { 7,  7}}, anchorBottomLeft,  "Time",         128,  64, NULL,                                  NULL          },                    // 12 Time. Needs to check range
+    {moduleTypeReverb,     paramTypeCommonDial,     {{ 46,  -3}, { 7,  7}}, anchorBottomLeft,  "Brightness",   128,  64, NULL,                                  NULL          },                    // 12 Brightness
+    {moduleTypeReverb,     paramTypeCommonDial,     {{ 66,  -3}, { 7,  7}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                                  NULL          },                    // 12 DryWet
+    {moduleTypeReverb,     paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                    // 12 Bypass
     // 13 OscString
-    {moduleTypeOscString,  paramTypeOscFreq,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                      // 13 OscString Tune
-    {moduleTypeOscString,  paramTypeFine,           {{ 47,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                      // 13 OscString Fine
-    {moduleTypeOscString,  paramTypeToggle,         {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                      // 13 OscString Kbt
-    {moduleTypeOscString,  paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                      // 13 OscString Pitch modulation
-    {moduleTypeOscString,  paramTypeMenu,           {{ 30,  10}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                      // 13 OscString Pitch mode
-    {moduleTypeOscString,  paramTypeCommonDial,     {{ 59,  -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          },                      // 13 OscString Decay
-    {moduleTypeOscString,  paramTypeCommonDial,     {{ 71,  -3}, { 7,  7}}, anchorBottomLeft,  "Damp",         128,  64, NULL,                                  NULL          },                      // 13 OscString Damp
-    {moduleTypeOscString,  paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                      // 13 OscString Bypass
+    {moduleTypeOscString,  paramTypeOscFreq,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                    // 13 OscString Tune
+    {moduleTypeOscString,  paramTypeFine,           {{ 47,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                    // 13 OscString Fine
+    {moduleTypeOscString,  paramTypeToggle,         {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                    // 13 OscString Kbt
+    {moduleTypeOscString,  paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                    // 13 OscString Pitch modulation
+    {moduleTypeOscString,  paramTypeMenu,           {{ 30,  10}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                    // 13 OscString Pitch mode
+    {moduleTypeOscString,  paramTypeCommonDial,     {{ 59,  -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          },                    // 13 OscString Decay
+    {moduleTypeOscString,  paramTypeCommonDial,     {{ 71,  -3}, { 7,  7}}, anchorBottomLeft,  "Damp",         128,  64, NULL,                                  NULL          },                    // 13 OscString Damp
+    {moduleTypeOscString,  paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                    // 13 OscString Bypass
     // 14 Unknown
     // 15 Sw8-1 *** Needs more resources
     {moduleTypeSw8to1,     paramTypeMenu,           {{ 10, -14}, { 7,  7}}, anchorBottomLeft,  "Sel",            8,   0, sw8to1SelStrMap,                       NULL          },                      // 15 Sel
@@ -532,7 +532,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeEnvADSR,    paramTypeADRTime,        {{ 56,  -3}, { 7,  7}}, anchorBottomLeft,  "Rel",          128,   0, NULL,                                  NULL          },                      // 20 R
     {moduleTypeEnvADSR,    paramTypeMenu,           {{-24, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },                      // 20 Output Type
     {moduleTypeEnvADSR,    paramTypeToggle,         {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap},                      // 20 KB Active
-    {moduleTypeEnvADSR,    paramTypeMenu,           {{  3,  -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          },                      // 20 Normal/Reset
+    {moduleTypeEnvADSR,    paramTypeMenu,           {{  3, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          },                      // 20 Normal/Reset
     // 21 Mux1-8 -- No params
     // 22 PartQuant
     {moduleTypePartQuant,  paramTypePartials,       {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Range",        128,  64, NULL,                                  NULL          },                      // 22 Range  (bipolar partials -64..+63; default 64 = 0/centre)
@@ -893,19 +893,19 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeStChorus,   paramTypeBypass,         {{ -3,   1}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
     // 95 Unknown
     // 96 OscD
-    {moduleTypeOscD,       paramTypeFreq,           {{ 32,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                      // 96 Tune
-    {moduleTypeOscD,       paramTypeCommonDial,     {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                      // 96 Fine
-    {moduleTypeOscD,       paramTypeToggle,         {{ 22,  -7}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap},                      // 96 Kbt
-    {moduleTypeOscD,       paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                      // 96 Pitch M
-    {moduleTypeOscD,       paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                      // 96 Bypass
+    {moduleTypeOscD,       paramTypeFreq,           {{ 32,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                    // 96 Tune
+    {moduleTypeOscD,       paramTypeCommonDial,     {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                    // 96 Fine
+    {moduleTypeOscD,       paramTypeToggle,         {{ 22,  -7}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap},                    // 96 Kbt
+    {moduleTypeOscD,       paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                    // 96 Pitch M
+    {moduleTypeOscD,       paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                    // 96 Bypass
     // 97 OscA
-    {moduleTypeOscA,       paramTypeOscFreq,        {{ 29,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                      // 97 Tune
-    {moduleTypeOscA,       paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                      // 97 Fine
-    {moduleTypeOscA,       paramTypeToggle,         {{ 12,   -15}, { 7,  7}}, anchorBottomLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap},                      // 97 Kbt
-    {moduleTypeOscA,       paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                      // 97 Pitch M
-    {moduleTypeOscA,       paramTypeMenu,           {{45,   10}, { 7,  7}}, anchorTopLeft,    "Wave",             6,   2, shapeOscATypeStrMap,                   NULL          },                      // 97 Waveform
-    {moduleTypeOscA,       paramTypeBypass,         {{-3,  0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                      // 97 Bypass
-    {moduleTypeOscA,       paramTypeMenu,           {{ 29,  -15}, { 7,  7}}, anchorBottomLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                      // 97 Pitch Type
+    {moduleTypeOscA,       paramTypeOscFreq,        {{ 29,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                    // 97 Tune
+    {moduleTypeOscA,       paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                    // 97 Fine
+    {moduleTypeOscA,       paramTypeToggle,         {{ 12, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                    // 97 Kbt
+    {moduleTypeOscA,       paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                    // 97 Pitch M
+    {moduleTypeOscA,       paramTypeMenu,           {{ 45,  10}, { 7,  7}}, anchorTopLeft,     "Wave",           6,   2, shapeOscATypeStrMap,                   NULL          },                    // 97 Waveform
+    {moduleTypeOscA,       paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                    // 97 Bypass
+    {moduleTypeOscA,       paramTypeMenu,           {{ 29, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },                    // 97 Pitch Type
 
     // 98 FreqShift
     {moduleTypeFreqShift,  paramTypeFreqShift,      {{ 32,  -3}, { 7,  7}}, anchorBottomLeft,  "FreqShift",    128,  64, NULL,                                  NULL          },                      // 98 FreqShift
@@ -1092,9 +1092,9 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeWahWah,     paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                      // 125 Bypass
     // 126 Name
     // 127 Fx-In
-    {moduleTypeFxtoIn,     paramTypeMenu,           {{ 20,  -4}, { 7,  3}}, anchorBottomLeft,  "In from",        2,   0, inFxStrMap,                            NULL          },                      // 127 In
-    {moduleTypeFxtoIn,     paramTypeBypass,         {{ -3,  6}, { 5,  5}}, anchorTopRight,  "Bypass",         2,   1, NULL,                                  NULL          },                      // 127 Bypass
-    {moduleTypeFxtoIn,     paramTypeMenu,           {{  3,  -4}, { 7,  3}}, anchorBottomLeft,  "Pad",            4,   0, db12PadStrMap,                         NULL          },                      // 127 Pad
+    {moduleTypeFxtoIn,     paramTypeMenu,           {{ 20,  -4}, { 7,  3}}, anchorBottomLeft,  "In from",        2,   0, inFxStrMap,                            NULL          },                   // 127 In
+    {moduleTypeFxtoIn,     paramTypeBypass,         {{ -3,   6}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          },                   // 127 Bypass
+    {moduleTypeFxtoIn,     paramTypeMenu,           {{  3,  -4}, { 7,  3}}, anchorBottomLeft,  "Pad",            4,   0, db12PadStrMap,                         NULL          },                   // 127 Pad
     // 128 MinMax -- No params
     // 128 Unknown
     // 130 BinCounter -- No params
@@ -1414,7 +1414,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeModAHD,     paramTypeToggle,         {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap},
     // 170 2-In
     {moduleType2toIn,      paramTypeMenu,           {{ 20,  -4}, { 7,  3}}, anchorBottomLeft,  "In from",        4,   0, twoToInSourceStrMap,                   NULL          },
-    {moduleType2toIn,      paramTypeBypass,         {{ -3,  6}, { 5,  5}}, anchorTopRight,  "Bypass",         2,   1, NULL,                                  NULL          },                    // 167 On/Off
+    {moduleType2toIn,      paramTypeBypass,         {{ -3,   6}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          },                 // 167 On/Off
     {moduleType2toIn,      paramTypeMenu,           {{  3,  -4}, { 7,  3}}, anchorBottomLeft,  "Pad",            4,   1, db12PadStrMap,                         NULL          },
     // 171 4-In
     {moduleType4toIn,      paramTypeMenu,           {{ 20,  -4}, { 7,  3}}, anchorBottomLeft,  "In from",        2,   0, fourToInSourceStrMap,                  NULL          },              // 171 source
@@ -1634,44 +1634,44 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 72,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Exp",          labelLocLeft },
     // 2 Unknown
     // 3 4-Out
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-24,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",            labelLocDown   },          // 3 4-out
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-17,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "2",            labelLocDown   },
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",            labelLocDown   },
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "4",            labelLocDown   },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-24,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",            labelLocDown },           // 3 4-out
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-17,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "2",            labelLocDown },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",            labelLocDown },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "4",            labelLocDown },
     //  4 2-Out
     {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },         // 4
     {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },
     //  5 Invert
-    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{20,  1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,    NULL,           labelLocLeft },          // 5 In 1
-    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{36,  1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,    NULL,           labelLocLeft },          // 5 Out 1
-    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{60,  1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,    NULL,           labelLocLeft },          // 5 In 2
-    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{ 76,  1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,    NULL,           labelLocLeft },          // 5 Out 2
+    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{ 20,   1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },          // 5 In 1
+    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{ 36,   1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },          // 5 Out 1
+    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{ 60,   1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },          // 5 In 2
+    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{ 76,   1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },          // 5 Out 2
     //  6 Unknown
     //  7 OscB
     {moduleTypeOscB,        connectorDirIn,  connectorTypeControl, {{  3, -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 7 OscB Pitch
     {moduleTypeOscB,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // PitchVar
-    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{  3, 7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "Sync",         labelLocRight}, // Sync
+    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{  3,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Sync",         labelLocRight}, // Sync
     {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // FmMod
     {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{ 73,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // Shape Mod
     {moduleTypeOscB,        connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // Out
     //  8 OscShpB
     {moduleTypeOscShpB,     connectorDirIn,  connectorTypeControl, {{  3, -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 8 OscShpB
-    {moduleTypeOscShpB,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",           labelLocRight   },
-    {moduleTypeOscShpB,     connectorDirIn,  connectorTypeAudio,   {{  3, 7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "Sync",           labelLocRight   },
-    {moduleTypeOscShpB,     connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight   },
-    {moduleTypeOscShpB,     connectorDirIn,  connectorTypeAudio,   {{ 73,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight   },
-    {moduleTypeOscShpB,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 8 Out
+    {moduleTypeOscShpB,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",           labelLocRight},
+    {moduleTypeOscShpB,     connectorDirIn,  connectorTypeAudio,   {{  3,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Sync",         labelLocRight},
+    {moduleTypeOscShpB,     connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",            labelLocRight},
+    {moduleTypeOscShpB,     connectorDirIn,  connectorTypeAudio,   {{ 73,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",            labelLocRight},
+    {moduleTypeOscShpB,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 8 Out
     //  9 OscC
-    {moduleTypeOscC,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 9 OscC PitchVar
-    {moduleTypeOscC,        connectorDirIn,  connectorTypeAudio,   {{  3, 7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "Sync",         labelLocRight},          // Sync
-    {moduleTypeOscC,        connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // FmMod
-    {moduleTypeOscC,        connectorDirIn,  connectorTypeControl, {{  3, -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // Pitch
-    {moduleTypeOscC,        connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // Out
+    {moduleTypeOscC,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},     // 9 OscC PitchVar
+    {moduleTypeOscC,        connectorDirIn,  connectorTypeAudio,   {{  3,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Sync",         labelLocRight},     // Sync
+    {moduleTypeOscC,        connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},     // FmMod
+    {moduleTypeOscC,        connectorDirIn,  connectorTypeControl, {{  3, -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},     // Pitch
+    {moduleTypeOscC,        connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // Out
     // 10 Unknown
     // 11 Unknown
     // 12 Reverb
-    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{-10,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocDown },         // 12 Reberb InL
-    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocDown },         // 12 Reberb InR
+    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{-10,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocDown },         // 12 Reberb InL
+    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocDown },         // 12 Reberb InR
     {moduleTypeReverb,      connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },         // 12 Reberb OutL
     {moduleTypeReverb,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },         // 12 Reberb InL
     // 13 OscString
@@ -2058,8 +2058,8 @@ const tConnectorLocation connectorLocationList[] = {
     // 93 Unknown
     // 94 StChorus
     {moduleTypeStChorus,    connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 94
-    {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocLeft },
-    {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocLeft },
+    {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },
+    {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },
     // 95 Unknown
     // 96 OscD
     {moduleTypeOscD,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 96 Pitch
@@ -2192,8 +2192,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeWahWah,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 112 Out
     // 126 Name
     // 127 Fx-In
-    {moduleTypeFxtoIn,      connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },         // 127
-    {moduleTypeFxtoIn,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },
+    {moduleTypeFxtoIn,      connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 127
+    {moduleTypeFxtoIn,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 128 MinMax
     {moduleTypeMinMax,      connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "A",            labelLocLeft },          // 128 In A
     {moduleTypeMinMax,      connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "B",            labelLocLeft },          // 128 In B
@@ -2407,8 +2407,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeModAHD,      connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocLeft },          // 169 Env
     {moduleTypeModAHD,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 169 Out
     // 170 2-In
-    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },          // 170 OutL
-    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },          // 170 OutR
+    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 170 OutL
+    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 170 OutR
     // 171 4-In
     {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-24,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1",            labelLocUp   },          // 170 Out1
     {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "2",            labelLocUp   },          // 170 Out2
@@ -2443,8 +2443,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDelayA,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 177 DelayB
     {moduleTypeDelayB,      connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },     // 177
-    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 29,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight },     // 169 E
-    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 63,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight },     // 169 E
+    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 29,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",            labelLocRight},     // 169 E
+    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 63,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",            labelLocRight},     // 169 E
     {moduleTypeDelayB,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 178 DlyClock
     {moduleTypeDlyClock,    connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft }, // 178 In
@@ -2606,8 +2606,8 @@ const tConnectorLocation connectorLocationList[] = {
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tModeLocation      modeLocationList[] = {
     {moduleTypeOscShpB,    paramTypeMenu,   {{ 35, 10}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap       }, // 8 OscShpB
-    {moduleTypeOscC,       paramTypeMenu,   {{45,  10}, { 7, 7}}, anchorTopLeft,    "Wave",  6, 0, shapeOscATypeStrMap }, // 9 Wave
-    {moduleTypeReverb,     paramTypeMenu,   {{  3,  17}, {14, 7}}, anchorTopLeft,  "Type",  4, 0, reverbTypeStrMap    }, // 12 Reverb
+    {moduleTypeOscC,       paramTypeMenu,   {{ 45, 10}, { 7, 7}}, anchorTopLeft,     "Wave",  6, 0, shapeOscATypeStrMap }, // 9 Wave
+    {moduleTypeReverb,     paramTypeMenu,   {{  3, 17}, {14, 7}}, anchorTopLeft,     "Type",  4, 0, reverbTypeStrMap    }, // 12 Reverb
     {moduleTypeLfoC,       paramTypeMenu,   {{ 64,  0}, { 7, 7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap       }, // 24 LfoC
     {moduleTypeDriver,     paramTypeMenu,   {{ 35,  0}, { 7, 7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap    }, // 35 Type
     {moduleTypePulse,      paramTypeMenu,   {{-13,  0}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap     }, // 38 Mode
@@ -2681,97 +2681,97 @@ const tVolumeMeterConfig volumeMeterConfigList[] = {
     {volumeTypeSequencer, volumeMeterStyleSingleLed, 16, 2.0, RGB_GREEN_7, RGB_GREEN_3}, };
 
 const tLedLocation       ledLocationList[]       = {
-    {moduleTypeInvert,     ledTypeYes,  {{29, 1}, {3, 3}}, anchorMiddleLeft},
-    {moduleTypeInvert,     ledTypeYes,  {{69, 1}, {3, 3}}, anchorMiddleLeft},
-    {moduleTypeEnvADSR,    ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft },
-    {moduleTypeGate,       ledTypeYes,  {{-40, 11}, {3, 3}}, anchorTopRight}, // XPos:137 YPos:11 H:2
-    {moduleTypeGate,       ledTypeYes,  {{-10, 11}, {3, 3}}, anchorTopRight}, // XPos:230 YPos:11 H:2
-    {moduleTypeFlipFlop,   ledTypeYes,  {{-18, 17}, {3, 3}}, anchorTopRight}, // XPos:204 YPos:17 H:2
-    {moduleTypeFlipFlop,   ledTypeYes,  {{-10,  7}, {3, 3}}, anchorTopRight}, // XPos:230 YPos:7  H:2
-    {moduleTypeValSw1to2,  ledTypeYes,  {{-37, 17}, {3, 3}}, anchorTopRight}, // XPos:146 YPos:17 H:2
-    {moduleTypeValSw2to1,  ledTypeYes,  {{-37, 17}, {3, 3}}, anchorTopRight}, // XPos:146 YPos:17 H:2
-    {moduleTypeLfoC,       ledTypeYes,  {{-11,  4}, {3, 3}}, anchorTopRight}, // XPos:226 YPos:4  H:2
-    {moduleTypeLfoA,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft }, // XPos:242 YPos:21 H:3
-    {moduleTypeLfoShpA,    ledTypeYes,  {{ -6, 20}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:51 H:5
-    {moduleTypeLfoB,       ledTypeYes,  {{ -6, 18}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:36 H:4
-    {moduleTypeModADSR,    ledTypeYes,  {{  3, 13}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:33 H:5
-    {moduleTypeModAHD,     ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:19 H:5
-    {moduleTypeEnvAHD,     ledTypeYes,  {{  3,  9}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:18 H:4
-    {moduleTypeEnvH,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft }, // XPos:40  YPos:18 H:2
-    {moduleTypeEnvD,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft }, // XPos:40  YPos:18 H:2
-    {moduleTypeEnvADR,     ledTypeYes,  {{  3, 12}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:18 H:3
-    {moduleTypeEnvMulti,   ledTypeYes,  {{  3,  6}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:18 H:6
-    {moduleTypeEnvADDSR,   ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:19 H:5
-    {moduleTypePulse,      ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft }, // XPos:242 YPos:4  H:2
-    {moduleTypeDelay,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:4  H:2
-    {moduleTypeDrumSynth,  ledTypeYes,  {{  9, 10}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:39 H:8
-    {moduleTypeWindSw,     ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft }, // XPos:198 YPos:15 H:2
-    {moduleTypeNoteDet,    ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft }, // XPos:186 YPos:15 H:2
-    {moduleTypeNoiseGate,  ledTypeYes,  {{-15, 21}, {3, 3}}, anchorTopRight}, // XPos:213 YPos:32 H:3
-    {moduleTypePitchTrack, ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft }, // XPos:212 YPos:15 H:2
-    {moduleTypeRandomA,    ledTypeYes,  {{-11,  4}, {3, 3}}, anchorTopRight}, // XPos:226 YPos:4  H:2
-    {moduleTypeRandomB,    ledTypeYes,  {{ -6, 14}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:21 H:3
-    {moduleTypeOperator,   ledTypeYes,  {{  8, 13}, {3, 3}}, anchorTopLeft }, // XPos:17  YPos:77 H:12
+    {moduleTypeInvert,     ledTypeYes,  {{ 29,  1}, {3, 3}}, anchorMiddleLeft},
+    {moduleTypeInvert,     ledTypeYes,  {{ 69,  1}, {3, 3}}, anchorMiddleLeft},
+    {moduleTypeEnvADSR,    ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft   },
+    {moduleTypeGate,       ledTypeYes,  {{-40, 11}, {3, 3}}, anchorTopRight  }, // XPos:137 YPos:11 H:2
+    {moduleTypeGate,       ledTypeYes,  {{-10, 11}, {3, 3}}, anchorTopRight  }, // XPos:230 YPos:11 H:2
+    {moduleTypeFlipFlop,   ledTypeYes,  {{-18, 17}, {3, 3}}, anchorTopRight  }, // XPos:204 YPos:17 H:2
+    {moduleTypeFlipFlop,   ledTypeYes,  {{-10,  7}, {3, 3}}, anchorTopRight  }, // XPos:230 YPos:7  H:2
+    {moduleTypeValSw1to2,  ledTypeYes,  {{-37, 17}, {3, 3}}, anchorTopRight  }, // XPos:146 YPos:17 H:2
+    {moduleTypeValSw2to1,  ledTypeYes,  {{-37, 17}, {3, 3}}, anchorTopRight  }, // XPos:146 YPos:17 H:2
+    {moduleTypeLfoC,       ledTypeYes,  {{-11,  4}, {3, 3}}, anchorTopRight  }, // XPos:226 YPos:4  H:2
+    {moduleTypeLfoA,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:242 YPos:21 H:3
+    {moduleTypeLfoShpA,    ledTypeYes,  {{ -6, 20}, {3, 3}}, anchorTopRight  }, // XPos:242 YPos:51 H:5
+    {moduleTypeLfoB,       ledTypeYes,  {{ -6, 18}, {3, 3}}, anchorTopRight  }, // XPos:242 YPos:36 H:4
+    {moduleTypeModADSR,    ledTypeYes,  {{  3, 13}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:33 H:5
+    {moduleTypeModAHD,     ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:19 H:5
+    {moduleTypeEnvAHD,     ledTypeYes,  {{  3,  9}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:18 H:4
+    {moduleTypeEnvH,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:40  YPos:18 H:2
+    {moduleTypeEnvD,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:40  YPos:18 H:2
+    {moduleTypeEnvADR,     ledTypeYes,  {{  3, 12}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:18 H:3
+    {moduleTypeEnvMulti,   ledTypeYes,  {{  3,  6}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:18 H:6
+    {moduleTypeEnvADDSR,   ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:19 H:5
+    {moduleTypePulse,      ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft   }, // XPos:242 YPos:4  H:2
+    {moduleTypeDelay,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight  }, // XPos:242 YPos:4  H:2
+    {moduleTypeDrumSynth,  ledTypeYes,  {{  9, 10}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:39 H:8
+    {moduleTypeWindSw,     ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:198 YPos:15 H:2
+    {moduleTypeNoteDet,    ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:186 YPos:15 H:2
+    {moduleTypeNoiseGate,  ledTypeYes,  {{-15, 21}, {3, 3}}, anchorTopRight  }, // XPos:213 YPos:32 H:3
+    {moduleTypePitchTrack, ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:212 YPos:15 H:2
+    {moduleTypeRandomA,    ledTypeYes,  {{-11,  4}, {3, 3}}, anchorTopRight  }, // XPos:226 YPos:4  H:2
+    {moduleTypeRandomB,    ledTypeYes,  {{ -6, 14}, {3, 3}}, anchorTopRight  }, // XPos:242 YPos:21 H:3
+    {moduleTypeOperator,   ledTypeYes,  {{  8, 13}, {3, 3}}, anchorTopLeft   }, // XPos:17  YPos:77 H:12
     // Mux1to8 (ID 21) — 8 LEDs across the upper-right strip
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 13,  7}, {3, 3}}, anchorTopLeft }, // XPos:102
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 21,  7}, {3, 3}}, anchorTopLeft }, // XPos:122
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 28,  7}, {3, 3}}, anchorTopLeft }, // XPos:142
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 36,  7}, {3, 3}}, anchorTopLeft }, // XPos:162
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 44,  7}, {3, 3}}, anchorTopLeft }, // XPos:182
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 52,  7}, {3, 3}}, anchorTopLeft }, // XPos:202
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 59,  7}, {3, 3}}, anchorTopLeft }, // XPos:222
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 67,  7}, {3, 3}}, anchorTopLeft }, // XPos:242
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 13,  7}, {3, 3}}, anchorTopLeft   }, // XPos:102
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 21,  7}, {3, 3}}, anchorTopLeft   }, // XPos:122
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 28,  7}, {3, 3}}, anchorTopLeft   }, // XPos:142
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 36,  7}, {3, 3}}, anchorTopLeft   }, // XPos:162
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 44,  7}, {3, 3}}, anchorTopLeft   }, // XPos:182
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 52,  7}, {3, 3}}, anchorTopLeft   }, // XPos:202
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 59,  7}, {3, 3}}, anchorTopLeft   }, // XPos:222
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 67,  7}, {3, 3}}, anchorTopLeft   }, // XPos:242
     // Mux8to1X (ID 60) — 8 LEDs spread across the middle
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 13, 14}, {3, 3}}, anchorTopLeft }, // XPos:34
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 21, 14}, {3, 3}}, anchorTopLeft }, // XPos:54
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 28, 14}, {3, 3}}, anchorTopLeft }, // XPos:74
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 36, 14}, {3, 3}}, anchorTopLeft }, // XPos:94
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 44, 14}, {3, 3}}, anchorTopLeft }, // XPos:114
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 52, 14}, {3, 3}}, anchorTopLeft }, // XPos:134
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 59, 14}, {3, 3}}, anchorTopLeft }, // XPos:154
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 67, 14}, {3, 3}}, anchorTopLeft }, // XPos:174
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 13, 14}, {3, 3}}, anchorTopLeft   }, // XPos:34
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 21, 14}, {3, 3}}, anchorTopLeft   }, // XPos:54
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 28, 14}, {3, 3}}, anchorTopLeft   }, // XPos:74
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 36, 14}, {3, 3}}, anchorTopLeft   }, // XPos:94
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 44, 14}, {3, 3}}, anchorTopLeft   }, // XPos:114
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 52, 14}, {3, 3}}, anchorTopLeft   }, // XPos:134
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 59, 14}, {3, 3}}, anchorTopLeft   }, // XPos:154
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 67, 14}, {3, 3}}, anchorTopLeft   }, // XPos:174
     // Mux8to1 (ID 124) — 8 LEDs across the upper-right strip
-    {moduleTypeMux8to1,    ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight}, // XPos:82
-    {moduleTypeMux8to1,    ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight}, // XPos:102
-    {moduleTypeMux8to1,    ledTypeYes,  {{-45,  7}, {3, 3}}, anchorTopRight}, // XPos:122
-    {moduleTypeMux8to1,    ledTypeYes,  {{-38,  7}, {3, 3}}, anchorTopRight}, // XPos:142
-    {moduleTypeMux8to1,    ledTypeYes,  {{-32,  7}, {3, 3}}, anchorTopRight}, // XPos:162
-    {moduleTypeMux8to1,    ledTypeYes,  {{-25,  7}, {3, 3}}, anchorTopRight}, // XPos:202
-    {moduleTypeMux8to1,    ledTypeYes,  {{-19,  7}, {3, 3}}, anchorTopRight}, // XPos:202
-    {moduleTypeMux8to1,    ledTypeYes,  {{-13,  7}, {3, 3}}, anchorTopRight}, // XPos:222
+    {moduleTypeMux8to1,    ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight  }, // XPos:82
+    {moduleTypeMux8to1,    ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight  }, // XPos:102
+    {moduleTypeMux8to1,    ledTypeYes,  {{-45,  7}, {3, 3}}, anchorTopRight  }, // XPos:122
+    {moduleTypeMux8to1,    ledTypeYes,  {{-38,  7}, {3, 3}}, anchorTopRight  }, // XPos:142
+    {moduleTypeMux8to1,    ledTypeYes,  {{-32,  7}, {3, 3}}, anchorTopRight  }, // XPos:162
+    {moduleTypeMux8to1,    ledTypeYes,  {{-25,  7}, {3, 3}}, anchorTopRight  }, // XPos:202
+    {moduleTypeMux8to1,    ledTypeYes,  {{-19,  7}, {3, 3}}, anchorTopRight  }, // XPos:202
+    {moduleTypeMux8to1,    ledTypeYes,  {{-13,  7}, {3, 3}}, anchorTopRight  }, // XPos:222
     // BinCounter (ID 130) — 8 LEDs across the upper-right strip
-    {moduleTypeBinCounter, ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight}, // XPos:81
-    {moduleTypeBinCounter, ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight}, // XPos:104
-    {moduleTypeBinCounter, ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight}, // XPos:127
-    {moduleTypeBinCounter, ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight}, // XPos:150
-    {moduleTypeBinCounter, ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight}, // XPos:173
-    {moduleTypeBinCounter, ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight}, // XPos:196
-    {moduleTypeBinCounter, ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight}, // XPos:219
-    {moduleTypeBinCounter, ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight}, // XPos:242
+    {moduleTypeBinCounter, ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight  }, // XPos:81
+    {moduleTypeBinCounter, ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight  }, // XPos:104
+    {moduleTypeBinCounter, ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight  }, // XPos:127
+    {moduleTypeBinCounter, ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight  }, // XPos:150
+    {moduleTypeBinCounter, ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight  }, // XPos:173
+    {moduleTypeBinCounter, ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight  }, // XPos:196
+    {moduleTypeBinCounter, ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight  }, // XPos:219
+    {moduleTypeBinCounter, ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight  }, // XPos:242
     // ADConv (ID 131) — 8 LEDs across the upper-right strip
-    {moduleTypeADConv,     ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight}, // XPos:81
-    {moduleTypeADConv,     ledTypeYes,  {{-50,  7}, {3, 3}}, anchorTopRight}, // XPos:105
-    {moduleTypeADConv,     ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight}, // XPos:127
-    {moduleTypeADConv,     ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight}, // XPos:150
-    {moduleTypeADConv,     ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight}, // XPos:173
-    {moduleTypeADConv,     ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight}, // XPos:196
-    {moduleTypeADConv,     ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight}, // XPos:219
-    {moduleTypeADConv,     ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight}, // XPos:242
+    {moduleTypeADConv,     ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight  }, // XPos:81
+    {moduleTypeADConv,     ledTypeYes,  {{-50,  7}, {3, 3}}, anchorTopRight  }, // XPos:105
+    {moduleTypeADConv,     ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight  }, // XPos:127
+    {moduleTypeADConv,     ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight  }, // XPos:150
+    {moduleTypeADConv,     ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight  }, // XPos:173
+    {moduleTypeADConv,     ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight  }, // XPos:196
+    {moduleTypeADConv,     ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight  }, // XPos:219
+    {moduleTypeADConv,     ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight  }, // XPos:242
     // 8Counter (ID 86) — 8 LEDs across the upper-right strip
-    {moduleType8Counter,   ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight}, // XPos:81
-    {moduleType8Counter,   ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight}, // XPos:104
-    {moduleType8Counter,   ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight}, // XPos:127
-    {moduleType8Counter,   ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight}, // XPos:150
-    {moduleType8Counter,   ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight}, // XPos:173
-    {moduleType8Counter,   ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight}, // XPos:196
-    {moduleType8Counter,   ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight}, // XPos:219
-    {moduleType8Counter,   ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight}, // XPos:242
+    {moduleType8Counter,   ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight  }, // XPos:81
+    {moduleType8Counter,   ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight  }, // XPos:104
+    {moduleType8Counter,   ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight  }, // XPos:127
+    {moduleType8Counter,   ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight  }, // XPos:150
+    {moduleType8Counter,   ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight  }, // XPos:173
+    {moduleType8Counter,   ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight  }, // XPos:196
+    {moduleType8Counter,   ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight  }, // XPos:219
+    {moduleType8Counter,   ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight  }, // XPos:242
 
-    {moduleTypeSeqEvent,   ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight}, // Park LED — display-only, not in LED stream
-    {moduleTypeSeqNote,    ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight},
-    {moduleTypeSeqVal,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight},
-    {moduleTypeSeqLev,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight},
-    {moduleTypeSeqCtr,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight}};
+    {moduleTypeSeqEvent,   ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  }, // Park LED — display-only, not in LED stream
+    {moduleTypeSeqNote,    ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  },
+    {moduleTypeSeqVal,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  },
+    {moduleTypeSeqLev,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  },
+    {moduleTypeSeqCtr,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  }};
 
 // moduleType, rectangle, anchor - placement only; each module's own graph function
 // (moduleGraphics.cpp) still owns its drawing/curve logic.
