@@ -525,12 +525,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMix4to1B,   paramTypeCommonDial,     {{ 74,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                      // 19 Lev4
     {moduleTypeMix4to1B,   paramTypeMenu,           {{  3,   6}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, expStrMap,                             NULL          },                      // 19 ExpLinDB  (top-left, above Chain)
     // 20 EnvvADSR
-    {moduleTypeEnvADSR,    paramTypeMenu,           {{-26,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          },                      // 20 Env Shape
+    {moduleTypeEnvADSR,    paramTypeMenu,           {{-24,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          },                      // 20 Env Shape
     {moduleTypeEnvADSR,    paramTypeADRTime,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          },                      // 20 A
     {moduleTypeEnvADSR,    paramTypeADRTime,        {{ 32,  -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                                  NULL          },                      // 20 D  (was mislabelled "Delay")
     {moduleTypeEnvADSR,    paramTypeUniPol,         {{ 44,  -3}, { 7,  7}}, anchorBottomLeft,  "Sus",          128, 100, NULL,                                  NULL          },                      // 20 S  (0-64 units, not 0-100%)
     {moduleTypeEnvADSR,    paramTypeADRTime,        {{ 56,  -3}, { 7,  7}}, anchorBottomLeft,  "Rel",          128,   0, NULL,                                  NULL          },                      // 20 R
-    {moduleTypeEnvADSR,    paramTypeMenu,           {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },                      // 20 Output Type
+    {moduleTypeEnvADSR,    paramTypeMenu,           {{-24, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },                      // 20 Output Type
     {moduleTypeEnvADSR,    paramTypeToggle,         {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap},                      // 20 KB Active
     {moduleTypeEnvADSR,    paramTypeMenu,           {{  3,  -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          },                      // 20 Normal/Reset
     // 21 Mux1-8 -- No params
