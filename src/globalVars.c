@@ -148,6 +148,31 @@ char                    gSynthRestorePeekName[CLAVIA_NAME_SIZE + 1]             
 tNameTableEntry         gPatchNameTable[NUM_PATCH_BANKS][NUM_LOCATIONS_PER_BANK]                     = {0};
 tNameTableEntry         gPerfNameTable[NUM_PERF_BANKS][NUM_LOCATIONS_PER_BANK]                       = {0};
 
+// One bit per variation, one mask per slot — see the note on variation_is_linked() in globalVars.h.
+// A mask rather than an array of bools because "is the group empty" and "clear it" are then a single
+// comparison and a single store, which is what most of the callers actually ask.
+static uint32_t         gVariationLinks[MAX_SLOTS]                                                   = {0};
+
+bool variation_is_linked(uint32_t slot, uint32_t variation) {
+    if ((slot >= MAX_SLOTS) || (variation >= VARIATION_INIT)) {
+        return false;
+    }
+    return (gVariationLinks[slot] & (1u << variation)) != 0;
+}
+
+void variation_toggle_link(uint32_t slot, uint32_t variation) {
+    if ((slot >= MAX_SLOTS) || (variation >= VARIATION_INIT)) {
+        return; // Init is not a real variation — see globalVars.h
+    }
+    gVariationLinks[slot] ^= (1u << variation);
+}
+
+void variation_clear_links(uint32_t slot) {
+    if (slot < MAX_SLOTS) {
+        gVariationLinks[slot] = 0;
+    }
+}
+
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;
 

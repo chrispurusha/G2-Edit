@@ -1538,6 +1538,7 @@ static void action_set_toggle_value(int index) {
         } else {
             send_param_value(slot, gMenuContext.moduleKey, paramIdx, variation, newValue);
             undo_push_param_change(gMenuContext.moduleKey, paramIdx, variation, oldValue, newValue);
+            send_param_value_to_links(slot, gMenuContext.moduleKey, paramIdx, variation, newValue);
         }
     }
     gContextMenu.active = false;

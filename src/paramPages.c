@@ -590,6 +590,7 @@ static bool release_knob_widget(tCoord coord) {
             param->value = (param->value + 1) % range;
             send_param_value(target.key.slot, target.key, target.paramIndex, variation, param->value);
             undo_push_param_change(target.key, target.paramIndex, variation, oldValue, param->value);
+            send_param_value_to_links(target.key.slot, target.key, target.paramIndex, variation, param->value);
             return true;
         }
         return true;

@@ -500,6 +500,12 @@ bool canvas_param_drag_release(void) {
                                        pdVariation,
                                        gParamDragging.startValue,
                                        curVal);
+
+                // Linked variations pick up the SETTLED value, once, rather than every intermediate
+                // one the drag passed through — see send_param_value_to_links(). None of them is on
+                // screen during the drag, so there is nothing to keep in step until here.
+                send_param_value_to_links(gParamDragging.moduleKey.slot, gParamDragging.moduleKey,
+                                          gParamDragging.param, pdVariation, curVal);
             } else {
                 uint32_t curVal = pdMod->mode[gParamDragging.mode].value;
                 undo_push_mode_change(gParamDragging.moduleKey,
@@ -903,6 +909,7 @@ static bool nudge_param_for_module(tModule * module, tCoord coord, uint32_t vari
         if ((uint32_t)newValue != param->value) {
             param->value = (uint32_t)newValue;
             send_param_value(module->key.slot, module->key, i, variation, (uint32_t)newValue);
+            send_param_value_to_links(module->key.slot, module->key, i, variation, (uint32_t)newValue);
         }
         return true;
     }

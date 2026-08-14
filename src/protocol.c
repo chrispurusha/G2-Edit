@@ -38,6 +38,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "msgQueue.h"
 #include "globalVars.h"
+#include "undo.h"   // undo_push_param_change() — the linked-variation fan-out records one entry per variation
 
 // Shares gStringCopyMutex (defined in globalVars.c) with the COPY_STRING macro used
 // everywhere on the UI thread to read these same name buffers — a previous private
@@ -1700,6 +1701,44 @@ void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, ui
     msg.paramData.variation = variation;
     msg.paramData.value     = value;
     msg_send(&gToUsbThread, &msg);
+}
+
+// Fans a parameter value out to every LINKED variation (see variation_is_linked() in globalVars.h)
+// other than the one just edited — same value, same wire command, one message each, and the local
+// database updated to match so the canvas shows it the moment you select one of them.
+//
+// Safe as a burst: send_param_value() above is COMMAND_WRITE_NO_RESP (see send_param_morph() below
+// for the same reasoning), so a run of them carries no acks and cannot lose a patch-version race the
+// way a run of per-entry bulk edits does. No whole-patch write is needed.
+//
+// A linked variation is under no obligation to have been holding the same value as the edited one,
+// so the undo entry per variation carries that variation's OWN previous value. They undo one
+// variation per step rather than as a single atomic group — this app has no generic undo grouping,
+// and one correct step per variation beats one step that only half-reverses.
+//
+// The DRAG path calls this once on RELEASE rather than on every mouse-move. A linked variation is
+// not on screen while you drag, so nothing is lost visually, and it keeps both the wire traffic and
+// the undo stack to one entry per variation instead of one per event.
+void send_param_value_to_links(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t variation, uint32_t value) {
+    tModule * module = get_module(moduleKey);
+
+    if (module == NULL) {
+        return;
+    }
+
+    for (uint32_t linked = 0; linked < VARIATION_INIT; linked++) {
+        if ((linked == variation) || !variation_is_linked(slot, linked)) {
+            continue;
+        }
+        uint32_t oldValue = module->param[linked][paramIdx].value;
+
+        if (oldValue == value) {
+            continue;
+        }
+        module->param[linked][paramIdx].value = (uint8_t)value;
+        send_param_value(slot, moduleKey, paramIdx, linked, value);
+        undo_push_param_change(moduleKey, paramIdx, linked, oldValue, value);
+    }
 }
 
 // A parameter's morph RANGE for one morph group, as distinct from its value. Same shape and the same

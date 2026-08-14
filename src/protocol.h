@@ -63,6 +63,12 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length);
 int parse_perf(uint8_t * buff, int length);
 void send_module_move_msg(tModule * module);
 void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t variation, uint32_t value);
+
+// Call after send_param_value() at a USER edit, with the same arguments: repeats the write into
+// every linked variation. Discrete edits (toggles, dropdowns, a scroll step) call it as they happen;
+// a drag calls it once on release. See the definition in protocol.c for why both, and for why bulk
+// tools, undo/redo and the variation-copy commands deliberately do NOT call it.
+void send_param_value_to_links(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t variation, uint32_t value);
 void send_param_morph(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t morphGroup, uint32_t variation, uint32_t value);
 void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint32_t value);
 void send_mutation_lock_value(uint32_t slot, tModuleKey moduleKey, uint32_t locked);
