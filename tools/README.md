@@ -80,7 +80,7 @@ python3 analyse_ir.py rooms.wav --dry-channel 5 --wet-channel 7 --raw --skip 2
 `--sweep-mode` matters: a **drop-down selector is a MODE, not a parameter**. Driving one as a
 high-numbered parameter is accepted locally, dropped by the G2, and reported OK — that produced three
 captures of the same room before `DEVSET` learned to check. Results in the `REVERB` entry of
-`todo.txt`.
+`Docs/todo.txt`.
 
 ## Traps worth knowing before trusting a result
 
