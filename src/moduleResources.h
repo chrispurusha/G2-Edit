@@ -1414,7 +1414,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeModAHD,     paramTypeToggle,         {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap},
     // 170 2-In
     {moduleType2toIn,      paramTypeMenu,           {{ 20,  -4}, { 7,  3}}, anchorBottomLeft,  "In from",        4,   0, twoToInSourceStrMap,                   NULL          },
-    {moduleType2toIn,      paramTypeBypass,         {{ 39,  -2}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },                    // 167 On/Off
+    {moduleType2toIn,      paramTypeBypass,         {{ -3,  6}, { 5,  5}}, anchorTopRight,  "Bypass",         2,   1, NULL,                                  NULL          },                    // 167 On/Off
     {moduleType2toIn,      paramTypeMenu,           {{  3,  -4}, { 7,  3}}, anchorBottomLeft,  "Pad",            4,   1, db12PadStrMap,                         NULL          },
     // 171 4-In
     {moduleType4toIn,      paramTypeMenu,           {{ 20,  -4}, { 7,  3}}, anchorBottomLeft,  "In from",        2,   0, fourToInSourceStrMap,                  NULL          },              // 171 source
@@ -1634,9 +1634,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 72,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Exp",          labelLocLeft },
     // 2 Unknown
     // 3 4-Out
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-30,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",            labelLocDown   },          // 3 4-out
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-21,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "2",            labelLocDown   },
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-12,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",            labelLocDown   },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-24,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",            labelLocDown   },          // 3 4-out
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-17,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "2",            labelLocDown   },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",            labelLocDown   },
     {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "4",            labelLocDown   },
     //  4 2-Out
     {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },         // 4
@@ -2407,12 +2407,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeModAHD,      connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocLeft },          // 169 Env
     {moduleTypeModAHD,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 169 Out
     // 170 2-In
-    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{-12,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",            labelLocUp   },          // 170 OutL
-    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "R",            labelLocUp   },          // 170 OutR
+    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },          // 170 OutL
+    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },          // 170 OutR
     // 171 4-In
-    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1",            labelLocUp   },          // 170 Out1
-    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-21,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "2",            labelLocUp   },          // 170 Out2
-    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-12,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "3",            labelLocUp   },          // 170 Out3
+    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-24,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1",            labelLocUp   },          // 170 Out1
+    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "2",            labelLocUp   },          // 170 Out2
+    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "3",            labelLocUp   },          // 170 Out3
     {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "4",            labelLocUp   },          // 170 Out4
     // 172 DlySingleA
     {moduleTypeDlySingleA,  connectorDirIn,  connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 172 In
