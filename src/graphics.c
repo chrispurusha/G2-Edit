@@ -352,6 +352,17 @@ void init_graphics(void) {
         .mouseCoord = get_global_gui_scaled_mouse_coord,
     });
     synthlib_scale_init(TARGET_FRAME_BUFF_WIDTH);
+
+    // The bank browser's Category mode sorts its groups by name, which buries the two categories the
+    // player actually assigns themselves at the bottom under U. Pin them to the top instead. Read
+    // out of patchTypeStrMap rather than spelt again here, so renaming a category cannot silently
+    // unpin it. Set once: it holds for every browser this app opens, all of which use this same map.
+    const char *const priorityCategories[] = {
+        patchTypeStrMap[patchTypeUser1], patchTypeStrMap[patchTypeUser2]
+    };
+
+    bank_browser_set_priority_categories(priorityCategories, ARRAY_SIZE(priorityCategories));
+
     split_view_init();   // one pane showing the Voice Area — the pre-split behaviour, as the default
 
     glfwSetErrorCallback(error_callback);
