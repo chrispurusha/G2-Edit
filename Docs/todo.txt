@@ -371,7 +371,7 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   into composite USB-thread commands for atomicity / less chatter — low priority.
 
 - Reverse (USB->UI) message queue + GUI busy state — all steps built, NONE hardware-tested. Design
-  in reverse-queue-design.md (repo root); keep that doc updated. TO VERIFY ON HARDWARE:
+  in reverse-queue-design.md (this folder); keep that doc updated. TO VERIFY ON HARDWARE:
     - G2-Edit: load/save/new-patch alerts fire on failure; the busy overlay appears and clears (a
       5s force-clear safety net exists so a lost completion cannot lock the GUI).
     - EmuUtility: device still detected at startup; Scan Devices still connects; LCD and LEDs still
@@ -569,7 +569,7 @@ OPEN WORK
   the plug-in.
 
 === SOUND ENGINE HANDOVER 2026-08-07 ===
-(Say "read the SOUND ENGINE HANDOVER section in G2-Edit/todo.txt" to pick this up in a new session.)
+(Say "read the SOUND ENGINE HANDOVER section in G2-Edit/Docs/todo.txt" to pick this up in a new session.)
 
 --- 1. FIXED 2026-08-07: the engine no longer depends on connector data the RENDERER fills in ---
 
