@@ -1634,10 +1634,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 72,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Exp",          labelLocLeft },
     // 2 Unknown
     // 3 4-Out
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-30,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",            labelLocUp   },          // 3 4-out
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-21,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "2",            labelLocUp   },
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-12,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",            labelLocUp   },
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "4",            labelLocUp   },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-30,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",            labelLocDown   },          // 3 4-out
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-21,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "2",            labelLocDown   },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-12,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",            labelLocDown   },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "4",            labelLocDown   },
     //  4 2-Out
     {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },         // 4
     {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },
