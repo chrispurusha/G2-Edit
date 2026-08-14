@@ -136,7 +136,7 @@ INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/vst3" -I"$SDK"
           # Headers only. GLFW's is here because utilsGraphics.c includes it for the GL
           # declarations; freetype's because the text renderer is built on it. The bundled copies
           # are used rather than Homebrew's so the deployment target matches the application's —
-          # see "Third Party build notes.txt".
+          # see "Docs/Third Party build notes.txt".
           -I"$HERE/SynthLib/ThirdParty/glfw/include"
           -I"$HERE/SynthLib/ThirdParty/freetype/include")
 
