@@ -2,10 +2,10 @@
   3 4-Out OK (CT)
   4 2-Out OK (CT)
   5 Invert OK (CT)
-  7 OscB OK
-  8 OscShpB OK *** CHECKED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT via backdoor — Pitch Type param (index 4) correctly drives render_paramType1OscFreq; all 4 modes (Semi/Freq/Factor/Partial) render right values (Semi 32.0, Freq 2.09kHz at raw 96). Layout clean, no overlap. (The original editor's OscTuneMode has a 5th "Sub" mode, but the manual confirms these oscillators use 4 — "the SEMI (OR FREQ/PART/FAC) knob" — so range=4 is correct.) ALSO FIXED a layout overlap (owner-reported): in Freq/Factor mode the wide Tune value (e.g. 12.5kHz) overran the Cent dial — nudged the Tune dial + its mode menu left (x32->29). Verified clear at max value.
-  9 Oscar (OscC) OK *** FIXED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT (Tune Mode param index 3; all 4 modes render right values Semi 32.0 / Freq 2.09kHz / Factor 6.3516x / Partial 33:1 at raw 96). Also FIXED a layout overlap — the Tune Mode selector menu sat at y=15, overlapping the Tune dial's label; moved to y=5 (top row). AND (same as OscShpB) nudged the Tune dial + mode menu left (x32->29) so the wide Freq/Factor Tune value clears the Cent dial. Verified clear at max value via backdoor.
- 12 Reverb OK
+  7 OscB OK (CT) - Needs wave. Needs values/units checking
+  8 OscShpB OK (CT) - Needs values/units checking
+  9 OscC (OscC) OK *** FIXED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT (Tune Mode param index 3; all 4 modes render right values Semi 32.0 / Freq 2.09kHz / Factor 6.3516x / Partial 33:1 at raw 96). Also FIXED a layout overlap — the Tune Mode selector menu sat at y=15, overlapping the Tune dial's label; moved to y=5 (top row). AND (same as OscShpB) nudged the Tune dial + mode menu left (x32->29) so the wide Freq/Factor Tune value clears the Cent dial. Verified clear at max value via backdoor.
+ 12 Reverb OK (CT)
  13 OscString OK
  15 Sw8-1 Needs more resources
  17 ValSw1-2 Needs more resources
