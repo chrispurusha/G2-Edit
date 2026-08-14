@@ -495,10 +495,10 @@ const tParamLocation     paramLocationList[] = {
     // 10 Unknown
     // 11 Unknown
     // 12 Reverb
-    {moduleTypeReverb,     paramTypeCommonDial,     {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Time",         128,  64, NULL,                                  NULL          },                      // 12 Time. Needs to check range
-    {moduleTypeReverb,     paramTypeCommonDial,     {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  "Brightness",   128,  64, NULL,                                  NULL          },                      // 12 Brightness
-    {moduleTypeReverb,     paramTypeCommonDial,     {{ 57,  -3}, { 7,  7}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                                  NULL          },                      // 12 DryWet
-    {moduleTypeReverb,     paramTypeBypass,         {{-20,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                      // 12 Bypass
+    {moduleTypeReverb,     paramTypeCommonDial,     {{ 26,  -3}, { 7,  7}}, anchorBottomLeft,  "Time",         128,  64, NULL,                                  NULL          },                      // 12 Time. Needs to check range
+    {moduleTypeReverb,     paramTypeCommonDial,     {{ 46,  -3}, { 7,  7}}, anchorBottomLeft,  "Brightness",   128,  64, NULL,                                  NULL          },                      // 12 Brightness
+    {moduleTypeReverb,     paramTypeCommonDial,     {{ 66,  -3}, { 7,  7}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                                  NULL          },                      // 12 DryWet
+    {moduleTypeReverb,     paramTypeBypass,         {{-3,  0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                      // 12 Bypass
     // 13 OscString
     {moduleTypeOscString,  paramTypeOscFreq,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                      // 13 OscString Tune
     {moduleTypeOscString,  paramTypeFine,           {{ 47,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                      // 13 OscString Fine
@@ -1670,8 +1670,8 @@ const tConnectorLocation connectorLocationList[] = {
     // 10 Unknown
     // 11 Unknown
     // 12 Reverb
-    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{-10,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "L",            labelLocDown },         // 12 Reberb InL
-    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "R",            labelLocDown },         // 12 Reberb InR
+    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{-10,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocDown },         // 12 Reberb InL
+    {moduleTypeReverb,      connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocDown },         // 12 Reberb InR
     {moduleTypeReverb,      connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },         // 12 Reberb OutL
     {moduleTypeReverb,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },         // 12 Reberb InL
     // 13 OscString
@@ -2607,7 +2607,7 @@ const tConnectorLocation connectorLocationList[] = {
 const tModeLocation      modeLocationList[] = {
     {moduleTypeOscShpB,    paramTypeMenu,   {{ 35, 10}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap       }, // 8 OscShpB
     {moduleTypeOscC,       paramTypeMenu,   {{45,  10}, { 7, 7}}, anchorTopLeft,    "Wave",  6, 0, shapeOscATypeStrMap }, // 9 Wave
-    {moduleTypeReverb,     paramTypeMenu,   {{  3,  0}, {14, 7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap    }, // 12 Reverb
+    {moduleTypeReverb,     paramTypeMenu,   {{  3,  17}, {14, 7}}, anchorTopLeft,  "Type",  4, 0, reverbTypeStrMap    }, // 12 Reverb
     {moduleTypeLfoC,       paramTypeMenu,   {{ 64,  0}, { 7, 7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap       }, // 24 LfoC
     {moduleTypeDriver,     paramTypeMenu,   {{ 35,  0}, { 7, 7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap    }, // 35 Type
     {moduleTypePulse,      paramTypeMenu,   {{-13,  0}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap     }, // 38 Mode
