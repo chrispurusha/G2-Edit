@@ -171,16 +171,36 @@ extern "C" {
 //void patch_name_get(uint32_t slot, char * name, size_t size);
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active);
 
+// ── Linked variations ───────────────────────────────────────────────────────
+//
+// The set of variations that a parameter edit fans out to as well as the selected one — built by
+// shift-clicking variation buttons in the topbar, one set per slot.
+//
+// Membership is EXPLICIT and independent of which variation is selected, which is what lets you
+// audition another variation without dismantling the group. The selected variation always receives
+// its own edits whether or not it is a member; being a member is what makes it keep receiving them
+// once you have moved on. If the selected variation were only ever an implicit member, selecting a
+// different one would silently drop it from the group with nothing on screen having changed.
+//
+// Editor-only state: deliberately NOT part of tPatchDescr, which is a wire structure the G2 reads
+// back. The device knows nothing about this and each fanned-out write reaches it as an ordinary
+// per-variation parameter change.
+//
+// Variations are 0-based here; VARIATION_INIT is not a real variation and is never a member.
+bool variation_is_linked(uint32_t slot, uint32_t variation);
+void variation_toggle_link(uint32_t slot, uint32_t variation);
+void variation_clear_links(uint32_t slot);
+
 #ifdef __cplusplus
 }
 #endif
 
 // Drag reference points in raw cursor coordinates — see globalVars.c. Shared between canvasDrag.c's
 // parameter dragging and mouseHandle.c's tempo/vibrato/glide dragging.
-extern double                  gDragStartX;
-extern double                  gDragStartY;
-extern double                  gDragPrevX;
-extern double                  gDragPrevY;
+extern double gDragStartX;
+extern double gDragStartY;
+extern double gDragPrevX;
+extern double gDragPrevY;
 
 // Cancel an in-progress name edit — see globalVars.c.
 void stop_patch_name_editing(void);

@@ -42,6 +42,7 @@ extern "C" {
 #include "topbarResourcesAccess.h"
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
+#include "inputState.h" // shift_modifier_held() — variation buttons link rather than select on shift
 #include "graphics.h"
 #include "splitView.h"
 #include "globalVars.h"
@@ -67,6 +68,16 @@ static void handle_button(tTopbarControlId controlId) {
         {
             uint32_t        variation      = (uint32_t)controlId - (uint32_t)topbarVariation1Id;
 
+            // Shift-click links a variation into the edit group instead of selecting it — see
+            // variation_is_linked() in globalVars.h. It toggles on the SELECTED button too: the
+            // selected variation receives its own edits regardless, but only explicit membership
+            // survives selecting a different one, and that survival is the whole point of the group.
+            // Init is not a real variation, so it is left to select normally.
+            if (shift_modifier_held() && (variation < VARIATION_INIT)) {
+                variation_toggle_link(slot, variation);
+                synthlib_request_redraw();
+                break;
+            }
             gPatchDescr[slot].activeVariation      = variation;
 
             set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId, controlId);

@@ -147,6 +147,7 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             param->value = (param->value + 1) % range;
             send_param_value(slot, module->key, ctx->paramIndex, variation, param->value);
             undo_push_param_change(module->key, ctx->paramIndex, variation, oldParamVal, param->value);
+            send_param_value_to_links(slot, module->key, ctx->paramIndex, variation, param->value);
         } else if (paramType == paramTypePush) {
             uint32_t listSize = array_size_param_location_list();
 
@@ -333,6 +334,7 @@ static void morph_param_click_handler(tCoord coord, eClickPhase phase, void * us
             param->value = (param->value + 1) % 2;
             send_param_value(gSlot, module->key, i, variation, param->value);
             undo_push_param_change(module->key, i, variation, oldParamVal, param->value);
+            send_param_value_to_links(gSlot, module->key, i, variation, param->value);
         }
     }
 }

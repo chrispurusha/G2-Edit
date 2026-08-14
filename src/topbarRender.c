@@ -165,7 +165,24 @@ void render_top_bar(void) {
         } else {
             buttonBackgroundColour = gTopbarControls[i].colour;
         }
-        gTopbarControls[i].rectangle = draw_button(mainArea, rectangle, def->text, buttonBackgroundColour);
+        // A variation button carries two states that vary independently — SELECTED (exactly one, and
+        // already in gTopbarControls[].colour via set_exclusive_button_highlight) and LINKED (any
+        // number of them, see variation_is_linked() in globalVars.h). One fill colour cannot say
+        // both, so a button that is both is split across the middle: green above for where you are,
+        // orange below for what the edit will also reach. Linked-but-not-selected is plain orange,
+        // and the press highlight still wins over either, being momentary feedback for this click.
+        bool isVariation = (i >= (int)topbarVariation1Id) && (i <= (int)topbarVariationInitId);
+        bool isLinked    = isVariation && variation_is_linked(slot, (uint32_t)i - (uint32_t)topbarVariation1Id);
+
+        if (isLinked && !gTopbarControls[i].isPressed) {
+            bool isSelected = (((uint32_t)i - (uint32_t)topbarVariation1Id) == gPatchDescr[slot].activeVariation);
+
+            gTopbarControls[i].rectangle = draw_button_split(mainArea, rectangle, def->text,
+                                                             isSelected ? buttonBackgroundColour : (tRgb)RGB_ORANGE_2,
+                                                             (tRgb)RGB_ORANGE_2);
+        } else {
+            gTopbarControls[i].rectangle = draw_button(mainArea, rectangle, def->text, buttonBackgroundColour);
+        }
     }
 
     commsStateColour = (tRgb)RGB_BACKGROUND_GREY;
