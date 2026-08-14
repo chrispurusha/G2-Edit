@@ -1642,10 +1642,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },         // 4
     {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },
     //  5 Invert
-    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{-48,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft },          // 5 In 1
-    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{-33,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft },          // 5 Out 1
-    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{-18,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft },          // 5 In 2
-    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft },          // 5 Out 2
+    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{20,  1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,    NULL,           labelLocLeft },          // 5 In 1
+    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{36,  1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,    NULL,           labelLocLeft },          // 5 Out 1
+    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{60,  1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,    NULL,           labelLocLeft },          // 5 In 2
+    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{ 76,  1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,    NULL,           labelLocLeft },          // 5 Out 2
     //  6 Unknown
     //  7 OscB
     {moduleTypeOscB,        connectorDirIn,  connectorTypeControl, {{  3, -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 7 OscB Pitch
@@ -2681,8 +2681,8 @@ const tVolumeMeterConfig volumeMeterConfigList[] = {
     {volumeTypeSequencer, volumeMeterStyleSingleLed, 16, 2.0, RGB_GREEN_7, RGB_GREEN_3}, };
 
 const tLedLocation       ledLocationList[]       = {
-    {moduleTypeInvert,     ledTypeYes,  {{-40, 10}, {3, 3}}, anchorTopRight},
-    {moduleTypeInvert,     ledTypeYes,  {{-10, 10}, {3, 3}}, anchorTopRight},
+    {moduleTypeInvert,     ledTypeYes,  {{29, 1}, {3, 3}}, anchorMiddleLeft},
+    {moduleTypeInvert,     ledTypeYes,  {{69, 1}, {3, 3}}, anchorMiddleLeft},
     {moduleTypeEnvADSR,    ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft },
     {moduleTypeGate,       ledTypeYes,  {{-40, 11}, {3, 3}}, anchorTopRight}, // XPos:137 YPos:11 H:2
     {moduleTypeGate,       ledTypeYes,  {{-10, 11}, {3, 3}}, anchorTopRight}, // XPos:230 YPos:11 H:2
