@@ -532,7 +532,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeEnvADSR,    paramTypeADRTime,        {{ 56,  -3}, { 7,  7}}, anchorBottomLeft,  "Rel",          128,   0, NULL,                                  NULL          },                      // 20 R
     {moduleTypeEnvADSR,    paramTypeMenu,           {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },                      // 20 Output Type
     {moduleTypeEnvADSR,    paramTypeToggle,         {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap},                      // 20 KB Active
-    {moduleTypeEnvADSR,    paramTypeMenu,           {{  5,  -8}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          },                      // 20 Normal/Reset
+    {moduleTypeEnvADSR,    paramTypeMenu,           {{  3,  -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          },                      // 20 Normal/Reset
     // 21 Mux1-8 -- No params
     // 22 PartQuant
     {moduleTypePartQuant,  paramTypePartials,       {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Range",        128,  64, NULL,                                  NULL          },                      // 22 Range  (bipolar partials -64..+63; default 64 = 0/centre)
