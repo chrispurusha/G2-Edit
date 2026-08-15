@@ -149,6 +149,17 @@ void cursor_raw_coord(double * rawX, double * rawY) {
     }
 }
 
+// Is any in-window text field taking keystrokes? Note entry and any other bare-letter shortcut has
+// to stand aside while one is: the letter belongs to the name being typed.
+static bool any_text_edit_active(void) {
+    return gPatchNameEdit.active
+           || gPatchNotesEdit.active
+           || gModuleNameEdit.active
+           || gParamNameEdit.active
+           || gSynthNameEdit.active
+           || gPerfNameEdit.active;
+}
+
 void cursor_capture(void) {
     gDragSkipCount = 3;
     glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -944,6 +955,32 @@ void scroll_event(GLFWwindow * window, double x, double y) {
         hovered = (int32_t)split_view_focused_pane();
     }
 
+    // ALT + WHEEL over a parameter adjusts it, rather than scrolling the pane under it — the wheel
+    // equivalent of the bare +/- keys, and it goes through the same canvas_nudge_param_under_cursor()
+    // so the two cannot drift on what counts as a step or which widgets refuse one.
+    //
+    // The accumulator is not decoration. A mouse wheel delivers whole notches, but a trackpad
+    // delivers a stream of fractions, and stepping one unit per EVENT would make a trackpad race
+    // through the range while truncating each fraction to nothing would make it do nothing at all.
+    // Same reasoning as the sub-unit remainder carried between drag events — see tParamDragging.
+    // A delta of 0 is a pure QUERY — nudge_param_for_module() reports whether the cursor is over a
+    // steppable parameter and only sends when the value actually changes. Asking first is what lets
+    // Alt + wheel away from any parameter still scroll the pane normally, instead of being swallowed.
+    if (alt_modifier_held() && canvas_nudge_param_under_cursor(0)) {
+        static double wheelAccum = 0.0;
+
+        wheelAccum += y;
+
+        int           steps      = (int)wheelAccum;
+
+        if (steps != 0) {
+            wheelAccum -= (double)steps;
+            canvas_nudge_param_under_cursor(steps);
+            synthlib_request_redraw();
+        }
+        return;   // while Alt is held over a parameter, the wheel belongs to it
+    }
+
     if (gCommandKeyPressed == true) {
         uint32_t prevPane = module_pane();
 
@@ -1105,6 +1142,18 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
     if (handle_virtual_keyboard_key(key, mods, action)) {
         synthlib_request_redraw();
+        return;
+    }
+
+    // NOTE ENTRY, deliberately global — it does not need the Virtual Keyboard panel open, because the
+    // panel is a view of that state rather than a precondition for it.
+    //
+    // The text-edit guard is EXPLICIT rather than positional. key_event()'s own name-editing block is
+    // further down this function (the char_event() handlers near the top of the file are a different
+    // path), so relying on "everything above has returned" would have let every letter typed into a
+    // patch name play a note as well as being inserted. Stating the condition also means a future
+    // edit field cannot quietly reintroduce it by being handled somewhere new.
+    if (!any_text_edit_active() && handle_note_entry_key(key, mods, action)) {
         return;
     }
 

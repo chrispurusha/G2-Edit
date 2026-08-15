@@ -410,6 +410,7 @@ void render_patch_adjuster_panel(void) {
 
     gPatchAdjuster.panel.titleBarRect = draw_panel_chrome(mainArea, box, titleH, "Patch Adjuster");
     gPatchAdjuster.close              = draw_panel_close_button(mainArea, box, gPatchAdjuster.closePressed);
+    gPatchAdjuster.panel.closeRect    = gPatchAdjuster.close; // carve it out of the title-bar drag — see floatingPanel.h
 
     for (uint32_t k = 0; k < adjusterKnobMax; k++) {
         double     cx     = boxX + margin + (k * colW) + (colW / 2.0);

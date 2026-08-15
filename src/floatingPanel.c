@@ -100,6 +100,12 @@ bool floating_panel_contains(const tFloatingPanel * panel, tCoord coord) {
 }
 
 bool floating_panel_press(tFloatingPanel * panel, tCoord coord) {
+    // The close button is part of the title bar's rectangle, so it has to be carved out before the
+    // drag test or a press on it becomes a move and the panel can never be closed.
+    if (within_rectangle(coord, panel->closeRect)) {
+        floating_panel_raise(panel);
+        return false;   // not a move — the panel's own handler deals with it
+    }
     bool onTitle = within_rectangle(coord, panel->titleBarRect);
     bool ctrlAny = ctrl_modifier_held() && within_rectangle(coord, panel->rect);
 
