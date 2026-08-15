@@ -42,6 +42,11 @@ extern "C" {
 typedef struct {
     tRectangle rect;           // where the panel IS: position kept across frames, size set by content
     tRectangle titleBarRect;   // the drag handle; the render pass fills this in from draw_panel_chrome()
+
+    // The close button, which sits INSIDE the title bar (panel_close_button_rect() insets it from the
+    // panel's top-left). Without excluding it, the title-bar drag claims the press first and the
+    // close never registers — which is exactly what broke closing the Virtual Keyboard.
+    tRectangle closeRect;
     bool       placed;         // false until first shown — a position is chosen ONCE, never per frame
     bool       dragging;
     tCoord     dragMouseStart;

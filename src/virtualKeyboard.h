@@ -69,6 +69,7 @@ typedef struct {
     uint32_t       firstNote;         // MIDI note at the left edge, always a C
     int32_t        noteOn;            // the sounding note, -1 when silent
     int32_t        lastNote;          // last note played, -1 if none yet — what Repeat re-strikes
+    int32_t        sustainedNote;     // shift-latched note, left ringing after its key is released; -1 = none
     uint32_t       velocity;          // fixed; the wire format carries no velocity field
     bool           drone;
     bool           repeat;
@@ -100,6 +101,11 @@ void close_virtual_keyboard_panel(void);
 void render_virtual_keyboard_panel(void);
 bool handle_virtual_keyboard_mouse(tCoord coord, tMouseButton mouseButton);
 bool handle_virtual_keyboard_key(int key, int mods, int action);
+
+// The computer keyboard as note entry, INDEPENDENT of whether the panel is open — the panel is a
+// view of this state, not a precondition for it. Routed from key_event() after the text-edit
+// handlers, so typing a patch or module name can never play a note. True when it consumed the key.
+bool handle_note_entry_key(int key, int mods, int action);
 
 // Repeat's clock. tick() re-strikes the note when one is due and is a no-op otherwise, so the
 // render loop can call it unconditionally; wants_ticks() tells that loop to wait with a timeout
