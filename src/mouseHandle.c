@@ -59,6 +59,7 @@ extern "C" {
 #include "midiCcList.h"
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
+#include "helpPanel.h"
 #include "misc.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
@@ -406,30 +407,26 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         synthlib_request_redraw();
         return;
     }
-
     // Floating panels are hit-tested FRONT TO BACK, matching the order they are drawn in (see
     // render_panels() in graphics.c, which draws them back to front). Fixed call order was wrong the
     // moment two of them could overlap: whichever was tested first swallowed the press, even when it
     // was the one underneath.
-    if (floating_panel_in_front_of(&gPatchAdjuster.panel, &gVirtualKeyboard.panel)) {
-        if (handle_patch_adjuster_mouse(coord, mouseButton)) {
-            synthlib_request_redraw();
-            return;
-        }
+    {
+        tFloatingPanelEntry panels[] = {
+            {&gVirtualKeyboard.panel, NULL, handle_virtual_keyboard_mouse, NULL},
+            {&gPatchAdjuster.panel,   NULL, handle_patch_adjuster_mouse,   NULL},
+            {&gHelpPanel.panel,       NULL, handle_help_panel_mouse,       NULL}
+        };
+        uint32_t            count    = (uint32_t)(sizeof(panels) / sizeof(panels[0]));
 
-        if (handle_virtual_keyboard_mouse(coord, mouseButton)) {
-            synthlib_request_redraw();
-            return;
-        }
-    } else {
-        if (handle_virtual_keyboard_mouse(coord, mouseButton)) {
-            synthlib_request_redraw();
-            return;
-        }
+        floating_panel_sort(panels, count);
 
-        if (handle_patch_adjuster_mouse(coord, mouseButton)) {
-            synthlib_request_redraw();
-            return;
+        // Reversed: sorted back-to-front for drawing, so front-to-back is the hit-test order.
+        for (uint32_t i = count; i > 0; i--) {
+            if (panels[i - 1].mouse(coord, mouseButton)) {
+                synthlib_request_redraw();
+                return;
+            }
         }
     }
 
@@ -1139,10 +1136,25 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         synthlib_request_redraw();
         return;
     }
+    // Floating-panel keys, FRONT TO BACK for the same reason their clicks are: Escape has to close
+    // the panel you are looking at. Fixed call order closed whichever handler happened to be first —
+    // with the Help panel in front and the Virtual Keyboard behind it, Escape shut the keyboard.
+    {
+        tFloatingPanelEntry panels[] = {
+            {&gVirtualKeyboard.panel, NULL, NULL, handle_virtual_keyboard_key},
+            {&gPatchAdjuster.panel,   NULL, NULL, handle_patch_adjuster_key  },
+            {&gHelpPanel.panel,       NULL, NULL, handle_help_panel_key      }
+        };
+        uint32_t            count    = (uint32_t)(sizeof(panels) / sizeof(panels[0]));
 
-    if (handle_virtual_keyboard_key(key, mods, action)) {
-        synthlib_request_redraw();
-        return;
+        floating_panel_sort(panels, count);
+
+        for (uint32_t i = count; i > 0; i--) {
+            if (panels[i - 1].key(key, mods, action)) {
+                synthlib_request_redraw();
+                return;
+            }
+        }
     }
 
     // NOTE ENTRY, deliberately global — it does not need the Virtual Keyboard panel open, because the
@@ -1154,11 +1166,6 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     // patch name play a note as well as being inserted. Stating the condition also means a future
     // edit field cannot quietly reintroduce it by being handled somewhere new.
     if (!any_text_edit_active() && handle_note_entry_key(key, mods, action)) {
-        return;
-    }
-
-    if (handle_patch_adjuster_key(key, mods, action)) {
-        synthlib_request_redraw();
         return;
     }
 
