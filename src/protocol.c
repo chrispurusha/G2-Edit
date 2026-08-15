@@ -446,10 +446,14 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         module->active           = true;
         module->actualParamCount = paramCount;
 
-        if ((module->type != moduleTypeUnknown0) && (module_param_count(module->type) > 0)) {
-            if (paramCount != module_param_count(module->type)) {
-                LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module->type, gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
-                record_param_count_mismatch(module->type, paramCount, module_param_count(module->type));
+        // Compared against the DEVICE parameter count, not the raw row count: SeqNote carries two
+        // paramTypeCustomData rows in slots the G2 never transmits, so against module_param_count()
+        // it reported a permanent 37-vs-39 mismatch. A check that cries wolf on a module that is
+        // correct is worse than no check, because it trains you to ignore the one that isn't.
+        if ((module->type != moduleTypeUnknown0) && (module_device_param_count(module->type) > 0)) {
+            if (paramCount != module_device_param_count(module->type)) {
+                LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module->type, gModuleProperties[module->type].name, paramCount, module_device_param_count(module->type));
+                record_param_count_mismatch(module->type, paramCount, module_device_param_count(module->type));
             }
         }
 

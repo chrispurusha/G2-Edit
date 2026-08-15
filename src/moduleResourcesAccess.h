@@ -63,6 +63,10 @@ uint32_t array_size_volume_location_list(void);
 uint32_t array_size_led_location_list(void);
 uint32_t array_size_str_map(const char ** strMap);
 uint32_t module_param_count(tModuleType moduleType);
+
+// The subset of those the DEVICE actually sends — paramTypeCustomData rows excluded, they are local
+// storage with their own wire message. For the patch-parse count check only; see the definition.
+uint32_t module_device_param_count(tModuleType moduleType);
 uint32_t module_connector_count(tModuleType moduleType);
 // Fills module->connector[].dir/.type from connectorLocationList. Must be called whenever a
 // module enters the database, because these fields are what every cable lookup reads and they
