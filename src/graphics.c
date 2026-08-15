@@ -2041,7 +2041,8 @@ static void render_frame(void) {
         tFloatingPanelEntry panels[] = {
             {&gVirtualKeyboard.panel, render_virtual_keyboard_panel, NULL, NULL},
             {&gPatchAdjuster.panel,   render_patch_adjuster_panel,   NULL, NULL},
-            {&gHelpPanel.panel,       render_help_panel,             NULL, NULL}
+            {&gHelpPanel.panel,       render_help_panel,             NULL, NULL},
+            {&gMutator.panel,         render_mutator_panel,          NULL, NULL}
         };
 
         floating_panel_sort(panels, (uint32_t)(sizeof(panels) / sizeof(panels[0])));
@@ -2054,7 +2055,6 @@ static void render_frame(void) {
     render_patch_notes_edit();
     render_bank_backup_progress();
     render_bank_restore_progress();
-    render_mutator_panel();
     render_file_browser();
     render_bank_browser();
     render_device_busy_overlay(); // dim + "please wait" while a whole-slot device op is in flight
