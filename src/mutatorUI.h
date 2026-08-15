@@ -22,6 +22,7 @@
 
 #include "mutator.h"
 #include "synthlibTypes.h"
+#include "floatingPanel.h"
 
 // Patch Mutator floater: panel chrome + drag, Mutate/Randomize/Interpolate/Cross operators with
 // Probability/Range/Cross-probability sliders, Mother/Children x6/Father row (click to
@@ -48,13 +49,13 @@ typedef enum {
 } tMutatorFocusKind;
 
 typedef struct {
-    bool                active;
-    uint32_t            slot;
+    bool     active;
+    uint32_t slot;
 
-    tRectangle          panelRect;
-    bool                draggingPanel;
-    tCoord              dragMouseStart;
-    tCoord              dragPanelStart;
+    // Was four hand-rolled fields (panelRect + three drag ones) predating floatingPanel.h. Migrated
+    // onto the shared type so the Mutator joins the other panels' stacking order — on its own scheme
+    // it could not be raised above them, and they could not be raised above it.
+    tFloatingPanel      panel;
     int32_t             draggingSlider;   // -1 = none, else 0=Prob, 1=Range, 2=Cross Prob
     double              dragLastY;        // last mouse y while dragging a dial (vertical drag = adjust)
 
@@ -92,7 +93,6 @@ typedef struct {
     tRectangle          categorySoloRect[mutatorCatNone];
     tRectangle          variationRect[MUTATOR_NUM_REAL_VARIATIONS]; // mirrors the 8 real hardware variations
     tRectangle          storageRect[MUTATOR_NUM_STORAGE];
-    tRectangle          titleBarRect;
     tRectangle          closeButtonRect;
     bool                closeButtonPressed;
 } tMutatorState;

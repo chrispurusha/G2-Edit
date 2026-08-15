@@ -77,12 +77,17 @@ void open_mutator_panel(uint32_t slot) {
     gMutator.mutateRange                     = 0.3;
     gMutator.linkProbRange                   = true;
     gMutator.crossProb                       = 0.5;
-    gMutator.panelRect.coord                 = (tCoord){
+    // Its own home position, top-left, rather than the centred cascade the other panels use —
+    // marking it placed keeps floating_panel_place() from moving it. It is the biggest panel here and
+    // has always opened there; changing that was not part of joining the stacking order.
+    gMutator.panel.rect.coord                = (tCoord){
         80.0, 80.0 + MENU_BAR_HEIGHT
     };
-    gMutator.panelRect.size                  = (tSize){
+    gMutator.panel.rect.size                 = (tSize){
         700.0, 320.0
     };
+    gMutator.panel.placed                    = true;
+    floating_panel_raise(&gMutator.panel);
 
     // Seed Mother from whatever's currently playing, so there's something to work with right away.
     uint32_t activeVariation = gPatchDescr[slot].activeVariation;
@@ -313,7 +318,12 @@ void render_mutator_panel(void) {
     if (!gMutator.active) {
         return;
     }
-    tRectangle               panel                       = gMutator.panelRect;
+    // Through floating_panel_place() for the edge clamping every panel shares. The height is the one
+    // it already has: this render GROWS it at the end if the content needs more, so the value passed
+    // here is last frame's — which only matters to the clamp, and being one frame stale is harmless.
+    tRectangle               panel                       = floating_panel_place(&gMutator.panel,
+                                                                                gMutator.panel.rect.size.w,
+                                                                                gMutator.panel.rect.size.h);
     double                   x                           = panel.coord.x;
     double                   y                           = panel.coord.y;
     double                   w                           = panel.size.w;
@@ -322,8 +332,9 @@ void render_mutator_panel(void) {
 
     // titleBarRect is also the drag handle, so it stays the full-width rect returned by
     // draw_panel_chrome() (whose visual fill is inset from the border internally).
-    gMutator.titleBarRect    = draw_panel_chrome(mainArea, panel, titleH, "Patch Mutator");
-    gMutator.closeButtonRect = draw_panel_close_button(mainArea, panel, gMutator.closeButtonPressed);
+    gMutator.panel.titleBarRect = draw_panel_chrome(mainArea, panel, titleH, "Patch Mutator");
+    gMutator.closeButtonRect    = draw_panel_close_button(mainArea, panel, gMutator.closeButtonPressed);
+    gMutator.panel.closeRect    = gMutator.closeButtonRect; // carve it out of the title-bar drag
 
     double                   rowY                        = y + titleH + margin;
 
@@ -522,7 +533,7 @@ void render_mutator_panel(void) {
     rowY += varBoxH;
 
     if ((rowY + margin) > (y + panel.size.h)) {
-        gMutator.panelRect.size.h = (rowY + margin) - y;
+        gMutator.panel.rect.size.h = (rowY + margin) - y;
     }
     draw_drag_ghost();
 }
@@ -815,14 +826,14 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
         if (hit_test_drag_box(coord, &fam, &idx)) {
             clear_box(fam, idx);
         }
-        return within_rectangle(coord, gMutator.panelRect);
+        return within_rectangle(coord, gMutator.panel.rect);
     }
 
     // Any other button/action this handler doesn't specifically act on must still be swallowed
     // while the cursor is over the panel, so it can't reach the module canvas underneath and open
     // e.g. a module's context menu.
     if ((mouseButton != mouseButtonLeftDown) && (mouseButton != mouseButtonLeftUp)) {
-        return within_rectangle(coord, gMutator.panelRect);
+        return within_rectangle(coord, gMutator.panel.rect);
     }
 
     if (mouseButton == mouseButtonLeftDown) {
@@ -837,10 +848,9 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
 
         // Continuous drag controls (panel title bar, dials) still act immediately on press -
         // they aren't discrete "click" actions.
-        if (within_rectangle(coord, gMutator.titleBarRect)) {
-            gMutator.draggingPanel  = true;
-            gMutator.dragMouseStart = coord;
-            gMutator.dragPanelStart = gMutator.panelRect.coord;
+        // Title bar, or anywhere on the panel with Ctrl held — the shared rule, which also keeps the
+        // close button out of the drag handle it sits inside.
+        if (floating_panel_press(&gMutator.panel, coord)) {
             return true;
         }
 
@@ -900,7 +910,7 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
         }
         // Swallow clicks inside the panel that didn't hit a control, so they don't fall through
         // to the module canvas underneath.
-        return within_rectangle(coord, gMutator.panelRect);
+        return within_rectangle(coord, gMutator.panel.rect);
     }
 
     // mouseButtonLeftUp
@@ -908,8 +918,8 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
         gMutator.operatorPressed[i] = false;
     }
 
-    if (gMutator.draggingPanel) {
-        gMutator.draggingPanel = false;
+    if (gMutator.panel.dragging) {
+        floating_panel_release(&gMutator.panel);
         return true;
     }
 
@@ -988,7 +998,7 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
         default:
             break;
     }
-    return within_rectangle(coord, gMutator.panelRect);
+    return within_rectangle(coord, gMutator.panel.rect);
 }
 
 void handle_mutator_cursor_pos(tCoord coord) {
@@ -996,9 +1006,7 @@ void handle_mutator_cursor_pos(tCoord coord) {
         return;
     }
 
-    if (gMutator.draggingPanel) {
-        gMutator.panelRect.coord.x = gMutator.dragPanelStart.x + (coord.x - gMutator.dragMouseStart.x);
-        gMutator.panelRect.coord.y = gMutator.dragPanelStart.y + (coord.y - gMutator.dragMouseStart.y);
+    if (floating_panel_drag(&gMutator.panel, coord)) {
         return;
     }
 

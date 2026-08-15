@@ -279,7 +279,7 @@ void param_overlay_note_param(tModule * module, uint32_t paramIndex, tRectangle 
             }
             get_global_gui_scaled_mouse_coord(&mouseCoord);
 
-            if (gMutator.active && within_rectangle(mouseCoord, gMutator.panelRect)) {
+            if (gMutator.active && within_rectangle(mouseCoord, gMutator.panel.rect)) {
                 return;
             }
 
