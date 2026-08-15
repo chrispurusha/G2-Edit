@@ -2071,6 +2071,8 @@ static void render_frame(void) {
 //   LOADFILE <path>   — read_file_into_memory_and_process() (works offline)
 //   SLOT <0-3|A-D>    — select the slot the canvas renders
 //   DUMP              — current slot + every module: type, name, location, col/row
+//   PARAMDUMP         — the same modules with their variation-0 PARAMETER and MODE values, plus the
+//                       parameter count the patch declared against the one our table gives
 //   MENU <bar>[/<item>[/<sub>]] — run a menu item by label (leading substring, case-insensitive,
 //                       '/' separated); omit the last level to LIST what that level contains
 //   SELECT <VA|FX> <n> — select one module by index; SELECT NONE clears
@@ -2218,6 +2220,56 @@ static void backdoor_dump_state(char * out, size_t outMax) {
                                      (unsigned)cable->colour);
         }
     }
+}
+
+// PARAMDUMP — every active module in the current slot with its VARIATION 0 parameter values and its
+// mode values. DUMP above reports only STRUCTURE (which modules, which cables); this reports
+// CONTENTS, which is what auditing paramLocationList's defaultValue column against a reference patch
+// needs.
+//
+// Prints the count the PATCH declared (module->actualParamCount) alongside the count our own table
+// gives, so the same dump doubles as a param-count check on any device-authored file.
+//
+// Written straight to the result file rather than composed in a buffer the way backdoor_dump_state()
+// is: a full patch runs to tens of modules by tens of parameters, which overruns any fixed buffer
+// worth putting on the stack.
+static void backdoor_param_dump(void) {
+    FILE *         file       = fopen(backdoor_result_path(), "w");
+
+    if (file == NULL) {
+        return;
+    }
+    const uint32_t locs[]     = {(uint32_t)locationVa, (uint32_t)locationFx};
+    const char *   locNames[] = {"VA", "FX"};
+
+    fprintf(file, "OK\nslot=%u\n", (unsigned)gSlot);
+
+    for (uint32_t l = 0; l < 2; l++) {
+        for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
+            tModule * module = get_module_slot(gSlot, locs[l], index);
+
+            if ((module == NULL) || (module->type == 0)) {
+                continue; // type 0 == empty slot in the sparse per-index store
+            }
+            fprintf(file, "module loc=%s index=%u type=%u name=\"%s\" filecount=%u tablecount=%u params:",
+                    locNames[l], (unsigned)index, (unsigned)module->type, module->name,
+                    (unsigned)module->actualParamCount, (unsigned)module_param_count(module->type));
+
+            for (uint32_t p = 0; (p < module->actualParamCount) && (p < MAX_NUM_PARAMETERS); p++) {
+                fprintf(file, " %u", (unsigned)module->param[0][p].value);
+            }
+
+            fprintf(file, "\nmodes loc=%s index=%u count=%u:", locNames[l], (unsigned)index, (unsigned)module->modeCount);
+
+            for (uint32_t m = 0; (m < module->modeCount) && (m < MAX_NUM_MODES); m++) {
+                fprintf(file, " %u", (unsigned)module->mode[m].value);
+            }
+
+            fprintf(file, "\n");
+        }
+    }
+
+    fclose(file);
 }
 
 // A cable end is addressed by its I/O index — "output 2", "input 0" — counting only connectors of
@@ -2659,6 +2711,8 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
         backdoor_dump_state(dump, sizeof(dump));
         backdoor_write_result(dump);
+    } else if (strcmp(cmd, "PARAMDUMP") == 0) {
+        backdoor_param_dump();
     } else if (strcmp(cmd, "MENU") == 0) {
         // MENU <bar>[/<item>[/<subitem>]] — runs a menu item by label without going near the mouse.
         // Labels are matched case-insensitively on a leading substring and separated by '/', so
