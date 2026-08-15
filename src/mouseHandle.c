@@ -379,11 +379,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         return;
     }
 
-    if (handle_mutator_mouse(coord, mouseButton)) {
-        synthlib_request_redraw();
-        return;
-    }
-
     if (handle_patch_notes_mouse(coord, mouseButton)) {
         synthlib_request_redraw();
         return;
@@ -415,7 +410,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         tFloatingPanelEntry panels[] = {
             {&gVirtualKeyboard.panel, NULL, handle_virtual_keyboard_mouse, NULL},
             {&gPatchAdjuster.panel,   NULL, handle_patch_adjuster_mouse,   NULL},
-            {&gHelpPanel.panel,       NULL, handle_help_panel_mouse,       NULL}
+            {&gHelpPanel.panel,       NULL, handle_help_panel_mouse,       NULL},
+            {&gMutator.panel,         NULL, handle_mutator_mouse,          NULL}
         };
         uint32_t            count    = (uint32_t)(sizeof(panels) / sizeof(panels[0]));
 
@@ -843,7 +839,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         return;
     }
 
-    if (gMutator.active && (gMutator.draggingPanel || (gMutator.draggingSlider >= 0))) {
+    if (gMutator.active && (gMutator.panel.dragging || (gMutator.draggingSlider >= 0))) {
         handle_mutator_cursor_pos(coord);
         synthlib_request_redraw();
         return;
@@ -852,14 +848,20 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     // Floating panels being moved (floatingPanel.h). Ahead of the canvas gestures below for the same
     // reason the Mutator is: a panel drag owns the pointer until it is released, and the panel is
     // over the canvas, so letting the canvas also act on the motion would rubber-band underneath it.
-    if (floating_panel_drag(&gVirtualKeyboard.panel, coord) || floating_panel_drag(&gPatchAdjuster.panel, coord)) {
+    // Every floating panel has to be listed here or its title bar drags nothing — the Help panel was
+    // added to the draw and hit-test registries but missed off this one, so it could be raised and
+    // closed but never moved. The Mutator is absent deliberately: handle_mutator_cursor_pos() above
+    // already runs its move, because it has sliders to drag as well.
+    if (  floating_panel_drag(&gVirtualKeyboard.panel, coord)
+       || floating_panel_drag(&gPatchAdjuster.panel, coord)
+       || floating_panel_drag(&gHelpPanel.panel, coord)) {
         return;
     }
 
     // Mouse is just hovering over the (non-dragging) Mutator panel - skip all the hover detection
     // below (cable highlight, knob/CC overlays, etc.) so nothing hidden behind the floater lights
     // up. gHoverConnector.active is already false from just above.
-    if (gMutator.active && within_rectangle(coord, gMutator.panelRect)) {
+    if (gMutator.active && within_rectangle(coord, gMutator.panel.rect)) {
         synthlib_request_redraw();
         return;
     }
@@ -1117,11 +1119,6 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         return;
     }
 
-    if (handle_mutator_key(key, mods, action)) {
-        synthlib_request_redraw();
-        return;
-    }
-
     if (handle_param_pages_key(key, mods, action)) {
         synthlib_request_redraw();
         return;
@@ -1143,7 +1140,8 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         tFloatingPanelEntry panels[] = {
             {&gVirtualKeyboard.panel, NULL, NULL, handle_virtual_keyboard_key},
             {&gPatchAdjuster.panel,   NULL, NULL, handle_patch_adjuster_key  },
-            {&gHelpPanel.panel,       NULL, NULL, handle_help_panel_key      }
+            {&gHelpPanel.panel,       NULL, NULL, handle_help_panel_key      },
+            {&gMutator.panel,         NULL, NULL, handle_mutator_key         }
         };
         uint32_t            count    = (uint32_t)(sizeof(panels) / sizeof(panels[0]));
 
