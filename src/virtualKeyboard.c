@@ -219,6 +219,7 @@ void render_virtual_keyboard_panel(void) {
 
     gVirtualKeyboard.panel.titleBarRect = draw_panel_chrome(mainArea, box, titleH, "Virtual Keyboard");
     gVirtualKeyboard.close              = draw_panel_close_button(mainArea, box, gVirtualKeyboard.closePressed);
+    gVirtualKeyboard.panel.closeRect    = gVirtualKeyboard.close; // carve it out of the title-bar drag — see floatingPanel.h
 
     // ── The button bar ────────────────────────────────────────────────────
     // Four scroll buttons on the left as in the original — double arrows an octave, singles a note
@@ -462,10 +463,122 @@ bool handle_virtual_keyboard_mouse(tCoord coord, tMouseButton mouseButton) {
 
 // ─── Keyboard ────────────────────────────────────────────────────────────────
 
-bool handle_virtual_keyboard_key(int key, int mods, int action) {
-    (void)mods;
+// The computer keyboard as note entry: the home row is the white keys and the row above holds the
+// blacks, the layout every tracker and DAW uses — a = C, w = C#, s = D, e = D#, d = E, f = F and so
+// on, with k and l carrying on into the octave above where the home row runs out.
+//
+// Returns the semitone offset from the leftmost DRAWN note, or -1 for a key that is not a note.
+// Offsets rather than absolute notes so the played octave follows gVirtualKeyboard.firstNote, which
+// is always a C: what you play is then always what the panel is showing.
+static int32_t note_offset_for_key(int key) {
+    switch (key) {
+        case GLFW_KEY_A: return 0;    // C
 
-    if (!gVirtualKeyboard.active || (action != GLFW_PRESS)) {
+        case GLFW_KEY_W: return 1;    // C#
+
+        case GLFW_KEY_S: return 2;    // D
+
+        case GLFW_KEY_E: return 3;    // D#
+
+        case GLFW_KEY_D: return 4;    // E
+
+        case GLFW_KEY_F: return 5;    // F
+
+        case GLFW_KEY_T: return 6;    // F#
+
+        case GLFW_KEY_G: return 7;    // G
+
+        case GLFW_KEY_Y: return 8;    // G#
+
+        case GLFW_KEY_H: return 9;    // A
+
+        case GLFW_KEY_U: return 10;   // A#
+
+        case GLFW_KEY_J: return 11;   // B
+
+        case GLFW_KEY_K: return 12;   // C, octave up
+
+        case GLFW_KEY_O: return 13;   // C#
+
+        case GLFW_KEY_L: return 14;   // D
+
+        case GLFW_KEY_P: return 15;   // D#
+
+        default: return -1;
+    }
+}
+
+// Note entry works whether or not the panel is open: the panel shows this state, it does not own it.
+// Split out of handle_virtual_keyboard_key() for exactly that reason, and routed separately from
+// key_event().
+bool handle_note_entry_key(int key, int mods, int action) {
+    // The octave shift belongs with the notes, not with the panel: it decides WHICH octave those
+    // keys play, so gating it on the panel being open would leave the notes global but stranded in
+    // one octave. The panel's own Up/Down arrows do the same thing when it is open.
+    if (  (action == GLFW_PRESS)
+       && ((mods & (GLFW_MOD_SUPER | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0)
+       && ((key == GLFW_KEY_Z) || (key == GLFW_KEY_X))) {
+        scroll_by((key == GLFW_KEY_Z) ? -12 : 12);
+        synthlib_request_redraw();
+        return true;
+    }
+    int32_t offset = note_offset_for_key(key);
+
+    if (offset < 0) {
+        return false;
+    }
+
+    // Cmd/Ctrl/Alt suppress note entry so a shortcut on one of these letters can never also play.
+    // SHIFT deliberately does not: it is the sustain latch below, and it does not change which
+    // physical key GLFW reports.
+    if ((mods & (GLFW_MOD_SUPER | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) != 0) {
+        return false;
+    }
+
+    // Playable with the panel never opened, so the defaults it would have set have to exist anyway.
+    if (gVirtualKeyboard.velocity == 0) {
+        gVirtualKeyboard.velocity  = 100;
+        gVirtualKeyboard.firstNote = 48;   // C3
+    }
+    int32_t note   = (int32_t)gVirtualKeyboard.firstNote + offset;
+
+    if (note > VKB_NOTE_MAX) {
+        return true;   // off the top of the MIDI range: swallowed rather than passed on as a shortcut
+    }
+
+    // GLFW_REPEAT is ignored: OS auto-repeat would retrigger the envelope several times a second for
+    // as long as a key was held, which is not what holding a note means.
+    if (action == GLFW_PRESS) {
+        // SHIFT LATCHES: the note is left ringing when the key comes up, and stays that way until
+        // the same key is pressed WITHOUT shift, which clears the latch so its release silences it.
+        gVirtualKeyboard.sustainedNote = ((mods & GLFW_MOD_SHIFT) != 0) ? note : -1;
+        gVirtualKeyboard.lastNote      = note;
+        gVirtualKeyboard.nextRepeatAt  = ((get_time_ms() / 1000.0) * 1000.0) + VKB_REPEAT_MS;
+        set_sounding_note(note);
+    } else if (action == GLFW_RELEASE) {
+        // ONLY the key actually sounding releases it. Roll from one key to the next without lifting
+        // the first and the releases arrive out of order — a release that silenced whatever happened
+        // to be sounding would cut the note still being held.
+        //
+        // Drone and Repeat hold the note deliberately, as they do for a mouse release, and so does a
+        // shift latch on this same note.
+        if (  (gVirtualKeyboard.noteOn == note)
+           && (gVirtualKeyboard.sustainedNote != note)
+           && !gVirtualKeyboard.drone
+           && !gVirtualKeyboard.repeat) {
+            set_sounding_note(-1);
+        }
+    }
+    synthlib_request_redraw();
+    return true;
+}
+
+bool handle_virtual_keyboard_key(int key, int mods, int action) {
+    if (!gVirtualKeyboard.active) {
+        return false;
+    }
+
+    if (action != GLFW_PRESS) {
         return false;
     }
 
