@@ -21,6 +21,7 @@
 #define PATCH_ADJUSTER_H
 
 #include "types.h"
+#include "floatingPanel.h"
 #include "synthlibTypes.h"
 
 // The Patch Adjuster — the original editor's Tools > Patch Adjuster (manual ch.8, p.113). Eight
@@ -70,12 +71,16 @@ typedef enum {
 #define ADJUSTER_RANGE    (50)   // knob travel either side of centre, as in the original
 
 typedef struct {
-    bool     active;
-    uint32_t slot;
-    uint32_t variation;                      // the variation the baseline was taken from
-    int32_t  amount[adjusterKnobMax];        // -ADJUSTER_RANGE..+ADJUSTER_RANGE, 0 = centre
-    bool     haveBaseline;
-    uint32_t moduleCount;                    // to notice an add/remove and commit
+    bool           active;
+
+    // Floating, not modal — see floatingPanel.h.
+    tFloatingPanel panel;
+
+    uint32_t       slot;
+    uint32_t       variation;                // the variation the baseline was taken from
+    int32_t        amount[adjusterKnobMax];  // -ADJUSTER_RANGE..+ADJUSTER_RANGE, 0 = centre
+    bool           haveBaseline;
+    uint32_t       moduleCount;              // to notice an add/remove and commit
 
     // Baseline values, indexed [location][moduleIndex][paramIndex]. Only the active variation is
     // snapshotted — that is the one the knobs edit, and it is the one whose change commits.

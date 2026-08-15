@@ -396,14 +396,30 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         return;
     }
 
-    if (handle_virtual_keyboard_mouse(coord, mouseButton)) {
-        synthlib_request_redraw();
-        return;
-    }
+    // Floating panels are hit-tested FRONT TO BACK, matching the order they are drawn in (see
+    // render_panels() in graphics.c, which draws them back to front). Fixed call order was wrong the
+    // moment two of them could overlap: whichever was tested first swallowed the press, even when it
+    // was the one underneath.
+    if (floating_panel_in_front_of(&gPatchAdjuster.panel, &gVirtualKeyboard.panel)) {
+        if (handle_patch_adjuster_mouse(coord, mouseButton)) {
+            synthlib_request_redraw();
+            return;
+        }
 
-    if (handle_patch_adjuster_mouse(coord, mouseButton)) {
-        synthlib_request_redraw();
-        return;
+        if (handle_virtual_keyboard_mouse(coord, mouseButton)) {
+            synthlib_request_redraw();
+            return;
+        }
+    } else {
+        if (handle_virtual_keyboard_mouse(coord, mouseButton)) {
+            synthlib_request_redraw();
+            return;
+        }
+
+        if (handle_patch_adjuster_mouse(coord, mouseButton)) {
+            synthlib_request_redraw();
+            return;
+        }
     }
 
     if (handle_patch_params_mouse(coord, mouseButton)) {
@@ -822,6 +838,13 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     if (gMutator.active && (gMutator.draggingPanel || (gMutator.draggingSlider >= 0))) {
         handle_mutator_cursor_pos(coord);
         synthlib_request_redraw();
+        return;
+    }
+
+    // Floating panels being moved (floatingPanel.h). Ahead of the canvas gestures below for the same
+    // reason the Mutator is: a panel drag owns the pointer until it is released, and the panel is
+    // over the canvas, so letting the canvas also act on the motion would rubber-band underneath it.
+    if (floating_panel_drag(&gVirtualKeyboard.panel, coord) || floating_panel_drag(&gPatchAdjuster.panel, coord)) {
         return;
     }
 

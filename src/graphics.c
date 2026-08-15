@@ -73,6 +73,7 @@ extern "C" {
 #include "paramPages.h"
 #include "paramOverview.h"
 #include "midiCcList.h"
+#include "floatingPanel.h"
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
 #include "soundEngine.h"
@@ -2031,8 +2032,17 @@ static void render_frame(void) {
     render_param_pages_panel();
     render_param_overview_panel();
     render_midi_cc_list_panel();
-    render_virtual_keyboard_panel();
-    render_patch_adjuster_panel();
+
+    // Floating panels, drawn BACK TO FRONT so the most recently clicked one ends up on top. The
+    // mouse dispatch in mouseHandle.c walks the same order reversed — the two must agree, or a panel
+    // is drawn on top of one that is taking its clicks.
+    if (floating_panel_in_front_of(&gPatchAdjuster.panel, &gVirtualKeyboard.panel)) {
+        render_virtual_keyboard_panel();
+        render_patch_adjuster_panel();
+    } else {
+        render_patch_adjuster_panel();
+        render_virtual_keyboard_panel();
+    }
     render_context_menu();
     render_patch_notes_edit();
     render_bank_backup_progress();

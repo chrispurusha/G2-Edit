@@ -385,31 +385,31 @@ void render_patch_adjuster_panel(void) {
     }
     check_for_commit();
 
-    double renderW = get_render_width() / gGlobalGuiScale;
-    double renderH = get_render_height() / gGlobalGuiScale;
-    double margin  = 12.0;
-    double titleH  = 24.0;
-    double btnH    = STANDARD_BUTTON_TEXT_HEIGHT;
-    double textH   = STANDARD_TEXT_HEIGHT;
+    double     margin = 12.0;
+    double     titleH = 24.0;
+    double     btnH   = STANDARD_BUTTON_TEXT_HEIGHT;
+    double     textH  = STANDARD_TEXT_HEIGHT;
 
     // One column per knob, each as wide as its label needs.
-    double colW    = PA_KNOB_SIZE;
+    double     colW   = PA_KNOB_SIZE;
 
     for (uint32_t k = 0; k < adjusterKnobMax; k++) {
         colW = fmax(colW, get_text_width((char *)kKnobLabel[k], textH, eCache));
     }
 
-    colW                += PA_KNOB_GAP;
+    colW                             += PA_KNOB_GAP;
 
-    double boxW    = (margin * 2.0) + (colW * (double)adjusterKnobMax);
-    double boxH    = titleH + margin + textH + 4.0 + PA_KNOB_SIZE + 4.0 + textH + margin + btnH + margin;
-    double boxX    = (renderW - boxW) / 2.0;
-    double boxY    = (renderH - boxH) / 2.0;
-    double y       = boxY + titleH + margin;
+    double     boxW   = (margin * 2.0) + (colW * (double)adjusterKnobMax);
+    double     boxH   = titleH + margin + textH + 4.0 + PA_KNOB_SIZE + 4.0 + textH + margin + btnH + margin;
+    // Floating, not modal — position held across frames instead of re-centred, and no background
+    // overlay, so the patch this is adjusting stays visible while you adjust it. See floatingPanel.h.
+    tRectangle box    = floating_panel_place(&gPatchAdjuster.panel, boxW, boxH);
+    double     boxX   = box.coord.x;
+    double     boxY   = box.coord.y;
+    double     y      = boxY + titleH + margin;
 
-    draw_dialog_background_overlay();
-    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Adjuster");
-    gPatchAdjuster.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gPatchAdjuster.closePressed);
+    gPatchAdjuster.panel.titleBarRect = draw_panel_chrome(mainArea, box, titleH, "Patch Adjuster");
+    gPatchAdjuster.close              = draw_panel_close_button(mainArea, box, gPatchAdjuster.closePressed);
 
     for (uint32_t k = 0; k < adjusterKnobMax; k++) {
         double     cx     = boxX + margin + (k * colW) + (colW / 2.0);
@@ -496,6 +496,33 @@ static void set_knob(uint32_t k, int32_t amount) {
 bool handle_patch_adjuster_mouse(tCoord coord, tMouseButton mouseButton) {
     if (!gPatchAdjuster.active) {
         return false;
+    }
+
+    // Claims only its own clicks — see the same guard in virtualKeyboard.c for why.
+    if (mouseButton == mouseButtonLeftDown) {
+        if (floating_panel_press(&gPatchAdjuster.panel, coord)) {
+            return true;
+        }
+
+        if (!floating_panel_contains(&gPatchAdjuster.panel, coord)) {
+            return false;
+        }
+    } else if (mouseButton == mouseButtonLeftUp) {
+        bool wasDragging = gPatchAdjuster.panel.dragging;
+
+        floating_panel_release(&gPatchAdjuster.panel);
+
+        if (wasDragging) {
+            return true;
+        }
+
+        // A knob drag in progress is outstanding work: the release must reach the code below that
+        // ends it, even if the pointer has been dragged clear of the panel.
+        if (  !floating_panel_contains(&gPatchAdjuster.panel, coord)
+           && !gPatchAdjuster.closePressed
+           && (gPatchAdjuster.dragKnob < 0)) {
+            return false;
+        }
     }
 
     if (mouseButton == mouseButtonLeftDown) {
