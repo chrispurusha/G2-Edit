@@ -402,9 +402,43 @@ OPEN WORK
   algorithm on both channels differing only in LFO PHASE, not a second structure. Proven by
   rebuilding the patch repeatedly at Detune 0, where the LFO freezes wherever it happens to be: the
   comb pattern changed completely between runs but was identical within a run. So a stereo chorus is
-  one delay line per channel with the LFO offset, most likely by a quarter or a half cycle — worth
-  measuring which, by capturing both channels at Detune 0 in the same run and comparing their frozen
-  delays over several runs.
+  one delay line per channel with the LFO offset.
+  THE OFFSET IS HALF A CYCLE — antiphase — measured 2026-08-15 and re-confirmed the same day from
+  the retained captures: L/R phase at the AM fundamental of 180.0, 179.9 and 180.1 degrees across
+  the three files. That was the last measurement either effect was waiting on.
+  BUT THE REAL BLOCKER IS NOT THE EFFECTS, IT IS THE OUTPUT PATH, found 2026-08-15 while about to
+  wire the chorus up. The engine is mono all the way to the speakers and not merely at the effects:
+  eNodeOut SUMS its two legs ("value[n][0] = (a + signal_in(spec, value, 1)) * gain"), and the
+  render loop carries ONE scalar `sample` into one gOutHistory decimator. So a stereo chorus wired
+  in today would have its two antiphase channels summed straight back together at the Out node,
+  which largely cancels the very modulation the work is meant to add — a worse sound than the mono
+  version, arrived at with more code. Neither effect can be finished before the output path carries
+  a pair: eNodeOut keeping its legs separate, `sample` becoming two, and the decimator running on
+  both. Do that FIRST, then the chorus (cheap), then the reverb (needs the second tap set above).
+
+- CHORUS LFO SHAPE AND DEPTH — FIXED 2026-08-15, needs an ear. Owner reported that Amount 127 sounds
+  like a slow vibrato rather than a chorus. It did, and the cause was the LFO SHAPE, not the depth:
+  the hardware sweeps on a symmetric TRIANGLE and chorus_step() used sin(). Pitch shift through a
+  swept delay is the sweep VELOCITY, so a triangle gives a CONSTANT detune flipping sign twice a
+  cycle — two steady pitches alternating, i.e. doubling — where a sine glides smoothly through zero
+  to a peak and back, which is vibrato by definition. Fixed by chorus_triangle(); CHORUS_SWEEP_S
+  also went 0.0021 -> 0.00238.
+  Re-analysed OFFLINE from the three files in ~/Documents/G2 Captures/, with no G2 present, by
+  demodulating at the tone frequency so that |z|^2 reads out the comb argument directly. Where the
+  phase swing is small the folded profile IS the LFO waveform, and the 32.7 Hz captures fold to a
+  clean triangle (fitted rise fraction exactly 0.50). Fitting P + Q*cos(th0 + X*triangle) gives
+  R^2 = 0.9992..1.0000, against sinusoid-based estimators that returned impossible 4..14 ms sweeps.
+  CONFIRMED AND NOT CHANGED by the same pass: CHORUS_RATE_MAX_HZ 3.334 (AM fundamentals 0.8382 Hz at
+  Detune 32 and 1.6795 Hz at Detune 64, exactly 2:1) and CHORUS_CENTRE_S 0.0030 (both tone
+  frequencies independently put the centre at 2.4..3.9 ms).
+  TWO TRAPS, both of which produced a confidently wrong answer first:
+   * a frequency scan capped at 1.2 Hz clipped the real AM peak in the Detune 64 files and made the
+     rate look 4x too fast. It is not. Always check the search band contains the answer.
+   * the retained capture named chorus_det64_16Hz.wav contains a 32.708 Hz tone, NOT 16 Hz. The two
+     tones actually on disk are 32.708 Hz and 98.0 Hz, so the "and again at 16 Hz" cross-check in
+     the soundEngine.c note is not supported by the file it names. The argument it was making — that
+     the sweep spans well under one wavelength, so the AM cannot be a harmonic of the LFO — still
+     holds at 32.7 Hz (4A = 9.5 ms against a 30.6 ms wavelength), just with different numbers.
 
 - MEASURE THE REST OF THE INSTRUMENT THE WAY THE REVERB WAS MEASURED (2026-08-10, owner's idea).
   Extend tools/ from "characterise the reverb" to "characterise any module we implement", so that
