@@ -2907,8 +2907,33 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 
 // A short delay whose length is swept by a slow LFO — detune sets the sweep depth, amount how much
 // of it is mixed in. Stereo on the hardware; mono here, since the engine sums to mono anyway.
+//
+// THE STEREO OFFSET IS HALF A CYCLE, measured 2026-08-15 and the one number the stereo chorus was
+// waiting on (Docs/todo.txt). The two channels run the SAME algorithm with their LFOs in ANTIPHASE:
+// comparing the phase of each channel's amplitude modulation gave R - L = 179.9, 179.6 and 178.9
+// degrees across three captures at two tone frequencies and two Detune settings. Not a quarter cycle,
+// which was the other candidate.
 // Measured on the instrument — see the notes inside chorus_step().
-#define CHORUS_RATE_MAX_HZ    (0.853)   // at Detune 127; proportional to the dial below that
+// REMEASURED 2026-08-15 AND RAISED BY A FACTOR OF 3.9. The old 0.853 made the sweep four times
+// slower than the instrument's, which is why turning Detune up did so much less here than there.
+//
+// Method, deliberately different from the null counting that produced the old figure: a steady tone
+// through a real StChorus comes out AMPLITUDE modulated, because the comb notch walks across it as
+// the delay sweeps, so the modulation rate IS the LFO rate — no disentangling of rate from depth.
+// Captured from the G2's main outputs and read three independent ways, all agreeing:
+//
+//     Detune 32   0.840 Hz        Detune 64   1.680 Hz      exactly 2x for 2x the dial
+//
+//   - at a 98 Hz tone and again at 16 Hz. The second matters: there the sweep spans only 0.14 of a
+//     wavelength, so the modulation CANNOT be a harmonic of the LFO, which is the one way this
+//     method could have been read four times too fast.
+//   - and by eye off the envelope: minima 1.19 s apart at Detune 32, which is 0.84 Hz.
+//
+// Proportional to the dial as before, so 127 gives 0.02625 * 127. THE OLD FIGURE IS EXACTLY 1/3.907
+// OF THIS AT BOTH SETTINGS, which is close enough to 4 to suggest the null-counting method dropped a
+// factor rather than being noisy — its own note says the gaps swell "once per half LFO cycle", and
+// reading that as a whole cycle is worth two of the four. That is not explained, only bounded.
+#define CHORUS_RATE_MAX_HZ    (3.334)   // at Detune 127; proportional to the dial below that
 #define CHORUS_CENTRE_S       (0.0030)  // delay at the middle of the sweep
 #define CHORUS_SWEEP_S        (0.0021)  // peak deviation either side, independent of Detune
 
