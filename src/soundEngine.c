@@ -708,7 +708,7 @@ static uint64_t           gSeenTopology      = 0;
 #define OUT_DECIMATE_TAPS    (64)
 
 static double   gOutDecimate[OUT_DECIMATE_TAPS];
-static double   gOutHistory[OUT_DECIMATE_TAPS];
+static double   gOutHistory[2][OUT_DECIMATE_TAPS];   // [channel]; one shared cursor, see the render loop
 static uint32_t gOutHistoryPos = 0;
 
 static double   gOscDecimate[OSC_DECIMATE_TAPS];
@@ -756,10 +756,13 @@ static uint32_t gDelayWrite[MAX_DELAY_LINES];
 static double   gDelayDamp[MAX_DELAY_LINES];
 static double   gDelayHp[MAX_DELAY_LINES];   // the HP's lowpass half; the filter is x - this
 
-// The chorus's own short sweep, one per node, plus its LFO phase.
-#define CHORUS_SAMPLES    (2048 * ENGINE_OVERSAMPLE)
-static float    gChorusLine[MAX_ENGINE_NODES][CHORUS_SAMPLES];
-static uint32_t gChorusWrite[MAX_ENGINE_NODES];
+// The chorus's own short sweep, plus its LFO phase. TWO LINES PER NODE: the instrument runs left and
+// right through the same algorithm with their LFOs in ANTIPHASE, so one phase accumulator serves
+// both — the right channel simply reads it half a cycle along. See chorus_step().
+#define CHORUS_SAMPLES     (2048 * ENGINE_OVERSAMPLE)
+#define CHORUS_CHANNELS    (2)
+static float    gChorusLine[MAX_ENGINE_NODES][CHORUS_CHANNELS][CHORUS_SAMPLES];
+static uint32_t gChorusWrite[MAX_ENGINE_NODES][CHORUS_CHANNELS];
 static double   gChorusLfo[MAX_ENGINE_NODES];
 
 // Compressor gain-reduction state, one per node.
@@ -1085,9 +1088,10 @@ static void reset_node_state(void) {
     }
 
     for (i = 0; i < MAX_ENGINE_NODES; i++) {
-        gSmoothPrimed[i] = false;
-        gChorusWrite[i]  = 0;
-        gChorusLfo[i]    = 0.0;
+        gSmoothPrimed[i]   = false;
+        gChorusWrite[i][0] = 0;
+        gChorusWrite[i][1] = 0;
+        gChorusLfo[i]      = 0.0;
         memset(gChorusLine[i], 0, sizeof(gChorusLine[i]));
     }
 
@@ -2972,52 +2976,30 @@ static double chorus_triangle(double phase) {
     return (p < 0.5) ? (-1.0 + (4.0 * p)) : (3.0 - (4.0 * p));
 }
 
-static double chorus_step(uint32_t node, double input, double depth, double amount) {
+// ONE CHANNEL of the sweep, read at the LFO phase it is given. The two channels differ ONLY in that
+// phase, which is why this is one function called twice rather than two structures — measured, see
+// the antiphase note above chorus_step().
+static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase, double amount) {
     double   sweep   = 0.0;
     uint32_t samples = 0;
     uint32_t readPos = 0;
     double   wet     = 0.0;
 
-    // DETUNE SETS THE RATE, NOT THE DEPTH — this had it the other way round, with the rate fixed at
-    // 0.7 Hz and the sweep scaled by the dial.
-    //
-    // MEASURED with a pure 1976 Hz tone through a real StChorus. Dry and wet beat against each other
-    // as the delay moves, and one null is exactly one wavelength of delay change, so counting nulls
-    // measures the sweep VELOCITY outright. The gaps between nulls swell and shrink once per half
-    // LFO cycle, which separates rate from depth:
-    //
-    //     Detune 32   rate 0.215 Hz   depth 2.11 ms      Detune 0   no nulls at all: static
-    //     Detune 64   rate 0.430 Hz   depth 2.04 ms
-    //
-    // Exactly twice the rate for twice the dial, at constant depth. Above about 96 the nulls come
-    // too close to separate the two, so the top of the range is extrapolated from that proportion.
-    // (The RATES in that table are the ones later found to be 3.907x low; the DEPTHS survived the
-    // 2026-08-15 re-analysis nearly unchanged, at 2.38 ms.)
-    //
-    // CROSS-CHECKED against a quite different measurement: at Detune 0 the LFO stops wherever it
-    // happens to be, and rebuilding the patch repeatedly froze the delay at 1.33, 1.52, 1.94, 2.13
-    // and 5.33 ms. A 3 ms centre swept +/-2.38 ms spans 0.6 to 5.4 ms, and every one of those frozen
-    // values falls inside it.
-    gChorusLfo[node]                     += (CHORUS_RATE_MAX_HZ * depth) / gSampleRate;
-
-    if (gChorusLfo[node] >= 1.0) {
-        gChorusLfo[node] -= 1.0;
-    }
     // The DEPTH is fixed; only the rate follows the dial. The shape is a TRIANGLE — measured, and
     // the difference between a chorus and a vibrato; see chorus_triangle().
-    sweep                                 = CHORUS_CENTRE_S + (CHORUS_SWEEP_S * chorus_triangle(gChorusLfo[node]));
-    samples                               = (uint32_t)(sweep * gSampleRate);
+    sweep                                         = CHORUS_CENTRE_S + (CHORUS_SWEEP_S * chorus_triangle(phase));
+    samples                                       = (uint32_t)(sweep * gSampleRate);
 
     if (samples < 1) {
         samples = 1;
     } else if (samples >= CHORUS_SAMPLES) {
         samples = CHORUS_SAMPLES - 1;
     }
-    readPos                               = (gChorusWrite[node] + CHORUS_SAMPLES - samples) % CHORUS_SAMPLES;
-    wet                                   = (double)gChorusLine[node][readPos];
+    readPos                                       = (gChorusWrite[node][ch] + CHORUS_SAMPLES - samples) % CHORUS_SAMPLES;
+    wet                                           = (double)gChorusLine[node][ch][readPos];
 
-    gChorusLine[node][gChorusWrite[node]] = (float)input;
-    gChorusWrite[node]                    = (gChorusWrite[node] + 1) % CHORUS_SAMPLES;
+    gChorusLine[node][ch][gChorusWrite[node][ch]] = (float)input;
+    gChorusWrite[node][ch]                        = (gChorusWrite[node][ch] + 1) % CHORUS_SAMPLES;
 
     // A CONSTANT-POWER BLEND whose wet/dry ratio IS the dial, measured on the instrument.
     //
@@ -3041,6 +3023,46 @@ static double chorus_step(uint32_t node, double input, double depth, double amou
         double scale = 1.0 / sqrt(1.0 + (m * m));
 
         return (input * scale) + (wet * m * scale);
+    }
+}
+
+// STEREO, from one LFO: the right channel reads it HALF A CYCLE along. Measured 2026-08-15 and
+// re-confirmed from the retained captures the same day — L/R phase at the AM fundamental of 180.0,
+// 179.9 and 180.1 degrees across three files, so antiphase and not the quarter cycle that was the
+// other candidate.
+static void chorus_step(uint32_t node, double input, double depth, double amount,
+                        double * outLeft, double * outRight) {
+    double phase = gChorusLfo[node];
+
+    // DETUNE SETS THE RATE, NOT THE DEPTH — this had it the other way round, with the rate fixed at
+    // 0.7 Hz and the sweep scaled by the dial.
+    //
+    // MEASURED with a pure 1976 Hz tone through a real StChorus. Dry and wet beat against each other
+    // as the delay moves, and one null is exactly one wavelength of delay change, so counting nulls
+    // measures the sweep VELOCITY outright. The gaps between nulls swell and shrink once per half
+    // LFO cycle, which separates rate from depth:
+    //
+    //     Detune 32   rate 0.215 Hz   depth 2.11 ms      Detune 0   no nulls at all: static
+    //     Detune 64   rate 0.430 Hz   depth 2.04 ms
+    //
+    // Exactly twice the rate for twice the dial, at constant depth. Above about 96 the nulls come
+    // too close to separate the two, so the top of the range is extrapolated from that proportion.
+    // (The RATES in that table are the ones later found to be 3.907x low; the DEPTHS survived the
+    // 2026-08-15 re-analysis nearly unchanged, at 2.38 ms.)
+    //
+    // CROSS-CHECKED against a quite different measurement: at Detune 0 the LFO stops wherever it
+    // happens to be, and rebuilding the patch repeatedly froze the delay at 1.33, 1.52, 1.94, 2.13
+    // and 5.33 ms. A 3 ms centre swept +/-2.38 ms spans 0.6 to 5.4 ms, and every one of those frozen
+    // values falls inside it.
+    // BOTH TAPS READ THE PHASE BEFORE IT ADVANCES, so the two channels are sampled at the same
+    // instant rather than one being a sample ahead of the other.
+    *outLeft          = chorus_tap(node, 0, input, phase, amount);
+    *outRight         = chorus_tap(node, 1, input, phase + 0.5, amount);
+
+    gChorusLfo[node] += (CHORUS_RATE_MAX_HZ * depth) / gSampleRate;
+
+    if (gChorusLfo[node] >= 1.0) {
+        gChorusLfo[node] -= 1.0;
     }
 }
 
@@ -3922,9 +3944,12 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeChorus:
         {
-            value[n][0] = (spec->active == true)
-                              ? chorus_step(n, a, spec->depth, spec->amount) : a;
-            value[n][1] = value[n][0];         // stereo on the hardware, summed to mono here
+            if (spec->active == true) {
+                chorus_step(n, a, spec->depth, spec->amount, &value[n][0], &value[n][1]);
+            } else {
+                value[n][0] = a;
+                value[n][1] = a;
+            }
             break;
         }
         case eNodeCompress:
@@ -3972,14 +3997,95 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeOut:
         {
-            // Sums its inputs — the two legs are the left and right channels, and the engine
-            // is mono to the speakers for now.
-            value[n][0] = (spec->active == true)
-                              ? ((a + signal_in(spec, value, 1)) * gSmoothedGain[n]) : 0.0;
+            // THE TWO LEGS ARE THE LEFT AND RIGHT CHANNELS AND THEY STAY SEPARATE. This used to sum
+            // them into one value, which is what made the whole engine mono however stereo the
+            // modules feeding it were.
+            //
+            // AN UNPATCHED SOCKET MIRRORS THE OTHER, and that rule is load-bearing rather than
+            // tidiness. Cabling only the left socket is very common, and letting signal_in() return
+            // its usual 0.0 for the absent leg would play such a patch out of one speaker — which
+            // the instrument never does, both of its sockets being real. Mirroring leaves every
+            // one-socket patch exactly as it sounded before this change.
+            //
+            // WHAT DOES CHANGE IS THE DUAL-MONO PATCH: the same signal cabled to both sockets used
+            // to be summed to 2a and that sum sent to both channels, i.e. 6 dB hot. It now plays at
+            // a, which is what the hardware does with two sockets carrying the same thing.
+            if (spec->active == true) {
+                bool   haveLeft  = (spec->inCount > 0) && (spec->in[0] >= 0);
+                bool   haveRight = (spec->inCount > 1) && (spec->in[1] >= 0);
+                double left      = a;
+                double right     = signal_in(spec, value, 1);
+
+                if (haveLeft == false) {
+                    left = right;
+                }
+
+                if (haveRight == false) {
+                    right = left;
+                }
+                value[n][0] = left * gSmoothedGain[n];
+                value[n][1] = right * gSmoothedGain[n];
+            }
             break;
         }
         default:
         {
+            break;
+        }
+    }
+
+    // EVERY NODE MUST LEAVE BOTH LEGS VALID, and most kinds are mono and write only leg 0 —
+    // the oscillators, the filter, LevAmp, LevMult and the mixers all do.
+    //
+    // Leaving leg 1 at the zero this function starts it from was INVISIBLE while eNodeOut summed its
+    // two legs: a spurious 0 on the right just made the sum equal the left, which is what got played.
+    // It stopped being invisible the moment the Out module began keeping them apart.
+    // PatchTestFiles/SimpleLead.pch2 cables one module's output 0 to Out L and its output 1 to Out R
+    // — an entirely ordinary thing for a patch to do — and the right channel fell silent.
+    //
+    // The three exceptions fill both legs themselves and must NOT be flattened here: an envelope
+    // keeps its SHAPED AUDIO in leg 1, and the chorus and the Out module are genuinely stereo.
+    switch (spec->kind) {
+        case eNodeEnv:
+        case eNodeChorus:
+        case eNodeOut:
+        {
+            break;
+        }
+        default:
+        {
+            value[n][1] = value[n][0];
+            break;
+        }
+    }
+}
+
+// One tapped module's stereo pair.
+//
+// DELIBERATELY CONSERVATIVE: only eNodeOut is known to fill BOTH legs with a genuine left and right.
+// Most node kinds mirror leg 0 into leg 1, but some — the oscillators among them — write leg 0 and
+// leave leg 1 at the zero eval_node() starts it from. Reading leg 1 blindly would give those a
+// silent right channel, so anything that is not an Out module has its leg 0 mirrored, which is
+// exactly what the mono path did before stereo. An envelope used as an amp is the standing
+// exception: its SHAPED AUDIO is in leg 1 and is mono, so both channels take that.
+static void tap_pair(const tSoundEngineParams * paramsIn, int32_t node, double value[][2], double out[2]) {
+    switch (paramsIn->node[node].kind) {
+        case eNodeEnv:
+        {
+            out[0] = value[node][1];
+            out[1] = value[node][1];
+            break;
+        }
+        case eNodeOut:
+        {
+            out[0] = value[node][0];
+            out[1] = value[node][1];
+            break;
+        }
+        default:
+        {
+            out[0] = value[node][0];
+            out[1] = value[node][0];
             break;
         }
     }
@@ -4120,7 +4226,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 vibrato        = (sin(gVibratoPhase * 2.0 * M_PI) * depth * params.vibratoCents) / 100.0;
             }
             double bend         = ((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones;
-            double sample       = 0.0;
+            double sample[2]    = {0.0, 0.0};
             double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
             double smoothCoeff  = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
             // Depends on the patch and the rate, not on the voice, so it is worked out once here
@@ -4284,68 +4390,85 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
             if (params.tap >= 0) {
                 // Tapping a module means listening to its main output; for an envelope used as an amp
-                // that is its shaped audio rather than the envelope signal.
-                sample = value[params.tap][(params.node[params.tap].kind == eNodeEnv) ? 1 : 0];
+                // that is its shaped audio rather than the envelope signal. See tap_pair().
+                tap_pair(&params, params.tap, value, sample);
 
                 // The patch's other Out modules, summed rather than mixed at some fraction: that is
-                // what the hardware's sockets do when two areas both drive them.
+                // what the hardware's sockets do when two areas both drive them. Summed PER CHANNEL
+                // now, so two Out modules each carrying a stereo pair stay a stereo pair.
                 for (uint32_t t = 0; t < params.extraTapCount; t++) {
-                    int32_t e = params.extraTap[t];
+                    double extra[2] = {0.0, 0.0};
 
-                    sample += value[e][(params.node[e].kind == eNodeEnv) ? 1 : 0];
+                    tap_pair(&params, params.extraTap[t], value, extra);
+                    sample[0] += extra[0];
+                    sample[1] += extra[1];
                 }
             }
             // With an envelope module shaping the note, the fixed ramp would only double up on it; it is
             // still applied when the chain has none.
+            // THE METERS READ THE LOUDER CHANNEL. A per-channel peak would need a per-channel meter
+            // to show it, and what these drive is one number.
             {
-                uint32_t rawMilli = (uint32_t)(fabs(sample) * 1000.0);
+                uint32_t rawMilli = (uint32_t)(fmax(fabs(sample[0]), fabs(sample[1])) * 1000.0);
 
                 if (rawMilli > atomic_load(&gRawPeakMilli)) {
                     atomic_store(&gRawPeakMilli, rawMilli);
                 }
             }
-            sample                     *= VOICE_GAIN;
-            // The anti-click ramp is applied PER VOICE as each voice's output leaves the Voice Area
-            // (see the voice loop), not here. Applying it to the mixed output would fade the whole
-            // instrument — including the FX tail — every time any one note was released.
-            // The user's own attenuation, ahead of the knee.
-            sample                     *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
 
-            // Soft knee rather than a hard edge. Below the knee nothing is touched at all, so ordinary
-            // playing is untouched; above it the curve bends over instead of shearing the tops off, which
-            // is both kinder to listen to and closer to what an overloaded analogue output does. The hard
-            // clamp afterwards is only a guard against a bug producing something enormous.
-            if (sample > OUTPUT_KNEE) {
-                sample = OUTPUT_KNEE + ((1.0 - OUTPUT_KNEE) * tanh((sample - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
-            } else if (sample < -OUTPUT_KNEE) {
-                sample = -OUTPUT_KNEE - ((1.0 - OUTPUT_KNEE) * tanh((-sample - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
+            // The gain, the knee and the clamp are all PER CHANNEL. The knee especially: shaping the
+            // two channels together off a common peak would make one duck when the other got loud,
+            // which is a stereo image moving under a limiter rather than an output stage.
+            for (uint32_t ch = 0; ch < 2; ch++) {
+                sample[ch]                     *= VOICE_GAIN;
+                // The anti-click ramp is applied PER VOICE as each voice's output leaves the Voice Area
+                // (see the voice loop), not here. Applying it to the mixed output would fade the whole
+                // instrument — including the FX tail — every time any one note was released.
+                // The user's own attenuation, ahead of the knee.
+                sample[ch]                     *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
+
+                // Soft knee rather than a hard edge. Below the knee nothing is touched at all, so ordinary
+                // playing is untouched; above it the curve bends over instead of shearing the tops off, which
+                // is both kinder to listen to and closer to what an overloaded analogue output does. The hard
+                // clamp afterwards is only a guard against a bug producing something enormous.
+                if (sample[ch] > OUTPUT_KNEE) {
+                    sample[ch] = OUTPUT_KNEE + ((1.0 - OUTPUT_KNEE) * tanh((sample[ch] - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
+                } else if (sample[ch] < -OUTPUT_KNEE) {
+                    sample[ch] = -OUTPUT_KNEE - ((1.0 - OUTPUT_KNEE) * tanh((-sample[ch] - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
+                }
+
+                if (sample[ch] > 1.0) {
+                    sample[ch] = 1.0;
+                } else if (sample[ch] < -1.0) {
+                    sample[ch] = -1.0;
+                }
+                // Every internal sample goes through the decimator; only the last of each group produces
+                // an output. Feeding all of them is the point — dropping the others without filtering is
+                // exactly what would fold the high end back down.
+                gOutHistory[ch][gOutHistoryPos] = sample[ch];
             }
 
-            if (sample > 1.0) {
-                sample = 1.0;
-            } else if (sample < -1.0) {
-                sample = -1.0;
-            }
-            // Every internal sample goes through the decimator; only the last of each group produces
-            // an output. Feeding all of them is the point — dropping the others without filtering is
-            // exactly what would fold the high end back down.
-            gOutHistory[gOutHistoryPos] = sample;
-            gOutHistoryPos              = (gOutHistoryPos + 1) % OUT_DECIMATE_TAPS;
+            // ONE position for both lines: they are written in lockstep, so one cursor serves.
+            gOutHistoryPos = (gOutHistoryPos + 1) % OUT_DECIMATE_TAPS;
         }
 
         {
-            uint32_t channel   = 0;
-            uint32_t tap       = 0;
-            double   milli     = 0.0;
-            double   outSample = 0.0;
+            uint32_t channel      = 0;
+            uint32_t tap          = 0;
+            double   milli        = 0.0;
+            double   outSample[2] = {0.0, 0.0};
 
             // Walked rather than recomputed, as in the oscillator decimator above and for the same
-            // reason — the same taps in the same order, without a division per tap.
+            // reason — the same taps in the same order, without a division per tap. Both channels
+            // share the walk and the coefficient lookup; only the history line differs.
             {
                 uint32_t oldest = gOutHistoryPos;
 
                 for (tap = 0; tap < OUT_DECIMATE_TAPS; tap++) {
-                    outSample += gOutHistory[oldest] * gOutDecimate[OUT_DECIMATE_TAPS - 1 - tap];
+                    double coeff = gOutDecimate[OUT_DECIMATE_TAPS - 1 - tap];
+
+                    outSample[0] += gOutHistory[0][oldest] * coeff;
+                    outSample[1] += gOutHistory[1][oldest] * coeff;
                     oldest++;
 
                     if (oldest >= OUT_DECIMATE_TAPS) {
@@ -4354,14 +4477,17 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 }
             }
 
-            milli = fabs(outSample) * 1000.0;
+            milli = fmax(fabs(outSample[0]), fabs(outSample[1])) * 1000.0;
 
             if ((uint32_t)milli > atomic_load(&gPeakMilli)) {
                 atomic_store(&gPeakMilli, (uint32_t)milli);
             }
 
+            // Interleaved, left to the even channels and right to the odd. A ONE-channel device
+            // therefore gets the left leg rather than a fold-down, which is the same choice the
+            // mono path made implicitly, and a four-channel one gets the pair twice.
             for (channel = 0; channel < channelCount; channel++) {
-                out[(frame * channelCount) + channel] = (float)outSample;
+                out[(frame * channelCount) + channel] = (float)outSample[channel & 1U];
             }
         }
     }
