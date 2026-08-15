@@ -880,21 +880,53 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 // every delay line. It was 16/10 when the largest type was exactly 1.6, which the measured 1.6795 then
 // silently outgrew by 66 samples per comb. Rounding up rather than tracking the scale exactly costs a
 // few kilobytes and removes the trap.
-#define REVERB_COMB_MAX       (((REVERB_COMB_BASE * 18) / 10) + 1)
-#define REVERB_ALLPASS_MAX    (((REVERB_ALLPASS_BASE * 18) / 10) + 1)
-static const uint32_t kCombLen[REVERB_COMBS]      = {
+// THE STEREO SPREAD: the right channel runs the SAME topology with every line lengthened by this.
+//
+// Deliberately a spread rather than the instrument's own measured lengths. Its two output channels
+// are near-disjoint tap sets (Small L 2338/2407/2420/4214/5022 against R 2378/2904/3903/3972/4046)
+// but its tank has about 31 lines against this one's 4 combs and 3 allpasses, and the ROUTING is not
+// recoverable — a real set of lengths in the wrong arrangement sounds plausible and is wrong, which
+// is the hardest kind of error to find. See the REVERB entry in Docs/todo.txt.
+//
+// So this claims no new structure. It is Freeverb's own answer to the same question, and what makes
+// it honest is that the thing it is aimed at IS measured: the instrument's two outputs correlate at
+// +0.012..+0.045, so 0.03 is the target, and tools/render + analyse_ir.py read the same number off
+// this code. Tuned against that — see the note in sound_engine_render_reverb_ir().
+#define REVERB_SPREAD         (23 * ENGINE_OVERSAMPLE)
+#define REVERB_CHANNELS       (2)
+
+#define REVERB_COMB_MAX       (((REVERB_COMB_BASE * 18) / 10) + REVERB_SPREAD + 1)
+#define REVERB_ALLPASS_MAX    (((REVERB_ALLPASS_BASE * 18) / 10) + REVERB_SPREAD + 1)
+
+// PER-CHANNEL PRE-DELAY. The instrument's two outputs do not start together — Small measures 12.88 ms
+// on the left and 7.54 ms on the right — and this engine had no pre-delay at all, so both tails began
+// at the input. Those two figures are MEASURED; the other three rooms are INFERRED, by scaling with
+// kReverbTypeScale exactly as every other line is, which is itself a measured property of the
+// instrument ("room Type scales every delay line by ONE factor"). NOT YET CHECKED against hardware
+// for Medium, Large or Hall — see the todo entry that asks for those three onsets.
+//
+// Expressed as sample counts at the 48 kHz base rate, times ENGINE_OVERSAMPLE, for the same reason
+// the comb lengths are: an array bound has to be an INTEGER constant expression. Sizing one with a
+// float cast is what produced the -Wgnu-folding-constant pair recorded in Docs/todo.txt.
+#define REVERB_PREDELAY_L      (618 * ENGINE_OVERSAMPLE)  // 12.88 ms at 48 kHz
+#define REVERB_PREDELAY_R      (362 * ENGINE_OVERSAMPLE)  //  7.54 ms
+#define REVERB_PREDELAY_MAX    (((REVERB_PREDELAY_L * 18) / 10) + 1)
+static const uint32_t kCombLen[REVERB_COMBS]           = {
     1116 * ENGINE_OVERSAMPLE, 1188 * ENGINE_OVERSAMPLE,
     1277 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
 };
-static const uint32_t kAllpassLen[REVERB_ALLPASS] = {
+static const uint32_t kAllpassLen[REVERB_ALLPASS]      = {
     REVERB_ALLPASS_BASE, 149 * ENGINE_OVERSAMPLE,
     97 * ENGINE_OVERSAMPLE
 };
-static float          gComb[REVERB_COMBS][REVERB_COMB_MAX];
-static uint32_t       gCombPos[REVERB_COMBS];
-static double         gCombStore[REVERB_COMBS];
-static float          gAllpass[REVERB_ALLPASS][REVERB_ALLPASS_MAX];
-static uint32_t       gAllpassPos[REVERB_ALLPASS];
+static const uint32_t kReverbPreDelay[REVERB_CHANNELS] = {REVERB_PREDELAY_L, REVERB_PREDELAY_R};
+static float          gPreDelay[REVERB_CHANNELS][REVERB_PREDELAY_MAX];
+static uint32_t       gPreDelayPos[REVERB_CHANNELS];
+static float          gComb[REVERB_COMBS][REVERB_CHANNELS][REVERB_COMB_MAX];
+static uint32_t       gCombPos[REVERB_COMBS][REVERB_CHANNELS];
+static double         gCombStore[REVERB_COMBS][REVERB_CHANNELS];
+static float          gAllpass[REVERB_ALLPASS][REVERB_CHANNELS][REVERB_ALLPASS_MAX];
+static uint32_t       gAllpassPos[REVERB_ALLPASS][REVERB_CHANNELS];
 static double         gEnvLevel[MAX_VOICES][MAX_ENGINE_NODES];
 // Linear 0..1 through the current segment, and the level it started from. Shaping this rather than
 // the step keeps a segment's DURATION exactly what its dial says, whatever curve it draws.
@@ -1104,6 +1136,8 @@ static void reset_node_state(void) {
     memset(gCombStore, 0, sizeof(gCombStore));
     memset(gAllpass, 0, sizeof(gAllpass));
     memset(gAllpassPos, 0, sizeof(gAllpassPos));
+    memset(gPreDelay, 0, sizeof(gPreDelay));
+    memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 }
 
 // The lowpass that turns OSC_OVERSAMPLE samples back into one. A windowed sinc: cut just under the
@@ -3092,11 +3126,11 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
 // filter's coefficient, which inverted it — a knob labelled Brightness made the tail darker as it
 // opened, and the manual's advice that "the most natural range is between 25 and 50" (p.251) landed
 // on the dullest part of the travel instead of the liveliest.
-static double reverb_step(double input, double timeSeconds, double timeNorm, double brightness,
-                          double mix, uint32_t type) {
-    double   diffused = input;
-    double   sum      = 0.0;
-    uint32_t i        = 0;
+static void reverb_step(double input, double timeSeconds, double timeNorm, double brightness,
+                        double mix, uint32_t type, double * outLeft, double * outRight) {
+    double   sum[REVERB_CHANNELS] = {0.0, 0.0};
+    uint32_t i                    = 0;
+    uint32_t ch                   = 0;
     // A one-pole lowpass inside each comb, so every pass round the loop loses more high end — which
     // is what makes a tail decay into a thump rather than ringing on with the same tone.
     //
@@ -3145,6 +3179,8 @@ static double reverb_step(double input, double timeSeconds, double timeNorm, dou
         memset(gCombStore, 0, sizeof(gCombStore));
         memset(gAllpass, 0, sizeof(gAllpass));
         memset(gAllpassPos, 0, sizeof(gAllpassPos));
+        memset(gPreDelay, 0, sizeof(gPreDelay));
+        memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
         sLastType = type;
     }
 
@@ -3155,45 +3191,70 @@ static double reverb_step(double input, double timeSeconds, double timeNorm, dou
     // slope and the two limits it is held between are the instrument's own: a longer room diffuses
     // harder. The bounds are what matter most here — a coefficient outside them stops sounding like
     // this reverb — and they are narrow enough that the exact position within them is a detail.
-    for (i = 0; i < REVERB_ALLPASS; i++) {
-        uint32_t len = (uint32_t)(kAllpassLen[i] * scale);
-        double   out = 0.0;
-        double   in  = 0.0;
+    // ONE BANK PER CHANNEL, identical but for REVERB_SPREAD added to every line length. Same input
+    // into both, so the two tails diverge only through their lengths — which is the whole mechanism.
+    for (ch = 0; ch < REVERB_CHANNELS; ch++) {
+        uint32_t spread   = (ch == 0) ? 0 : REVERB_SPREAD;
+        double   diffused = input;
 
-        if (len == 0) {
-            continue;
+        // PRE-DELAY FIRST, so the whole wet path — tail and early-onset term alike — starts late.
+        // Only the wet path: the dry signal is added at the very end and is not delayed, which is
+        // what a pre-delay means.
+        {
+            uint32_t len = (uint32_t)(kReverbPreDelay[ch] * scale);
+
+            if (len >= REVERB_PREDELAY_MAX) {
+                len = REVERB_PREDELAY_MAX - 1;   // a device rate above the base cannot overrun
+            }
+
+            if (len > 0) {
+                gPreDelayPos[ch]               %= len;   // the type may have shrunk this line under us
+                diffused                        = (double)gPreDelay[ch][gPreDelayPos[ch]];
+                gPreDelay[ch][gPreDelayPos[ch]] = (float)input;
+                gPreDelayPos[ch]                = (gPreDelayPos[ch] + 1) % len;
+            }
         }
-        gAllpassPos[i]             %= len;           // the type may have shrunk this line under us
-        out                         = (double)gAllpass[i][gAllpassPos[i]];
-        in                          = diffused + (out * diffusion);
-        gAllpass[i][gAllpassPos[i]] = (float)in;
-        gAllpassPos[i]              = (gAllpassPos[i] + 1) % len;
-        diffused                    = out - (in * diffusion);
-    }
 
-    // Then the combs, in parallel, for the tail.
-    for (i = 0; i < REVERB_COMBS; i++) {
-        uint32_t len = (uint32_t)(kCombLen[i] * scale);
-        double   out = 0.0;
-        double   fb  = 0.0;
+        for (i = 0; i < REVERB_ALLPASS; i++) {
+            uint32_t len = (uint32_t)(kAllpassLen[i] * scale) + spread;
+            double   out = 0.0;
+            double   in  = 0.0;
 
-        if (len == 0) {
-            continue;
+            if (len == 0) {
+                continue;
+            }
+            gAllpassPos[i][ch]                 %= len;   // the type may have shrunk this line under us
+            out                                 = (double)gAllpass[i][ch][gAllpassPos[i][ch]];
+            in                                  = diffused + (out * diffusion);
+            gAllpass[i][ch][gAllpassPos[i][ch]] = (float)in;
+            gAllpassPos[i][ch]                  = (gAllpassPos[i][ch] + 1) % len;
+            diffused                            = out - (in * diffusion);
         }
-        gCombPos[i]          %= len;
-        out                   = (double)gComb[i][gCombPos[i]];
-        // Feedback set so the tail decays to -60 dB over the chosen time.
-        fb                    = pow(0.001, ((double)len / gSampleRate) / timeSeconds);
-        gCombStore[i]        += (1.0 - damping) * (out - gCombStore[i]);
-        gComb[i][gCombPos[i]] = (float)(diffused + (gCombStore[i] * fb));
-        gCombPos[i]           = (gCombPos[i] + 1) % len;
-        sum                  += out;
-    }
 
-    // A little of the diffused input so the onset is early rather than waiting for the shortest comb
-    // at ~23 ms. Kept low: the allpass chain is near enough flat in magnitude, so too much of this
-    // reads as the dry signal leaking back through a send that is supposed to be fully wet.
-    sum = (sum * 0.25) + (diffused * 0.12);
+        // Then the combs, in parallel, for the tail.
+        for (i = 0; i < REVERB_COMBS; i++) {
+            uint32_t len = (uint32_t)(kCombLen[i] * scale) + spread;
+            double   out = 0.0;
+            double   fb  = 0.0;
+
+            if (len == 0) {
+                continue;
+            }
+            gCombPos[i][ch]              %= len;
+            out                           = (double)gComb[i][ch][gCombPos[i][ch]];
+            // Feedback set so the tail decays to -60 dB over the chosen time.
+            fb                            = pow(0.001, ((double)len / gSampleRate) / timeSeconds);
+            gCombStore[i][ch]            += (1.0 - damping) * (out - gCombStore[i][ch]);
+            gComb[i][ch][gCombPos[i][ch]] = (float)(diffused + (gCombStore[i][ch] * fb));
+            gCombPos[i][ch]               = (gCombPos[i][ch] + 1) % len;
+            sum[ch]                      += out;
+        }
+
+        // A little of the diffused input so the onset is early rather than waiting for the shortest comb
+        // at ~23 ms. Kept low: the allpass chain is near enough flat in magnitude, so too much of this
+        // reads as the dry signal leaking back through a send that is supposed to be fully wet.
+        sum[ch] = (sum[ch] * 0.25) + (diffused * 0.12);
+    }
 
     // THE WET PATH IS QUIETER THAN THE DRY ONE, by about 11 dB, and this engine had it at almost
     // unity — which is why its reverb sat so much more prominently in a patch than the instrument's
@@ -3215,7 +3276,8 @@ static double reverb_step(double input, double timeSeconds, double timeNorm, dou
     // combs, so its level moves with how many there are.
 #define REVERB_WET_GAIN    (0.31)
 
-    sum *= REVERB_WET_GAIN;
+    sum[0] *= REVERB_WET_GAIN;
+    sum[1] *= REVERB_WET_GAIN;
 
     // DRY/WET IS NOT A CROSSFADE, and this was the largest single difference from the instrument.
     // The two gains are independent, each a ramp CUBED, and the ramps overlap: the dry side holds
@@ -3229,8 +3291,14 @@ static double reverb_step(double input, double timeSeconds, double timeNorm, dou
     {
         double wetRamp = (mix >= 0.5) ? 1.0 : (mix * 2.0);
         double dryRamp = (mix <= 0.5) ? 1.0 : ((1.0 - mix) * 2.0);
+        double dry     = input * dryRamp * dryRamp * dryRamp;
+        double wet     = wetRamp * wetRamp * wetRamp;
 
-        return (input * dryRamp * dryRamp * dryRamp) + (sum * wetRamp * wetRamp * wetRamp);
+        // THE DRY SIDE IS THE SAME IN BOTH CHANNELS. It is the module's mono input; only the tail is
+        // a pair, which is exactly what the instrument's correlation of +0.03 describes — two tails,
+        // one source.
+        *outLeft  = dry + (sum[0] * wet);
+        *outRight = dry + (sum[1] * wet);
     }
 }
 
@@ -3249,9 +3317,12 @@ static double reverb_step(double input, double timeSeconds, double timeNorm, dou
 //
 // `out` receives `frames` interleaved stereo pairs at the ENGINE's rate, which is
 // deviceRate * ENGINE_OVERSAMPLE — pass 48000 to get the 96 kHz the hardware measurements are
-// expressed in, so a lag is the same integer in both. THE REVERB IS MONO, so both channels come back
-// identical and their correlation reads 1.000 where the instrument reads +0.03. That is the harness
-// reporting what is missing, not a fault in it.
+// expressed in, so a lag is the same integer in both.
+//
+// THE TWO CHANNELS ARE NOW A REAL PAIR, and this is where REVERB_SPREAD gets tuned: render, then read
+// the L/R correlation off the result and compare it with the instrument's measured +0.012..+0.045.
+// It used to be the standing example of what the harness could see and the engine could not do —
+// both channels came back identical and the correlation read 1.000.
 void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t timeValue,
                                    uint32_t brightValue, float * out, uint32_t frames) {
     if ((out == NULL) || (frames == 0) || (deviceRate <= 0.0)) {
@@ -3272,19 +3343,24 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
     memset(gCombStore, 0, sizeof(gCombStore));
     memset(gAllpass, 0, sizeof(gAllpass));
     memset(gAllpassPos, 0, sizeof(gAllpassPos));
+    memset(gPreDelay, 0, sizeof(gPreDelay));
+    memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 
     double timeSeconds = kReverbDecayBase[type] + (kReverbDecaySlope[type] * (double)timeValue);
     double timeNorm    = (double)timeValue / 127.0;
     double brightness  = (double)brightValue / 127.0;
 
     for (uint32_t i = 0; i < frames; i++) {
-        double in  = (i == 0) ? 1.0 : 0.0;
+        double in   = (i == 0) ? 1.0 : 0.0;
+        double wetL = 0.0;
+        double wetR = 0.0;
+
         // mix at 1.0 is fully wet, matching DryWet 127 on the hardware — and with the dry/wet law
         // above that means the dry ramp is zero, so nothing of the click itself is in the output.
-        double wet = reverb_step(in, timeSeconds, timeNorm, brightness, 1.0, type);
+        reverb_step(in, timeSeconds, timeNorm, brightness, 1.0, type, &wetL, &wetR);
 
-        out[(i * 2) + 0] = (float)wet;
-        out[(i * 2) + 1] = (float)wet;
+        out[(i * 2) + 0] = (float)wetL;
+        out[(i * 2) + 1] = (float)wetR;
     }
 }
 
@@ -3971,10 +4047,13 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             // Only the first reverb in a chain is modelled; see the DSP note above.
             double in = (a + signal_in(spec, value, 1)) * 0.5;
 
-            value[n][0] = ((spec->active == true) && (spec->line == 0))
-                              ? reverb_step(in, spec->timeSeconds, spec->timeNorm, spec->brightness,
-                                            spec->amount, spec->reverbType) : in;
-            value[n][1] = value[n][0];
+            if ((spec->active == true) && (spec->line == 0)) {
+                reverb_step(in, spec->timeSeconds, spec->timeNorm, spec->brightness,
+                            spec->amount, spec->reverbType, &value[n][0], &value[n][1]);
+            } else {
+                value[n][0] = in;
+                value[n][1] = in;
+            }
             break;
         }
         case eNodeConstant:
@@ -4048,6 +4127,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
     switch (spec->kind) {
         case eNodeEnv:
         case eNodeChorus:
+        case eNodeReverb:
         case eNodeOut:
         {
             break;

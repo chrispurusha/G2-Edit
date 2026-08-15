@@ -467,6 +467,66 @@ OPEN WORK
     delay line and write pointer per node (gChorusLine/gChorusWrite gaining a channel index), the
     right channel reading the LFO at phase + 0.5, and chorus_step() returning a pair.
 
+  STEP 3 IS DONE TOO, 2026-08-15, but NOT the way this entry originally proposed — read on before
+  treating the paragraph below as the plan. It said "a second tap set with its own lengths", meaning
+  the instrument's measured ones, and the REVERB entry further down forbids exactly that: the G2's
+  tank has ~31 lines against this one's 4 combs + 3 allpasses, its ROUTING is not recoverable, and a
+  real set of lengths in the wrong arrangement sounds plausible and is wrong.
+  WHAT WAS BUILT INSTEAD IS A STEREO SPREAD — Freeverb's own answer — claiming no new structure: the
+  right channel runs identical topology with REVERB_SPREAD added to every comb and allpass length.
+  It is honest because the thing it aims at is MEASURED: the instrument's outputs correlate at
+  +0.012..+0.045, and tools/render + a correlation read give the same number off our own code.
+  RESULT, all four room types at Time 127: +0.0029, -0.0065, +0.0072, +0.0001, against 1.000 before.
+  Slightly MORE decorrelated than the instrument rather than less. Deliberately not tuned finer than
+  that — the hardware figure itself spans a 4x range, so chasing 0.030 exactly would be false
+  precision, and 0.005 and 0.030 are the same thing to an ear. Per-channel RMS matches to 0.5%.
+  THE LEFT CHANNEL IS BIT-IDENTICAL to the pre-session engine — 0 differing samples of 1.1M checked,
+  700k of them non-zero — so none of the measured and tuned behaviour in the REVERB entry below
+  (room scales, decay law, brightness curve, REVERB_WET_GAIN) has moved. The spread only adds a
+  second bank. REVERB_WET_GAIN did NOT need re-measuring for the same reason: its warning is about
+  the COMB COUNT changing, and each channel still sums the same four.
+  eNodeReverb had to join the eval_node() exclusion list, or step 1's mirror flattens it straight
+  back to mono. That list is now eNodeEnv / eNodeChorus / eNodeReverb / eNodeOut.
+  ONE AUDIBLE SIDE EFFECT, expected and correct: a patch that cables the reverb's RIGHT output into
+  a mono chain now gets the genuine right bank where it used to get a copy of the left, so its tail
+  differs. SimpleLead does exactly that and moved by -0.26 dB (0.016911 -> 0.016415 rms) while
+  staying mono downstream, because the node it feeds mirrors leg 0. ExpAudio, which has no reverb in
+  its path, is unchanged to every digit — which is what isolates the cause.
+  THE PER-CHANNEL PRE-DELAY WENT IN TOO, as its own change straight after — owner asked for all four
+  rooms now and a hardware check later. The engine had NO pre-delay at all before this; both tails
+  began at the input.
+  MEASURED: Small L 12.88 ms, R 7.54 ms. INFERRED: the other three rooms, by scaling with
+  kReverbTypeScale exactly as every other line is — which is itself a measured property of the
+  instrument, "room Type scales every delay line by ONE factor". Read back off the render, the four
+  rooms come out L 12.88 / 16.33 / 19.64 / 21.61 ms and R 7.54 / 9.56 / 11.50 / 12.66 ms, matching
+  the scaling to within 0.02 ms — the residue is integer-sample rounding, since the constants are
+  sample counts and not seconds (an array bound has to be an integer constant expression; sizing one
+  with a float cast is what produced the -Wgnu-folding-constant pair recorded further down).
+  Correlation is undisturbed: +0.0006 / +0.0061 / +0.0103 / -0.0048.
+  NOTE THE LEFT CHANNEL IS NO LONGER BIT-IDENTICAL to the pre-session engine, and cannot be — a
+  pre-delay shifts the whole wet path later by design. That check belonged to the spread, which had
+  to leave the tail where it was; it does not apply to this change. SimpleLead moved again as a
+  result, 0.016415 -> 0.015999 rms, for the same reason it moved before: it reads the reverb's right
+  output into a mono chain. ExpAudio is unchanged to every digit, again.
+
+- MEASURE THE REVERB PRE-DELAY FOR MEDIUM, LARGE AND HALL (2026-08-15, when back at the hardware).
+  Only SMALL was ever measured — L 12.88 ms, R 7.54 ms — and the other three rooms are currently an
+  INFERENCE from kReverbTypeScale, not a measurement. The inference is a reasonable one and matches
+  how every other delay line in this reverb behaves, but it has never been checked, and the whole
+  point of the measurement rig is that plausible-sounding wrong answers are the ones that survive.
+  WHAT TO DO: the existing rig already does it — put a click through a real Reverb at each Type with
+  DryWet at 127, capture both outputs, and read the onset of each channel. That is the same capture
+  the lag sets came from, so an old one may already contain the answer for a room other than Small
+  before any new recording is needed. Compare against what the engine now produces:
+      Type      0 Small    1 Medium    2 Large    3 Hall
+      L (ms)    12.88      16.33       19.64      21.61
+      R (ms)     7.54       9.56       11.50      12.66
+  If the instrument's do NOT scale with the room, the pre-delays are their own data — four pairs of
+  numbers rather than one pair and a factor — and kReverbPreDelay becomes a table like
+  kReverbTypeScale is. That would be worth knowing for its own sake: it would be the first line in
+  this reverb that does NOT follow the one-factor rule.
+
+  THE ORIGINAL STEP 3 TEXT, kept because its warning still governs any future attempt:
   STEP 3 — THE REVERB. The big one: a second tap set with its own lengths and pre-delay, and the
     warning above about NOT dropping the measured lengths straight into a parallel comb bank.
     Worth doing after step 1 for a second reason — sound_engine_render_reverb_ir()'s own header note
@@ -2404,6 +2464,10 @@ PARTIALLY DONE / STILL OPEN:
      common (Small L 2338/2407/2420/4214/5022 against Small R 2378/2904/3903/3972/4046). Pre-delays
      differ too: Small L 12.88 ms, R 7.54 ms. This is not a mono tail spread across two outputs, so no
      amount of tuning reverb_step() reaches it; it needs two tap sets. 0.03 is the number to build to.
+     ADDRESSED 2026-08-15 by a stereo SPREAD rather than by the hardware's own lengths, which this
+     entry's topology warning rules out — measured correlation now +0.0029/-0.0065/+0.0072/+0.0001
+     across the four rooms. See the STEREO entry near the top of OPEN WORK for what was built, what
+     it deliberately did not do, and the per-channel PRE-DELAY that is still outstanding.
    * Measured Small lags, 96 kHz samples, Out 3 at Time 127: 2192, 2338, 2407, 2420, 4214, 4600, 5022,
      5054, 6937, 7476, 8285, 9343. DELIBERATELY NOT loaded into kCombLen — see the topology note below.
      CORRECTION: an earlier version of this entry called the short lags (81, 125, 216, 246, 258, seen at
