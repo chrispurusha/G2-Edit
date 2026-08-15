@@ -517,6 +517,40 @@ static void menu_action_copy_module(int index) {
     copy_selection();
 }
 
+// Copies every parameter of the selected module(s), as they stand in the CURRENT variation, into
+// every MARKED variation — the one-shot form of the fan-out that shift-marking already applies to
+// each edit as you make it. For bringing variations into line after the fact, rather than having had
+// to mark them before touching anything.
+//
+// Works on the whole selection, so several modules go across together; right-clicking a module that
+// is not part of the selection selects it first, exactly as Copy/Cut/Delete do.
+//
+// send_param_value_to_links() does the per-variation work, so this inherits its rules for free: the
+// current variation is never written to itself, values that already match are skipped, and each
+// variation actually changed gets its own undo entry carrying its own previous value.
+static void menu_action_copy_params_to_marked(int index) {
+    uint32_t slot      = gSlot;
+    uint32_t variation = gPatchDescr[slot].activeVariation;
+
+    (void)index;
+    ensure_module_selected();
+
+    for (uint32_t si = 0; si < gSelection.count; si++) {
+        tModule * module = get_module(gSelection.keys[si]);
+
+        if (module == NULL) {
+            continue;
+        }
+
+        for (uint32_t p = 0; p < module_param_count(module->type); p++) {
+            send_param_value_to_links(slot, module->key, p, variation, module->param[variation][p].value);
+        }
+    }
+
+    gContextMenu.active = false;
+    synthlib_request_redraw();
+}
+
 static void menu_action_cut_module(int index) {
     ensure_module_selected();
     cut_selection();
@@ -2380,6 +2414,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         kItemCut,
         kItemPaste,
         kItemPasteParams,
+        kItemParamsToMarked,
         kItemDelete,
         kItemExclude,
         kItemTerminator
@@ -2392,6 +2427,10 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         {"Cut",          RGB_GREY_3, menu_action_cut_module,              0, NULL},
         {"Paste",        RGB_GREY_3, menu_action_paste,                   0, NULL},
         {"Paste Params", RGB_GREY_3, menu_action_paste_params,            0, NULL},
+        {
+            "Copy Params to Marked Variations",
+            RGB_GREY_3, menu_action_copy_params_to_marked, 0, NULL
+        },
         {"Delete",       RGB_GREY_3, menu_action_delete_module,           0, NULL},
         {NULL,           RGB_GREY_3, action_toggle_exclude_from_mutation, 0, NULL},
         {NULL,           RGB_BLACK,  NULL,                                0, NULL}
@@ -2406,14 +2445,29 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     bool             canPasteParams = gClipboard.active && (gClipboard.moduleCount > 0)
                                       && (module != NULL) && (gClipboard.modules[0].type == module->type);
 
-    menuItems[kItemPasteParams].colour = canPasteParams ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
-    menuItems[kItemPasteParams].action = canPasteParams ? menu_action_paste_params : NULL;
+    menuItems[kItemPasteParams].colour    = canPasteParams ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
+    menuItems[kItemPasteParams].action    = canPasteParams ? menu_action_paste_params : NULL;
+
+    // Nothing to copy INTO unless a variation other than the one on screen is marked. Greyed rather
+    // than hidden for the same reason as Paste Params above: the entry keeps its place, and its
+    // being unavailable is explained by the empty variation strip in the topbar.
+    bool             haveMarked     = false;
+
+    for (uint32_t v = 0; v < VARIATION_INIT; v++) {
+        if ((v != gPatchDescr[gSlot].activeVariation) && variation_is_linked((uint32_t)gSlot, v)) {
+            haveMarked = true;
+            break;
+        }
+    }
+
+    menuItems[kItemParamsToMarked].colour = haveMarked ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
+    menuItems[kItemParamsToMarked].action = haveMarked ? menu_action_copy_params_to_marked : NULL;
 
     snprintf(gExcludeMutationMenuLabel, sizeof(gExcludeMutationMenuLabel), "[%s] Exclude From Mutation",
              excluded ? "x" : " ");
-    menuItems[kItemExclude].label      = gExcludeMutationMenuLabel;
+    menuItems[kItemExclude].label         = gExcludeMutationMenuLabel;
 
-    gMenuContext.moduleKey             = moduleKey;
+    gMenuContext.moduleKey                = moduleKey;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 

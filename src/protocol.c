@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 #include <stdio.h>
+#include <time.h>   // timestamping the param-count mismatch record — see record_param_count_mismatch()
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -45,6 +46,54 @@ extern "C" {
 // mutex here provided no actual exclusion against those reads (two different locks
 // don't exclude each other), which raced against the UI thread's wake-driven render
 // loop and could leave the topbar showing a name mid-clear until the next redraw.
+// A module arriving with a DIFFERENT parameter count than paramLocationList lists for its type is a
+// gap in that table. This used to EXIT_IN_DEBUG() when the G2 declared MORE than we know about — a
+// deliberate development tripwire, on the reasoning that stopping is how a missing row gets noticed.
+//
+// It no longer stops, because in practice the tripwire destroyed the very evidence it existed to
+// collect. It fires while a patch is arriving from the G2, so it kills the session before the
+// offending module can be looked at, and a mismatch rare enough not to be reproducible on demand is
+// exactly the kind you only get one look at.
+//
+// Both directions are survivable: the count is 7 bits so it cannot exceed 127, and module->param is
+// MAX_NUM_PARAMETERS (128) wide, so every value read lands in bounds either way. What the extra
+// device parameters lack is a table row to draw them with — they are stored, just not shown.
+//
+// Recorded to ~/G2_param_count_mismatch.log in APPEND mode, the point being to outlive the session
+// it happened in (usbLog.c opens with "w" and is gated behind ENABLE_USB_LOG, so it is no use here).
+// Once per module type per session, so a patch full of the same offender writes one line, not one
+// per instance. USB-thread only, which is what makes the plain static safe.
+static void record_param_count_mismatch(tModuleType moduleType, uint32_t deviceCount, uint32_t tableCount) {
+    static bool  reported[moduleTypeMax] = {0};
+
+    if ((moduleType >= moduleTypeMax) || (reported[moduleType] == true)) {
+        return;
+    }
+    reported[moduleType] = true;
+
+    char         path[1024]              = {0};
+    const char * home                    = getenv("HOME");
+
+    snprintf(path, sizeof(path), "%s/G2_param_count_mismatch.log", (home != NULL) ? home : "/tmp");
+
+    FILE *       file                    = fopen(path, "a");
+
+    if (file == NULL) {
+        return;
+    }
+    time_t       now                     = time(NULL);
+    struct tm    tmInfo;
+
+    localtime_r(&now, &tmInfo);
+    fprintf(file, "%04d-%02d-%02d %02d:%02d:%02d  module type %u (%s): G2 says %u parameters, paramLocationList has %u%s\n",
+            tmInfo.tm_year + 1900, tmInfo.tm_mon + 1, tmInfo.tm_mday,
+            tmInfo.tm_hour, tmInfo.tm_min, tmInfo.tm_sec,
+            (unsigned)moduleType, gModuleProperties[moduleType].name,
+            deviceCount, tableCount,
+            (deviceCount > tableCount) ? "  <-- ROWS MISSING FROM OUR TABLE" : "");
+    fclose(file);
+}
+
 void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize) {
     int i = 0;
 
@@ -400,16 +449,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         if ((module->type != moduleTypeUnknown0) && (module_param_count(module->type) > 0)) {
             if (paramCount != module_param_count(module->type)) {
                 LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module->type, gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
-            }
-
-            // A module carrying more parameters than our table lists is a gap in the table, and one
-            // worth stopping for while developing — that is exactly how a missing row gets noticed.
-            // In a Release build it is survivable and not worth a user's whole session: the count is
-            // 7 bits so it cannot exceed 127, and module->param is MAX_NUM_PARAMETERS (128) wide, so
-            // every one of them is read into bounds either way. The mismatch is logged immediately
-            // above whichever build this is.
-            if (paramCount > module_param_count(module->type)) {
-                EXIT_IN_DEBUG();
+                record_param_count_mismatch(module->type, paramCount, module_param_count(module->type));
             }
         }
 
