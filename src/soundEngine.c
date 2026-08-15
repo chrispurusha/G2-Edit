@@ -2154,7 +2154,22 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                                                            param_value(module, variation, DELAY_PARAM_TIME));
                 }
             }
-            node->depth = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0 * 0.95;
+            // FEEDBACK IS LINEAR TO EXACTLY UNITY, MEASURED ON THE INSTRUMENT 2026-08-15. This was
+            // scaled by 0.95, which is why the engine's repeats died away where the hardware's hold.
+            //
+            // DelayB, Range 500 ms, LP wide open so the in-loop filter is transparent, decay read off
+            // the repeat train of a note-gated click captured from the G2's main outputs:
+            //
+            //     FB dial      64        96       127
+            //     measured   0.4973    0.7413    1.0004
+            //     value/127  0.5039    0.7559    1.0000
+            //     was (x.95) 0.4787    0.7181    0.9500
+            //
+            // At 127 the hardware does not decay AT ALL — nine repeats within 0.06 dB of each other,
+            // then flat. The old 0.95 turned that infinite sustain into -0.45 dB a repeat, audibly
+            // gone inside thirty. The measured values sit ~0.7% under value/127 at the two lower
+            // settings, which is the residual loss of the LP even at its widest, not a different law.
+            node->depth = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0;
             // LP IS A CUTOFF, AND 127 IS WIDE OPEN. This read the dial as an amount of damping and
             // had it the wrong way round, with a fatal end point: delay_step() uses (1 - damping) as
             // its one-pole coefficient, so LP 127 — the brightest, most ordinary setting there is —
