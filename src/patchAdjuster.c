@@ -323,6 +323,7 @@ static void adjuster_apply(void) {
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
 void open_patch_adjuster_panel(uint32_t slot) {
+    floating_panel_raise(&gPatchAdjuster.panel);   // opens in front — see floatingPanel.c on why this is not left to placement
     memset(gPatchAdjuster.amount, 0, sizeof(gPatchAdjuster.amount));
     gPatchAdjuster.active       = true;
     gPatchAdjuster.slot         = slot;

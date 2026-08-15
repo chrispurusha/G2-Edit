@@ -40,6 +40,11 @@ static uint32_t sCascade  = 0;
 
 // Monotonic, so "most recently raised" is simply the largest. Never reset: at one raise per click it
 // would take longer than any session to wrap a uint32_t.
+//
+// A panel is raised when it is OPENED, not when it is first placed. Placement happens inside the
+// render pass, by which point that frame has already been sorted using the old order — so a newly
+// opened panel was drawn BEHIND the others for that frame, and since the app only redraws on demand,
+// that wrong stacking then stayed on screen until something else asked for a frame.
 static uint32_t sTopOrder = 0;
 
 void floating_panel_raise(tFloatingPanel * panel) {
@@ -67,7 +72,6 @@ tRectangle floating_panel_place(tFloatingPanel * panel, double width, double hei
         };
         panel->placed     = true;
         sCascade++;
-        floating_panel_raise(panel);   // a newly opened panel opens in front
     }
     // Re-clamp every frame, not just on placement: the window can be resized under a panel that was
     // dragged to an edge, and a panel parked entirely off-screen cannot be dragged back.
@@ -137,6 +141,22 @@ bool floating_panel_drag(tFloatingPanel * panel, tCoord coord) {
 
 void floating_panel_release(tFloatingPanel * panel) {
     panel->dragging = false;
+}
+
+// Insertion sort: the list is three or four entries long, it runs once per frame and once per click,
+// and being stable keeps two never-raised panels in their registration order rather than shuffling
+// them about between frames.
+void floating_panel_sort(tFloatingPanelEntry * entries, uint32_t count) {
+    for (uint32_t i = 1; i < count; i++) {
+        tFloatingPanelEntry key = entries[i];
+        uint32_t            j   = i;
+
+        while ((j > 0) && floating_panel_in_front_of(entries[j - 1].panel, key.panel)) {
+            entries[j] = entries[j - 1];
+            j--;
+        }
+        entries[j] = key;
+    }
 }
 
 void floating_panel_unplace(tFloatingPanel * panel) {
