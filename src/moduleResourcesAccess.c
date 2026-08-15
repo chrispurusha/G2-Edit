@@ -122,6 +122,34 @@ uint32_t module_param_count(tModuleType moduleType) {
     return cache[moduleType];
 }
 
+// How many parameters the DEVICE sends for this module type, which is not always how many rows the
+// table has. paramTypeCustomData rows are local storage, not wire parameters: SeqNote's Magnifier
+// and Octave sit in param slots past the end of what the G2 transmits, and reach the device through
+// their own eMsgCmdSetCustomData message instead (see send_custom_data_value() in protocol.c).
+//
+// Only the patch-parse count check wants this. Everywhere else — init, copy/paste, the sound engine —
+// genuinely means "every slot this module uses", which is module_param_count() above.
+//
+// Called from both threads — caches are pre-warmed by init_module_resource_cache() before USB thread starts.
+uint32_t module_device_param_count(tModuleType moduleType) {
+    static uint32_t cache[moduleTypeMax]      = {0};
+    static bool     validCache[moduleTypeMax] = {0};
+
+    if (validCache[moduleType] == false) {
+        uint32_t count = 0;
+
+        for (int i = 0; i < array_size_param_location_list(); i++) {
+            if ((paramLocationList[i].moduleType == moduleType) && (paramLocationList[i].type != paramTypeCustomData)) {
+                count++;
+            }
+        }
+
+        cache[moduleType]      = count;
+        validCache[moduleType] = true;
+    }
+    return cache[moduleType];
+}
+
 // Called from both threads — caches are pre-warmed by init_module_resource_cache() before USB thread starts.
 uint32_t module_connector_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
@@ -312,6 +340,7 @@ void init_module_resource_cache(void) {
 
     for (t = (tModuleType)0; t < moduleTypeMax; t++) {
         module_param_count(t);
+        module_device_param_count(t);
         module_connector_count(t);
         module_mode_count(t);
         module_volume_count(t);
