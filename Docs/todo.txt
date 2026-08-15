@@ -413,8 +413,40 @@ OPEN WORK
   in today would have its two antiphase channels summed straight back together at the Out node,
   which largely cancels the very modulation the work is meant to add — a worse sound than the mono
   version, arrived at with more code. Neither effect can be finished before the output path carries
-  a pair: eNodeOut keeping its legs separate, `sample` becoming two, and the decimator running on
-  both. Do that FIRST, then the chorus (cheap), then the reverb (needs the second tap set above).
+  a pair.
+
+  SCOPE, IN ORDER (worked out 2026-08-15; line numbers are as of that day's soundEngine.c):
+
+  STEP 1 — THE OUTPUT PATH. Every stage after the mix is a single scalar, and each becomes a pair:
+     * 3973  eNodeOut SUMS its legs: (a + signal_in(spec, value, 1)) * gain. Keep them separate.
+     * 4288  the tap stage collapses to one `double sample`.
+     * 4295  the extraTap loop sums the patch's other Out modules into that same scalar; it has to
+             sum per channel instead.
+     * 4332  one gOutHistory[64] and one gOutHistoryPos — the decimator has to run twice.
+     * 4364  outSample is copied to EVERY output channel; L and R instead.
+     * plus gRawPeakMilli / gPeakMilli, and the VOICE_GAIN -> output gain -> soft knee -> hard clamp
+       sequence, all of which are per-sample scalar and want doing per channel.
+    THE ONE PART THAT IS NOT MECHANICAL, and the reason this is its own step rather than a rename:
+    eNodeOut summing its two sockets is LOAD-BEARING. A patch that connects only the left socket —
+    very common — produces full output today. Stop summing and it goes half silent, which the
+    instrument never does, because there both sockets are real and the player hears both. So it
+    needs an explicit rule: when spec->in[1] < 0, mirror the connected leg into both channels rather
+    than letting signal_in() return its usual 0.0 for the missing one. The tap path needs the same
+    rule, since params.tap selects a MODULE and a tapped mono module must feed both channels.
+    NO API CHANGE: sound_engine_render(out, frameCount, channelCount) already takes a channel count
+    and writes interleaved — it just copies one value into each channel today. So the VST3 wrapper
+    gets stereo for free, with no change in vst3/.
+
+  STEP 2 — THE CHORUS. Cheap once step 1 is in, and the measurement is already banked: a second
+    delay line and write pointer per node (gChorusLine/gChorusWrite gaining a channel index), the
+    right channel reading the LFO at phase + 0.5, and chorus_step() returning a pair.
+
+  STEP 3 — THE REVERB. The big one: a second tap set with its own lengths and pre-delay, and the
+    warning above about NOT dropping the measured lengths straight into a parallel comb bank.
+    Worth doing after step 1 for a second reason — sound_engine_render_reverb_ir()'s own header note
+    says the two channels come out identical and their correlation reads 1.000, so that harness only
+    starts measuring something real once the output path carries a pair. The hardware's measured
+    +0.012..+0.045 then becomes a target that can actually be checked against.
 
 - CHORUS LFO SHAPE AND DEPTH — FIXED 2026-08-15, needs an ear. Owner reported that Amount 127 sounds
   like a slow vibrato rather than a chorus. It did, and the cause was the LFO SHAPE, not the depth:
