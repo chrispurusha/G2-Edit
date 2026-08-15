@@ -21,6 +21,7 @@
 #define VIRTUAL_KEYBOARD_H
 
 #include "types.h"
+#include "floatingPanel.h"
 #include "synthlibTypes.h"
 
 // The Virtual Keyboard panel — the original editor's Tools > Virtual Keyboard (manual p.128).
@@ -59,23 +60,28 @@
 #define VKB_MAX_WHITE       (VKB_KEYS_VISIBLE)
 
 typedef struct {
-    bool       active;
-    uint32_t   firstNote;             // MIDI note at the left edge, always a C
-    int32_t    noteOn;                // the sounding note, -1 when silent
-    int32_t    lastNote;              // last note played, -1 if none yet — what Repeat re-strikes
-    uint32_t   velocity;              // fixed; the wire format carries no velocity field
-    bool       drone;
-    bool       repeat;
-    double     nextRepeatAt;          // glfwGetTime() stamp of the next re-strike
+    bool active;
 
-    tRectangle close;
-    bool       closePressed;
-    tRectangle octaveDown;
-    tRectangle octaveUp;
-    tRectangle noteDown;
-    tRectangle noteUp;
-    tRectangle droneButton;
-    tRectangle repeatButton;
+    // Floating, not modal — see floatingPanel.h. Holds the panel's position between frames, which is
+    // what stopped it re-centring itself and made it movable.
+    tFloatingPanel panel;
+
+    uint32_t       firstNote;         // MIDI note at the left edge, always a C
+    int32_t        noteOn;            // the sounding note, -1 when silent
+    int32_t        lastNote;          // last note played, -1 if none yet — what Repeat re-strikes
+    uint32_t       velocity;          // fixed; the wire format carries no velocity field
+    bool           drone;
+    bool           repeat;
+    double         nextRepeatAt;      // glfwGetTime() stamp of the next re-strike
+
+    tRectangle     close;
+    bool           closePressed;
+    tRectangle     octaveDown;
+    tRectangle     octaveUp;
+    tRectangle     noteDown;
+    tRectangle     noteUp;
+    tRectangle     droneButton;
+    tRectangle     repeatButton;
 
     // Hit rects, kept parallel to the drawn keys. Blacks are tested first because they overlap the
     // whites they sit between.

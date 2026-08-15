@@ -182,15 +182,16 @@ void render_virtual_keyboard_panel(void) {
     if (!gVirtualKeyboard.active) {
         return;
     }
-    double   renderW = get_render_width() / gGlobalGuiScale;
-    double   renderH = get_render_height() / gGlobalGuiScale;
-    double   margin  = 10.0;
-    double   titleH  = 24.0;
-    double   btnH    = STANDARD_BUTTON_TEXT_HEIGHT;
-    double   textH   = STANDARD_TEXT_HEIGHT;
+    // renderW still bounds the panel WIDTH below; the height and both origins are the floating
+    // panel's business now (floatingPanel.h), not this function's.
+    double     renderW = get_render_width() / gGlobalGuiScale;
+    double     margin  = 10.0;
+    double     titleH  = 24.0;
+    double     btnH    = STANDARD_BUTTON_TEXT_HEIGHT;
+    double     textH   = STANDARD_TEXT_HEIGHT;
 
     // Count the whites in the visible span first — the panel is exactly as wide as they need.
-    uint32_t whites  = 0;
+    uint32_t   whites  = 0;
 
     for (uint32_t i = 0; i < VKB_KEYS_VISIBLE; i++) {
         uint32_t note = gVirtualKeyboard.firstNote + i;
@@ -200,21 +201,24 @@ void render_virtual_keyboard_panel(void) {
         }
     }
 
-    double   whiteW  = VKB_WHITE_W;
-    double   boxW    = (margin * 2.0) + (whiteW * whites);
-    double   boxH    = titleH + margin + btnH + margin + VKB_WHITE_H + margin + textH + margin;
+    double     whiteW  = VKB_WHITE_W;
+    double     boxW    = (margin * 2.0) + (whiteW * whites);
+    double     boxH    = titleH + margin + btnH + margin + VKB_WHITE_H + margin + textH + margin;
 
     if (boxW > (renderW - (margin * 2.0))) {
         boxW   = renderW - (margin * 2.0);
         whiteW = (boxW - (margin * 2.0)) / (double)whites;
     }
-    double   boxX    = (renderW - boxW) / 2.0;
-    double   boxY    = (renderH - boxH) / 2.0;
-    double   y       = boxY + titleH + margin;
+    // Floating, not modal: the position comes from the panel state rather than being recomputed as
+    // (renderW - boxW) / 2 every frame, and there is no background overlay — the patch stays visible
+    // and clickable underneath, and a second panel can share the screen. See floatingPanel.h.
+    tRectangle box     = floating_panel_place(&gVirtualKeyboard.panel, boxW, boxH);
+    double     boxX    = box.coord.x;
+    double     boxY    = box.coord.y;
+    double     y       = boxY + titleH + margin;
 
-    draw_dialog_background_overlay();
-    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Virtual Keyboard");
-    gVirtualKeyboard.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gVirtualKeyboard.closePressed);
+    gVirtualKeyboard.panel.titleBarRect = draw_panel_chrome(mainArea, box, titleH, "Virtual Keyboard");
+    gVirtualKeyboard.close              = draw_panel_close_button(mainArea, box, gVirtualKeyboard.closePressed);
 
     // ── The button bar ────────────────────────────────────────────────────
     // Four scroll buttons on the left as in the original — double arrows an octave, singles a note
@@ -363,6 +367,37 @@ static int32_t note_at(tCoord coord) {
 bool handle_virtual_keyboard_mouse(tCoord coord, tMouseButton mouseButton) {
     if (!gVirtualKeyboard.active) {
         return false;
+    }
+
+    // A floating panel claims ONLY the clicks that land on it. This used to return true for every
+    // click anywhere while open, which is what made it modal — the canvas and any other open panel
+    // were unreachable until it was closed.
+    if (mouseButton == mouseButtonLeftDown) {
+        if (floating_panel_press(&gVirtualKeyboard.panel, coord)) {
+            return true;   // title bar, or ctrl-drag anywhere on the panel: a move, not a key press
+        }
+
+        if (!floating_panel_contains(&gVirtualKeyboard.panel, coord)) {
+            return false;
+        }
+    } else if (mouseButton == mouseButtonLeftUp) {
+        bool wasDragging = gVirtualKeyboard.panel.dragging;
+
+        floating_panel_release(&gVirtualKeyboard.panel);
+
+        // A release that ends a move belongs to the move, wherever the pointer has got to.
+        if (wasDragging) {
+            return true;
+        }
+
+        // A release outside the panel is only ignorable if there is nothing of ours outstanding.
+        // A note sounding is outstanding: press a key, slide off the panel, release — that release
+        // has to reach set_sounding_note(-1) below or the note hangs until something else stops it.
+        if (  !floating_panel_contains(&gVirtualKeyboard.panel, coord)
+           && !gVirtualKeyboard.closePressed
+           && (gVirtualKeyboard.noteOn < 0)) {
+            return false;
+        }
     }
 
     if (mouseButton == mouseButtonLeftDown) {
