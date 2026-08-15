@@ -2933,9 +2933,44 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 // OF THIS AT BOTH SETTINGS, which is close enough to 4 to suggest the null-counting method dropped a
 // factor rather than being noisy — its own note says the gaps swell "once per half LFO cycle", and
 // reading that as a whole cycle is worth two of the four. That is not explained, only bounded.
-#define CHORUS_RATE_MAX_HZ    (3.334)   // at Detune 127; proportional to the dial below that
-#define CHORUS_CENTRE_S       (0.0030)  // delay at the middle of the sweep
-#define CHORUS_SWEEP_S        (0.0021)  // peak deviation either side, independent of Detune
+//
+// RE-ANALYSED FROM THE RETAINED CAPTURES, 2026-08-15, offline and with no G2 present. The three
+// files in ~/Documents/G2 Captures/ were demodulated at the tone frequency: for a single input tone
+// the module's output is dry + m*delayed, so |z|^2 of the demodulate is a direct read-out of the
+// comb argument, and its modulation IS the LFO. What that settled, in order of importance:
+//
+//   - THE RATE ABOVE IS CONFIRMED. AM fundamentals of 0.8382 Hz (Detune 32) and 1.6795 Hz (Detune
+//     64), exactly 2:1, so 0.8382 * 127/32 = 3.327 Hz at Detune 127. An earlier pass in the same
+//     session called this 4x too fast; that was a frequency scan capped at 1.2 Hz clipping the real
+//     peak in the Detune 64 files, not a fault in the figure.
+//   - THE HALF-CYCLE STEREO OFFSET IS CONFIRMED to a fraction of a degree: L/R phase at the AM
+//     fundamental of 180.0, 179.9 and 180.1 degrees across the three files.
+//   - THE LFO IS A SYMMETRIC TRIANGLE, NOT A SINE. This is the one that was wrong. Where the phase
+//     swing is small the folded profile IS the LFO waveform, and the 32.7 Hz captures fold to a
+//     triangle — straight flanks, sharp turn — with a fitted rise fraction of exactly 0.50. Fitting
+//     P + Q*cos(th0 + X*triangle) to the folded profiles lands at R^2 = 0.9992..1.0000, where every
+//     sinusoid-based estimator returned impossible sweeps of 4 to 14 ms against a 3 ms centre.
+//   - THE SWEEP IS 2.38 ms, from the 98 Hz capture (both channels agreeing to 0.1%), which is the
+//     well-conditioned one: at 32.7 Hz the swing and the mix trade off against each other and those
+//     fits are not to be believed. The old 2.1 ms was close, so the frozen-delay cross-check below
+//     stands. Both tone frequencies independently put the centre at 2.4..3.9 ms, bracketing
+//     CHORUS_CENTRE_S — a consistency check that only passes if the model is right.
+#define CHORUS_RATE_MAX_HZ    (3.334)    // at Detune 127; proportional to the dial below that
+#define CHORUS_CENTRE_S       (0.0030)   // delay at the middle of the sweep
+#define CHORUS_SWEEP_S        (0.00238)  // peak deviation either side, independent of Detune
+
+// The LFO shape: a symmetric triangle in [-1, 1], phase in [0, 1). Measured, not assumed — see above.
+//
+// IT IS THE SHAPE, NOT THE DEPTH, THAT MAKES THIS SOUND LIKE A CHORUS. Pitch shift through a swept
+// delay is the sweep VELOCITY, so a triangle gives a CONSTANT detune that flips sign twice a cycle
+// — two steady pitches alternating, which is what doubling is — where a sine glides smoothly
+// through zero to a peak and back, which is the textbook definition of vibrato. With a sine here,
+// Amount 127 came out sounding like a slow vibrato rather than a chorus.
+static double chorus_triangle(double phase) {
+    double p = phase - floor(phase);
+
+    return (p < 0.5) ? (-1.0 + (4.0 * p)) : (3.0 - (4.0 * p));
+}
 
 static double chorus_step(uint32_t node, double input, double depth, double amount) {
     double   sweep   = 0.0;
@@ -2956,18 +2991,21 @@ static double chorus_step(uint32_t node, double input, double depth, double amou
     //
     // Exactly twice the rate for twice the dial, at constant depth. Above about 96 the nulls come
     // too close to separate the two, so the top of the range is extrapolated from that proportion.
+    // (The RATES in that table are the ones later found to be 3.907x low; the DEPTHS survived the
+    // 2026-08-15 re-analysis nearly unchanged, at 2.38 ms.)
     //
     // CROSS-CHECKED against a quite different measurement: at Detune 0 the LFO stops wherever it
     // happens to be, and rebuilding the patch repeatedly froze the delay at 1.33, 1.52, 1.94, 2.13
-    // and 5.33 ms. A 3 ms centre swept +/-2.1 ms spans 0.9 to 5.1 ms, and every one of those frozen
+    // and 5.33 ms. A 3 ms centre swept +/-2.38 ms spans 0.6 to 5.4 ms, and every one of those frozen
     // values falls inside it.
     gChorusLfo[node]                     += (CHORUS_RATE_MAX_HZ * depth) / gSampleRate;
 
     if (gChorusLfo[node] >= 1.0) {
         gChorusLfo[node] -= 1.0;
     }
-    // The DEPTH is fixed; only the rate follows the dial.
-    sweep                                 = CHORUS_CENTRE_S + (CHORUS_SWEEP_S * sin(gChorusLfo[node] * 2.0 * M_PI));
+    // The DEPTH is fixed; only the rate follows the dial. The shape is a TRIANGLE — measured, and
+    // the difference between a chorus and a vibrato; see chorus_triangle().
+    sweep                                 = CHORUS_CENTRE_S + (CHORUS_SWEEP_S * chorus_triangle(gChorusLfo[node]));
     samples                               = (uint32_t)(sweep * gSampleRate);
 
     if (samples < 1) {
