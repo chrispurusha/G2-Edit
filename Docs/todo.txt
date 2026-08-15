@@ -415,6 +415,32 @@ OPEN WORK
   version, arrived at with more code. Neither effect can be finished before the output path carries
   a pair.
 
+  STEPS 1 AND 2 ARE DONE, 2026-08-15 — needs an ear. Step 3 (the reverb) is still open, and the
+  entry below it still describes what that one needs. WHAT LANDED, and the two things to know:
+
+   * A REAL BUG CAME OUT OF IT, and it was not in the effects. FIVE NODE KINDS NEVER WROTE LEG 1 —
+     the oscillators, the filter, LevAmp, LevMult and the mixers all write value[n][0] and leave
+     value[n][1] at the zero eval_node() starts it from. That was INVISIBLE while eNodeOut summed
+     its legs, because a spurious 0 on the right just made the sum equal the left. The moment the
+     Out module kept them apart, SimpleLead lost its right channel outright: it cables one module's
+     output 0 to Out L and its output 1 to Out R, which is an ordinary thing for a patch to do.
+     Fixed with one mirror at the end of eval_node() rather than five scattered assignments;
+     eNodeEnv, eNodeChorus and eNodeOut are excluded because they genuinely fill both legs.
+     ANY FUTURE STEREO MODULE MUST BE ADDED TO THAT EXCLUSION LIST or it will be flattened to mono.
+   * EVERYTHING GOT 6 dB QUIETER, deliberately, and this is what wants an ear. eNodeOut used to sum
+     its two sockets and send that sum to both channels, so the same signal cabled to both — which
+     is the common case — played at 2a. It now plays at a, which is what the instrument does with
+     two sockets carrying the same thing. Measured across the reference patches: SimpleLead and
+     ExpAudio both drop by exactly 2.0000x and no patch loses a channel. VOICE_GAIN, the output gain
+     and OUTPUT_KNEE were all tuned with that doubling in place, so the knee now engages 6 dB later
+     than it used to; whether that wants compensating is a listening question, not a measurement.
+
+  VERIFIED OFFLINE, no hardware: a before/after harness (git show HEAD:src/soundEngine.c built
+  alongside the working tree) across every reference patch, plus a direct exercise of the chorus at
+  Detune 127 / Amount 127 giving equal per-channel RMS with max |L-R| = 1.41, i.e. genuinely two
+  channels rather than one copied. What is NOT verified is how any of it sounds, and no reference
+  patch contains a StChorus, so the stereo chorus has been proven only at the function level.
+
   SCOPE, IN ORDER (worked out 2026-08-15; line numbers are as of that day's soundEngine.c):
 
   STEP 1 — THE OUTPUT PATH. Every stage after the mix is a single scalar, and each becomes a pair:
