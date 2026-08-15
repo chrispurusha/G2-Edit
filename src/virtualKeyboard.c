@@ -71,6 +71,7 @@ static const bool kIsBlack[12]     = {false, true, false, true, false, false, tr
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
 void open_virtual_keyboard_panel(void) {
+    floating_panel_raise(&gVirtualKeyboard.panel);   // opens in front — see floatingPanel.c on why this is not left to placement
     gVirtualKeyboard.active       = true;
     gVirtualKeyboard.closePressed = false;
     gVirtualKeyboard.noteOn       = -1;

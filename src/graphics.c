@@ -74,6 +74,7 @@ extern "C" {
 #include "paramOverview.h"
 #include "midiCcList.h"
 #include "floatingPanel.h"
+#include "helpPanel.h"
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
 #include "soundEngine.h"
@@ -2034,14 +2035,20 @@ static void render_frame(void) {
     render_midi_cc_list_panel();
 
     // Floating panels, drawn BACK TO FRONT so the most recently clicked one ends up on top. The
-    // mouse dispatch in mouseHandle.c walks the same order reversed — the two must agree, or a panel
-    // is drawn on top of one that is taking its clicks.
-    if (floating_panel_in_front_of(&gPatchAdjuster.panel, &gVirtualKeyboard.panel)) {
-        render_virtual_keyboard_panel();
-        render_patch_adjuster_panel();
-    } else {
-        render_patch_adjuster_panel();
-        render_virtual_keyboard_panel();
+    // mouse dispatch in mouseHandle.c builds the same list and walks it reversed — the two must
+    // agree, or a panel is drawn on top of one that is taking its clicks.
+    {
+        tFloatingPanelEntry panels[] = {
+            {&gVirtualKeyboard.panel, render_virtual_keyboard_panel, NULL, NULL},
+            {&gPatchAdjuster.panel,   render_patch_adjuster_panel,   NULL, NULL},
+            {&gHelpPanel.panel,       render_help_panel,             NULL, NULL}
+        };
+
+        floating_panel_sort(panels, (uint32_t)(sizeof(panels) / sizeof(panels[0])));
+
+        for (uint32_t i = 0; i < (uint32_t)(sizeof(panels) / sizeof(panels[0])); i++) {
+            panels[i].render();
+        }
     }
     render_context_menu();
     render_patch_notes_edit();

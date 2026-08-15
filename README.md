@@ -38,6 +38,13 @@ needed once per install, including after each update.
 If you would rather not use Terminal: double-click the app, dismiss the warning, then open System
 Settings > Privacy & Security, scroll down and click **Open Anyway**.
 
+### Keyboard and mouse
+
+Once it is running, **Help > Keyboard and Mouse** lists everything the modifier keys do — Alt with
+the wheel to adjust the parameter under the pointer, Shift and Cmd for selection, Ctrl to drag a
+panel around, playing notes from the computer keyboard, and the rest. It is a floating panel, so it
+can be left open beside the patch while you try them.
+
 ### The VST3 plug-in (optional)
 
 `G2 Alike.vst3` **plays** a patch rather than editing one, which is where the name comes from. It is

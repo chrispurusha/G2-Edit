@@ -46,6 +46,7 @@ void open_restore_menu(tCoord anchor);
 void open_controls_menu(tCoord anchor);
 void open_tools_menu(tCoord anchor);
 void open_view_menu(tCoord anchor);
+void open_help_menu(tCoord anchor);
 void open_experimental_menu(tCoord anchor);
 
 // False omits the bank and device entries rather than greying them. See the note in appMenuBar.c:

@@ -92,6 +92,24 @@ void floating_panel_raise(tFloatingPanel * panel);
 // that has never been raised sorts behind one that has.
 bool floating_panel_in_front_of(const tFloatingPanel * a, const tFloatingPanel * b);
 
+// One floating panel, paired with how to draw it and how to offer it a click. Registering them in an
+// array and sorting means the draw order and the hit-test order come from ONE place. Hand-written
+// two-way branches worked while there were two panels and become combinatorial at three, which is
+// exactly the sort of duplication that lets the two orders drift apart — and if they drift, a panel
+// is drawn on top of one that is taking its clicks.
+typedef struct {
+    tFloatingPanel * panel;
+    void (*render)(void);
+    bool (*mouse)(tCoord coord, tMouseButton mouseButton);
+
+    // Keys are ordered too, not just clicks: Escape has to close the panel you are looking at, and a
+    // fixed call order closed whichever handler came first regardless of what was in front.
+    bool (*key)(int key, int mods, int action);
+} tFloatingPanelEntry;
+
+// Sorts entries BACK TO FRONT: draw in this order, hit-test in reverse.
+void floating_panel_sort(tFloatingPanelEntry * entries, uint32_t count);
+
 #ifdef __cplusplus
 }
 #endif

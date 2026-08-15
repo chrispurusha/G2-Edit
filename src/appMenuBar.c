@@ -45,6 +45,7 @@ extern "C" {
 #include "alertDialog.h"
 #include "menus.h"
 #include "appMenuBar.h"
+#include "helpPanel.h"
 #include "synthlibPersistence.h"
 
 // Real actions land in these six open_*_menu() functions as misc.mm's Cocoa
@@ -412,6 +413,25 @@ static void action_overlay_mode(int index) {
     tParamOverlayMode mode = (tParamOverlayMode)gContextMenu.items[index].param;
 
     param_overlay_set_mode((param_overlay_mode() == mode) ? overlayModeNone : mode);
+}
+
+static void action_open_help(int index) {
+    (void)index;
+    open_help_panel();
+}
+
+// The keyboard and mouse reference. Its own top-level menu rather than an entry buried in Tools:
+// a shortcut list nobody can find is a shortcut list nobody reads.
+void open_help_menu(tCoord anchor) {
+    static tMenuItem items[2] = {0};
+
+    items[0] = (tMenuItem){
+        "Keyboard and Mouse...", (tRgb)RGB_GREY_3, action_open_help, 0, NULL, 0, 0.0
+    };
+    items[1] = (tMenuItem){
+        NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+    };
+    open_context_menu(anchor, items, 0, 0.0);
 }
 
 void open_view_menu(tCoord anchor) {
@@ -914,6 +934,7 @@ tMenuBarItem gAppMenuBar[] = {
     {"View",         open_view_menu        },
 #ifndef G2_VST3_BUILD
     {"Experimental", open_experimental_menu},
+    {"Help",         open_help_menu        },
 #endif
     {NULL,           NULL                  },
 };
