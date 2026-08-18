@@ -898,28 +898,50 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 #define REVERB_COMB_MAX       (((REVERB_COMB_BASE * 18) / 10) + REVERB_SPREAD + 1)
 #define REVERB_ALLPASS_MAX    (((REVERB_ALLPASS_BASE * 18) / 10) + REVERB_SPREAD + 1)
 
-// PER-CHANNEL PRE-DELAY. The instrument's two outputs do not start together — Small measures 12.88 ms
-// on the left and 7.54 ms on the right — and this engine had no pre-delay at all, so both tails began
-// at the input. Those two figures are MEASURED; the other three rooms are INFERRED, by scaling with
-// kReverbTypeScale exactly as every other line is, which is itself a measured property of the
-// instrument ("room Type scales every delay line by ONE factor"). NOT YET CHECKED against hardware
-// for Medium, Large or Hall — see the todo entry that asks for those three onsets.
+// PER-CHANNEL PRE-DELAY, MEASURED PER ROOM ON THE HARDWARE 2026-08-18. The instrument's two outputs
+// do not start together, and this engine had no pre-delay at all, so both tails began at the input.
+//
+// THIS IS THE ONE LINE IN THIS REVERB THAT DOES NOT FOLLOW THE ONE-FACTOR RULE. Every other length
+// here is a room-size factor times a constant (see kReverbTypeScale), and an earlier version of this
+// table assumed the pre-delay was too. It is not: across the four rooms the left pre-delay moves only
+// 12.90 -> 13.33 ms, a 3.3% spread, where kReverbTypeScale spans 68%. Scaling it would have put Hall
+// at 21.67 ms against a measured 13.33. So these are eight independent numbers, not two and a factor.
+//
+// AND THE OLD RIGHT-CHANNEL FIGURE WAS SIMPLY WRONG — recorded as 7.54 ms, actually 11.75 ms. At
+// 7.5 ms both channels are still in the noise (3.8-6.7% of peak); the right channel leaves it at
+// 11.50 ms and the left at 12.75 ms, read sample by sample off the raw capture rather than through a
+// threshold. So the two channels are about 1.15 ms apart, not 5.34.
+//
+// MEASURED TWICE, INDEPENDENTLY, AND THEY AGREE TO 0.06 ms: once from the stored 192 kHz Fireface
+// captures (tools/ rig, Time sweeps read at Time 0 where the tail clears between impulses) and once
+// live into a QU-24 at 48 kHz. Pre-delay is a fixed line length — Type sets the delay lengths, Time
+// only the feedback gain — which the measurement confirms: the same figures come back at Time 0, 32
+// and 64.
 //
 // Expressed as sample counts at the 48 kHz base rate, times ENGINE_OVERSAMPLE, for the same reason
 // the comb lengths are: an array bound has to be an INTEGER constant expression. Sizing one with a
 // float cast is what produced the -Wgnu-folding-constant pair recorded in Docs/todo.txt.
-#define REVERB_PREDELAY_L      (618 * ENGINE_OVERSAMPLE)  // 12.88 ms at 48 kHz
-#define REVERB_PREDELAY_R      (362 * ENGINE_OVERSAMPLE)  //  7.54 ms
-#define REVERB_PREDELAY_MAX    (((REVERB_PREDELAY_L * 18) / 10) + 1)
-static const uint32_t kCombLen[REVERB_COMBS]           = {
+//
+//                        Small   Medium   Large    Hall
+//     left    (ms)       12.89   13.05    13.30    13.36
+//     right   (ms)       11.75   11.90    12.14    12.20
+#define REVERB_PREDELAY_MAXSAMP    (641 * ENGINE_OVERSAMPLE)   // the largest below, Hall left
+#define REVERB_PREDELAY_MAX        (((REVERB_PREDELAY_MAXSAMP * 11) / 10) + 1)
+static const uint32_t kCombLen[REVERB_COMBS]                              = {
     1116 * ENGINE_OVERSAMPLE, 1188 * ENGINE_OVERSAMPLE,
     1277 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
 };
-static const uint32_t kAllpassLen[REVERB_ALLPASS]      = {
+static const uint32_t kAllpassLen[REVERB_ALLPASS]                         = {
     REVERB_ALLPASS_BASE, 149 * ENGINE_OVERSAMPLE,
     97 * ENGINE_OVERSAMPLE
 };
-static const uint32_t kReverbPreDelay[REVERB_CHANNELS] = {REVERB_PREDELAY_L, REVERB_PREDELAY_R};
+// [room type][channel], in samples at the base rate. NOT scaled by kReverbTypeScale — see above.
+static const uint32_t kReverbPreDelay[REVERB_TYPE_COUNT][REVERB_CHANNELS] = {
+    {619 * ENGINE_OVERSAMPLE, 564 * ENGINE_OVERSAMPLE},    // Small   12.89 / 11.75 ms
+    {626 * ENGINE_OVERSAMPLE, 571 * ENGINE_OVERSAMPLE},    // Medium  13.05 / 11.90 ms
+    {638 * ENGINE_OVERSAMPLE, 583 * ENGINE_OVERSAMPLE},    // Large   13.30 / 12.14 ms
+    {641 * ENGINE_OVERSAMPLE, 586 * ENGINE_OVERSAMPLE}     // Hall    13.36 / 12.20 ms
+};
 static float          gPreDelay[REVERB_CHANNELS][REVERB_PREDELAY_MAX];
 static uint32_t       gPreDelayPos[REVERB_CHANNELS];
 static float          gComb[REVERB_COMBS][REVERB_CHANNELS][REVERB_COMB_MAX];
@@ -3201,7 +3223,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         // Only the wet path: the dry signal is added at the very end and is not delayed, which is
         // what a pre-delay means.
         {
-            uint32_t len = (uint32_t)(kReverbPreDelay[ch] * scale);
+            uint32_t len = kReverbPreDelay[(type < REVERB_TYPE_COUNT) ? type : 0][ch];
 
             if (len >= REVERB_PREDELAY_MAX) {
                 len = REVERB_PREDELAY_MAX - 1;   // a device rate above the base cannot overrun
