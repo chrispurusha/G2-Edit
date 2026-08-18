@@ -101,6 +101,18 @@ static void send_note_to_synth(uint8_t note, uint8_t velocity, bool on) {
     if ((atomic_load(&gSendsToSynth) == false) || (gCommsState != eCommsOnLine)) {
         return;
     }
+
+    // WITH THE LOCAL ENGINE SOUNDING, THE G2 DOES NOT ALSO GET THE NOTE. Otherwise one key press
+    // plays twice — once here and once on the instrument — which is exactly the comparison the
+    // engine exists to make, ruined by doing both at once.
+    //
+    // NOTE-OFFS ALWAYS GO THROUGH. Enabling the engine while a key is held would otherwise swallow
+    // the release and leave the G2 droning with no way to stop it short of a panic. A release sent
+    // for a note the instrument is not playing is harmless, so this is the safe asymmetry rather
+    // than a tidy one.
+    if ((on == true) && (sound_engine_active() == true)) {
+        return;
+    }
     msg.cmd                   = eMsgCmdPlayNote;
     msg.playNoteData.note     = note;
     msg.playNoteData.velocity = velocity;
