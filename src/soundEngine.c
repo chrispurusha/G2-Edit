@@ -138,7 +138,18 @@ typedef enum {
 // parameter list entirely because, unlike a knob, they cannot be assigned to a morph group or a
 // controller and hold one setting across every variation (manual p.20). It lives in
 // modeLocationList, so it is read from module->mode[] and reading param[10] found nothing.
-#define SHPB_MODE_WAVEFORM          (0)
+#define SHPB_MODE_WAVEFORM    (0)
+
+// Pulse: a one-shot gate fired by a RISING EDGE at its input. Time and Range set how long it stays
+// high; there is no power button, so it is always live.
+#define PULSE_PARAM_TIME       (0)
+#define PULSE_PARAM_TIMEMOD    (1)
+#define PULSE_PARAM_RANGE      (2)
+
+// What counts as a logic high. The G2's logic signals are full-scale 0/1, so anything near the
+// middle separates them; the envelope that drives this in the measurement patch sweeps the whole
+// range, so the exact threshold is not delicate.
+#define PULSE_THRESHOLD             (0.5)
 
 // Mix4to1C: one level per input, then a pad and a curve.
 #define MIX_PARAM_LEVEL_BASE        (0)
@@ -421,6 +432,7 @@ typedef enum {
     eNodeConstant,
     eNodeFxIn,           // the FX area's feed from the Voice area — no cable, an implicit link
     eNodePassThru,       // an effect that is not modelled yet: passes its input along unchanged
+    eNodePulse,          // a one-shot gate, fired by a rising edge at its input
     eNodeOut,
 } tNodeKind;
 
@@ -463,6 +475,8 @@ typedef struct {
     double   release;
 
     double   gain;           // LevAmp
+    double   pulseSeconds;   // Pulse gate width
+    uint32_t outDest;        // Out module: 0 = outputs 1/2, 1 = outputs 3/4
 
     double   depth;          // chorus detune depth, and the delay's feedback
     double   amount;         // chorus wet amount, delay/reverb dry-wet
@@ -708,7 +722,7 @@ static uint64_t           gSeenTopology      = 0;
 #define OUT_DECIMATE_TAPS    (64)
 
 static double   gOutDecimate[OUT_DECIMATE_TAPS];
-static double   gOutHistory[2][OUT_DECIMATE_TAPS];   // [channel]; one shared cursor, see the render loop
+static double   gOutHistory[4][OUT_DECIMATE_TAPS];   // [pair*2 + channel]; one shared cursor, see the render loop
 static uint32_t gOutHistoryPos = 0;
 
 static double   gOscDecimate[OSC_DECIMATE_TAPS];
@@ -764,6 +778,11 @@ static double   gDelayHp[MAX_DELAY_LINES];   // the HP's lowpass half; the filte
 static float    gChorusLine[MAX_ENGINE_NODES][CHORUS_CHANNELS][CHORUS_SAMPLES];
 static uint32_t gChorusWrite[MAX_ENGINE_NODES][CHORUS_CHANNELS];
 static double   gChorusLfo[MAX_ENGINE_NODES];
+
+// Pulse: the countdown still to run, and the previous input, so a rising edge can be seen. Per voice,
+// because the gate is fired by that voice's own envelope.
+static uint32_t gPulseCount[MAX_VOICES][MAX_ENGINE_NODES];
+static double   gPulsePrev[MAX_VOICES][MAX_ENGINE_NODES];
 
 // Compressor gain-reduction state, one per node.
 static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
@@ -1138,6 +1157,8 @@ static void reset_node_state(void) {
             gEnvStart[v][i]      = 0.0;
             gEnvStage[v][i]      = eEnvIdle;
             gCompEnv[v][i]       = 0.0;
+            gPulseCount[v][i]    = 0;
+            gPulsePrev[v][i]     = 0.0;
         }
     }
 
@@ -1363,7 +1384,7 @@ const char * sound_engine_debug_text(void) {
     // the end by the kindName[n->kind] below, which is a stack overflow rather than a wrong label.
     const char * kindName[] = {
         "Osc",    "OscShp",   "Filter", "LevAmp", "LevMult", "Mix",   "Env",
-        "Chorus", "Compress", "Delay",  "Reverb", "Lfo",     "Const", "FxIn","PassThru", "Out"
+        "Chorus", "Compress", "Delay",  "Reverb", "Lfo",     "Const", "FxIn","PassThru","Pulse", "Out"
     };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
@@ -1616,6 +1637,27 @@ static bool take_next_note_event(void) {
 // The exact scale the dial prints, rather than the power-law fit this used to be — see
 // adr_time_seconds() in renderParams.c. Shared so the envelope that is heard cannot take a
 // different time from the one shown.
+// THE PULSE'S WIDTH IN SECONDS, as a closed form rather than a copy of the dial's 128 readings.
+//
+// The instrument's own readout for the Lo range runs 1.04 ms at dial 0 to 10.0 s at dial 127, and it
+// is a geometric progression — a constant 7.49% per step — so the whole table is two endpoints and an
+// exponent. Written this way deliberately: a 128-entry table truncates the FRACTIONAL dial values a
+// morph or a smoothed knob produces, and would disagree with the dial's own text between steps.
+//
+// Range shifts it by a decade either way: Sub a tenth, Hi ten times (pulseRangeStrMap order).
+static double pulse_time_seconds(double value, uint32_t range) {
+    const double loMin   = 0.00104;
+    const double loMax   = 10.0;
+    double       seconds = loMin * pow(loMax / loMin, value / 127.0);
+
+    if (range == 0) {
+        seconds /= 10.0;          // Sub
+    } else if (range == 2) {
+        seconds *= 10.0;          // Hi
+    }
+    return seconds;
+}
+
 static double env_time_seconds(double paramValue) {
     return adr_time_seconds(paramValue);
 }
@@ -1710,6 +1752,11 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
         case moduleTypeLevMult:
         {
             *kind = eNodeLevMult;
+            return true;
+        }
+        case moduleTypePulse:
+        {
+            *kind = eNodePulse;
             return true;
         }
         case moduleTypeEnvADSR:
@@ -1814,6 +1861,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             return 2;
         }
         case eNodeLevMult:
+        case eNodePulse:
         case eNodeOut:
         {
             *connectors = twoIn;
@@ -2447,6 +2495,12 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->release = env_time_seconds(param_value(module, variation, ENV_PARAM_RELEASE));
             break;
         }
+        case eNodePulse:
+        {
+            node->pulseSeconds = pulse_time_seconds(param_value(module, variation, PULSE_PARAM_TIME),
+                                                    (uint32_t)param_value(module, variation, PULSE_PARAM_RANGE));
+            break;
+        }
         case eNodeLevAmp:
         {
             // The manual (p.227) gives the range as 0.25x to 4.0x, which is what the dial displays;
@@ -2457,8 +2511,16 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeOut:
         {
-            node->active = (param_value(module, variation, OUT_PARAM_ACTIVE) != 0.0);
-            node->gain   = (param_value(module, variation, OUT_PARAM_PAD) != 0.0) ? 0.5 : 1.0;
+            node->active  = (param_value(module, variation, OUT_PARAM_ACTIVE) != 0.0);
+            node->gain    = (param_value(module, variation, OUT_PARAM_PAD) != 0.0) ? 0.5 : 1.0;
+            // WHICH PHYSICAL PAIR IT FEEDS. A 2-Out's "Out to" selects Out 1/2 or Out 3/4, and a
+            // measurement patch depends on the difference: the rig puts its dry reference on one
+            // pair and the processed signal on the other, so summing them would destroy the very
+            // comparison it exists to make. A 4-Out has one "Out" setting covering all four
+            // channels and is only half-modelled here anyway (eNodeOut carries two legs, not four),
+            // so it stays on the first pair.
+            node->outDest = (  (module->type == moduleType2toOut)
+                            && (param_value(module, variation, OUT_PARAM_DESTINATION) >= 1.0)) ? 1U : 0U;
             break;
         }
         default:
@@ -3018,6 +3080,32 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 #define CHORUS_RATE_MAX_HZ    (3.334)    // at Detune 127; proportional to the dial below that
 #define CHORUS_CENTRE_S       (0.0030)   // delay at the middle of the sweep
 #define CHORUS_SWEEP_S        (0.00238)  // peak deviation either side, independent of Detune
+
+// A one-shot gate: a rising edge at the input starts it, and it stays high for the width above.
+//
+// A RISING EDGE WHILE THE GATE IS STILL HIGH RESTARTS IT rather than being ignored. That is what the
+// instrument does, and it matters only for an input faster than the width — the measurement patch
+// fires one edge per note, so nothing there depends on it.
+//
+// TimeMod is NOT implemented: the module has a modulation input for its width and this ignores it,
+// which is honest rather than inventing a law for it. Nothing measured so far uses it.
+static double pulse_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
+    double   prev    = gPulsePrev[voice][node];
+    double   width   = spec->pulseSeconds * gSampleRate;
+    uint32_t samples = (width < 1.0) ? 1U : (uint32_t)width;
+
+    gPulsePrev[voice][node] = input;
+
+    if ((prev <= PULSE_THRESHOLD) && (input > PULSE_THRESHOLD)) {
+        gPulseCount[voice][node] = samples;
+    }
+
+    if (gPulseCount[voice][node] > 0) {
+        gPulseCount[voice][node]--;
+        return 1.0;
+    }
+    return 0.0;
+}
 
 // The LFO shape: a symmetric triangle in [-1, 1], phase in [0, 1). Measured, not assumed — see above.
 //
@@ -4014,6 +4102,11 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             value[n][0] = a * signal_in(spec, value, 1);
             break;
         }
+        case eNodePulse:
+        {
+            value[n][0] = pulse_step(voice, n, a, spec);
+            break;
+        }
         case eNodeMix:
         {
             uint32_t c           = 0;
@@ -4328,7 +4421,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 vibrato        = (sin(gVibratoPhase * 2.0 * M_PI) * depth * params.vibratoCents) / 100.0;
             }
             double bend         = ((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones;
-            double sample[2]    = {0.0, 0.0};
+            double sample[2][2] = {{0.0, 0.0}, {0.0, 0.0}};   // [output pair][channel]
             double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
             double smoothCoeff  = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
             // Depends on the patch and the rate, not on the voice, so it is worked out once here
@@ -4493,17 +4586,27 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             if (params.tap >= 0) {
                 // Tapping a module means listening to its main output; for an envelope used as an amp
                 // that is its shaped audio rather than the envelope signal. See tap_pair().
-                tap_pair(&params, params.tap, value, sample);
+                {
+                    double   first[2] = {0.0, 0.0};
+                    uint32_t d        = params.node[params.tap].outDest & 1U;
+
+                    tap_pair(&params, params.tap, value, first);
+                    sample[d][0] += first[0];
+                    sample[d][1] += first[1];
+                }
 
                 // The patch's other Out modules, summed rather than mixed at some fraction: that is
-                // what the hardware's sockets do when two areas both drive them. Summed PER CHANNEL
-                // now, so two Out modules each carrying a stereo pair stay a stereo pair.
+                // what the hardware's sockets do when two areas both drive them. Summed per channel
+                // AND PER PAIR, so a patch whose Out modules feed different physical pairs — which
+                // is what every measurement patch does — keeps them apart instead of folding them
+                // into one stereo image.
                 for (uint32_t t = 0; t < params.extraTapCount; t++) {
-                    double extra[2] = {0.0, 0.0};
+                    double   extra[2] = {0.0, 0.0};
+                    uint32_t d        = params.node[params.extraTap[t]].outDest & 1U;
 
                     tap_pair(&params, params.extraTap[t], value, extra);
-                    sample[0] += extra[0];
-                    sample[1] += extra[1];
+                    sample[d][0] += extra[0];
+                    sample[d][1] += extra[1];
                 }
             }
             // With an envelope module shaping the note, the fixed ramp would only double up on it; it is
@@ -4511,7 +4614,8 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             // THE METERS READ THE LOUDER CHANNEL. A per-channel peak would need a per-channel meter
             // to show it, and what these drive is one number.
             {
-                uint32_t rawMilli = (uint32_t)(fmax(fabs(sample[0]), fabs(sample[1])) * 1000.0);
+                uint32_t rawMilli = (uint32_t)(fmax(fmax(fabs(sample[0][0]), fabs(sample[0][1])),
+                                                    fmax(fabs(sample[1][0]), fabs(sample[1][1]))) * 1000.0);
 
                 if (rawMilli > atomic_load(&gRawPeakMilli)) {
                     atomic_store(&gRawPeakMilli, rawMilli);
@@ -4521,33 +4625,35 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             // The gain, the knee and the clamp are all PER CHANNEL. The knee especially: shaping the
             // two channels together off a common peak would make one duck when the other got loud,
             // which is a stereo image moving under a limiter rather than an output stage.
-            for (uint32_t ch = 0; ch < 2; ch++) {
-                sample[ch]                     *= VOICE_GAIN;
+            for (uint32_t q = 0; q < 4; q++) {
+                double * sp = &sample[q >> 1][q & 1];
+
+                *sp                           *= VOICE_GAIN;
                 // The anti-click ramp is applied PER VOICE as each voice's output leaves the Voice Area
                 // (see the voice loop), not here. Applying it to the mixed output would fade the whole
                 // instrument — including the FX tail — every time any one note was released.
                 // The user's own attenuation, ahead of the knee.
-                sample[ch]                     *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
+                *sp                           *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
 
                 // Soft knee rather than a hard edge. Below the knee nothing is touched at all, so ordinary
                 // playing is untouched; above it the curve bends over instead of shearing the tops off, which
                 // is both kinder to listen to and closer to what an overloaded analogue output does. The hard
                 // clamp afterwards is only a guard against a bug producing something enormous.
-                if (sample[ch] > OUTPUT_KNEE) {
-                    sample[ch] = OUTPUT_KNEE + ((1.0 - OUTPUT_KNEE) * tanh((sample[ch] - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
-                } else if (sample[ch] < -OUTPUT_KNEE) {
-                    sample[ch] = -OUTPUT_KNEE - ((1.0 - OUTPUT_KNEE) * tanh((-sample[ch] - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
+                if (*sp > OUTPUT_KNEE) {
+                    *sp = OUTPUT_KNEE + ((1.0 - OUTPUT_KNEE) * tanh((*sp - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
+                } else if (*sp < -OUTPUT_KNEE) {
+                    *sp = -OUTPUT_KNEE - ((1.0 - OUTPUT_KNEE) * tanh((-*sp - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
                 }
 
-                if (sample[ch] > 1.0) {
-                    sample[ch] = 1.0;
-                } else if (sample[ch] < -1.0) {
-                    sample[ch] = -1.0;
+                if (*sp > 1.0) {
+                    *sp = 1.0;
+                } else if (*sp < -1.0) {
+                    *sp = -1.0;
                 }
                 // Every internal sample goes through the decimator; only the last of each group produces
                 // an output. Feeding all of them is the point — dropping the others without filtering is
                 // exactly what would fold the high end back down.
-                gOutHistory[ch][gOutHistoryPos] = sample[ch];
+                gOutHistory[q][gOutHistoryPos] = *sp;
             }
 
             // ONE position for both lines: they are written in lockstep, so one cursor serves.
@@ -4558,11 +4664,11 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             uint32_t channel      = 0;
             uint32_t tap          = 0;
             double   milli        = 0.0;
-            double   outSample[2] = {0.0, 0.0};
+            double   outSample[4] = {0.0, 0.0, 0.0, 0.0};
 
             // Walked rather than recomputed, as in the oscillator decimator above and for the same
-            // reason — the same taps in the same order, without a division per tap. Both channels
-            // share the walk and the coefficient lookup; only the history line differs.
+            // reason — the same taps in the same order, without a division per tap. All four
+            // channels share the walk and the coefficient lookup; only the history line differs.
             {
                 uint32_t oldest = gOutHistoryPos;
 
@@ -4571,6 +4677,8 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
                     outSample[0] += gOutHistory[0][oldest] * coeff;
                     outSample[1] += gOutHistory[1][oldest] * coeff;
+                    outSample[2] += gOutHistory[2][oldest] * coeff;
+                    outSample[3] += gOutHistory[3][oldest] * coeff;
                     oldest++;
 
                     if (oldest >= OUT_DECIMATE_TAPS) {
@@ -4579,17 +4687,29 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 }
             }
 
-            milli = fmax(fabs(outSample[0]), fabs(outSample[1])) * 1000.0;
+            milli = fmax(fmax(fabs(outSample[0]), fabs(outSample[1])),
+                         fmax(fabs(outSample[2]), fabs(outSample[3]))) * 1000.0;
 
             if ((uint32_t)milli > atomic_load(&gPeakMilli)) {
                 atomic_store(&gPeakMilli, (uint32_t)milli);
             }
 
-            // Interleaved, left to the even channels and right to the odd. A ONE-channel device
-            // therefore gets the left leg rather than a fold-down, which is the same choice the
-            // mono path made implicitly, and a four-channel one gets the pair twice.
+            // FOUR CHANNELS IF THE CALLER ASKED FOR THEM, otherwise the two pairs are SUMMED.
+            //
+            // The summing is what keeps the application unchanged: its device is stereo, every Out
+            // module used to be added together whatever pair it fed, and a patch sending anything to
+            // Out 3/4 would fall silent if this suddenly routed by destination. A caller that wants
+            // them apart — the measurement harness, which needs the rig's dry reference on one pair
+            // and its processed signal on the other — asks for four and gets them.
+            //
+            // Choosing WHICH pair a stereo device should monitor, rather than always summing, wants
+            // a menu item; see the todo. Summing is the answer that changes nothing until then.
             for (channel = 0; channel < channelCount; channel++) {
-                out[(frame * channelCount) + channel] = (float)outSample[channel & 1U];
+                double v = (channelCount >= 4)
+                           ? outSample[channel & 3U]
+                           : (outSample[channel & 1U] + outSample[2U + (channel & 1U)]);
+
+                out[(frame * channelCount) + channel] = (float)v;
             }
         }
     }
