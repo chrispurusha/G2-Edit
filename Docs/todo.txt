@@ -537,6 +537,70 @@ OPEN WORK
   The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
   right — within 0.05 ms of the instrument in every room.
 
+- THE INSTRUMENT'S REVERB IS NOT A COMB BANK AT ALL, AND THAT IS WHY OURS CANNOT BE TUNED INTO IT.
+  Recovered from the decompile 2026-08-18 at the owner's prompting, after this file had wrongly
+  recorded the routing as unrecoverable. What is now known, and all of it is solid:
+
+   * ONE SHARED CIRCULAR BUFFER WITH ABOUT 31 TAPS, not a set of parallel combs. The buffer base is
+     aligned to 32768 (the setup calls a bit-count helper on 0x7fff), and every tap is an ADDRESS into
+     that one buffer. Ours is eight-to-sixteen independent comb lines feeding a summing node. These
+     are different architectures, not different tunings of one.
+   * EVERY TAP ADDRESS IS  roomSize * K + 1200, with K one of the 31 constants below and 1200 shared
+     by every single tap. THAT COMMON OFFSET IS WHY THE PRE-DELAY DOES NOT SCALE WITH THE ROOM while
+     everything else does — measured independently on hardware the same day, and here is the reason.
+   * THE 31 K CONSTANTS, in the order the setup assigns them:
+         14470 15537 | 5403 6307 | 17021 18693 | 7347 8992 | 12398(+110) 1680 3589
+         19561 21432 | 10589 22599 | 1000 11651 | 7300 18600 | 921
+         110 255 532 1677 | 11655 17536 | 6726 12393 | 1004 4425 | 15080
+     plus a bare 0x420 (1056). They pair up in source order, and a pair's DIFFERENCE is a line length
+     — which is what the older entry above meant by "the lengths are the differences between pairs".
+     The pairings above are the source's own grouping and are NOT yet confirmed as read/write pairs.
+   * THE COEFFICIENTS ARE READABLE: UpdateParams() computes them in ordinary floating point before
+     handing them to the fixed-point core, so decay, damping and diffusion can be read off directly
+     rather than inferred. There are no baked-in immediates to reverse.
+
+  WHY THIS MATTERS MORE THAN ANY MORE TUNING: a parallel comb bank generates a periodic echo at each
+  comb's own rate, and that periodicity is what the owner keeps hearing as flutter — worst at the end
+  of the tail, where the density thins and the individual lines start to show. Sixteen combs, per-comb
+  damping equalisation and four different diffuser sets were all tried against a hardware capture
+  (see the entry below); each one moved the number and none removed the character, because the
+  character is inherent to the structure. A single-buffer multi-tap network does not have it.
+
+  WHAT IS LEFT TO DO, and it is a project of days rather than an afternoon: CNativeFxReverbPart::
+  Compute() is 1876 lines of emulated SHARC — register shuffling through g_r1..g_r7 with every memory
+  access bank-switched on a 0x800000 test — and the routing lives in the ORDER of those loads and
+  stores. Recovering it means tracing which tap each access touches and where the feedback closes.
+  The addresses are already known, which is the hard half; what is missing is the graph.
+  DO NOT tune the comb reverb further in the meantime. It is at the point where the measurements say
+  it matches (tail spectrum within ~1 dB of the instrument, wet/dry +3.4 against +2.9 dB, comb-rate
+  flutter gone) and the owner's ear still says it does not, which is exactly what a structural
+  mismatch sounds like.
+
+- REVERB: WHAT WAS TRIED AND REJECTED ON 2026-08-18, so none of it is repeated. All measured against
+  the hardware capture at the owner's settings (Hall, Time 122, Bright 64), using the envelope's
+  MODULATION SPECTRUM, where the instrument reads a flat 2.9% maximum:
+   * SIXTEEN COMBS instead of eight — KEPT. Took the comb-rate peak from 5.4% to flat.
+   * PER-COMB DAMPING EQUALISATION — KEPT. 5.4% -> 4.4% on its own.
+   * FOUR DIFFUSERS AT THE REFERENCE LENGTHS (556/441/341/225) instead of three short ones — REJECTED,
+     it made the tail WORSE, 4.3% -> 6.2%. The short lengths stay. Do not "fix" them without measuring.
+   * A DIFFERENT COMB SET PER CHANNEL instead of one set plus an offset — kept, but it fixed nothing:
+     see the correlation note below. Harmless and arguably more correct, so it stays.
+   * MOVING THE DIFFUSERS AFTER THE COMBS — REJECTED, and it CANNOT work: the chain is linear
+     time-invariant, so the two orderings are the same system.
+  AND ONE REPORTED REGRESSION THAT WAS NOT ONE: L/R correlation appeared to jump to +0.064 after the
+  band-limiting. It had not. corr.py analyses whole 20 s render segments including the near-silent
+  end, where the statistic is meaningless. Measured over the SAME window used for the hardware, the
+  engine reads -0.0013 and the instrument +0.0044. MATCH THE ANALYSIS WINDOW TO THE ONE THE REFERENCE
+  WAS MEASURED IN, every time.
+  WHERE IT STANDS: the comb-rate flutter is gone by measurement, the tail spectrum is within about
+  1 dB of the instrument from 125 Hz to 4 kHz, wet/dry is +3.4 dB against the instrument's +2.9 dB on
+  the same patch — and the owner still hears some fluttering, and now hears the engine as slightly
+  DARKER than the instrument although the measurements put it 2.6-3.6 dB BRIGHTER at 8 kHz. That
+  disagreement between ear and measurement is the signal that tuning this structure further is not the
+  way; see the G2Demo note in the REVERB entry below, which is now known to contain the real topology.
+  A/B FILES for listening are in ~/Documents/GitHub/G2Captures: listen_HARDWARE_hall122_WET.wav and
+  listen_ENGINE_hall122_WET.wav, same patch and settings.
+
 - THE REVERB'S TAIL WAS FAR TOO BRIGHT, AND THAT WAS THE REAL FAULT (2026-08-18). Owner said the
   engine still rippled after the comb work, and added "sounds like the G2 has more low end". The
   second remark is what cracked it — the two are the same fault.
@@ -2702,10 +2766,25 @@ PARTIALLY DONE / STILL OPEN:
      255, 532, 1677, 11655, 17536, 6726, 12393, 1004, 4425, 15080. Those are ADDRESSES in one buffer,
      so the actual line lengths are the DIFFERENCES between pairs of them — e.g. 15537-12508 = 3029,
      5403-1680 = 3723, 6307-3589 = 2718, 17021-14470 = 2551, all times the room factor.
-   * THE ROUTING IS NOT RECOVERABLE the same way. Which line feeds which lives in a block of emulated
-     fixed-point DSP with no structure left in it, and the coefficients come from memory rather than
-     from immediates. Lengths without topology are worse than useless — a real set of lengths in the
-     wrong arrangement sounds plausible and is wrong, which is the hardest kind of error to find.
+   * THE ROUTING IS RECOVERABLE AFTER ALL — this entry was WRONG, corrected 2026-08-18 after the owner
+     asked whether G2Demo really had nothing. It has the whole thing:
+       - CNativeFxReverbPart::Compute() is 1876 lines with 238 indexed delay-buffer accesses. That is
+         the actual tank, taps and all, not a stub.
+       - ZERO DAT_ constants in it, which is the good news rather than the bad: the coefficients are
+         not baked-in immediates, they are computed in UpdateParams(), which decompiles to READABLE
+         maths — the decay and damping expressions are recognisable on sight.
+       - CPartFxReverb::CreateNative() and UpdateParams() give the buffer formula outright:
+         kRoomSizes[type] * 22599.0 + 1200.0. The 22599 is one of the addresses already listed above,
+         which ties the two together.
+       - AND THAT +1200 IS A CONSTANT OFFSET, so the structure does NOT scale purely with room size —
+         independent corroboration of the 2026-08-18 pre-delay measurement, which found the pre-delay
+         essentially fixed across the four rooms while every other length scales.
+       - _kRoomSizes itself is an unresolved data symbol, so the four values are not in the decompile;
+         they are already measured (kReverbTypeScale) so that does not matter.
+     WHAT IT WOULD TAKE: following which buffer each of the 238 accesses touches, through the piVar/
+     puVar cursors, to recover the signal-flow graph. That is a project of days, not an afternoon, but
+     it is TRACTABLE, and it is the only way left that is not guesswork. The warning below still holds
+     and is the reason to do it properly: lengths without topology are worse than useless.
    * THE FOUR ROOM SIZES ARE DATA, not code, and are not in anything available. One hardware
      measurement pins them: the ratio of the decay of Small to Hall at the same Time setting.
      DONE 2026-08-09 — see the top of this entry. In the event the lengths were read directly rather
