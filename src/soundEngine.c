@@ -987,14 +987,37 @@ static const uint32_t kReverbPreDelay[REVERB_TYPE_COUNT][REVERB_CHANNELS] = {
     {638 * ENGINE_OVERSAMPLE, 583 * ENGINE_OVERSAMPLE},    // Large   13.30 / 12.14 ms
     {641 * ENGINE_OVERSAMPLE, 586 * ENGINE_OVERSAMPLE}     // Hall    13.36 / 12.20 ms
 };
-static float          gPreDelay[REVERB_CHANNELS][REVERB_PREDELAY_MAX];
-static uint32_t       gPreDelayPos[REVERB_CHANNELS];
-static float          gComb[REVERB_COMBS][REVERB_CHANNELS][REVERB_COMB_MAX];
-static uint32_t       gCombPos[REVERB_COMBS][REVERB_CHANNELS];
-static double         gCombStore[REVERB_COMBS][REVERB_CHANNELS];
-static float          gAllpass[REVERB_ALLPASS][REVERB_CHANNELS][REVERB_ALLPASS_MAX];
-static uint32_t       gAllpassPos[REVERB_ALLPASS][REVERB_CHANNELS];
-static double         gEnvLevel[MAX_VOICES][MAX_ENGINE_NODES];
+// THE TANK IS FED THROUGH A LOWPASS, because the instrument's tail STARTS darker than ours did.
+//
+// This is NOT the same thing as the in-loop damping, and the two were confused for a whole session.
+// The damping sets how fast the high end DECAYS relative to the low, and it is already right —
+// measured against the instrument at Hall / Time 122 / Bright 64, the decay rates agree closely
+// (hardware -5.6 dB/s low and -7.7 high, engine -6.0 and -7.6, i.e. a high-to-low decay-time ratio
+// of 0.72 against 0.79, on a fitted target of 0.75). What was wrong is where the tail STARTS: the
+// instrument's is band-limited going in, ours was white.
+//
+// MEASURED, same capture, tail spectrum normalised so the two agree below 500 Hz:
+//
+//     1 kHz  -1.4 dB      2 kHz  -3.7 dB      4 kHz  -9.0 dB      8 kHz  -17.9 dB
+//
+// which is a one-pole to within about 3 dB at the very top. Hence the cutoff below, fitted to those
+// four points. This is what the owner heard as "the G2 has more low end" — it does, relatively,
+// because ours had far too much top.
+// TWO POLES, not one: a single pole matched the instrument up to 2 kHz but left 4 and 8 kHz 2.0 and
+// 6.7 dB too bright, because the instrument's roll-off is steeper than 6 dB/octave at the very top.
+// The second pole sits an octave up so it barely touches the region the first one already fitted.
+#define REVERB_INPUT_LP_HZ     (2000.0)
+#define REVERB_INPUT_LP2_HZ    (4000.0)
+static double   gRevInLp[REVERB_CHANNELS];
+static double   gRevInLp2[REVERB_CHANNELS];
+static float    gPreDelay[REVERB_CHANNELS][REVERB_PREDELAY_MAX];
+static uint32_t gPreDelayPos[REVERB_CHANNELS];
+static float    gComb[REVERB_COMBS][REVERB_CHANNELS][REVERB_COMB_MAX];
+static uint32_t gCombPos[REVERB_COMBS][REVERB_CHANNELS];
+static double   gCombStore[REVERB_COMBS][REVERB_CHANNELS];
+static float    gAllpass[REVERB_ALLPASS][REVERB_CHANNELS][REVERB_ALLPASS_MAX];
+static uint32_t gAllpassPos[REVERB_ALLPASS][REVERB_CHANNELS];
+static double   gEnvLevel[MAX_VOICES][MAX_ENGINE_NODES];
 // Linear 0..1 through the current segment, and the level it started from. Shaping this rather than
 // the step keeps a segment's DURATION exactly what its dial says, whatever curve it draws.
 // PARAMETER SMOOTHING. The G2 runs its modulation at 24 kHz (manual p.71 — "modules can process and
@@ -1009,27 +1032,27 @@ static double         gEnvLevel[MAX_VOICES][MAX_ENGINE_NODES];
 // between frames.
 #define PARAM_SMOOTH_SECONDS    (0.008)
 
-static double         gSmoothShape[MAX_ENGINE_NODES];
-static double         gSmoothCutoff[MAX_ENGINE_NODES];
-static double         gSmoothRes[MAX_ENGINE_NODES];
-static double         gSmoothGain[MAX_ENGINE_NODES];
-static double         gSmoothLevel[MAX_ENGINE_NODES][MAX_NODE_INPUTS];
+static double   gSmoothShape[MAX_ENGINE_NODES];
+static double   gSmoothCutoff[MAX_ENGINE_NODES];
+static double   gSmoothRes[MAX_ENGINE_NODES];
+static double   gSmoothGain[MAX_ENGINE_NODES];
+static double   gSmoothLevel[MAX_ENGINE_NODES][MAX_NODE_INPUTS];
 
 // Where the per-sample smoothing pass leaves its results, for the voice passes to read. Not per
 // voice: a knob is in one place however many notes are sounding, and smoothing it inside the voice
 // loop would advance the filter once per voice — so a sweep would speed up as more keys went down.
-static double         gSmoothedShape[MAX_ENGINE_NODES];
-static double         gSmoothedCutoff[MAX_ENGINE_NODES];
-static double         gSmoothedRes[MAX_ENGINE_NODES];
-static double         gSmoothedGain[MAX_ENGINE_NODES];
-static double         gSmoothedLevel[MAX_ENGINE_NODES][MAX_NODE_INPUTS];
+static double   gSmoothedShape[MAX_ENGINE_NODES];
+static double   gSmoothedCutoff[MAX_ENGINE_NODES];
+static double   gSmoothedRes[MAX_ENGINE_NODES];
+static double   gSmoothedGain[MAX_ENGINE_NODES];
+static double   gSmoothedLevel[MAX_ENGINE_NODES][MAX_NODE_INPUTS];
 // Until a node has been seen once there is nothing to interpolate FROM, so the first sample snaps.
 // Also what stops a patch load sweeping every parameter up from whatever the last patch left.
-static bool           gSmoothPrimed[MAX_ENGINE_NODES];
+static bool     gSmoothPrimed[MAX_ENGINE_NODES];
 
-static double         gEnvProgress[MAX_VOICES][MAX_ENGINE_NODES];
-static double         gEnvStart[MAX_VOICES][MAX_ENGINE_NODES];
-static uint32_t       gEnvStage[MAX_VOICES][MAX_ENGINE_NODES];
+static double   gEnvProgress[MAX_VOICES][MAX_ENGINE_NODES];
+static double   gEnvStart[MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t gEnvStage[MAX_VOICES][MAX_ENGINE_NODES];
 
 typedef enum {
     eEnvIdle = 0,
@@ -1206,6 +1229,8 @@ static void reset_node_state(void) {
     memset(gAllpass, 0, sizeof(gAllpass));
     memset(gAllpassPos, 0, sizeof(gAllpassPos));
     memset(gPreDelay, 0, sizeof(gPreDelay));
+    memset(gRevInLp, 0, sizeof(gRevInLp));
+    memset(gRevInLp2, 0, sizeof(gRevInLp2));
     memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 }
 
@@ -3371,6 +3396,8 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         memset(gAllpass, 0, sizeof(gAllpass));
         memset(gAllpassPos, 0, sizeof(gAllpassPos));
         memset(gPreDelay, 0, sizeof(gPreDelay));
+        memset(gRevInLp, 0, sizeof(gRevInLp));
+        memset(gRevInLp2, 0, sizeof(gRevInLp2));
         memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
         sLastType = type;
     }
@@ -3404,6 +3431,18 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
                 gPreDelay[ch][gPreDelayPos[ch]] = (float)input;
                 gPreDelayPos[ch]                = (gPreDelayPos[ch] + 1) % len;
             }
+        }
+
+        // Band-limit the feed, as the instrument does — see REVERB_INPUT_LP_HZ. On the input rather
+        // than the output only because it is cheaper there; the chain is linear, so it makes no
+        // difference to the result which end it sits at.
+        {
+            double a  = exp(-2.0 * M_PI * REVERB_INPUT_LP_HZ / gSampleRate);
+            double a2 = exp(-2.0 * M_PI * REVERB_INPUT_LP2_HZ / gSampleRate);
+
+            gRevInLp[ch]  = ((1.0 - a) * diffused) + (a * gRevInLp[ch]);
+            gRevInLp2[ch] = ((1.0 - a2) * gRevInLp[ch]) + (a2 * gRevInLp2[ch]);
+            diffused      = gRevInLp2[ch];
         }
 
         for (i = 0; i < REVERB_ALLPASS; i++) {
@@ -3465,14 +3504,17 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     //
     // RE-MEASURE IF THE COMB SET OR THEIR COUNT CHANGES: this is the sum of REVERB_COMBS parallel
     // combs, so its level moves with how many there are.
-// RE-DERIVED TWICE ON 2026-08-18 AS THE COMB COUNT WENT 4 -> 8 -> 16, exactly as the warning above
-// this line requires: this scales the SUM of REVERB_COMBS parallel combs, so its value moves with how
-// many there are. Each doubling added very close to the 3 dB an incoherent sum of twice as many lines
-// predicts — 2.96 dB then 3.17 dB — so 0.31 -> 0.2205 -> 0.1531 puts it back each time.
+// RE-DERIVED THREE TIMES ON 2026-08-18. Twice because the comb count went 4 -> 8 -> 16, which is
+// exactly what the warning above this line is for — this scales the SUM of REVERB_COMBS parallel
+// combs, so it moves with how many there are, and each doubling added close to the 3 dB an incoherent
+// sum predicts (2.96 then 3.17). Once more, and much larger, because REVERB_INPUT_LP_HZ then took
+// 11.9 dB of high-frequency energy out of the tank: 0.31 -> 0.2205 -> 0.1531 -> 0.6028.
+// The last one looks alarming beside the others and is not: the wet path is simply much quieter
+// before this gain now that it is band-limited, and the figure it has to land on is unchanged.
 //
 // AND THE TARGET IS NO LONGER SECOND-HAND: -11.5 dB was measured on the instrument on 2026-08-18,
 // wet-to-dry energy through the impulse rig, agreeing with the -11.3 dB the old figure came from.
-#define REVERB_WET_GAIN    (0.1531)
+#define REVERB_WET_GAIN    (0.6028)
 
     sum[0] *= REVERB_WET_GAIN;
     sum[1] *= REVERB_WET_GAIN;
@@ -3542,6 +3584,8 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
     memset(gAllpass, 0, sizeof(gAllpass));
     memset(gAllpassPos, 0, sizeof(gAllpassPos));
     memset(gPreDelay, 0, sizeof(gPreDelay));
+    memset(gRevInLp, 0, sizeof(gRevInLp));
+    memset(gRevInLp2, 0, sizeof(gRevInLp2));
     memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 
     double timeSeconds = kReverbDecayBase[type] + (kReverbDecaySlope[type] * (double)timeValue);

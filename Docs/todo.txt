@@ -537,6 +537,52 @@ OPEN WORK
   The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
   right — within 0.05 ms of the instrument in every room.
 
+- THE REVERB'S TAIL WAS FAR TOO BRIGHT, AND THAT WAS THE REAL FAULT (2026-08-18). Owner said the
+  engine still rippled after the comb work, and added "sounds like the G2 has more low end". The
+  second remark is what cracked it — the two are the same fault.
+
+  MEASURED against a hardware capture at the owner's own settings (ImpulseTest2 in slot D, Hall,
+  Time 122, Bright 64), tail spectrum in octave bands. NOTE the bands are constant-Q, so a FLAT
+  spectrum reads as +21 dB rising across these seven octaves; correcting for that:
+
+      band          63   500    2k     8k
+      hardware   -10.7 -11.3 -15.0 -31.5     rolls off ~20 dB above 500 Hz
+      engine     -19.1 -18.4 -18.8 -21.1     essentially WHITE, only 3 dB of tilt
+
+  So the instrument's tail is band-limited going in and ours was not. That is both complaints at
+  once: relatively more low end on the G2, and a bright sparse tail reads as ripple.
+
+  IT IS NOT THE DAMPING, which was the obvious suspect and is already right. The damping sets how
+  fast the high end decays RELATIVE to the low, and measured on the same capture the decay rates
+  agree closely: hardware -5.6 dB/s low and -7.7 high, engine -6.0 and -7.6. What was wrong is where
+  the tail STARTS, not how it decays. Those are different things and confusing them cost a session.
+
+  THE FIX: REVERB_INPUT_LP_HZ, a two-pole lowpass on the tank's feed at 2 kHz and 4 kHz, fitted to
+  the measured difference. A single pole matched to 2 kHz but left the top 2.0 and 6.7 dB bright.
+  The engine's tail now sits within about 1 dB of the instrument from 125 Hz to 4 kHz, and 3.1 dB at
+  8 kHz, against a 19 dB tilt before.
+
+  REVERB_WET_GAIN went 0.1531 -> 0.6028, because band-limiting took 11.9 dB of energy out of the
+  tank. THAT LOOKS ALARMING AND IS CORRECT — validated the honest way rather than by the impulse
+  metric alone: same patch, same excitation, hardware against engine, wet energy over dry energy
+  gives +2.9 dB on the instrument and +3.4 dB here. SimpleLead got 5.5 dB louder as a result, which
+  means it was previously too QUIET, not that it is now too loud.
+
+  THREE THINGS THIS LEFT OPEN, none of them blocking but all of them real:
+   * L/R CORRELATION GOT WORSE: +0.064 at Hall against a live hardware reading of +0.0044 from the
+     same capture (it was +0.016 before band-limiting). NOT the stereo spread — sweeping REVERB_SPREAD
+     over 23/60/120/240 moves it not at all — and NOT the direct feed-through term either, which was
+     the other candidate and changes nothing at 0.12, 0.04 or 0.00. The cause is that both channels
+     use the SAME comb lengths plus a constant offset, which decorrelates only through high-frequency
+     detail that is now filtered away. THE FIX IS A GENUINELY DIFFERENT LENGTH SET PER CHANNEL —
+     sixteen more primes interleaved with the left's — not a bigger offset.
+   * THE HF/LF DECAY RATIO DRIFTED to 0.93 where it was 0.79 and the instrument reads 0.72, because
+     there is now much less high end for the in-loop damping to act on. REVERB_BRIGHT_MAX and
+     REVERB_BRIGHT_CURVE were fitted before this filter existed and want re-fitting on top of it,
+     against the three recorded points (Bright 16/64/127 -> 0.54/0.75/0.95).
+   * CPU: sixteen combs times two channels is 32 comb operations per sample at 96 kHz, four times
+     what it was, and nobody has looked at sound_engine_load_percent() on a heavy patch.
+
 - REVERB FLUTTER — FIXED 2026-08-18, AND IT TOOK THREE GOES TO MEASURE PROPERLY. Owner reported the
   engine's reverb fluttering where the instrument is smooth, continuous, on ImpulseTest2 in slot D at
   Hall / Time 122 / Bright 64.
