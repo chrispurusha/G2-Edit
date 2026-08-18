@@ -907,7 +907,7 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 //
 // The scale fix stands on its own, though: it is a ratio, so it is right whatever the base set is, and
 // it moves Small from half the room to the whole of it.
-#define REVERB_COMB_BASE       (1657 * ENGINE_OVERSAMPLE)   // the LONGEST comb; the buffers are sized from it
+#define REVERB_COMB_BASE       (1667 * ENGINE_OVERSAMPLE)   // the LONGEST comb of EITHER channel; buffers are sized from it
 #define REVERB_ALLPASS_BASE    (225 * ENGINE_OVERSAMPLE)
 // INTEGER ARITHMETIC, NOT A CAST OF A FLOAT PRODUCT. These size static arrays, and an array bound has
 // to be an integer constant expression — `(uint32_t)(base * 1.6)` is not one, so clang accepted it only
@@ -966,16 +966,43 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 //     right   (ms)       11.75   11.90    12.14    12.20
 #define REVERB_PREDELAY_MAXSAMP    (641 * ENGINE_OVERSAMPLE)   // the largest below, Hall left
 #define REVERB_PREDELAY_MAX        (((REVERB_PREDELAY_MAXSAMP * 11) / 10) + 1)
-static const uint32_t kCombLen[REVERB_COMBS]                              = {
-    1116 * ENGINE_OVERSAMPLE, 1153 * ENGINE_OVERSAMPLE,
-    1188 * ENGINE_OVERSAMPLE, 1223 * ENGINE_OVERSAMPLE,
-    1277 * ENGINE_OVERSAMPLE, 1319 * ENGINE_OVERSAMPLE,
-    1356 * ENGINE_OVERSAMPLE, 1399 * ENGINE_OVERSAMPLE,
-    1422 * ENGINE_OVERSAMPLE, 1459 * ENGINE_OVERSAMPLE,
-    1491 * ENGINE_OVERSAMPLE, 1523 * ENGINE_OVERSAMPLE,
-    1557 * ENGINE_OVERSAMPLE, 1583 * ENGINE_OVERSAMPLE,
-    1617 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
+// ONE COMB SET PER CHANNEL, and they are genuinely DIFFERENT sets rather than one set plus an offset.
+//
+// A common offset — Freeverb's "stereo spread", which is what this had — decorrelates two tails only
+// through their fine detail, because the gross structure of the two banks is otherwise identical. That
+// works while the tail is broadband and STOPS WORKING once it is band-limited, which is exactly what
+// REVERB_INPUT_LP_HZ did to it: measured at Hall, L/R correlation went from +0.016 to +0.064 against a
+// live hardware reading of +0.0044 from the same capture. Sweeping the offset over 23/60/120/240
+// samples moved it not at all, which is what ruled the offset out as the mechanism.
+//
+// So the right channel gets its own sixteen lengths. All prime, at least 9 samples clear of every
+// left-channel length and 24 apart from each other, so no two lines in either bank reinforce and no
+// line has a near-twin in the opposite one.
+static const uint32_t kCombLen[REVERB_CHANNELS][REVERB_COMBS] = {
+    {
+        1116 * ENGINE_OVERSAMPLE, 1153 * ENGINE_OVERSAMPLE,
+        1188 * ENGINE_OVERSAMPLE, 1223 * ENGINE_OVERSAMPLE,
+        1277 * ENGINE_OVERSAMPLE, 1319 * ENGINE_OVERSAMPLE,
+        1356 * ENGINE_OVERSAMPLE, 1399 * ENGINE_OVERSAMPLE,
+        1422 * ENGINE_OVERSAMPLE, 1459 * ENGINE_OVERSAMPLE,
+        1491 * ENGINE_OVERSAMPLE, 1523 * ENGINE_OVERSAMPLE,
+        1557 * ENGINE_OVERSAMPLE, 1583 * ENGINE_OVERSAMPLE,
+        1617 * ENGINE_OVERSAMPLE, 1657 * ENGINE_OVERSAMPLE
+    },
+    {
+        1103 * ENGINE_OVERSAMPLE, 1129 * ENGINE_OVERSAMPLE,
+        1163 * ENGINE_OVERSAMPLE, 1201 * ENGINE_OVERSAMPLE,
+        1237 * ENGINE_OVERSAMPLE, 1289 * ENGINE_OVERSAMPLE,
+        1367 * ENGINE_OVERSAMPLE, 1409 * ENGINE_OVERSAMPLE,
+        1433 * ENGINE_OVERSAMPLE, 1471 * ENGINE_OVERSAMPLE,
+        1511 * ENGINE_OVERSAMPLE, 1543 * ENGINE_OVERSAMPLE,
+        1567 * ENGINE_OVERSAMPLE, 1597 * ENGINE_OVERSAMPLE,
+        1627 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
+    }
 };
+// TRIED AND REJECTED 2026-08-18: four diffusers at the reference lengths (556/441/341/225) instead
+// of these three short ones. It made the tail MEASURABLY WORSE, not better — the envelope's
+// modulation went from 4.3% to 6.2% — so the short lengths stay. Do not "fix" this without measuring.
 static const uint32_t kAllpassLen[REVERB_ALLPASS]                         = {
     REVERB_ALLPASS_BASE, 149 * ENGINE_OVERSAMPLE,
     97 * ENGINE_OVERSAMPLE
@@ -3366,12 +3393,11 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
 
     if ((damping != sDampFor) || (type != sDampType)) {
         for (uint32_t c = 0; c < REVERB_CHANNELS; c++) {
-            uint32_t sp     = (c == 0) ? 0U : (uint32_t)REVERB_SPREAD;
-            uint32_t lenRef = (uint32_t)(kCombLen[REVERB_COMBS - 1] * scale) + sp;
+            uint32_t lenRef = (uint32_t)(kCombLen[c][REVERB_COMBS - 1] * scale);
             uint32_t j      = 0;
 
             for (j = 0; j < REVERB_COMBS; j++) {
-                sCombDamp[j][c] = comb_damping(damping, (uint32_t)(kCombLen[j] * scale) + sp, lenRef);
+                sCombDamp[j][c] = comb_damping(damping, (uint32_t)(kCombLen[c][j] * scale), lenRef);
             }
         }
 
@@ -3463,7 +3489,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
 
         // Then the combs, in parallel, for the tail.
         for (i = 0; i < REVERB_COMBS; i++) {
-            uint32_t len = (uint32_t)(kCombLen[i] * scale) + spread;
+            uint32_t len = (uint32_t)(kCombLen[ch][i] * scale);
             double   out = 0.0;
             double   fb  = 0.0;
 
