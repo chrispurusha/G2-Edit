@@ -787,9 +787,20 @@ static double   gPulsePrev[MAX_VOICES][MAX_ENGINE_NODES];
 // Compressor gain-reduction state, one per node.
 static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 
-// A Schroeder reverb: four combs into two allpasses. One reverb is modelled; any further ones pass
+// A Schroeder reverb: eight combs into three allpasses. One reverb is modelled; any further ones pass
 // their input through, which is what a patch with two of them would mostly sound like anyway.
-#define REVERB_COMBS      (4)
+//
+// EIGHT COMBS, NOT FOUR, SINCE 2026-08-18 — and the four that were missing are why it FLUTTERED.
+// This bank is Freeverb's, and Freeverb specifies EIGHT combs; only the first four were ever here,
+// so the tank ran at half the echo density its own topology was designed around. On sustained
+// material that is inaudible, but on an impulse the tail is not a decay at all, it is a train of
+// discrete echoes at the comb recirculation times — which is what a flutter echo IS.
+//
+// MEASURED, on the impulse patch the instrument's own rig uses: the wet envelope rippled with
+// periods clustered at 36-46 ms against comb recirculation times of 23.25 to 28.25 ms, i.e. the
+// ripple was ON the comb timescale rather than at some unrelated rate. See the ripple figures
+// recorded against REVERB_WET_GAIN, which had to be re-derived because this count changed.
+#define REVERB_COMBS      (8)
 #define REVERB_ALLPASS    (3)
 
 // The Reverb's TYPE selector — Small, Medium, Large, Hall (reverbTypeStrMap) — is what sets the size
@@ -887,7 +898,7 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 //
 // The scale fix stands on its own, though: it is a ratio, so it is right whatever the base set is, and
 // it moves Small from half the room to the whole of it.
-#define REVERB_COMB_BASE       (1356 * ENGINE_OVERSAMPLE)
+#define REVERB_COMB_BASE       (1617 * ENGINE_OVERSAMPLE)   // the LONGEST comb; the buffers are sized from it
 #define REVERB_ALLPASS_BASE    (225 * ENGINE_OVERSAMPLE)
 // INTEGER ARITHMETIC, NOT A CAST OF A FLOAT PRODUCT. These size static arrays, and an array bound has
 // to be an integer constant expression — `(uint32_t)(base * 1.6)` is not one, so clang accepted it only
@@ -948,7 +959,9 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 #define REVERB_PREDELAY_MAX        (((REVERB_PREDELAY_MAXSAMP * 11) / 10) + 1)
 static const uint32_t kCombLen[REVERB_COMBS]                              = {
     1116 * ENGINE_OVERSAMPLE, 1188 * ENGINE_OVERSAMPLE,
-    1277 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
+    1277 * ENGINE_OVERSAMPLE, 1356 * ENGINE_OVERSAMPLE,
+    1422 * ENGINE_OVERSAMPLE, 1491 * ENGINE_OVERSAMPLE,
+    1557 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
 };
 static const uint32_t kAllpassLen[REVERB_ALLPASS]                         = {
     REVERB_ALLPASS_BASE, 149 * ENGINE_OVERSAMPLE,
@@ -3384,7 +3397,15 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     //
     // RE-MEASURE IF THE COMB SET OR THEIR COUNT CHANGES: this is the sum of REVERB_COMBS parallel
     // combs, so its level moves with how many there are.
-#define REVERB_WET_GAIN    (0.31)
+// RE-DERIVED 2026-08-18 WHEN THE COMB COUNT WENT FROM FOUR TO EIGHT, exactly as the warning above
+// this line requires: this scales the SUM of REVERB_COMBS parallel combs, so its value moves with how
+// many there are. Doubling the bank added 2.96 dB — very close to the 3 dB an incoherent sum of twice
+// as many lines predicts — taking the wet impulse response from -11.50 dB to -8.54 dB against the
+// impulse that produced it. 0.31 * 10^(-2.96/20) = 0.2205 puts it back.
+//
+// AND THE TARGET IS NO LONGER SECOND-HAND: -11.5 dB was measured on the instrument on 2026-08-18,
+// wet-to-dry energy through the impulse rig, agreeing with the -11.3 dB the old figure came from.
+#define REVERB_WET_GAIN    (0.2205)
 
     sum[0] *= REVERB_WET_GAIN;
     sum[1] *= REVERB_WET_GAIN;
