@@ -495,13 +495,11 @@ OPEN WORK
   THE PER-CHANNEL PRE-DELAY WENT IN TOO, as its own change straight after — owner asked for all four
   rooms now and a hardware check later. The engine had NO pre-delay at all before this; both tails
   began at the input.
-  MEASURED: Small L 12.88 ms, R 7.54 ms. INFERRED: the other three rooms, by scaling with
-  kReverbTypeScale exactly as every other line is — which is itself a measured property of the
-  instrument, "room Type scales every delay line by ONE factor". Read back off the render, the four
-  rooms come out L 12.88 / 16.33 / 19.64 / 21.61 ms and R 7.54 / 9.56 / 11.50 / 12.66 ms, matching
-  the scaling to within 0.02 ms — the residue is integer-sample rounding, since the constants are
-  sample counts and not seconds (an array bound has to be an integer constant expression; sizing one
-  with a float cast is what produced the -Wgnu-folding-constant pair recorded further down).
+  IT WENT IN AS ONE MEASURED PAIR SCALED BY kReverbTypeScale, AND BOTH HALVES OF THAT WERE WRONG —
+  superseded 2026-08-18 by the per-room hardware measurement in its own entry below. The right
+  channel was not 7.54 ms (it is 11.75), and the pre-delay does not scale with the room at all. Left
+  here only so the reasoning is on record: scaling looked safe because every OTHER length in this
+  reverb does scale, and that is precisely why it needed measuring rather than inferring.
   Correlation is undisturbed: +0.0006 / +0.0061 / +0.0103 / -0.0048.
   NOTE THE LEFT CHANNEL IS NO LONGER BIT-IDENTICAL to the pre-session engine, and cannot be — a
   pre-delay shifts the whole wet path later by design. That check belonged to the spread, which had
@@ -509,22 +507,52 @@ OPEN WORK
   result, 0.016415 -> 0.015999 rms, for the same reason it moved before: it reads the reverb's right
   output into a mono chain. ExpAudio is unchanged to every digit, again.
 
-- MEASURE THE REVERB PRE-DELAY FOR MEDIUM, LARGE AND HALL (2026-08-15, when back at the hardware).
-  Only SMALL was ever measured — L 12.88 ms, R 7.54 ms — and the other three rooms are currently an
-  INFERENCE from kReverbTypeScale, not a measurement. The inference is a reasonable one and matches
-  how every other delay line in this reverb behaves, but it has never been checked, and the whole
-  point of the measurement rig is that plausible-sounding wrong answers are the ones that survive.
-  WHAT TO DO: the existing rig already does it — put a click through a real Reverb at each Type with
-  DryWet at 127, capture both outputs, and read the onset of each channel. That is the same capture
-  the lag sets came from, so an old one may already contain the answer for a room other than Small
-  before any new recording is needed. Compare against what the engine now produces:
-      Type      0 Small    1 Medium    2 Large    3 Hall
-      L (ms)    12.88      16.33       19.64      21.61
-      R (ms)     7.54       9.56       11.50      12.66
-  If the instrument's do NOT scale with the room, the pre-delays are their own data — four pairs of
-  numbers rather than one pair and a factor — and kReverbPreDelay becomes a table like
-  kReverbTypeScale is. That would be worth knowing for its own sake: it would be the first line in
-  this reverb that does NOT follow the one-factor rule.
+- REVERB PRE-DELAY — MEASURED ON HARDWARE 2026-08-18, DONE. Asked for on 2026-08-15 because only
+  Small had ever been measured and the other three rooms were an inference. Both halves of that
+  inference turned out to be wrong.
+
+  MEASURED TWICE, INDEPENDENTLY, AGREEING TO 0.06 ms: from the stored 192 kHz Fireface captures
+  (the Time sweeps, read at Time 0 where the tail clears between impulses) and live into a QU-24 at
+  48 kHz on the day. Pre-delay is a fixed line length, so Time does not enter — confirmed by getting
+  the same figures at Time 0, 32 and 64.
+
+      room      L (ms)   R (ms)      what the engine had     what scaling predicted
+      Small     12.90    11.75       12.88 /  7.54           12.90 / 11.75
+      Medium    13.02    11.88       16.33 /  9.56           16.37 / 14.91
+      Large     13.33    12.17       19.64 / 11.50           19.68 / 17.92
+      Hall      13.33    12.17       21.61 / 12.66           21.67 / 19.73
+
+   * IT DOES NOT SCALE WITH ROOM SIZE. The left pre-delay moves 12.90 -> 13.33 ms across the four
+     rooms, a 3.3% spread, where kReverbTypeScale spans 68%. This is THE FIRST LINE IN THIS REVERB
+     THAT DOES NOT FOLLOW THE ONE-FACTOR RULE, which is exactly what the old entry said would be
+     worth knowing for its own sake. kReverbPreDelay is now a [type][channel] table of eight
+     independent numbers with the * scale removed.
+   * THE OLD RIGHT-CHANNEL FIGURE WAS WRONG: recorded as 7.54 ms, actually 11.75 ms. Read sample by
+     sample off the raw capture rather than through a threshold, the right channel leaves the noise
+     at 11.50 ms and the left at 12.75 ms; at 7.5 ms BOTH are still in the noise at 3.8-6.7% of peak.
+     So the channels sit about 1.15 ms apart, not 5.34. The left figure was right all along.
+   * REVERB_WET_GAIN IS CONFIRMED, incidentally: wet-to-dry energy measures -11.5 dB in every room
+     against the -11.3 dB the 0.31 was derived from. The rig's four LevAmps are all at the same gain,
+     one on the dry leg and one on each wet leg, so the ratio is not confounded by them.
+  The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
+  right — within 0.05 ms of the instrument in every room.
+
+- THE MEASUREMENT RIG, as actually used on 2026-08-18, because rebuilding it cost most of a session:
+   * THE PATCH IS ImpulseTest2.pch2, and it lives on disk — do not build a new one. Loaded into slot
+     D it gives Reverb at VA index 2, which is why every old sidecar says --index 2. Its routing is
+     Osc1 -> Amp Env -> Pulse, the Pulse going dry through a LevAmp to an "Fx Out" (Out-to 0, i.e.
+     G2 outs 1-2) and into the Reverb, whose L and R go through LevAmps to a "2-Out" (Out-to 1, i.e.
+     outs 3-4). All four LevAmps sit at the same gain, which is what keeps a wet/dry ratio honest.
+   * IT NEEDS A NOTE. The impulse train is not free-running: measure.py must be given --gate, which
+     drives DEVNOTE. Without it the patch is silent and every channel reads the noise floor, which
+     looks exactly like a broken rig. This cost an hour.
+   * gSlot FOLLOWS THE G2's OWN SLOT SELECTION. Backdoor commands act on whatever slot the hardware
+     is currently showing, so a scripted sequence must re-issue SLOT before EVERY command or it will
+     silently write into the wrong slot — CABLE and SET return "no module at that loc/index" when
+     that happens, which is a confusing way to be told.
+   * QU-24 CHANNEL MAP (the Fireface was not available): G2 outs 1-2 on inputs 5-6, outs 3-4 on
+     19-20. Inputs 29-30 carry the desk's main mix and are far louder than either — do not mistake
+     them for the signal. The old stored captures are 8-channel with dry on 5-6 and wet on 7-8.
 
   THE ORIGINAL STEP 3 TEXT, kept because its warning still governs any future attempt:
   STEP 3 — THE REVERB. The big one: a second tap set with its own lengths and pre-delay, and the
