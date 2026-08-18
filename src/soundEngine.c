@@ -790,17 +790,26 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // A Schroeder reverb: eight combs into three allpasses. One reverb is modelled; any further ones pass
 // their input through, which is what a patch with two of them would mostly sound like anyway.
 //
-// EIGHT COMBS, NOT FOUR, SINCE 2026-08-18 — and the four that were missing are why it FLUTTERED.
-// This bank is Freeverb's, and Freeverb specifies EIGHT combs; only the first four were ever here,
-// so the tank ran at half the echo density its own topology was designed around. On sustained
-// material that is inaudible, but on an impulse the tail is not a decay at all, it is a train of
-// discrete echoes at the comb recirculation times — which is what a flutter echo IS.
+// SIXTEEN COMBS SINCE 2026-08-18, AND THE SHORTAGE IS WHY IT FLUTTERED. This bank started as
+// Freeverb's, which specifies eight; only the FIRST FOUR were ever here, so the tank ran at a quarter
+// of the density it now has. A comb is a periodic echo generator, and too few of them means the tail
+// is not a decay at all but a train of discrete echoes at the comb recirculation rates.
 //
-// MEASURED, on the impulse patch the instrument's own rig uses: the wet envelope rippled with
-// periods clustered at 36-46 ms against comb recirculation times of 23.25 to 28.25 ms, i.e. the
-// ripple was ON the comb timescale rather than at some unrelated rate. See the ripple figures
-// recorded against REVERB_WET_GAIN, which had to be re-derived because this count changed.
-#define REVERB_COMBS      (8)
+// MEASURED AGAINST THE INSTRUMENT, same patch and settings (Hall, Time 122, Bright 64), using the
+// MODULATION SPECTRUM of the tail's envelope — which is what "flutter" actually names, and the only
+// metric tried that separated the two. Envelope ripple and echo density both said the engine was
+// FINE, and both were wrong:
+//
+//     hardware    flat: nothing above 2.9% anywhere from 5 to 58 Hz
+//     4 -> 8      5.4% at 18.2 Hz, standing clear of everything around it. 18.2 Hz is a 55 ms
+//                 period against Hall's longest comb of 56.6 ms — one comb ringing on its own
+//     + damping   4.4%, no longer clear of its neighbours (see comb_damping)
+//     16 combs    3.6% and FLAT, with the 18 Hz peak gone entirely
+//
+// The other eight lengths continue Freeverb's progression and are prime, so no two lines reinforce.
+// THE INSTRUMENT HAS ABOUT 31 DELAY LINES (see Docs/todo.txt), so sixteen is still short of it —
+// but it is now dense enough that the flutter does not survive the measurement.
+#define REVERB_COMBS      (16)
 #define REVERB_ALLPASS    (3)
 
 // The Reverb's TYPE selector — Small, Medium, Large, Hall (reverbTypeStrMap) — is what sets the size
@@ -898,7 +907,7 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 //
 // The scale fix stands on its own, though: it is a ratio, so it is right whatever the base set is, and
 // it moves Small from half the room to the whole of it.
-#define REVERB_COMB_BASE       (1617 * ENGINE_OVERSAMPLE)   // the LONGEST comb; the buffers are sized from it
+#define REVERB_COMB_BASE       (1657 * ENGINE_OVERSAMPLE)   // the LONGEST comb; the buffers are sized from it
 #define REVERB_ALLPASS_BASE    (225 * ENGINE_OVERSAMPLE)
 // INTEGER ARITHMETIC, NOT A CAST OF A FLOAT PRODUCT. These size static arrays, and an array bound has
 // to be an integer constant expression — `(uint32_t)(base * 1.6)` is not one, so clang accepted it only
@@ -958,10 +967,14 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 #define REVERB_PREDELAY_MAXSAMP    (641 * ENGINE_OVERSAMPLE)   // the largest below, Hall left
 #define REVERB_PREDELAY_MAX        (((REVERB_PREDELAY_MAXSAMP * 11) / 10) + 1)
 static const uint32_t kCombLen[REVERB_COMBS]                              = {
-    1116 * ENGINE_OVERSAMPLE, 1188 * ENGINE_OVERSAMPLE,
-    1277 * ENGINE_OVERSAMPLE, 1356 * ENGINE_OVERSAMPLE,
-    1422 * ENGINE_OVERSAMPLE, 1491 * ENGINE_OVERSAMPLE,
-    1557 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
+    1116 * ENGINE_OVERSAMPLE, 1153 * ENGINE_OVERSAMPLE,
+    1188 * ENGINE_OVERSAMPLE, 1223 * ENGINE_OVERSAMPLE,
+    1277 * ENGINE_OVERSAMPLE, 1319 * ENGINE_OVERSAMPLE,
+    1356 * ENGINE_OVERSAMPLE, 1399 * ENGINE_OVERSAMPLE,
+    1422 * ENGINE_OVERSAMPLE, 1459 * ENGINE_OVERSAMPLE,
+    1491 * ENGINE_OVERSAMPLE, 1523 * ENGINE_OVERSAMPLE,
+    1557 * ENGINE_OVERSAMPLE, 1583 * ENGINE_OVERSAMPLE,
+    1617 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
 };
 static const uint32_t kAllpassLen[REVERB_ALLPASS]                         = {
     REVERB_ALLPASS_BASE, 149 * ENGINE_OVERSAMPLE,
@@ -3243,6 +3256,40 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
     return input * gain;
 }
 
+// THE DAMPING IS EQUALISED ACROSS THE COMBS, or the longest one ends up ringing on its own.
+//
+// The one-pole inside each comb loop loses a fixed amount PER RECIRCULATION, and a short comb goes
+// round more often than a long one — 39.0 ms against 56.6 ms in the Hall room. Left alone, the short
+// combs lose more per SECOND, die first, and the tail collapses onto the longest comb: a single delay
+// line feeding back, which is a periodic echo at its own period. That is what flutter is.
+//
+// MEASURED against the instrument, same patch and settings (Hall, Time 122, Bright 64), by taking the
+// modulation spectrum of the tail's envelope — which is what "flutter" actually names:
+//
+//     hardware   flat, no peak above 2.9% anywhere between 5 and 58 Hz
+//     engine     5.4% at 18.2 Hz, standing clear of its neighbours -- and 18.2 Hz is a 55 ms period
+//                against Hall's longest comb of 56.6 ms
+//
+// So the per-pass loss is scaled by the comb's own length, which leaves the loss PER SECOND equal.
+// The one-pole's high-frequency gain is (1-d)/(1+d); holding that constant per unit time means
+// ((1-d)/(1+d))^(1/len) is the same for every comb, and solving for d gives what is below. Referenced
+// to the longest comb so the Brightness dial keeps meaning at the top of the set what it always did.
+static double comb_damping(double dRef, uint32_t len, uint32_t lenRef) {
+    double ratio = 0.0;
+    double k     = 0.0;
+
+    if ((dRef <= 0.0) || (len == 0) || (lenRef == 0)) {
+        return (dRef < 0.0) ? 0.0 : dRef;
+    }
+
+    if (dRef >= 1.0) {
+        return 1.0;
+    }
+    ratio = (1.0 - dRef) / (1.0 + dRef);
+    k     = pow(ratio, (double)len / (double)lenRef);
+    return (1.0 - k) / (1.0 + k);
+}
+
 // Schroeder reverb — parallel combs for density, allpasses to smear the result.
 //
 // brightness is the dial as it reads: HIGH IS BRIGHT. It used to be handed straight to the damping
@@ -3285,6 +3332,27 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     double          scale     = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
     double          diffusion = (REVERB_DIFFUSE_SLOPE * timeNorm) + REVERB_DIFFUSE_BASE;
     static uint32_t sLastType = REVERB_TYPE_COUNT;   // forces the reset below on the first call
+
+    // Per-comb damping, cached: it depends only on the dial and the room, so recomputing eight pow()
+    // calls every sample would be waste. See comb_damping().
+    static double   sCombDamp[REVERB_COMBS][REVERB_CHANNELS];
+    static double   sDampFor  = -1.0;
+    static uint32_t sDampType = REVERB_TYPE_COUNT;
+
+    if ((damping != sDampFor) || (type != sDampType)) {
+        for (uint32_t c = 0; c < REVERB_CHANNELS; c++) {
+            uint32_t sp     = (c == 0) ? 0U : (uint32_t)REVERB_SPREAD;
+            uint32_t lenRef = (uint32_t)(kCombLen[REVERB_COMBS - 1] * scale) + sp;
+            uint32_t j      = 0;
+
+            for (j = 0; j < REVERB_COMBS; j++) {
+                sCombDamp[j][c] = comb_damping(damping, (uint32_t)(kCombLen[j] * scale) + sp, lenRef);
+            }
+        }
+
+        sDampFor  = damping;
+        sDampType = type;
+    }
 
     if (diffusion < REVERB_DIFFUSE_MIN) {
         diffusion = REVERB_DIFFUSE_MIN;
@@ -3367,7 +3435,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
             out                           = (double)gComb[i][ch][gCombPos[i][ch]];
             // Feedback set so the tail decays to -60 dB over the chosen time.
             fb                            = pow(0.001, ((double)len / gSampleRate) / timeSeconds);
-            gCombStore[i][ch]            += (1.0 - damping) * (out - gCombStore[i][ch]);
+            gCombStore[i][ch]            += (1.0 - sCombDamp[i][ch]) * (out - gCombStore[i][ch]);
             gComb[i][ch][gCombPos[i][ch]] = (float)(diffused + (gCombStore[i][ch] * fb));
             gCombPos[i][ch]               = (gCombPos[i][ch] + 1) % len;
             sum[ch]                      += out;
@@ -3397,15 +3465,14 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     //
     // RE-MEASURE IF THE COMB SET OR THEIR COUNT CHANGES: this is the sum of REVERB_COMBS parallel
     // combs, so its level moves with how many there are.
-// RE-DERIVED 2026-08-18 WHEN THE COMB COUNT WENT FROM FOUR TO EIGHT, exactly as the warning above
+// RE-DERIVED TWICE ON 2026-08-18 AS THE COMB COUNT WENT 4 -> 8 -> 16, exactly as the warning above
 // this line requires: this scales the SUM of REVERB_COMBS parallel combs, so its value moves with how
-// many there are. Doubling the bank added 2.96 dB — very close to the 3 dB an incoherent sum of twice
-// as many lines predicts — taking the wet impulse response from -11.50 dB to -8.54 dB against the
-// impulse that produced it. 0.31 * 10^(-2.96/20) = 0.2205 puts it back.
+// many there are. Each doubling added very close to the 3 dB an incoherent sum of twice as many lines
+// predicts — 2.96 dB then 3.17 dB — so 0.31 -> 0.2205 -> 0.1531 puts it back each time.
 //
 // AND THE TARGET IS NO LONGER SECOND-HAND: -11.5 dB was measured on the instrument on 2026-08-18,
 // wet-to-dry energy through the impulse rig, agreeing with the -11.3 dB the old figure came from.
-#define REVERB_WET_GAIN    (0.2205)
+#define REVERB_WET_GAIN    (0.1531)
 
     sum[0] *= REVERB_WET_GAIN;
     sum[1] *= REVERB_WET_GAIN;
