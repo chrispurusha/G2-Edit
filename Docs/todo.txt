@@ -537,32 +537,56 @@ OPEN WORK
   The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
   right — within 0.05 ms of the instrument in every room.
 
-- REVERB FLUTTER — CAUSE FOUND AND FIXED 2026-08-18. Owner reported "strange fluttering" on the
-  engine's reverb, audible on ImpulseTest2 and not needing a held note. It was NOT any of that day's
-  stereo or pre-delay work, and the measurements say so:
-   * the reverb in isolation, steady sine straight into reverb_step(), rippled 1.6%;
-   * the IR tail ripple was 0.220 before the stereo work, 0.216 after, 0.216 in the working tree;
-   * but on IMPULSIVE material the wet envelope rippled with periods clustered at 36-46 ms, against
-     comb recirculation times of 23.25 / 24.75 / 26.60 / 28.25 ms. The ripple was ON the comb
-     timescale, which is what a flutter echo is: not a decay but a train of discrete echoes.
-  THE CAUSE: this bank is Freeverb's, and FREEVERB SPECIFIES EIGHT COMBS. Only the first four were
-  ever here (1116, 1188, 1277, 1356), so the tank ran at half the echo density its own topology was
-  designed around. Sustained material masks that; a click exposes it. Note this is a separate and
-  much cheaper problem than the standing one below about the instrument having ~31 delay lines —
-  we were not even matching the four-comb reference we had adopted.
-  THE FIX: the missing four (1422, 1491, 1557, 1617). REVERB_COMB_BASE is now the LONGEST rather
-  than 1356, since the buffers are sized from it. Result — the 42/44 ms comb-rate periodicity is
-  GONE, the strongest remaining correlation halved (0.0272 -> 0.0138) and moved off the comb
-  timescale entirely, and the envelope ripple fell 0.301 -> 0.260. What is left is broadband, which
-  is what a dense tail looks like.
-  REVERB_WET_GAIN HAD TO BE RE-DERIVED, exactly as its own comment demands when the comb count
-  changes. Doubling the bank added 2.96 dB — close to the 3 dB an incoherent sum of twice as many
-  lines predicts — so 0.31 -> 0.2205. AND THE TARGET WAS NO LONGER SECOND-HAND: -11.5 dB measured on
-  the instrument the same day. The engine now renders -11.50 dB left and -11.54 dB right.
-  Nothing else moved: L/R correlation is +0.004..+0.011 (if anything closer to the instrument's own
-  +0.012..+0.045 than before), the per-room pre-delays are unchanged, and the steady-sine ripple is
-  2.7% against 1.6% — slightly higher because a denser tank beats more on a pure tone, and far below
-  anything audible.
+- REVERB FLUTTER — FIXED 2026-08-18, AND IT TOOK THREE GOES TO MEASURE PROPERLY. Owner reported the
+  engine's reverb fluttering where the instrument is smooth, continuous, on ImpulseTest2 in slot D at
+  Hall / Time 122 / Bright 64.
+
+  THE MEASUREMENT THAT FINALLY WORKED is the MODULATION SPECTRUM of the tail's envelope — which is
+  what "flutter" actually names. Captured the hardware at those exact settings and compared:
+
+      hardware      flat: nothing above 2.9% anywhere from 5 to 58 Hz
+      engine        5.4% at 18.2 Hz, standing clear of everything around it
+      after         3.6%, flat, no peak
+
+  18.2 Hz is a 55 ms period against Hall's longest comb of 56.6 ms — one comb ringing on its own.
+
+  TWO METRICS SAID THE ENGINE WAS FINE AND BOTH WERE WRONG. Envelope ripple came out 0.185 against the
+  hardware's 0.176, and ECHO DENSITY came out HIGHER than the hardware (13113/s against 5833/s). A
+  dense, smooth-enveloped tail can still flutter, because flutter is a PERIODICITY and neither of
+  those looks for one. If this comes up again, go straight to the modulation spectrum.
+
+  TWO DEAD ENDS BEFORE THAT, recorded so they are not repeated:
+   * I MEASURED AN INAUDIBLE TAIL. The first "late tail flutter" analysis used a 1-4 s window on Small
+     at Time 64, where the signal is -107 dB by 1 s and -152 dB by 2 s. That is numerical dust, and it
+     is why every build returned bit-identical numbers — the metric was reading the decay shape, not
+     the tail. ALWAYS CHECK THE ABSOLUTE LEVEL OF AN ANALYSIS WINDOW BEFORE TRUSTING WHAT IT SAYS.
+   * MOVING THE ALLPASSES AFTER THE COMBS CANNOT DO ANYTHING, and it is worth knowing why: the whole
+     comb + allpass chain is LINEAR TIME-INVARIANT, so allpass-then-comb and comb-then-allpass are the
+     same system. The renders differed only in the small `diffused * 0.12` onset term. The existing
+     "diffusion first" arrangement is not a bug and does not need revisiting.
+
+  THE FIX, in two parts, both measured:
+   * SIXTEEN COMBS, from four. This bank is Freeverb's, which specifies EIGHT, and only the first four
+     were ever here — so it started at a quarter of the density its own topology assumed. 4 -> 8 took
+     the peak from 5.4% but left it clear of its neighbours; 8 -> 16 flattened it. The extra lengths
+     continue the progression and are prime, so no two lines reinforce.
+   * PER-COMB DAMPING EQUALISATION (comb_damping()). The one-pole in each comb loses a fixed amount
+     PER RECIRCULATION, and a short comb goes round more often, so it loses more per SECOND and dies
+     first — leaving the longest comb ringing alone. Scaling the per-pass loss by the comb's length
+     leaves the loss per second equal. This is what took 5.4% to 4.4% before the comb count finished
+     the job. NOTE it does change the aggregate high-frequency decay slightly, so if REVERB_BRIGHT_MAX
+     and REVERB_BRIGHT_CURVE are ever re-fitted, that is the reason.
+
+  REVERB_WET_GAIN RE-DERIVED TWICE, as its own comment demands when the comb count changes: each
+  doubling added close to the 3 dB an incoherent sum predicts (2.96 then 3.17), so 0.31 -> 0.2205 ->
+  0.1531. Verified back on target at -11.50 dB left, -11.53 right, against the -11.5 dB measured on
+  the instrument the same day.
+  NOTHING ELSE MOVED: L/R correlation -0.002..+0.016 (hardware +0.012..+0.045), per-room pre-delays
+  unchanged, ExpAudio byte-identical.
+  STILL TO WATCH: sixteen combs times two channels is 32 comb operations per sample at 96 kHz, four
+  times what it was. Nobody has looked at what that does to sound_engine_load_percent() on a big
+  patch — worth an eye before it is trusted on stage.
+
 
 - NOTES ARE NOT SENT TO THE G2 WHILE THE LOCAL ENGINE IS SOUNDING (2026-08-18, owner's request).
   Playing a key used to sound the note twice, once in the engine and once on the instrument, which
