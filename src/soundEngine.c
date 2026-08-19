@@ -1059,6 +1059,20 @@ typedef enum {
 // realign every cycle would put their own period into the tail, which is the fault being fixed.
 #define RV_MOD_DEPTH    (28)
 
+// WHAT THE SWEEP COSTS THE DECAY. Reading a delay line at a fractional position means interpolating
+// between two samples, and linear interpolation is a mild lowpass -- so every pass round the tank
+// loses a little that a whole-sample read would not. Measured, it shortened a Hall from RT60 9.67 s
+// to 8.87 s where the dial had asked for 10.34. It DIVIDES the gain rather than scaling the
+// exponent: the interpolator takes a fixed amount out of every pass whatever the decay setting, so
+// scaling the exponent over-corrects exactly where the requested loss is largest -- it put a short
+// room 8% long while fixing the long one. Not a fudge factor for something unexplained: it is the
+// interpolator's own attenuation, and it would change if the interpolator did.
+//
+// THIS RESTORES THE DIAL AS THE ONLY PLACE DECAY IS SET. What the dial asks for is
+// kReverbDecayBase/Slope, and those are a separate question -- see the note there for how they now
+// stand against the hardware.
+#define RV_MOD_LOSS    (0.9955)
+
 static const double kRvModHz[RV_LINES] = {
     0.61, 0.73, 0.89, 1.03, 1.19, 1.31, 1.47, 1.61
 };
@@ -3615,7 +3629,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         double len = (double)(gRvAddr[kRvLineDl[i] + 1] - gRvAddr[kRvLineDl[i]]);
 
         gRvGain[i] = (timeSeconds > 0.01)
-                     ? pow(10.0, (-3.0 * len) / (gSampleRate * timeSeconds))
+                     ? (pow(10.0, (-3.0 * len) / (gSampleRate * timeSeconds)) / RV_MOD_LOSS)
                      : 0.0;
     }
 
