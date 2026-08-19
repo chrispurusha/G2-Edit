@@ -49,6 +49,65 @@ void selection_clear(void) {
     memset(&gSelection, 0, sizeof(gSelection));
 }
 
+// A SELECTION IS ONLY EVER VALID FOR WHAT IS ON SCREEN. Called once per frame from the render loop,
+// this drops it whenever the ground it stands on has moved: a different slot, a different location,
+// or the same slot with different modules in it.
+//
+// WHY A WATCHER RATHER THAN CLEARING AT EACH SITE. There are seven or eight places that can change
+// any of the three, and they are not all on this thread — a patch arriving because the device's own
+// patch changed is parsed on the USB thread, and clearing UI state from there would be a data race.
+// One check on the render thread covers every route, including ones added later.
+//
+// THE STALE SELECTION WAS NOT MERELY COSMETIC. A module key is slot + location + index, so after a
+// switch the highlight correctly disappears — is_selected() compares all three — while the keys stay
+// live. Cut, Copy and Delete are enabled on gSelection.count alone, so they would happily operate on
+// modules from another slot that were no longer on screen. Worse after a load into the SAME slot,
+// where those indices now name entirely different modules, so Delete would take the wrong ones.
+void selection_validate(void) {
+    static bool     init         = false;
+    static uint32_t lastSlot     = 0;
+    static uint32_t lastLocation = 0;
+    static uint32_t lastGen[MAX_SLOTS];
+
+    uint32_t        slot         = (uint32_t)gSlot;
+    uint32_t        location     = (uint32_t)gLocation;
+    bool            stale        = false;
+
+    if (init == false) {
+        init         = true;
+        lastSlot     = slot;
+        lastLocation = location;
+
+        for (uint32_t i = 0; i < MAX_SLOTS; i++) {
+            lastGen[i] = gPatchGeneration[i];
+        }
+
+        return;
+    }
+
+    if ((slot != lastSlot) || (location != lastLocation)) {
+        stale        = true;
+        lastSlot     = slot;
+        lastLocation = location;
+    }
+
+    // ANY slot's generation, not just the visible one: a selection can only hold keys for one slot at
+    // a time, but a load into a background slot still invalidates a selection held there.
+    for (uint32_t i = 0; i < MAX_SLOTS; i++) {
+        uint32_t gen = gPatchGeneration[i];
+
+        if (gen != lastGen[i]) {
+            lastGen[i] = gen;
+            stale      = true;
+        }
+    }
+
+    if ((stale == true) && (gSelection.count > 0)) {
+        selection_clear();
+        synthlib_request_redraw();
+    }
+}
+
 static void selection_add(tModuleKey key) {
     if (gSelection.count >= MAX_NUM_MODULES) {
         return;

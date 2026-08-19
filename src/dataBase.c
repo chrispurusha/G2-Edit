@@ -355,6 +355,7 @@ void init_patch(uint32_t slot) {
 
 void clear_slot_data(uint32_t slot) {
     if (slot < MAX_SLOTS) {
+        gPatchGeneration[slot]++;   // everything keyed to this slot's modules is now stale
         database_delete_cables_by_slot(slot);
         database_delete_modules_by_slot(slot);
         gMorphCount[slot]      = 0;

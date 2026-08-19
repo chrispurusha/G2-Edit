@@ -315,6 +315,21 @@ void file_menu_open_patch(void) {
     wake_glfw();
 }
 
+// File > Open Recent — the path is already known, so no browser, but the same deferral: opening a
+// patch from inside a menu callback would run the load while the menu that raised it is still on
+// screen.
+void file_menu_open_path(const char * path) {
+    tMessageContent msg = {0};
+
+    if ((path == NULL) || (path[0] == '\0')) {
+        return;
+    }
+    msg.cmd = eRspOpenPath;
+    COPY_STRING(msg.patchFileData.filePath, path);
+    msg_send(&gToGuiThread, &msg);
+    wake_glfw();
+}
+
 void file_menu_save_patch(void) {
     tMessageContent msg = {0};
 
