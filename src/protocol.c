@@ -1473,6 +1473,14 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
         return EXIT_FAILURE;
     }
 
+    // NOT ALL PATCH LOADS CLEAR THE SLOT FIRST — a patch arriving because the device's own patch
+    // changed is parsed straight over what was there. Bumping here as well as in the two slot-clear
+    // paths means every route that can replace a module ends up counted exactly once or twice, and
+    // the watcher only cares that the number moved.
+    if (slot < MAX_SLOTS) {
+        gPatchGeneration[slot]++;
+    }
+
     while (BIT_TO_BYTE(bitOffset) < length) {
         type      = read_bit_stream(buff, &bitOffset, 8);
         count     = 0;

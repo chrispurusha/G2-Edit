@@ -224,7 +224,19 @@ bool handle_scrollbar_click(tCoord coord) {
 // included, rather than being torn down by hand here. Same authority and same approach as the
 // plug-in shell's recoverLostRelease (vst3/g2GlView.m).
 void recover_lost_cursor(void) {
-    if ((sCursorHidden == true) && (platform_any_mouse_button_down() == false)) {
+    // A CANVAS GESTURE WITH NO BUTTON BEHIND IT LOST ITS RELEASE. Every one of them is torn down by
+    // the left-up handler, so if one is still running while nothing is pressed, that event never
+    // arrived — the window lost focus mid-drag, or something else swallowed it. The rubber band is
+    // the visible symptom: its rectangle stays drawn on the canvas until the next click.
+    //
+    // SYNTHESISING THE RELEASE rather than clearing the flags is what makes this safe. The release
+    // handlers are where a rubber band applies its selection and a module drag pushes its undo
+    // entry; zeroing the state instead would drop both, turning a stuck rectangle into a lost edit.
+    bool staleGesture = (gRubberBand.active == true)
+                        || (gModuleDrag.active == true)
+                        || (gCableDrag.active == true);
+
+    if (((sCursorHidden == true) || (staleGesture == true)) && (platform_any_mouse_button_down() == false)) {
         // The modifier state is saved and put back around the synthetic release. mouse_button() begins by
         // pushing set_modifier_state_from_glfw(mods) so its handlers can read the predicates, and there
         // are no real mods to pass here — a literal 0 would report every modifier as released. Alt in

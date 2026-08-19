@@ -53,6 +53,12 @@ extern uint32_t                gDeviceMidiCCCount;
 extern tModuleDragging         gModuleDrag;
 extern tSelection              gSelection;
 extern tRubberBand             gRubberBand;
+
+// BUMPED WHENEVER A SLOT'S CONTENTS ARE REPLACED — a patch parsed into it, or the slot cleared. The
+// UI thread watches it to know that anything it was holding a module key for is gone; see
+// selection_validate(). Atomic because patches arrive on the USB thread and this is read on the
+// render thread, which is also why the selection is not simply cleared at the point of the load.
+extern _Atomic uint32_t        gPatchGeneration[MAX_SLOTS];
 extern tClipboard              gClipboard;
 extern tMessageQueue           gToUsbThread; // GUI thread -> USB thread (commands); USB thread blocks on it
 extern tMessageQueue           gToGuiThread; // USB thread -> GUI thread (results); poll-drained in the render loop

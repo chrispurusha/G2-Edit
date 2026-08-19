@@ -44,6 +44,8 @@ extern "C" {
 #include "midiInput.h"
 #include "alertDialog.h"
 #include "menus.h"
+#include <unistd.h>
+
 #include "appMenuBar.h"
 #include "helpPanel.h"
 #include "synthlibPersistence.h"
@@ -55,6 +57,22 @@ extern "C" {
 static void action_open_patch(int index) {
     (void)index;
     file_menu_open_patch();
+}
+
+// One entry of File > Open Recent. The item's param carries the index into the recent list rather
+// than the menu position, because the list and the menu are not the same length — the menu has a
+// Clear Menu row on the end of it.
+static void action_open_recent(int index) {
+    const char * path = recent_files_path(gContextMenu.items[index].param);
+
+    if (path != NULL) {
+        file_menu_open_path(path);
+    }
+}
+
+static void action_clear_recent(int index) {
+    (void)index;
+    recent_files_clear();
 }
 
 static void action_save_patch(int index) {
@@ -110,13 +128,56 @@ void app_menu_set_device_capable(bool capable) {
 }
 
 void open_file_menu(tCoord anchor) {
-    static tMenuItem items[10];  // 9 entries + the NULL terminator
-    bool             online       = gCommsState == eCommsOnLine;
-    bool             isPerf       = gGlobalSettings.perfMode == 1;
-    int              i            = 0;
+    static tMenuItem items[11];  // 10 entries + the NULL terminator
+    bool             online      = gCommsState == eCommsOnLine;
+    bool             isPerf      = gGlobalSettings.perfMode == 1;
+    int              i           = 0;
 
     items[i++] = (tMenuItem){
         "Open Patch/Perf File...", (tRgb)RGB_GREY_3, action_open_patch, 0, NULL, 0, 0.0
+    };
+
+    // OPEN RECENT, as a flyout. Both arrays are static because the menu engine keeps the pointers it
+    // is given and reads them while the menu is open — a stack array would be gone by then. So are
+    // the labels: tMenuItem.label is a borrowed const char *, and a basename points into the stored
+    // path, which outlives the menu.
+    //
+    // A MISSING FILE IS SHOWN GREYED, not hidden. Removing it silently would make a patch on an
+    // unplugged drive vanish from the list for good; greying says "this is still yours, it is just
+    // not reachable right now", which is what the platform menus do.
+    static tMenuItem recentItems[RECENT_FILES_MAX + 2];
+    uint32_t         recentCount = recent_files_count();
+    uint32_t         r           = 0;
+
+    for (uint32_t n = 0; n < recentCount; n++) {
+        const char * path      = recent_files_path(n);
+        bool         reachable = (path != NULL) && (access(path, R_OK) == 0);
+
+        recentItems[r++] = (tMenuItem){
+            recent_files_display_name(n),
+            reachable ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+            reachable ? action_open_recent : NULL,
+            n, NULL, 0, 0.0
+        };
+    }
+
+    if (recentCount > 0) {
+        // No separator above it: the menu engine has no separator item and nothing else in the app
+        // fakes one with a dead row, so Clear Menu simply sits last.
+        recentItems[r++] = (tMenuItem){
+            "Clear Menu", (tRgb)RGB_GREY_3, action_clear_recent, 0, NULL, 0, 0.0
+        };
+    }
+    recentItems[r] = (tMenuItem){
+        NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+    };
+
+    // Greyed with no flyout when there is nothing in it, rather than opening an empty one.
+    items[i++]     = (tMenuItem){
+        "Open Recent",
+        (recentCount > 0) ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+        NULL, 0,
+        (recentCount > 0) ? recentItems : NULL, 0, 0.0
     };
 
     if (sDeviceCapable) {
@@ -132,7 +193,7 @@ void open_file_menu(tCoord anchor) {
     }
     // Save writes back to wherever this patch/perf came from; it only appears live once there IS
     // such a place, which is why Save As sits below it rather than being the only option.
-    bool             haveSavePath = file_menu_have_saved_path();
+    bool haveSavePath = file_menu_have_saved_path();
 
     items[i++] = (tMenuItem){
         isPerf ? "Save Perf" : "Save Patch",

@@ -2842,6 +2842,7 @@ static int send_select_variation(uint32_t slot, uint32_t variation) {
 // answered, neither path's behaviour is changed by merging them. They were previously both called
 // clear_slot_data(), the static one here quietly shadowing the other.
 static void clear_slot_data_usb(uint32_t slot) {
+    gPatchGeneration[slot]++;   // everything keyed to this slot's modules is now stale
     database_delete_modules_by_slot(slot);
     database_delete_cables_by_slot(slot);
 
