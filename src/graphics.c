@@ -737,6 +737,7 @@ static void on_file_opened(const char * path) {
     if (path) {
         LOG_INFO("Selected file: %s", path);
         read_file_into_memory_and_process(path);
+        recent_files_add(path);    // File > Open Recent — same event that settles File > Save's target
         remember_file_path(path);  // Read AFTER the load: it is the load that settles perf vs patch
         //set_window_title(path);
     }
@@ -1123,6 +1124,13 @@ static void check_action_flags(void) {
                 case eRspShowOpenRead:
                     // Deferred from a menu click so the browser opens from the render loop, not mid-callback.
                     open_file_browser_read(on_file_opened);
+                    break;
+
+                case eRspOpenPath:
+                    // File > Open Recent. Goes through on_file_opened() exactly as the browser does,
+                    // so a recent open records its path, updates File > Save's target and re-orders
+                    // the recent list itself by the same route — no second copy of any of that.
+                    on_file_opened(resp.patchFileData.filePath);
                     break;
 
                 case eRspShowOpenWrite:
@@ -2882,6 +2890,25 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             return;
         }
 
+        // SELECT with no argument reports what is selected, so a test can check the selection
+        // rather than infer it from a screenshot. Without this the clear-on-switch behaviour is
+        // invisible to anything driving the app from outside.
+        if ((arg[0] == '\0') || (arg[0] == '?')) {
+            char report[512] = {0};
+            int  used        = snprintf(report, sizeof(report), "OK\ncount=%u\n", gSelection.count);
+
+            for (uint32_t si = 0; (si < gSelection.count) && (used < (int)sizeof(report) - 48); si++) {
+                used += snprintf(report + used, sizeof(report) - (size_t)used,
+                                 "  slot=%u loc=%s index=%u\n",
+                                 gSelection.keys[si].slot,
+                                 (gSelection.keys[si].location == locationVa) ? "VA" : "FX",
+                                 gSelection.keys[si].index);
+            }
+
+            backdoor_write_result(report);
+            return;
+        }
+
         if (sscanf(arg, "%7s %u", locName, &index) != 2) {
             backdoor_write_result("ERROR: expected 'SELECT <VA|FX> <index>' or 'SELECT NONE'\n");
             return;
@@ -3047,8 +3074,12 @@ void do_graphics_loop(void) {
         // The Virtual Keyboard's Repeat button. No-op unless a repeat is actually running.
         virtual_keyboard_tick();
 
-        // Belt and braces: a hidden pointer with no drag behind it never survives a frame.
+        // Belt and braces: a hidden pointer with no drag behind it never survives a frame, and nor
+        // does a canvas gesture whose release went missing.
         recover_lost_cursor();
+
+        // The selection is only valid for the slot, location and patch currently on screen.
+        selection_validate();
 
         if ((gModuleDrag.active == true) || (gCableDrag.active == true) || (gContextMenu.active == true)) {
             double x = 0.0;

@@ -47,6 +47,7 @@ uint32_t                gDeviceMidiCCCount                                      
 tModuleDragging         gModuleDrag                                                                  = {0};
 tSelection              gSelection                                                                   = {0};
 tRubberBand             gRubberBand                                                                  = {0};
+_Atomic uint32_t        gPatchGeneration[MAX_SLOTS]                                                  = {0};
 tClipboard              gClipboard                                                                   = {0};
 tMessageQueue           gToUsbThread                                                                 = {0};
 tMessageQueue           gToGuiThread                                                                 = {0};

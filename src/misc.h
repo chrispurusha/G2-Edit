@@ -20,6 +20,8 @@
 #ifndef __MISC_H__
 #define __MISC_H__
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -43,12 +45,23 @@ void load_saved_settings(void);
 
 void save_zoom_factor(double zoom);
 
+// File > Open Recent. Implemented in persistence.c beside the other prefs-backed state.
+// recent_files_load() is called by load_saved_settings(); recent_files_add() by on_file_opened().
+#define RECENT_FILES_MAX    (10)
+void recent_files_load(void);
+void recent_files_add(const char * path);
+uint32_t recent_files_count(void);
+const char * recent_files_path(uint32_t index);
+const char * recent_files_display_name(uint32_t index);
+void recent_files_clear(void);
+
 // File/Settings/Backup/Restore menu actions — plain-C-callable bodies used by the in-window menu
 // bar (src/appMenuBar.c). File open/save and folder picking all go through the custom in-window
 // browser (SynthLib/src/fileBrowser.cpp); alerts/confirms/bank-target pickers go through
 // SynthLib/src/alertDialog.cpp — none of it uses native Cocoa panels any more. Only the dispatch
 // logic (which browser mode to open, with what pre-filled state) lives here.
 void file_menu_open_patch(void);
+void file_menu_open_path(const char * path);
 void file_menu_save_patch(void);
 void file_menu_save_patch_to_current_path(void);
 bool file_menu_have_saved_path(void);

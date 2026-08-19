@@ -47,6 +47,9 @@ typedef enum {
     eRspSynthRestorePeek,
     // UI-thread-originated deferred work (posted from menu actions, run in the render loop).
     eRspShowOpenRead,      // open the "load file" browser
+    eRspOpenPath,          // open a file whose path is already known (File > Open Recent) — the
+                           // browser is skipped, but the deferral is not: a menu action must not
+                           // load a patch from inside its own callback. Path in patchFileData.filePath
     eRspShowOpenWrite,     // open the "save file" browser (drain builds the default name)
     eRspSaveToCurrentPath, // save straight back to the remembered path, no browser
     eRspOfflineConflict    // offlineEditData: edits were made while the G2 was away — ask the user
