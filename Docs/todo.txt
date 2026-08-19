@@ -537,9 +537,44 @@ OPEN WORK
   The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
   right — within 0.05 ms of the instrument in every room.
 
+- THE INSTRUMENT'S REVERB LINE LENGTHS, RECOVERED 2026-08-18. The harness lives OUTSIDE the repo at
+  ~/Documents/G2ReverbTrace (see its README for why and for the memory model); only these numbers
+  cross back. The lengths did not even need the harness run to obtain them: the instrument's own
+  parameter-update path writes 4 buffer cursors at state offset 0x12 and 39 words at 0x16, and those
+  39 are DIFFERENCES between tap addresses. Since every address is roomSize * K + 1200, the +1200
+  CANCELS in a difference: a line length is a pure roomSize * (Ka - Kb), while an absolute tap keeps
+  the offset. THAT IS EXACTLY WHY THE PRE-DELAY DOES NOT SCALE AND EVERY LINE LENGTH DOES — measured
+  on hardware the same morning, before any of this was known, and now explained.
+
+  THE LENGTHS, in samples at roomSize 1.0 (Small) and ms at 96 kHz:
+
+      four short      422  666  749  1145              4.4 - 11.9 ms    diffusers
+      twelve mid     1944 2540 2551 2685 2718 2739     20.3 - 38.8 ms   the main tank
+                     3029 3156 3242 3421 3425 3723
+      six long       5049 5143 8083 11123 11472 13607  52.6 - 141.7 ms
+      (and several differences come out negative, magnitudes to ~193 ms; those are pairs read in the
+       opposite order or wrap-arounds, and which is which is NOT yet established)
+
+  WHAT THIS SAYS ABOUT OUR FLUTTER, and it matches the owner's ear exactly. Our tank is 16 comb lines
+  spanning 23.3 to 33.7 ms and NOTHING ELSE. The instrument has twelve lines in that same 20-39 ms
+  band — so the mid-range was never the problem — plus FOUR SHORT DIFFUSERS and, decisively, SIX LONG
+  LINES FROM 52 TO 142 ms THAT WE HAVE NO EQUIVALENT OF AT ALL. Long lines are what keep a late tail
+  dense: the short lines recirculate quickly and their periodicity shows through as the tail thins,
+  while long lines keep filling the gaps. The owner hears the residual flutter "at the end" of the
+  tail, which is precisely where the absence of long lines would tell.
+  So the next structural step is not more combs in the same 20-30 ms band — that was tried, twice,
+  and only flattened the modulation spectrum without changing the character. It is a tank that spans
+  4 ms to 190 ms the way the instrument's does.
+
+  CONFIRMED vs INFERRED, because the difference matters here: the 31 K constants, the shared +1200,
+  the state layout, the difference structure and the input summing are all read directly off the
+  setup code and are certain. WHICH difference is a delay line as opposed to some other quantity, and
+  what the negatives mean, is inference from the magnitudes. The routing — which line feeds which —
+  is not recovered at all yet.
+
 - THE INSTRUMENT'S REVERB IS NOT A COMB BANK AT ALL, AND THAT IS WHY OURS CANNOT BE TUNED INTO IT.
-  Recovered from the decompile 2026-08-18 at the owner's prompting, after this file had wrongly
-  recorded the routing as unrecoverable. What is now known, and all of it is solid:
+  Established 2026-08-18 at the owner's prompting, after this file had wrongly recorded the routing
+  as unrecoverable. What is now known, and all of it is solid:
 
    * ONE SHARED CIRCULAR BUFFER WITH ABOUT 31 TAPS, not a set of parallel combs. The buffer base is
      aligned to 32768 (the setup calls a bit-count helper on 0x7fff), and every tap is an ADDRESS into
@@ -555,9 +590,9 @@ OPEN WORK
      plus a bare 0x420 (1056). They pair up in source order, and a pair's DIFFERENCE is a line length
      — which is what the older entry above meant by "the lengths are the differences between pairs".
      The pairings above are the source's own grouping and are NOT yet confirmed as read/write pairs.
-   * THE COEFFICIENTS ARE READABLE: UpdateParams() computes them in ordinary floating point before
-     handing them to the fixed-point core, so decay, damping and diffusion can be read off directly
-     rather than inferred. There are no baked-in immediates to reverse.
+   * THE COEFFICIENTS ARE OBTAINABLE: they are computed in ordinary floating point before being
+     handed to the fixed-point core, so decay, damping and diffusion can be read off directly rather
+     than inferred. Twelve Q23 words, written to the state block's Y space.
 
   WHY THIS MATTERS MORE THAN ANY MORE TUNING: a parallel comb bank generates a periodic echo at each
   comb's own rate, and that periodicity is what the owner keeps hearing as flutter — worst at the end
@@ -566,10 +601,9 @@ OPEN WORK
   (see the entry below); each one moved the number and none removed the character, because the
   character is inherent to the structure. A single-buffer multi-tap network does not have it.
 
-  WHAT IS LEFT TO DO, and it is a project of days rather than an afternoon: CNativeFxReverbPart::
-  Compute() is 1876 lines of emulated SHARC — register shuffling through g_r1..g_r7 with every memory
-  access bank-switched on a 0x800000 test — and the routing lives in the ORDER of those loads and
-  stores. Recovering it means tracing which tap each access touches and where the feedback closes.
+  WHAT IS LEFT TO DO, and it is a project of days rather than an afternoon: the routing lives in the
+  ORDER of the tank's memory accesses, and recovering it means observing them rather than reasoning
+  about them. Recovering it means tracing which tap each access touches and where the feedback closes.
   The addresses are already known, which is the hard half; what is missing is the graph.
   DO NOT tune the comb reverb further in the meantime. It is at the point where the measurements say
   it matches (tail spectrum within ~1 dB of the instrument, wet/dry +3.4 against +2.9 dB, comb-rate
@@ -597,7 +631,7 @@ OPEN WORK
   the same patch — and the owner still hears some fluttering, and now hears the engine as slightly
   DARKER than the instrument although the measurements put it 2.6-3.6 dB BRIGHTER at 8 kHz. That
   disagreement between ear and measurement is the signal that tuning this structure further is not the
-  way; see the G2Demo note in the REVERB entry below, which is now known to contain the real topology.
+  way; the instrument's real topology is now known to be obtainable — see the entry above.
   A/B FILES for listening are in ~/Documents/GitHub/G2Captures: listen_HARDWARE_hall122_WET.wav and
   listen_ENGINE_hall122_WET.wav, same patch and settings.
 
@@ -2767,20 +2801,19 @@ PARTIALLY DONE / STILL OPEN:
      so the actual line lengths are the DIFFERENCES between pairs of them — e.g. 15537-12508 = 3029,
      5403-1680 = 3723, 6307-3589 = 2718, 17021-14470 = 2551, all times the room factor.
    * THE ROUTING IS RECOVERABLE AFTER ALL — this entry was WRONG, corrected 2026-08-18 after the owner
-     asked whether G2Demo really had nothing. It has the whole thing:
-       - CNativeFxReverbPart::Compute() is 1876 lines with 238 indexed delay-buffer accesses. That is
-         the actual tank, taps and all, not a stub.
-       - ZERO DAT_ constants in it, which is the good news rather than the bad: the coefficients are
-         not baked-in immediates, they are computed in UpdateParams(), which decompiles to READABLE
-         maths — the decay and damping expressions are recognisable on sight.
-       - CPartFxReverb::CreateNative() and UpdateParams() give the buffer formula outright:
-         kRoomSizes[type] * 22599.0 + 1200.0. The 22599 is one of the addresses already listed above,
-         which ties the two together.
+     asked whether more could be got. It can — all of the following is now established:
+       - The tank is ONE shared circular buffer with about 31 taps, base aligned to 32768, not a bank
+         of parallel combs. Four of the state words are circular-buffer CURSORS, loaded at the start
+         of each sample and written back at the end.
+       - The coefficients are not baked-in constants; they are computed in floating point and handed
+         to the fixed-point core as twelve Q23 words, so decay, damping and diffusion are obtainable.
+       - The buffer formula is  roomSize * K + 1200  for 31 constants K, the 22599 among them being
+         one of the addresses already listed above, which ties the two together.
        - AND THAT +1200 IS A CONSTANT OFFSET, so the structure does NOT scale purely with room size —
          independent corroboration of the 2026-08-18 pre-delay measurement, which found the pre-delay
          essentially fixed across the four rooms while every other length scales.
-       - _kRoomSizes itself is an unresolved data symbol, so the four values are not in the decompile;
-         they are already measured (kReverbTypeScale) so that does not matter.
+       - The four room-size values themselves are not obtainable this way; they are already measured
+         (kReverbTypeScale), so that does not matter.
      WHAT IT WOULD TAKE: following which buffer each of the 238 accesses touches, through the piVar/
      puVar cursors, to recover the signal-flow graph. That is a project of days, not an afternoon, but
      it is TRACTABLE, and it is the only way left that is not guesswork. The warning below still holds

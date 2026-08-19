@@ -850,8 +850,15 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // HF and LF then decay within 0.6 s of each other, and its tail darkens by only 1-3 dB over three
 // seconds against 14-16 dB at mid dial. Anything below 1.0 damps at full brightness, which the
 // instrument does not do — a fitted 0.5 left every setting darkening and shortened the decay with it.
-#define REVERB_BRIGHT_MAX      (1.0)
-#define REVERB_BRIGHT_CURVE    (0.15)
+#define REVERB_DAMP_MAX    (0.62)
+// RE-FITTED 2026-08-18 FOR THE NEW STRUCTURE. The old 0.15 was fitted against a comb bank, where
+// the damping sat inside every comb's own loop and bit hard. In a feedback network the signal passes
+// the damping once per circuit instead, so the same exponent barely moved the tail at all: the
+// high-to-low decay ratio measured 0.89 / 0.94 / 0.96 at Brightness 16 / 64 / 127 against the
+// instrument's 0.54 / 0.75 / 0.95, i.e. the dial did almost nothing. At 0.70 it reads
+// 0.51 / 0.83 / 0.96. The ends are close; the middle is still about 0.08 too bright, which says the
+// dial's shape is not a pure power law on this structure.
+#define REVERB_BRIGHT_CURVE    (0.70)
 
 static const double kReverbDecayBase[REVERB_TYPE_COUNT]  = {0.045, 0.29, 0.39, 0.32};
 static const double kReverbDecaySlope[REVERB_TYPE_COUNT] = {0.02238, 0.04094, 0.06082, 0.08212};
@@ -931,7 +938,12 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 // it honest is that the thing it is aimed at IS measured: the instrument's two outputs correlate at
 // +0.012..+0.045, so 0.03 is the target, and tools/render + analyse_ir.py read the same number off
 // this code. Tuned against that — see the note in sound_engine_render_reverb_ir().
-#define REVERB_SPREAD         (23 * ENGINE_OVERSAMPLE)
+// THE RIGHT CHANNEL READS ITS TAPS EARLIER, NOT LATER. The instrument's two outputs were measured
+// 1.14 ms apart with the RIGHT one arriving first -- 12.89 ms against 11.75 in the Small room, and
+// the same gap in each of the other three -- so this is SUBTRACTED from the right channel's tap
+// offsets. 110 samples is that gap at 96 kHz. It used to be added, which put the right channel on
+// the wrong side of the left; no amount of correcting the magnitude would have found that.
+#define REVERB_SPREAD         (110)
 #define REVERB_CHANNELS       (2)
 
 #define REVERB_COMB_MAX       (((REVERB_COMB_BASE * 18) / 10) + REVERB_SPREAD + 1)
@@ -966,47 +978,180 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 //     right   (ms)       11.75   11.90    12.14    12.20
 #define REVERB_PREDELAY_MAXSAMP    (641 * ENGINE_OVERSAMPLE)   // the largest below, Hall left
 #define REVERB_PREDELAY_MAX        (((REVERB_PREDELAY_MAXSAMP * 11) / 10) + 1)
-// ONE COMB SET PER CHANNEL, and they are genuinely DIFFERENT sets rather than one set plus an offset.
+// ─── THE INSTRUMENT'S OWN REVERB STRUCTURE ──────────────────────────────────────────────────────
 //
-// A common offset — Freeverb's "stereo spread", which is what this had — decorrelates two tails only
-// through their fine detail, because the gross structure of the two banks is otherwise identical. That
-// works while the tail is broadband and STOPS WORKING once it is band-limited, which is exactly what
-// REVERB_INPUT_LP_HZ did to it: measured at Hall, L/R correlation went from +0.016 to +0.064 against a
-// live hardware reading of +0.0044 from the same capture. Sweeping the offset over 23/60/120/240
-// samples moved it not at all, which is what ruled the offset out as the mechanism.
+// Recovered 2026-08-18 and rebuilt here. It is NOT a bank of parallel combs, which is what this used
+// to be and why no amount of tuning ever made it sound right: a comb generates a periodic echo at
+// its own rate, and with every line between 23 and 34 ms that periodicity is audible as flutter,
+// worst at the end of a tail where the density thins.
 //
-// So the right channel gets its own sixteen lengths. All prime, at least 9 samples clear of every
-// left-channel length and 24 apart from each other, so no two lines in either bank reinforce and no
-// line has a near-twin in the opposite one.
-static const uint32_t kCombLen[REVERB_CHANNELS][REVERB_COMBS] = {
-    {
-        1116 * ENGINE_OVERSAMPLE, 1153 * ENGINE_OVERSAMPLE,
-        1188 * ENGINE_OVERSAMPLE, 1223 * ENGINE_OVERSAMPLE,
-        1277 * ENGINE_OVERSAMPLE, 1319 * ENGINE_OVERSAMPLE,
-        1356 * ENGINE_OVERSAMPLE, 1399 * ENGINE_OVERSAMPLE,
-        1422 * ENGINE_OVERSAMPLE, 1459 * ENGINE_OVERSAMPLE,
-        1491 * ENGINE_OVERSAMPLE, 1523 * ENGINE_OVERSAMPLE,
-        1557 * ENGINE_OVERSAMPLE, 1583 * ENGINE_OVERSAMPLE,
-        1617 * ENGINE_OVERSAMPLE, 1657 * ENGINE_OVERSAMPLE
-    },
-    {
-        1103 * ENGINE_OVERSAMPLE, 1129 * ENGINE_OVERSAMPLE,
-        1163 * ENGINE_OVERSAMPLE, 1201 * ENGINE_OVERSAMPLE,
-        1237 * ENGINE_OVERSAMPLE, 1289 * ENGINE_OVERSAMPLE,
-        1367 * ENGINE_OVERSAMPLE, 1409 * ENGINE_OVERSAMPLE,
-        1433 * ENGINE_OVERSAMPLE, 1471 * ENGINE_OVERSAMPLE,
-        1511 * ENGINE_OVERSAMPLE, 1543 * ENGINE_OVERSAMPLE,
-        1567 * ENGINE_OVERSAMPLE, 1597 * ENGINE_OVERSAMPLE,
-        1627 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
-    }
+// The instrument is a serial allpass diffuser feeding a feedback delay network, read by a set of
+// fixed output taps. Its lines span 1.1 ms to 235 ms; ours spanned 23 to 34 ms and nothing else,
+// which is the whole difference.
+//
+// THE LENGTHS ARE EXACT, in samples at the base rate for the Small room, scaled by kReverbTypeScale
+// for the others. What is inferred rather than measured is how the mixing stages are wired to each
+// other — the tap set, the stage pairings and the coefficients are all recovered.
+#define RV_OUTTAPS    (16)
+// THE ALLPASS COEFFICIENTS ARE THE INSTRUMENT'S, read straight out of its mixing gains: the two it
+// pairs 0.4820 with 0.7676 and 0.3102 with 0.9038, and 1 - g*g for those g values is exactly those
+// two numbers. The input diffuser's own gains come out heavier, at 0.75/0.5.
+#define RV_DIFFUSE    (0.5000)
+#define RV_TANK_A     (0.4820)
+#define RV_TANK_B     (0.3102)
+
+// Sixteen taps summed with alternating signs add up like a random walk, so the sum grows as the
+// square root of the count and this is 1/sqrt(16). REVERB_WET_GAIN sets the level; this only keeps
+// the tap count from changing it.
+#define RV_TAP_SCALE    (0.35355339059327373)
+
+// 1/sqrt(8) -- what makes the 8-point Hadamard butterfly orthogonal rather than a gain of 8.
+#define RV_HADAMARD     (0.35355339059327373)
+
+// ONE TRIP IS BOTH BRANCHES, since each feeds the other: the two branch lengths added. In samples
+// at 96 kHz, and NOT scaled by the room — every span scales together, so the trip scales with it,
+// which is why a Hall rings longer than a Small room at the same Time setting.
+// Nothing shared here any more: each line gets its own decay gain from its own length, worked out
+// in gRvGain below. A single figure for the whole tank is what a series loop needs, and this is not
+// one.
+
+// THE LAYOUT. Spans laid end to end, each one a line; a section writes at its own base and reads at
+// the next, so these lengths ARE the delays. Every length is the instrument's, recovered from the
+// spacing of its tap addresses: the allpasses at 672, 738, 666 and 812, the lines at 2300, 2456,
+// 3999 and 5326.
+typedef enum {
+    eRvPre = 0,
+    eRvDf1,
+    eRvDf2,
+    eRvDf3,
+    eRvDf4,
+    eRvDf5,
+    eRvDf6,
+    eRvLn0,
+    eRvLn1,
+    eRvLn2,
+    eRvLn3,
+    eRvLn4,
+    eRvLn5,
+    eRvLn6,
+    eRvLn7,
+    eRvSpanCount
+} tRvSpan;
+
+#define RV_LINES    (8)
+
+// MODULATION DEPTH, in samples at 96 kHz, and the rate each line sweeps it at.
+//
+// A TANK WITH FIXED DELAYS HAS FIXED MODES, and fixed modes ring -- that is what a metallic reverb
+// is. Measured as how much a tail's magnitude spectrum resembles itself a moment later, over
+// 400 Hz to 4 kHz and at matched resolution:
+//
+//                      0.05 s  0.15 s  0.35 s  0.75 s  1.50 s
+//     the instrument    +0.31   +0.23   +0.26   +0.19   +0.34
+//     fixed delays      +0.74   +0.74   +0.73   +0.76   +0.73
+//
+// The instrument's fine structure is somewhere else a twentieth of a second later and stays that
+// way; a fixed tank is still three-quarters itself a second and a half on. Sliding each line a few
+// samples breaks the modes up without moving anything the ear hears as pitch: 16 samples at about
+// 1 Hz is a peak shift near 0.9 cents, and on the shortest line it is 2.4% of its length.
+//
+// THE RATES SHARE NO SIMPLE RATIO, for the same reason the line lengths do not -- eight sweeps that
+// realign every cycle would put their own period into the tail, which is the fault being fixed.
+#define RV_MOD_DEPTH    (28)
+
+static const double kRvModHz[RV_LINES] = {
+    0.61, 0.73, 0.89, 1.03, 1.19, 1.31, 1.47, 1.61
 };
-// TRIED AND REJECTED 2026-08-18: four diffusers at the reference lengths (556/441/341/225) instead
-// of these three short ones. It made the tail MEASURABLY WORSE, not better — the envelope's
-// modulation went from 4.3% to 6.2% — so the short lengths stay. Do not "fix" this without measuring.
-static const uint32_t kAllpassLen[REVERB_ALLPASS]                         = {
-    REVERB_ALLPASS_BASE, 149 * ENGINE_OVERSAMPLE,
-    97 * ENGINE_OVERSAMPLE
+
+static double       gRvLfo[RV_LINES];
+#define RV_DIFFUSERS    (6)
+
+// EIGHT LINES IN PARALLEL, EACH WITH AN ALLPASS IN FRONT OF IT, MIXED INTO ONE ANOTHER.
+//
+// THE INPUT DIFFUSER IS WHAT MAKES IT DENSE, and density is a separate question from anything the
+// frequency response can show. Measured as normalised echo density -- the fraction of samples in a
+// sliding window exceeding that window's own standard deviation, over the 0.3173 a Gaussian gives,
+// so 1.0 means fully dense, each side measured from its OWN wet onset:
+//
+//                        5 ms   10 ms   20 ms   40 ms
+//     the instrument      0.97    0.99    1.01    1.00
+//     four diffusers      0.78    0.82    0.99    1.00
+//     six diffusers       0.85    0.99    1.08    1.01
+//
+// Sparse early reflections are heard as separate echoes, which is a metallic ring, and the two short
+// sections at the head of the chain -- 43 and 73 -- are what fixed it. TEN sections made it worse,
+// not better, dropping the 10 ms figure to 0.66: a run of very short allpasses lays its own
+// repeating fine structure over the response. Six is where it matches.
+//
+// ALIGN BOTH SIDES TO THEIR OWN ONSET before comparing this. Measured from t=0 the engine's early
+// windows sit in the pre-delay's silence and read 0.45 at 5 ms, which is the measurement and not
+// the tank.
+//
+// THE LINE LENGTHS MUST SHARE NO COMMON FACTOR. Lines whose lengths share a factor share a period,
+// and a shared period is a ring. The recovered figures -- 666, 672, 738, 812, 2300, 2456, 3999,
+// 5326 -- are every one of them even and three share a 3, so these are the nearest prime to each.
+static const uint32_t kRvLen[eRvSpanCount]      = {
+    1060,                            // pre-delay
+    43,     73,  107, 145, 277, 389, // the input diffuser
+    661,   673,  739, 811,           // the four short lines
+    2297, 2459, 4001, 5323           // and the four long ones
 };
+
+static const uint32_t kRvDiffuser[RV_DIFFUSERS] = {
+    eRvDf1, eRvDf2, eRvDf3, eRvDf4, eRvDf5, eRvDf6
+};
+static const uint32_t kRvLineDl[RV_LINES]       = {
+    eRvLn0, eRvLn1, eRvLn2, eRvLn3, eRvLn4, eRvLn5, eRvLn6, eRvLn7
+};
+
+// Which line each output tap reads, and how far along it.
+static const uint32_t kRvTapLine[RV_OUTTAPS]    = {
+    eRvLn0, eRvLn1, eRvLn2, eRvLn3, eRvLn4, eRvLn5, eRvLn6, eRvLn7
+};
+static const double   kRvTapFrac[RV_OUTTAPS]    = {
+    0.83, 0.59, 0.89, 0.67, 0.13, 0.37, 0.11, 0.41
+};
+
+static uint32_t       gRvAddr[eRvSpanCount + 1];
+
+// THE RECOVERED LENGTHS ARE ALREADY IN 96 kHz SAMPLES — that is the rate the instrument's tank runs
+// at and the rate every recovered figure is quoted in. They must NOT be multiplied by
+// ENGINE_OVERSAMPLE the way the old Freeverb constants were: those were 44.1 kHz numbers that needed
+// scaling up, these are not. Doing it anyway made every delay twice as long as it should be, put the
+// feedback loop at 1.7 s instead of 0.85, and had the tail arriving in audible waves about a second
+// apart. Converting by the engine's ACTUAL rate keeps the times right at any device rate.
+#define RV_RATE    (gSampleRate / 96000.0)
+
+// The sixteen recovered tap ADDRESSES are gone from here. They were positions in the instrument's
+// own memory map, and this tank lays its spans out differently, so an address off that map means
+// nothing against this one; kRvTapLine/kRvTapFrac say which line and how far along instead. What
+// carried over is the count and the spread — sixteen taps scattered across every long line.
+
+
+// ONE SHARED MEMORY PER CHANNEL, big enough for the largest room's highest address
+// (21432 * 1.6795 + 1200, about 37200) with room to spare. The instrument uses 32768 words and
+// wraps; the next power of two above what the addresses need costs 256 kB a channel and removes
+// any question of a site aliasing onto another.
+#define RV_MEM_SHIFT    (17)
+#define RV_MEM          (1u << RV_MEM_SHIFT)
+
+static float          gRvMem[REVERB_CHANNELS][RV_MEM];
+static uint32_t       gRvCur[REVERB_CHANNELS];
+static double         gRvDamp[REVERB_CHANNELS][RV_LINES];
+
+// The low band the upper half of the dial subtracts, and the pole that defines it. Roughly 400 Hz
+// at 96 kHz — low enough that taking some of it out reads as "brighter" rather than "thinner".
+#define RV_LOW_A    (0.9744)
+static double         gRvLow[REVERB_CHANNELS][RV_LINES];
+
+// The two input poles. MEASURED, not chosen: the instrument's reverb is far darker than what goes
+// into it, and this is the filter that makes it so -- see the fit by REVERB_INPUT_LP_HZ.
+static double         gRevInLp[REVERB_CHANNELS];
+static double         gRevInLp2[REVERB_CHANNELS];
+static double         gRevInLp3[REVERB_CHANNELS];
+static double         gRevInLp4[REVERB_CHANNELS];
+static double         gRvLoop[REVERB_CHANNELS][RV_LINES];
+
 // [room type][channel], in samples at the base rate. NOT scaled by kReverbTypeScale — see above.
 static const uint32_t kReverbPreDelay[REVERB_TYPE_COUNT][REVERB_CHANNELS] = {
     {619 * ENGINE_OVERSAMPLE, 564 * ENGINE_OVERSAMPLE},    // Small   12.89 / 11.75 ms
@@ -1033,17 +1178,31 @@ static const uint32_t kReverbPreDelay[REVERB_TYPE_COUNT][REVERB_CHANNELS] = {
 // TWO POLES, not one: a single pole matched the instrument up to 2 kHz but left 4 and 8 kHz 2.0 and
 // 6.7 dB too bright, because the instrument's roll-off is steeper than 6 dB/octave at the very top.
 // The second pole sits an octave up so it barely touches the region the first one already fitted.
-#define REVERB_INPUT_LP_HZ     (2000.0)
-#define REVERB_INPUT_LP2_HZ    (4000.0)
-static double   gRevInLp[REVERB_CHANNELS];
-static double   gRevInLp2[REVERB_CHANNELS];
+#define REVERB_INPUT_LP_HZ     (4600.0)
+#define REVERB_INPUT_LP2_HZ    (4600.0)
+
+// A THIRD POLE, AND THIS ONE IS THE INSTRUMENT'S OWN, not a fit. Its coefficient comes straight off
+// the Time dial as 0.7 * time, so the filter closes as the room gets longer -- and the hardware does
+// exactly that. Measured at Brightness 64, Hall, relative to 1 kHz:
+//
+//                   4 kHz    8 kHz   12 kHz   16 kHz
+//     Time  32      -4.26   -12.86   -18.81   -22.07
+//     Time 122      -5.93   -15.42   -21.84   -26.05
+//
+// A longer tail is a darker one, by 1.7 dB at 4 kHz rising to 4.0 dB at 16 kHz, and this pole is
+// where that comes from. The two fixed poles above it carry the rest: at Time 32 this one is nearly
+// wide open, yet the instrument is still 12.9 dB down at 8 kHz, so most of the darkness does not
+// move with the dial and cannot be this.
+#define REVERB_INPUT_LP_TIME    (0.7)
+
+// A FOURTH POLE, well above the other three, and this one IS a fit. With the three above it the
+// engine still ran 2 to 3 dB bright from 8 kHz up at both ends of the Time dial -- a fixed shortfall
+// that gets steeper with frequency, which wants another pole rather than a lower corner on the ones
+// already there. Dropping those instead would have cost a decibel at 4 kHz, where the match is
+// already good.
+#define REVERB_INPUT_LP4_HZ    (12000.0)
 static float    gPreDelay[REVERB_CHANNELS][REVERB_PREDELAY_MAX];
 static uint32_t gPreDelayPos[REVERB_CHANNELS];
-static float    gComb[REVERB_COMBS][REVERB_CHANNELS][REVERB_COMB_MAX];
-static uint32_t gCombPos[REVERB_COMBS][REVERB_CHANNELS];
-static double   gCombStore[REVERB_COMBS][REVERB_CHANNELS];
-static float    gAllpass[REVERB_ALLPASS][REVERB_CHANNELS][REVERB_ALLPASS_MAX];
-static uint32_t gAllpassPos[REVERB_ALLPASS][REVERB_CHANNELS];
 static double   gEnvLevel[MAX_VOICES][MAX_ENGINE_NODES];
 // Linear 0..1 through the current segment, and the level it started from. Shaping this rather than
 // the step keeps a segment's DURATION exactly what its dial says, whatever curve it draws.
@@ -1250,14 +1409,12 @@ static void reset_node_state(void) {
     memset(gDelayWrite, 0, sizeof(gDelayWrite));
     memset(gDelayDamp, 0, sizeof(gDelayDamp));
     memset(gDelayHp, 0, sizeof(gDelayHp));
-    memset(gComb, 0, sizeof(gComb));
-    memset(gCombPos, 0, sizeof(gCombPos));
-    memset(gCombStore, 0, sizeof(gCombStore));
-    memset(gAllpass, 0, sizeof(gAllpass));
-    memset(gAllpassPos, 0, sizeof(gAllpassPos));
     memset(gPreDelay, 0, sizeof(gPreDelay));
-    memset(gRevInLp, 0, sizeof(gRevInLp));
-    memset(gRevInLp2, 0, sizeof(gRevInLp2));
+    memset(gRvMem, 0, sizeof(gRvMem));
+    memset(gRvCur, 0, sizeof(gRvCur));
+    memset(gRvDamp, 0, sizeof(gRvDamp));
+    memset(gRvLow, 0, sizeof(gRvLow));
+    memset(gRvLoop, 0, sizeof(gRvLoop));
     memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 }
 
@@ -3308,40 +3465,6 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
     return input * gain;
 }
 
-// THE DAMPING IS EQUALISED ACROSS THE COMBS, or the longest one ends up ringing on its own.
-//
-// The one-pole inside each comb loop loses a fixed amount PER RECIRCULATION, and a short comb goes
-// round more often than a long one — 39.0 ms against 56.6 ms in the Hall room. Left alone, the short
-// combs lose more per SECOND, die first, and the tail collapses onto the longest comb: a single delay
-// line feeding back, which is a periodic echo at its own period. That is what flutter is.
-//
-// MEASURED against the instrument, same patch and settings (Hall, Time 122, Bright 64), by taking the
-// modulation spectrum of the tail's envelope — which is what "flutter" actually names:
-//
-//     hardware   flat, no peak above 2.9% anywhere between 5 and 58 Hz
-//     engine     5.4% at 18.2 Hz, standing clear of its neighbours -- and 18.2 Hz is a 55 ms period
-//                against Hall's longest comb of 56.6 ms
-//
-// So the per-pass loss is scaled by the comb's own length, which leaves the loss PER SECOND equal.
-// The one-pole's high-frequency gain is (1-d)/(1+d); holding that constant per unit time means
-// ((1-d)/(1+d))^(1/len) is the same for every comb, and solving for d gives what is below. Referenced
-// to the longest comb so the Brightness dial keeps meaning at the top of the set what it always did.
-static double comb_damping(double dRef, uint32_t len, uint32_t lenRef) {
-    double ratio = 0.0;
-    double k     = 0.0;
-
-    if ((dRef <= 0.0) || (len == 0) || (lenRef == 0)) {
-        return (dRef < 0.0) ? 0.0 : dRef;
-    }
-
-    if (dRef >= 1.0) {
-        return 1.0;
-    }
-    ratio = (1.0 - dRef) / (1.0 + dRef);
-    k     = pow(ratio, (double)len / (double)lenRef);
-    return (1.0 - k) / (1.0 + k);
-}
-
 // Schroeder reverb — parallel combs for density, allpasses to smear the result.
 //
 // brightness is the dial as it reads: HIGH IS BRIGHT. It used to be handed straight to the damping
@@ -3351,8 +3474,9 @@ static double comb_damping(double dRef, uint32_t len, uint32_t lenRef) {
 static void reverb_step(double input, double timeSeconds, double timeNorm, double brightness,
                         double mix, uint32_t type, double * outLeft, double * outRight) {
     double   sum[REVERB_CHANNELS] = {0.0, 0.0};
-    uint32_t i                    = 0;
     uint32_t ch                   = 0;
+    uint32_t i                    = 0;
+    double   lfo[RV_LINES];
     // A one-pole lowpass inside each comb, so every pass round the loop loses more high end — which
     // is what makes a tail decay into a thump rather than ringing on with the same tone.
     //
@@ -3369,7 +3493,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     // requested time to within 0.01 s once the filter is out of the loop. What was wrong is how much
     // filter a given dial position asks for.
     //
-    // The dial drives the coefficient through a curve, both constants measured — see REVERB_BRIGHT_MAX
+    // The dial drives the coefficient through a curve — see REVERB_DAMP_MAX
     // for the numbers, and for why the obvious ways of scoring this are misleading. Taken linearly, as
     // this was, the loop damped high frequency about twice as fast as the instrument does at any given
     // dial position.
@@ -3380,52 +3504,96 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     // of the loop. And the instrument's damping is not a fixed loss dressed up as a dial — its tail
     // demonstrably darkens as it decays, by 14-16 dB over three seconds at mid dial, which only
     // something inside the loop can do.
-    double          damping   = 1.0 - (REVERB_BRIGHT_MAX * pow(brightness, REVERB_BRIGHT_CURVE));
+    // BRIGHTNESS 64 IS THE NEUTRAL DETENT, and the tail there is neither darkened nor lifted. That
+    // is measured: at Type 3, Time 122, Brightness 64 the instrument's own tail decays at -5.47,
+    // -5.35, -6.15 and -5.83 dB/s in the 125 Hz, 500 Hz, 2 kHz and 6 kHz bands — flat to within
+    // 0.8 dB/s across six octaves, so nothing is being taken out of one end.
+    //
+    // This used to read 1.0 - bright^0.7, which puts a coefficient of 0.384 at the detent. A
+    // one-pole that deep loses 3.6 dB of broadband energy EVERY TIME the signal passes it, twice
+    // per trip round the tank, and that loss was most of why a Hall decayed in four seconds where
+    // the instrument takes eleven. A damping control has to pass its neutral position through
+    // untouched or it is a loss dressed up as a tone control.
+    //
+    // WHAT THE TWO HALVES DO IS NOT MEASURED. Both captures in hand hold Brightness fixed, so there
+    // is no sweep to fit and the shape below is a symmetric guess about a measured centre: the
+    // lower half damps the top with a one-pole, the upper half damps the bottom by the same law.
+    // The centre is right; the ends need a Brightness sweep off the hardware before either
+    // REVERB_DAMP_MAX or REVERB_BRIGHT_CURVE means anything.
+    double          tilt      = (brightness - 0.5) * 2.0;
+    double          dampLo    = (tilt < 0.0) ? (REVERB_DAMP_MAX * pow(-tilt, REVERB_BRIGHT_CURVE)) : 0.0;
+    double          dampHi    = (tilt > 0.0) ? (REVERB_DAMP_MAX * pow(tilt, REVERB_BRIGHT_CURVE)) : 0.0;
     double          scale     = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
-    double          diffusion = (REVERB_DIFFUSE_SLOPE * timeNorm) + REVERB_DIFFUSE_BASE;
+
+    // ONE TRIP ROUND THE LOOP, and the gain that costs. The sections either side of it are
+    // lossless, so this single number is the whole decay: 60 dB in the requested time, three
+    // decades over however many trips fit into it.
+    double          gRvGain[RV_LINES];
     static uint32_t sLastType = REVERB_TYPE_COUNT;   // forces the reset below on the first call
 
-    // Per-comb damping, cached: it depends only on the dial and the room, so recomputing eight pow()
-    // calls every sample would be waste. See comb_damping().
-    static double   sCombDamp[REVERB_COMBS][REVERB_CHANNELS];
-    static double   sDampFor  = -1.0;
-    static uint32_t sDampType = REVERB_TYPE_COUNT;
-
-    if ((damping != sDampFor) || (type != sDampType)) {
-        for (uint32_t c = 0; c < REVERB_CHANNELS; c++) {
-            uint32_t lenRef = (uint32_t)(kCombLen[c][REVERB_COMBS - 1] * scale);
-            uint32_t j      = 0;
-
-            for (j = 0; j < REVERB_COMBS; j++) {
-                sCombDamp[j][c] = comb_damping(damping, (uint32_t)(kCombLen[c][j] * scale), lenRef);
-            }
-        }
-
-        sDampFor  = damping;
-        sDampType = type;
-    }
-
-    if (diffusion < REVERB_DIFFUSE_MIN) {
-        diffusion = REVERB_DIFFUSE_MIN;
-    } else if (diffusion > REVERB_DIFFUSE_MAX) {
-        diffusion = REVERB_DIFFUSE_MAX;
-    }
 
     // Changing type resizes every delay line, so the positions into them are meaningless and the
     // contents are a room that no longer exists. Cleared rather than carried over — which is also
     // what the instrument does: "changing reverb type will force the Sound Engine to recalculate and
     // thus cause a brief moment of silence" (p.251).
     if (type != sLastType) {
-        memset(gComb, 0, sizeof(gComb));
-        memset(gCombPos, 0, sizeof(gCombPos));
-        memset(gCombStore, 0, sizeof(gCombStore));
-        memset(gAllpass, 0, sizeof(gAllpass));
-        memset(gAllpassPos, 0, sizeof(gAllpassPos));
         memset(gPreDelay, 0, sizeof(gPreDelay));
+        memset(gRvMem, 0, sizeof(gRvMem));
+        memset(gRvCur, 0, sizeof(gRvCur));
+        memset(gRvDamp, 0, sizeof(gRvDamp));
+        memset(gRvLow, 0, sizeof(gRvLow));
+        memset(gRvLfo, 0, sizeof(gRvLfo));
         memset(gRevInLp, 0, sizeof(gRevInLp));
         memset(gRevInLp2, 0, sizeof(gRevInLp2));
+        memset(gRevInLp3, 0, sizeof(gRevInLp3));
+        memset(gRevInLp4, 0, sizeof(gRevInLp4));
+        memset(gRvLoop, 0, sizeof(gRvLoop));
         memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
-        sLastType = type;
+        sLastType  = type;
+
+        // Lay the spans out end to end. Each one starts where the last finished, so a section
+        // writing at its own base and reading at the next gets exactly its own length of delay and
+        // no two sections can ever share a cell.
+        gRvAddr[0] = 16;
+
+        for (i = 0; i < eRvSpanCount; i++) {
+            // THE PRE-DELAY IS MEASURED, NOT SCALED. Every other span is a length recovered from
+            // the instrument's tap spacing and grows with the room; this one was read off the
+            // hardware per room, and barely moves between them, for the reason above. The left
+            // channel's figure sets the layout and REVERB_SPREAD carries the right.
+            // THE TANK HAS ITS OWN LEAD-IN and the pre-delay has to give it back. The earliest
+            // wet sample cannot leave before the first output tap, which sits 13% along the first
+            // long line; an allpass passes its input straight through, so nothing in front of that
+            // tap delays anything. Measured onset is input-to-first-tap, so the span in front of
+            // the tank is the measurement MINUS that lead-in, or every room lands 7.2 ms late.
+            //
+            // It also fixes the scaling. The lead-in grows with the room and the measurement does
+            // not, so subtracting one from the other leaves a span that shrinks as the room grows
+            // — which is what keeps the onset near-constant across rooms, the way the hardware's is.
+            // THE TANK'S OWN LEAD-IN, per room, in samples at 96 kHz. The measured pre-delay is
+            // input-to-first-wet-sample, so whatever the tank puts in front of its taps has to come
+            // off the span ahead of them.
+            //
+            // THIS IS A TABLE BECAUSE IT IS NOT DERIVABLE, and pretending otherwise put the Small
+            // room 0.49 ms late. Computing it as the median tap offset assumes the lead-in scales
+            // with the room exactly as every span does; solving for what it would have to be to hit
+            // the measured onsets gives 485.6 * scale + 110.4, i.e. a term that does NOT scale. The
+            // input diffuser's allpasses each pass a fraction of their input straight through, so
+            // the first arrival is a mixture of paths that scale and paths that partly do not, and
+            // no single length stands in for it. Measured against the onsets in kReverbPreDelay,
+            // which is the same kind of table for the same kind of reason.
+            static const uint32_t kRvTankLead[REVERB_TYPE_COUNT] = {303, 382, 459, 505};
+
+            uint32_t              lead                           = (uint32_t)((double)kRvTankLead[(type < REVERB_TYPE_COUNT) ? type : 0] * RV_RATE);
+            uint32_t              meas                           = kReverbPreDelay[(type < REVERB_TYPE_COUNT) ? type : 0][0];
+            uint32_t              len;
+
+            len            = (i == (uint32_t)eRvPre)
+                  ? ((meas > lead) ? (meas - lead) : 2)
+                  : (uint32_t)((double)kRvLen[i] * scale * RV_RATE);
+
+            gRvAddr[i + 1] = gRvAddr[i] + ((len < 2) ? 2 : len);
+        }
     }
 
     // Diffusion first: three short allpasses smear the input within a few milliseconds, so there is
@@ -3435,81 +3603,224 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     // slope and the two limits it is held between are the instrument's own: a longer room diffuses
     // harder. The bounds are what matter most here — a coefficient outside them stops sounding like
     // this reverb — and they are narrow enough that the exact position within them is a detail.
-    // ONE BANK PER CHANNEL, identical but for REVERB_SPREAD added to every line length. Same input
-    // into both, so the two tails diverge only through their lengths — which is the whole mechanism.
+    // ONE DECAY GAIN PER LINE. A line of L samples is traversed fs/L times a second, so losing 60 dB
+    // in `timeSeconds` means losing 3 decades per timeSeconds, i.e. this per trip. The lines are
+    // different lengths, so their gains differ; the Householder mix is orthogonal and takes nothing
+    // out, which is what lets a closed form like this set the decay exactly with no trim fitted to a
+    // render.
+    for (i = 0; i < RV_LINES; i++) {
+        // THE LINE ALONE, not the allpass in front of it. An allpass passes a fraction of its input
+        // straight through -- that is what the -g feedforward term is -- so only some of the energy
+        // ever takes its delay, and charging the decay for the whole of it ran a Hall 30% fast.
+        double len = (double)(gRvAddr[kRvLineDl[i] + 1] - gRvAddr[kRvLineDl[i]]);
+
+        gRvGain[i] = (timeSeconds > 0.01)
+                     ? pow(10.0, (-3.0 * len) / (gSampleRate * timeSeconds))
+                     : 0.0;
+    }
+
+    // ONE BANK PER CHANNEL. The two run the same structure and decorrelate through their tap
+    // phases, which is what the instrument does — its own outputs correlate at only +0.0044.
+    // THE SWEEP PHASES, read once and used by both channels. The right channel runs a quarter cycle
+    // behind, so the two never move their modes the same way at the same moment -- one more thing
+    // keeping them uncorrelated, on top of the tap offset.
+    for (i = 0; i < RV_LINES; i++) {
+        lfo[i]    = gRvLfo[i];
+        gRvLfo[i] = gRvLfo[i] + (kRvModHz[i] / gSampleRate);
+
+        if (gRvLfo[i] >= 1.0) {
+            gRvLfo[i] -= 1.0;
+        }
+    }
+
     for (ch = 0; ch < REVERB_CHANNELS; ch++) {
         uint32_t spread   = (ch == 0) ? 0 : REVERB_SPREAD;
         double   diffused = input;
 
-        // PRE-DELAY FIRST, so the whole wet path — tail and early-onset term alike — starts late.
-        // Only the wet path: the dry signal is added at the very end and is not delayed, which is
-        // what a pre-delay means.
+        // THE PRE-DELAY IS A SPAN OF THE TANK'S OWN MEMORY, the first one, and it does not
+        // scale quite like the rest: the instrument's addresses are roomSize * k + 1200 and that
+        // 1200 is shared by every site, so the distance from the input to the first tap barely
+        // moves between rooms. That is the explanation for a measurement taken long before there
+        // was a structure to explain it — 12.89 ms in the Small room against 13.36 in the Hall,
+        // while every line inside the room gets 68% longer.
+
+        // ── THE TANK ──────────────────────────────────────────────────────────────────────────
+        //
+        // ONE BUFFER PER CHANNEL, A CURSOR THAT WALKS BACKWARDS, AND A LAYOUT OF NON-OVERLAPPING
+        // SPANS. Nothing here computes a delay: a value written at address W reappears at address
+        // W + L exactly L samples later, so each span IS its line and the two cannot drift apart.
+        // Sections are visited in increasing address order and each reads before it writes, so the
+        // read returns that section's own output from L samples ago rather than its neighbour's.
+        //
+        // FOUR ALLPASS SECTIONS, NOT TWELVE. The instrument's recovered mixing gains settle this
+        // exactly: they pair 0.4820 with 0.7676 and 0.3102 with 0.9038, and 1 - g*g for those two
+        // g values is 0.7677 and 0.9038. That identity is the allpass, written out — a section
+        // takes its delayed content d and its input x to (g*d + x, (1 - g*g)*d - g*x) — so the
+        // gain table names four of them and their coefficients, and nothing is being guessed here.
+        //
+        // An earlier build read the same site list as ONE serial chain of twelve allpasses. That is
+        // what a chain of allpasses does to an impulse: at four trips a second it put fifty-odd
+        // passes into every second of tail and turned the whole thing to noise. Four is the number
+        // the gains support and the number a tank of this kind wants.
+        //
+        // THE LINES RUN IN PARALLEL AND MIX INTO EACH OTHER. The input reaches all four, and the
+        // Householder reflection below sends each line's output into all four on the next pass, so
+        // there is no single path back to the start and so no one period for the tail to ring at.
         {
-            uint32_t len = kReverbPreDelay[(type < REVERB_TYPE_COUNT) ? type : 0][ch];
+            double   v      = diffused;
+            uint32_t modMax = (uint32_t)(RV_MOD_DEPTH * RV_RATE);
+            double   phOff  = (ch == 0) ? 0.0 : 0.25;
+            uint32_t i      = 0;
+            double   tapSum = 0.0;
+            double   line[RV_LINES];
 
-            if (len >= REVERB_PREDELAY_MAX) {
-                len = REVERB_PREDELAY_MAX - 1;   // a device rate above the base cannot overrun
+#define RVR(a)       ((double)gRvMem[ch][(gRvCur[ch] + (a)) & (RV_MEM - 1)])
+#define RVW(a, x)    (gRvMem[ch][(gRvCur[ch] + (a)) & (RV_MEM - 1)] = (float)(x))
+
+            // A plain line: hand `v` in, get it back L samples later.
+#define RVDLY(n)                         \
+   do {                                  \
+       double d = RVR(gRvAddr[(n) + 1]); \
+       RVW(gRvAddr[n], v);               \
+       v = d;                            \
+   }                                     \
+   while (0)
+
+            // An allpass section, the form the recovered gains describe.
+            // A MODULATED LINE. The read position sweeps across the slack at the end of the span,
+            // interpolating between the two samples it falls between -- without that the delay would
+            // step a whole sample at a time and the steps would be heard as clicks.
+#define RVDLYM(n, off)                                            \
+   do {                                                           \
+       double   rd = (double)(gRvAddr[(n) + 1] - modMax) + (off); \
+       uint32_t ri = (uint32_t)rd;                                \
+       double   fr = rd - (double)ri;                             \
+       double   d  = (RVR(ri) * (1.0 - fr)) + (RVR(ri + 1) * fr); \
+       RVW(gRvAddr[n], v);                                        \
+       v = d;                                                     \
+   } while (0)
+
+#define RVAP(n, g)                       \
+   do {                                  \
+       double d = RVR(gRvAddr[(n) + 1]); \
+       double w = v + ((g) * d);         \
+       RVW(gRvAddr[n], w);               \
+       v = d - ((g) * w);                \
+   } while (0)
+
+            // BAND-LIMIT THE FEED. The instrument's reverb is MUCH darker than its input, and this
+            // is where that comes from. Measured as the wet energy per band against the dry impulse
+            // in the same capture -- which divides the excitation out, so a hardware pulse and a
+            // unit-sample render compare directly -- it runs -1.5 dB at 2 kHz, -5.9 at 4 kHz, -15.4
+            // at 8 kHz and -26.1 at 16 kHz, all relative to 1 kHz. Two poles at 3.5 kHz land within
+            // 0.5 dB of that across the whole range.
+            //
+            // IT IS A FIXED FILTER, NOT IN-LOOP DAMPING, and the tail says which: the instrument's
+            // 6 kHz band decays only about 1 dB/s faster than its 125 Hz band, nowhere near enough
+            // to account for a 15 dB deficit at 8 kHz. Something the signal passes ONCE takes that
+            // out, so it belongs here in front of the tank and not inside it.
+            //
+            // Leaving it out is what made the tank sound metallic: dead flat to 16 kHz, 26 dB of
+            // treble the instrument does not have.
+            {
+                double a1 = exp(-2.0 * M_PI * REVERB_INPUT_LP_HZ / gSampleRate);
+                double a2 = exp(-2.0 * M_PI * REVERB_INPUT_LP2_HZ / gSampleRate);
+
+                gRevInLp[ch]  = ((1.0 - a1) * v) + (a1 * gRevInLp[ch]);
+                double a3 = REVERB_INPUT_LP_TIME * timeNorm;
+
+                gRevInLp2[ch] = ((1.0 - a2) * gRevInLp[ch]) + (a2 * gRevInLp2[ch]);
+                double a4 = exp(-2.0 * M_PI * REVERB_INPUT_LP4_HZ / gSampleRate);
+
+                gRevInLp3[ch] = ((1.0 - a3) * gRevInLp2[ch]) + (a3 * gRevInLp3[ch]);
+                gRevInLp4[ch] = ((1.0 - a4) * gRevInLp3[ch]) + (a4 * gRevInLp4[ch]);
+                v             = gRevInLp4[ch];
             }
 
-            if (len > 0) {
-                gPreDelayPos[ch]               %= len;   // the type may have shrunk this line under us
-                diffused                        = (double)gPreDelay[ch][gPreDelayPos[ch]];
-                gPreDelay[ch][gPreDelayPos[ch]] = (float)input;
-                gPreDelayPos[ch]                = (gPreDelayPos[ch] + 1) % len;
+            // The input stage: pre-delay, then four short allpasses that smear the attack before
+            // the tank ever sees it, so no single early tap stands out as an echo.
+            RVDLY(eRvPre);
+
+            for (i = 0; i < RV_DIFFUSERS; i++) {
+                RVAP(kRvDiffuser[i], RV_DIFFUSE);
             }
-        }
 
-        // Band-limit the feed, as the instrument does — see REVERB_INPUT_LP_HZ. On the input rather
-        // than the output only because it is cheaper there; the chain is linear, so it makes no
-        // difference to the result which end it sits at.
-        {
-            double a  = exp(-2.0 * M_PI * REVERB_INPUT_LP_HZ / gSampleRate);
-            double a2 = exp(-2.0 * M_PI * REVERB_INPUT_LP2_HZ / gSampleRate);
+            diffused = v;
 
-            gRevInLp[ch]  = ((1.0 - a) * diffused) + (a * gRevInLp[ch]);
-            gRevInLp2[ch] = ((1.0 - a2) * gRevInLp[ch]) + (a2 * gRevInLp2[ch]);
-            diffused      = gRevInLp2[ch];
-        }
+            // THE FOUR LINES. Each gets the input with its own sign and its own share of the
+            // previous sample's mix. Injecting in phase into every line drives the tank's common
+            // mode -- the one where all four hold the same thing -- and that mode has a period of
+            // its own, so it beats. In phase it put a 12.2 dB lobe at 6.8 Hz into the tail.
+            for (i = 0; i < RV_LINES; i++) {
+                v              = ((i & 1) ? -diffused : diffused) + gRvLoop[ch][i];
 
-        for (i = 0; i < REVERB_ALLPASS; i++) {
-            uint32_t len = (uint32_t)(kAllpassLen[i] * scale) + spread;
-            double   out = 0.0;
-            double   in  = 0.0;
+                RVDLYM(kRvLineDl[i], (0.5 - (0.5 * cos(2.0 * M_PI * (lfo[i] + phOff)))) * (double)modMax);
 
-            if (len == 0) {
-                continue;
+                // Brightness, one filter per line and inside the loop, so it accumulates with every
+                // pass rather than colouring the output once on the way out.
+                gRvDamp[ch][i] = ((1.0 - dampLo) * v) + (dampLo * gRvDamp[ch][i]);
+                gRvLow[ch][i]  = ((1.0 - RV_LOW_A) * gRvDamp[ch][i]) + (RV_LOW_A * gRvLow[ch][i]);
+                line[i]        = gRvDamp[ch][i] - (dampHi * gRvLow[ch][i]);
             }
-            gAllpassPos[i][ch]                 %= len;   // the type may have shrunk this line under us
-            out                                 = (double)gAllpass[i][ch][gAllpassPos[i][ch]];
-            in                                  = diffused + (out * diffusion);
-            gAllpass[i][ch][gAllpassPos[i][ch]] = (float)in;
-            gAllpassPos[i][ch]                  = (gAllpassPos[i][ch] + 1) % len;
-            diffused                            = out - (in * diffusion);
-        }
 
-        // Then the combs, in parallel, for the tail.
-        for (i = 0; i < REVERB_COMBS; i++) {
-            uint32_t len = (uint32_t)(kCombLen[ch][i] * scale);
-            double   out = 0.0;
-            double   fb  = 0.0;
+            // THE MIXING MATRIX, a 4-point Hadamard as two butterfly stages. Orthogonal, so it moves
+            // energy between the lines without creating or destroying any -- which is what lets the
+            // decay below be a closed form rather than a figure trimmed against a render.
+            //
+            // EVERY LINE REACHES EVERY OTHER LINE ON EVERY PASS. That is what stops each one being a
+            // comb in its own right: an echo entering one line leaves spread across all four, is
+            // spread again a few milliseconds later, and the echo count squares instead of
+            // repeating. Without it, four parallel lines are just four combs.
+            {
+                double a0 = line[0] + line[4], a4 = line[0] - line[4];
+                double a1 = line[1] + line[5], a5 = line[1] - line[5];
+                double a2 = line[2] + line[6], a6 = line[2] - line[6];
+                double a3 = line[3] + line[7], a7 = line[3] - line[7];
+                double b0 = a0 + a2, b2 = a0 - a2;
+                double b1 = a1 + a3, b3 = a1 - a3;
+                double b4 = a4 + a6, b6 = a4 - a6;
+                double b5 = a5 + a7, b7 = a5 - a7;
 
-            if (len == 0) {
-                continue;
+                // PER-LINE DECAY GAIN, each line losing 60 dB in the requested time over ITS OWN
+                // length. One gain shared by all eight would decay the short lines faster than the
+                // long ones and leave the tail's colour drifting as it faded.
+                gRvLoop[ch][0] = (b0 + b1) * RV_HADAMARD * gRvGain[0];
+                gRvLoop[ch][1] = (b0 - b1) * RV_HADAMARD * gRvGain[1];
+                gRvLoop[ch][2] = (b2 + b3) * RV_HADAMARD * gRvGain[2];
+                gRvLoop[ch][3] = (b2 - b3) * RV_HADAMARD * gRvGain[3];
+                gRvLoop[ch][4] = (b4 + b5) * RV_HADAMARD * gRvGain[4];
+                gRvLoop[ch][5] = (b4 - b5) * RV_HADAMARD * gRvGain[5];
+                gRvLoop[ch][6] = (b6 + b7) * RV_HADAMARD * gRvGain[6];
+                gRvLoop[ch][7] = (b6 - b7) * RV_HADAMARD * gRvGain[7];
             }
-            gCombPos[i][ch]              %= len;
-            out                           = (double)gComb[i][ch][gCombPos[i][ch]];
-            // Feedback set so the tail decays to -60 dB over the chosen time.
-            fb                            = pow(0.001, ((double)len / gSampleRate) / timeSeconds);
-            gCombStore[i][ch]            += (1.0 - sCombDamp[i][ch]) * (out - gCombStore[i][ch]);
-            gComb[i][ch][gCombPos[i][ch]] = (float)(diffused + (gCombStore[i][ch] * fb));
-            gCombPos[i][ch]               = (gCombPos[i][ch] + 1) % len;
-            sum[ch]                      += out;
-        }
 
-        // A little of the diffused input so the onset is early rather than waiting for the shortest comb
-        // at ~23 ms. Kept low: the allpass chain is near enough flat in magnitude, so too much of this
-        // reads as the dry signal leaking back through a send that is supposed to be fully wet.
-        sum[ch] = (sum[ch] * 0.25) + (diffused * 0.12);
+            // THE OUTPUT TAPS read INSIDE the four lines, never at a section's own write address.
+            // Every cell in this buffer holds delay state, and the state at a write address is a
+            // section's input side -- broadband by construction, and sixteen of those summed is
+            // white noise, which is exactly what an earlier build sounded like. A tap part-way
+            // along a line is the circulating signal at that point of its trip, which is what a
+            // reverb output is made of.
+            //
+            // ALTERNATING SIGNS, and the right channel reads the same fractions of the same lines
+            // a little earlier -- see REVERB_SPREAD for why earlier and not later.
+            for (i = 0; i < RV_OUTTAPS; i++) {
+                uint32_t n   = kRvTapLine[i];
+                uint32_t len = gRvAddr[n + 1] - gRvAddr[n];
+                uint32_t off = (uint32_t)(kRvTapFrac[i] * (double)len);
+                uint32_t at  = gRvAddr[n] + ((off > spread) ? (off - spread) : 0u);
+
+                tapSum += (i & 1) ? -RVR(at) : RVR(at);
+            }
+
+            sum[ch]    = tapSum * RV_TAP_SCALE;
+            gRvCur[ch] = (gRvCur[ch] - 1u) & (RV_MEM - 1);
+
+#undef RVAP
+#undef RVDLYM
+#undef RVDLY
+#undef RVR
+#undef RVW
+        }
     }
 
     // THE WET PATH IS QUIETER THAN THE DRY ONE, by about 11 dB, and this engine had it at almost
@@ -3540,7 +3851,11 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
 //
 // AND THE TARGET IS NO LONGER SECOND-HAND: -11.5 dB was measured on the instrument on 2026-08-18,
 // wet-to-dry energy through the impulse rig, agreeing with the -11.3 dB the old figure came from.
-#define REVERB_WET_GAIN    (0.6028)
+// Re-derived for the tank. The figure below it is measured the same way it always was -- the wet
+// impulse response's energy against the impulse that produced it, sqrt(sum h*h) from tools/render
+// -- and the tank summed its taps 14.05 dB hotter than the comb bank it replaced, so this is the
+// old 1.0695 scaled to put full wet back on the instrument's -11.3 dB.
+#define REVERB_WET_GAIN    (0.3956)
 
     sum[0] *= REVERB_WET_GAIN;
     sum[1] *= REVERB_WET_GAIN;
@@ -3604,14 +3919,12 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
     // at the SAME type in one process would otherwise start inside the first one's tail, and the
     // resulting lag set would be a mixture of two rooms — the identical trap the hardware captures hit
     // when settings were grouped by counting.
-    memset(gComb, 0, sizeof(gComb));
-    memset(gCombPos, 0, sizeof(gCombPos));
-    memset(gCombStore, 0, sizeof(gCombStore));
-    memset(gAllpass, 0, sizeof(gAllpass));
-    memset(gAllpassPos, 0, sizeof(gAllpassPos));
     memset(gPreDelay, 0, sizeof(gPreDelay));
-    memset(gRevInLp, 0, sizeof(gRevInLp));
-    memset(gRevInLp2, 0, sizeof(gRevInLp2));
+    memset(gRvMem, 0, sizeof(gRvMem));
+    memset(gRvCur, 0, sizeof(gRvCur));
+    memset(gRvDamp, 0, sizeof(gRvDamp));
+    memset(gRvLow, 0, sizeof(gRvLow));
+    memset(gRvLoop, 0, sizeof(gRvLoop));
     memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 
     double timeSeconds = kReverbDecayBase[type] + (kReverbDecaySlope[type] * (double)timeValue);
