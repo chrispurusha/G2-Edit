@@ -1057,8 +1057,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramTypeEnable,         {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                     // 121 Evnt14
     {moduleTypeSeqNote,    paramTypeEnable,         {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                     // 121 Evnt15
     {moduleTypeSeqNote,    paramTypeEnable,         {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                     // 121 Evnt16
-    {moduleTypeSeqNote,    paramTypeToggle,         {{  3,   9}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   1, offOnStrMap,                           offOnColourMap},                     // 121 Cycle
-    {moduleTypeSeqNote,    paramTypeMenu,           {{ 16,   9}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                     // 121 Length
+    {moduleTypeSeqNote,    paramTypeToggle,         {{  12,   9}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   1, offOnStrMap,                           offOnColourMap},                     // 121 Cycle
+    {moduleTypeSeqNote,    paramTypeMenu,           {{ 25,   9}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                     // 121 Length
     // x WAS +88, WHICH PUT THIS BOX ALMOST A WHOLE MODULE WIDTH TO THE RIGHT OF THE MODULE, floating
     // in empty canvas. For a right anchor, adjust_rectangle() computes x as an inset from the module's
     // RIGHT edge (module.x + module.w + x - w), so a positive x pushes it outside — every other
@@ -1165,8 +1165,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqEvent,   paramTypeEnable,         {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                   // 144 Step2-14
     {moduleTypeSeqEvent,   paramTypeEnable,         {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                   // 144 Step2-15
     {moduleTypeSeqEvent,   paramTypeEnable,         {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                   // 144 Step2-16
-    {moduleTypeSeqEvent,   paramTypeToggle,         {{  3,   9}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   1, offOnStrMap,                           offOnColourMap},                   // 121 Cycle
-    {moduleTypeSeqEvent,   paramTypeMenu,           {{ 16,   9}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                   // 121 Length
+    {moduleTypeSeqEvent,   paramTypeToggle,         {{  12,   9}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   1, offOnStrMap,                           offOnColourMap},                   // 121 Cycle
+    {moduleTypeSeqEvent,   paramTypeMenu,           {{ 25,   9}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                   // 121 Length
     {moduleTypeSeqEvent,   paramTypeMenu,           {{ 88, -21}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                   // 144 T up
     {moduleTypeSeqEvent,   paramTypeMenu,           {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                   // 144 T down
     // 145 SeqVal
@@ -1202,8 +1202,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqVal,     paramTypeEnable,         {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                   // 144 Step2-14
     {moduleTypeSeqVal,     paramTypeEnable,         {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                   // 144 Step2-15
     {moduleTypeSeqVal,     paramTypeEnable,         {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                   // 144 Step2-16
-    {moduleTypeSeqVal,     paramTypeToggle,         {{  3,   9}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   1, offOnStrMap,                           offOnColourMap},                   // 144 Cycle
-    {moduleTypeSeqVal,     paramTypeMenu,           {{ 16,   9}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                   // 144 Length
+    {moduleTypeSeqVal,     paramTypeToggle,         {{  12,   9}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   1, offOnStrMap,                           offOnColourMap},                   // 144 Cycle
+    {moduleTypeSeqVal,     paramTypeMenu,           {{ 25,   9}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                   // 144 Length
     {moduleTypeSeqVal,     paramTypeMenu,           {{  3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          },                   // 144 Cycle
     {moduleTypeSeqVal,     paramTypeMenu,           {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                   // 144 T down
     {moduleTypeSeqVal,     paramTypePush,           {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          },                   // 145 Randomize
@@ -1241,8 +1241,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqLev,     paramTypeEnable,         {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                   // Evnt14
     {moduleTypeSeqLev,     paramTypeEnable,         {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                   // Evnt15
     {moduleTypeSeqLev,     paramTypeEnable,         {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                   // Evnt16
-    {moduleTypeSeqLev,     paramTypeToggle,         {{  3,   9}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   1, offOnStrMap,                           offOnColourMap},                   // 144 Cycle
-    {moduleTypeSeqLev,     paramTypeMenu,           {{ 16,   9}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                   // 144 Length
+    {moduleTypeSeqLev,     paramTypeToggle,         {{  12,   9}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   1, offOnStrMap,                           offOnColourMap},                   // 144 Cycle
+    {moduleTypeSeqLev,     paramTypeMenu,           {{ 25,   9}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                   // 144 Length
     {moduleTypeSeqLev,     paramTypeMenu,           {{  3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, bipUniStrMap,                          NULL          },                   // 144 Cycle
     {moduleTypeSeqLev,     paramTypeMenu,           {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                   // 144 T down
     {moduleTypeSeqLev,     paramTypePush,           {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          },                   // 146 Randomize
@@ -2680,97 +2680,97 @@ const tVolumeMeterConfig volumeMeterConfigList[] = {
     {volumeTypeSequencer, volumeMeterStyleSingleLed, 16, 2.0, RGB_GREEN_7, RGB_GREEN_3}, };
 
 const tLedLocation       ledLocationList[]       = {
-    {moduleTypeInvert,     ledTypeYes,  {{ 29,  1}, {3, 3}}, anchorMiddleLeft},
-    {moduleTypeInvert,     ledTypeYes,  {{ 69,  1}, {3, 3}}, anchorMiddleLeft},
-    {moduleTypeEnvADSR,    ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft   },
-    {moduleTypeGate,       ledTypeYes,  {{-40, 11}, {3, 3}}, anchorTopRight  }, // XPos:137 YPos:11 H:2
-    {moduleTypeGate,       ledTypeYes,  {{-10, 11}, {3, 3}}, anchorTopRight  }, // XPos:230 YPos:11 H:2
-    {moduleTypeFlipFlop,   ledTypeYes,  {{-18, 17}, {3, 3}}, anchorTopRight  }, // XPos:204 YPos:17 H:2
-    {moduleTypeFlipFlop,   ledTypeYes,  {{-10,  7}, {3, 3}}, anchorTopRight  }, // XPos:230 YPos:7  H:2
-    {moduleTypeValSw1to2,  ledTypeYes,  {{-37, 17}, {3, 3}}, anchorTopRight  }, // XPos:146 YPos:17 H:2
-    {moduleTypeValSw2to1,  ledTypeYes,  {{-37, 17}, {3, 3}}, anchorTopRight  }, // XPos:146 YPos:17 H:2
-    {moduleTypeLfoC,       ledTypeYes,  {{-11,  4}, {3, 3}}, anchorTopRight  }, // XPos:226 YPos:4  H:2
+    {moduleTypeInvert,     ledTypeYes,  {{ 3,  7}, {3, 3}}, anchorTopLeft},
+    {moduleTypeInvert,     ledTypeYes,  {{ 53,  7}, {3, 3}}, anchorTopLeft},
+    {moduleTypeEnvADSR,    ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   },
+    {moduleTypeGate,       ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft  }, // XPos:137 YPos:11 H:2
+    {moduleTypeGate,       ledTypeYes,  {{53, 7}, {3, 3}}, anchorTopLeft  }, // XPos:230 YPos:11 H:2
+    {moduleTypeFlipFlop,   ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft  }, // XPos:204 YPos:17 H:2
+    {moduleTypeFlipFlop,   ledTypeYes,  {{53,  7}, {3, 3}}, anchorTopLeft  }, // XPos:230 YPos:7  H:2
+    {moduleTypeValSw1to2,  ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft  }, // XPos:146 YPos:17 H:2
+    {moduleTypeValSw2to1,  ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft  }, // XPos:146 YPos:17 H:2
+    {moduleTypeLfoC,       ledTypeYes,  {{3,  7}, {3, 3}}, anchorTopLeft  }, // XPos:226 YPos:4  H:2
     {moduleTypeLfoA,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:242 YPos:21 H:3
-    {moduleTypeLfoShpA,    ledTypeYes,  {{ -6, 20}, {3, 3}}, anchorTopRight  }, // XPos:242 YPos:51 H:5
-    {moduleTypeLfoB,       ledTypeYes,  {{ -6, 18}, {3, 3}}, anchorTopRight  }, // XPos:242 YPos:36 H:4
-    {moduleTypeModADSR,    ledTypeYes,  {{  3, 13}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:33 H:5
-    {moduleTypeModAHD,     ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:19 H:5
-    {moduleTypeEnvAHD,     ledTypeYes,  {{  3,  9}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:18 H:4
+    {moduleTypeLfoShpA,    ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft  }, // XPos:242 YPos:51 H:5
+    {moduleTypeLfoB,       ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft  }, // XPos:242 YPos:36 H:4
+    {moduleTypeModADSR,    ledTypeYes,  {{  3, 7}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:33 H:5
+    {moduleTypeModAHD,     ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:19 H:5
+    {moduleTypeEnvAHD,     ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:18 H:4
     {moduleTypeEnvH,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:40  YPos:18 H:2
     {moduleTypeEnvD,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:40  YPos:18 H:2
-    {moduleTypeEnvADR,     ledTypeYes,  {{  3, 12}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:18 H:3
-    {moduleTypeEnvMulti,   ledTypeYes,  {{  3,  6}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:18 H:6
-    {moduleTypeEnvADDSR,   ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:19 H:5
-    {moduleTypePulse,      ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft   }, // XPos:242 YPos:4  H:2
-    {moduleTypeDelay,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight  }, // XPos:242 YPos:4  H:2
-    {moduleTypeDrumSynth,  ledTypeYes,  {{  9, 10}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:39 H:8
+    {moduleTypeEnvADR,     ledTypeYes,  {{  3, 7}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:18 H:3
+    {moduleTypeEnvMulti,   ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:18 H:6
+    {moduleTypeEnvADDSR,   ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:19 H:5
+    {moduleTypePulse,      ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:242 YPos:4  H:2
+    {moduleTypeDelay,      ledTypeYes,  {{ 3,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242 YPos:4  H:2
+    {moduleTypeDrumSynth,  ledTypeYes,  {{  3, 7}, {3, 3}}, anchorTopLeft   }, // XPos:6   YPos:39 H:8
     {moduleTypeWindSw,     ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:198 YPos:15 H:2
     {moduleTypeNoteDet,    ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:186 YPos:15 H:2
-    {moduleTypeNoiseGate,  ledTypeYes,  {{-15, 21}, {3, 3}}, anchorTopRight  }, // XPos:213 YPos:32 H:3
+    {moduleTypeNoiseGate,  ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft  }, // XPos:213 YPos:32 H:3
     {moduleTypePitchTrack, ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft   }, // XPos:212 YPos:15 H:2
-    {moduleTypeRandomA,    ledTypeYes,  {{-11,  4}, {3, 3}}, anchorTopRight  }, // XPos:226 YPos:4  H:2
-    {moduleTypeRandomB,    ledTypeYes,  {{ -6, 14}, {3, 3}}, anchorTopRight  }, // XPos:242 YPos:21 H:3
-    {moduleTypeOperator,   ledTypeYes,  {{  8, 13}, {3, 3}}, anchorTopLeft   }, // XPos:17  YPos:77 H:12
+    {moduleTypeRandomA,    ledTypeYes,  {{3,  7}, {3, 3}}, anchorTopLeft  }, // XPos:226 YPos:4  H:2
+    {moduleTypeRandomB,    ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft  }, // XPos:242 YPos:21 H:3
+    {moduleTypeOperator,   ledTypeYes,  {{  3, 7}, {3, 3}}, anchorTopLeft   }, // XPos:17  YPos:77 H:12
     // Mux1to8 (ID 21) — 8 LEDs across the upper-right strip
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 13,  7}, {3, 3}}, anchorTopLeft   }, // XPos:102
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 21,  7}, {3, 3}}, anchorTopLeft   }, // XPos:122
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 28,  7}, {3, 3}}, anchorTopLeft   }, // XPos:142
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 36,  7}, {3, 3}}, anchorTopLeft   }, // XPos:162
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 44,  7}, {3, 3}}, anchorTopLeft   }, // XPos:182
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 52,  7}, {3, 3}}, anchorTopLeft   }, // XPos:202
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 59,  7}, {3, 3}}, anchorTopLeft   }, // XPos:222
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 67,  7}, {3, 3}}, anchorTopLeft   }, // XPos:242
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 10,  7}, {3, 3}}, anchorTopLeft   }, // XPos:102
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 18,  7}, {3, 3}}, anchorTopLeft   }, // XPos:122
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 26,  7}, {3, 3}}, anchorTopLeft   }, // XPos:142
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 34,  7}, {3, 3}}, anchorTopLeft   }, // XPos:162
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 42,  7}, {3, 3}}, anchorTopLeft   }, // XPos:182
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 50,  7}, {3, 3}}, anchorTopLeft   }, // XPos:202
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 58,  7}, {3, 3}}, anchorTopLeft   }, // XPos:222
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 66,  7}, {3, 3}}, anchorTopLeft   }, // XPos:242
     // Mux8to1X (ID 60) — 8 LEDs spread across the middle
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 13, 14}, {3, 3}}, anchorTopLeft   }, // XPos:34
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 21, 14}, {3, 3}}, anchorTopLeft   }, // XPos:54
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 28, 14}, {3, 3}}, anchorTopLeft   }, // XPos:74
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 36, 14}, {3, 3}}, anchorTopLeft   }, // XPos:94
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 44, 14}, {3, 3}}, anchorTopLeft   }, // XPos:114
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 52, 14}, {3, 3}}, anchorTopLeft   }, // XPos:134
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 59, 14}, {3, 3}}, anchorTopLeft   }, // XPos:154
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 67, 14}, {3, 3}}, anchorTopLeft   }, // XPos:174
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 10, 7}, {3, 3}}, anchorTopLeft   }, // XPos:34
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 18, 7}, {3, 3}}, anchorTopLeft   }, // XPos:54
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 26, 7}, {3, 3}}, anchorTopLeft   }, // XPos:74
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 34, 7}, {3, 3}}, anchorTopLeft   }, // XPos:94
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 42, 7}, {3, 3}}, anchorTopLeft   }, // XPos:114
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 50, 7}, {3, 3}}, anchorTopLeft   }, // XPos:134
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 58, 7}, {3, 3}}, anchorTopLeft   }, // XPos:154
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 66, 7}, {3, 3}}, anchorTopLeft   }, // XPos:174
     // Mux8to1 (ID 124) — 8 LEDs across the upper-right strip
-    {moduleTypeMux8to1,    ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight  }, // XPos:82
-    {moduleTypeMux8to1,    ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight  }, // XPos:102
-    {moduleTypeMux8to1,    ledTypeYes,  {{-45,  7}, {3, 3}}, anchorTopRight  }, // XPos:122
-    {moduleTypeMux8to1,    ledTypeYes,  {{-38,  7}, {3, 3}}, anchorTopRight  }, // XPos:142
-    {moduleTypeMux8to1,    ledTypeYes,  {{-32,  7}, {3, 3}}, anchorTopRight  }, // XPos:162
-    {moduleTypeMux8to1,    ledTypeYes,  {{-25,  7}, {3, 3}}, anchorTopRight  }, // XPos:202
-    {moduleTypeMux8to1,    ledTypeYes,  {{-19,  7}, {3, 3}}, anchorTopRight  }, // XPos:202
-    {moduleTypeMux8to1,    ledTypeYes,  {{-13,  7}, {3, 3}}, anchorTopRight  }, // XPos:222
+    {moduleTypeMux8to1,    ledTypeYes,  {{10,  7}, {3, 3}}, anchorTopLeft  }, // XPos:82
+    {moduleTypeMux8to1,    ledTypeYes,  {{18,  7}, {3, 3}}, anchorTopLeft  }, // XPos:102
+    {moduleTypeMux8to1,    ledTypeYes,  {{26,  7}, {3, 3}}, anchorTopLeft  }, // XPos:122
+    {moduleTypeMux8to1,    ledTypeYes,  {{34,  7}, {3, 3}}, anchorTopLeft  }, // XPos:142
+    {moduleTypeMux8to1,    ledTypeYes,  {{42,  7}, {3, 3}}, anchorTopLeft  }, // XPos:162
+    {moduleTypeMux8to1,    ledTypeYes,  {{50,  7}, {3, 3}}, anchorTopLeft  }, // XPos:202
+    {moduleTypeMux8to1,    ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:202
+    {moduleTypeMux8to1,    ledTypeYes,  {{66,  7}, {3, 3}}, anchorTopLeft  }, // XPos:222
     // BinCounter (ID 130) — 8 LEDs across the upper-right strip
-    {moduleTypeBinCounter, ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight  }, // XPos:81
-    {moduleTypeBinCounter, ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight  }, // XPos:104
-    {moduleTypeBinCounter, ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight  }, // XPos:127
-    {moduleTypeBinCounter, ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight  }, // XPos:150
-    {moduleTypeBinCounter, ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight  }, // XPos:173
-    {moduleTypeBinCounter, ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight  }, // XPos:196
-    {moduleTypeBinCounter, ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight  }, // XPos:219
-    {moduleTypeBinCounter, ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight  }, // XPos:242
+    {moduleTypeBinCounter, ledTypeYes,  {{10,  7}, {3, 3}}, anchorTopLeft  }, // XPos:81
+    {moduleTypeBinCounter, ledTypeYes,  {{18,  7}, {3, 3}}, anchorTopLeft  }, // XPos:104
+    {moduleTypeBinCounter, ledTypeYes,  {{26,  7}, {3, 3}}, anchorTopLeft  }, // XPos:127
+    {moduleTypeBinCounter, ledTypeYes,  {{34,  7}, {3, 3}}, anchorTopLeft  }, // XPos:150
+    {moduleTypeBinCounter, ledTypeYes,  {{42,  7}, {3, 3}}, anchorTopLeft  }, // XPos:173
+    {moduleTypeBinCounter, ledTypeYes,  {{50,  7}, {3, 3}}, anchorTopLeft  }, // XPos:196
+    {moduleTypeBinCounter, ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:219
+    {moduleTypeBinCounter, ledTypeYes,  {{ 66,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242
     // ADConv (ID 131) — 8 LEDs across the upper-right strip
-    {moduleTypeADConv,     ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight  }, // XPos:81
-    {moduleTypeADConv,     ledTypeYes,  {{-50,  7}, {3, 3}}, anchorTopRight  }, // XPos:105
-    {moduleTypeADConv,     ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight  }, // XPos:127
-    {moduleTypeADConv,     ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight  }, // XPos:150
-    {moduleTypeADConv,     ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight  }, // XPos:173
-    {moduleTypeADConv,     ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight  }, // XPos:196
-    {moduleTypeADConv,     ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight  }, // XPos:219
-    {moduleTypeADConv,     ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight  }, // XPos:242
+    {moduleTypeADConv,     ledTypeYes,  {{10,  7}, {3, 3}}, anchorTopLeft  }, // XPos:81
+    {moduleTypeADConv,     ledTypeYes,  {{18,  7}, {3, 3}}, anchorTopLeft  }, // XPos:105
+    {moduleTypeADConv,     ledTypeYes,  {{26,  7}, {3, 3}}, anchorTopLeft  }, // XPos:127
+    {moduleTypeADConv,     ledTypeYes,  {{34,  7}, {3, 3}}, anchorTopLeft  }, // XPos:150
+    {moduleTypeADConv,     ledTypeYes,  {{42,  7}, {3, 3}}, anchorTopLeft  }, // XPos:173
+    {moduleTypeADConv,     ledTypeYes,  {{50,  7}, {3, 3}}, anchorTopLeft  }, // XPos:196
+    {moduleTypeADConv,     ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:219
+    {moduleTypeADConv,     ledTypeYes,  {{66,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242
     // 8Counter (ID 86) — 8 LEDs across the upper-right strip
-    {moduleType8Counter,   ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight  }, // XPos:81
-    {moduleType8Counter,   ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight  }, // XPos:104
-    {moduleType8Counter,   ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight  }, // XPos:127
-    {moduleType8Counter,   ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight  }, // XPos:150
-    {moduleType8Counter,   ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight  }, // XPos:173
-    {moduleType8Counter,   ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight  }, // XPos:196
-    {moduleType8Counter,   ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight  }, // XPos:219
-    {moduleType8Counter,   ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight  }, // XPos:242
+    {moduleType8Counter,   ledTypeYes,  {{10,  7}, {3, 3}}, anchorTopLeft  }, // XPos:81
+    {moduleType8Counter,   ledTypeYes,  {{18,  7}, {3, 3}}, anchorTopLeft  }, // XPos:104
+    {moduleType8Counter,   ledTypeYes,  {{26,  7}, {3, 3}}, anchorTopLeft  }, // XPos:127
+    {moduleType8Counter,   ledTypeYes,  {{34,  7}, {3, 3}}, anchorTopLeft  }, // XPos:150
+    {moduleType8Counter,   ledTypeYes,  {{42,  7}, {3, 3}}, anchorTopLeft }, // XPos:173
+    {moduleType8Counter,   ledTypeYes,  {{50,  7}, {3, 3}}, anchorTopLeft  }, // XPos:196
+    {moduleType8Counter,   ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:219
+    {moduleType8Counter,   ledTypeYes,  {{66,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242
 
-    {moduleTypeSeqEvent,   ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  }, // Park LED — display-only, not in LED stream
-    {moduleTypeSeqNote,    ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  },
-    {moduleTypeSeqVal,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  },
-    {moduleTypeSeqLev,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  },
-    {moduleTypeSeqCtr,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight  }};
+    {moduleTypeSeqEvent,   ledTypePark, {{ 3,  7}, {3, 3}}, anchorTopLeft  }, // Park LED — display-only, not in LED stream
+    {moduleTypeSeqNote,    ledTypePark, {{ 3,  7}, {3, 3}}, anchorTopLeft  },
+    {moduleTypeSeqVal,     ledTypePark, {{ 3,  7}, {3, 3}}, anchorTopLeft  },
+    {moduleTypeSeqLev,     ledTypePark, {{ 3,  7}, {3, 3}}, anchorTopLeft  },
+    {moduleTypeSeqCtr,     ledTypePark, {{ 3,  7}, {3, 3}}, anchorTopLeft  }};
 
 // moduleType, rectangle, anchor - placement only; each module's own graph function
 // (moduleGraphics.cpp) still owns its drawing/curve logic.
