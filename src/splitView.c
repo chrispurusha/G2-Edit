@@ -31,6 +31,7 @@ extern "C" {
 #pragma clang diagnostic pop
 
 #include <math.h>
+#include <string.h>
 
 #include "splitView.h"
 #include "defs.h"
@@ -52,10 +53,10 @@ tSplitView gSplitView = {0};
 #define SV_BAR_GRAB_MARGIN    (5.0)   // extra grab height above and below the drawn bar
 
 void split_view_init(void) {
-    gSplitView.focusedPane     = 0;
-    gSplitView.restorePosition = 0;
-    gSplitView.dragging        = false;
-    gSplitView.dirty           = false;
+    gSplitView.focusedPane = 0;
+    memset(gSplitView.restorePosition, 0, sizeof(gSplitView.restorePosition));
+    gSplitView.dragging    = false;
+    gSplitView.dirty       = false;
 }
 
 // ─── Pane geometry ───────────────────────────────────────────────────────────
@@ -97,9 +98,34 @@ static double top_pane_height(double band) {
     return top;
 }
 
+// REMEMBER ANY BOTH-PANES-VISIBLE POSITION WE SEE, wherever it came from.
+//
+// set_bar_position() is not the only way the divider moves, and recording only there was the bug:
+// a patch carries its own barPosition and is parsed straight into gPatchDescr (protocol.c), a new
+// patch is created with a default (dataBase.c), and the device can move it behind us. So after a
+// fresh load, collapsing a pane and pressing the double-arrow went to the MIDDLE instead of back —
+// and only started behaving once the divider had been dragged by hand at least once. That history
+// dependence is what read as "inconsistent".
+//
+// Observing here, where the layout is recomputed, catches every one of those sources without having
+// to find and hook each of them. A collapsed position is deliberately NOT remembered: "previous
+// split position" means the last one where both areas were actually visible, which is the only
+// answer that makes the button useful.
+static void note_restore_position(double band) {
+    double   usable = band - SPLIT_BAR_FOOTPRINT;
+    double   top    = (double)gPatchDescr[gSlot].barPosition;
+    uint32_t slot   = gSlot;
+
+    if ((usable > 0.0) && (top > 0.0) && (top < usable) && (slot < MAX_SLOTS)) {
+        gSplitView.restorePosition[slot] = (uint16_t)top;
+    }
+}
+
 void split_view_apply(void) {
     double band       = band_height();
     double top        = top_pane_height(band);
+
+    note_restore_position(band);
 
     if (band <= 0.0) {
         set_module_pane_count(1);
@@ -194,8 +220,8 @@ static void set_bar_position(double pixels) {
         pixels = SPLIT_POS_MAX;
     }
 
-    if ((pixels > 0.0) && (pixels < usable)) {
-        gSplitView.restorePosition = (uint16_t)pixels;
+    if ((pixels > 0.0) && (pixels < usable) && (gSlot < MAX_SLOTS)) {
+        gSplitView.restorePosition[gSlot] = (uint16_t)pixels;
     }
     gPatchDescr[gSlot].barPosition = (uint16_t)pixels;
     gSplitView.dirty               = true;
@@ -206,10 +232,11 @@ static void set_bar_position(double pixels) {
 // Back to the last position that had both areas visible. With nothing remembered — a patch that
 // arrived collapsed — an even split is the sensible landing place.
 void split_view_restore_balance(void) {
-    double band = band_height();
-    double back = (gSplitView.restorePosition > 0)
-                  ? (double)gSplitView.restorePosition
-                  : ((band - SPLIT_BAR_FOOTPRINT) / 2.0);
+    double   band = band_height();
+    uint32_t slot = (gSlot < MAX_SLOTS) ? gSlot : 0;
+    double   back = (gSplitView.restorePosition[slot] > 0)
+                    ? (double)gSplitView.restorePosition[slot]
+                    : ((band - SPLIT_BAR_FOOTPRINT) / 2.0);
 
     set_bar_position(back);
 }
