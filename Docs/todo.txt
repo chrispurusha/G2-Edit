@@ -5,6 +5,59 @@ finished code awaiting a real-world check. Lessons from removed work that must n
 are collected under "DO NOT RE-TRY" at the end of this file.
 
 
+FIXED 2026-08-20 — both bugs reported that day, kept because the FINDINGS are worth more than the diffs
+
+- LOADING A PATCH FROM A FLASH BANK KILLED THE APP; the same patch from a FILE was fine. Symptom:
+      D parse_command_response() Got patch description
+      E parse_param_names() param name payload 36 overruns module section (3 of 6 used), stopping
+  followed by the process exiting (EXIT_IN_DEBUG, which is deliberate — see below).
+
+  THE DATA WAS VALID ALL ALONG. Captured with ENABLE_LOG_MODULE_DATA + ENABLE_USB_LOG against the
+  instrument in its failing state. Section 0x5b, NameCount 11: modules 1-10 parse perfectly (isString
+  1, sensible lengths, real names — "In 1", "Out 3", "Switch"). The eleventh is module index 22,
+  moduleLength 6, and its six bytes read
+      37 37 00 00 00 00        (a name record reads 01 <len> <paramIndex> <len-1 bytes of text>)
+  Module 22 is moduleTypeSeqNote — the test patch is named SwitchSeqNote for a reason — and 37 is
+  SeqNote's own parameter count. So the record is not a name list at all.
+  THE BYTE BUDGET PROVES THE POSITION WAS NEVER WRONG: the eleven entries consume 282 bytes, plus the
+  section's 10-bit header, inside a section whose count is 284. It fits exactly. Every "we must be
+  misaligned" theory — including the -1/+1 offset at SUB_RESPONSE_PATCH_DESCRIPTION, which is
+  arithmetically correct — was wrong.
+  AND THAT IS THE FILE-VERSUS-FLASH ANSWER: the file copy of this patch carries no such record; the
+  copy stored on the instrument does. Nothing about the transport differed, and the CRC always passed.
+
+  FIX: every genuine name record carries isString == 1, so parse_param_names() now tests that
+  POSITIVELY before trusting the length, and skips a non-name record. The squaring-up loop already
+  steps past the module's remaining bytes, so the following modules and sections stay positioned.
+  EXIT_IN_DEBUG IS DELIBERATELY LEFT IN PLACE on the overrun path (owner's call). It now only ever
+  sees genuine corruption, because the one legitimate record that was reaching it is turned away
+  first. The hex dump added while diagnosing stays too — it is what made the record identifiable from
+  a single capture.
+  NOT DECODED: what that SeqNote record actually means. One capture cannot settle it, parameter names
+  are cosmetic, and inventing semantics here is how the wrong kind of "fix" gets written. If it is
+  ever wanted, it wants the reference editor's reader.
+
+- PATCH PICKER SHOWED TWO NAMES RUN TOGETHER — "distant activity Ringmod Basses" for Bank 3 Loc 22.
+  "distant activity" is EXACTLY 16 characters, which is CLAVIA_NAME_SIZE, and strncpy pads with zeros
+  only when the source is SHORTER than n: at exactly n it writes n bytes and no terminator, so the
+  reader runs on into whatever follows. The tables are globals, so the byte is zero at startup — which
+  is why it only appeared once an entry had been rewritten by a re-sweep, a Store or a Delete, and why
+  a screenshot from earlier the same day showed that entry rendering correctly.
+  FIXED at SEVEN sites, not the two first spotted: the List Names sweep (patch and perf), bank restore
+  (x2), Store (x2) and the synth-settings file parser, all now COPY_STRING.
+  IT IS NOT A CLAVIA-HELPER PROBLEM, and the instinct to reach for one is wrong: read_clavia_string()
+  is the WIRE side and was already correct. What was broken is the in-memory copy afterwards, which is
+  COPY_STRING's job. At the Store site gSlot is now read into a local first — COPY_STRING evaluates
+  its source twice, and two loads of an _Atomic can disagree.
+
+  DIAGNOSTIC KIT, since it paid for itself here: ENABLE_LOG_MODULE_DATA (defs.h) prints the parse
+  trace — Location / NameCount / Module index / Module length / IsString / ParamLen / Param Index —
+  and routes through _USB_LOG as well as stdout, so with ENABLE_USB_LOG on, the decoded reading and
+  the raw bytes interleave in ~/G2_usb.log. Both are OFF again. usbLog.c now APPENDS with a dated
+  session marker rather than truncating, so relaunching cannot destroy a capture of a fault that may
+  not survive being reproduced twice.
+
+
 AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless the check fails)
 
 - SUPER-SAW ("sup") PHASE FIX NEEDS AN EAR (2026-08-09). Fixed as part of the warnings sweep, because
