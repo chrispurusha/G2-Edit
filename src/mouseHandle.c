@@ -103,10 +103,8 @@ static void send_master_clock_bpm(uint32_t bpm) {
 // Registered with GLFW so a modifier released while another application has the keyboard cannot
 // leave one stuck on here — see set_modifier_state()'s note. There is nothing to restore on the way
 // back in: the next key or button event carries the truth with it.
-void window_focus_callback(GLFWwindow * window, int focused) {
-    (void)window;
-
-    if (focused == 0) {
+void window_focus_callback(bool focused) {
+    if (!focused) {
         set_modifier_state((uint32_t)eModifierNone);
     }
 }
@@ -235,16 +233,16 @@ void recover_lost_cursor(void) {
                         || (gCableDrag.active == true);
 
     if (((sCursorHidden == true) || (staleGesture == true)) && (platform_any_mouse_button_down() == false)) {
-        // The modifier state is saved and put back around the synthetic release. mouse_button() begins by
-        // pushing set_modifier_state_from_glfw(mods) so its handlers can read the predicates, and there
-        // are no real mods to pass here — a literal 0 would report every modifier as released. Alt in
-        // particular is what tells a dial drag to move the morph offset rather than the value, so
-        // clearing it while still holding a key would leave the next gesture reading the wrong one until
-        // some real event happened to refresh it.
-        uint32_t modifiers = modifier_state();
+        // A SYNTHETIC RELEASE, so it goes straight to the handler rather than through SynthLib's shim
+        // — there is no GLFW event behind it. That also means the shim's set_modifier_state_from_glfw()
+        // does not run, which is exactly what is wanted here: there are no real mods to pass, and a
+        // literal 0 would report every modifier as released. Alt in particular is what tells a dial
+        // drag to move the morph offset rather than the value, so clearing it while a key is still
+        // held would leave the next gesture reading the wrong one until some real event refreshed it.
+        tCoord at = {0};
 
-        mouse_button(synthlib_window(), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE, 0);
-        set_modifier_state(modifiers);
+        get_global_gui_scaled_mouse_coord(&at);
+        mouse_button(at, mouseButtonLeftUp, 0);
     }
 
     if (is_cursor_hidden_dragging() == false) {
@@ -306,19 +304,15 @@ tMouseButton convert_to_mouse_button(int button, int action) {
     return synthlib_mouse_button(button, action);   // pure decode, shared — see synthlibWindow.h
 }
 
-void mouse_button(GLFWwindow * window, int button, int action, int mods) {
-    tCoord       coord       = {0};
-    tMouseButton mouseButton = mouseButtonNone;
-    bool         found       = false;
-    int32_t      i           = 0;
-    uint32_t     slot        = gSlot;
-    uint32_t     location    = gLocation;
-
-    set_modifier_state_from_glfw(mods);   // before any handler runs: they read the predicates
-
-    mouseButton = convert_to_mouse_button(button, action);
-
-    get_global_gui_scaled_mouse_coord(&coord);
+// The coordinate arrives already scaled and the button already decoded, and the modifier state has
+// been updated before this runs — SynthLib's shim does all three, for all three editors. See
+// tSynthLibInputHandlers in synthlibWindow.h.
+void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
+    (void)mods;
+    bool     found    = false;
+    int32_t  i        = 0;
+    uint32_t slot     = gSlot;
+    uint32_t location = gLocation;
 
     if (gDeviceOpInProgress > 0) {
         return; // a whole-slot device op is in flight — swallow canvas interaction until it completes
@@ -748,17 +742,24 @@ static bool handle_patch_param_drag_motion(uint32_t slot, double xCoord, double 
     return false;
 }
 
-void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
-    // Several locals went with the parameter-drag arm when it moved to canvasDrag.c; what is left is
-    // what the remaining arms actually use.
-    tCoord coord = {0};
-    double x     = 0;
-    double y     = 0;
+// The coordinate is the EVENT's own, handed over by SynthLib's shim already scaled. This used to
+// ignore its GLFW x/y parameters and poll glfwGetCursorPos instead — the same value in practice,
+// since both come from the same place, but the event's is the position the event actually happened
+// at rather than wherever the pointer has reached by the time the handler runs.
+void cursor_pos(tCoord coord) {
+    double x      = coord.x;
+    double y      = coord.y;
 
+    // THE RAW CURSOR POSITION IS STILL NEEDED HERE, and is fetched rather than passed. The vertical
+    // and horizontal dial modes difference raw window coordinates against their previous value (see
+    // canvas_param_drag_motion), and this app's drag arithmetic — Alt morph offsets, the sub-unit
+    // accumulator, the Shift-fine divisor — is tuned around that. The other two editors moved their
+    // drags to logical units when they took the shared shim; this one deliberately did not, because
+    // there was no need to disturb working maths to change a function signature.
+    double xCoord = 0.0;
+    double yCoord = 0.0;
 
-    get_global_gui_scaled_mouse_coord(&coord);
-    x                      = coord.x;
-    y                      = coord.y;
+    cursor_raw_coord(&xCoord, &yCoord);
 
     // Scale x and y to match intended rendering window
     //glfwGetWindowSize(window, &width, &height);
@@ -880,7 +881,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     // }
 }
 
-void scroll_event(GLFWwindow * window, double x, double y) {
+void scroll_event(double x, double y) {
     tCoord  coord   = {0};
 
     if (synthlib_popups_dispatch_scroll(y)) {
@@ -936,7 +937,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     synthlib_request_redraw();
 }
 
-void char_event(GLFWwindow * window, unsigned int value) {
+void char_event(unsigned int value) {
     if (synthlib_popups_dispatch_char(value)) {
         return;
     }
@@ -1022,11 +1023,7 @@ void char_event(GLFWwindow * window, unsigned int value) {
     synthlib_request_redraw();
 }
 
-void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
-    (void)window;                         // GLFW dictates the signature; nothing here needs the window
-
-    set_modifier_state_from_glfw(mods);   // a modifier PRESS is a key event like any other
-
+void key_callback(int key, int scancode, int action, int mods) {
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
 
     if ((key == GLFW_KEY_L) && (action == GLFW_PRESS)) {
