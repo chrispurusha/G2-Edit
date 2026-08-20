@@ -1997,6 +1997,7 @@ bool floating_panels_under(tCoord coord) {
             return true;
         }
     }
+
     return false;
 }
 
@@ -2014,7 +2015,22 @@ bool floating_panels_drag(tCoord coord) {
             return true;
         }
     }
+
     return false;
+}
+
+// The wheel over a panel must not scroll the canvas underneath it — the hover bug again, on the one
+// channel that cannot be asked where the pointer is: the coordinator's scroll callback carries only
+// a delta, so the position is fetched here exactly as scroll_event() fetches it.
+//
+// Swallowing rather than forwarding is deliberate. No panel scrolls its own content today; if one
+// ever does, it gains a scroll handler and this stays as the backstop for the rest.
+static bool floating_panels_scroll(double yDelta) {
+    tCoord coord = {0};
+
+    (void)yDelta;
+    get_global_gui_scaled_mouse_coord(&coord);
+    return floating_panels_under(coord);
 }
 
 // The application's own popups, registered into SynthLib's ordering (synthlibPopups.h) so that this
@@ -2038,20 +2054,20 @@ static const tSynthLibPopup gAppPopups[] = {
     // the menu's, i.e. below — the one place where making input follow paint changes behaviour. A
     // menu raised over the notes editor is drawn underneath it, so it could previously be clicked
     // while invisible.
-    {"patchNotes",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 10, false, NULL, render_patch_notes_edit,      NULL, handle_patch_notes_mouse,    NULL,                      NULL, NULL},
-    {"bankBackup",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 20, false, NULL, render_bank_backup_progress,  NULL, NULL,                        NULL,                      NULL, NULL},
-    {"bankRestore",    SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 30, false, NULL, render_bank_restore_progress, NULL, NULL,                        NULL,                      NULL, NULL},
-    {"deviceBusy",     SYNTHLIB_POPUP_LAYER_BROWSERS + 10,     false, NULL, render_device_busy_overlay,   NULL, NULL,                        NULL,                      NULL, NULL},
+    {"patchNotes",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 10, false, NULL, render_patch_notes_edit,      NULL, handle_patch_notes_mouse,    NULL,                      NULL,                   NULL},
+    {"bankBackup",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 20, false, NULL, render_bank_backup_progress,  NULL, NULL,                        NULL,                      NULL,                   NULL},
+    {"bankRestore",    SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 30, false, NULL, render_bank_restore_progress, NULL, NULL,                        NULL,                      NULL,                   NULL},
+    {"deviceBusy",     SYNTHLIB_POPUP_LAYER_BROWSERS + 10,     false, NULL, render_device_busy_overlay,   NULL, NULL,                        NULL,                      NULL,                   NULL},
 
     // The group, not the panels: their order among themselves is dynamic (they raise on click) and
     // belongs to floatingPanel.c. What is constant, and so belongs here, is that all of them sit
     // above the fixed panels below and below the context menu above.
-    {"floatingPanels", SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 10, false, NULL, floating_panels_render,       NULL, floating_panels_mouse,       floating_panels_key,       NULL, NULL},
+    {"floatingPanels", SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 10, false, NULL, floating_panels_render,       NULL, floating_panels_mouse,       floating_panels_key,       floating_panels_scroll, NULL},
 
     // Drawn in this order, so ranked in it. These are what the menu bar's clicks had to stay behind.
-    {"midiCcList",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 14, false, NULL, render_midi_cc_list_panel,    NULL, handle_midi_cc_list_mouse,   handle_midi_cc_list_key,   NULL, NULL},
-    {"paramOverview",  SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 16, false, NULL, render_param_overview_panel,  NULL, handle_param_overview_mouse, handle_param_overview_key, NULL, NULL},
-    {"paramPages",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 18, false, NULL, render_param_pages_panel,     NULL, handle_param_pages_mouse,    handle_param_pages_key,    NULL, NULL},
+    {"midiCcList",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 14, false, NULL, render_midi_cc_list_panel,    NULL, handle_midi_cc_list_mouse,   handle_midi_cc_list_key,   NULL,                   NULL},
+    {"paramOverview",  SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 16, false, NULL, render_param_overview_panel,  NULL, handle_param_overview_mouse, handle_param_overview_key, NULL,                   NULL},
+    {"paramPages",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 18, false, NULL, render_param_pages_panel,     NULL, handle_param_pages_mouse,    handle_param_pages_key,    NULL,                   NULL},
 };
 
 static void register_app_popups(void) {

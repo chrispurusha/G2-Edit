@@ -301,7 +301,10 @@ void render_top_bar(void) {
                                                                       perfNameDisplay, (tRgb)RGB_WHITE);
         } else {
             tRgb perfNameCol = gTopbarControls[topbarPerfNameId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-            snprintf(perfNameDisplay, sizeof(perfNameDisplay), "%s", gGlobalSettings.perfName[0] ? gGlobalSettings.perfName : "---");
+            // Under the name lock, as in moduleGraphics.c: the USB thread can be writing perfName
+            // while this draws it. The ternary is evaluated once — COPY_STRING resolves both
+            // operands into locals before taking the lock (see defs.h).
+            COPY_STRING(perfNameDisplay, gGlobalSettings.perfName[0] ? gGlobalSettings.perfName : "---");
             gTopbarControls[topbarPerfNameId].rectangle = draw_button(mainArea,
                                                                       (tRectangle){topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                       perfNameDisplay, perfNameCol);

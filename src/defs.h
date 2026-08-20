@@ -339,8 +339,22 @@
 #define NULL_RECTANGLE         {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
-// NOTE: dst is expanded three times, so it must be a plain array expression with no side effects —
-// never something like buffer[atomicIndex], which would be re-read each time.
+// dst and src are each evaluated EXACTLY ONCE, which they were not until 2026-08-20. The macro used
+// to expand dst three times (the self-copy guard, the strncpy, the terminator) and src twice, and
+// carried a note telling every caller that dst "must be a plain array expression with no side
+// effects — never something like buffer[atomicIndex]". That is a rule a caller has to remember, and
+// forgetting it is silent: with an atomic index the three expansions can resolve to three DIFFERENT
+// rows, so the guard checks one buffer, the copy writes a second and the terminator lands in a
+// third. It had already been paid for once — a Store site in usbComms.c indexing on gSlot had to
+// have the slot hoisted into a local by hand.
+//
+// Hoisting into the do-block moves that from the caller's memory into the macro, where it cannot be
+// got wrong. sizeof(dst) is unaffected: it is compile-time on the array TYPE and never evaluates its
+// operand, so it still measures the destination and not the pointer it decays to.
+//
+// Evaluating src once also closes a deadlock that was reachable in principle: the second expansion
+// of src sat INSIDE the lock, so a src expression that itself used COPY_STRING would have taken this
+// same non-recursive mutex twice. Both operands are now resolved before the lock is taken.
 //
 // The self-copy guard matters: strncpy takes restrict-qualified pointers, so copying a buffer onto
 // itself is undefined behaviour, not a no-op. It is easy to reach by accident whenever a "save back
@@ -356,14 +370,18 @@ static inline int same_string_storage(const void * dst, const void * src) {
     return dst == src;
 }
 
-#define COPY_STRING(dst, src)                         \
-   do {                                               \
-       if (!same_string_storage((dst), (src))) {      \
-           pthread_mutex_lock(&(gStringCopyMutex));   \
-           strncpy((dst), (src), sizeof(dst) - 1);    \
-           (dst)[sizeof(dst) - 1] = '\0';             \
-           pthread_mutex_unlock(&(gStringCopyMutex)); \
-       }                                              \
+#define COPY_STRING(dst, src)                                            \
+   do {                                                                  \
+       char *       copyStringDst_  = (dst);                             \
+       const char * copyStringSrc_  = (src);                             \
+       const size_t copyStringSize_ = sizeof(dst);                       \
+                                                                         \
+       if (!same_string_storage(copyStringDst_, copyStringSrc_)) {       \
+           pthread_mutex_lock(&(gStringCopyMutex));                      \
+           strncpy(copyStringDst_, copyStringSrc_, copyStringSize_ - 1); \
+           copyStringDst_[copyStringSize_ - 1] = '\0';                   \
+           pthread_mutex_unlock(&(gStringCopyMutex));                    \
+       }                                                                 \
    } while (0)
 
 #endif // #define __DEFS_H__
