@@ -1948,7 +1948,98 @@ static tFloatingPanelEntry gFloatingPanels[] = {
 
 #define FLOATING_PANEL_COUNT    ((uint32_t)(sizeof(gFloatingPanels) / sizeof(gFloatingPanels[0])))
 
+// WHICH panel, front to back — the same walk the clicks take, so the panel this names is the panel
+// that would receive a press.
+static const tFloatingPanel * floating_panel_at(tCoord coord) {
+    floating_panel_sort(gFloatingPanels, FLOATING_PANEL_COUNT);
+
+    for (uint32_t i = FLOATING_PANEL_COUNT; i > 0; i--) {
+        if (  floating_panel_entry_visible(&gFloatingPanels[i - 1])
+           && floating_panel_contains(gFloatingPanels[i - 1].panel, coord)) {
+            return gFloatingPanels[i - 1].panel;
+        }
+    }
+
+    return NULL;
+}
+
+bool floating_panels_under(tCoord coord) {
+    return floating_panel_at(coord) != NULL;
+}
+
+// PRESSING A PANEL ABANDONS A NAME EDIT SOMEWHERE ELSE. Clicking back onto the notes editor while
+// the topbar patch name was being edited used to leave that edit running, so the keyboard stayed
+// with the name field and the panel just clicked took not one character.
+//
+// Abandon, not commit: stop_*_name_editing() memsets the edit state, discarding the half-typed
+// buffer and leaving the real name untouched. That is already the meaning everywhere else — a click
+// on the canvas does exactly this — and it is what makes clicking away safe, rather than a way to
+// half-rename something by accident.
+//
+// The SYNTH name is exempt when the press lands on the Synth Settings panel, because that is the
+// panel the edit belongs to: a click elsewhere within its own panel is that panel's business, and
+// its handler already ends the edit on the release.
+static void panel_press_takes_the_keyboard(tCoord coord) {
+    const tFloatingPanel * hit = floating_panel_at(coord);
+
+    if (hit == NULL) {
+        return;
+    }
+    stop_patch_name_editing();
+    stop_module_name_editing();
+    stop_param_name_editing();
+    stop_perf_name_editing();
+
+    if (hit != &gPatchSettingsEdit.panel) {
+        stop_synth_name_editing();
+    }
+}
+
+// SHOWING A PANEL BRINGS IT TO THE FRONT. Without this a panel opened from a menu keeps whatever
+// order it last had — zero, if it has never been clicked — so opening the notes editor over an
+// already-open Virtual Keyboard left the two tied, and which one ended up in front was decided by
+// their position in the table rather than by which was just asked for.
+//
+// Keyed by POINTER, not by index: floating_panel_sort() reorders the table in place, so entry i is
+// a different panel from one frame to the next and a parallel array indexed by i would compare the
+// wrong panels. Raising on the transition rather than on first placement also covers REOPENING,
+// which keeps its old position and so never looked new to floating_panel_place().
+static void raise_newly_shown_panels(void) {
+    static const tFloatingPanel * wasVisible[FLOATING_PANEL_COUNT] = {NULL};
+    static uint32_t               wasVisibleCount                  = 0;
+    const tFloatingPanel *        nowVisible[FLOATING_PANEL_COUNT] = {NULL};
+    uint32_t                      nowVisibleCount                  = 0;
+
+    for (uint32_t i = 0; i < FLOATING_PANEL_COUNT; i++) {
+        if (!floating_panel_entry_visible(&gFloatingPanels[i])) {
+            continue;
+        }
+        const tFloatingPanel * panel = gFloatingPanels[i].panel;
+        bool                   seen  = false;
+
+        for (uint32_t j = 0; j < wasVisibleCount; j++) {
+            if (wasVisible[j] == panel) {
+                seen = true;
+                break;
+            }
+        }
+
+        if (!seen) {
+            floating_panel_raise(gFloatingPanels[i].panel);
+        }
+        nowVisible[nowVisibleCount++] = panel;
+    }
+
+    for (uint32_t i = 0; i < nowVisibleCount; i++) {
+        wasVisible[i] = nowVisible[i];
+    }
+
+    wasVisibleCount = nowVisibleCount;
+}
+
 static void floating_panels_render(void) {
+    raise_newly_shown_panels();
+
     // Panels stay off the canvas scrollbars, which run along the bottom and the right. Overlapping
     // the TOP bar is deliberately still allowed — a panel has to start somewhere, and the bar is not
     // something you scroll — but a panel lying over a scrollbar reads as a mistake rather than as a
@@ -1974,6 +2065,9 @@ static void floating_panels_render(void) {
 // hit-test order. Fixed call order was wrong the moment two of them could overlap — whichever was
 // tested first swallowed the press, even when it was the one underneath.
 static bool floating_panels_mouse(tCoord coord, tMouseButton mouseButton) {
+    if (mouseButton == mouseButtonLeftDown) {
+        panel_press_takes_the_keyboard(coord);
+    }
     floating_panel_sort(gFloatingPanels, FLOATING_PANEL_COUNT);
 
     for (uint32_t i = FLOATING_PANEL_COUNT; i > 0; i--) {
@@ -2006,6 +2100,38 @@ static bool floating_panels_key(int key, int mods, int action) {
     return false;
 }
 
+// DOES THIS PANEL OWN THE KEYBOARD? It does if it is the frontmost panel that is actually shown.
+//
+// There was no answer to this question before 2026-08-20, and the Patch Notes editor was the one
+// that needed it: its typing is handled in key_event()/char_event() rather than through the panel
+// key walk, gated on nothing but "is the notes editor open". So an open notes editor swallowed the
+// keyboard from wherever you were actually looking — with Synth Settings in front of it, the synth
+// name could not be typed into at all. Reported 2026-08-20.
+//
+// Frontmost is not a new concept: floating_panel_raise() has maintained it since panels could
+// overlap, and a click on a panel already raises it. This just asks it out loud.
+bool floating_panel_is_frontmost(const tFloatingPanel * panel) {
+    const tFloatingPanel * front = NULL;
+
+    for (uint32_t i = 0; i < FLOATING_PANEL_COUNT; i++) {
+        if (!floating_panel_entry_visible(&gFloatingPanels[i])) {
+            continue;   // a closed panel keeps its order, so it must not win this
+        }
+
+        // "NOT BEHIND" RATHER THAN "IN FRONT OF", so that equal orders resolve the way the DRAWING
+        // resolves them. floating_panel_sort() is stable, so panels sharing an order keep table
+        // order and the LAST of them is drawn on top; testing strictly-in-front here would have
+        // picked the FIRST, and the panel you were looking at would not have been the one taking
+        // the keys. Ties are rare now that showing a panel raises it (see floating_panels_render),
+        // but "rare" is how the last few of these bugs got in.
+        if ((front == NULL) || !floating_panel_in_front_of(front, gFloatingPanels[i].panel)) {
+            front = gFloatingPanels[i].panel;
+        }
+    }
+
+    return (front != NULL) && (front == panel);
+}
+
 // THE POINTER IS OVER A PANEL — so the canvas underneath must not react to the motion.
 //
 // This is what the hover path needed and could not ask. cursor_pos() named the Mutator in an if and
@@ -2016,16 +2142,6 @@ static bool floating_panels_key(int key, int mods, int action) {
 //
 // Visibility is checked, not just the rectangle: a closed panel keeps its rect so it can reopen
 // where it was left, and testing that alone would suppress hover over a strip of empty canvas.
-bool floating_panels_under(tCoord coord) {
-    for (uint32_t i = 0; i < FLOATING_PANEL_COUNT; i++) {
-        if (  floating_panel_entry_visible(&gFloatingPanels[i])
-           && floating_panel_contains(gFloatingPanels[i].panel, coord)) {
-            return true;
-        }
-    }
-
-    return false;
-}
 
 // A panel being MOVED owns the pointer until it is released. This was a fourth hand-written copy of
 // the list — the draw, click and key copies are gone; this one had already lost the Mutator (which
