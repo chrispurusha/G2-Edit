@@ -135,7 +135,9 @@ void render_top_bar(void) {
 
             snprintf(buff, sizeof(buff), (volumeDb <= -10.0) ? "%.0fdB" : "%.1fdB", volumeDb);
             render_text(mainArea, (tRectangle){{gTopbarControls[topbarPatchVolumeId].rectangle.coord.x, gTopbarControls[topbarPatchVolumeId].rectangle.coord.y - 12}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-            gParamRectangle[module->key.slot][module->key.location][module->key.index][VOLUME_LEVEL] = render_dial(mainArea, gTopbarControls[topbarPatchVolumeId].rectangle, module->param[variation][VOLUME_LEVEL].value, 127, 0, (tRgb)RGB_GREY_7);
+            // The rect this returns was stored in gParamRectangle and never read by anything — the
+            // topbar volume dial is hit-tested through gTopbarControls, not the param array.
+            render_dial(mainArea, gTopbarControls[topbarPatchVolumeId].rectangle, module->param[variation][VOLUME_LEVEL].value, 127, 0, (tRgb)RGB_GREY_7);
         }
     }
 

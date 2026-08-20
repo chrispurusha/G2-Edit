@@ -481,18 +481,18 @@ void render_param_pages_panel(void) {
             }
             // The param widget itself, drawn by exactly the code the canvas uses - so a dial
             // looks like a dial, a toggle looks like a toggle, and the value text is formatted
-            // by that param type's own rule. render_param_common() records the widget's
-            // clickable rect in gParamRectangle; read it straight back for hit-testing, so
-            // there's only ever one description of where the control is.
+            // by that param type's own rule. It RETURNS the clickable rect it registered, which is
+            // what this keeps for its own hit-testing — so there is still only ever one description
+            // of where the control is, without a round trip through gParamRectangle to fetch back
+            // something the call just computed.
             // Dials and sliders take the rect as the control itself and draw their text upwards,
             // so they start two text rows down. Toggles, menus and Enable buttons still draw
             // downwards from the rect, so they start at the top of the widget block and their
             // button lands on the same line as a dial's value.
             double widgetY = y + textH + 4.0 + (metrics[pos].dialLike ? PP_WIDGET_TEXT_ROWS : 0.0);
 
-            render_param_common((tRectangle){{widgetX, widgetY}, {metrics[pos].rectWidth, PP_DIAL_SIZE}},
-                                target.module, target.paramRef, target.paramIndex);
-            gParamPages.knobWidget[pos] = gParamRectangle[target.key.slot][target.key.location][target.key.index][target.paramIndex];
+            gParamPages.knobWidget[pos] = render_param_common((tRectangle){{widgetX, widgetY}, {metrics[pos].rectWidth, PP_DIAL_SIZE}},
+                                                              target.module, target.paramRef, target.paramIndex);
         }
 
         set_param_render_area(moduleArea);
