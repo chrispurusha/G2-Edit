@@ -22,6 +22,7 @@
 
 #include "types.h"
 #include "synthlibTypes.h"
+#include "floatingPanel.h"
 
 // The Parameter Overview panel — the original editor's Tools > Parameter Overview (manual p.126).
 // Where the Parameter Pages panel (paramPages.c) shows ONE page's eight knobs as live widgets,
@@ -71,7 +72,9 @@ typedef struct {
     // Drag-to-move. dragFrom is the flat knob index the drag started on, -1 when none is in
     // progress. There is no separate "has moved far enough" test: the drop is a move only when it
     // lands on a DIFFERENT box, so a click that goes down and up on one box is inherently a no-op.
-    int32_t dragFrom;
+    int32_t        dragFrom;
+
+    tFloatingPanel panel;   // see floatingPanel.h
 } tParamOverviewEdit;
 
 extern tParamOverviewEdit gParamOverview;
