@@ -158,6 +158,18 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
         return false;
     }
 
+    switch (floating_panel_mouse(&gPerfSettingsEdit.panel, coord, mouseButton, gPerfSettingsPanelRects.closePressed)) {
+        case eFloatingPanelPassThrough:
+            return false;
+
+        case eFloatingPanelConsumed:
+            return true;
+
+        case eFloatingPanelContent:
+        default:
+            break;
+    }
+
     if (mouseButton == mouseButtonLeftDown) {
         if (within_rectangle(coord, gPerfSettingsPanelRects.close)) {
             gPerfSettingsPanelRects.closePressed = true;
@@ -249,6 +261,18 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
         return false;
     }
 
+    switch (floating_panel_mouse(&gPatchParamsEdit.panel, coord, mouseButton, gPatchParamClosePressed)) {
+        case eFloatingPanelPassThrough:
+            return false;
+
+        case eFloatingPanelConsumed:
+            return true;
+
+        case eFloatingPanelContent:
+        default:
+            break;
+    }
+
     if (mouseButton == mouseButtonLeftDown) {
         if (within_rectangle(coord, gPatchParamClose)) {
             gPatchParamClosePressed = true;
@@ -328,6 +352,23 @@ bool handle_patch_settings_mouse(tCoord coord, tMouseButton mouseButton) {
     if (!gPatchSettingsEdit.active) {
         return false;
     }
+    // FLOATING NOW, so this claims only the clicks that land on it. It used to end in an
+    // unconditional `return true`, i.e. it swallowed every click anywhere on screen while open —
+    // which is what "modal" meant here, and why the canvas and every other panel went dead. The
+    // three-way answer comes from SynthLib (floatingPanel.h) rather than being written out per
+    // panel, because the two ways of getting it wrong are subtle and both have bitten before.
+
+    switch (floating_panel_mouse(&gPatchSettingsEdit.panel, coord, mouseButton, gSettingsPanelRects.closePressed)) {
+        case eFloatingPanelPassThrough:
+            return false;
+
+        case eFloatingPanelConsumed:
+            return true;
+
+        case eFloatingPanelContent:
+        default:
+            break;
+    }
 
     if (mouseButton == mouseButtonLeftDown) {
         if (within_rectangle(coord, gSettingsPanelRects.close)) {
@@ -370,6 +411,47 @@ bool handle_patch_settings_mouse(tCoord coord, tMouseButton mouseButton) {
         }
     }
     synthlib_request_redraw();
+    return true;
+}
+
+// ── Escape, through the same front-to-back registry as clicks ────────────────
+//
+// These replace a settings_panel_escape() helper written the same day, which walked the three panels
+// in a hand-fixed order. That was right only for as long as the order matched what was drawn — the
+// exact drift this registry exists to prevent — and it could not know which panel the user was
+// actually looking at. Registering the panels means the key goes to the front one, by the same sort
+// that decides drawing and hit-testing.
+bool handle_patch_settings_key(int key, int mods, int action) {
+    (void)mods;
+
+    if (!gPatchSettingsEdit.active || (action != GLFW_PRESS) || (key != GLFW_KEY_ESCAPE)) {
+        return false;
+    }
+    // The pair the close button performs (below): a name edit left open would outlive the panel it
+    // belongs to. Escape while actually editing that name never reaches here — gSynthNameEdit is
+    // handled earlier in key_callback, and discards the edit rather than closing anything.
+    stop_synth_name_editing();
+    gPatchSettingsEdit.active = false;
+    return true;
+}
+
+bool handle_perf_settings_key(int key, int mods, int action) {
+    (void)mods;
+
+    if (!gPerfSettingsEdit.active || (action != GLFW_PRESS) || (key != GLFW_KEY_ESCAPE)) {
+        return false;
+    }
+    gPerfSettingsEdit.active = false;
+    return true;
+}
+
+bool handle_patch_params_key(int key, int mods, int action) {
+    (void)mods;
+
+    if (!gPatchParamsEdit.active || (action != GLFW_PRESS) || (key != GLFW_KEY_ESCAPE)) {
+        return false;
+    }
+    gPatchParamsEdit.active = false;
     return true;
 }
 

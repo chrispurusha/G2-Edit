@@ -55,6 +55,7 @@ extern "C" {
 #include "splitView.h"
 #include "utilsGraphics.h"
 #include "synthlibWindow.h"
+#include "synthlibPopups.h"
 #include "mouseHandle.h"
 #include "dataBase.h"
 #include "moduleGraphics.h"
@@ -91,6 +92,8 @@ extern "C" {
 #include "synthlibHost.h"
 #include "synthlibScale.h"
 #include "synthlibPersistence.h"
+
+static void register_app_popups(void);
 
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
@@ -313,6 +316,11 @@ void init_graphics(void) {
     // odd one out: SynthLib defaults to eDialModeVertical to match EmuUtility/SynthEdit, and this
     // one wants rotary. It is applied before setup_main_menu()'s load_saved_settings() (misc.mm)
     // runs, so a real saved value still wins.
+    // The popup coordinator needs to know this app's own panels and its menu bar before the first
+    // frame — see synthlibPopups.h. Through a function because the table names render functions
+    // defined further down this file.
+    register_app_popups();
+
     synthlib_window_create(&(tSynthLibWindowConfig){
         .title        = title,
         .targetWidth  = TARGET_FRAME_BUFF_WIDTH,
@@ -1210,8 +1218,6 @@ static void midi_chan_str(uint8_t val, char * buf, size_t bufLen) {
 
 static void render_patch_settings_panel(void) {
     static const char * slotLabel[4] = {"A", "B", "C", "D"};
-    double              renderW      = 0.0;
-    double              renderH      = 0.0;
     double              boxW         = 600.0;
     double              boxH         = 453.0;
     double              boxX         = 0.0;
@@ -1230,15 +1236,21 @@ static void render_patch_settings_panel(void) {
     if (!gPatchSettingsEdit.active) {
         return;
     }
-    renderW                   = get_render_width() / gGlobalGuiScale;
-    renderH                   = get_render_height() / gGlobalGuiScale;
-    boxX                      = (renderW - boxW) / 2.0;
-    boxY                      = (renderH - boxH) / 2.0;
-    y                         = boxY + titleH + margin;
+    // FLOATING, NOT MODAL (2026-08-20). The position comes from the panel state instead of being
+    // recomputed as (renderW - boxW) / 2 every frame — which is what made these three impossible to
+    // move — and there is no background overlay, so the patch stays visible and clickable underneath
+    // and a second panel can share the screen. Same treatment the Virtual Keyboard already had, and
+    // the reason renderW/renderH are gone from here: centring was all they were for. See SynthLib
+    // floatingPanel.h.
+    tRectangle          box          = floating_panel_place(&gPatchSettingsEdit.panel, boxW, boxH);
 
-    draw_dialog_background_overlay();
-    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Synth Settings");
-    gSettingsPanelRects.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gSettingsPanelRects.closePressed);
+    boxX                                  = box.coord.x;
+    boxY                                  = box.coord.y;
+    y                                     = boxY + titleH + margin;
+
+    gPatchSettingsEdit.panel.titleBarRect = draw_panel_chrome(mainArea, box, titleH, "Synth Settings");
+    gSettingsPanelRects.close             = draw_panel_close_button(mainArea, box, gSettingsPanelRects.closePressed);
+    gPatchSettingsEdit.panel.closeRect    = gSettingsPanelRects.close;   // carve it out of the title-bar drag
 
     // ── Synth Name ─────────────────────────────────────────────────
     {
@@ -1312,34 +1324,33 @@ static void render_patch_params_panel(void) {
     if (!gPatchParamsEdit.active) {
         return;
     }
-    uint32_t  slot          = gPatchParamsEdit.slot;
-    double    renderW       = get_render_width() / gGlobalGuiScale;
-    double    renderH       = get_render_height() / gGlobalGuiScale;
-    double    boxW          = 680.0;
-    double    boxH          = 320.0;
-    double    boxX          = (renderW - boxW) / 2.0;
-    double    boxY          = (renderH - boxH) / 2.0;
-    double    margin        = 10.0;
-    double    titleH        = 24.0;
-    double    rowH          = 26.0;
-    double    secH          = 18.0;
-    double    btnH          = STANDARD_BUTTON_TEXT_HEIGHT;
-    double    y             = boxY + titleH + margin;
-    double    x             = 0.0;
-    double    dialH         = 0.0;
-    tModule * sustMod       = get_module_slot(slot, (uint32_t)locationMorph, patchModuleSustain);
-    tModule * vibMod        = get_module_slot(slot, (uint32_t)locationMorph, patchModuleVibrato);
-    tModule * glideMod      = get_module_slot(slot, (uint32_t)locationMorph, patchModuleGlide);
-    uint8_t   sustainPedal  = sustMod ? sustMod->param[0][SUSTAIN_PEDAL].value : 0;
-    int8_t    octaveShift   = sustMod ? (int8_t)sustMod->param[0][OCTAVE_SHIFT].value : 0;
-    uint8_t   vibratoRate   = vibMod ? vibMod->param[0][VIBRATO_RATE].value : 0;
-    uint8_t   vibratoAmount = vibMod ? vibMod->param[0][VIBRATO_DEPTH].value : 0;
-    uint8_t   glideTime     = glideMod ? glideMod->param[0][GLIDE_SPEED].value : 0;
-    char      buf[16]       = {0};
+    uint32_t   slot          = gPatchParamsEdit.slot;
+    double     boxW          = 680.0;
+    double     boxH          = 320.0;
+    tRectangle box           = floating_panel_place(&gPatchParamsEdit.panel, boxW, boxH);
+    double     boxX          = box.coord.x;
+    double     boxY          = box.coord.y;
+    double     margin        = 10.0;
+    double     titleH        = 24.0;
+    double     rowH          = 26.0;
+    double     secH          = 18.0;
+    double     btnH          = STANDARD_BUTTON_TEXT_HEIGHT;
+    double     y             = boxY + titleH + margin;
+    double     x             = 0.0;
+    double     dialH         = 0.0;
+    tModule *  sustMod       = get_module_slot(slot, (uint32_t)locationMorph, patchModuleSustain);
+    tModule *  vibMod        = get_module_slot(slot, (uint32_t)locationMorph, patchModuleVibrato);
+    tModule *  glideMod      = get_module_slot(slot, (uint32_t)locationMorph, patchModuleGlide);
+    uint8_t    sustainPedal  = sustMod ? sustMod->param[0][SUSTAIN_PEDAL].value : 0;
+    int8_t     octaveShift   = sustMod ? (int8_t)sustMod->param[0][OCTAVE_SHIFT].value : 0;
+    uint8_t    vibratoRate   = vibMod ? vibMod->param[0][VIBRATO_RATE].value : 0;
+    uint8_t    vibratoAmount = vibMod ? vibMod->param[0][VIBRATO_DEPTH].value : 0;
+    uint8_t    glideTime     = glideMod ? glideMod->param[0][GLIDE_SPEED].value : 0;
+    char       buf[16]       = {0};
 
-    draw_dialog_background_overlay();
-    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Settings");
-    gPatchParamClose = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gPatchParamClosePressed);
+    gPatchParamsEdit.panel.titleBarRect = draw_panel_chrome(mainArea, box, titleH, "Patch Settings");
+    gPatchParamClose                    = draw_panel_close_button(mainArea, box, gPatchParamClosePressed);
+    gPatchParamsEdit.panel.closeRect    = gPatchParamClose;   // carve it out of the title-bar drag
 
     // ── Slot buttons in title bar ──────────────────────────────────
     {
@@ -1418,30 +1429,29 @@ static void render_perf_settings_panel(void) {
     if (!gPerfSettingsEdit.active) {
         return;
     }
-    double renderW                  = get_render_width() / gGlobalGuiScale;
-    double renderH                  = get_render_height() / gGlobalGuiScale;
-    double boxW                     = 700.0;
-    double boxH                     = 390.0;
-    double boxX                     = (renderW - boxW) / 2.0;
-    double boxY                     = (renderH - boxH) / 2.0;
-    double margin                   = 10.0;
-    double titleH                   = 24.0;
-    double rowH                     = 26.0;
-    double secH                     = 18.0;
-    double btnH                     = STANDARD_BUTTON_TEXT_HEIGHT;
-    double y                        = boxY + titleH + margin;
-    double colX[kPSSlotToggleCount] = {0.0, 0.0, 0.0};
-    int    i                        = 0;
-    int    col                      = 0;
-    char   buf[32]                  = {0};
-    char   note[8]                  = {0};
-    char   loNote[8]                = {0};
-    char   hiNote[8]                = {0};
-    char   rangeBuf[18]             = {0};
+    double     boxW                     = 700.0;
+    double     boxH                     = 390.0;
+    tRectangle box                      = floating_panel_place(&gPerfSettingsEdit.panel, boxW, boxH);
+    double     boxX                     = box.coord.x;
+    double     boxY                     = box.coord.y;
+    double     margin                   = 10.0;
+    double     titleH                   = 24.0;
+    double     rowH                     = 26.0;
+    double     secH                     = 18.0;
+    double     btnH                     = STANDARD_BUTTON_TEXT_HEIGHT;
+    double     y                        = boxY + titleH + margin;
+    double     colX[kPSSlotToggleCount] = {0.0, 0.0, 0.0};
+    int        i                        = 0;
+    int        col                      = 0;
+    char       buf[32]                  = {0};
+    char       note[8]                  = {0};
+    char       loNote[8]                = {0};
+    char       hiNote[8]                = {0};
+    char       rangeBuf[18]             = {0};
 
-    draw_dialog_background_overlay();
-    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Performance Settings");
-    gPerfSettingsPanelRects.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gPerfSettingsPanelRects.closePressed);
+    gPerfSettingsEdit.panel.titleBarRect = draw_panel_chrome(mainArea, box, titleH, "Performance Settings");
+    gPerfSettingsPanelRects.close        = draw_panel_close_button(mainArea, box, gPerfSettingsPanelRects.closePressed);
+    gPerfSettingsEdit.panel.closeRect    = gPerfSettingsPanelRects.close;   // carve it out of the title-bar drag
 
     // ── Perf Name ──────────────────────────────────────────────────
     {
@@ -1454,12 +1464,12 @@ static void render_perf_settings_panel(void) {
         draw_button(mainArea, (tRectangle){{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}},
                     nameBuf, (tRgb)RGB_BACKGROUND_GREY);
     }
-    y                            += rowH;
+    y                                   += rowH;
 
     // ── Master Clock ───────────────────────────────────────────────
     set_rgb_colour((tRgb)RGB_GREY_7);
     render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Master Clock");
-    y                            += secH;
+    y                                   += secH;
 
     {
         // blockH is the whole BPM readout + dial, which the Running button centres against and
@@ -1898,6 +1908,28 @@ static void render_mouse_crosshair(void) {
 }
 #endif
 
+// The application's own popups, registered into SynthLib's ordering (synthlibPopups.h) so that this
+// app's panels and the library's cannot disagree about who is in front.
+//
+// The layers reproduce EXACTLY what the eight hand-ordered render calls here used to do: patch notes
+// and the two progress panels above the context menu and below the browsers, the device-busy overlay
+// above the browsers and below the alert. Written as numbers relative to SynthLib's constants rather
+// than as bare values, so the intent survives someone renumbering the library's layers.
+//
+// Mouse and key are NULL: these keep their existing routing in mouseHandle.c for now. Only their
+// ORDER moves here, which is the half that was unstated.
+static const tSynthLibPopup gAppPopups[] = {
+    {"patchNotes",  SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 10, false, NULL, render_patch_notes_edit,      NULL, NULL, NULL},
+    {"bankBackup",  SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 20, false, NULL, render_bank_backup_progress,  NULL, NULL, NULL},
+    {"bankRestore", SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 30, false, NULL, render_bank_restore_progress, NULL, NULL, NULL},
+    {"deviceBusy",  SYNTHLIB_POPUP_LAYER_BROWSERS + 10,     false, NULL, render_device_busy_overlay,   NULL, NULL, NULL},
+};
+
+static void register_app_popups(void) {
+    synthlib_popups_register(gAppPopups, (uint32_t)(sizeof(gAppPopups) / sizeof(gAppPopups[0])));
+    synthlib_popups_set_menu_bar(gAppMenuBar, app_menu_bar_rect);
+}
+
 static void render_frame(void) {
     glClearColor(0.8, 0.8, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1950,12 +1982,14 @@ static void render_frame(void) {
         }
     }
     render_top_bar();
+
+    // The BAR itself stays here, ahead of the floating panels, because it is chrome they float above
+    // — a panel is allowed to overlap it, and drawing the bar afterwards would put it over the panel
+    // while the panel still took the click. Only its hover tick and its dropdown (which is the
+    // context menu) are the coordinator's. See synthlibPopups.h.
     render_menu_bar(gAppMenuBar, app_menu_bar_rect());
     render_morph_groups();
     render_scrollbars();
-    render_patch_settings_panel();
-    render_perf_settings_panel();
-    render_patch_params_panel();
     render_param_pages_panel();
     render_param_overview_panel();
     render_midi_cc_list_panel();
@@ -1965,11 +1999,26 @@ static void render_frame(void) {
     // agree, or a panel is drawn on top of one that is taking its clicks.
     {
         tFloatingPanelEntry panels[] = {
-            {&gVirtualKeyboard.panel, render_virtual_keyboard_panel, NULL, NULL},
-            {&gPatchAdjuster.panel,   render_patch_adjuster_panel,   NULL, NULL},
-            {&gHelpPanel.panel,       render_help_panel,             NULL, NULL},
-            {&gMutator.panel,         render_mutator_panel,          NULL, NULL}
+            {&gVirtualKeyboard.panel,   render_virtual_keyboard_panel, NULL, NULL},
+            {&gPatchAdjuster.panel,     render_patch_adjuster_panel,   NULL, NULL},
+            {&gHelpPanel.panel,         render_help_panel,             NULL, NULL},
+            {&gMutator.panel,           render_mutator_panel,          NULL, NULL},
+            {&gPatchSettingsEdit.panel, render_patch_settings_panel,   NULL, NULL},
+            {&gPerfSettingsEdit.panel,  render_perf_settings_panel,    NULL, NULL},
+            {&gPatchParamsEdit.panel,   render_patch_params_panel,     NULL, NULL}
         };
+
+        // Panels stay off the canvas scrollbars, which run along the bottom and the right. Overlapping
+        // the TOP bar is deliberately still allowed — a panel has to start somewhere, and the bar is
+        // not something you scroll — but a panel lying over a scrollbar reads as a mistake rather
+        // than as a panel in front. Set per frame so a window resize cannot leave it stale.
+        floating_panel_set_bounds((tRectangle){{
+                                                   0.0, 0.0
+                                               }, {
+                                                   (get_render_width() / gGlobalGuiScale) - SCROLLBAR_WIDTH,
+                                                   (get_render_height() / gGlobalGuiScale) - SCROLLBAR_WIDTH
+                                               }
+                                  });
 
         floating_panel_sort(panels, (uint32_t)(sizeof(panels) / sizeof(panels[0])));
 
@@ -1977,14 +2026,12 @@ static void render_frame(void) {
             panels[i].render();
         }
     }
-    render_context_menu();
-    render_patch_notes_edit();
-    render_bank_backup_progress();
-    render_bank_restore_progress();
-    render_file_browser();
-    render_bank_browser();
-    render_device_busy_overlay(); // dim + "please wait" while a whole-slot device op is in flight
-    render_alert_dialog();        // drawn last of all — modal, must paint over everything else
+    // ONE CALL, AND THE ORDER IS DATA. This used to be eight calls whose sequence WAS the z-order:
+    // correct, unstated, and one careless insertion away from being wrong. The four app panels below
+    // are registered with layers that reproduce exactly what those eight calls did — patch notes and
+    // the two progress panels above the context menu and below the browsers, the device-busy overlay
+    // above the browsers and below the alert. See synthlibPopups.h.
+    synthlib_popups_render();
 
 #ifdef ENABLE_MOUSE_CROSSHAIR
     render_mouse_crosshair();     // TEMPORARY debug aid (F9) — above even the modal, so it is never hidden
@@ -2976,8 +3023,11 @@ void do_graphics_loop(void) {
 
     while ((!synthlib_quit_requested()) && (!glfwWindowShouldClose((GLFWwindow *)synthlib_window()))) {
         check_action_flags();
-        update_context_menu_hover(); // Polled every tick (not just on cursor move) so a hover-dwell timer elapses even while the mouse sits still
-        update_menu_bar_hover(gAppMenuBar, app_menu_bar_rect());
+        // Every registered popup's hover/dwell update, in one call. Polled every tick rather than only
+        // on cursor movement, so a hover-dwell timer elapses while the mouse sits still — and the
+        // host can no longer forget one, which is a bug that has shipped twice in this family of
+        // apps. See synthlibPopups.h.
+        synthlib_popups_tick();
 
         reDraw = synthlib_consume_redraw();
 
