@@ -16,6 +16,13 @@ layout cleanup (2026-07), but they apply to any module.
 - A 2-row module is only ~81px tall; a dial is ~49px tall — so **vertical
   jack-above-dial stacking only fits on taller (3–4 row) modules**. On 2-row
   modules, pair a jack *beside* its dial instead.
+- **A dial row's rect is the DIAL, not the label+value block** (SynthLib
+  `render_dial_with_text`, dial-anchored since 2026-08-02). The value and label
+  are drawn in the two rows *above* it, growing upwards, so a dial's position no
+  longer depends on how many of those two strings exist: **`NULL` and `""` are
+  equivalent** and neither can move the dial. Dial rect heights are 7, not 14 —
+  do not "restore" the taller figure, and do not write `""` in place of `NULL`
+  to reserve a blank row.
 
 ## The rules
 1. **Nothing overlaps.** No component may sit on top of another — and that
