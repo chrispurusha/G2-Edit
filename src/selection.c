@@ -30,6 +30,8 @@
 #include "mouseHandle.h"
 #include "menus.h"
 #include "selection.h"
+#include "splitView.h"
+#include "utilsGraphics.h"
 #include "undo.h"
 #include "cableChain.h"
 
@@ -38,6 +40,20 @@ bool is_selected(tModuleKey key) {
         tModuleKey k = gSelection.keys[i];
 
         if (k.slot == key.slot && k.location == key.location && k.index == key.index) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void selection_remove(tModuleKey key);
+
+// Is this Location currently displayed by one of the panes? In a split view both are, and in a
+// single-pane view only the focused one is.
+static bool location_on_screen(uint32_t location) {
+    for (uint32_t pane = 0; pane < module_pane_count(); pane++) {
+        if ((uint32_t)split_view_location_for_pane(pane) == location) {
             return true;
         }
     }
@@ -85,10 +101,32 @@ void selection_validate(void) {
         return;
     }
 
-    if ((slot != lastSlot) || (location != lastLocation)) {
-        stale        = true;
-        lastSlot     = slot;
-        lastLocation = location;
+    // A SLOT CHANGE STILL INVALIDATES EVERYTHING — the canvas only ever shows one slot, so every key
+    // held refers to modules that are no longer on screen.
+    if (slot != lastSlot) {
+        stale    = true;
+        lastSlot = slot;
+    }
+    lastLocation = location;
+
+    // A LOCATION CHANGE NO LONGER DOES, and that was the bug. This test used to read
+    // (slot != lastSlot) || (location != lastLocation), which was correct while the canvas showed
+    // ONE location at a time: switching from the Voice Area to the FX Area put the selected modules
+    // out of sight, and holding a selection you cannot see is the trap this function exists to stop.
+    //
+    // Split view shows both at once, so the premise is gone — and the cost was that selecting an FX
+    // module while a Voice Area module was selected took TWO clicks. The first click moved the focus
+    // (split_view_focus_at) AND selected, and this function then threw the new selection away on the
+    // very next frame because gLocation had changed. The second click selected without moving focus,
+    // so it survived. Reported 2026-08-20.
+    //
+    // The intent is kept, and stated against what it actually meant: drop the keys that are not on
+    // screen, rather than all of them because a global changed.
+    for (uint32_t i = gSelection.count; i > 0; i--) {
+        if (!location_on_screen(gSelection.keys[i - 1].location)) {
+            selection_remove(gSelection.keys[i - 1]);
+            synthlib_request_redraw();
+        }
     }
 
     // ANY slot's generation, not just the visible one: a selection can only hold keys for one slot at
