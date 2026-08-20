@@ -1732,7 +1732,10 @@ void render_module(tModule * module) {
                                              {BLANK_SIZE, STANDARD_TEXT_HEIGHT}
                     }, editBuf);
     } else {
-        snprintf(buff, sizeof(buff), "%s", module->name);
+        // COPY_STRING, NOT snprintf: the USB thread writes module names as patch data arrives, and
+        // this read is on the render thread. Both go through gStringCopyMutex, so what is drawn is
+        // one name rather than a mixture of the old and the new. See defs.h.
+        COPY_STRING(buff, module->name);
         set_rgba_colour((tRgba)RGBA_BLACK_ON_TRANSPARENT);
         render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
                                              {BLANK_SIZE, STANDARD_TEXT_HEIGHT}
