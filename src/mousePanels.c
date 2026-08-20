@@ -54,7 +54,6 @@ extern "C" {
 
 // Suppresses a spurious leftUp event after dismissing the notes editor by
 // clicking outside it — prevents immediately re-triggering topbar controls.
-static bool gNoteEditDismissed = false;
 
 static bool check_ss_section(tCoord coord, const tSynthSettingItem * items, int count) {
     int i = 0;
@@ -88,16 +87,24 @@ bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
     int             newPos  = 0;
     tMessageContent msg     = {0};
 
-    if (gNoteEditDismissed) {
-        if (mouseButton == mouseButtonLeftUp) {
-            gNoteEditDismissed = false;
-        }
-        synthlib_request_redraw();
-        return true;
-    }
-
     if (!gPatchNotesEdit.active) {
         return false;
+    }
+
+    // FLOATING NOW, exactly as the settings panels are: the title bar moves it, the close button
+    // closes it, and a click anywhere else on the panel is content. gNoteEditDismissed went with the
+    // dismissal it existed to debounce — it swallowed the mouse-UP that followed a click-away, so
+    // that the release did not land on whatever the canvas had underneath.
+    switch (floating_panel_mouse(&gPatchNotesEdit.panel, coord, mouseButton, gPatchNotesClosePressed)) {
+        case eFloatingPanelPassThrough:
+            return false;
+
+        case eFloatingPanelConsumed:
+            return true;
+
+        case eFloatingPanelContent:
+        default:
+            break;
     }
 
     if (mouseButton == mouseButtonLeftDown) {
@@ -110,10 +117,16 @@ bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
 
             if (newPos >= 0) {
                 gPatchNotesEdit.cursorPos = (uint32_t)newPos;
-            } else {
-                gPatchNotesEdit.active = false;
-                gNoteEditDismissed     = true;
             }
+            // A CLICK ELSEWHERE NO LONGER CLOSES THE EDITOR. It used to: any press that missed the
+            // text area set active = false, which meant clicking the title bar — the part of a panel
+            // you are most likely to press, since on every other panel it is the drag handle — shut
+            // the notes editor outright. Reported 2026-08-20.
+            //
+            // Click-away-to-dismiss is not the behaviour any other panel here has, and it is not
+            // what a floating panel should do: the canvas underneath is live, so a click on it means
+            // what it says and has no business closing a window somewhere else. Close and Discard
+            // are the ways out, plus Escape.
         }
     }
 

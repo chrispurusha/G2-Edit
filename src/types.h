@@ -901,11 +901,13 @@ typedef struct {
 } tResourceAlloc;
 
 typedef struct {
-    bool     active;
-    uint32_t slot;
-    uint32_t cursorPos;
-    char     buffer[PATCH_NOTES_SIZE + 1];
-    char     original[PATCH_NOTES_SIZE + 1];
+    bool           active;
+    uint32_t       slot;
+    uint32_t       cursorPos;
+    char           buffer[PATCH_NOTES_SIZE + 1];
+    char           original[PATCH_NOTES_SIZE + 1];
+
+    tFloatingPanel panel;   // floats and is dragged like the settings panels — see floatingPanel.h
 } tPatchNotesEdit;
 
 typedef struct {

@@ -119,6 +119,10 @@ extern bool                    gCablesTransparent;  // true = draw all cables se
 extern bool                    gCablesHideAll;
 extern tResourceAlloc          gResourceAlloc[MAX_SLOTS];
 
+// The whole panel, not just its buttons. The mouse handler needs it to tell "clicked away from the
+// editor, dismiss it" from "clicked on the editor's own chrome", which is not a distinction it could
+// make while the only rectangles it had were the two buttons.
+extern tRectangle              gPatchNotesPanelRect;
 extern tRectangle              gPatchNotesCloseRect;
 extern bool                    gPatchNotesClosePressed;
 extern tRectangle              gPatchNotesDiscardRect;

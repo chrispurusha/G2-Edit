@@ -267,13 +267,20 @@ void render_param_overview_panel(void) {
         boxH  = renderH - (margin * 2.0);
         cellH = ((boxH - titleH - (margin * 3.0) - rowH - textH - 2.0) - (PO_CELL_GAP * (PARAM_OVERVIEW_ROWS - 1))) / PARAM_OVERVIEW_ROWS;
     }
-    double boxX  = (renderW - boxW) / 2.0;
-    double boxY  = (renderH - boxH) / 2.0;
-    double y     = boxY + titleH + margin;
+    // FLOATING, so the position comes from the panel rather than from the window: chosen once on
+    // first show and thereafter wherever the user has dragged it. Centring every frame is what made
+    // a panel impossible to move — it snapped back before the next redraw.
+    //
+    // No draw_dialog_background_overlay() either. Dimming the canvas behind is what a MODAL dialog
+    // does, and this is not one: the canvas stays live underneath and stays legible to match.
+    tRectangle panelBox = floating_panel_place(&gParamOverview.panel, boxW, boxH);
+    double     boxX     = panelBox.coord.x;
+    double     boxY     = panelBox.coord.y;
+    double     y        = boxY + titleH + margin;
 
-    draw_dialog_background_overlay();
-    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Parameter Overview");
-    gParamOverview.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gParamOverview.closePressed);
+    gParamOverview.panel.titleBarRect = draw_panel_chrome(mainArea, panelBox, titleH, "Parameter Overview");
+    gParamOverview.close              = draw_panel_close_button(mainArea, panelBox, gParamOverview.closePressed);
+    gParamOverview.panel.closeRect    = gParamOverview.close;
 
     // ── Slot buttons in the title bar ──────────────────────────────────
     // Patch pages only: a global assignment carries its own Slot per knob, so a panel-wide Slot
@@ -462,6 +469,21 @@ static int32_t cell_at(tCoord coord) {
 bool handle_param_overview_mouse(tCoord coord, tMouseButton mouseButton) {
     if (!gParamOverview.active) {
         return false;
+    }
+
+    // FLOATING NOW: the move/raise/close-button routing comes from SynthLib rather than being
+    // written out per panel. eFloatingPanelContent means "it landed on me, but not on my chrome" —
+    // which is the only case the panel's own hit-testing below should see.
+    switch (floating_panel_mouse(&gParamOverview.panel, coord, mouseButton, gParamOverview.closePressed)) {
+        case eFloatingPanelPassThrough:
+            return false;
+
+        case eFloatingPanelConsumed:
+            return true;
+
+        case eFloatingPanelContent:
+        default:
+            break;
     }
 
     if (mouseButton == mouseButtonLeftDown) {

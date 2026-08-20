@@ -22,6 +22,7 @@
 
 #include "sysIncludes.h"
 #include "types.h"
+#include "floatingPanel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,6 +46,24 @@ extern "C" {
 // silently and by design, and this is the only place that shows what it took.
 
 void open_midi_cc_list_panel(uint32_t slot);
+// THE STATE IS PUBLISHED, as gParamPages and gParamOverview already are, because the panel is a
+// FLOATING one now: the shared registry in graphics.c takes the address of its tFloatingPanel and of
+// its `active` flag, and both have to be compile-time constants to sit in a static table. It was
+// file-static in midiCcList.c until 2026-08-20.
+#define CC_LIST_ROWS    (24)   // 3 x 24 = 72 visible; a patch can hold MAX_NUM_CONTROLLERS (128)
+
+typedef struct {
+    bool           active;
+    uint32_t       slot;
+    bool           closePressed;
+    tRectangle     close;
+    tRectangle     slotButton[MAX_SLOTS];
+
+    tFloatingPanel panel;   // see floatingPanel.h
+} tMidiCcList;
+
+extern tMidiCcList gMidiCcList;
+
 void close_midi_cc_list_panel(void);
 bool midi_cc_list_active(void);
 void render_midi_cc_list_panel(void);

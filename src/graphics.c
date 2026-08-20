@@ -1655,27 +1655,32 @@ static void render_patch_notes_edit(void) {
     if (!gPatchNotesEdit.active) {
         return;
     }
-    double renderW      = get_render_width() / gGlobalGuiScale;
-    double renderH      = get_render_height() / gGlobalGuiScale;
-    double boxW         = 700.0;
-    double boxH         = 500.0;
-    double boxX         = (renderW - boxW) / 2.0;
-    double boxY         = (renderH - boxH) / 2.0;
-    double margin       = 10.0;
-    double titleH       = 24.0;
-    double lineH        = STANDARD_TEXT_HEIGHT + 3.0;
-    double hintH        = STANDARD_TEXT_HEIGHT + 12.0; // extra headroom below the button/text baseline so descenders (g, y, p) aren't clipped by the border
-    double textY0       = boxY + titleH + margin;
-    double textX        = boxX + margin;
-    double textW        = boxW - margin * 2.0;
-    double maxTextH     = boxH - titleH - hintH - margin * 3.0;
-    char   countBuf[32] = {0};
+    double     boxW         = 700.0;
+    double     boxH         = 500.0;
 
-    double btnH         = STANDARD_BUTTON_TEXT_HEIGHT;
+    // FLOATING, so the position comes from the panel rather than from the window — chosen once on
+    // first show, and thereafter wherever the user has dragged it.
+    tRectangle panelBox     = floating_panel_place(&gPatchNotesEdit.panel, boxW, boxH);
+    double     boxX         = panelBox.coord.x;
+    double     boxY         = panelBox.coord.y;
+    double     margin       = 10.0;
+    double     titleH       = 24.0;
+    double     lineH        = STANDARD_TEXT_HEIGHT + 3.0;
+    double     hintH        = STANDARD_TEXT_HEIGHT + 12.0; // extra headroom below the button/text baseline so descenders (g, y, p) aren't clipped by the border
+    double     textY0       = boxY + titleH + margin;
+    double     textX        = boxX + margin;
+    double     textW        = boxW - margin * 2.0;
+    double     maxTextH     = boxH - titleH - hintH - margin * 3.0;
+    char       countBuf[32] = {0};
 
-    draw_dialog_background_overlay();
-    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Notes");
-    gPatchNotesCloseRect = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gPatchNotesClosePressed);
+    double     btnH         = STANDARD_BUTTON_TEXT_HEIGHT;
+
+    // No draw_dialog_background_overlay(): dimming the canvas is what a MODAL dialog does, and the
+    // notes editor is not one — it floats over a live canvas like the settings panels.
+    gPatchNotesPanelRect               = panelBox;
+    gPatchNotesEdit.panel.titleBarRect = draw_panel_chrome(mainArea, panelBox, titleH, "Patch Notes");
+    gPatchNotesCloseRect               = draw_panel_close_button(mainArea, panelBox, gPatchNotesClosePressed);
+    gPatchNotesEdit.panel.closeRect    = gPatchNotesCloseRect;
 
     // Character count
     snprintf(countBuf, sizeof(countBuf), "%zu / %d", strlen(gPatchNotesEdit.buffer), PATCH_NOTES_SIZE);
@@ -1683,17 +1688,17 @@ static void render_patch_notes_edit(void) {
     render_text(mainArea, (tRectangle){{boxX + boxW / 2.0 - 30.0, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, countBuf);
 
     // Cache geometry for click-to-cursor and keyboard navigation
-    gNoteTextX           = textX;
-    gNoteTextY0          = textY0;
-    gNoteLineH           = lineH;
-    gNoteTextW           = textW;
-    gNoteTextHParam      = STANDARD_TEXT_HEIGHT;
+    gNoteTextX                         = textX;
+    gNoteTextY0                        = textY0;
+    gNoteLineH                         = lineH;
+    gNoteTextW                         = textW;
+    gNoteTextHParam                    = STANDARD_TEXT_HEIGHT;
 
     build_note_visual_lines(gPatchNotesEdit.buffer, textW, STANDARD_TEXT_HEIGHT);
 
-    int    cursorPos    = (int)gPatchNotesEdit.cursorPos;
-    int    cursorLine   = find_note_cursor_line(cursorPos);
-    int    visLines     = (int)(maxTextH / lineH);
+    int cursorPos  = (int)gPatchNotesEdit.cursorPos;
+    int cursorLine = find_note_cursor_line(cursorPos);
+    int visLines   = (int)(maxTextH / lineH);
 
     // Keep scroll so the cursor line is always visible
     if (cursorLine < gNoteScrollLine) {
@@ -1925,7 +1930,20 @@ static tFloatingPanelEntry gFloatingPanels[] = {
     {&gMutator.panel,           render_mutator_panel,          handle_mutator_mouse,          handle_mutator_key,          &gMutator.active          },
     {&gPatchSettingsEdit.panel, render_patch_settings_panel,   handle_patch_settings_mouse,   handle_patch_settings_key,   &gPatchSettingsEdit.active},
     {&gPerfSettingsEdit.panel,  render_perf_settings_panel,    handle_perf_settings_mouse,    handle_perf_settings_key,    &gPerfSettingsEdit.active },
-    {&gPatchParamsEdit.panel,   render_patch_params_panel,     handle_patch_params_mouse,     handle_patch_params_key,     &gPatchParamsEdit.active  }
+    {&gPatchParamsEdit.panel,   render_patch_params_panel,     handle_patch_params_mouse,     handle_patch_params_key,     &gPatchParamsEdit.active  },
+
+    // Joined the floating panels on 2026-08-20, having been fixed, window-centred panels drawn over
+    // a dimmed canvas. They are the same KIND of thing as the settings panels above and now behave
+    // like them: draggable by the title bar, raised by a click, closed by their button or Escape.
+    // Patch Notes in particular used to close on any click that missed its text area, so pressing
+    // its title bar — the drag handle everywhere else — shut it.
+    //
+    // Patch Notes takes no key entry: its Escape lives in key_event() beside the text editing it
+    // belongs with, and is reached after this dispatch.
+    {&gPatchNotesEdit.panel,    render_patch_notes_edit,       handle_patch_notes_mouse,      NULL,                        &gPatchNotesEdit.active   },
+    {&gParamPages.panel,        render_param_pages_panel,      handle_param_pages_mouse,      handle_param_pages_key,      &gParamPages.active       },
+    {&gParamOverview.panel,     render_param_overview_panel,   handle_param_overview_mouse,   handle_param_overview_key,   &gParamOverview.active    },
+    {&gMidiCcList.panel,        render_midi_cc_list_panel,     handle_midi_cc_list_mouse,     handle_midi_cc_list_key,     &gMidiCcList.active       }
 };
 
 #define FLOATING_PANEL_COUNT    ((uint32_t)(sizeof(gFloatingPanels) / sizeof(gFloatingPanels[0])))
@@ -1946,7 +1964,9 @@ static void floating_panels_render(void) {
     floating_panel_sort(gFloatingPanels, FLOATING_PANEL_COUNT);
 
     for (uint32_t i = 0; i < FLOATING_PANEL_COUNT; i++) {
-        gFloatingPanels[i].render();     // back to front, so the most recently clicked ends up on top
+        if (gFloatingPanels[i].render != NULL) {
+            gFloatingPanels[i].render();     // back to front, so the most recently clicked ends up on top
+        }
     }
 }
 
@@ -1957,7 +1977,8 @@ static bool floating_panels_mouse(tCoord coord, tMouseButton mouseButton) {
     floating_panel_sort(gFloatingPanels, FLOATING_PANEL_COUNT);
 
     for (uint32_t i = FLOATING_PANEL_COUNT; i > 0; i--) {
-        if (gFloatingPanels[i - 1].mouse(coord, mouseButton)) {
+        if (  (gFloatingPanels[i - 1].mouse != NULL)
+           && gFloatingPanels[i - 1].mouse(coord, mouseButton)) {
             return true;
         }
     }
@@ -1972,7 +1993,12 @@ static bool floating_panels_key(int key, int mods, int action) {
     floating_panel_sort(gFloatingPanels, FLOATING_PANEL_COUNT);
 
     for (uint32_t i = FLOATING_PANEL_COUNT; i > 0; i--) {
-        if (gFloatingPanels[i - 1].key(key, mods, action)) {
+        // NULL-CHECKED, WHICH IT WAS NOT: every entry had a key handler until Patch Notes joined the
+        // table with none — its Escape belongs in key_event() beside the text editing — and the very
+        // first keystroke typed into the notes editor called through a null pointer. The columns of
+        // this table are independently optional, so every walk over it has to say so.
+        if (  (gFloatingPanels[i - 1].key != NULL)
+           && gFloatingPanels[i - 1].key(key, mods, action)) {
             return true;
         }
     }
@@ -2054,20 +2080,14 @@ static const tSynthLibPopup gAppPopups[] = {
     // the menu's, i.e. below — the one place where making input follow paint changes behaviour. A
     // menu raised over the notes editor is drawn underneath it, so it could previously be clicked
     // while invisible.
-    {"patchNotes",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 10, false, NULL, render_patch_notes_edit,      NULL, handle_patch_notes_mouse,    NULL,                      NULL,                   NULL},
-    {"bankBackup",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 20, false, NULL, render_bank_backup_progress,  NULL, NULL,                        NULL,                      NULL,                   NULL},
-    {"bankRestore",    SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 30, false, NULL, render_bank_restore_progress, NULL, NULL,                        NULL,                      NULL,                   NULL},
-    {"deviceBusy",     SYNTHLIB_POPUP_LAYER_BROWSERS + 10,     false, NULL, render_device_busy_overlay,   NULL, NULL,                        NULL,                      NULL,                   NULL},
+    {"bankBackup",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 20, false, NULL, render_bank_backup_progress,  NULL, NULL,                  NULL,                NULL,                   NULL},
+    {"bankRestore",    SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 30, false, NULL, render_bank_restore_progress, NULL, NULL,                  NULL,                NULL,                   NULL},
+    {"deviceBusy",     SYNTHLIB_POPUP_LAYER_BROWSERS + 10,     false, NULL, render_device_busy_overlay,   NULL, NULL,                  NULL,                NULL,                   NULL},
 
     // The group, not the panels: their order among themselves is dynamic (they raise on click) and
     // belongs to floatingPanel.c. What is constant, and so belongs here, is that all of them sit
     // above the fixed panels below and below the context menu above.
-    {"floatingPanels", SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 10, false, NULL, floating_panels_render,       NULL, floating_panels_mouse,       floating_panels_key,       floating_panels_scroll, NULL},
-
-    // Drawn in this order, so ranked in it. These are what the menu bar's clicks had to stay behind.
-    {"midiCcList",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 14, false, NULL, render_midi_cc_list_panel,    NULL, handle_midi_cc_list_mouse,   handle_midi_cc_list_key,   NULL,                   NULL},
-    {"paramOverview",  SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 16, false, NULL, render_param_overview_panel,  NULL, handle_param_overview_mouse, handle_param_overview_key, NULL,                   NULL},
-    {"paramPages",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 18, false, NULL, render_param_pages_panel,     NULL, handle_param_pages_mouse,    handle_param_pages_key,    NULL,                   NULL},
+    {"floatingPanels", SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 10, false, NULL, floating_panels_render,       NULL, floating_panels_mouse, floating_panels_key, floating_panels_scroll, NULL},
 };
 
 static void register_app_popups(void) {

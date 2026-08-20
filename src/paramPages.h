@@ -22,6 +22,7 @@
 
 #include "types.h"
 #include "synthlibTypes.h"
+#include "floatingPanel.h"
 
 // The Parameter Pages panel - the on-screen stand-in for the G2 front panel's PARAMETER PAGES
 // and their eight ASSIGNABLE KNOBS (manual p.19 and p.89-91).
@@ -70,22 +71,24 @@ const char * param_pages_module_display_name(const tModule * module);
 const char * param_pages_knob_param_label(const tKnobTarget * target);
 
 typedef struct {
-    bool       active;
-    uint32_t   slot;                 // which Slot's patch pages are shown (own copy, as with
+    bool           active;
+    uint32_t       slot;             // which Slot's patch pages are shown (own copy, as with
                                      // gPatchParamsEdit - selecting a page here doesn't change
                                      // the Slot the canvas or the device is on)
-    uint32_t   page;                 // 0..NUM_PARAM_PAGES-1, i.e. row A..E
-    uint32_t   bank;                 // 0..NUM_BANKS_PER_PAGE-1, i.e. column 1..3
-    bool       showGlobal;           // false = the patch's own pages, true = the global pages
+    uint32_t       page;             // 0..NUM_PARAM_PAGES-1, i.e. row A..E
+    uint32_t       bank;             // 0..NUM_BANKS_PER_PAGE-1, i.e. column 1..3
+    bool           showGlobal;       // false = the patch's own pages, true = the global pages
 
-    tRectangle close;
-    bool       closePressed;
-    tRectangle slotButton[MAX_SLOTS];
-    tRectangle patchButton;
-    tRectangle globalButton;
-    tRectangle pageButton[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE];
-    tRectangle knobCell[NUM_KNOBS_PER_BANK];      // whole cell, for the right-click menu
-    tRectangle knobWidget[NUM_KNOBS_PER_BANK];    // just the dial/button, for click and drag
+    tRectangle     close;
+    bool           closePressed;
+    tRectangle     slotButton[MAX_SLOTS];
+    tRectangle     patchButton;
+    tRectangle     globalButton;
+    tRectangle     pageButton[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE];
+    tRectangle     knobCell[NUM_KNOBS_PER_BANK];   // whole cell, for the right-click menu
+    tRectangle     knobWidget[NUM_KNOBS_PER_BANK]; // just the dial/button, for click and drag
+
+    tFloatingPanel panel;                          // see floatingPanel.h
 } tParamPagesEdit;
 
 extern tParamPagesEdit gParamPages;
