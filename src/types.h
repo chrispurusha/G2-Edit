@@ -22,6 +22,13 @@
 
 #include "sysIncludes.h"
 #include "defs.h"
+
+// AFTER defs.h, and it has to stay that way. This reaches synthlibTypes.h -> synthlibDefs.h,
+// where every RGB_* colour sits behind #ifdef G2_EDIT — and G2_EDIT is defined in defs.h.
+// Include it first and synthlibDefs.h is consumed with that guard closed; its own include
+// guard then stops the later #include from doing anything, and the build fails much later in
+// unrelated files with "undeclared identifier RGB_GREY_9". The ordering is load-bearing.
+#include "floatingPanel.h"   // tFloatingPanel, for the panels below that float
 #include "geometry.h"
 
 typedef enum {
@@ -237,13 +244,7 @@ typedef enum {
     moduleTypeMax
 } tModuleType;
 
-typedef enum {
-    mouseButtonNone,
-    mouseButtonLeftDown,
-    mouseButtonLeftUp,
-    mouseButtonRightDown,
-    mouseButtonRightUp
-} tMouseButton;
+// tMouseButton now lives in SynthLib's synthlibTypes.h — the floating-panel registry takes it.
 
 typedef enum {
     cableColourRed,
@@ -898,8 +899,9 @@ typedef struct {
 } tPatchNotesEdit;
 
 typedef struct {
-    bool     active;
-    uint32_t slot;
+    bool           active;
+    uint32_t       slot;
+    tFloatingPanel panel;   // floats like the Virtual Keyboard does — see SynthLib floatingPanel.h
 } tPatchSettingsEdit;
 
 typedef enum {
@@ -1008,7 +1010,8 @@ typedef struct {
 } tSettingsPanelRects;
 
 typedef struct {
-    bool active;
+    bool           active;
+    tFloatingPanel panel;   // floats like the Virtual Keyboard does — see SynthLib floatingPanel.h
 } tPerfSettingsEdit;
 
 typedef struct {

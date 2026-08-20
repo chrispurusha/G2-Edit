@@ -31,6 +31,11 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton);
 bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton);
 bool handle_patch_settings_mouse(tCoord coord, tMouseButton mouseButton);
 
+// Escape for the three, registered in key_callback's floating-panel table so the front one gets it.
+bool handle_patch_settings_key(int key, int mods, int action);
+bool handle_perf_settings_key(int key, int mods, int action);
+bool handle_patch_params_key(int key, int mods, int action);
+
 #ifdef __cplusplus
 }
 #endif
