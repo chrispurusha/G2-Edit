@@ -99,6 +99,7 @@ bool                    gCablesTransparent                                      
 bool                    gCablesHideAll                                           = false;
 tResourceAlloc          gResourceAlloc[MAX_SLOTS]                                = {0};
 
+tRectangle              gPatchNotesPanelRect                                     = {0};
 tRectangle              gPatchNotesCloseRect                                     = {0};
 bool                    gPatchNotesClosePressed                                  = false;
 tRectangle              gPatchNotesDiscardRect                                   = {0};

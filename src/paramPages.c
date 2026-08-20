@@ -308,7 +308,6 @@ void render_param_pages_panel(void) {
         return;
     }
     double       renderW                     = get_render_width() / gGlobalGuiScale;
-    double       renderH                     = get_render_height() / gGlobalGuiScale;
     double       margin                      = 10.0;
     double       titleH                      = 24.0;
     double       rowH                        = 20.0;
@@ -357,13 +356,20 @@ void render_param_pages_panel(void) {
     if (boxH < (titleH + margin + rowH + margin + gridH + margin)) {
         boxH = titleH + margin + rowH + margin + gridH + margin;
     }
-    double       boxX                        = (renderW - boxW) / 2.0;
-    double       boxY                        = (renderH - boxH) / 2.0;
+    // FLOATING, so the position comes from the panel rather than from the window: chosen once on
+    // first show and thereafter wherever the user has dragged it. Centring every frame is what made
+    // a panel impossible to move — it snapped back before the next redraw.
+    //
+    // No draw_dialog_background_overlay() either. Dimming the canvas behind is what a MODAL dialog
+    // does, and this is not one: the canvas stays live underneath and stays legible to match.
+    tRectangle   panelBox                    = floating_panel_place(&gParamPages.panel, boxW, boxH);
+    double       boxX                        = panelBox.coord.x;
+    double       boxY                        = panelBox.coord.y;
     double       y                           = boxY + titleH + margin;
 
-    draw_dialog_background_overlay();
-    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Parameter Pages");
-    gParamPages.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gParamPages.closePressed);
+    gParamPages.panel.titleBarRect = draw_panel_chrome(mainArea, panelBox, titleH, "Parameter Pages");
+    gParamPages.close              = draw_panel_close_button(mainArea, panelBox, gParamPages.closePressed);
+    gParamPages.panel.closeRect    = gParamPages.close;
 
     // ── Slot buttons in the title bar ──────────────────────────────────
     // Only for the patch pages: a global assignment carries its own Slot per knob, so there's
@@ -602,6 +608,21 @@ static bool release_knob_widget(tCoord coord) {
 bool handle_param_pages_mouse(tCoord coord, tMouseButton mouseButton) {
     if (!gParamPages.active) {
         return false;
+    }
+
+    // FLOATING NOW: the move/raise/close-button routing comes from SynthLib rather than being
+    // written out per panel. eFloatingPanelContent means "it landed on me, but not on my chrome" —
+    // which is the only case the panel's own hit-testing below should see.
+    switch (floating_panel_mouse(&gParamPages.panel, coord, mouseButton, gParamPages.closePressed)) {
+        case eFloatingPanelPassThrough:
+            return false;
+
+        case eFloatingPanelConsumed:
+            return true;
+
+        case eFloatingPanelContent:
+        default:
+            break;
     }
 
     if (mouseButton == mouseButtonLeftDown) {

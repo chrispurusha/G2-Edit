@@ -46,17 +46,7 @@ extern "C" {
 // stays on the parameter's own right-click menu, where the parameter being acted on is unambiguous.
 
 #define CC_LIST_COLUMNS    (3)
-#define CC_LIST_ROWS       (24)   // 3 x 24 = 72 visible; a patch can hold MAX_NUM_CONTROLLERS (128)
-
-typedef struct {
-    bool       active;
-    uint32_t   slot;
-    bool       closePressed;
-    tRectangle close;
-    tRectangle slotButton[MAX_SLOTS];
-} tMidiCcList;
-
-static tMidiCcList gMidiCcList = {0};
+tMidiCcList gMidiCcList = {0};   // declared in midiCcList.h — see the note there on why it is public
 
 void open_midi_cc_list_panel(uint32_t slot) {
     gMidiCcList.active       = true;
@@ -118,7 +108,13 @@ void render_midi_cc_list_panel(void) {
     uint32_t            count                 = 0;
     double              renderW               = 0.0;
     double              renderH               = 0.0;
-    double              titleH                = (double)STANDARD_BUTTON_TEXT_HEIGHT + 8.0;
+    // 24.0, as every other panel in the app uses. Derived from the text height it USED to be
+    // (STANDARD_BUTTON_TEXT_HEIGHT + 8.0), which came to 20.0 — and the close button that
+    // draw_panel_close_button() puts in the banner is inset 6.0 from the panel top and is 14.0
+    // square, so it ended exactly ON the bar's bottom edge and hung out of it. The button's geometry
+    // is measured from the PANEL's corner and never sees the title height, so a bar shorter than
+    // 20.0 has nowhere to put it; this was the only panel not using the common value.
+    double              titleH                = 24.0;
     double              btnH                  = (double)STANDARD_BUTTON_TEXT_HEIGHT;
     double              margin                = 10.0;
     double              rowH                  = btnH + 4.0;
@@ -134,7 +130,7 @@ void render_midi_cc_list_panel(void) {
     if (gMidiCcList.active == false) {
         return;
     }
-    count             = gControllerCount[gMidiCcList.slot];
+    count                          = gControllerCount[gMidiCcList.slot];
 
     if (count > MAX_NUM_CONTROLLERS) {
         count = MAX_NUM_CONTROLLERS;
@@ -149,7 +145,7 @@ void render_midi_cc_list_panel(void) {
     }
     // Width follows the widest row: nothing clips anywhere in SynthLib, so a column narrower than
     // its content would be painted over by the next one.
-    colW              = get_text_width((char *)"CC 000  VA  ModuleName  ParameterName", btnH, eCache);
+    colW                           = get_text_width((char *)"CC 000  VA  ModuleName  ParameterName", btnH, eCache);
 
     for (i = 0; i < count; i++) {
         double w = 0.0;
@@ -162,8 +158,8 @@ void render_midi_cc_list_panel(void) {
         }
     }
 
-    colW             += margin;
-    rows              = (count + CC_LIST_COLUMNS - 1) / CC_LIST_COLUMNS;
+    colW                          += margin;
+    rows                           = (count + CC_LIST_COLUMNS - 1) / CC_LIST_COLUMNS;
 
     if (rows < 1) {
         rows = 1;
@@ -172,21 +168,27 @@ void render_midi_cc_list_panel(void) {
     if (rows > CC_LIST_ROWS) {
         rows = CC_LIST_ROWS;
     }
-    boxW              = (colW * CC_LIST_COLUMNS) + (margin * 2.0);
-    boxH              = titleH + (rowH * (double)(rows + 1)) + (margin * 2.0);
-    renderW           = get_render_width() / gGlobalGuiScale;
-    renderH           = get_render_height() / gGlobalGuiScale;
+    boxW                           = (colW * CC_LIST_COLUMNS) + (margin * 2.0);
+    boxH                           = titleH + (rowH * (double)(rows + 1)) + (margin * 2.0);
+    renderW                        = get_render_width() / gGlobalGuiScale;
+    renderH                        = get_render_height() / gGlobalGuiScale;
 
     if (boxW > (renderW - 20.0)) {
         boxW = renderW - 20.0;
     }
-    boxX              = (renderW - boxW) / 2.0;
-    boxY              = (renderH - boxH) / 2.0;
+    // FLOATING, so the position comes from the panel rather than from the window: chosen once on
+    // first show and thereafter wherever the user has dragged it. Centring every frame is what made
+    // a panel impossible to move — it snapped back before the next redraw.
+    tRectangle panelBox = floating_panel_place(&gMidiCcList.panel, boxW, boxH);
 
-    draw_dialog_background_overlay();
-    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "MIDI Controller List");
-    gMidiCcList.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}},
-                                                gMidiCcList.closePressed);
+    boxX                           = panelBox.coord.x;
+    boxY                           = panelBox.coord.y;
+
+    // No draw_dialog_background_overlay(): dimming the canvas behind is what a MODAL dialog does,
+    // and this is not one.
+    gMidiCcList.panel.titleBarRect = draw_panel_chrome(mainArea, panelBox, titleH, "MIDI Controller List");
+    gMidiCcList.close              = draw_panel_close_button(mainArea, panelBox, gMidiCcList.closePressed);
+    gMidiCcList.panel.closeRect    = gMidiCcList.close;
 
     {
         double   slotBtnW = get_text_width((char *)"A", btnH, eCache);
@@ -233,6 +235,21 @@ bool handle_midi_cc_list_mouse(tCoord coord, tMouseButton mouseButton) {
 
     if (gMidiCcList.active == false) {
         return false;
+    }
+
+    // FLOATING NOW: the move/raise/close-button routing comes from SynthLib rather than being
+    // written out per panel. eFloatingPanelContent means "it landed on me, but not on my chrome" —
+    // which is the only case the panel's own hit-testing below should see.
+    switch (floating_panel_mouse(&gMidiCcList.panel, coord, mouseButton, gMidiCcList.closePressed)) {
+        case eFloatingPanelPassThrough:
+            return false;
+
+        case eFloatingPanelConsumed:
+            return true;
+
+        case eFloatingPanelContent:
+        default:
+            break;
     }
 
     if (mouseButton == mouseButtonLeftUp) {
