@@ -72,12 +72,14 @@ void stop_synth_name_editing(void);
 bool handle_scrollbar_click(tCoord coord);
 void set_x_scroll_bar(double x);
 void set_y_scroll_bar(double y);
-void char_event(GLFWwindow * window, unsigned int value);
-void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods);
-void cursor_pos(GLFWwindow * window, double x, double y);
-void mouse_button(GLFWwindow * window, int button, int action, int mods);
-void scroll_event(GLFWwindow * window, double x, double y);
-void window_focus_callback(GLFWwindow * window, int focused);
+void char_event(unsigned int value);
+void key_callback(int key, int scancode, int action, int mods);
+void cursor_pos(tCoord coord);
+// Normalised input handlers, registered with SynthLib via tSynthLibInputHandlers — the coordinate
+// arrives already scaled, the button already decoded, the modifier state already updated.
+void mouse_button(tCoord coord, tMouseButton mouseButton, int mods);
+void scroll_event(double x, double y);
+void window_focus_callback(bool focused);
 
 #ifdef __cplusplus
 }
