@@ -711,11 +711,18 @@ static void parse_list_names_response(uint8_t * buff, uint32_t * bitPos, int len
             if (!sSuppressNameTableUpdate) {
                 if ((mode == BANK_UPLOAD_DOMAIN_PATCH) && (bank < NUM_PATCH_BANKS)) {
                     gPatchNameTable[bank][location].populated = true;
-                    strncpy(gPatchNameTable[bank][location].name, name, CLAVIA_NAME_SIZE);
+                    // COPY_STRING, NOT strncpy. strncpy pads with zeros only when the source is
+                    // SHORTER than n: at exactly CLAVIA_NAME_SIZE it writes 16 bytes and no
+                    // terminator, and the reader then runs on into whatever follows the field. That
+                    // is how "distant activity" — exactly 16 characters — came to be displayed in the
+                    // Load Patch picker as "distant activity Ringmod Basses". The tables are globals
+                    // so the byte is zero at startup, which is why it only showed up once an entry
+                    // had been rewritten by a re-sweep, a Store or a Delete.
+                    COPY_STRING(gPatchNameTable[bank][location].name, name);
                     gPatchNameTable[bank][location].category  = category;
                 } else if ((mode == BANK_UPLOAD_DOMAIN_PERFORMANCE) && (bank < NUM_PERF_BANKS)) {
                     gPerfNameTable[bank][location].populated = true;
-                    strncpy(gPerfNameTable[bank][location].name, name, CLAVIA_NAME_SIZE);
+                    COPY_STRING(gPerfNameTable[bank][location].name, name);
                     gPerfNameTable[bank][location].category  = category;
                 }
             }
@@ -1919,11 +1926,11 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
             // the pushed content itself.
             if (isPerf && (destBank < NUM_PERF_BANKS)) {
                 gPerfNameTable[destBank][location].populated = true;
-                strncpy(gPerfNameTable[destBank][location].name, pushName, CLAVIA_NAME_SIZE);
+                COPY_STRING(gPerfNameTable[destBank][location].name, pushName);
                 gPerfNameTable[destBank][location].category  = peek_patch_category(sBankRestoreContent, sBankRestoreContentLen);
             } else if (!isPerf && (destBank < NUM_PATCH_BANKS)) {
                 gPatchNameTable[destBank][location].populated = true;
-                strncpy(gPatchNameTable[destBank][location].name, pushName, CLAVIA_NAME_SIZE);
+                COPY_STRING(gPatchNameTable[destBank][location].name, pushName);
                 gPatchNameTable[destBank][location].category  = peek_patch_category(sBankRestoreContent, sBankRestoreContentLen);
             }
         } else {
@@ -2022,12 +2029,16 @@ static int store_patch_to_bank(uint32_t bank, uint32_t location, bool isPerf) {
         // buffer (that's what Store just sent), no device round-trip needed to know them.
         if (isPerf && (bank < NUM_PERF_BANKS)) {
             gPerfNameTable[bank][location].populated = true;
-            strncpy(gPerfNameTable[bank][location].name, gGlobalSettings.perfName, CLAVIA_NAME_SIZE);
+            COPY_STRING(gPerfNameTable[bank][location].name, gGlobalSettings.perfName);
             gPerfNameTable[bank][location].category  = 0;
         } else if (!isPerf && (bank < NUM_PATCH_BANKS)) {
             gPatchNameTable[bank][location].populated = true;
-            strncpy(gPatchNameTable[bank][location].name, gGlobalSettings.slot[gSlot].patchName, CLAVIA_NAME_SIZE);
-            gPatchNameTable[bank][location].category  = gPatchDescr[gSlot].category;
+            // gSlot read ONCE into a local first: COPY_STRING expands its source twice, and an
+            // _Atomic read twice over is two separate loads that can disagree — the same trap that
+            // once corrupted a different slot's buffer than the one being copied into.
+            uint32_t slot = gSlot;
+            COPY_STRING(gPatchNameTable[bank][location].name, gGlobalSettings.slot[slot].patchName);
+            gPatchNameTable[bank][location].category  = gPatchDescr[slot].category;
         }
     } else {
         snprintf(msg, sizeof(msg), "Store of %s to Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
@@ -2408,7 +2419,11 @@ static bool parse_synth_settings_backup_file(const char * filePath, tSynthSettin
         }
 
         if (strcmp(line, "Name") == 0) {
-            strncpy(outSettings->name, value, CLAVIA_NAME_SIZE);
+            // Same unterminated-at-exactly-16 hazard as the name tables: this destination belongs to
+            // the caller and is not guaranteed to have been zeroed first. (The two other strncpy
+            // name copies in this file write into locals declared = {0}, so their terminator is
+            // there by construction.)
+            COPY_STRING(outSettings->name, value);
         } else if (strcmp(line, "MIDI Channel A") == 0) {
             outSettings->midiChanSlot[0] = parse_midi_chan_value(value);
         } else if (strcmp(line, "MIDI Channel B") == 0) {
