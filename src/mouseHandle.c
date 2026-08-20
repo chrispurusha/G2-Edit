@@ -759,26 +759,22 @@ void cursor_pos(tCoord coord) {
         return;
     }
 
-    // Floating panels being moved (floatingPanel.h). Ahead of the canvas gestures below for the same
-    // reason the Mutator is: a panel drag owns the pointer until it is released, and the panel is
-    // over the canvas, so letting the canvas also act on the motion would rubber-band underneath it.
-    // Every floating panel has to be listed here or its title bar drags nothing — the Help panel was
-    // added to the draw and hit-test registries but missed off this one, so it could be raised and
-    // closed but never moved. The Mutator is absent deliberately: handle_mutator_cursor_pos() above
-    // already runs its move, because it has sliders to drag as well.
-    if (  floating_panel_drag(&gVirtualKeyboard.panel, coord)
-       || floating_panel_drag(&gPatchAdjuster.panel, coord)
-       || floating_panel_drag(&gHelpPanel.panel, coord)
-       || floating_panel_drag(&gPatchSettingsEdit.panel, coord)
-       || floating_panel_drag(&gPerfSettingsEdit.panel, coord)
-       || floating_panel_drag(&gPatchParamsEdit.panel, coord)) {
+    // Floating panels being moved. Ahead of the canvas gestures below for the same reason the Mutator
+    // is: a panel drag owns the pointer until it is released, and the panel is over the canvas, so
+    // letting the canvas also act on the motion would rubber-band underneath it.
+    if (floating_panels_drag(coord)) {
         return;
     }
 
-    // Mouse is just hovering over the (non-dragging) Mutator panel - skip all the hover detection
-    // below (cable highlight, knob/CC overlays, etc.) so nothing hidden behind the floater lights
-    // up. gHoverConnector.active is already false from just above.
-    if (gMutator.active && within_rectangle(coord, gMutator.panel.rect)) {
+    // Hovering over a panel: skip all the hover detection below — cable highlight, connector
+    // hover, knob/CC overlays — so nothing UNDERNEATH the panel lights up in response to a pointer
+    // that never touched it. gHoverConnector.active is already false from just above.
+    //
+    // THIS USED TO NAME THE MUTATOR AND ONLY THE MUTATOR, which meant it was not a rule but a
+    // patch applied to the one panel somebody noticed it on. The other six had the bug the comment
+    // described: hovering Synth Settings ran the canvas hover under it, lighting connectors it was
+    // covering and hiding the cables that go with them. See floating_panels_under() in graphics.c.
+    if (floating_panels_under(coord)) {
         synthlib_request_redraw();
         return;
     }

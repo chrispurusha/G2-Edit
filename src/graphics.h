@@ -60,6 +60,13 @@ int note_editor_cursor_from_click(double logicalX, double logicalY);
 
 // Shared popup-panel chrome (bordered box, inset title bar, Close button) — see graphics.cpp.
 
+// The floating panels, asked as a group. Their one table lives in graphics.c beside the popup
+// registration; these are the two questions the cursor-position handler has to ask it. Clicks and
+// keys do NOT need an entry point here — those go through the popup coordinator, which walks the
+// same table. See synthlibPopups.h and floatingPanel.h.
+bool floating_panels_under(tCoord coord);
+bool floating_panels_drag(tCoord coord);
+
 #ifdef __cplusplus
 }
 #endif
