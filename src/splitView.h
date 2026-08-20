@@ -63,8 +63,13 @@
 #define SPLIT_POS_MAX          (0x3fff) // the field is 14 bits, as the reference's setter clamps it
 
 typedef struct {
-    uint32_t   focusedPane;       // 0 or 1 — the pane clicks and the scrollbars act on
-    uint16_t   restorePosition;   // where the double-arrow puts the divider back to
+    uint32_t focusedPane;         // 0 or 1 — the pane clicks and the scrollbars act on
+
+    // WHERE THE DOUBLE-ARROW PUTS THE DIVIDER BACK TO — the manual's "previous split position" —
+    // and PER SLOT, because the thing it remembers is per slot. barPosition lives in
+    // gPatchDescr[slot], so it is patch data: each of the four slots has its own divider, and a
+    // single app-wide value handed slot B the position last seen in slot A.
+    uint16_t   restorePosition[MAX_SLOTS];
 
     tRectangle barRect;           // the draggable bar, window coordinates
     tRectangle upButton;          // give the TOP pane everything
