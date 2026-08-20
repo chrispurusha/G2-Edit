@@ -284,11 +284,21 @@ static void build_bank_browser_items(bool isPerf, bool populatedOnly,
             bool populated = isPerf ? gPerfNameTable[bank][location].populated : gPatchNameTable[bank][location].populated;
 
             if (!populatedOnly || populated) {
+                // COPY_STRING, NOT strncpy. `names` is a malloc'd array of contiguous
+                // CLAVIA_NAME_SIZE + 1 byte rows, and strncpy(dst, src, 16) writes a terminator only
+                // when the source is SHORTER than 16 — at exactly 16 characters it fills the row and
+                // leaves the 17th byte as whatever malloc handed back. The rows are adjacent, so the
+                // name then runs straight on into the NEXT patch's row: "Bank 2 Loc 106" displayed as
+                // "DreamPad    DLX?DreamPluck   DLXEvolution String" — three consecutive entries, with
+                // the uninitialised byte showing up as the '?'.
+                //
+                // The same defect was fixed in the name tables themselves (usbComms.c) the same day;
+                // this copy hid from that sweep because it says sizeof(names[i]) - 1 rather than
+                // CLAVIA_NAME_SIZE. COPY_STRING always terminates, whatever the source length.
                 if (populated) {
-                    strncpy(names[i], isPerf ? gPerfNameTable[bank][location].name : gPatchNameTable[bank][location].name,
-                            sizeof(names[i]) - 1);
+                    COPY_STRING(names[i], isPerf ? gPerfNameTable[bank][location].name : gPatchNameTable[bank][location].name);
                 } else {
-                    strncpy(names[i], "(empty)", sizeof(names[i]) - 1);
+                    COPY_STRING(names[i], "(empty)");
                 }
                 items[i].name             = names[i];
                 items[i].category         = populated ? (isPerf ? gPerfNameTable[bank][location].category : gPatchNameTable[bank][location].category) : 0;
