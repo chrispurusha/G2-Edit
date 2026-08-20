@@ -2495,7 +2495,7 @@ ARCHITECTURE — RATIONALISE AND COMMONALISE FOR THE OTHER PROJECTS
 mostly-mechanical dedup + decoupling wins at the host<->SynthLib boundary; do these before the bigger
 open design items below):
 
-1. [DONE for G2-Edit 2026-08-20, the other two need the pin] Shared graphics/window bootstrap.
+1. [DONE 2026-08-20, all three apps] Shared graphics/window bootstrap.
    BUILT as SynthLib/src/synthlibWindow.{c,h}: synthlib_window_create(config, callbacks) does GLFW
    init, the two window hints, creation, the TARGET/minDivisor minimum and locked aspect ratio, the
    context, the initial scale query, callback registration and the blend setup; synthlib_window_close()
@@ -2526,7 +2526,7 @@ open design items below):
    STILL TO DO: advance the recorded pin in each project (git add SynthLib + commit); all three
    worktrees are already at 57356ff.
 
-2. [PART DONE 2026-08-20 — the registry half] Popup lifecycle coordinator.
+2. [MOSTLY DONE 2026-08-20 — registry + facade; see the two deliberate exclusions below] Popup lifecycle coordinator.
 
    WHAT LANDED. floatingPanel.{c,h} moved from G2-Edit into SynthLib, which is the coordinator's
    foundation rather than a side-quest: it already WAS the registration model this item asks for — a
