@@ -323,56 +323,19 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
     // dropdown — moved into SynthLib. See synthlibPopups.h. The gating is the part worth not losing:
     // a modal popup swallows the PRESS as well as the click, because the browsers act only on the
     // release and the press used to fall straight through to the canvas underneath.
+    // ONE QUESTION, ASKED ONCE: is this click any popup's? Thirteen ifs used to stand here — the
+    // modal cascade, the four fixed panels, then a hand-sorted walk of the seven floating ones — and
+    // their SEQUENCE was the z-order, restated (differently, and so wrongly in two places) by
+    // render_frame(). All of them are rows in gAppPopups now, ranked by a layer that decides drawing
+    // and hit-testing together. See graphics.c and synthlibPopups.h.
+    //
+    // The gating is the part worth not losing: a modal popup swallows the PRESS as well as the
+    // click, because the browsers act only on the release and the press used to fall straight
+    // through to the canvas underneath.
     if (synthlib_popups_dispatch_click(coord, mouseButton)) {
         synthlib_request_redraw();
         return;
     }
-
-    if (handle_patch_notes_mouse(coord, mouseButton)) {
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (handle_param_pages_mouse(coord, mouseButton)) {
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (handle_midi_cc_list_mouse(coord, mouseButton)) {
-        return;
-    }
-
-    if (handle_param_overview_mouse(coord, mouseButton)) {
-        synthlib_request_redraw();
-        return;
-    }
-    // Floating panels are hit-tested FRONT TO BACK, matching the order they are drawn in (see
-    // render_panels() in graphics.c, which draws them back to front). Fixed call order was wrong the
-    // moment two of them could overlap: whichever was tested first swallowed the press, even when it
-    // was the one underneath.
-    {
-        tFloatingPanelEntry panels[] = {
-            {&gVirtualKeyboard.panel,   NULL, handle_virtual_keyboard_mouse, NULL},
-            {&gPatchAdjuster.panel,     NULL, handle_patch_adjuster_mouse,   NULL},
-            {&gHelpPanel.panel,         NULL, handle_help_panel_mouse,       NULL},
-            {&gMutator.panel,           NULL, handle_mutator_mouse,          NULL},
-            {&gPatchSettingsEdit.panel, NULL, handle_patch_settings_mouse,   NULL},
-            {&gPerfSettingsEdit.panel,  NULL, handle_perf_settings_mouse,    NULL},
-            {&gPatchParamsEdit.panel,   NULL, handle_patch_params_mouse,     NULL}
-        };
-        uint32_t            count    = (uint32_t)(sizeof(panels) / sizeof(panels[0]));
-
-        floating_panel_sort(panels, count);
-
-        // Reversed: sorted back-to-front for drawing, so front-to-back is the hit-test order.
-        for (uint32_t i = count; i > 0; i--) {
-            if (panels[i - 1].mouse(coord, mouseButton)) {
-                synthlib_request_redraw();
-                return;
-            }
-        }
-    }
-
     stop_patch_name_editing();
     stop_module_name_editing();
     stop_param_name_editing();
@@ -416,10 +379,16 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
     switch (mouseButton) {
         case mouseButtonLeftDown:
         {
-            if (!found) {
-                found = handle_menu_bar_click(gAppMenuBar, app_menu_bar_rect(), coord);
-            }
-
+            // THE MENU BAR USED TO BE TESTED HERE, first of the left-down chain. It is the
+            // coordinator's now, at the lowest layer there is — which is what this position meant,
+            // since everything ahead of it in the old sequence (the panels, the context menu) is
+            // ranked above it there. It could only move once the floating panels were ranked too:
+            // a panel may overlap the bar, so dispatching the bar from a coordinator that ran
+            // BEFORE the panels would have silently put it in front of them.
+            //
+            // Nothing is lost by it happening before split_view_focus_at() below: the bar sits above
+            // both panes, so split_view_pane_at() returns -1 for any coordinate on it and the call
+            // was already a no-op.
             if (!found) {
                 found = handle_topbar_left_down(coord, slot);
             }
@@ -1038,48 +1007,13 @@ void key_callback(int key, int scancode, int action, int mods) {
     // each with its own early return, and the alert's routing around its bank-picker dropdown — is
     // SynthLib's now. See synthlibPopups.h: the order is a layer on each popup rather than the order
     // of the ifs in this function, and the quirks live in one copy instead of one per application.
-    if (synthlib_popups_dispatch_key(key, action)) {
+    // The same one question the clicks ask, on the key channel: Escape has to close the panel you are
+    // LOOKING at, which is a statement about z-order and so has exactly one right answer for both.
+    // mods is carried through the coordinator for this — the floating panels' key handlers need it,
+    // and a dispatcher that owned keys while dropping a field of a key event was a trap waiting.
+    if (synthlib_popups_dispatch_key(key, mods, action)) {
         synthlib_request_redraw();
         return;
-    }
-
-    if (handle_param_pages_key(key, mods, action)) {
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (handle_midi_cc_list_key(key, mods, action)) {
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (handle_param_overview_key(key, mods, action)) {
-        synthlib_request_redraw();
-        return;
-    }
-    // Floating-panel keys, FRONT TO BACK for the same reason their clicks are: Escape has to close
-    // the panel you are looking at. Fixed call order closed whichever handler happened to be first —
-    // with the Help panel in front and the Virtual Keyboard behind it, Escape shut the keyboard.
-    {
-        tFloatingPanelEntry panels[] = {
-            {&gVirtualKeyboard.panel,   NULL, NULL, handle_virtual_keyboard_key},
-            {&gPatchAdjuster.panel,     NULL, NULL, handle_patch_adjuster_key  },
-            {&gHelpPanel.panel,         NULL, NULL, handle_help_panel_key      },
-            {&gMutator.panel,           NULL, NULL, handle_mutator_key         },
-            {&gPatchSettingsEdit.panel, NULL, NULL, handle_patch_settings_key  },
-            {&gPerfSettingsEdit.panel,  NULL, NULL, handle_perf_settings_key   },
-            {&gPatchParamsEdit.panel,   NULL, NULL, handle_patch_params_key    }
-        };
-        uint32_t            count    = (uint32_t)(sizeof(panels) / sizeof(panels[0]));
-
-        floating_panel_sort(panels, count);
-
-        for (uint32_t i = count; i > 0; i--) {
-            if (panels[i - 1].key(key, mods, action)) {
-                synthlib_request_redraw();
-                return;
-            }
-        }
     }
 
     // NOTE ENTRY, deliberately global — it does not need the Virtual Keyboard panel open, because the

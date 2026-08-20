@@ -72,6 +72,7 @@ extern "C" {
 #include "undo.h"
 #include "deviceSync.h"
 #include "mutatorUI.h"
+#include "mousePanels.h"
 #include "paramPages.h"
 #include "paramOverview.h"
 #include "midiCcList.h"
@@ -1909,21 +1910,148 @@ static void render_mouse_crosshair(void) {
 }
 #endif
 
+// THE FLOATING PANELS, ONCE. This list existed THREE TIMES — here for drawing, and twice in
+// mouseHandle.c, once for clicks and once for keys — each copy filling a different column of the
+// same struct and each carrying a comment warning that it had to agree with the others. It is the
+// duplication the struct was introduced to remove, reintroduced one channel at a time.
+//
+// Sorted in place on every walk. That is not wasteful and it is not a cache: floating_panel_sort()
+// orders by last-raised, which a click can change between one walk and the next, so asking again is
+// the only way to be right.
+static tFloatingPanelEntry gFloatingPanels[] = {
+    {&gVirtualKeyboard.panel,   render_virtual_keyboard_panel, handle_virtual_keyboard_mouse, handle_virtual_keyboard_key, &gVirtualKeyboard.active  },
+    {&gPatchAdjuster.panel,     render_patch_adjuster_panel,   handle_patch_adjuster_mouse,   handle_patch_adjuster_key,   &gPatchAdjuster.active    },
+    {&gHelpPanel.panel,         render_help_panel,             handle_help_panel_mouse,       handle_help_panel_key,       &gHelpPanel.active        },
+    {&gMutator.panel,           render_mutator_panel,          handle_mutator_mouse,          handle_mutator_key,          &gMutator.active          },
+    {&gPatchSettingsEdit.panel, render_patch_settings_panel,   handle_patch_settings_mouse,   handle_patch_settings_key,   &gPatchSettingsEdit.active},
+    {&gPerfSettingsEdit.panel,  render_perf_settings_panel,    handle_perf_settings_mouse,    handle_perf_settings_key,    &gPerfSettingsEdit.active },
+    {&gPatchParamsEdit.panel,   render_patch_params_panel,     handle_patch_params_mouse,     handle_patch_params_key,     &gPatchParamsEdit.active  }
+};
+
+#define FLOATING_PANEL_COUNT    ((uint32_t)(sizeof(gFloatingPanels) / sizeof(gFloatingPanels[0])))
+
+static void floating_panels_render(void) {
+    // Panels stay off the canvas scrollbars, which run along the bottom and the right. Overlapping
+    // the TOP bar is deliberately still allowed — a panel has to start somewhere, and the bar is not
+    // something you scroll — but a panel lying over a scrollbar reads as a mistake rather than as a
+    // panel in front. Set per frame so a window resize cannot leave it stale.
+    floating_panel_set_bounds((tRectangle){{
+                                               0.0, 0.0
+                                           }, {
+                                               (get_render_width() / gGlobalGuiScale) - SCROLLBAR_WIDTH,
+                                               (get_render_height() / gGlobalGuiScale) - SCROLLBAR_WIDTH
+                                           }
+                              });
+
+    floating_panel_sort(gFloatingPanels, FLOATING_PANEL_COUNT);
+
+    for (uint32_t i = 0; i < FLOATING_PANEL_COUNT; i++) {
+        gFloatingPanels[i].render();     // back to front, so the most recently clicked ends up on top
+    }
+}
+
+// Reversed against the draw walk: sorted back-to-front for drawing, so front-to-back is the
+// hit-test order. Fixed call order was wrong the moment two of them could overlap — whichever was
+// tested first swallowed the press, even when it was the one underneath.
+static bool floating_panels_mouse(tCoord coord, tMouseButton mouseButton) {
+    floating_panel_sort(gFloatingPanels, FLOATING_PANEL_COUNT);
+
+    for (uint32_t i = FLOATING_PANEL_COUNT; i > 0; i--) {
+        if (gFloatingPanels[i - 1].mouse(coord, mouseButton)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Keys are ordered for the same reason clicks are: Escape has to close the panel you are LOOKING at.
+// Fixed call order closed whichever handler came first — with the Help panel in front and the
+// Virtual Keyboard behind it, Escape shut the keyboard.
+static bool floating_panels_key(int key, int mods, int action) {
+    floating_panel_sort(gFloatingPanels, FLOATING_PANEL_COUNT);
+
+    for (uint32_t i = FLOATING_PANEL_COUNT; i > 0; i--) {
+        if (gFloatingPanels[i - 1].key(key, mods, action)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// THE POINTER IS OVER A PANEL — so the canvas underneath must not react to the motion.
+//
+// This is what the hover path needed and could not ask. cursor_pos() named the Mutator in an if and
+// suppressed hover only for that one, so moving the pointer across Synth Settings (or any of the
+// other five) ran the canvas hover detection underneath it: connectors the panel was covering lit
+// up and the cable-hiding that goes with a connector hover triggered, over a panel. Reported
+// 2026-08-20 against Synth Settings.
+//
+// Visibility is checked, not just the rectangle: a closed panel keeps its rect so it can reopen
+// where it was left, and testing that alone would suppress hover over a strip of empty canvas.
+bool floating_panels_under(tCoord coord) {
+    for (uint32_t i = 0; i < FLOATING_PANEL_COUNT; i++) {
+        if (  floating_panel_entry_visible(&gFloatingPanels[i])
+           && floating_panel_contains(gFloatingPanels[i].panel, coord)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// A panel being MOVED owns the pointer until it is released. This was a fourth hand-written copy of
+// the list — the draw, click and key copies are gone; this one had already lost the Mutator (which
+// is fine, see below) and had a comment recording that the Help panel was once missed off it
+// entirely, so it could be raised and closed but never moved.
+//
+// The Mutator is harmless to include even though cursor_pos() handles its move separately: that
+// branch returns before this is reached whenever the Mutator is actually dragging, so the entry can
+// only ever be a no-op here.
+bool floating_panels_drag(tCoord coord) {
+    for (uint32_t i = 0; i < FLOATING_PANEL_COUNT; i++) {
+        if (floating_panel_drag(gFloatingPanels[i].panel, coord)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // The application's own popups, registered into SynthLib's ordering (synthlibPopups.h) so that this
 // app's panels and the library's cannot disagree about who is in front.
 //
-// The layers reproduce EXACTLY what the eight hand-ordered render calls here used to do: patch notes
-// and the two progress panels above the context menu and below the browsers, the device-busy overlay
-// above the browsers and below the alert. Written as numbers relative to SynthLib's constants rather
-// than as bare values, so the intent survives someone renumbering the library's layers.
+// THE LAYERS ARE NOW THE WHOLE PIPELINE, not just the render order. Every entry below carries its
+// mouse and key handlers, so this table is the answer to "who gets the click, and after whom" — a
+// question that used to be answered by the ORDER OF THIRTEEN ifs in mouseHandle.c, restated a second
+// time by the order of eight calls in render_frame(), with nothing anywhere able to check that the
+// two agreed. They did not: the three panels below sat BELOW the floating panels when drawn and
+// ABOVE them when clicked, so a floating panel lying over the Parameter Pages panel was drawn in
+// front and took no clicks. That class of defect — paint order and hit order disagreeing — is the
+// one this app has hit repeatedly (the context menu over the scrollbars, the VA module under the FX
+// pane), and here it is now impossible to write down: ONE layer decides both.
 //
-// Mouse and key are NULL: these keep their existing routing in mouseHandle.c for now. Only their
-// ORDER moves here, which is the half that was unstated.
+// The numbers still reproduce exactly what the render calls did, which is what makes this a
+// re-expression rather than a redesign, with one deliberate exception noted at patchNotes. Written
+// relative to SynthLib's constants so the intent survives someone renumbering the library's layers.
 static const tSynthLibPopup gAppPopups[] = {
-    {"patchNotes",  SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 10, false, NULL, render_patch_notes_edit,      NULL, NULL, NULL},
-    {"bankBackup",  SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 20, false, NULL, render_bank_backup_progress,  NULL, NULL, NULL},
-    {"bankRestore", SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 30, false, NULL, render_bank_restore_progress, NULL, NULL, NULL},
-    {"deviceBusy",  SYNTHLIB_POPUP_LAYER_BROWSERS + 10,     false, NULL, render_device_busy_overlay,   NULL, NULL, NULL},
+    // ABOVE the context menu, because that is where it is DRAWN. Its clicks used to be offered after
+    // the menu's, i.e. below — the one place where making input follow paint changes behaviour. A
+    // menu raised over the notes editor is drawn underneath it, so it could previously be clicked
+    // while invisible.
+    {"patchNotes",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 10, false, NULL, render_patch_notes_edit,      NULL, handle_patch_notes_mouse,    NULL,                      NULL, NULL},
+    {"bankBackup",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 20, false, NULL, render_bank_backup_progress,  NULL, NULL,                        NULL,                      NULL, NULL},
+    {"bankRestore",    SYNTHLIB_POPUP_LAYER_CONTEXT_MENU + 30, false, NULL, render_bank_restore_progress, NULL, NULL,                        NULL,                      NULL, NULL},
+    {"deviceBusy",     SYNTHLIB_POPUP_LAYER_BROWSERS + 10,     false, NULL, render_device_busy_overlay,   NULL, NULL,                        NULL,                      NULL, NULL},
+
+    // The group, not the panels: their order among themselves is dynamic (they raise on click) and
+    // belongs to floatingPanel.c. What is constant, and so belongs here, is that all of them sit
+    // above the fixed panels below and below the context menu above.
+    {"floatingPanels", SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 10, false, NULL, floating_panels_render,       NULL, floating_panels_mouse,       floating_panels_key,       NULL, NULL},
+
+    // Drawn in this order, so ranked in it. These are what the menu bar's clicks had to stay behind.
+    {"midiCcList",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 14, false, NULL, render_midi_cc_list_panel,    NULL, handle_midi_cc_list_mouse,   handle_midi_cc_list_key,   NULL, NULL},
+    {"paramOverview",  SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 16, false, NULL, render_param_overview_panel,  NULL, handle_param_overview_mouse, handle_param_overview_key, NULL, NULL},
+    {"paramPages",     SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 18, false, NULL, render_param_pages_panel,     NULL, handle_param_pages_mouse,    handle_param_pages_key,    NULL, NULL},
 };
 
 static void register_app_popups(void) {
@@ -1991,47 +2119,12 @@ static void render_frame(void) {
     render_menu_bar(gAppMenuBar, app_menu_bar_rect());
     render_morph_groups();
     render_scrollbars();
-    render_param_pages_panel();
-    render_param_overview_panel();
-    render_midi_cc_list_panel();
 
-    // Floating panels, drawn BACK TO FRONT so the most recently clicked one ends up on top. The
-    // mouse dispatch in mouseHandle.c builds the same list and walks it reversed — the two must
-    // agree, or a panel is drawn on top of one that is taking its clicks.
-    {
-        tFloatingPanelEntry panels[] = {
-            {&gVirtualKeyboard.panel,   render_virtual_keyboard_panel, NULL, NULL},
-            {&gPatchAdjuster.panel,     render_patch_adjuster_panel,   NULL, NULL},
-            {&gHelpPanel.panel,         render_help_panel,             NULL, NULL},
-            {&gMutator.panel,           render_mutator_panel,          NULL, NULL},
-            {&gPatchSettingsEdit.panel, render_patch_settings_panel,   NULL, NULL},
-            {&gPerfSettingsEdit.panel,  render_perf_settings_panel,    NULL, NULL},
-            {&gPatchParamsEdit.panel,   render_patch_params_panel,     NULL, NULL}
-        };
-
-        // Panels stay off the canvas scrollbars, which run along the bottom and the right. Overlapping
-        // the TOP bar is deliberately still allowed — a panel has to start somewhere, and the bar is
-        // not something you scroll — but a panel lying over a scrollbar reads as a mistake rather
-        // than as a panel in front. Set per frame so a window resize cannot leave it stale.
-        floating_panel_set_bounds((tRectangle){{
-                                                   0.0, 0.0
-                                               }, {
-                                                   (get_render_width() / gGlobalGuiScale) - SCROLLBAR_WIDTH,
-                                                   (get_render_height() / gGlobalGuiScale) - SCROLLBAR_WIDTH
-                                               }
-                                  });
-
-        floating_panel_sort(panels, (uint32_t)(sizeof(panels) / sizeof(panels[0])));
-
-        for (uint32_t i = 0; i < (uint32_t)(sizeof(panels) / sizeof(panels[0])); i++) {
-            panels[i].render();
-        }
-    }
-    // ONE CALL, AND THE ORDER IS DATA. This used to be eight calls whose sequence WAS the z-order:
-    // correct, unstated, and one careless insertion away from being wrong. The four app panels below
-    // are registered with layers that reproduce exactly what those eight calls did — patch notes and
-    // the two progress panels above the context menu and below the browsers, the device-busy overlay
-    // above the browsers and below the alert. See synthlibPopups.h.
+    // ONE CALL, AND THE ORDER IS DATA. This used to be twelve calls whose sequence WAS the z-order —
+    // the three fixed panels, the seven floating ones and SynthLib's own — correct, unstated, and
+    // one careless insertion away from being wrong. Every one of them is now a row in gAppPopups
+    // above, ranked by the same layer that decides which of them gets the click. See
+    // synthlibPopups.h.
     synthlib_popups_render();
 
 #ifdef ENABLE_MOUSE_CROSSHAIR
