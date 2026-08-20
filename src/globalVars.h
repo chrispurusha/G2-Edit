@@ -166,7 +166,6 @@ extern char                    gSynthRestorePeekFileName[64];                   
 extern char                    gSynthRestorePeekName[CLAVIA_NAME_SIZE + 1];              // the backup's own "Name" field, for display
 extern tNameTableEntry         gPatchNameTable[NUM_PATCH_BANKS][NUM_LOCATIONS_PER_BANK]; // filled by send_list_names_sweep() during init
 extern tNameTableEntry         gPerfNameTable[NUM_PERF_BANKS][NUM_LOCATIONS_PER_BANK];
-extern tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 extern pthread_mutex_t         gStringCopyMutex;
 
 #ifdef __cplusplus

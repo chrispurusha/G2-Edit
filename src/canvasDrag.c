@@ -399,7 +399,7 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                         }
                         value      = (uint32_t)newVal;
                     } else {
-                        angle = calculate_mouse_angle((tCoord){x, y}, gParamRectangle[module->key.slot][module->key.location][module->key.index][gParamDragging.param]);
+                        angle = calculate_mouse_angle((tCoord){x, y}, gParamDragging.rect);   // captured at press — see tParamDragging
                         value = angle_to_value(angle, range);
                     }
 
@@ -528,44 +528,56 @@ bool canvas_param_drag_release(void) {
 //
 // The application keeps its own topbar and module-area right-click handling after calling this.
 bool canvas_right_click(tCoord coord, uint32_t slot, uint32_t location) {
-    bool found = false;
-    int  i     = 0;
+    (void)slot;
+    (void)location;
+    bool                  found  = false;
 
-    for (uint32_t idx = 0; idx < MAX_NUM_MODULES && !found; idx++) {
-        tModule * module = get_module_slot(slot, location, idx);
+    // ONE QUERY, not a walk over every module and every parameter. The click-region registry already
+    // holds each widget's rectangle and its identity, front to back, so "what is under the cursor"
+    // is a lookup rather than a re-derivation — and it is the SAME lookup a left-click makes, which
+    // is the property the old nested loops could not offer: they were a second opinion about z-order
+    // that happened to agree.
+    //
+    // The precedence this replaces is preserved without being restated. Connectors and parameters
+    // register AFTER the module body (render_module registers the body, then the drag strip, then
+    // calls render_module_common), and the registry resolves ties by taking the most recently
+    // registered — so a connector still wins over the body it sits inside, exactly as the old
+    // "connectors, then params, then body" order spelled out. The slot and location arguments are
+    // now unused for the same reason: the registry only ever holds the widgets currently on screen.
+    const tCanvasWidget * widget = canvas_widget_at(coord);
 
-        if (!module->active) {
-            continue;
-        }
+    if (widget != NULL) {
+        found = true;
 
-        for (i = 0; i < (int)module_connector_count(module->type); i++) {
-            if (within_rectangle(coord, module->connector[i].rectangle)) {
-                open_connector_context_menu(coord, module->key, i);
-                found = true;
+        switch (widget->kind) {
+            case eCanvasWidgetConnector:
+                open_connector_context_menu(coord, widget->key, (int)canvas_widget_index(widget));
                 break;
-            }
-        }
 
-        if (found == false) {
-            uint32_t paramCount = module_param_count(module->type);
+            case eCanvasWidgetParam:
+                open_param_context_menu(coord, widget->key, canvas_widget_index(widget));
+                break;
 
-            for (uint32_t p = 0; p < paramCount && !found; p++) {
-                if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][p])) {
-                    open_param_context_menu(coord, module->key, p);
-                    found = true;
-                }
-            }
-        }
+            case eCanvasWidgetModule:
+                // The drag strip shares the module's context, so a right-click there opens the
+                // module menu — which is what it did before, by falling through to the body.
+                open_module_context_menu(coord, widget->key);
+                break;
 
-        if (found == false) {
-            if (within_rectangle(coord, module->rectangle)) {
-                open_module_context_menu(coord, module->key);
-                found = true;
-            }
+            case eCanvasWidgetMode:
+            case eCanvasWidgetMorph:
+            case eCanvasWidgetNone:
+            default:
+                // A mode selector has no right-click menu of its own; fall back to its module's,
+                // which is where a right-click on that part of the face used to land.
+                open_module_context_menu(coord, widget->key);
+                break;
         }
     }
 
     if (found == false) {
+        // The morph LABELS are drawn text, not registered widgets, so they are still a rectangle
+        // test. Worth registering one day; not worth inventing a widget kind for it today.
         for (int mi = 0; mi < NUM_MORPHS && !found; mi++) {
             if (within_rectangle(coord, gMorphLabelRect[mi])) {
                 open_morph_label_context_menu(coord, (uint32_t)mi);
@@ -868,111 +880,102 @@ void canvas_hover_update(tCoord coord) {
 // the question never came up. It has one now, and this is the action behind it — the KEY DECODING
 // stays in each shell, because a GLFW key code and an NSEvent's characters are not the same thing,
 // and translating once at the boundary is the same split the modifier seam uses.
-static bool nudge_param_for_module(tModule * module, tCoord coord, uint32_t variation, int delta) {
-    uint32_t paramCount = 0;
+static bool nudge_one_param(tModule * module, uint32_t i, uint32_t variation, int delta) {
+    tParam *   param = &module->param[variation][i];
+    tParamType type  = paramTypeCommonDial;
+    uint32_t   range = 128;
+    int        newValue;
 
-    if (module->key.location == locationMorph) {
-        paramCount = (module->key.index == 1) ? (NUM_MORPHS * 2) : 1;
-    } else {
-        paramCount = module_param_count(module->type);
+    if (module->key.location != locationMorph) {
+        type  = paramLocationList[param->paramRef].type;
+        range = paramLocationList[param->paramRef].range;
     }
 
-    for (uint32_t i = 0; i < paramCount; i++) {
-        tParam *   param = &module->param[variation][i];
-        tParamType type  = paramTypeCommonDial;
-        uint32_t   range = 128;
-        int        newValue;
-
-        if (!within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i])) {
-            continue;
-        }
-
-        if (module->key.location != locationMorph) {
-            type  = paramLocationList[param->paramRef].type;
-            range = paramLocationList[param->paramRef].range;
-        }
-
-        // Push is momentary and CustomData is not a scalar, so neither has a value to step. Return
-        // true regardless: the cursor IS over this parameter, and falling through to keep looking
-        // would let a widget behind it take the keypress instead.
-        if ((type == paramTypePush) || (type == paramTypeCustomData) || (range == 0)) {
-            return true;
-        }
-        newValue = (int)param->value + delta;
-
-        if (newValue < 0) {
-            newValue = 0;
-        } else if (newValue >= (int)range) {
-            newValue = (int)range - 1;
-        }
-
-        if ((uint32_t)newValue != param->value) {
-            param->value = (uint32_t)newValue;
-            send_param_value(module->key.slot, module->key, i, variation, (uint32_t)newValue);
-            send_param_value_to_links(module->key.slot, module->key, i, variation, (uint32_t)newValue);
-        }
+    // Push is momentary and CustomData is not a scalar, so neither has a value to step. Return true
+    // regardless: the pointer IS on this parameter, and answering false would let a widget behind it
+    // take the keypress instead.
+    if ((type == paramTypePush) || (type == paramTypeCustomData) || (range == 0)) {
         return true;
     }
+    newValue = (int)param->value + delta;
 
-    // Mode selectors render as dials too, so hovering one and getting nothing would be the
-    // surprise. They carry their own range table and their own write command.
-    for (uint32_t i = 0; i < module->modeCount; i++) {
-        tMode *  mode  = &module->mode[i];
-        uint32_t range = modeLocationList[mode->modeRef].range;
-        int      newValue;
-
-        if (!within_rectangle(coord, mode->rectangle)) {
-            continue;
-        }
-
-        if (range == 0) {
-            return true;
-        }
-        newValue = (int)mode->value + delta;
-
-        if (newValue < 0) {
-            newValue = 0;
-        } else if (newValue >= (int)range) {
-            newValue = (int)range - 1;
-        }
-
-        if ((uint32_t)newValue != mode->value) {
-            mode->value = (uint32_t)newValue;
-            send_mode_value(module->key.slot, module->key, i, (uint32_t)newValue);
-        }
-        return true;
+    if (newValue < 0) {
+        newValue = 0;
+    } else if (newValue >= (int)range) {
+        newValue = (int)range - 1;
     }
 
-    return false;
+    if ((uint32_t)newValue != param->value) {
+        param->value = (uint32_t)newValue;
+        send_param_value(module->key.slot, module->key, i, variation, (uint32_t)newValue);
+        send_param_value_to_links(module->key.slot, module->key, i, variation, (uint32_t)newValue);
+    }
+    return true;
+}
+
+// Mode selectors render as dials too, so pointing at one and getting nothing would be the surprise.
+// They carry their own range table and their own write command.
+static bool nudge_one_mode(tModule * module, uint32_t i, int delta) {
+    tMode *  mode  = &module->mode[i];
+    uint32_t range = modeLocationList[mode->modeRef].range;
+    int      newValue;
+
+    if (range == 0) {
+        return true;
+    }
+    newValue = (int)mode->value + delta;
+
+    if (newValue < 0) {
+        newValue = 0;
+    } else if (newValue >= (int)range) {
+        newValue = (int)range - 1;
+    }
+
+    if ((uint32_t)newValue != mode->value) {
+        mode->value = (uint32_t)newValue;
+        send_mode_value(module->key.slot, module->key, i, (uint32_t)newValue);
+    }
+    return true;
 }
 
 bool canvas_nudge_param_under_cursor(int delta) {
-    tCoord   coord     = {0};
-    uint32_t slot      = gSlot;
-    uint32_t variation = gPatchDescr[slot].activeVariation;
+    tCoord                coord     = {0};
+    uint32_t              slot      = gSlot;
+    uint32_t              variation = gPatchDescr[slot].activeVariation;
 
     get_global_gui_scaled_mouse_coord(&coord);
 
-    // Morph knobs are drawn on top of the canvas, so they have to win the hit test against a module
-    // param that happens to sit at the same place — hence the Morph location is walked first here.
-    // (The click path gets this ordering from the click-region layers instead; see the press handler.)
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
+    // ONE QUERY. This used to walk every module in the Morph location and then every module in the
+    // current one, testing each parameter's rectangle and then each mode's — morph first, because
+    // morph knobs are drawn over the canvas and had to win a hit test against whatever sits beneath
+    // them. The registry already knows that: the morph dials register at eClickLayerPanel and the
+    // canvas widgets at eClickLayerCanvas, and the walk goes front to back. The old code's own
+    // comment said as much — "the click path gets this ordering from the click-region layers
+    // instead" — which is the duplication this removes rather than a difference to preserve.
+    const tCanvasWidget * widget    = canvas_widget_at_any_layer(coord);
 
-        if (module->active && nudge_param_for_module(module, coord, variation, delta)) {
-            return true;
-        }
+    if (widget == NULL) {
+        return false;
+    }
+    tModule *             module    = get_module(widget->key);
+
+    if ((module == NULL) || !module->active) {
+        return false;
     }
 
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, gLocation, i);
+    switch (widget->kind) {
+        case eCanvasWidgetParam:
+        case eCanvasWidgetMorph:
+            return nudge_one_param(module, canvas_widget_index(widget), variation, delta);
 
-        if (module->active && nudge_param_for_module(module, coord, variation, delta)) {
-            return true;
-        }
+        case eCanvasWidgetMode:
+            return nudge_one_mode(module, canvas_widget_index(widget), delta);
+
+        default:
+            // A connector, a module body or its drag strip: nothing with a value to step. Answering
+            // false lets the keypress go on to whatever else wants it.
+            return false;
     }
-
-    return false;
 }
 
 // ── The gesture table ───────────────────────────────────────────────────────────────────────────

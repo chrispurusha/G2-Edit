@@ -67,29 +67,35 @@ extern "C" {
 // regular module sit visually underneath the morph overlay without stealing
 // its clicks (see mouse_button()'s own comment on this).
 
+// The leading {kind, key} pair is the shared prefix declared in moduleGraphics.h — see the comment
+// there before reordering or adding a member.
 typedef struct {
-    tModuleKey key;
-    uint32_t   paramIndex;
+    eCanvasWidgetKind kind;
+    tModuleKey        key;
+    uint32_t          paramIndex;
 } tParamClickCtx;
 
 static tParamClickCtx     sParamClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 
 typedef struct {
-    tModuleKey key;
+    eCanvasWidgetKind kind;
+    tModuleKey        key;
 } tModuleClickCtx;
 
 static tModuleClickCtx    sModuleClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES];
 
 typedef struct {
-    tModuleKey key;
-    uint32_t   modeIndex;
+    eCanvasWidgetKind kind;
+    tModuleKey        key;
+    uint32_t          modeIndex;
 } tModeClickCtx;
 
 static tModeClickCtx      sModeClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_MODES];
 
 typedef struct {
-    tModuleKey key;
-    uint32_t   connectorIndex;
+    eCanvasWidgetKind kind;
+    tModuleKey        key;
+    uint32_t          connectorIndex;
 } tConnectorClickCtx;
 
 static tConnectorClickCtx sConnectorClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_CONNECTORS];
@@ -128,6 +134,11 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             gParamDragging.param           = ctx->paramIndex;
             gParamDragging.startValue      = param->value;
             gParamDragging.active          = true;
+            // From the registry's own capture, which dispatch armed with this region before calling
+            // this handler — so the drag holds the exact rectangle that was clicked, rather than
+            // looking the same thing up again in an array that a later frame may have rewritten.
+            // See click_region_capture_rect() and tParamDragging.
+            click_region_capture_rect(&gParamDragging.rect);
             gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
 
             if ((synthlib_dial_mode() != eDialModeRotary) || (paramType == paramTypeSlider)) {
@@ -306,9 +317,25 @@ static void drag_area_click_handler(tCoord coord, eClickPhase phase, void * user
 // it. That collapses the original 3-way paramType branch down to: the dial
 // half only ever arms a drag (on press), the label half only ever toggles
 // (on release, flipping the isKnob flag render_morph_groups() reads).
+// A TAGGED CONTEXT, NOT AN INTEGER CAST TO A POINTER. These regions used to carry (void *)(intptr_t)i
+// as their user data, which works for a handler that knows what it registered and is a landmine for
+// anything that asks the registry what is under the cursor: reading a tag off it dereferences a small
+// integer. The morph module's own slots in sParamClickCtx are free — render_param_common() is never
+// called for a morph module, which is what fills them for everything else — so the context lives
+// there, tagged eCanvasWidgetMorph.
+static void * morph_click_ctx(const tModule * module, uint32_t index) {
+    tParamClickCtx * ctx = &sParamClickCtx[module->key.slot][module->key.location][module->key.index][index];
+
+    *ctx = (tParamClickCtx){
+        eCanvasWidgetMorph, module->key, index
+    };
+
+    return ctx;
+}
+
 static void morph_param_click_handler(tCoord coord, eClickPhase phase, void * userData) {
     (void)coord;
-    uint32_t  i         = (uint32_t)(intptr_t)userData;
+    uint32_t  i         = ((const tParamClickCtx *)userData)->paramIndex;
     tModule * module    = get_module((tModuleKey){gSlot, (uint32_t)locationMorph, 1});
     uint32_t  variation = gPatchDescr[gSlot].activeVariation;
     tParam *  param     = &module->param[variation][i];
@@ -459,17 +486,22 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
 // This might be too generic and won't be able to use, or we add extra params!
 // TODO: possibly move all the type cases into functions in a new source file, references by function pointer?
-void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
-    char     buff[16]                    = {0};
-    char     label[CLAVIA_NAME_SIZE + 1] = {0};
+tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
+    // WHERE THE WIDGET ACTUALLY WENT. A local, because that is all it ever was: the value is written
+    // here, handed to register_click_region() a few lines down and returned to the caller, and
+    // nothing reads it afterwards. It used to be a slot in a 6MB [slot][location][module][param]
+    // global that every hit test in the app then re-read — see the migration note in Docs/todo.txt.
+    tRectangle widgetRect                  = {0};
+    char       buff[16]                    = {0};
+    char       label[CLAVIA_NAME_SIZE + 1] = {0};
     // The module's own Slot, not gSlot: identical while rendering the canvas (which only ever
     // draws the selected Slot), but the Parameter Pages panel reuses these widgets to draw a
     // Global page's knobs, and those can point at a module in any of the four Slots - each with
     // its own active Variation. Same reason the renderParams.c widgets read module->key.slot.
-    uint32_t slot                        = module->key.slot;
-    uint32_t variation                   = gPatchDescr[slot].activeVariation;
-    uint32_t paramValue                  = module->param[variation][paramIndex].value;
-    uint32_t morphRange                  = module->param[variation][paramIndex].morphRange[gMorphGroupFocus];
+    uint32_t   slot                        = module->key.slot;
+    uint32_t   variation                   = gPatchDescr[slot].activeVariation;
+    uint32_t   paramValue                  = module->param[variation][paramIndex].value;
+    uint32_t   morphRange                  = module->param[variation][paramIndex].morphRange[gMorphGroupFocus];
 
     if (paramValue >= paramLocationList[paramRef].range) {
         LOG_ERROR("Module index %u name %s ParamRef %u ParamIndex %u Value %u > Range %u\n", module->key.index, module->name, paramRef, paramIndex, paramValue, paramLocationList[paramRef].range);
@@ -496,7 +528,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             render_param_function = &render_paramType1StandardToggle;
 
             if (render_param_function != NULL) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+                widgetRect = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -506,7 +538,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             render_param_function = &render_paramType1Bypass;
 
             if (render_param_function != NULL) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+                widgetRect = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -517,7 +549,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             render_param_function = &render_paramType1Enable;
 
             if (render_param_function != NULL) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+                widgetRect = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -627,17 +659,72 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             }
 
             if (render_param_function != NULL) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramRef);
+                widgetRect = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramRef);
             }
             break;
         }
     }
     sParamClickCtx[module->key.slot][module->key.location][module->key.index][paramIndex] = (tParamClickCtx){
-        module->key, paramIndex
+        eCanvasWidgetParam, module->key, paramIndex
     };
-    register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex],
-                          eClickLayerCanvas, param_click_handler, &sParamClickCtx[module->key.slot][module->key.location][module->key.index][paramIndex]);
+    register_click_region(widgetRect, eClickLayerCanvas, param_click_handler,
+                          &sParamClickCtx[module->key.slot][module->key.location][module->key.index][paramIndex]);
     param_overlay_note_param(module, paramIndex, rectangle, buff);
+
+    // Hand back where the widget actually went, for a caller that needs it for its own hit-testing.
+    return widgetRect;
+}
+
+// EVERY registered region in this application now carries a tagged context — the morph dials were
+// the last holdout, and they carried a bare integer. That is what makes this variant safe: it walks
+// all layers, so the fixed morph overlay is found before the scrolling canvas underneath it, exactly
+// as a click resolves.
+const tCanvasWidget * canvas_widget_at_any_layer(tCoord coord) {
+    return (const tCanvasWidget *)click_region_at(coord);
+}
+
+const tCanvasWidget * canvas_widget_at(tCoord coord) {
+    // Canvas layer only — see moduleGraphics.h. The morph dials sit at eClickLayerPanel and register
+    // an INTEGER cast to a pointer as their user data, so reading a tag off one would not merely be
+    // the wrong answer, it would dereference a small integer.
+    return (const tCanvasWidget *)click_region_at_layer(coord, eClickLayerCanvas);
+}
+
+uint32_t canvas_widget_index(const tCanvasWidget * widget) {
+    if (widget == NULL) {
+        return 0;
+    }
+
+    switch (widget->kind) {
+        case eCanvasWidgetParam:
+            return ((const tParamClickCtx *)widget)->paramIndex;
+
+        case eCanvasWidgetMode:
+            return ((const tModeClickCtx *)widget)->modeIndex;
+
+        case eCanvasWidgetConnector:
+            return ((const tConnectorClickCtx *)widget)->connectorIndex;
+
+        default:
+            return 0;
+    }
+}
+
+// Is this parameter the thing under the cursor RIGHT NOW?
+//
+// Answered from the click-region registry rather than by testing the app's own rectangle array, so
+// the answer cannot disagree with where a click would actually land: same front-to-back walk, same
+// data, one description of where the widget is. The comparison is against this parameter's own click
+// context, which is its identity in the registry — no tag, no lookup table, and sParamClickCtx stays
+// private to this file.
+//
+// Returns false while the registry is empty (before the first frame) or when something is drawn over
+// the canvas, which is the correct answer in both cases.
+bool param_is_under_cursor(const tModule * module, uint32_t paramIndex, tCoord coord) {
+    if ((module == NULL) || (paramIndex >= MAX_NUM_PARAMETERS)) {
+        return false;
+    }
+    return click_region_at(coord) == &sParamClickCtx[module->key.slot][module->key.location][module->key.index][paramIndex];
 }
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
@@ -662,7 +749,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             modeDialRect.size.h                                                                 = modeDialRect.size.w;
             module->mode[modeIndex].rectangle                                                   = render_dial_with_text(moduleArea, modeDialRect, (char *)modeLocationList[modeRef].label, buff, modeLabelH, module->mode[0].value, modeLocationList[modeRef].range, 0, (tRgb)RGB_GREY_5); // TODO: Check if Mode can be morphed
             sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
-                module->key, modeIndex
+                eCanvasWidgetMode, module->key, modeIndex
             };
             register_click_region(module->mode[modeIndex].rectangle, eClickLayerCanvas, mode_click_handler,
                                   &sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex]);
@@ -682,7 +769,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
                 //Debug help for value
                 char debug[64] = {0};
                 snprintf(debug, sizeof(debug), "modeRef %u", modeRef);
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][modeIndex] = draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {30, textHeight}}, debug, (tRgb)RGB_BACKGROUND_GREY);
+                draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {30, textHeight}}, debug, (tRgb)RGB_BACKGROUND_GREY);
                 return;
             }
             //if (paramLocationList[paramRef].colourMap != NULL) {
@@ -704,7 +791,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             }
             module->mode[modeIndex].rectangle                                                   = draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight, eCache), textHeight}}, strMap[modeValue], (tRgb)RGB_BACKGROUND_GREY);
             sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
-                module->key, modeIndex
+                eCanvasWidgetMode, module->key, modeIndex
             };
             register_click_region(module->mode[modeIndex].rectangle, eClickLayerCanvas, mode_click_handler,
                                   &sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex]);
@@ -868,7 +955,7 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
         module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, (tRectangle){rectangle.coord, {rectangle.size.w, rectangle.size.h}});
     }
     sConnectorClickCtx[module->key.slot][module->key.location][module->key.index][connectorIndex] = (tConnectorClickCtx){
-        module->key, connectorIndex
+        eCanvasWidgetConnector, module->key, connectorIndex
     };
     register_click_region(module->connector[connectorIndex].rectangle, eClickLayerCanvas, connector_click_handler,
                           &sConnectorClickCtx[module->key.slot][module->key.location][module->key.index][connectorIndex]);
@@ -1580,7 +1667,7 @@ void render_module(tModule * module) {
     module->rectangle                                                          = render_rectangle_with_border(moduleArea, moduleRectangle);
 
     sModuleClickCtx[module->key.slot][module->key.location][module->key.index] = (tModuleClickCtx){
-        module->key
+        eCanvasWidgetModule, module->key
     };
     register_click_region(module->rectangle, eClickLayerCanvas, module_body_click_handler,
                           &sModuleClickCtx[module->key.slot][module->key.location][module->key.index]);
@@ -1878,7 +1965,6 @@ void render_morph_groups(void) {
     char       label[16]        = {0};
     tRgb       dialColour       = (tRgb)RGB_BACKGROUND_GREY;
     uint32_t   i                = 0;
-    uint32_t   j                = 0;
     double     textHeight       = 0.0;
     bool       isKnob           = false;
     uint8_t    dialValue        = 0;
@@ -1888,16 +1974,14 @@ void render_morph_groups(void) {
     tModule *  module           = get_module((tModuleKey){slot, (uint32_t)locationMorph, 1});
 
     if (module != NULL) {
-        // Make sure all rectangles (for mouse click) are nullified
-        for (i = 0; i < NUM_VARIATIONS_USB; i++) {
-            for (j = 0; j < (NUM_MORPHS * 2); j++) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][j] = (tRectangle)NULL_RECTANGLE;
-            }
-        }
+        // The per-frame "nullify all the rectangles so stale ones cannot be clicked" loop that used
+        // to be here is gone with the array: hit-testing comes from the click-region registry, and
+        // clear_click_regions() empties that at the top of every frame. A widget that is not drawn
+        // this frame is not registered this frame, which is the same guarantee without the bookkeeping.
 
         for (i = 0; i < NUM_MORPHS; i++) {
-            isKnob                                                                                     = !(module->param[variation][i + NUM_MORPHS].value != 0);
-            dialValue                                                                                  = module->param[variation][i].value;
+            isKnob     = !(module->param[variation][i + NUM_MORPHS].value != 0);
+            dialValue  = module->param[variation][i].value;
 
             snprintf(dialValueStr, sizeof(dialValueStr), "%u", dialValue);
 
@@ -1910,7 +1994,7 @@ void render_morph_groups(void) {
             } else {
                 snprintf(label, sizeof(label), "%s", morph_source_name(i, module->param[variation][i + NUM_MORPHS].value));
             }
-            textHeight                                                                                 = rectangle.size.h / 4.0;
+            textHeight = rectangle.size.h / 4.0;
 
             set_rgb_colour((tRgb)RGB_BLACK);
             render_text(mainArea, (tRectangle){{rectangle.coord.x - 3, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, (char *)morphStrMap[i]);
@@ -1923,9 +2007,10 @@ void render_morph_groups(void) {
             // + textHeight on top of the existing + 16 because render_dial_with_text() is
             // dial-anchored: the rect is now the circle and the value string is drawn in the row
             // above it, where it previously started at the rect's own y.
-            gParamRectangle[module->key.slot][module->key.location][module->key.index][i]              = render_dial_with_text(mainArea, (tRectangle){{rectangle.coord.x, rectangle.coord.y + 16 + textHeight}, {rectangle.size.w, rectangle.size.w}}, NULL, dialValueStr, textHeight, module->param[variation][i].value, 128, module->param[variation][i].morphRange[gMorphGroupFocus], dialColour);
-            register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][i],
-                                  eClickLayerPanel, morph_param_click_handler, (void *)(intptr_t)i);
+            tRectangle dialRect = render_dial_with_text(mainArea, (tRectangle){{rectangle.coord.x, rectangle.coord.y + 16 + textHeight}, {rectangle.size.w, rectangle.size.w}}, NULL, dialValueStr, textHeight, module->param[variation][i].value, 128, module->param[variation][i].morphRange[gMorphGroupFocus], dialColour);
+
+            register_click_region(dialRect, eClickLayerPanel, morph_param_click_handler,
+                                  morph_click_ctx(module, i));
 
             if (  gParamNameEdit.active
                && gParamNameEdit.moduleKey.slot == module->key.slot
@@ -1941,11 +2026,10 @@ void render_morph_groups(void) {
             } else {
                 gMorphLabelRect[i] = draw_button(mainArea, (tRectangle){{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, (tRgb)RGB_BACKGROUND_GREY);
             }
-            gParamRectangle[module->key.slot][module->key.location][module->key.index][i + NUM_MORPHS] = gMorphLabelRect[i];
-            register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][i + NUM_MORPHS],
-                                  eClickLayerPanel, morph_param_click_handler, (void *)(intptr_t)(i + NUM_MORPHS));
+            register_click_region(gMorphLabelRect[i], eClickLayerPanel, morph_param_click_handler,
+                                  morph_click_ctx(module, (uint32_t)(i + NUM_MORPHS)));
 
-            rectangle.coord.x                                                                         += (STANDARD_TEXT_HEIGHT * 4) + 5;
+            rectangle.coord.x += (STANDARD_TEXT_HEIGHT * 4) + 5;
         }
     }
 }
