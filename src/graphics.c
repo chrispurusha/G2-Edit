@@ -54,6 +54,7 @@ extern "C" {
 #include "topbarRender.h"
 #include "splitView.h"
 #include "utilsGraphics.h"
+#include "synthlibWindow.h"
 #include "mouseHandle.h"
 #include "dataBase.h"
 #include "moduleGraphics.h"
@@ -215,55 +216,12 @@ static int find_note_cursor_line(int cursorPos) {
     return result;
 }
 
-void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
-    (void)window;
-    synthlib_scale_update(width, height);
-
-    synthlib_request_redraw();
-}
-
-// Fires when the window moves to a display with a different HiDPI scale (e.g. dragging from a
-// Retina built-in display to a non-Retina external one, or vice versa) — see synthlibScale.h's
-// own comment for the bug this fixes (gContentScale used to be hardcoded 2.0f here).
-static void content_scale_callback(GLFWwindow * window, float xscale, float yscale) {
-    (void)yscale; // this app only ever uses a single uniform scale factor
-
-    synthlib_scale_set_content_scale(window, xscale);
-
-    synthlib_request_redraw();
-}
-
-void window_size_callback(GLFWwindow * window, int width, int height) {
-    synthlib_save_window_size(width);
-}
-
-void window_pos_callback(GLFWwindow * window, int x, int y) {
-    synthlib_save_window_pos(x, y);
-}
-
 void resize_window(int w, int h) {
     glfwSetWindowSize((GLFWwindow *)synthlib_window(), w, h);
 }
 
 void reposition_window(int x, int y) {
     glfwSetWindowPos((GLFWwindow *)synthlib_window(), x, y);
-}
-
-void window_close_callback(GLFWwindow * window) {
-    synthlib_clear_redraw();
-
-    glfwSetFramebufferSizeCallback((GLFWwindow *)synthlib_window(), NULL);
-    glfwSetWindowContentScaleCallback((GLFWwindow *)synthlib_window(), NULL);
-    glfwSetWindowCloseCallback((GLFWwindow *)synthlib_window(), NULL);
-    glfwSetKeyCallback((GLFWwindow *)synthlib_window(), NULL);
-    glfwSetCharCallback((GLFWwindow *)synthlib_window(), NULL);
-    glfwSetCursorPosCallback((GLFWwindow *)synthlib_window(), NULL);
-    glfwSetMouseButtonCallback((GLFWwindow *)synthlib_window(), NULL);
-    glfwSetScrollCallback((GLFWwindow *)synthlib_window(), NULL);
-    glfwSetWindowFocusCallback((GLFWwindow *)synthlib_window(), NULL);
-
-    glfwSetWindowShouldClose((GLFWwindow *)synthlib_window(), GLFW_TRUE);
-    glfwPostEmptyEvent();
 }
 
 void set_window_title(const char * filePath) {
@@ -277,10 +235,6 @@ void set_window_title(const char * filePath) {
     }
     snprintf(newTitle, sizeof(newTitle), "%s - %s", WINDOW_TITLE, filename);
     glfwSetWindowTitle((GLFWwindow *)synthlib_window(), newTitle);
-}
-
-void error_callback(int error, const char * description) {
-    LOG_ERROR("GLFW error [%d]: %s\n", error, description);
 }
 
 // NO GLFWwindow * ARGUMENT ANY MORE, AND THERE NEVER SHOULD HAVE BEEN ONE. It took a window and read
@@ -325,36 +279,15 @@ void notify_full_patch_change(void) {
 }
 
 void init_graphics(void) {
-    int  fbWidth    = 0;
-    int  fbHeight   = 0;
-    char title[128] = {0};
+    char              title[128]           = {0};
 
     snprintf(title, sizeof(title), "%s - Build %s %s", WINDOW_TITLE, __DATE__, __TIME__);
 
-    // The dial mode now lives in SynthLib (synthlibGlobals.h/.c), defaulting to eDialModeVertical
-    // to match EmuUtility/SynthEdit — this app's own default was eDialModeRotary instead, so it's
-    // set explicitly here, before setup_main_menu()'s load_saved_settings() (misc.mm) runs and
-    // overwrites it from a real saved value if one exists.
-    synthlib_set_dial_mode(eDialModeRotary);
-
-    // Tells SynthLib's utilsGraphics.cpp which app it's drawing for, without
-    // it needing to include this app's defs.h — see configure_synthlib_theme().
-    configure_synthlib_theme((tSynthLibTheme){
-        .topBarHeight   = TOP_BAR_HEIGHT + MENU_BAR_HEIGHT,
-        .orange1        = (tRgb)RGB_ORANGE_1,
-        .orange2        = (tRgb)RGB_ORANGE_2,
-        .greenOn        = (tRgb)RGB_GREEN_ON,
-        .backgroundGrey = (tRgb)RGB_BACKGROUND_GREY,
-    });
-
-    // Injection point for the mouse-coord query every SynthLib popup/panel file (contextMenu.c,
-    // menuBar.c, alertDialog.cpp, bankBrowser.cpp, fileBrowser.cpp) needs — see synthlibHost.h's
-    // own comment.
-    synthlib_host_init((tSynthLibHost){
-        .mouseCoord = get_global_gui_scaled_mouse_coord,
-    });
-    synthlib_scale_init(TARGET_FRAME_BUFF_WIDTH);
-
+    // Things that must be in place before the first frame but need no window. They stay here rather
+    // than moving into SynthLib because every one of them is this application's own business: what
+    // its patch categories are, that it opens with a single pane, what a wake-up from the USB thread
+    // should do.
+    //
     // The bank browser's Category mode sorts its groups by name, which buries the two categories the
     // player actually assigns themselves at the bottom under U. Pin them to the top instead. Read
     // out of patchTypeStrMap rather than spelt again here, so renaming a category cannot silently
@@ -366,56 +299,41 @@ void init_graphics(void) {
     bank_browser_set_priority_categories(priorityCategories, ARRAY_SIZE(priorityCategories));
 
     split_view_init();   // one pane showing the Voice Area — the pre-split behaviour, as the default
-
-    glfwSetErrorCallback(error_callback);
-
-    if (!glfwInit()) {
-        exit(EXIT_FAILURE);
-    }
     register_glfw_wake_cb(wake_glfw);
     register_full_patch_change_notify_cb(notify_full_patch_change);
     topbar_init_controls();
 
-    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
-    glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);  // Needed for Intel systems with discrete graphics
-    synthlib_set_window((void *)glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH / 4, TARGET_FRAME_BUFF_HEIGHT / 4, title, NULL, NULL));
-
-    if (!synthlib_window()) {
-        glfwTerminate();
-        exit(EXIT_FAILURE);
-    }
-    // Minimum 640x360 (TARGET/4, so still exactly the locked 16:9). The old TARGET/8 allowed a
-    // 320pt window, which on a 1x display is a 320px framebuffer — gGlobalGuiScale 0.25, putting
-    // body text at ~3px and the small top-bar labels at ~2px, unreadable however well they are
-    // rendered. At 640pt the 1x case bottoms out at ~6px body text, which is legible.
-    glfwSetWindowSizeLimits((GLFWwindow *)synthlib_window(), TARGET_FRAME_BUFF_WIDTH / 4, TARGET_FRAME_BUFF_HEIGHT / 4, GLFW_DONT_CARE, GLFW_DONT_CARE);
-    glfwSetWindowAspectRatio((GLFWwindow *)synthlib_window(), TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
-
-    glfwMakeContextCurrent((GLFWwindow *)synthlib_window());
-
-    // Real initial scale for whichever display the window opens on, not the
-    // 2.0 (Retina-only) assumption this used to hardcode — see
-    // content_scale_callback()'s own comment for what that broke.
-    synthlib_scale_query_initial(synthlib_window());
-
-    glfwGetFramebufferSize((GLFWwindow *)synthlib_window(), &fbWidth, &fbHeight);
-    synthlib_scale_update(fbWidth, fbHeight);
-
-    glfwSetFramebufferSizeCallback((GLFWwindow *)synthlib_window(), framebuffer_size_callback);
-    glfwSetWindowContentScaleCallback((GLFWwindow *)synthlib_window(), content_scale_callback);
-    glfwSetWindowSizeCallback((GLFWwindow *)synthlib_window(), window_size_callback);
-    glfwSetWindowPosCallback((GLFWwindow *)synthlib_window(), window_pos_callback);
-    glfwSwapInterval(1);
-    glfwSetWindowCloseCallback((GLFWwindow *)synthlib_window(), window_close_callback);
-    glfwSetKeyCallback((GLFWwindow *)synthlib_window(), key_callback);
-    glfwSetCharCallback((GLFWwindow *)synthlib_window(), char_event);
-    glfwSetCursorPosCallback((GLFWwindow *)synthlib_window(), cursor_pos);
-    glfwSetMouseButtonCallback((GLFWwindow *)synthlib_window(), mouse_button);
-    glfwSetScrollCallback((GLFWwindow *)synthlib_window(), scroll_event);
-    glfwSetWindowFocusCallback((GLFWwindow *)synthlib_window(), window_focus_callback); // clears held modifiers — see inputState.h
-
-    glEnable(GL_BLEND);                                                                 // TODO - since we're doing these 2 here, probably doesn't need to be in the text rendering in SynthLib
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // THE WINDOW, ITS SCALE AND ITS INPUT WIRING ARE SYNTHLIB'S NOW — see synthlibWindow.h. What
+    // used to be ~60 lines here, and the same ~60 lines in SynthEdit and EmuUtility, is a config and
+    // a callback table. The six callbacks that only ever called back into SynthLib (error,
+    // framebuffer size, content scale, window size, window position, window close) went with it;
+    // the ones below are the ones that reach into this app's own domain.
+    //
+    // The dial mode is set through the config rather than left to default, because this app is the
+    // odd one out: SynthLib defaults to eDialModeVertical to match EmuUtility/SynthEdit, and this
+    // one wants rotary. It is applied before setup_main_menu()'s load_saved_settings() (misc.mm)
+    // runs, so a real saved value still wins.
+    synthlib_window_create(&(tSynthLibWindowConfig){
+        .title        = title,
+        .targetWidth  = TARGET_FRAME_BUFF_WIDTH,
+        .targetHeight = TARGET_FRAME_BUFF_HEIGHT,
+        .dialMode     = eDialModeRotary,
+        .theme        = (tSynthLibTheme){
+            .topBarHeight   = TOP_BAR_HEIGHT + MENU_BAR_HEIGHT,
+            .orange1        = (tRgb)RGB_ORANGE_1,
+            .orange2        = (tRgb)RGB_ORANGE_2,
+            .greenOn        = (tRgb)RGB_GREEN_ON,
+            .backgroundGrey = (tRgb)RGB_BACKGROUND_GREY,
+        },
+        .mouseCoord   = get_global_gui_scaled_mouse_coord,
+    }, &(tSynthLibWindowCallbacks){
+        .key         = key_callback,
+        .character   = char_event,
+        .cursorPos   = cursor_pos,
+        .mouseButton = mouse_button,
+        .scroll      = scroll_event,
+        .windowFocus = window_focus_callback,   // clears held modifiers — see inputState.h
+    });
 
     FT_Init_FreeType(&gLibrary);
     FT_New_Face(gLibrary, "/System/Library/Fonts/Supplemental/Arial.ttf", 0, &gFace);
