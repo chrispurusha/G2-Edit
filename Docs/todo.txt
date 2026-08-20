@@ -58,6 +58,24 @@ FIXED 2026-08-20 — both bugs reported that day, kept because the FINDINGS are 
   not survive being reproduced twice.
 
 
+SYNTHEDIT: THE BOTTOM/RIGHT EDGE OF EVERY BUTTON WAS DEAD (fixed 2026-08-20, owner report)
+
+- "I have to click up and left from the bottom right corner." A dial drawn as a BUTTON is drawn four
+  units larger at the bottom and right than dial->rect — draw_button() keeps the origin and adds
+  2 * DRAW_BUTTON_MARGIN to the width and the height. THREE places needed to know that and only one
+  did: the click region registered the expanded bounds, while hit_test_panel_section() and the
+  press/release pair in mouseHandle.c both tested the raw rect. So a click in that strip ARMED the
+  dial through the click region and then the release, re-tested against the raw rect, failed — the
+  button did nothing at all. It affected every toggle and every value-menu button, those being
+  exactly the two kinds that re-test on release.
+  FIXED with panel_dial_hit_rect() (panelConfig.c), used by the registration, the hit test and both
+  release checks. No raw ->rect click test remains.
+  WORTH KNOWING HOW IT WAS MISSED FIRST TIME: the draw condition and the registration condition were
+  compared, found byte-identical, and that was taken as proof. The press was never the problem. When
+  a widget is "visible but unclickable", check the RELEASE path too — a press-arms/release-fires
+  control has two hit tests and they can disagree.
+
+
 FIXED 2026-08-20 (second batch) — input routing and the split bar
 
 - CLICKS PASSED THROUGH THE CONTEXT MENU to whatever was under it. A right-click menu overlapping the
@@ -2742,7 +2760,23 @@ open design items below):
    wrapper; the name stays because it is what synthlib_host_init() is handed and what nine files in
    G2-Edit call.
 
-   STILL TO DO — THE CALLBACK ADAPTER, which is the part of this item that has not been touched. The
+   THE CALLBACK ADAPTER IS BUILT AND IN BOTH MIDI APPS (2026-08-20). tSynthLibInputHandlers in
+   synthlibWindow.h: supply normalised handlers instead of raw GLFW callbacks and SynthLib installs
+   the shims, so a handler receives a logical tCoord and a tMouseButton. EmuUtility and SynthEdit have
+   ZERO GLFW shims left; G2-Edit is not converted yet, because its callbacks ARE its handlers and its
+   signatures change.
+   IT FOUND A DRIFT BUG IMMEDIATELY: EmuUtility's own shims never called
+   set_modifier_state_from_glfw(), so its shift/ctrl predicates only ever held whatever a previous
+   event had left behind. The shared shim does it before every handler runs.
+   THE DIAL DRAGS MOVED TO LOGICAL COORDINATES with it, and each app's local delta_to_logical() is
+   gone: window_to_logical is a linear scale with no offset, so the difference of two logical
+   coordinates equals the converted difference of two window ones. Arithmetically identical, and the
+   drag rate is unchanged — but it wants a real drag in each mode to confirm.
+   WHAT IT DELIBERATELY DOES NOT DO is dispatch popups. Where that sits relative to a host's other
+   early checks is a real decision — G2-Edit swallows canvas input during a device operation BEFORE
+   consulting the popups — and moving it silently would change behaviour nobody asked to change.
+
+   (superseded, kept for the record) The remaining description follows. The
    thin GLFW shim in each app still repeats the same shape: decode the button/action pair, scale the
    coordinate, offer the event to the popup coordinator, call the app's own handler, request a
    redraw. Sharing it would also unify the two conventions that exist today — EmuUtility's and
@@ -2756,7 +2790,19 @@ open design items below):
    the context-menu click routing, context_menu_contains() or the click-region viewport clip from the
    second batch of fixes. Both want a pull and a pin bump; neither is broken meanwhile.
 
-4. [PRIORITY] CoreMIDI send-primitive extraction (safe first step of the comms-layer item below).
+4. [DONE 2026-08-20, both MIDI apps] CoreMIDI send-primitive extraction.
+   SynthLib/src/synthlibMidi.{c,h}: synthlib_midi_set_out_port() + synthlib_midi_send_to(). Each app
+   still creates and names its own port inside its own connect logic, then hands it over; scan,
+   connect and dispatch are untouched, as this item asked.
+   THE TWO APPS' COPIES DIFFERED IN EXACTLY THE WAYS THAT MATTERED, and in both of them SynthEdit had
+   already been bitten: a 512-byte stack buffer that silently failed a whole-bank restore (18734
+   bytes measured), and a void return that left the caller nothing to test — which is what made
+   Restore Bank report success while nothing reached the wire (2026-07-11). EmuUtility still had BOTH
+   until now, so this was not a tidy-up: it fixed the same latent bug there for free. The shared
+   version uses a static 64KB buffer under the mutex that already serialised sends, rather than a
+   64KB stack frame at every call site.
+
+   (superseded, kept for the record) The original text of this item follows.
    EmuUtility and SynthEdit's low-level MIDI send is near-identical (MIDIPacketListInit /
    MIDIPacketListAdd / MIDISend over the same gMidiOutPort/gMidiDest globals; SynthEdit just has a
    bigger sysex buffer). Move the packet-send primitive + the CoreMIDI handle globals
