@@ -26,6 +26,40 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   construction (it read [node][0][0] and now reads [0][node][0] — same value, different slot), so if the
   single note sounds different, something else is wrong.
 
+- ESCAPE NO LONGER QUITS THE APPLICATION (2026-08-20, owner report). Owner pressed Escape with a
+  pop-up presented and the whole app exited. mouseHandle.c's key_callback ended in the GLFW
+  sample-code idiom — a bare `else if (key == GLFW_KEY_ESCAPE) glfwSetWindowShouldClose(window,
+  GL_TRUE)` — which is fine for a demo and wrong for an editor: it quit with unsaved patch edits and
+  no confirmation, on the one key whose meaning everywhere else in this app is "close the thing in
+  front of me". Present since 2026-06-29 (1d926f2), unrelated to that day's window-bootstrap work.
+  REMOVED. Escape now does nothing when there is nothing to dismiss; quitting is Cmd-Q, the Quit item
+  in the application menu (GLFW's Cocoa backend populates both) or the window's close button.
+  WHICH POP-UPS FELL THROUGH: the owner named them the same day — Virtual Keyboard closed on Escape,
+  "Synth Settings" did not. THE PATTERN IS EXACT, and it is worth stating because it predicts the
+  next gap of this kind: every pop-up that got its own .c file grew a handle_*_key() with an Escape
+  path (help, mutator, param pages, param overview, MIDI CC list, virtual keyboard, patch adjuster),
+  while the three still rendered out of graphics.c never did —
+    render_patch_settings_panel()  gPatchSettingsEdit  "Synth Settings"
+    render_perf_settings_panel()   gPerfSettingsEdit   "Performance Settings"
+    render_patch_params_panel()    gPatchParamsEdit    "Patch Settings"
+  FIXED with settings_panel_escape() in mouseHandle.c, tried FRONT TO BACK (the reverse of the
+  render order in render_frame, so Escape closes the panel you are looking at) and performing the
+  same close the panel's own close button does — including stop_synth_name_editing() for the synth
+  panel, since a name edit left open would outlive the panel it belongs to. Escape while actually
+  editing that name still cancels the edit instead: gSynthNameEdit is handled further up.
+  THE PROGRESS PANELS ARE DELIBERATELY NOT DISMISSIBLE — "Please wait", "Backup Everything" and
+  "Restore Everything" have no Escape and should not: they report an operation in flight.
+  THIS IS ARGUMENT FOR ITEM 2's SCOPE, not just a bug fix. A per-panel Escape handler is exactly the
+  hand-maintained list that drifts; the popup coordinator should take a REGISTRATION (active
+  predicate, close, render, click, key) so a panel cannot exist without an Escape path. Note that
+  scoping it that way means covering app-local panels, not only SynthLib's own widgets, which is
+  wider than that item currently describes. G2-Edit's floatingPanel.c already does the front-to-back
+  half of this for its four floating panels and is the model to generalise.
+  NOT VERIFIED BY A KEYPRESS: synthetic keystrokes do not reach this app's GLFW window — cliclick and
+  System Events, bare executable and `open`-ed bundle, all four combinations deliver clicks but no
+  keys, on the pre-change build as well. Clicks, hover, resize and close are all scriptable; keys are
+  not. Worth solving on its own, as it blocks every keyboard test in this app.
+
 - Backdoor SCROLL and ZOOM commands (2026-08-02, graphics.c) — SCROLL <x> <y> as 0.0-1.0 fractions
   and ZOOM <0.25-2.0>. Added because a synthetic drag doesn't reach the app AT ALL - neither a
   scrollbar thumb nor a dial responds to one - so a scripted check could otherwise only ever see
@@ -2461,16 +2495,36 @@ ARCHITECTURE — RATIONALISE AND COMMONALISE FOR THE OTHER PROJECTS
 mostly-mechanical dedup + decoupling wins at the host<->SynthLib boundary; do these before the bigger
 open design items below):
 
-1. [PRIORITY] Shared graphics/window bootstrap. init_graphics() and every window callback
-   (framebuffer_size_callback / content_scale_callback / window_size / window_pos / window_close) are
-   ~90% character-identical across all three apps: same glfwWindowHints, same glfwCreateWindow, same
-   context/FreeType/scale init, same callback wiring. Only real differences: dial-mode default,
-   topBarHeight, whether wake-callbacks are registered, and the callback function *names* (key_callback
-   vs key_cb — a non-issue, they go in a struct). There is already a precedent seam (apps pass
-   configure_synthlib_theme((tSynthLibTheme){...}) — utilsGraphics.h). Extend it:
-       tGlfwWindow * synthlib_window_create(const tSynthLibWindowConfig * cfg,  // title, size, topBarHeight, dialModeDefault
-                                            const tSynthLibCallbacks   * cbs);  // key/char/cursor/button/scroll/resize fn-ptrs
-   Effort low, risk low, removes ~150 lines x2.
+1. [DONE for G2-Edit 2026-08-20, the other two need the pin] Shared graphics/window bootstrap.
+   BUILT as SynthLib/src/synthlibWindow.{c,h}: synthlib_window_create(config, callbacks) does GLFW
+   init, the two window hints, creation, the TARGET/minDivisor minimum and locked aspect ratio, the
+   context, the initial scale query, callback registration and the blend setup; synthlib_window_close()
+   is the teardown half, registered as the close callback.
+   BIGGER THAN THE ESTIMATE, because six of the twelve callbacks turned out to be character-identical
+   in all three apps and moved wholesale: error, framebuffer size, content scale, window size, window
+   position and window close. An app now supplies only the seven that reach into its own domain (key,
+   char, cursor, mouse button, scroll, focus, refresh) and any of those may be NULL.
+   AND IT CAUGHT ONE PIECE OF LIVE DRIFT: EmuUtility registered a window-focus callback that its
+   close handler never unregistered, because that handler was copied before the focus callback
+   existed. The shared version cannot drift that way — it unregisters exactly what it registered,
+   from the same table.
+   G2-Edit's init_graphics() is 120 lines lighter and its graphics.c has no GLFW callback in it that
+   is not about this app. Verified live against the hardware: window opens Online with the patch
+   rendered, menu bar opens and tracks hover, resize re-lays out correctly through the shared
+   framebuffer/scale path, the saved size is restored on the next launch (so the shared size/pos
+   callbacks reach synthlibPersistence), and closing the window exits cleanly.
+   NOT EXERCISED: the key callback. Synthetic keystrokes (cliclick and System Events alike) do not
+   reach this app's GLFW window, so the key path could not be driven from a script — but the
+   pre-change build behaves identically, which is what rules the change in or out. Worth an owner
+   keypress.
+   ALL THREE APPS ARE CONVERTED (2026-08-20, once the owner pushed SynthLib 57356ff and checked it
+   out everywhere): G2-Edit -120 lines, EmuUtility -107, SynthEdit -126, and every app's graphics.c
+   now holds only callbacks that are about that app. All three build clean and were launched and
+   screenshotted: G2-Edit renders its patch Online, EmuUtility its panel and LCD, SynthEdit its page
+   tabs and dials in the right colours — which incidentally re-proves the theme is reaching SynthLib,
+   since a missing configure_synthlib_theme() is what once drew its power buttons black on black.
+   STILL TO DO: advance the recorded pin in each project (git add SynthLib + commit); all three
+   worktrees are already at 57356ff.
 
 2. [PRIORITY] Popup lifecycle coordinator — the cleanest DECOUPLING win. SynthLib owns the popup
    WIDGETS (file/bank/alert browsers, context menu, menu bar) but NOT their orchestration, so each host
