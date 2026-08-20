@@ -42,6 +42,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "topbarResourcesAccess.h"
 #include "utilsGraphics.h"
+#include "synthlibPopups.h"
 #include "mouseHandle.h"
 #include "canvasDrag.h"
 #include "graphics.h"
@@ -341,62 +342,17 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         return; // a whole-slot device op is in flight — swallow canvas interaction until it completes
     }
 
-    if (file_browser_active()) {
-        // Modal: swallow mouse-down entirely so nothing underneath (module press, scrollbar
-        // drag, rubber-band select) starts while it's open — handle_file_browser_click() only
-        // needs to see mouse-up, but mouse-down was previously falling straight through to the
-        // module-area/topbar/scrollbar handling below, so the down-half of a click on e.g. the
-        // browser's Cancel button could also press a module control underneath it.
-        if (mouseButton == mouseButtonLeftDown) {
-            handle_file_browser_mouse_down(coord);
-        } else if (mouseButton == mouseButtonLeftUp) {
-            handle_file_browser_click(coord);
-        }
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (bank_browser_active()) {
-        // Same modal mouse-down/up gating as file_browser_active() above.
-        if (mouseButton == mouseButtonLeftDown) {
-            handle_bank_browser_mouse_down(coord);
-        } else if (mouseButton == mouseButtonLeftUp) {
-            handle_bank_browser_click(coord);
-        }
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (alert_dialog_active()) {
-        // Same modal gating as file_browser_active()/bank_browser_active() above, plus routing
-        // around the bank-picker's own dropdown: that flyout is opened (from
-        // handle_alert_dialog_click()) using the app's shared context-menu system, so once it's
-        // open, clicks must go to handle_context_menu_click() — exactly how the main window's own
-        // menu bar already defers to it — rather than being swallowed here as if they'd landed on
-        // the dialog panel itself.
-        if (mouseButton == mouseButtonLeftDown) {
-            if (!gContextMenu.active) {
-                handle_alert_dialog_mouse_down(coord);
-            }
-        } else if (mouseButton == mouseButtonLeftUp) {
-            if (gContextMenu.active) {
-                if (!handle_context_menu_click(coord)) {
-                    gContextMenu.active = false;
-                }
-            } else {
-                handle_alert_dialog_click(coord);
-            }
-        }
+    // The modal cascade — file browser, bank browser, alert dialog, each with its own early return
+    // and its own mouse-down/mouse-up gating, plus the alert's routing around its bank-picker
+    // dropdown — moved into SynthLib. See synthlibPopups.h. The gating is the part worth not losing:
+    // a modal popup swallows the PRESS as well as the click, because the browsers act only on the
+    // release and the press used to fall straight through to the canvas underneath.
+    if (synthlib_popups_dispatch_click(coord, mouseButton)) {
         synthlib_request_redraw();
         return;
     }
 
     if (handle_patch_notes_mouse(coord, mouseButton)) {
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (handle_perf_settings_mouse(coord, mouseButton)) {
         synthlib_request_redraw();
         return;
     }
@@ -420,10 +376,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     // was the one underneath.
     {
         tFloatingPanelEntry panels[] = {
-            {&gVirtualKeyboard.panel, NULL, handle_virtual_keyboard_mouse, NULL},
-            {&gPatchAdjuster.panel,   NULL, handle_patch_adjuster_mouse,   NULL},
-            {&gHelpPanel.panel,       NULL, handle_help_panel_mouse,       NULL},
-            {&gMutator.panel,         NULL, handle_mutator_mouse,          NULL}
+            {&gVirtualKeyboard.panel,   NULL, handle_virtual_keyboard_mouse, NULL},
+            {&gPatchAdjuster.panel,     NULL, handle_patch_adjuster_mouse,   NULL},
+            {&gHelpPanel.panel,         NULL, handle_help_panel_mouse,       NULL},
+            {&gMutator.panel,           NULL, handle_mutator_mouse,          NULL},
+            {&gPatchSettingsEdit.panel, NULL, handle_patch_settings_mouse,   NULL},
+            {&gPerfSettingsEdit.panel,  NULL, handle_perf_settings_mouse,    NULL},
+            {&gPatchParamsEdit.panel,   NULL, handle_patch_params_mouse,     NULL}
         };
         uint32_t            count    = (uint32_t)(sizeof(panels) / sizeof(panels[0]));
 
@@ -438,15 +397,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         }
     }
 
-    if (handle_patch_params_mouse(coord, mouseButton)) {
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (handle_patch_settings_mouse(coord, mouseButton)) {
-        synthlib_request_redraw();
-        return;
-    }
     stop_patch_name_editing();
     stop_module_name_editing();
     stop_param_name_editing();
@@ -866,7 +816,10 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     // already runs its move, because it has sliders to drag as well.
     if (  floating_panel_drag(&gVirtualKeyboard.panel, coord)
        || floating_panel_drag(&gPatchAdjuster.panel, coord)
-       || floating_panel_drag(&gHelpPanel.panel, coord)) {
+       || floating_panel_drag(&gHelpPanel.panel, coord)
+       || floating_panel_drag(&gPatchSettingsEdit.panel, coord)
+       || floating_panel_drag(&gPerfSettingsEdit.panel, coord)
+       || floating_panel_drag(&gPatchParamsEdit.panel, coord)) {
         return;
     }
 
@@ -948,13 +901,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 void scroll_event(GLFWwindow * window, double x, double y) {
     tCoord  coord   = {0};
 
-    if (file_browser_active()) {
-        handle_file_browser_scroll(y);
-        return;
-    }
-
-    if (bank_browser_active()) {
-        handle_bank_browser_scroll(y);
+    if (synthlib_popups_dispatch_scroll(y)) {
         return;
     }
     // The wheel acts on the pane UNDER THE CURSOR, not the focused one — hovering the FX half and
@@ -1008,8 +955,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
 }
 
 void char_event(GLFWwindow * window, unsigned int value) {
-    if (file_browser_active()) {
-        handle_file_browser_char(value);
+    if (synthlib_popups_dispatch_char(value)) {
         return;
     }
 
@@ -1094,39 +1040,6 @@ void char_event(GLFWwindow * window, unsigned int value) {
     synthlib_request_redraw();
 }
 
-// Escape for the three settings panels that live in graphics.c rather than in a module of their own.
-//
-// FRONT TO BACK, for the same reason the floating panels above are: Escape has to close the panel you
-// are looking at. The render order in render_frame() is Synth, Performance, Patch — later is drawn on
-// top — so this tries them in the opposite order.
-//
-// These three were the gap the owner found on 2026-08-20: every pop-up that got its own .c file
-// (help, mutator, param pages, param overview, MIDI CC list, virtual keyboard, patch adjuster) grew a
-// handle_*_key() with an Escape path, while the ones still rendered out of graphics.c never did — so
-// Escape fell all the way through to the bare branch that used to quit the application. See the
-// comment where that branch was.
-static bool settings_panel_escape(void) {
-    if (gPatchParamsEdit.active) {          // "Patch Settings"
-        gPatchParamsEdit.active = false;
-        return true;
-    }
-
-    if (gPerfSettingsEdit.active) {         // "Performance Settings"
-        gPerfSettingsEdit.active = false;
-        return true;
-    }
-
-    if (gPatchSettingsEdit.active) {        // "Synth Settings"
-        // Same pair the close button performs (mousePanels.c): a name edit left open would otherwise
-        // outlive the panel it belongs to. Escape while actually editing the name never reaches here
-        // — gSynthNameEdit is handled further up, and discards the edit rather than closing anything.
-        stop_synth_name_editing();
-        gPatchSettingsEdit.active = false;
-        return true;
-    }
-    return false;
-}
-
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
     (void)window;                         // GLFW dictates the signature; nothing here needs the window
 
@@ -1142,26 +1055,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                  (int)gPatchNotesEdit.active, (int)gPerfNameEdit.active);
     }
 
-    if (file_browser_active()) {
-        handle_file_browser_key(key, action);
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (bank_browser_active()) {
-        handle_bank_browser_key(key, action);
-        synthlib_request_redraw();
-        return;
-    }
-
-    if (alert_dialog_active()) {
-        // Escape closes just the bank-picker dropdown first, if it's open, rather than the whole
-        // dialog underneath it — same precedence the main window's own menu-vs-Escape handling uses.
-        if (gContextMenu.active && (key == GLFW_KEY_ESCAPE) && (action == GLFW_PRESS)) {
-            gContextMenu.active = false;
-        } else {
-            handle_alert_dialog_key(key, action);
-        }
+    // The modal cascade that used to be written out here — file browser, bank browser, alert dialog,
+    // each with its own early return, and the alert's routing around its bank-picker dropdown — is
+    // SynthLib's now. See synthlibPopups.h: the order is a layer on each popup rather than the order
+    // of the ifs in this function, and the quirks live in one copy instead of one per application.
+    if (synthlib_popups_dispatch_key(key, action)) {
         synthlib_request_redraw();
         return;
     }
@@ -1185,10 +1083,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     // with the Help panel in front and the Virtual Keyboard behind it, Escape shut the keyboard.
     {
         tFloatingPanelEntry panels[] = {
-            {&gVirtualKeyboard.panel, NULL, NULL, handle_virtual_keyboard_key},
-            {&gPatchAdjuster.panel,   NULL, NULL, handle_patch_adjuster_key  },
-            {&gHelpPanel.panel,       NULL, NULL, handle_help_panel_key      },
-            {&gMutator.panel,         NULL, NULL, handle_mutator_key         }
+            {&gVirtualKeyboard.panel,   NULL, NULL, handle_virtual_keyboard_key},
+            {&gPatchAdjuster.panel,     NULL, NULL, handle_patch_adjuster_key  },
+            {&gHelpPanel.panel,         NULL, NULL, handle_help_panel_key      },
+            {&gMutator.panel,           NULL, NULL, handle_mutator_key         },
+            {&gPatchSettingsEdit.panel, NULL, NULL, handle_patch_settings_key  },
+            {&gPerfSettingsEdit.panel,  NULL, NULL, handle_perf_settings_key   },
+            {&gPatchParamsEdit.panel,   NULL, NULL, handle_patch_params_key    }
         };
         uint32_t            count    = (uint32_t)(sizeof(panels) / sizeof(panels[0]));
 
@@ -1519,8 +1420,6 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         }
     } else if (gContextMenu.active && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         close_context_menu();
-        synthlib_request_redraw();
-    } else if ((key == GLFW_KEY_ESCAPE) && (action == GLFW_PRESS) && settings_panel_escape()) {
         synthlib_request_redraw();
 #ifdef ENABLE_MOUSE_CROSSHAIR
     } else if (key == GLFW_KEY_F9 && action == GLFW_PRESS) {

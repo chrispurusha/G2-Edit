@@ -2526,26 +2526,81 @@ open design items below):
    STILL TO DO: advance the recorded pin in each project (git add SynthLib + commit); all three
    worktrees are already at 57356ff.
 
-2. [PRIORITY] Popup lifecycle coordinator — the cleanest DECOUPLING win. SynthLib owns the popup
-   WIDGETS (file/bank/alert browsers, context menu, menu bar) but NOT their orchestration, so each host
-   re-implements it four separate times: (a) render order (every app calls render_context_menu ->
-   render_file_browser -> render_bank_browser -> render_alert_dialog back-to-front, with the same
-   "drawn last - modal" comment copy-pasted verbatim); (b) modal-priority CLICK dispatch cascade
-   (if file_browser_active(){...return;} if bank_browser_active(){...} if alert_dialog_active(){...} —
-   14 routing refs each in G2-Edit and SynthEdit mouseHandle.c); (c) the same cascade again for
-   KEY/CHAR; (d) per-frame hover tick (update_context_menu_hover / update_menu_bar_hover /
-   update_bank_browser_hover — the host must remember to call each every frame). That last one has
-   ALREADY shipped real bugs: SynthEdit's own comments document "never actually called anywhere until
-   now" hover reports (2026-07-11, 2026-07-24). An order-dependent contract spread across the host is
-   fragile by construction. Fix = a coordinator façade that internalises the z-order (SynthLib
-   registered the popups, so it knows the stacking):
-       bool synthlib_popups_dispatch_click(tCoord coord, eClickPhase phase); // true if a modal consumed it
-       bool synthlib_popups_dispatch_key(int key, int action);
-       void synthlib_popups_tick(void);    // replaces all the update_*_hover() calls
-       void synthlib_popups_render(void);  // one call, correct back-to-front order
-   Each host's mouse_button / key / loop / render_frame collapses to a single guarded call. Turns a
-   ~20-symbol order-sensitive surface into 4 functions. Effort medium, risk low-medium (mechanical but
-   touches the hot input path in all three apps — sequence carefully). DO THIS FIRST of the priority set.
+2. [PART DONE 2026-08-20 — the registry half] Popup lifecycle coordinator.
+
+   WHAT LANDED. floatingPanel.{c,h} moved from G2-Edit into SynthLib, which is the coordinator's
+   foundation rather than a side-quest: it already WAS the registration model this item asks for — a
+   tFloatingPanelEntry of {panel, render, mouse, key}, one sort, draw back-to-front and hit-test
+   front-to-back. tMouseButton went with it into synthlibTypes.h; it had been G2-Edit's alone, which
+   is precisely why neither of the other two apps could adopt a panel.
+   Added floating_panel_mouse(), the three-way press/release preamble (PassThrough / Consumed /
+   Content) that each panel used to write out by hand, and floating_panel_set_bounds().
+
+   AND THE THREE SETTINGS PANELS ARE NOW FLOATING PANELS — owner's ask, and the direct answer to the
+   Escape gap recorded further up this file: "Synth Settings" and the others should behave like the
+   Virtual Keyboard. Synth Settings, Performance Settings and Patch Settings each gained a
+   tFloatingPanel, lost draw_dialog_background_overlay() and their per-frame (renderW - boxW) / 2
+   re-centring, and joined the render, mouse and key registries. They are draggable, they raise on
+   click, they close on Escape through the same front-to-back sort as everything else, and two of
+   them can be open at once — none of which was possible when each was modal.
+   The bespoke settings_panel_escape() helper written earlier the same day is GONE, replaced by
+   registration. It walked the three panels in a hand-fixed order, which is right only while that
+   order matches what is drawn — the exact drift this registry exists to prevent.
+
+   PANELS ARE NOW BOUNDED BY THE CANVAS CHROME (owner's observation): floating_panel_set_bounds() is
+   set per frame to the render area minus SCROLLBAR_WIDTH on the right and bottom, so a panel cannot
+   be dragged over the scrollbars. Overlapping the TOP bar is still allowed, deliberately — a panel
+   has to start somewhere and the bar is not something you scroll. The clamp runs every frame, after
+   the drag has moved the panel, which is what makes it a drag limit rather than only a placement
+   rule. A panel bigger than the bounds is pinned top-left and allowed to overflow: at the 640x360
+   minimum window, Synth Settings is taller than the whole canvas.
+
+   A TRAP THIS UNCOVERED, worth more than the change that found it: types.h must include defs.h
+   BEFORE anything that reaches synthlibTypes.h, because synthlibTypes.h pulls in synthlibDefs.h,
+   where every RGB_* colour sits behind #ifdef G2_EDIT — and G2_EDIT is defined in defs.h. Get the
+   order wrong and synthlibDefs.h is consumed with the guard closed, its include guard then makes the
+   later #include a no-op, and the build fails in unrelated files with "undeclared identifier
+   RGB_GREY_9". There is now a comment in types.h saying so.
+
+   THE FACADE IS BUILT TOO — SynthLib/src/synthlibPopups.{c,h}, same day. Registration, not a fixed
+   call order: every popup carries a LAYER, SynthLib's own five are registered internally, and an app
+   registers its own into the same ordering. G2-Edit now does, with layers chosen to reproduce exactly
+   what its eight hand-ordered render calls did — patch notes and the two progress panels above the
+   context menu and below the browsers, the device-busy overlay above the browsers and below the
+   alert. What the host used to carry, and no longer does:
+     * the modal click cascade (file browser / bank browser / alert dialog, each with its own early
+       return, its own mouse-down-vs-up gating, and the alert's routing around its bank-picker
+       dropdown) -> synthlib_popups_dispatch_click(). 13 routing refs down to 5, of which 2 are a
+       debug log line.
+     * the same cascade for keys, for scroll and for character input -> _dispatch_key / _dispatch_scroll
+       / _dispatch_char. All four input channels were separately hand-cascaded.
+     * the render tail, eight calls -> synthlib_popups_render().
+     * the hover tick, which the host had to remember per popup -> synthlib_popups_tick().
+
+   TWO THINGS DELIBERATELY LEFT WITH THE HOST, and the reasoning matters more than the code:
+     * THE MENU BAR IS NOT RENDERED BY THE COORDINATOR. It is chrome that floating panels sit ABOVE —
+       a panel may overlap the top bar — so drawing it in the popup tail would put the bar over a
+       panel that still took the click. Only its hover tick is registered.
+     * CLICKS FOR THE MENU BAR AND THE CONTEXT MENU ARE STILL THE HOST'S, for the same reason: both
+       sit BEHIND the floating panels in the input pipeline, and the coordinator is consulted before
+       the panels are. Dispatching them there would silently move them in front. Their mouse entries
+       are NULL and say so. They follow once the hosts' own pipeline steps are registered here too.
+
+   ALL THREE APPS ARE ON IT (2026-08-20, after the owner pushed SynthLib d50d626):
+     * SynthEdit — the full set. Its modal cascade came out exactly as G2-Edit's did: 11 routing refs
+       to ZERO, all four input channels through the coordinator, three hover-tick calls to one, the
+       render tail to one. It carries GLFW's button/action pair rather than a tMouseButton, so the
+       normalisation happens at its single dispatch call site.
+     * EmuUtility — only the menu bar and context menu exist there today, so it gains the hover tick
+       and the render; the browsers and the alert dialog come for free if it ever opens one.
+     * G2-Edit keeps 2 references to the *_active() predicates, both in one debug log line.
+
+   A PRE-PUSH CHECK WORTH REPEATING for anything added to SynthLib: SynthLib/src is a synchronized
+   folder in all three Xcode projects, so a new file starts compiling into EVERY app the moment it is
+   pulled, converted or not. Compile it with `clang -fsyntax-only -I SynthLib/src` WITHOUT the app's
+   own defines before pushing — that is how floatingPanel.c's missing <stddef.h> was found, which
+   built only by luck of transitive includes in G2-Edit and would have been someone else's build
+   failure. Nothing in either new file touches the #ifdef G2_EDIT half of synthlibDefs.h.
 
 3. [PRIORITY] Move mouse-callback plumbing into SynthLib (ties into 1 & 2). The common preamble in
    every app's mouse handling is boilerplate over SynthLib-owned state:
