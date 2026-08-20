@@ -2175,14 +2175,14 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft },     // 123 Chain
     {moduleTypeMix4to1C,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 123 Out
     // 124 Mux8-1
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },     // 60 In1
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },     // 60 In2
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },     // 60 In3
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 34,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },     // 60 In4
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 42,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },     // 60 In5
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },     // 60 In6
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },     // 60 In7
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },     // 60 In8
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 22,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },     // 60 In1
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 29,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },     // 60 In2
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 36,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },     // 60 In3
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 43,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },     // 60 In4
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },     // 60 In5
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 57,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },     // 60 In6
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 64,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },     // 60 In7
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 71,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },     // 60 In8
     {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocUp   },     // 60 Ctrl
     {moduleTypeMux8to1,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },     // 60 Out
     // 125 WahWah
@@ -2712,59 +2712,59 @@ const tLedLocation       ledLocationList[]       = {
     {moduleTypeRandomB,    ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft  }, // XPos:242 YPos:21 H:3
     {moduleTypeOperator,   ledTypeYes,  {{  3, 7}, {3, 3}}, anchorTopLeft   }, // XPos:17  YPos:77 H:12
     // Mux1to8 (ID 21) — 8 LEDs across the upper-right strip
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 10,  7}, {3, 3}}, anchorTopLeft   }, // XPos:102
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 18,  7}, {3, 3}}, anchorTopLeft   }, // XPos:122
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 26,  7}, {3, 3}}, anchorTopLeft   }, // XPos:142
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 34,  7}, {3, 3}}, anchorTopLeft   }, // XPos:162
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 42,  7}, {3, 3}}, anchorTopLeft   }, // XPos:182
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 50,  7}, {3, 3}}, anchorTopLeft   }, // XPos:202
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 58,  7}, {3, 3}}, anchorTopLeft   }, // XPos:222
-    {moduleTypeMux1to8,    ledTypeYes,  {{ 66,  7}, {3, 3}}, anchorTopLeft   }, // XPos:242
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 23,  7}, {3, 3}}, anchorTopLeft   }, // XPos:102
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 30,  7}, {3, 3}}, anchorTopLeft   }, // XPos:122
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 37,  7}, {3, 3}}, anchorTopLeft   }, // XPos:142
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 44,  7}, {3, 3}}, anchorTopLeft   }, // XPos:162
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 51,  7}, {3, 3}}, anchorTopLeft   }, // XPos:182
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 58,  7}, {3, 3}}, anchorTopLeft   }, // XPos:202
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 65,  7}, {3, 3}}, anchorTopLeft   }, // XPos:222
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 72,  7}, {3, 3}}, anchorTopLeft   }, // XPos:242
     // Mux8to1X (ID 60) — 8 LEDs spread across the middle
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 10, 7}, {3, 3}}, anchorTopLeft   }, // XPos:34
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 18, 7}, {3, 3}}, anchorTopLeft   }, // XPos:54
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 26, 7}, {3, 3}}, anchorTopLeft   }, // XPos:74
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 34, 7}, {3, 3}}, anchorTopLeft   }, // XPos:94
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 42, 7}, {3, 3}}, anchorTopLeft   }, // XPos:114
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 50, 7}, {3, 3}}, anchorTopLeft   }, // XPos:134
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 58, 7}, {3, 3}}, anchorTopLeft   }, // XPos:154
-    {moduleTypeMux8to1X,   ledTypeYes,  {{ 66, 7}, {3, 3}}, anchorTopLeft   }, // XPos:174
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 23, 7}, {3, 3}}, anchorTopLeft   }, // XPos:34
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 30, 7}, {3, 3}}, anchorTopLeft   }, // XPos:54
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 37, 7}, {3, 3}}, anchorTopLeft   }, // XPos:74
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 44, 7}, {3, 3}}, anchorTopLeft   }, // XPos:94
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 51, 7}, {3, 3}}, anchorTopLeft   }, // XPos:114
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 58, 7}, {3, 3}}, anchorTopLeft   }, // XPos:134
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 65, 7}, {3, 3}}, anchorTopLeft   }, // XPos:154
+    {moduleTypeMux8to1X,   ledTypeYes,  {{ 72, 7}, {3, 3}}, anchorTopLeft   }, // XPos:174
     // Mux8to1 (ID 124) — 8 LEDs across the upper-right strip
-    {moduleTypeMux8to1,    ledTypeYes,  {{10,  7}, {3, 3}}, anchorTopLeft  }, // XPos:82
-    {moduleTypeMux8to1,    ledTypeYes,  {{18,  7}, {3, 3}}, anchorTopLeft  }, // XPos:102
-    {moduleTypeMux8to1,    ledTypeYes,  {{26,  7}, {3, 3}}, anchorTopLeft  }, // XPos:122
-    {moduleTypeMux8to1,    ledTypeYes,  {{34,  7}, {3, 3}}, anchorTopLeft  }, // XPos:142
-    {moduleTypeMux8to1,    ledTypeYes,  {{42,  7}, {3, 3}}, anchorTopLeft  }, // XPos:162
-    {moduleTypeMux8to1,    ledTypeYes,  {{50,  7}, {3, 3}}, anchorTopLeft  }, // XPos:202
+    {moduleTypeMux8to1,    ledTypeYes,  {{23,  7}, {3, 3}}, anchorTopLeft  }, // XPos:82
+    {moduleTypeMux8to1,    ledTypeYes,  {{30,  7}, {3, 3}}, anchorTopLeft  }, // XPos:102
+    {moduleTypeMux8to1,    ledTypeYes,  {{37,  7}, {3, 3}}, anchorTopLeft  }, // XPos:122
+    {moduleTypeMux8to1,    ledTypeYes,  {{44,  7}, {3, 3}}, anchorTopLeft  }, // XPos:142
+    {moduleTypeMux8to1,    ledTypeYes,  {{51,  7}, {3, 3}}, anchorTopLeft  }, // XPos:162
     {moduleTypeMux8to1,    ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:202
-    {moduleTypeMux8to1,    ledTypeYes,  {{66,  7}, {3, 3}}, anchorTopLeft  }, // XPos:222
+    {moduleTypeMux8to1,    ledTypeYes,  {{65,  7}, {3, 3}}, anchorTopLeft  }, // XPos:202
+    {moduleTypeMux8to1,    ledTypeYes,  {{72,  7}, {3, 3}}, anchorTopLeft  }, // XPos:222
     // BinCounter (ID 130) — 8 LEDs across the upper-right strip
-    {moduleTypeBinCounter, ledTypeYes,  {{10,  7}, {3, 3}}, anchorTopLeft  }, // XPos:81
-    {moduleTypeBinCounter, ledTypeYes,  {{18,  7}, {3, 3}}, anchorTopLeft  }, // XPos:104
-    {moduleTypeBinCounter, ledTypeYes,  {{26,  7}, {3, 3}}, anchorTopLeft  }, // XPos:127
-    {moduleTypeBinCounter, ledTypeYes,  {{34,  7}, {3, 3}}, anchorTopLeft  }, // XPos:150
-    {moduleTypeBinCounter, ledTypeYes,  {{42,  7}, {3, 3}}, anchorTopLeft  }, // XPos:173
-    {moduleTypeBinCounter, ledTypeYes,  {{50,  7}, {3, 3}}, anchorTopLeft  }, // XPos:196
-    {moduleTypeBinCounter, ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:219
-    {moduleTypeBinCounter, ledTypeYes,  {{ 66,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242
+    {moduleTypeBinCounter, ledTypeYes,  {{23,  7}, {3, 3}}, anchorTopLeft  }, // XPos:81
+    {moduleTypeBinCounter, ledTypeYes,  {{30,  7}, {3, 3}}, anchorTopLeft  }, // XPos:104
+    {moduleTypeBinCounter, ledTypeYes,  {{37,  7}, {3, 3}}, anchorTopLeft  }, // XPos:127
+    {moduleTypeBinCounter, ledTypeYes,  {{44,  7}, {3, 3}}, anchorTopLeft  }, // XPos:150
+    {moduleTypeBinCounter, ledTypeYes,  {{51,  7}, {3, 3}}, anchorTopLeft  }, // XPos:173
+    {moduleTypeBinCounter, ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:196
+    {moduleTypeBinCounter, ledTypeYes,  {{65,  7}, {3, 3}}, anchorTopLeft  }, // XPos:219
+    {moduleTypeBinCounter, ledTypeYes,  {{ 72,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242
     // ADConv (ID 131) — 8 LEDs across the upper-right strip
-    {moduleTypeADConv,     ledTypeYes,  {{10,  7}, {3, 3}}, anchorTopLeft  }, // XPos:81
-    {moduleTypeADConv,     ledTypeYes,  {{18,  7}, {3, 3}}, anchorTopLeft  }, // XPos:105
-    {moduleTypeADConv,     ledTypeYes,  {{26,  7}, {3, 3}}, anchorTopLeft  }, // XPos:127
-    {moduleTypeADConv,     ledTypeYes,  {{34,  7}, {3, 3}}, anchorTopLeft  }, // XPos:150
-    {moduleTypeADConv,     ledTypeYes,  {{42,  7}, {3, 3}}, anchorTopLeft  }, // XPos:173
-    {moduleTypeADConv,     ledTypeYes,  {{50,  7}, {3, 3}}, anchorTopLeft  }, // XPos:196
-    {moduleTypeADConv,     ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:219
-    {moduleTypeADConv,     ledTypeYes,  {{66,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242
+    {moduleTypeADConv,     ledTypeYes,  {{23,  7}, {3, 3}}, anchorTopLeft  }, // XPos:81
+    {moduleTypeADConv,     ledTypeYes,  {{30,  7}, {3, 3}}, anchorTopLeft  }, // XPos:105
+    {moduleTypeADConv,     ledTypeYes,  {{37,  7}, {3, 3}}, anchorTopLeft  }, // XPos:127
+    {moduleTypeADConv,     ledTypeYes,  {{44,  7}, {3, 3}}, anchorTopLeft  }, // XPos:150
+    {moduleTypeADConv,     ledTypeYes,  {{51,  7}, {3, 3}}, anchorTopLeft  }, // XPos:173
+    {moduleTypeADConv,     ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:196
+    {moduleTypeADConv,     ledTypeYes,  {{65,  7}, {3, 3}}, anchorTopLeft  }, // XPos:219
+    {moduleTypeADConv,     ledTypeYes,  {{72,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242
     // 8Counter (ID 86) — 8 LEDs across the upper-right strip
-    {moduleType8Counter,   ledTypeYes,  {{10,  7}, {3, 3}}, anchorTopLeft  }, // XPos:81
-    {moduleType8Counter,   ledTypeYes,  {{18,  7}, {3, 3}}, anchorTopLeft  }, // XPos:104
-    {moduleType8Counter,   ledTypeYes,  {{26,  7}, {3, 3}}, anchorTopLeft  }, // XPos:127
-    {moduleType8Counter,   ledTypeYes,  {{34,  7}, {3, 3}}, anchorTopLeft  }, // XPos:150
-    {moduleType8Counter,   ledTypeYes,  {{42,  7}, {3, 3}}, anchorTopLeft }, // XPos:173
-    {moduleType8Counter,   ledTypeYes,  {{50,  7}, {3, 3}}, anchorTopLeft  }, // XPos:196
-    {moduleType8Counter,   ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:219
-    {moduleType8Counter,   ledTypeYes,  {{66,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242
+    {moduleType8Counter,   ledTypeYes,  {{23,  7}, {3, 3}}, anchorTopLeft  }, // XPos:81
+    {moduleType8Counter,   ledTypeYes,  {{30,  7}, {3, 3}}, anchorTopLeft  }, // XPos:104
+    {moduleType8Counter,   ledTypeYes,  {{37,  7}, {3, 3}}, anchorTopLeft  }, // XPos:127
+    {moduleType8Counter,   ledTypeYes,  {{44,  7}, {3, 3}}, anchorTopLeft  }, // XPos:150
+    {moduleType8Counter,   ledTypeYes,  {{51,  7}, {3, 3}}, anchorTopLeft }, // XPos:173
+    {moduleType8Counter,   ledTypeYes,  {{58,  7}, {3, 3}}, anchorTopLeft  }, // XPos:196
+    {moduleType8Counter,   ledTypeYes,  {{65,  7}, {3, 3}}, anchorTopLeft  }, // XPos:219
+    {moduleType8Counter,   ledTypeYes,  {{72,  7}, {3, 3}}, anchorTopLeft  }, // XPos:242
 
     {moduleTypeSeqEvent,   ledTypePark, {{ 3,  7}, {3, 3}}, anchorTopLeft  }, // Park LED — display-only, not in LED stream
     {moduleTypeSeqNote,    ledTypePark, {{ 3,  7}, {3, 3}}, anchorTopLeft  },
