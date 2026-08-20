@@ -334,14 +334,15 @@ void init_graphics(void) {
             .backgroundGrey = (tRgb)RGB_BACKGROUND_GREY,
         },
         .mouseCoord   = get_global_gui_scaled_mouse_coord,
-    }, &(tSynthLibWindowCallbacks){
-        .key         = key_callback,
-        .character   = char_event,
-        .cursorPos   = cursor_pos,
-        .mouseButton = mouse_button,
-        .scroll      = scroll_event,
-        .windowFocus = window_focus_callback,   // clears held modifiers — see inputState.h
-    });
+        .handlers     = &(const tSynthLibInputHandlers){
+            .mouseButton = mouse_button,
+            .cursorPos   = cursor_pos,
+            .key         = key_callback,
+            .character   = char_event,
+            .scroll      = scroll_event,
+            .windowFocus = window_focus_callback,   // clears held modifiers — see inputState.h
+        },
+    }, NULL);
 
     FT_Init_FreeType(&gLibrary);
     FT_New_Face(gLibrary, "/System/Library/Fonts/Supplemental/Arial.ttf", 0, &gFace);
@@ -3050,10 +3051,10 @@ void do_graphics_loop(void) {
         selection_validate();
 
         if ((gModuleDrag.active == true) || (gCableDrag.active == true) || (gContextMenu.active == true)) {
-            double x = 0.0;
-            double y = 0.0;
-            glfwGetCursorPos((GLFWwindow *)synthlib_window(), &x, &y);
-            cursor_pos((GLFWwindow *)synthlib_window(), x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
+            tCoord at = {0};
+
+            get_global_gui_scaled_mouse_coord(&at);
+            cursor_pos(at);   // Artificially do cursor_pos call for drag scrolling when cursor not moving
             glfwWaitEventsTimeout(0.016);
         } else if (gDeviceOpInProgress > 0) {
             glfwWaitEventsTimeout(0.05); // tick while busy so the device-op safety timeout can fire even with no events
