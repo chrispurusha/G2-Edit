@@ -2763,8 +2763,19 @@ open design items below):
    THE CALLBACK ADAPTER IS BUILT AND IN BOTH MIDI APPS (2026-08-20). tSynthLibInputHandlers in
    synthlibWindow.h: supply normalised handlers instead of raw GLFW callbacks and SynthLib installs
    the shims, so a handler receives a logical tCoord and a tMouseButton. EmuUtility and SynthEdit have
-   ZERO GLFW shims left; G2-Edit is not converted yet, because its callbacks ARE its handlers and its
-   signatures change.
+   ZERO GLFW shims left in any of the three — G2-Edit converted last, its callbacks having BEEN its
+   handlers, so six signatures changed.
+   TWO THINGS G2-EDIT NEEDED THAT THE OTHERS DID NOT:
+     * IT KEPT ITS RAW-COORDINATE DRAGS, deliberately. Its vertical and horizontal dial modes
+       difference RAW window coordinates and the arithmetic around that is tuned — Alt morph offsets,
+       the sub-unit accumulator, the Shift-fine divisor. It already had cursor_raw_coord(), so
+       cursor_pos() fetches raw there rather than disturbing working maths to change a signature. The
+       other two moved to logical units and the owner confirmed both drags feel unchanged.
+     * THE SYNTHETIC RELEASE in recover_lost_drag() used to save and restore the modifier state around
+       its direct mouse_button() call, because that function began by pushing
+       set_modifier_state_from_glfw(mods) and a literal 0 would report every modifier as released —
+       which would make a still-held Alt stop meaning "drag the morph offset". The shim does that now,
+       and a direct call bypasses the shim, so the save/restore is unnecessary and gone.
    IT FOUND A DRIFT BUG IMMEDIATELY: EmuUtility's own shims never called
    set_modifier_state_from_glfw(), so its shift/ctrl predicates only ever held whatever a previous
    event had left behind. The shared shim does it before every handler runs.
@@ -3168,6 +3179,19 @@ PARTIALLY DONE / STILL OPEN:
   start_cursor_drag() (dial drags hide and warp the pointer) and, in the plug-in, the view's
   tracking area.
 
+
+- MODULE CREATION LANDS ON THE GRID, NOT ON THE POINTER, and that is not a bug (owner's call,
+  2026-08-20, after asking whether the header should appear exactly where the right-click was).
+  convert_mouse_coord_to_module_column_row() FLOORS the click to a cell, the module occupies that
+  cell, and its header is drawn at the cell's TOP edge — so the header coincides with the click only
+  when the click was near a row boundary, and sits up to a row-height above it otherwise.
+  MENU CLAMPING IS NOT INVOLVED, which is the obvious suspect and was checked: menu_action_create()
+  reads gContextMenu.originCoord, set from the raw click BEFORE open_context_menu() clamps the menu
+  frame to the screen, and "Create module" is reachable from exactly one place. Near an edge the MENU
+  moves away from the click and the module still lands at the click — correct, but it reads as wrong
+  because the eye is on the menu.
+  Rounding instead of flooring, or anchoring the cell to the nearest top edge, were both considered
+  and deliberately not done: leave it unless someone complains.
 
 DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from this file, the constraint is not)
 
