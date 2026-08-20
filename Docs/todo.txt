@@ -58,6 +58,62 @@ FIXED 2026-08-20 — both bugs reported that day, kept because the FINDINGS are 
   not survive being reproduced twice.
 
 
+FIXED 2026-08-20 (second batch) — input routing and the split bar
+
+- CLICKS PASSED THROUGH THE CONTEXT MENU to whatever was under it. A right-click menu overlapping the
+  horizontal scrollbar, the vertical scrollbar or the split drag bar sent its clicks to them as well,
+  so choosing "add module" also scrolled or dragged the pane — and an item sitting over a scrollbar
+  could not be chosen at all. The menu is DRAWN over everything on the canvas but was HIT-TESTED last,
+  because the host tested the chrome in a fixed sequence of ifs before its context-menu call.
+  Fixed by routing context-menu clicks through the popup coordinator, ahead of the canvas chrome, with
+  a new context_menu_contains() in SynthLib (a frame is drawn as exactly its grid of item cells, so
+  that test is precisely "on something the menu painted").
+  SWALLOWING THE PRESS IS THE HALF THAT FIXES IT: the menu acts on the release, but a scrollbar or a
+  drag bar latches onto the press. A click OUTSIDE the menu is deliberately still passed through — the
+  host needs to see it to dismiss the menu and to decide what else it meant.
+
+- A VOICE AREA MODULE SCROLLED UNDER THE FX PANE COULD STILL BE SELECTED THROUGH IT. Drawing was
+  clipped per pane (glScissor, module_pane_clip_begin) but click-region REGISTRATION was not, so a
+  module scrolled past the bottom of its pane kept a live region in window coordinates, invisible and
+  hittable, underneath whatever the neighbouring pane drew.
+  Fixed with set_click_region_clip() in SynthLib, set in the same function that sets the scissor and
+  cleared where it is cleared, so the two cannot drift apart. A region entirely outside is dropped;
+  one straddling the edge is TRIMMED, so a half-scrolled widget is clickable exactly where it can be
+  seen. clear_click_regions() clears the clip too, so it can never outlive a frame.
+  THIS IS THE GENERAL FIX — it covers left-clicks, right-clicks and drags, not just the paths that
+  were patched by hand while chasing it.
+
+- (self-inflicted, same day) canvas_right_click() and canvas_nudge_param_under_cursor() lost their
+  SLOT/LOCATION SCOPE when they were collapsed into single registry queries, with a comment
+  confidently explaining why that was safe. It is not: with the split view showing both panes, a
+  query answers "what is anywhere on screen at this point", not "what is in this pane", so a
+  right-click in the FX area produced an "Assign knob" menu for a Voice Area module underneath. The
+  nested walks they replaced were implicitly scoped because they iterated only the modules of the
+  location they were handed. Scope restored in both, explicitly.
+
+- SPLIT BAR DOUBLE-ARROW WAS INCONSISTENT. The manual settles what it should do, and it is not "go to
+  the middle": "Click on the double arrow button to place the split bar on the PREVIOUS SPLIT
+  POSITION." Two faults, both in the tracking rather than the intent:
+   1. It was recorded ONLY in set_bar_position(). That is not the only way the divider moves — a
+      patch carries its own barPosition and is parsed straight into gPatchDescr (protocol.c), a new
+      patch gets a default (dataBase.c), and the device can move it behind us. So after a fresh load,
+      collapsing a pane and pressing the double-arrow went to the middle, and it only started
+      behaving once the divider had been dragged by hand. Behaviour that depends on history is what
+      read as "inconsistent". Now observed in split_view_apply(), which runs every frame from
+      render_frame(), catching every source without a hook per source.
+   2. It was ONE app-wide value, but barPosition lives in gPatchDescr[slot] — patch data, so each of
+      the four slots has its own divider. A single global handed slot B the position last seen in
+      slot A. restorePosition is now per slot.
+  A COLLAPSED POSITION IS DELIBERATELY NOT REMEMBERED: "previous split position" has to mean the last
+  one where both areas were visible, or the button returns you to the collapse you are undoing.
+
+- STILL MISSING, from the same manual paragraph: "Press V on the computer keyboard to toggle between
+  the current split position and viewing only the Voice Area. Press F ... only the FX Area." Neither
+  exists. GLFW_KEY_V is taken by Cmd-V (paste) but that is Command-modified, so bare V and F are free.
+  NOTE THIS ALSO CORRECTS A CLAIM MADE ELSEWHERE IN THIS FILE — that L (MIDI Learn) is "the original
+  editor's only BARE-key shortcut". The manual documents V and F as bare keys too.
+
+
 AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless the check fails)
 
 - SUPER-SAW ("sup") PHASE FIX NEEDS AN EAR (2026-08-09). Fixed as part of the warnings sweep, because
@@ -2576,8 +2632,7 @@ open design items below):
    screenshotted: G2-Edit renders its patch Online, EmuUtility its panel and LCD, SynthEdit its page
    tabs and dials in the right colours — which incidentally re-proves the theme is reaching SynthLib,
    since a missing configure_synthlib_theme() is what once drew its power buttons black on black.
-   STILL TO DO: advance the recorded pin in each project (git add SynthLib + commit); all three
-   worktrees are already at 57356ff.
+   PINS: G2-Edit's is current. EmuUtility and SynthEdit still lag — see item 3.
 
 2. [MOSTLY DONE 2026-08-20 — registry + facade; see the two deliberate exclusions below] Popup lifecycle coordinator.
 
@@ -2683,8 +2738,23 @@ open design items below):
    someone next builds it. Fixed, do-vst3 runs, universal binary, installed. CHECK do-vst3 WHENEVER A
    FILE MOVES OR IS ADDED.
 
-   STILL TO DO: EmuUtility and SynthEdit are pinned to a SynthLib that has these on synthlibWindow.h
-   rather than inputState.h, so both are reverted and green pending one more push. Ten lines each.
+   ALL THREE APPS ARE CONVERTED. Each app's get_global_gui_scaled_mouse_coord() is now a one-line
+   wrapper; the name stays because it is what synthlib_host_init() is handed and what nine files in
+   G2-Edit call.
+
+   STILL TO DO — THE CALLBACK ADAPTER, which is the part of this item that has not been touched. The
+   thin GLFW shim in each app still repeats the same shape: decode the button/action pair, scale the
+   coordinate, offer the event to the popup coordinator, call the app's own handler, request a
+   redraw. Sharing it would also unify the two conventions that exist today — EmuUtility's and
+   SynthEdit's `*_cb` wrappers calling `handle_*`, against G2-Edit's callbacks being the handlers
+   themselves.
+   THE BLOCKER THIS ITEM RECORDED IS NOW GONE: it said the app-specific hit-testing could not move
+   until gParamRectangle was off the render-time global arrays. That migration is done (see the
+   PARTIALLY DONE section), so more of the dispatch can follow the adapter whenever this is picked up.
+
+   ALSO OUTSTANDING: EmuUtility and SynthEdit are pinned to SynthLib 02056da and so do not yet have
+   the context-menu click routing, context_menu_contains() or the click-region viewport clip from the
+   second batch of fixes. Both want a pull and a pin bump; neither is broken meanwhile.
 
 4. [PRIORITY] CoreMIDI send-primitive extraction (safe first step of the comms-layer item below).
    EmuUtility and SynthEdit's low-level MIDI send is near-identical (MIDIPacketListInit /
