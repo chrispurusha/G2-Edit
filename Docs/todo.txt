@@ -2602,22 +2602,36 @@ open design items below):
    built only by luck of transitive includes in G2-Edit and would have been someone else's build
    failure. Nothing in either new file touches the #ifdef G2_EDIT half of synthlibDefs.h.
 
-3. [PRIORITY] Move mouse-callback plumbing into SynthLib (ties into 1 & 2). The common preamble in
-   every app's mouse handling is boilerplate over SynthLib-owned state:
-     - get_global_gui_scaled_mouse_coord() (window pixels -> logical/GUI-scaled coords) is DUPLICATED
-       per-app: EmuUtility's and SynthEdit's are character-identical (both delegate to
-       window_to_logical()), G2-Edit's is functionally equivalent but inlined. Pure math over
-       gGlobalGuiScale + get_render_width/height, all already in SynthLib -> clean move
-       (synthlib_window_to_logical() / synthlib_mouse_coord()).
-     - convert_to_mouse_button() (GLFW button/action -> normalized button+phase) is generic decode.
-     - The thin GLFW callback adapter itself (decode -> scale coord -> popup-coordinator dispatch (2)
-       -> app handler(coord, button) -> request_redraw) can be shared, unifying the two conventions
-       that exist today (EmuUtility/SynthEdit's *_cb -> handle_* split vs G2-Edit's
-       callbacks-are-handlers directly). App keeps only its domain hit-testing. NOTE: the app-specific
-       hit-testing cannot fully move until the gParamRectangle -> click-region migration below
-       decouples hit-testing from render-time global arrays; after that, even more of the dispatch
-       could move. Do the coord-transform + normalized-callback-adapter part now (independent of that),
-       leave domain hit-testing local.
+3. [PART DONE 2026-08-20] Move mouse-callback plumbing into SynthLib (ties into 1 & 2).
+
+   DONE — THE SHARED PRIMITIVES, on the platform-free input seam (declared in inputState.h,
+   implemented in inputStateGlfw.c beside set_modifier_state_from_glfw):
+       tCoord       synthlib_window_to_logical(double x, double y);
+       void         synthlib_mouse_coord(tCoord * coord);
+       tMouseButton synthlib_mouse_button(int glfwButton, int glfwAction);
+   window_to_logical() was character-identical in EmuUtility and SynthEdit and inlined into G2-Edit's
+   get_global_gui_scaled_mouse_coord() — where it had LOST the divide-by-zero guard the other two
+   kept, so a window reporting a zero dimension (which happens while minimising) would have divided
+   by it. The shared one keeps the guard. G2-Edit is converted; both its functions are now one-line
+   wrappers, names kept because get_global_gui_scaled_mouse_coord is what synthlib_host_init() is
+   given and what nine files call.
+
+   WHY inputState.h AND NOT synthlibWindow.h, having first put them there: synthlibWindow.h includes
+   <GLFW/glfw3.h> for the callback typedefs, and SynthEdit's mouseHandle.c deliberately does NOT pull
+   the GLFW header in — it hand-declares the handful of GLFW functions it needs and #defines the key
+   constants, so including it produced "conflicting types for glfwSetInputMode". These three take
+   plain doubles and ints, so the platform-free seam is where they belong; inputState.h now includes
+   synthlibTypes.h for tCoord/tMouseButton and stays GLFW-free, which is what lets the VST3 keep
+   linking inputState.c.
+
+   AND IT BROKE THE PLUG-IN, silently, exactly as this file warns elsewhere: do-vst3's source list is
+   MANUAL, and it still named $HERE/src/floatingPanel.c after that file moved into SynthLib. The app
+   builds either way — src/ is a synchronized folder — so only the plug-in fails, and only when
+   someone next builds it. Fixed, do-vst3 runs, universal binary, installed. CHECK do-vst3 WHENEVER A
+   FILE MOVES OR IS ADDED.
+
+   STILL TO DO: EmuUtility and SynthEdit are pinned to a SynthLib that has these on synthlibWindow.h
+   rather than inputState.h, so both are reverted and green pending one more push. Ten lines each.
 
 4. [PRIORITY] CoreMIDI send-primitive extraction (safe first step of the comms-layer item below).
    EmuUtility and SynthEdit's low-level MIDI send is near-identical (MIDIPacketListInit /
@@ -2631,14 +2645,80 @@ open design items below):
 
 PARTIALLY DONE / STILL OPEN:
 - Migrate G2-Edit's gParamRectangle[slot][location][index][param] onto the click-region registry —
-  NOT finished. It is a 6MB static array (globalVars.c's own comment says so) still doing double duty:
-  written at render time (moduleGraphics.c, topbarRender.c) and read straight back for hit-testing.
-  RE-SURVEYED 2026-08-20 — mouseHandle.c is now CLEAN of it (the ~258/458/1078 spots this entry used
-  to name are gone; its only within_rectangle calls are the menu bar and the mutator panel). The four
-  remaining readers are canvasDrag.c (3, mid-drag: these genuinely need the RECT, not a hit test, so
-  they are the ones that justify keeping some form of the array), paramPages.c, paramOverlay.c and
-  moduleGraphics.c itself. Other named hit rects (gPatchParamClose, gTopbarControls[].rectangle) are
-  still direct array indexing too.
+  STARTED 2026-08-20, 3 of 5 readers gone.
+
+  THE FINDING THAT SHAPED IT: parameters ALREADY register click regions, carrying a tParamClickCtx of
+  {moduleKey, paramIndex} as userData. So the registry already knew everything the array was being
+  read for; what it lacked was a QUERY. dispatch_click_region() answers an event by calling a handler,
+  and several things need the same question answered without an event — a right-click wanting a menu
+  for whatever is under the cursor, a keyboard nudge acting on the pointed-at widget, an overlay
+  deciding what to describe. Each walked the app's own rectangle array instead, which is a second,
+  parallel description of where every widget is: free to disagree with the registry about z-order, and
+  stale in exactly the frames where a widget was drawn but deliberately not registered.
+
+  ADDED TO SYNTHLIB: click_region_at(coord) and click_region_at_layer(coord, layer), using the SAME
+  front-to-back walk as dispatch, so a query and a click can never disagree about what is in front.
+  dispatch_click_region() now shares that walk rather than carrying its own copy.
+
+  CONVERTED, and note that only ONE of the three is a hit test — the other two were not queries at all:
+   1. canvasDrag.c:402, the rotary drag's angle: it re-read the rect every mouse-move to find the
+      widget's centre. Now CAPTURED into gParamDragging.rect when the drag is armed, which is what
+      pointer capture is for — the owner of a gesture holds what it needs, so nothing that
+      re-registers or re-renders underneath it mid-drag can disturb it. This was one of the two
+      readers this entry used to cite as the reason the array had to stay readable.
+   2. paramPages.c:495: it rendered a widget and then read the widget's rect back out of the global.
+      render_param_common() now RETURNS the rect it registered, so the caller keeps what it drew.
+      That was the other cited reason.
+   3. paramOverlay.c:286, "is the pointer on this param": now param_is_under_cursor() in
+      moduleGraphics.c, which asks the registry and compares against the parameter's own click
+      context — its identity there. No tag and no lookup table, and sParamClickCtx stays private.
+
+  ALL FIVE READERS ARE NOW GONE (2026-08-20). The remaining two needed DISCRIMINATION rather than a
+  better query: the registry hands back a void * userData and each widget kind registers a different
+  struct, so acting on an answer means knowing what came back. Every canvas click context now begins
+  with the same {eCanvasWidgetKind kind; tModuleKey key;} pair — the sockaddr idiom, declared as
+  tCanvasWidget in moduleGraphics.h — and canvas_widget_at() / canvas_widget_at_any_layer() return it.
+   * canvasDrag.c's canvas_right_click(): a walk over every module, then its connectors, then its
+     parameters, then its body, is ONE query. The precedence survives without being restated —
+     render_module registers the body, then the drag strip, then calls render_module_common, and the
+     registry resolves ties by most-recently-registered, so a connector still beats the body it sits
+     inside. Its slot/location arguments are now unused: the registry only holds what is on screen.
+   * canvas_nudge_param_under_cursor(): two walks over every module (Morph location first, because
+     morph knobs draw over the canvas) collapsed to one query. That ordering is not lost, it is
+     inherited — morph dials register at eClickLayerPanel, canvas widgets at eClickLayerCanvas, and
+     the walk goes front to back. The old code's own comment admitted the duplication: "the click path
+     gets this ordering from the click-region layers instead".
+
+  A LANDMINE REMOVED ON THE WAY: the morph dials registered (void *)(intptr_t)i as their user data —
+  fine for a handler that knows what it registered, fatal for anything that asks the registry what is
+  under the cursor, because reading a tag off it dereferences a small integer. They now carry a
+  tagged context, stored in the morph module's own free slots in sParamClickCtx (render_param_common
+  is never called for a morph module, which is what fills those slots for everything else). Every
+  registered region in the app is now tagged, which is what makes the all-layers query safe.
+
+  AND THE DRAG CAPTURE NO LONGER READS THE ARRAY EITHER. dispatch_click_region() already captures the
+  whole region on press — it must, so the release reaches the same handler wherever the cursor goes —
+  so click_region_capture_rect() exposes the rect it captured and the rotary drag keeps that. The
+  press knew the answer exactly; looking it up again was the only reason to keep the array readable.
+
+  THE ARRAY IS GONE (2026-08-20). Its remaining uses were all "write it, then immediately hand it to
+  register_click_region() or return it", so they became a local tRectangle in render_param_common()
+  and locals at the two morph sites. Three writes were pure dead weight and simply went: the topbar
+  volume dial's rect (that dial is hit-tested through gTopbarControls), a debug error path that stored
+  a MODE index into the PARAM array, and the per-frame loop that blanked every morph rect so stale
+  ones could not be clicked — clear_click_regions() empties the registry at the top of every frame,
+  so a widget that is not drawn is not registered, which is the same guarantee without the bookkeeping.
+
+  IT WAS 8MB, not the 6MB its own comment claimed: MAX_SLOTS 4 x locationMax 4 x MAX_NUM_MODULES 128
+  x MAX_NUM_PARAMETERS 128 x sizeof(tRectangle) 32 = 8,388,608 bytes of BSS, present in every build
+  including the VST3 plug-in.
+
+  WHAT REPLACED IT IS NOT A SMALLER ARRAY, it is the absence of a second opinion. Where a widget is
+  now has exactly one description — the click region the renderer registers — and hit-testing,
+  clicking, right-clicking, keyboard nudging and the overlay all read that same one. The class of bug
+  this closes is the one where the two descriptions disagree about z-order, which the old code had to
+  keep in step by hand and documented in comments rather than enforcing.
+
 - Generalize mousePanels.c/mouseTopbar.c/selection.c into shared SynthLib components — blocked on the
   above: hit-testing must be fully decoupled from render-time global arrays first.
 - Page-selection tabs — SynthEdit built its own render_page_tabs()/page-tab mechanism independently

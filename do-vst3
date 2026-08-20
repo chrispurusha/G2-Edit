@@ -66,7 +66,7 @@ SOURCES=(
     "$HERE/src/paramOverview.c"
     "$HERE/src/paramOverlay.c"
     "$HERE/src/midiCcList.c"
-    "$HERE/src/floatingPanel.c"
+    "$HERE/SynthLib/src/floatingPanel.c"   # moved out of src/ 2026-08-20 — this list is MANUAL
     "$HERE/src/helpPanel.c"
     "$HERE/src/virtualKeyboard.c"
     "$HERE/src/patchAdjuster.c"

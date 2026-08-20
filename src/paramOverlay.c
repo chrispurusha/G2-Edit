@@ -31,6 +31,7 @@ extern "C" {
 #pragma clang diagnostic pop
 
 #include "paramOverlay.h"
+#include "moduleGraphics.h"   // param_is_under_cursor()
 #include "defs.h"
 #include "synthlibDefs.h"
 #include "globalVars.h"
@@ -283,7 +284,10 @@ void param_overlay_note_param(tModule * module, uint32_t paramIndex, tRectangle 
                 return;
             }
 
-            if (!within_rectangle(mouseCoord, gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex])) {
+            // The click-region registry, not the rectangle array: this asks "is the pointer on this
+            // widget" and the registry is what a click asks the same question of. See
+            // param_is_under_cursor().
+            if (!param_is_under_cursor(module, paramIndex, mouseCoord)) {
                 return;
             }
             queue_assignment_rows(module, paramIndex, rectangle, true, true, isTextWidget);

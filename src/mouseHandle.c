@@ -43,6 +43,7 @@ extern "C" {
 #include "topbarResourcesAccess.h"
 #include "utilsGraphics.h"
 #include "synthlibPopups.h"
+#include "synthlibWindow.h"
 #include "mouseHandle.h"
 #include "canvasDrag.h"
 #include "graphics.h"
@@ -73,15 +74,11 @@ extern "C" {
 // Drag-start state moved to canvasDrag.c along with the parameter-drag arm that uses it.
 static int gDragSkipCount = 0;      // skip first N cursor_pos events after CURSOR_DISABLED — covers stale NORMAL-mode events + transition event
 
+// The transform itself is SynthLib's now (synthlibWindow.h) — it was written out in all three apps,
+// and this copy was the one that had lost the divide-by-zero guard. The NAME stays because it is
+// what gets injected into synthlib_host_init() and what nine files here call.
 void get_global_gui_scaled_mouse_coord(tCoord * coord) {
-    int winWidth  = 0;
-    int winHeight = 0;
-
-    glfwGetCursorPos(synthlib_window(), &(coord->x), &(coord->y));
-    glfwGetWindowSize(synthlib_window(), &winWidth, &winHeight);
-
-    coord->x = (coord->x / (double)winWidth) * (get_render_width() / gGlobalGuiScale);
-    coord->y = (coord->y / (double)winHeight) * (get_render_height() / gGlobalGuiScale);
+    synthlib_mouse_coord(coord);
 }
 
 static void send_master_clock_bpm(uint32_t bpm) {
@@ -306,22 +303,7 @@ void stop_dragging(void) {
 }
 
 tMouseButton convert_to_mouse_button(int button, int action) {
-    tMouseButton mouseButton = mouseButtonNone;
-
-    if (action == GLFW_PRESS) {
-        if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            mouseButton = mouseButtonLeftDown;
-        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            mouseButton = mouseButtonRightDown;
-        }
-    } else if (action == GLFW_RELEASE) {
-        if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            mouseButton = mouseButtonLeftUp;
-        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            mouseButton = mouseButtonRightUp;
-        }
-    }
-    return mouseButton;
+    return synthlib_mouse_button(button, action);   // pure decode, shared — see synthlibWindow.h
 }
 
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {

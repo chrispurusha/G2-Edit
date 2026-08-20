@@ -601,6 +601,16 @@ typedef struct {
     // free by the memset that arms every drag — a leftover fraction from the last drag would otherwise
     // be spent on the first event of the next one.
     double unitAccum;
+
+    // THE RECT THE DRAG WAS ARMED ON, captured at press time rather than looked up per mouse-move.
+    //
+    // Rotary mode needs the widget's centre to turn a cursor position into an angle, and it used to
+    // fetch that by indexing gParamRectangle every event. That is a re-derivation of something the
+    // press already knew, and it is what standard pointer capture exists to avoid: the owner of a
+    // gesture holds what it needs for the duration, so the gesture cannot be disturbed by anything
+    // that re-registers, re-renders or re-orders underneath it mid-drag. It is also one of the two
+    // readers that kept the 6MB gParamRectangle array readable at all.
+    tRectangle rect;
 } tParamDragging;
 
 // The parameter last clicked on the canvas. The original editor's MIDI Learn is "click a knob, then
