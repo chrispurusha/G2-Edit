@@ -26,54 +26,11 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   construction (it read [node][0][0] and now reads [0][node][0] — same value, different slot), so if the
   single note sounds different, something else is wrong.
 
-- render_dial_with_text() IS NOW DIAL-ANCHORED (2026-08-02) — SynthLib 17c1ee4, committed and
-  pushed by the owner; ALL THREE PINS STILL NEED ADVANCING (all three worktrees are already at
-  17c1ee4, only the recorded gitlinks are behind at 91a7a9f). The rect handed to it is now the
-  dial circle's bounding square,
-  and the value and label are drawn in the two rows ABOVE it, growing upwards. It used to take the
-  top-left of the whole label+value+dial block and work downwards, which made the dial's position
-  depend on how many of the two strings were non-NULL: a dial with no label rode a row higher than
-  its neighbours, and the only remedy was to write "" instead of NULL in moduleResources.h so the
-  row was reserved but blank. NULL and "" are now equivalent - neither can move the dial.
-  COMPENSATION, so the canvas didn't jump: all 378 dial entries in paramLocationList had their rect
-  height 14 -> 7 (it is the dial, not the block), and the 23 top-anchored ones y += 7. The table's
-  units are uniform - scale_from_percent() is val * MODULE_WIDTH / 100 with MODULE_WIDTH a constant
-  350, so one unit is 3.5px in every module, x and y alike - which is what let this be a scripted
-  edit in whole percent units rather than per-module hand-tuning. Values stay integers.
-  NET EFFECT: every dial moved DOWN 0.5px (uniform, so relative alignment is untouched), except the
-  16 params that previously had no label row, which moved down 12.5px INTO line with their
-  neighbours. Those 16 are LfoA/LfoC/LfoShpA Rate, Mix8to1B In1-In8, EnvH Hold, Constant Value,
-  FltVoice Vowel, LevAmp Gain and EnvADR Release.
-  Also converted, since they place dials by hand rather than through the table: the topbar tempo
-  dial, the perf-settings master clock, the patch-settings Vibrato Amount / Vibrato Rate / Glide
-  Time, the three Mutator dials, the morph-group dials, and render_mode_common()'s OscWave branch
-  (unexercised - no modeLocationList entry is an OscWave today).
-  VERIFIED: a pixel diff of the whole canvas before/after on ioosc.pch2 shows the dial regions are
-  the old ones shifted by exactly one device pixel (99.89% identical at +1px on a 2x display) and
-  nothing else moved; and all 9 module types holding those 16 params were eyeballed across
-  EnvFx/DelayLevel/RndFilter/LogicMidi/SwitchSeqNote and now line up.
-  STILL TO DO: advance the pin in G2-Edit AND SynthEdit AND EmuUtility (git add SynthLib + commit
-  in each). All three build clean against 17c1ee4. The other two are unaffected by construction,
-  not merely compiling: render_dial_with_text is the only function the commit touches and neither
-  calls it - SynthEdit draws its dials with render_dial() plus its own text (synthGraphics.c:1312)
-  and EmuUtility has its own render_dial_knob() (emuGraphics.c:140).
-
 - Backdoor SCROLL and ZOOM commands (2026-08-02, graphics.c) — SCROLL <x> <y> as 0.0-1.0 fractions
   and ZOOM <0.25-2.0>. Added because a synthetic drag doesn't reach the app AT ALL - neither a
   scrollbar thumb nor a dial responds to one - so a scripted check could otherwise only ever see
   whatever modules happened to be on screen at the default zoom. This is what makes the "fuller
   systematic sweep of the remaining ~190 module types" item below actually cheap.
-
-- SynthLib alertDialog — TWO CHANGES, NOT YET COMMITTED IN THE SUBMODULE AND NO PIN BUMPED. Both
-  were needed by the offline-edits dialog but affect every SynthLib app:
-    (1) show_choice() — up to three mutually-exclusive buttons on one row, callback takes the index
-        counted from the RIGHT (0 = rightmost, drawn green as the affirmative), -1 on dismissal.
-        Buttons are sized to their own labels and the panel widens to fit the row; the fixed 64px
-        button_rect() the confirm dialog uses overlaps as soon as a label is more than one word.
-    (2) wrap_text() now honours '\n' as a HARD break, with a blank line for a paragraph gap. It
-        only ever split on spaces, so any existing message containing '\n' has been rendering as
-        "sentence.Next sentence" — this fixes those too, in all three apps.
-  Commit in SynthLib, then advance the pin in G2-Edit AND check EmuUtility/SynthEdit still build.
 
 - File > Save vs Save As (2026-08-01) — "Save Patch"/"Save Perf" writes straight back to wherever
   the patch was last opened from or saved to, no browser; greyed until there is such a path. Path
@@ -355,7 +312,7 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   and that normal chains (Osc->Filter->Out) are unchanged. upRate is written to the patch and sent
   to the G2, so confirm the hardware doesn't behave differently after a store.
 
-- draw_slider() morph-indicator sign fix (utilsGraphics.cpp) — threshold (morphRange < 127) made a
+- draw_slider() morph-indicator sign fix (utilsGraphics.c) — threshold (morphRange < 127) made a
   range of exactly +127 render as -129; now < 128 to match render_dial(). Visual only, but worth an
   eyeball on a slider-based module (mixer/SeqLev) with a max-positive morph assigned.
 
@@ -390,8 +347,14 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 
 OPEN WORK
 
-- STEREO REVERB, AND STEREO CHORUS BEHIND IT (next session, 2026-08-10). Both effects are MONO in
-  this engine and both are a decorrelated pair on the instrument. Neither is a tuning gap.
+- STEREO REVERB AND STEREO CHORUS — ALL THREE STEPS DONE 2026-08-15, STILL NEEDS AN EAR. Verified in
+  the code 2026-08-20: chorus_step() reads the right channel half a cycle along, reverb_step() takes
+  &wetL/&wetR, and eval_node()'s mono-mirror exclusion list is eNodeEnv/eNodeChorus/eNodeReverb/
+  eNodeOut. Read the whole entry before touching any of it: the measurements are what the
+  implementation encodes, and the two things most likely to be broken by later work are that
+  exclusion list and the 6 dB level change at eNodeOut.
+  WHAT IT WAS (2026-08-10): both effects were MONO in this engine and both are a decorrelated pair on
+  the instrument. Neither was a tuning gap.
   REVERB, measured 2026-08-09: the two outputs correlate at +0.012..+0.045 — statistically
   independent — share almost no delay lengths, and have different pre-delays per channel.
   reverb_step() returns one value from one comb/allpass bank, so it needs a SECOND TAP SET: its own
@@ -415,8 +378,9 @@ OPEN WORK
   version, arrived at with more code. Neither effect can be finished before the output path carries
   a pair.
 
-  STEPS 1 AND 2 ARE DONE, 2026-08-15 — needs an ear. Step 3 (the reverb) is still open, and the
-  entry below it still describes what that one needs. WHAT LANDED, and the two things to know:
+  STEPS 1 AND 2 ARE DONE, 2026-08-15 — needs an ear. (So is step 3; see STEP 3 further down, which
+  records what was built instead of what this entry originally proposed.) WHAT LANDED, and the two
+  things to know:
 
    * A REAL BUG CAME OUT OF IT, and it was not in the effects. FIVE NODE KINDS NEVER WROTE LEG 1 —
      the oscillators, the filter, LevAmp, LevMult and the mixers all write value[n][0] and leave
@@ -1159,11 +1123,8 @@ resources already hold.
   nominal, reproducing the hardware's relationship instead of a trim. The code went 0.25 -> 0.15 in
   commit 58e0725 with no derivation recorded anywhere. So the decision is smaller than it looks —
   mostly "adopt 0.125, or say why not" — but it is a ~1.6 dB level change and wants an ear.
-- Polyphony: Voice Area is per-voice, FX Area is global. Needs node state split by area
-  ([MAX_VOICES][MAX_ENGINE_NODES] for VA nodes, single-instance for FX), a voice allocator honouring
-  gPatchDescr[slot].voiceCount, and per-voice glide/note queue. The VA-Out -> FX-bus link the engine
-  now models correctly is already the right join point.
-- Module coverage: ~17 of the G2's modules. FltLP added 2026-08-07 with a per-module filter param
+- Module coverage: 23 of the G2's modules as of 2026-08-20 (count the `case moduleType` labels in
+  soundEngine.c rather than trusting this line). FltLP added 2026-08-07 with a per-module filter param
   map (it has NO resonance, so its Slope sits one index earlier than FltClassic's — blind reuse
   would read a menu index as a resonance value). Extend that map per module; read indices, never
   assume them.
@@ -1231,10 +1192,6 @@ resources already hold.
   primitives in utilsGraphics — not a GLFW change.
   NOTE the CIDs changed with the rename (nothing was saved against the old ones), so any stale
   "G2 Edit" entry in a host's plug-in database is orphaned and should be rescanned away.
-- VST3: pitch bend and mod wheel are NOT routed. VST3 delivers those through IMidiMapping
-  (kPitchBend etc. mapped onto parameters), which is not implemented — sound_engine_pitch_bend()
-  exists and is host-shaped, so this is wiring, not new engine work.
-
 - VST3: MIDI events are applied at BLOCK GRANULARITY, not sample-accurate. The engine timestamps
   nothing, so a note lands at the start of the buffer it arrived in — under 12 ms at 44.1k/512.
   Fixing this means teaching the engine to place an event within a block, not changing the wrapper.
@@ -1245,11 +1202,6 @@ resources already hold.
   the densest. It confirmed our delay Time formula at 128/128 points and our ADRTimeStrMap exactly.
   NOTE its DLYCLK table has an off-by-one at raw 84 (boundary at 85 where hardware says 84, and it is
   the only boundary in their own table that is not a multiple of 4) — worth reporting upstream.
-
-- env_timesStrMap in moduleResources.h is DEAD CODE with a 1000x unit error: it labels the envelope
-  range 0.0005ms-45.000ms where the manual (p.9157) says 0.5 ms to 45 s. It appears exactly once in
-  the tree — its own definition — and the live table (ADRTimeStrMap) is correct. DELETE it rather
-  than fix it; a wrong lookalike sitting beside the right one is a trap for whoever reaches for it.
 
 - get_text_width(..., eCache) keys its cache on the TEXT POINTER, not contents, so it is only safe
   for string literals. Passing a stack buffer returns the first string ever measured at that address
@@ -1303,9 +1255,9 @@ resources already hold.
 - send_perf_mode_change() takes ~3 sends (500ms retries) before the 0x1f response arrives — minor,
   but the wait could be tightened if it matters.
 
-- moduleGraphics.cpp:685 — "can Mode be morphed?" Needs a manual/hardware check, not a code guess.
+- moduleGraphics.c:685 — "can Mode be morphed?" Needs a manual/hardware check, not a code guess.
 
-- moduleGraphics.cpp/renderParams.c — port the REMAINING custom graph displays from the original
+- moduleGraphics.c/renderParams.c — port the REMAINING custom graph displays from the original
   editor. Three are done (render_oscshpb_waveform_graph, render_envadsr_graph,
   render_fltclassic_response_graph) alongside render_volume_meter; this list was written before
   they existed and said "none exist". Still to do: the rest of the envelope shapes
@@ -1403,9 +1355,9 @@ resources already hold.
 
 - Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist).
 
-- moduleGraphics.cpp/graphics.cpp — GL_BLEND enable/disable sits at each caller
-  (moduleGraphics.cpp:1239/1254, graphics.cpp:590) rather than inside the shared drawing primitive
-  (render_cable_from_to() et al., utilsGraphics.cpp) the way render_text() already manages its own
+- moduleGraphics.c/graphics.c — GL_BLEND enable/disable sits at each caller
+  (moduleGraphics.c:1239/1254, graphics.c:590) rather than inside the shared drawing primitive
+  (render_cable_from_to() et al., utilsGraphics.c) the way render_text() already manages its own
   blend state. Not a bug — correct today, just a cosmetic/architectural inconsistency. Low priority;
   real regression risk if rushed, since these primitives are reused everywhere.
 
@@ -1478,7 +1430,7 @@ testing needed before touching; do not guess)
 - mouseHandle.c:164 — gControllerCount[slot] "seems to default to 2, so might need to set up
   defaults" — whether some default controller assignment should be pre-populated on a new patch.
   Needs product/hardware judgement, not a code fix.
-- moduleGraphics.cpp:744,751,758 — "Should come from volume location list!? Shouldn't be in
+- moduleGraphics.c:744,751,758 — "Should come from volume location list!? Shouldn't be in
   gModuleProperties" — a data-modelling question (where per-module volume-type info should live)
   needing a design decision, not a mechanical fix.
 - mouseHandle.c:929 — "Close if clicked outside" on a context menu — current behaviour looks
@@ -2474,9 +2426,6 @@ none of these exist in G2-Edit at all, confirmed by source search)
   cleanup. Both need one more unplug/replug cycle; Send overwrites the synth's edit buffer.
   STILL OPEN: dirty state is per SLOT and only covers the reconnect path. Slot change and any other
   device reload can still clobber silently, and the performance domain is not covered at all.
-- Scrollbars on the patch selectors (Load/Store/Delete/Restore bank-location pickers,
-  bankBrowser.cpp) — currently no visible scrollbar for long lists.
-
 - Close button moved TOP LEFT and drawn as a cross — DONE 2026-08-02, needs an owner eyeball.
   macOS puts the close control top left; every panel and popup had a "Close" text button top right.
   Now a 14px square with a drawn cross (two render_line() diagonals, never the character 'X').
@@ -2574,11 +2523,12 @@ open design items below):
 PARTIALLY DONE / STILL OPEN:
 - Migrate G2-Edit's gParamRectangle[slot][location][index][param] onto the click-region registry —
   NOT finished. It is a 6MB static array (globalVars.c's own comment says so) still doing double duty:
-  feeds register_click_region() at render time (moduleGraphics.cpp) AND is read directly via
-  within_rectangle() in a few mouseHandle.c spots (~258, 458, 1078) that look like they may predate the
-  click-region migration — worth checking whether those are dead code now shadowed by
-  dispatch_click_region(), or still load-bearing (e.g. mid-drag angle calculation genuinely needs the
-  rect, not just a hit test). Other named hit rects (gPatchParamClose, gTopbarControls[].rectangle) are
+  written at render time (moduleGraphics.c, topbarRender.c) and read straight back for hit-testing.
+  RE-SURVEYED 2026-08-20 — mouseHandle.c is now CLEAN of it (the ~258/458/1078 spots this entry used
+  to name are gone; its only within_rectangle calls are the menu bar and the mutator panel). The four
+  remaining readers are canvasDrag.c (3, mid-drag: these genuinely need the RECT, not a hit test, so
+  they are the ones that justify keeping some form of the array), paramPages.c, paramOverlay.c and
+  moduleGraphics.c itself. Other named hit rects (gPatchParamClose, gTopbarControls[].rectangle) are
   still direct array indexing too.
 - Generalize mousePanels.c/mouseTopbar.c/selection.c into shared SynthLib components — blocked on the
   above: hit-testing must be fully decoupled from render-time global arrays first.
@@ -2892,8 +2842,8 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - The Seq park LED's exclusion from the LED stream is CORRECT and must STAY — it is what keeps the
   module's other real stream LEDs aligned. (See the open Seq park-LED item above for what is still
   unknown.)
-- render_volume_meter stays G2-local in moduleGraphics.cpp. Moving it to SynthLib alongside
-  utilsGraphics.cpp was considered and DROPPED: it is pure G2 domain (tVolumeType /
+- render_volume_meter stays G2-local in moduleGraphics.c. Moving it to SynthLib alongside
+  utilsGraphics.c was considered and DROPPED: it is pure G2 domain (tVolumeType /
   tVolumeMeterConfig / volumeMeterStyle* enum + G2 value-bit decode) built entirely on primitives that
   are ALREADY shared. Moving it would couple SynthLib to G2 module semantics — the opposite of the
   commonalise goal.
