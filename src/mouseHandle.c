@@ -148,13 +148,38 @@ void cursor_raw_coord(double * rawX, double * rawY) {
 
 // Is any in-window text field taking keystrokes? Note entry and any other bare-letter shortcut has
 // to stand aside while one is: the letter belongs to the name being typed.
-static bool any_text_edit_active(void) {
+// The NAME fields only — every one of them entered deliberately, by clicking the field itself.
+static bool any_name_edit_active(void) {
     return gPatchNameEdit.active
-           || gPatchNotesEdit.active
            || gModuleNameEdit.active
            || gParamNameEdit.active
            || gSynthNameEdit.active
            || gPerfNameEdit.active;
+}
+
+static bool any_text_edit_active(void) {
+    return any_name_edit_active() || gPatchNotesEdit.active;
+}
+
+// WHO OWNS THE KEYBOARD, asked once, instead of six independent editors each helping themselves.
+//
+// char_event() is a row of sequential ifs with no else between them, so every ACTIVE editor used to
+// receive every character. Two of them being active at once is easy: opening the notes editor ends
+// no name edit, and starting a name edit does not close the notes editor. The results were a
+// character landing in the patch name AND the notes buffer at the same time, and — reported — the
+// synth name being untypeable whenever the notes editor sat open behind the Synth Settings panel.
+//
+// Two rules settle it, in this order:
+//
+//   * A NAME EDIT WINS. You entered it by clicking that exact field, which is the most specific
+//     intent available, and it is dismissed by clicking away.
+//   * OTHERWISE THE FRONTMOST PANEL WINS, which is what you are looking at. The notes editor is the
+//     only panel whose typing is handled here rather than through the panel key walk — the walk is
+//     already ordered front to back, so the other panels have always had this for free.
+static bool notes_own_keyboard(void) {
+    return gPatchNotesEdit.active
+           && !any_name_edit_active()
+           && floating_panel_is_frontmost(&gPatchNotesEdit.panel);
 }
 
 void cursor_capture(void) {
@@ -318,6 +343,18 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
         return; // a whole-slot device op is in flight — swallow canvas interaction until it completes
     }
 
+    // THE SYNTH NAME EDIT ENDS ON A PRESS ANYWHERE BUT ITS OWN FIELD, and this is stated here, ahead
+    // of the popup dispatch, because that dispatch RETURNS for anything it consumes. Doing it below
+    // with the other name edits covers the canvas and the chrome but not the menu bar or a context
+    // menu, both of which are the coordinator's and neither of which is "the synth name field".
+    //
+    // Its own field is exempt so that clicking into the text you are already editing keeps the edit
+    // alive; the Synth Settings panel restarts the edit on the release when the click lands there.
+    if (  ((mouseButton == mouseButtonLeftDown) || (mouseButton == mouseButtonRightDown))
+       && !within_rectangle(coord, gSettingsPanelRects.synthName)) {
+        stop_synth_name_editing();
+    }
+
     // The modal cascade — file browser, bank browser, alert dialog, each with its own early return
     // and its own mouse-down/mouse-up gating, plus the alert's routing around its bank-picker
     // dropdown — moved into SynthLib. See synthlibPopups.h. The gating is the part worth not losing:
@@ -336,6 +373,21 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
         synthlib_request_redraw();
         return;
     }
+    // A CLICK THAT REACHES HERE LANDED ON NOTHING THAT CLAIMED IT — the canvas, the chrome, empty
+    // space — and that ends every name edit. Abandoning rather than committing is the established
+    // meaning: stop_*_name_editing() memsets the edit, so the half-typed buffer goes and the real
+    // name is untouched.
+    //
+    // THE SYNTH NAME IS NOT IN THIS LIST, and belongs where it now is, at the top of this function:
+    // it was missing here for a reason that stopped being true. The Synth Settings panel was MODAL,
+    // returning true for every click anywhere on screen, so no click could reach this line while a
+    // synth name was being edited, and nothing needed to end it. Making that panel float — which is
+    // what let the canvas stay live behind it — turned an impossible case into an ordinary one, and
+    // the edit survived a click on the modules area. Reported 2026-08-20.
+    //
+    // Adding it here would have fixed only the half of "anywhere" that reaches this far. The popup
+    // dispatch above returns for whatever it consumes, so the menu bar and the context menus never
+    // get here — and neither of them is the synth name field either.
     stop_patch_name_editing();
     stop_module_name_editing();
     stop_param_name_editing();
@@ -920,7 +972,7 @@ void char_event(unsigned int value) {
         }
     }
 
-    if (gPatchNotesEdit.active) {
+    if (notes_own_keyboard()) {
         size_t   len       = strlen(gPatchNotesEdit.buffer);
         uint32_t cursorPos = gPatchNotesEdit.cursorPos;
 
@@ -1024,7 +1076,7 @@ void key_callback(int key, int scancode, int action, int mods) {
         return;
     }
 
-    if (gPatchNotesEdit.active) {
+    if (notes_own_keyboard()) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
             size_t   len       = strlen(gPatchNotesEdit.buffer);
             uint32_t cursorPos = gPatchNotesEdit.cursorPos;
