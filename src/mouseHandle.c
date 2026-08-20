@@ -1094,7 +1094,42 @@ void char_event(GLFWwindow * window, unsigned int value) {
     synthlib_request_redraw();
 }
 
+// Escape for the three settings panels that live in graphics.c rather than in a module of their own.
+//
+// FRONT TO BACK, for the same reason the floating panels above are: Escape has to close the panel you
+// are looking at. The render order in render_frame() is Synth, Performance, Patch — later is drawn on
+// top — so this tries them in the opposite order.
+//
+// These three were the gap the owner found on 2026-08-20: every pop-up that got its own .c file
+// (help, mutator, param pages, param overview, MIDI CC list, virtual keyboard, patch adjuster) grew a
+// handle_*_key() with an Escape path, while the ones still rendered out of graphics.c never did — so
+// Escape fell all the way through to the bare branch that used to quit the application. See the
+// comment where that branch was.
+static bool settings_panel_escape(void) {
+    if (gPatchParamsEdit.active) {          // "Patch Settings"
+        gPatchParamsEdit.active = false;
+        return true;
+    }
+
+    if (gPerfSettingsEdit.active) {         // "Performance Settings"
+        gPerfSettingsEdit.active = false;
+        return true;
+    }
+
+    if (gPatchSettingsEdit.active) {        // "Synth Settings"
+        // Same pair the close button performs (mousePanels.c): a name edit left open would otherwise
+        // outlive the panel it belongs to. Escape while actually editing the name never reaches here
+        // — gSynthNameEdit is handled further up, and discards the edit rather than closing anything.
+        stop_synth_name_editing();
+        gPatchSettingsEdit.active = false;
+        return true;
+    }
+    return false;
+}
+
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
+    (void)window;                         // GLFW dictates the signature; nothing here needs the window
+
     set_modifier_state_from_glfw(mods);   // a modifier PRESS is a key event like any other
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
@@ -1485,6 +1520,8 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     } else if (gContextMenu.active && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         close_context_menu();
         synthlib_request_redraw();
+    } else if ((key == GLFW_KEY_ESCAPE) && (action == GLFW_PRESS) && settings_panel_escape()) {
+        synthlib_request_redraw();
 #ifdef ENABLE_MOUSE_CROSSHAIR
     } else if (key == GLFW_KEY_F9 && action == GLFW_PRESS) {
         toggle_mouse_crosshair(); // TEMPORARY debug aid — Debug builds only
@@ -1497,8 +1534,17 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             update_module_up_rates();
             synthlib_request_redraw();
         }
-    } else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GL_TRUE);
+        // NO BARE-ESCAPE BRANCH HERE, AND THERE MUST NOT BE ONE AGAIN. Escape used to reach this point
+        // and call glfwSetWindowShouldClose() — the GLFW sample-code idiom, which is fine for a demo and
+        // wrong for an editor: it quit the application, with unsaved patch edits and no confirmation, on
+        // a key whose whole meaning everywhere else in this app is "close the thing in front of me".
+        // Every panel, page, browser and menu above handles its own Escape and returns before this point,
+        // so what fell through to it was precisely the case where the user meant "never mind" — most
+        // easily hit by pressing Escape once to dismiss a popup and once more out of habit.
+        //
+        // Escape now does nothing when there is nothing to dismiss. Quitting is Cmd-Q, the Quit item in
+        // the application menu (GLFW's Cocoa backend populates both) or the window's close button — all
+        // three go through window_close_callback and the normal shutdown.
     } else if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_PRESS) {
         gCommandKeyPressed = true;
     } else if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_RELEASE) {
