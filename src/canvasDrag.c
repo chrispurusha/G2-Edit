@@ -528,9 +528,7 @@ bool canvas_param_drag_release(void) {
 //
 // The application keeps its own topbar and module-area right-click handling after calling this.
 bool canvas_right_click(tCoord coord, uint32_t slot, uint32_t location) {
-    (void)slot;
-    (void)location;
-    bool                  found  = false;
+    bool found = false;
 
     // ONE QUERY, not a walk over every module and every parameter. The click-region registry already
     // holds each widget's rectangle and its identity, front to back, so "what is under the cursor"
@@ -542,9 +540,20 @@ bool canvas_right_click(tCoord coord, uint32_t slot, uint32_t location) {
     // register AFTER the module body (render_module registers the body, then the drag strip, then
     // calls render_module_common), and the registry resolves ties by taking the most recently
     // registered — so a connector still wins over the body it sits inside, exactly as the old
-    // "connectors, then params, then body" order spelled out. The slot and location arguments are
-    // now unused for the same reason: the registry only ever holds the widgets currently on screen.
+    // "connectors, then params, then body" order spelled out.
+    //
+    // THE SLOT AND LOCATION FILTER IS NOT OPTIONAL, and dropping it was a real regression: with the
+    // split view showing the Voice Area and the FX area at once, both panes have widgets registered,
+    // and a right-click in the FX pane came back with a VA module — the owner saw an "Assign knob"
+    // menu for a module underneath. The old nested walk was implicitly scoped because it iterated
+    // only the modules of the location it was given; a registry query is scoped to the whole screen,
+    // so the scope has to be stated. Ask the registry WHAT is there, then confirm it is something
+    // this pane owns.
     const tCanvasWidget * widget = canvas_widget_at(coord);
+
+    if ((widget != NULL) && ((widget->key.slot != slot) || (widget->key.location != location))) {
+        widget = NULL;
+    }
 
     if (widget != NULL) {
         found = true;
@@ -953,6 +962,17 @@ bool canvas_nudge_param_under_cursor(int delta) {
     // comment said as much — "the click path gets this ordering from the click-region layers
     // instead" — which is the duplication this removes rather than a difference to preserve.
     const tCanvasWidget * widget    = canvas_widget_at_any_layer(coord);
+
+    // SCOPED, for the same reason canvas_right_click() is: the registry covers the whole screen, and
+    // with both panes visible a widget belonging to the other one can be found under the pointer.
+    // The walk this replaced was implicitly scoped — it iterated the Morph location and then
+    // gLocation, and nothing else — so the scope has to be stated rather than assumed.
+    if (  (widget != NULL)
+       && (  (widget->key.slot != slot)
+          || (  (widget->key.location != (uint32_t)locationMorph)
+             && (widget->key.location != gLocation)))) {
+        widget = NULL;
+    }
 
     if (widget == NULL) {
         return false;
