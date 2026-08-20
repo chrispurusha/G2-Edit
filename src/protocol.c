@@ -890,6 +890,7 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         // index of 108 came from on a perfectly ordinary patch: not data, just the following
         // section misread. Whatever the trailing byte is for, it is not the start of an entry.
         for (j = 0; (j + 3) <= (int)moduleLength;) {
+            uint32_t entryStart = *subOffset;   // for the diagnostic dump below, if it comes to that
             isString    = read_bit_stream(buff, subOffset, 8);
             LOG_MODULE_DATA("IsString     %d\n", isString);
             paramLength = read_bit_stream(buff, subOffset, 8);
@@ -898,11 +899,52 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             LOG_MODULE_DATA("Param Index  %d\n", paramIndex);
             j          += 3;
 
-            // A payload that would run past the section is equally a misread. Stop rather than
-            // consume the following section's bytes; the tail is squared up after the loop.
+            // NOT EVERY RECORD IN THIS SECTION IS A LIST OF NAME STRINGS, and assuming otherwise is
+            // what made loading this patch from the instrument stop dead. Captured from a real G2 on
+            // 2026-08-20: a SeqNote (module type 121, at index 22) emits a six-byte record reading
+            //
+            //     37 37 00 00 00 00
+            //
+            // where a name record reads 01 <len> <paramIndex> <len-1 bytes of text>. 37 is SeqNote's
+            // own parameter count, so this is evidently a per-parameter record of some other shape
+            // rather than a name list. Read as a name record it claims a 36-byte payload inside a
+            // 6-byte module section, which trips the assert below — and that is exactly what "loads
+            // from a file but not from the flash bank" was: the file copy of this patch carries no
+            // such record, the copy stored on the instrument does.
+            //
+            // Every genuine name record carries isString == 1, so test for that POSITIVELY rather
+            // than waiting for a length to look wrong. The module's remaining bytes are stepped past
+            // by the squaring-up loop after this one, which is what keeps the following modules — and
+            // the following sections — correctly positioned.
+            //
+            // WHAT THIS RECORD MEANS IS NOT DECODED, and nothing here needs it: parameter names are
+            // cosmetic. If it is ever wanted it wants the reference editor's reader, not a guess from
+            // a single capture.
+            if (isString != 1) {
+                LOG_DEBUG("param names: module %u record type %u is not a name list, skipping its %u bytes\n",
+                          key.index, isString, moduleLength);
+                break;
+            }
+
+            // A payload that would run past the section means the record is genuinely malformed, and
+            // stopping dead is deliberate — see EXIT_IN_DEBUG in defs.h. It stays an assert BECAUSE
+            // the isString test above now turns away the one record that was reaching here
+            // legitimately; anything still arriving is corruption worth halting on rather than
+            // limping past. The hex dump is what made the SeqNote record identifiable, so it stays
+            // too: if this ever fires again it should be answerable from one capture.
             if ((paramLength > 0) && ((j + (int)(paramLength - 1)) > (int)moduleLength)) {
+                uint32_t dumpStart        = BIT_TO_BYTE(entryStart);
+                char     dump[3 * 24 + 1] = {0};
+
+                for (uint32_t d = 0; d < 24; d++) {
+                    snprintf(&dump[d * 3], 4, "%02x ", buff[dumpStart + d]);
+                }
+
                 LOG_ERROR("param name payload %u overruns module section (%d of %u used), stopping\n",
                           paramLength - 1, j, moduleLength);
+                LOG_ERROR("  module index %u, entry started at byte %u, isString %u paramIndex %u\n",
+                          key.index, dumpStart, isString, paramIndex);
+                LOG_ERROR("  bytes from there: %s\n", dump);
                 EXIT_IN_DEBUG();
                 break;
             }

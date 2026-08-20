@@ -39,13 +39,26 @@ void usb_log_open(void) {
     } else {
         snprintf(path, sizeof(path), "/tmp/G2_usb.log");
     }
-    logFile = fopen(path, "w");
+    // APPEND, not truncate. This used to open "w", so relaunching the app destroyed the previous
+    // session's capture — which is precisely the wrong behaviour when the thing being captured is a
+    // fault that only shows on a particular device state and may not survive being reproduced twice.
+    // Each session is separated by the marker below. Grows without bound; this is a temporary
+    // diagnostic (see ENABLE_USB_LOG in defs.h) and the file is meant to be deleted afterwards.
+    logFile = fopen(path, "a");
 
     if (logFile == NULL) {
         fprintf(stderr, "usb_log_open: failed to open %s (errno=%d %s)\n", path, errno, strerror(errno));
         return;
     }
-    fprintf(logFile, "--- session start ---\n");
+    {
+        time_t    now      = time(NULL);
+        struct tm tmInfo;
+        char      when[64] = {0};
+
+        localtime_r(&now, &tmInfo);
+        strftime(when, sizeof(when), "%Y-%m-%d %H:%M:%S", &tmInfo);
+        fprintf(logFile, "\n--- session start %s ---\n", when);
+    }
     fflush(logFile);
 }
 
