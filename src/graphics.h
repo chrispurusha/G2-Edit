@@ -64,6 +64,10 @@ int note_editor_cursor_from_click(double logicalX, double logicalY);
 // registration; these are the two questions the cursor-position handler has to ask it. Clicks and
 // keys do NOT need an entry point here — those go through the popup coordinator, which walks the
 // same table. See synthlibPopups.h and floatingPanel.h.
+// Is this panel the frontmost one currently shown? What "has keyboard focus" means for a panel
+// whose text handling lives outside the panel key walk — see the note in graphics.c.
+bool floating_panel_is_frontmost(const tFloatingPanel * panel);
+
 bool floating_panels_under(tCoord coord);
 bool floating_panels_drag(tCoord coord);
 
