@@ -1929,12 +1929,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeScratch,     connectorDirIn,  connectorTypeControl, {{  6,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 63 Mod
     {moduleTypeScratch,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },        // 63 Out
     // 64 Gate
-    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 35, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In1_1
-    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In1_2
-    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 65, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In2_1
-    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In2_2
-    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 52,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 64 Out1
-    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 82,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 64 Out2
+    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 16, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In1_1
+    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 16,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In1_2
+    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 66, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In2_1
+    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In2_2
+    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 40,  2}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },        // 64 Out1
+    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 90,  2}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },        // 64 Out2
     // 65 Unknown
 
     // 66 Mix2-1B
@@ -2610,8 +2610,8 @@ const tModeLocation      modeLocationList[] = {
     {moduleTypeDriver,     paramTypeMenu,   {{ 35,  0}, { 7, 7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap    }, // 35 Type
     {moduleTypePulse,      paramTypeMenu,   {{-13,  0}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap     }, // 38 Mode
     {moduleTypeDelay,      paramTypeMenu,   {{-13,  0}, { 7, 7}}, anchorBottomRight, "Mode",  3, 0, logicDelayModeStrMap}, // 42 Mode
-    {moduleTypeGate,       paramTypeMenu,   {{ 40,  0}, { 7, 7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap      }, // 64 Gate 1 Type
-    {moduleTypeGate,       paramTypeMenu,   {{ 70,  0}, { 7, 7}}, anchorBottomLeft,  "G2",    6, 0, gateTypeStrMap      }, // 64 Gate 2 Type
+    {moduleTypeGate,       paramTypeMenu,   {{ 25,  2}, { 7, 7}}, anchorMiddleLeft,  "G1",    6, 0, gateTypeStrMap      }, // 64 Gate 1 Type
+    {moduleTypeGate,       paramTypeMenu,   {{ 75,  2}, { 7, 7}}, anchorMiddleLeft,  "G2",    6, 0, gateTypeStrMap      }, // 64 Gate 2 Type
     {moduleTypeClkDiv,     paramTypeMenu,   {{ 80,  0}, { 7, 7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap       }, // 69 DivMode
     {moduleTypeFltLP,      paramTypeMenu,   {{ 67,  0}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 0, fltLPSlopeStrMap    }, // 87 FltLP
     {moduleTypeFlipFlop,   paramTypeMenu,   {{ 45,  0}, { 7, 7}}, anchorBottomLeft,  "Type",  2, 0, flipFlopStrMap      }, // 91 Selector
