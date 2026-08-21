@@ -88,7 +88,7 @@
 #define MAX_PARAMS_PER_MODULE                (38)
 #define MAX_CONNECTORS_PER_MODULE            (10)
 #define MAX_SLOTS                            (4)
-#define MAX_NUM_MODES                        (16)
+#define MAX_NUM_MODES                        (2)
 #define MAX_NUM_PARAMETERS                   (128)
 #define MAX_NUM_LABELS                       (32)
 #define MAX_NUM_CONNECTORS                   (13)
