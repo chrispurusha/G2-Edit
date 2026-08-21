@@ -567,14 +567,14 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeLfoShpA,    paramTypeMenu,           {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   4, posStrMap,                             NULL          },                     // 25 OutType
     {moduleTypeLfoShpA,    paramTypeMenu,           {{ 57, -32}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoShpAWaveStrMap,                     NULL          },                     // 25 Wave
     // 26 LfoA
-    {moduleTypeLfoA,       paramTypeLFORate,        {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                     // 26 Rate
-    {moduleTypeLfoA,       paramTypeMenu,           {{ 17, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                     // 26 Mode
-    {moduleTypeLfoA,       paramTypeMenu,           {{ 65,   0}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                     // 26 Kbt
+    {moduleTypeLfoA,       paramTypeLFORate,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                     // 26 Rate
+    {moduleTypeLfoA,       paramTypeMenu,           {{ 20, -1}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                     // 26 Mode
+    {moduleTypeLfoA,       paramTypeMenu,           {{ 65,   -1}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                     // 26 Kbt
     {moduleTypeLfoA,       paramTypeCommonDial,     {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 26 Rate M
-    {moduleTypeLfoA,       paramTypeMenu,           {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoWaveStrMap,                         NULL          },                     // 26 Wave
-    {moduleTypeLfoA,       paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                     // 26 Bypass
-    {moduleTypeLfoA,       paramTypeMenu,           {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   4, posStrMap,                             NULL          },                     // 26 OutType
-    {moduleTypeLfoA,       paramTypeMenu,           {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, rangeLfoCStrMap,                       NULL          },                     // 26 Range  (LfoA has no Clk; default 1 = Rate Lo)
+    {moduleTypeLfoA,       paramTypeMenu,           {{ -15, 7}, { 7,  7}}, anchorTopRight,  NULL,             6,   0, lfoWaveStrMap,                         NULL          },                     // 26 Wave
+    {moduleTypeLfoA,       paramTypeBypass,         {{-3,  0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                     // 26 Bypass
+    {moduleTypeLfoA,       paramTypeMenu,           {{-15, -1}, { 7,  7}}, anchorBottomRight, NULL,             6,   4, posStrMap,                             NULL          },                     // 26 OutType
+    {moduleTypeLfoA,       paramTypeMenu,           {{ 36,  -12}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, rangeLfoCStrMap,                       NULL          },                     // 26 Range  (LfoA has no Clk; default 1 = Rate Lo)
     // 27 OscMaster
     {moduleTypeOscMaster,  paramTypeOscFreq,        {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          },                     // 27 Pitch
     {moduleTypeOscMaster,  paramTypeFine,           {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                     // 27 Fine
@@ -876,7 +876,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFlanger,    paramTypeCommonDial,     {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  "Feedback",     128,  64, NULL,                                  NULL          },                      // 89 Feedback
     {moduleTypeFlanger,    paramTypeBypass,         {{ -3,  -8}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                      // 89 Bypass
     // 90 Sw1-2
-    {moduleTypeSw1to2,     paramTypeMenu,           {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, out8StrMap,                            NULL          },                      // 90 Selector
+    {moduleTypeSw1to2,     paramTypeMenu,           {{ 40,  0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, out8StrMap,                            NULL          },                      // 90 Selector
     // 91 FlipFlop
     // 92 FltClassic
     {moduleTypeFltClassic, paramTypeFreq,           {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  75, NULL,                                  NULL          },                        // 92
@@ -1751,8 +1751,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeLfoShpA,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // Out
     {moduleTypeLfoShpA,     connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Snc",          labelLocUp   },     // Snc
     // 26 LfoA
-    {moduleTypeLfoA,        connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },     // Rate
-    {moduleTypeLfoA,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },     // Rate
+    {moduleTypeLfoA,        connectorDirIn,  connectorTypeControl, {{  3, -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rate",           labelLocUp   },     // Rate
+    {moduleTypeLfoA,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight   },     // Rate
     {moduleTypeLfoA,        connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // Out
     // 27 OscMaster
     {moduleTypeOscMaster,   connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},     // 9 Pitch
@@ -2039,10 +2039,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFlanger,     connectorDirIn,  connectorTypeAudio,   {{ -3, -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 89 In
     {moduleTypeFlanger,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 89 Out
     // 90 Sw1-2
-    {moduleTypeSw1to2,      connectorDirIn,  connectorTypeControl, {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 88 In
-    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocLeft },          // 88 Out1
-    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocLeft },          // 88 Out2
-    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight},          // 88 Ctrl
+    {moduleTypeSw1to2,      connectorDirIn,  connectorTypeControl, {{ -19,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "In",           labelLocUp   },          // 88 In
+    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "1",            labelLocUp },          // 88 Out1
+    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "2",            labelLocUp },          // 88 Out2
+    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Control",         labelLocUp},          // 88 Ctrl
     // 91 FlipFlop
     {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocLeft },          // 91 Clock
     {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{ 15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocLeft },          // 91 Reset
