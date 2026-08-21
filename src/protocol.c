@@ -266,6 +266,11 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         module->unknown1            = read_bit_stream(buff, subOffset, 6);
         module->modeCount           = read_bit_stream(buff, subOffset, 4);
 
+        if (module->modeCount > MAX_NUM_MODES)
+        {
+            LOG_MODULE_DATA("Got a module count of greater than max %u\n", module->modeCount);
+            exit(1);
+        }
         // The connector array is static per module type, and the sound engine's cable lookups read
         // it. Fill it here rather than leaving it to the renderer, so a patch parsed with no GUI
         // present still resolves its modulation inputs.
