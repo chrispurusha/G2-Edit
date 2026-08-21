@@ -1,5 +1,12 @@
 G2-Edit TODO (priority order)
 
+Requests / bugs from users:
+Replace with similar module replace mechanism as per OG editor? Rename to something better
+Spacing on modules improved (might be restricted)
+Module palette drag selection
+2nd screen pixelised
+
+
 Purged 2026-07-28: fully-closed items removed. Anything still listed is either open work or
 finished code awaiting a real-world check. Lessons from removed work that must not be re-litigated
 are collected under "DO NOT RE-TRY" at the end of this file.
@@ -1428,6 +1435,112 @@ resources already hold.
   Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger —
   see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the
   CPnl*Graph class family for reference implementations.
+
+- DRAW THE WAVEFORM GRAPHICS FROM CAPTURED SAMPLES RATHER THAN BY HAND (2026-08-20, owner's idea).
+  Feeds the entry above: instead of reimplementing each oscillator/LFO/waveshaper picture from a
+  reference implementation, record one cycle from the instrument through the measurement rig and
+  draw THAT. The rig is already built and is the same one the reverb and delay work used.
+  MOST OF THE ACCURACY WORRIES DO NOT APPLY HERE, because the target is a picture roughly 30 px
+  wide, not audio: DC blocking, output-stage tilt near Nyquist and per-octave band-limiting are all
+  invisible at that size. What matters instead is NORMALISATION AND PHASE — a cycle that starts
+  part-way through reads as wrong even when every sample in it is right, so each capture wants
+  aligning to a zero crossing and scaling to a fixed height before it becomes a table.
+  RECIPE: capture at a LOW note (many samples per cycle, and the least band-limiting ripple), take
+  one period, align, normalise, decimate to 32-64 points, emit a C table. That is already more
+  resolution than the drawn size can show.
+  TWO REASONS IT IS WORTH MORE THAN "THE HAND-DRAWN ICON LOOKS FINE":
+   * IT SETTLES THE SHAPES WHOSE NAMES MISLEAD. shapeTypeStrMap's "sup" entry is believed to be
+     DualSaw (see the ParamText sweep work) — a measured picture is the argument, because it can be
+     LOOKED at rather than inferred from a string table.
+   * IF THE PICTURE SHOULD TRACK THE SHAPE/PW DIAL rather than being one static image per waveform,
+     a small sweep across the Shape axis recovers the actual interpolation law — does tri->saw morph
+     linearly, does PW skew or clip. Same class of question the delay-time and compressor sweeps
+     answered, and the same reason a capture beats a guess.
+  IF IT GOES PARAMETRIC, THE SHAPE FUNCTION BELONGS IN paramCurves.c, not in the renderer. That file
+  is deliberately GLFW-free and is already shared by the dial text, the response curves and the
+  sound engine, so putting it there is what stops the drawn wave and the played wave drifting apart
+  — which is the whole reason paramCurves.c was split out of renderParams.c in the first place.
+  CONTROL SIGNALS TOO — LFOs AND ENVELOPES (2026-08-20, owner's follow-up). Same idea, but the
+  obstacle is different and the naive attempt will produce a confidently wrong picture.
+  RESOLUTION IS NOT THE PROBLEM: at 48 kHz a 1 Hz LFO cycle is already 48000 points, far more than
+  the drawn size needs. DC BLOCKING IS THE PROBLEM. An envelope is unipolar and nearly DC, and the
+  instrument's analog output is AC-coupled, so a slow attack-decay comes back DIFFERENTIATED and
+  sagging and a 0.1 Hz LFO comes back as almost nothing. This is precisely the caveat that does NOT
+  matter for oscillators, and it is fatal here.
+  TWO WAYS THROUGH:
+   * RUN IT AT AUDIO RATE (owner's suggestion) — set the LFO's rate range high enough that its
+     fundamental sits well clear of the output's high-pass corner and the shape survives intact.
+     Good for LFOs. Weaker for envelopes, whose shortest stage times may still be slow enough to be
+     distorted by the coupling.
+   * MODULATE A CARRIER AND RECOVER THE ENVELOPE — route the control signal into a level module on a
+     steady tone, capture, and take the amplitude envelope of the recording. Immune to DC blocking
+     at ANY rate. The cost is that the modulating module's own level law is baked into the result,
+     and LevAmp's range was one of the things the parameter audit found WRONG, so it must be
+     calibrated with a known ramp and divided back out before the shape is trusted.
+  ENVELOPES PROBABLY WANT ONE CAPTURE, NOT EIGHT. render_envadsr_graph already exists, and the
+  outstanding shapes (AD/AR/D/H/AHD/ADBDSR/Multi/DX) differ mainly in WHICH STAGES they have, not in
+  the curve between breakpoints. The timing law is already known in closed form. So one capture that
+  settles the curve — exponential, and with what constant — plus that law generates the whole family
+  analytically, which is the "calculate, do not tabulate" route and avoids eight separate sweeps.
+  IT FEEDS THE ENGINE AS WELL, where the envelope shapes are still unimplemented — another reason
+  the shape functions belong in paramCurves.c rather than in the renderer.
+  A SEQUENCER IS THE CALIBRATION SOURCE (2026-08-20, owner's follow-up: sequencers can already be
+  used to draw waves as oscillators, so a control module CAN reach the audio output at audio rate).
+  The value of that is not just that it proves the route works — it is that a SeqLev with step
+  values WE set is a KNOWN input, so capturing it gives a known-in/measured-out pair for the whole
+  output chain. SWEEPING THE CLOCK RATE SETTLES THE AC-COUPLING QUESTION ABOVE without assuming it:
+  the rate at which the staircase starts to sag IS the high-pass corner. Measure it once and every
+  slow-signal capture can be CORRECTED rather than avoided, which makes the carrier-modulation trick
+  optional. It also gives an amplitude calibration, so control captures land in real units instead
+  of normalised guesses.
+  WATCH THE ZERO-ORDER HOLD: a sequencer's output is a staircase, so the recording is the steps PLUS
+  whatever the DSP does crossing the control-to-audio boundary. That is not contamination — an LFO's
+  output crosses the same boundary, so it is exactly the behaviour the drawn LFO should reflect.
+  THE PATCH IS SCRIPTABLE via the backdoor CABLE/PUSH commands; no hand-patching needed to build the
+  sequencer-to-Out rig or to set the step values.
+
+  CONVERT A WAVE SAMPLE INTO SEQUENCER DATA (2026-08-20, owner's idea) — the WRITE direction, and it
+  is what completes the rig. Everything above is read-only: capture what the instrument emits. This
+  lets the editor put an ARBITRARY KNOWN signal INTO it: resample a wave to N points, scale to the
+  step range, write the steps.
+  AS A MUSICAL FEATURE it is limited, and honestly so. A SeqLev is 16 steps, so it is a 16-point
+  wavetable — a real sound, but a chip-tune one, not a sample; more steps means chaining sequencers
+  behind a clock divider and a mux, at a cost in modules and DSP. Steps are 7-bit (~48 dB before
+  quantisation noise). And 440 Hz from 16 steps needs a ~7 kHz clock, which presses against the
+  control rate, so expect jitter at the step boundaries; a sequencer clocked by an LFO also does not
+  track the keyboard unless the LFO rate input is pitch-modulated, and that tracks approximately at
+  best. Roughly in tune, not in tune.
+  AS A MEASUREMENT TOOL IT IS WORTH MUCH MORE. Injecting a designed ramp, impulse or multi-tone
+  characterises the output chain properly instead of inferring it from a staircase. And it makes
+  CLOSED-LOOP VERIFICATION possible: push the ENGINE'S OWN computed waveform into a sequencer,
+  capture it back, and compare against the engine's output through the same chain. That separates
+  "our maths is wrong" from "we have misunderstood the capture path", which today is not separable.
+  OSCar TERRITORY — BUILD THE WAVE ADDITIVELY, NOT BY RESAMPLING (2026-08-20, owner's steer: the
+  OSCar's own configurable-waveform resolution was not great either, so this IS a musical feature
+  and not only a test tool). 16 STEPS PUTS NYQUIST AT THE 8TH HARMONIC. A 16-step table therefore
+  holds harmonics 1-8 exactly and nothing above, and a resampled arbitrary wave folds everything
+  above the 8th back down into them unless it is low-passed first — at which point the first 8
+  harmonics have been computed anyway. THE TWO ROUTES CONVERGE, so make harmonic levels the
+  INTERFACE: the constraint becomes the instrument rather than a defect, and it lands as a panel
+  alongside the Patch Adjuster and Parameter Overview.
+  CHAINING TARGETS: two SeqLevs = 32 steps = 16 harmonics; four = 64 steps = 32 harmonics, past the
+  OSCar's ~24. Vertical resolution stays 7-bit however many are chained.
+  PITCH TRACKING IS THE ONE REAL GAP, AND IT MAY BE FIXABLE. The OSCar's DCOs tracked the keyboard;
+  a sequencer clocked from an LFO does not. CLOCK IT FROM AN OSCILLATOR INSTEAD — an OscB tuned four
+  octaves up, driving the sequencer's clock input — and it tracks exactly, because the oscillator
+  does. Try this EARLY: it is the difference between a real oscillator and a novelty, and it also
+  removes the ~7 kHz-LFO worry noted above.
+
+  WRITE IT AS ONE eMsgCmdWritePatch. Setting 16 (or 128) step values is a bulk device edit, and a
+  burst of per-step commands races the async 0x38 patch-version bump and is SILENTLY REJECTED — the
+  sends look fine and the device simply does not take them. See the bulk-ops entry.
+
+  NOT THE SAME QUESTION AS MAKING THE ENGINE'S OSCILLATORS ACCURATE. That one is real too but is a
+  much bigger job (harmonic series per octave, mip-mapped tables, the analog capture chain
+  deconvolved out, and a second axis for every continuous Shape param) and it should start with a
+  single A/B capture of one note, hardware against engine, to find out whether the waveshape is
+  even where the audible error is — the unimplemented envelope shapes and oscillator mod inputs are
+  the more likely culprits.
 
 - MIDI CC Assignments list — BUILT 2026-08-05 (src/midiCcList.c / .h), View > MIDI CC Assignments.
   The original's "MIDI Controller" function (manual p.143), which it reaches from a right-click menu
