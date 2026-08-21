@@ -22,6 +22,7 @@ Second of these modes is showing wrong menu. Shows correct string, but selection
 
 Gate modes aren't saving. 2nd mode string is wrong as per above. Mode count for module type gate, is 2. I don't think we're coping well with more than 1 mode.
 Variables should be of abcDefgHijk type, not using underscores. Claude has generated too many with underscores.
+Yellow border for module selection isn't really obvious enough. Border probably needs to be bigger, maybe twice as wide lines?
 
 Requests / bugs from users:
 Replace with similar module mechanism as per OG editor?Rename to something better
