@@ -7,7 +7,7 @@
   9 OscC (OscC) OK *** FIXED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT (Tune Mode param index 3; all 4 modes render right values Semi 32.0 / Freq 2.09kHz / Factor 6.3516x / Partial 33:1 at raw 96). Also FIXED a layout overlap — the Tune Mode selector menu sat at y=15, overlapping the Tune dial's label; moved to y=5 (top row). AND (same as OscShpB) nudged the Tune dial + mode menu left (x32->29) so the wide Freq/Factor Tune value clears the Cent dial. Verified clear at max value via backdoor.
  12 Reverb OK (CT)
  13 OscString OK
- 15 Sw8-1 Needs more resources
+ 15 Sw8-1 OK (CT) - needs LEDs verifying
  17 ValSw1-2 Needs more resources
  18 X-fade OK
  19 Mix4-1B OK *** MODIFIED 2026-07-27 (Claude + CT tweaks) — NEEDS (CT) VERIFY: layout reworked — fixed vol-meter overlapping ch4 dial, Exp moved to top-left, connectors/dials respaced (grouped jack+dial), meter repositioned/symmetric
@@ -17,7 +17,7 @@
  23 ModADSR OK
  24 LfoC OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) HARDWARE VERIFY: range selector strMap was mis-ordered vs the wire value; reordered to {Sub,Lo,Hi,BPM} + default 0→1 (Rate Lo), per original editor ParamText::LFORange (G2Editor.c:44594). Resolves the old "Range Sub parameter values" issue. Also confirm a fresh LFO defaults to Rate Lo
  25 LfoShpA OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) VERIFY: range strMap reordered to {Sub,Lo,Hi,BPM,Clk} + default 0→1 (Rate Lo), same fix as LfoC (24)
- 26 LfoA OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) VERIFY: range strMap reordered to {Sub,Lo,Hi,BPM} (no Clk) + default 0→1 (Rate Lo), same fix as LfoC (24)
+ 26 LfoA OK (CT) - Ultimately might need pectoral shapes
  27 OscMaster OK
  28 Saturate OK
  29 MetNoise OK
@@ -73,7 +73,7 @@
  87 FltLP OK - harmless dead commented-out line, optional cleanup
  88 Sw1-4 check labelLocLeft vs Mux8-1X convention (same family question as Sw1-8/Sw4-1)
  89 Flanger OK
- 90 Sw1-2
+ 90 Sw1-2 OK (CT) - Need to work out what the offset box is and how it works. Seems to be 0 for left output, 4 for right box. Boxes also have names. Sw1-4 goes offsets 0, 4, 8, 12. 2 boxes also have names. Should display the names, not Out 1 and Out 2. Might need a new param type. Special type could also display the offset?
  91 FlipFlop
  92 FltClassic OK — REVIEWED 2026-07-27 (Claude): overlaps clean; values OK (Freq Hz, Res via strMap, Env %, dB menu)
  94 StChorus OK (CT)
@@ -143,7 +143,7 @@
 179 DlyShiftReg
 180 Operator
 181 DlyEight
-182 DlyStereo  OK (CT) Apart from when Clk is set, dial should show time divisions
+182 DlyStereo OK (CT)
 184 Mix1-1A OK (CT)
 185 Mix1-1S OK (CT)
 186 Sw1-2M
