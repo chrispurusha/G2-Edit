@@ -234,6 +234,16 @@ uint32_t module_mode_count(tModuleType moduleType) {
             }
         }
 
+        // Every caller uses this count to walk a MAX_NUM_MODES-sized array — module->mode[], the
+        // message's mode[], the click-context table's last dimension. It used to be impossible for
+        // the table to outrun them (16 slots against a table whose fullest type has 2), so none of
+        // those loops check. Clamping here keeps that true from one place, whatever gets added to
+        // modeLocationList later.
+        if (count > MAX_NUM_MODES) {
+            LOG_ERROR("MAX_NUM_MODES needs increasing to >= %u for module type %u\n", count, moduleType);
+            EXIT_IN_DEBUG();
+            count = MAX_NUM_MODES;
+        }
         cache[moduleType]      = count;
         validCache[moduleType] = true;
     }

@@ -266,10 +266,15 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         module->unknown1            = read_bit_stream(buff, subOffset, 6);
         module->modeCount           = read_bit_stream(buff, subOffset, 4);
 
-        if (module->modeCount > MAX_NUM_MODES)
-        {
-            LOG_MODULE_DATA("Got a module count of greater than max %u\n", module->modeCount);
-            exit(1);
+        // The wire field is 4 bits, so anything up to 15 is expressible whatever our table says. Log
+        // it and carry on rather than exit()ing: the surplus values are still READ below (just not
+        // stored), so the bit stream stays aligned and the rest of the patch parses. Exiting here
+        // took the whole editor down, in Release as well as Debug, and — LOG_MODULE_DATA being
+        // compiled out in every configuration — did it without printing anything at all.
+        if (module->modeCount > MAX_NUM_MODES) {
+            LOG_ERROR("Module type %u reports %u modes, MAX_NUM_MODES is %u — storing the first %u\n",
+                      module->type, module->modeCount, MAX_NUM_MODES, MAX_NUM_MODES);
+            EXIT_IN_DEBUG();
         }
         // The connector array is static per module type, and the sound engine's cable lookups read
         // it. Fill it here rather than leaving it to the renderer, so a patch parsed with no GUI
@@ -283,8 +288,12 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                         key.index, type, module->excludeFromMutation, module->unknown1);
 
         for (j = 0; j < module->modeCount; j++) {
-            module->mode[j].value = read_bit_stream(buff, subOffset, 6);
-            LOG_MODULE_DATA("Mode index %u = %u\n", j, module->mode[j].value);
+            uint32_t modeValue = read_bit_stream(buff, subOffset, 6);
+
+            if (j < MAX_NUM_MODES) {
+                module->mode[j].value = modeValue;
+            }
+            LOG_MODULE_DATA("Mode index %u = %u\n", j, modeValue);
         }
 
         LOG_MODULE_DATA("Number connectors for module %u\n", module_connector_count(type));
@@ -324,8 +333,12 @@ void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32
         write_bit_stream(buff, bitPos, 6, module->unknown1);
         write_bit_stream(buff, bitPos, 4, module->modeCount);
 
+        // modeCount is written as it was received, so the stream stays the shape the reader expects
+        // even for a module that declares more modes than we can hold. The surplus values are gone —
+        // parse_module_list() logs when it drops them — so write a defined 0 rather than reading off
+        // the end of mode[].
         for (j = 0; j < module->modeCount; j++) {
-            write_bit_stream(buff, bitPos, 6, module->mode[j].value);
+            write_bit_stream(buff, bitPos, 6, (j < MAX_NUM_MODES) ? module->mode[j].value : 0);
         }
     }
 
@@ -422,7 +435,13 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     // Expected to always be 10 (live USB) or 9 (a .pch2/.prf2 file) — this function has no way to
     // tell which source it's parsing, so this only flags anything outside that pair rather than
     // enforcing the exact value for the actual source.
-    if ((numVariations != 9) && (numVariations != 10)) {
+    //
+    // Except when the section is EMPTY. A location with no modules is written by the G2 (and by
+    // every .pch2 with an unused area) as moduleCount 0, variation count 0, and there is nothing
+    // wrong with that — half the files in PatchTestFiles have one, and each was logging an error on
+    // load. write_param_list() writes 9/10 even when empty, so this is about what we READ, not what
+    // we produce.
+    if ((moduleCount > 0) && (numVariations != 9) && (numVariations != 10)) {
         LOG_ERROR("parse_param_list: unexpected Variation Count %u (expected 9 or 10)\n", numVariations);
     }
 
