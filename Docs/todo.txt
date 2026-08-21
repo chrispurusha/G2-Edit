@@ -1,6 +1,8 @@
 G2-Edit TODO (priority order)
 
 CT new:
+Add an editor local mode button, to allow drawing of wave on sequencers, across the columns. Ultimately could be a mode switch to represent an actual wave?
+LEDs on invert might not be working at all.
 Check my LEDs fix in parse_led_data
   REVIEWED 2026-08-21. The per-LED loop is right — 8 is exactly the largest LED count in
   ledLocationList (Mux8to1/Mux1to8/Mux8to1X/BinCounter/ADConv/8Counter), and no module type mixes
