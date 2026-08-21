@@ -1,10 +1,14 @@
 G2-Edit TODO (priority order)
 
 Requests / bugs from users:
-Replace with similar module replace mechanism as per OG editor? Rename to something better
+Replace with similar module replace mechanism as per OG editor?Rename to something better
 Spacing on modules improved (might be restricted)
 Module palette drag selection
 2nd screen pixelised
+
+CT new:
+Move the backdoor functions out of graphics.c, into a backdoor.c source file.
+Move any todos out of code, into this file.
 
 
 Purged 2026-07-28: fully-closed items removed. Anything still listed is either open work or
