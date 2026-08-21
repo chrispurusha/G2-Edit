@@ -96,6 +96,7 @@
 #define MAX_NUM_CONTROLLERS                  (128)
 #define MAX_NUM_MODULES                      (128)
 #define MAX_NUM_CABLES                       (512)
+#define MAX_LEDS_PER_MODULE                  (8)
 #define NUM_PARAM_PAGES                      (5)
 #define NUM_BANKS_PER_PAGE                   (3)
 #define NUM_KNOBS_PER_BANK                   (8)

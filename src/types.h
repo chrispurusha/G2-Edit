@@ -442,7 +442,7 @@ typedef struct {
 typedef struct {
     uint32_t         ledRef;
     tRectangle       rectangle;
-    _Atomic uint32_t value;
+    _Atomic uint32_t value[MAX_LEDS_PER_MODULE];
 } tLed;
 
 typedef struct {
