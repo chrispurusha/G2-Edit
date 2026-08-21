@@ -1,7 +1,9 @@
 G2-Edit TODO (priority order)
 
 CT new:
-When adding or deleting a new module, seqval sequencer data seems to update randomly. Either pane. I had clicked random on the sequencer, if that makes a difference? Moving between variations also seems to randomise.
+Check my LEDs fix in parse_led_data
+Check my maximum modes mod in parse_module_list()
+When adding or deleting a new module - even name bar, seqval sequencer data seems to update randomly on my test file - SeqOscExp.pch2. Either pane. I had clicked random on the sequencer, if that makes a difference? Moving between variations also seems to randomise.
 Move the backdoor control functions out of graphics.c, into a backdoor.c source file.
 Move any todos out of code, into this todo file, with descriptions.
 Remove the module number from top right of module for release versions.
@@ -18,8 +20,8 @@ Second of these modes is showing wrong menu. Shows correct string, but selection
     {moduleTypeGate,       paramTypeMenu,   {{ 25,  2}, { 7, 7}}, anchorMiddleLeft,  "G1",    6, 0, gateTypeStrMap      }, // 64 Gate 1 Type
     {moduleTypeGate,       paramTypeMenu,   {{ 75,  2}, { 7, 7}}, anchorMiddleLeft,  "G2",    6, 0, gateTypeStrMap      }, // 64 Gate 2 Type
 
-Gate modes aren't saving. 2nd mode string is wrong as per above.
-Check my LEDs fix in parse_led_data
+Gate modes aren't saving. 2nd mode string is wrong as per above. Mode count for module type gate, is 2. I don't think we're coping well with more than 1 mode.
+Variables should be of abcDefgHijk type, not using underscores. Claude has generated too many with underscores.
 
 Requests / bugs from users:
 Replace with similar module mechanism as per OG editor?Rename to something better
