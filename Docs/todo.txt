@@ -1,11 +1,15 @@
 G2-Edit TODO (priority order)
 
 CT new:
+When adding or deleting a new module, seqval sequencer data seems to update randomly. Either pane. I had clicked random on the sequencer, if that makes a difference? Moving between variations also seems to randomise.
 Move the backdoor control functions out of graphics.c, into a backdoor.c source file.
 Move any todos out of code, into this todo file, with descriptions.
 Remove the module number from top right of module for release versions.
 When saving file, file name (path) needs adding to top of recents list.
 SW1-2 and similar need something new. See manual. The offset box seems to show 0 for first (leftmost) option box, 4 for the next box. Boxes also have names, currently displayed above our menu option. Might need a new param type. New type could also display the offset?
+Add an open recent for patches from bank?
+Got a: D parse_command_response() Got unknown sub-command 0x4d - must implement!!! That's SUB_RESPONSE_PARAM_LIST. We had that implemented at some point in the past, but removed it.
+Delete Unused Modules and delete unused cables? Move latter from cable menu to top menu in new column?  
 
 Requests / bugs from users:
 Replace with similar module mechanism as per OG editor?Rename to something better
