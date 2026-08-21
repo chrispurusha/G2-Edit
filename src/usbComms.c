@@ -418,38 +418,71 @@ static void parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bit
     }
 }
 
+// LED (blink) data, sub-command 0x39. THE WIRE FORMAT IS THE ORIGINAL EDITOR'S, read out of
+// CSynthPort::InterruptHandleBlinkData(): after the sub-command byte comes a start index, then
+// packed 2-bit values, FOUR TO A BYTE AND LOWEST BITS FIRST —
+//
+//     led[n + 0] = byte & 3        led[n + 2] = (byte >> 4) & 3
+//     led[n + 1] = (byte >> 2) & 3 led[n + 3] = (byte >> 6)
+//
+// which is what the indexing below does, directly. It used to reverse each data byte in place and
+// then read the pairs back MSB-first through read_bit_stream(). That put the VALUES in the right
+// order but transposed the two bits WITHIN each one, and render_led_common()'s colour mapping was
+// the mirror image of that, so the two cancelled and the LEDs came out right. Both are now the way
+// the reference has them, which draws exactly the same pixels and leaves neither half depending on
+// the other being wrong. It also stops us writing into the receive buffer.
+//
+// The index space is the whole slot, VA then FX (CPatch::UpdateBlink calls GetBkg(1) before
+// GetBkg(0)), one index per LED with a module's LEDs consecutive — CPatchBackground::AddBlinkModule
+// pushes a module once per LED group, and UpdateBlink counts the repeats to get the index within the
+// module.
+//
+// LED_STREAM_SIZE (40) is where it ENDS, not how much one message holds: the original walks from the
+// start index to 0x28 and stops, and UpdateBlink() gives each area Min(itsLedCount, 0x28 - used), so
+// 40 is the whole index space for both areas together and a patch with more LEDs than that has the
+// surplus unreported by the instrument. A message therefore covers startIndex..LED_STREAM_SIZE-1 —
+// it is NOT startIndex + 40.
 static void parse_led_data(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int length) {
-    uint8_t  start_idx = read_bit_stream(buff, bitPos, 8);
-    uint32_t  ledCountFromModule = 0;
-    uint32_t led_count = 0;
+    uint32_t startIndex         = read_bit_stream(buff, bitPos, 8);
+    uint32_t ledCount           = 0;
+    uint32_t ledCountFromModule = 0;
+    uint32_t dataStart          = BIT_TO_BYTE(*bitPos);
+    uint32_t dataBytes          = 0;
 
-    // G2 packs 2-bit LED values LSB-first (bits 0-1 = first LED, bits 2-3 = second,
-    // etc.), but read_bit_stream reads MSB-first.  Reversing each data byte reconciles
-    // the two orderings.  Only the packed data bytes are reversed — start_idx (buff[4])
-    // is already consumed above and must not be touched.
-    for (int i = 5; i < (length - 2); i++) {
-        buff[i] = reverse_bits_in_byte(buff[i]);
+    if (length > (int)(dataStart + CRC_BYTES)) {
+        dataBytes = (uint32_t)length - dataStart - CRC_BYTES;
     }
 
-    // VA (location 1) first, then FX (location 0), each sorted by ascending module
-    // index — this matches the order in which the G2 assigns LED sequence numbers.
     for (int32_t location = 1; location >= 0; location--) {
         for (int k = 0; k < MAX_NUM_MODULES; k++) {
             tModuleKey key    = {slot, (uint32_t)location, (uint32_t)k};
             tModule *  module = get_module(key);
 
             if (module != NULL) {
-                ledCountFromModule =module_led_count(module->type);
-                if (ledCountFromModule>MAX_LEDS_PER_MODULE){
-                    LOG_DEBUG("Module LED count %u > max\n", ledCountFromModule);
-                    exit(1);
+                ledCountFromModule = module_led_count(module->type);
+
+                if (ledCountFromModule > MAX_LEDS_PER_MODULE) {
+                    // The module still consumes all of its indices, so the ones after it stay in
+                    // step; only the surplus is dropped. Not exit(1): that took the editor down in
+                    // Release too, and said nothing on the way out (LOG_DEBUG is compiled out there).
+                    LOG_ERROR("Module type %u has %u LEDs, MAX_LEDS_PER_MODULE is %u — storing the first %u\n",
+                              module->type, ledCountFromModule, MAX_LEDS_PER_MODULE, MAX_LEDS_PER_MODULE);
+                    EXIT_IN_DEBUG();
                 }
-                for (int l=0; l<ledCountFromModule; l++) {
-                    //printf("%d\n", module_led_count(module->type));
-                    if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
-                        module->led.value[l] = read_bit_stream(buff, bitPos, 2);
+
+                for (uint32_t l = 0; l < ledCountFromModule; l++) {
+                    if ((ledCount >= startIndex) && (ledCount < LED_STREAM_SIZE)) {
+                        uint32_t offset = ledCount - startIndex;
+
+                        if ((offset / 4) < dataBytes) {
+                            uint32_t ledValue = (buff[dataStart + (offset / 4)] >> ((offset % 4) * 2)) & 0x3;
+
+                            if (l < MAX_LEDS_PER_MODULE) {
+                                module->led.value[l] = ledValue;
+                            }
+                        }
                     }
-                    led_count++;
+                    ledCount++;
                 }
             }
         }
@@ -828,6 +861,60 @@ static void parse_bank_upload_empty(void) {
     LOG_DEBUG("Bank upload: location empty\n");
 }
 
+// The device's own SUB_RESPONSE_PARAM_LIST (0x4d), arriving as a message rather than as a section of
+// a patch dump. The PAYLOAD is the same one parse_param_list() already reads — location, module
+// count, variation count, then the values — but WHETHER A 16-BIT SECTION LENGTH SITS IN FRONT OF IT
+// IS NOT KNOWN, and the two handlers in this file disagree on that question for messages of exactly
+// this shape: SUB_RESPONSE_GLOBAL_KNOBS reads a length first, SUB_RESPONSE_KNOBS does not. Inside a
+// patch dump there is always one (parse_patch() consumes it before dispatching, and the original
+// editor's own reader — Format_11::R_Base::Prolog — reads type then a 16-bit length for every
+// section, 0x4d included).
+//
+// Guessing is not free here: parse_param_list() writes a value into EVERY variation of every module
+// it walks, so a header read at the wrong offset silently rewrites the whole patch's knob values
+// rather than failing. So test the header before trusting it, at both candidate offsets, and refuse
+// to parse if neither looks like one. The first real capture then answers the question in the log
+// instead of leaving it open.
+static bool param_list_header_is_plausible(uint8_t * buff, uint32_t bitPos) {
+    uint32_t pos           = bitPos;
+    uint32_t location      = read_bit_stream(buff, &pos, 2);
+    uint32_t moduleCount   = read_bit_stream(buff, &pos, 8);
+    uint32_t numVariations = read_bit_stream(buff, &pos, 8);
+
+    // location 0/1 are the two areas, 2 is the patch-settings context; the variation count is 10 live
+    // (9 in a file, which cannot reach this path but costs nothing to accept). An EMPTY section is
+    // written as 0 modules and 0 variations and is perfectly valid — it also parses to nothing
+    // whichever offset it is read at, so accepting it costs nothing either.
+    if ((location <= 2) && (moduleCount == 0) && (numVariations == 0)) {
+        return true;
+    }
+    return (location <= 2) && (moduleCount <= MAX_NUM_MODULES) && ((numVariations == 9) || (numVariations == 10));
+}
+
+static void parse_param_list_message(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    if (param_list_header_is_plausible(buff, *bitPos)) {
+        LOG_DEBUG("Got param list slot %u (no section length)\n", slot);
+        parse_param_list(slot, buff, bitPos);
+        return;
+    }
+
+    if (param_list_header_is_plausible(buff, *bitPos + 16)) {
+        LOG_DEBUG("Got param list slot %u (16-bit section length in front, as in a patch dump)\n", slot);
+        *bitPos += 16;
+        parse_param_list(slot, buff, bitPos);
+        return;
+    }
+    uint32_t dumpStart        = BIT_TO_BYTE(*bitPos);
+    char     dump[3 * 16 + 1] = {0};
+
+    for (uint32_t d = 0; d < 16; d++) {
+        snprintf(&dump[d * 3], 4, "%02x ", buff[dumpStart + d]);
+    }
+
+    LOG_ERROR("param list slot %u: header implausible at either offset, not parsed\n", slot);
+    LOG_ERROR("  bytes from byte %u: %s\n", dumpStart, dump);
+}
+
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
                                   int length) {
@@ -989,9 +1076,9 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             // fields we need beyond the fact that it arrived; send_and_receive's caller already
             // knows which location it was clearing.
             return EXIT_SUCCESS;
-            
+
         case SUB_RESPONSE_PARAM_LIST:
-            parse_param_list(slot, buff, bitPos);
+            parse_param_list_message(slot, buff, bitPos);
             return EXIT_SUCCESS;
 
         default:

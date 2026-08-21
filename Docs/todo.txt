@@ -2,8 +2,67 @@ G2-Edit TODO (priority order)
 
 CT new:
 Check my LEDs fix in parse_led_data
+  REVIEWED 2026-08-21. The per-LED loop is right — 8 is exactly the largest LED count in
+  ledLocationList (Mux8to1/Mux1to8/Mux8to1X/BinCounter/ADConv/8Counter), and no module type mixes
+  ledTypePark rows with real ones, so the renderer's ledIndex and the parser's l still agree. Three
+  things fixed on top: the exit(1) went (it exits a RELEASE build too, and its LOG_DEBUG prints
+  nothing there — LOG_ERROR + EXIT_IN_DEBUG + drop only the surplus instead, per defs.h's own note);
+  the window is now the message's own capacity ((length - 7) * 4) rather than the constant 40, which
+  was only ever safe while one module consumed one value however many LEDs it had; and
+  render_led_common() bounds ledIndex the same way the parser does. Checked against the connected G2
+  with LogicMidi: 8Counter draws eight separate LEDs, and Invert's read green while Gate's read black
+  — which is the patch, not a fault. That Gate is an AND with nothing driving it, so it sits low and
+  both its LEDs are correctly off; the Invert beside it goes high on a low input. Gate LEDs confirmed
+  working by CT.
+
+  THEN THE WIRE FORMAT TURNED UP IN THE REFERENCE, in CSynthPort::InterruptHandleBlinkData(), and it
+  answers three things at once:
+    - PACKING. Four values per byte, lowest bits first, each value read as (byte >> 2k) & 3 with its
+      own bits in order. Our reverse_bits_in_byte() + MSB-first read put the VALUES in the right
+      order but transposed the two bits WITHIN each one — and render_led_common()'s bit0-red/bit1-
+      green mapping was the mirror image of that, so the two errors CANCELLED and the LEDs have
+      always looked right. Both sides now match the reference (extraction by direct indexing, green
+      on bit 0), which is provably the same picture — verified pixel-for-pixel against a capture of
+      the old build on live device data, every LED identical — but neither half now depends on the
+      other being wrong. It also stops us writing into the receive buffer.
+    - THE WINDOW IS A CONSTANT 40, NOT startIndex + 40. The original walks startIndex..0x28 and
+      stops, and UpdateBlink() gives each area Min(itsLeds, 0x28 - used), so 40 is the whole index
+      space for VA and FX TOGETHER — a patch with more LEDs than that has the surplus unreported by
+      the instrument. LED_STREAM_SIZE in defs.h.
+    - THE PER-LED MODEL IS CONFIRMED. AddBlinkModule() pushes a module once per LED group and
+      UpdateBlink() counts consecutive repeats to get the index within the module, which is exactly
+      what the fix does. VA-before-FX is confirmed too: CPatch::UpdateBlink calls GetBkg(1) then
+      GetBkg(0).
+  Still an assumption, but now only one and only in one place: WHICH bit is green. If a module whose
+  LED is known to be red ever shows green, swap the two lines in render_led_common() and nothing else.
+  Also dropped tLed's ledRef and rectangle — both write-only, and with value[] an array a single
+  ledRef could only hold whichever LED was drawn last. (tVolume still has the same write-only
+  volumeRef.)
 Check my maximum modes mod in parse_module_list()
+  REVIEWED 2026-08-21, and the guard was doing more harm than the case it guards. exit(1) on
+  modeCount > MAX_NUM_MODES takes the editor down in Release as well as Debug, and LOG_MODULE_DATA is
+  compiled out in EVERY configuration (no target defines ENABLE_LOG_MODULE_DATA), so it left no
+  message at all. Now LOG_ERROR + EXIT_IN_DEBUG, and the surplus mode values are still READ so the
+  bit stream stays aligned and the rest of the patch parses; write_module_list() writes a defined 0
+  for anything past MAX_NUM_MODES rather than reading off the end of mode[].
+  THE BIGGER POINT: 16 -> 2 removed slack that several loops were relying on without checking. The
+  fullest type in modeLocationList has 2 rows, so ONE added row would have overflowed module->mode[],
+  sModeClickCtx's last dimension, and messageContent.moduleData.mode[]. module_mode_count() now clamps
+  centrally (and says so), and create_module_at()'s table walk is bounded too. Max modeCount over all
+  12 PatchTestFiles is 2 (LogicMidi's Gate), so 2 fits everything we have — but that is 12 patches,
+  not the module set.
 When adding or deleting a new module - even name bar, seqval sequencer data seems to update randomly on my test file - SeqOscExp.pch2. Either pane. I had clicked random on the sequencer, if that makes a difference? Moving between variations also seems to randomise.
+  NOT REPRODUCED OFFLINE 2026-08-21, which is itself a result: SeqOscExp loaded with no instrument,
+  ADDMODULE, PARAMDUMP — the only change was the new module's own line, both SeqVals byte-identical.
+  So the local add path (create_module_at -> write_module -> init_params_on_module_all_variations ->
+  shift_modules_down) does not do it, and delete_module() memsets the whole record, so a reused index
+  cannot inherit the old one's values either.
+  THAT LEAVES THE DEVICE SIDE, and the first suspect is the 0x4d handler two items down: it went in at
+  14:07 and this was reported at 14:39. parse_param_list() writes every variation of every module it
+  walks, so a 0x4d read at the wrong offset randomises exactly what is described here — sequencer
+  steps (which ARE parameters), across variations. The handler now refuses to parse a header it cannot
+  validate, so if the symptom survives that, the cause is elsewhere. Reproduce with the instrument
+  connected and ENABLE_USB_LOG on, and look for "param list" in the log at the moment of the add.
 Move the backdoor control functions out of graphics.c, into a backdoor.c source file.
 Move any todos out of code, into this todo file, with descriptions.
 Remove the module number from top right of module for release versions.
@@ -11,16 +70,46 @@ When saving file, file name (path) needs adding to top of recents list.
 SW1-2 and similar need something new. See manual. The offset box seems to show 0 for first (leftmost) option box, 4 for the next box. Boxes also have names, currently displayed above our menu option. Might need a new param type. New type could also display the offset?
 Add an open recent for patches from bank?
 Got a: D parse_command_response() Got unknown sub-command 0x4d - must implement!!! That's SUB_RESPONSE_PARAM_LIST. We had that implemented at some point in the past, but removed it. Maybe needs case and call to parse_param_list() adding to parse_command_response()? Assume it's unsolicited. Have attempted a fix, but not seen it again. Check my fix as mentioned.
+  REVIEWED 2026-08-21 — the CASE is right, the OFFSET is unknowable from here, so it now tests before
+  it trusts. Inside a patch dump every section carries [type][16-bit length] before its payload
+  (parse_patch() consumes it, and the original editor's Format_11::R_Base::Prolog reads exactly that
+  for 0x4d too). Whether the device's standalone 0x4d does is NOT settled, and this file's own
+  handlers disagree for messages of that shape: SUB_RESPONSE_GLOBAL_KNOBS reads a length first,
+  SUB_RESPONSE_KNOBS does not. Guessing wrong is not a no-op — parse_param_list() writes a value into
+  every variation of every module it walks, so a header read 16 bits out silently rewrites the whole
+  patch rather than failing. parse_param_list_message() now checks the header (location <= 2, module
+  count sane, variation count 9/10, or an all-zero empty section) at BOTH candidate offsets, parses at
+  whichever validates, and if neither does, logs a hex dump and parses nothing. Whichever way it goes,
+  the first real capture answers the question in the log.
 Delete Unused Modules and delete unused cables? Move latter from cable menu to top menu in new column?
 Check this is correct in parse_command_response()          case SUB_RESPONSE_PARAM_LIST:
             parse_param_list(slot, buff, bitPos);
             return EXIT_SUCCESS; 
+  See the note above — now calls parse_param_list_message(), which validates the header first.
+  Separately, and found while testing it: parse_param_list()'s "unexpected Variation Count" error was
+  firing on 6 of the 12 PatchTestFiles at load. An EMPTY area is written as moduleCount 0, variation
+  count 0 and there is nothing wrong with that; the check now only complains when there are actually
+  modules in the section. (write_param_list() already writes 9/10 even when empty, so this is about
+  what we read, not what we produce.)
 
 Second of these modes is showing wrong menu. Shows correct string, but selection is Sine1, Sine2 etc.
+  FIXED 2026-08-21, one index: render_mode_common() did module->mode[0].modeRef = modeRef, so every
+  mode's modeRef landed in mode[0] and mode[1] kept 0 — and modeLocationList[0] is OscShpB's waveform,
+  i.e. oscShpBStrMap, i.e. Sine1/Sine2/... The BUTTON drew from the modeRef it was passed (hence the
+  correct string) while the MENU read it back from the module (hence the wrong list). The two
+  module->mode[0].value reads in the OscWave branch were the same bug. UNVERIFIED BY CLICK — the
+  backdoor cannot open a context menu; both G1 and G2 render correctly on the instrument, which is as
+  far as a screenshot goes.
     {moduleTypeGate,       paramTypeMenu,   {{ 25,  2}, { 7, 7}}, anchorMiddleLeft,  "G1",    6, 0, gateTypeStrMap      }, // 64 Gate 1 Type
     {moduleTypeGate,       paramTypeMenu,   {{ 75,  2}, { 7, 7}}, anchorMiddleLeft,  "G2",    6, 0, gateTypeStrMap      }, // 64 Gate 2 Type
 
 Gate modes aren't saving. 2nd mode string is wrong as per above. Mode count for module type gate, is 2. I don't think we're coping well with more than 1 mode.
+  The wrong-menu half is fixed (above) and is probably half of this too: from an 8-entry list on a
+  6-value selector, entries 6 and 7 are values the Gate has no meaning for. The LOCAL side reads
+  clean — write_module_list() writes modeCount then mode[j].value, and both are populated for a Gate
+  (PARAMDUMP of LogicMidi reads "modes loc=VA index=24 count=2: 0 0"). What is NOT checked is
+  send_set_mode() on the wire, which needs the instrument: set G1 and G2 to DIFFERENT values, re-read
+  the patch from the G2, and see which of the two comes back.
 Variables should be of lower camel case type, not using underscores. Claude has generated too many with underscores.
 Yellow border for module selection isn't really obvious enough. Border probably needs to be bigger, maybe twice as wide lines?
 
