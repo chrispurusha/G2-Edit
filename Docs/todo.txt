@@ -21,7 +21,7 @@ Second of these modes is showing wrong menu. Shows correct string, but selection
     {moduleTypeGate,       paramTypeMenu,   {{ 75,  2}, { 7, 7}}, anchorMiddleLeft,  "G2",    6, 0, gateTypeStrMap      }, // 64 Gate 2 Type
 
 Gate modes aren't saving. 2nd mode string is wrong as per above. Mode count for module type gate, is 2. I don't think we're coping well with more than 1 mode.
-Variables should be of abcDefgHijk type, not using underscores. Claude has generated too many with underscores.
+Variables should be of lower camel case type, not using underscores. Claude has generated too many with underscores.
 Yellow border for module selection isn't really obvious enough. Border probably needs to be bigger, maybe twice as wide lines?
 
 Requests / bugs from users:
