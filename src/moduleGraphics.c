@@ -728,16 +728,29 @@ bool param_is_under_cursor(const tModule * module, uint32_t paramIndex, tCoord c
 }
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
+    // The caller's loop is bounded by module_mode_count(), which counts ROWS IN modeLocationList for
+    // this type — not by MAX_NUM_MODES, which is how many a tModule can hold. Those were the same
+    // thing while MAX_NUM_MODES was 16; at 2 they are one added table row apart, and the writes below
+    // would run off the end of module->mode[] and off sModeClickCtx's last dimension.
+    if (modeIndex >= MAX_NUM_MODES) {
+        LOG_ERROR("MAX_NUM_MODES needs increasing to >= %u (module type %u)\n", modeIndex + 1, module->type);
+        EXIT_IN_DEBUG();
+        return;
+    }
     uint32_t modeValue = module->mode[modeIndex].value;
 
-    module->mode[0].modeRef = modeRef;
+    // Per MODE, not per module: mode[0] took every mode's modeRef, so the LAST one rendered won and
+    // every other mode kept 0 — modeLocationList[0], which is OscShpB's waveform. That is why the
+    // Gate's second drop-down opened a menu of Sine1/Sine2/..., and why picking from it could write a
+    // value the Gate has no meaning for (that list is 8 long, gateTypeStrMap is 6).
+    module->mode[modeIndex].modeRef = modeRef;
 
     switch (modeLocationList[modeRef].type) {
         case paramTypeOscWave:
         {
             char       buff[16]     = {0};
 
-            snprintf(buff, sizeof(buff), "%u", module->mode[0].value);
+            snprintf(buff, sizeof(buff), "%u", modeValue);
             // render_dial_with_text() is dial-anchored and draws its text upwards, so shift the
             // rect down by the rows this mode will use to keep the block where it was. No entry
             // in modeLocationList is currently an OscWave, so this path is unexercised - it is
@@ -747,7 +760,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
 
             modeDialRect.coord.y                                                               += (modeLocationList[modeRef].label != NULL) ? (modeLabelH * 2.0) : modeLabelH;
             modeDialRect.size.h                                                                 = modeDialRect.size.w;
-            module->mode[modeIndex].rectangle                                                   = render_dial_with_text(moduleArea, modeDialRect, (char *)modeLocationList[modeRef].label, buff, modeLabelH, module->mode[0].value, modeLocationList[modeRef].range, 0, (tRgb)RGB_GREY_5); // TODO: Check if Mode can be morphed
+            module->mode[modeIndex].rectangle                                                   = render_dial_with_text(moduleArea, modeDialRect, (char *)modeLocationList[modeRef].label, buff, modeLabelH, modeValue, modeLocationList[modeRef].range, 0, (tRgb)RGB_GREY_5); // TODO: Check if Mode can be morphed
             sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
                 eCanvasWidgetMode, module->key, modeIndex
             };
@@ -853,14 +866,25 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
 }
 
 void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, uint32_t ledIndex) {
-    module->led.ledRef = ledRef;
-
     switch (ledLocationList[ledRef].ledType) {
         case ledTypeYes:
         {
+            // Same bound the parser applies, from the other end: the caller's loop counts rows in
+            // ledLocationList, and nothing stops that table growing a ninth row for a type.
+            if (ledIndex >= MAX_LEDS_PER_MODULE) {
+                LOG_ERROR("MAX_LEDS_PER_MODULE needs increasing to >= %u (module type %u)\n", ledIndex + 1, module->type);
+                EXIT_IN_DEBUG();
+                break;
+            }
+            // Bit 0 green, bit 1 red — the pair to parse_led_data()'s extraction, and swapped from
+            // what this used to say. The two were mirror images of each other and cancelled exactly
+            // (a value of 1 or 2 was transposed on the way in and transposed back here; 0 and 3 are
+            // symmetric), so this draws the same colours it always did. Which of the two bits is
+            // really green is still an assumption — but it is now ONE assumption, in one place,
+            // instead of two that only worked together.
             uint32_t ledVal = module->led.value[ledIndex];
-            bool     green  = (ledVal >> 1) & 1;
-            bool     red    = ledVal & 1;
+            bool     green  = ledVal & 1;
+            bool     red    = (ledVal >> 1) & 1;
 
             if (green && red) {
                 set_rgb_colour((tRgb)RGB_YELLOW_7);

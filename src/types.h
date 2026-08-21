@@ -439,9 +439,12 @@ typedef struct {
     //uint32_t   value4;
 } tVolume;
 
+// One entry per LED the module has, in ledLocationList order. ledRef and rectangle used to sit here
+// too; both were write-only, and once value became an array a single ledRef could only ever hold
+// whichever LED was drawn last — a field that looks like it identifies the LED but does not. The
+// renderer already has the ref it was passed. (tVolume above still carries the same write-only
+// volumeRef.)
 typedef struct {
-    uint32_t         ledRef;
-    tRectangle       rectangle;
     _Atomic uint32_t value[MAX_LEDS_PER_MODULE];
 } tLed;
 

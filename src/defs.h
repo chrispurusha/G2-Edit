@@ -97,6 +97,7 @@
 #define MAX_NUM_MODULES                      (128)
 #define MAX_NUM_CABLES                       (512)
 #define MAX_LEDS_PER_MODULE                  (8)
+#define LED_STREAM_SIZE                      (40)                         // 2-bit LEDs the G2 reports per slot, VA and FX together — see parse_led_data()
 #define NUM_PARAM_PAGES                      (5)
 #define NUM_BANKS_PER_PAGE                   (3)
 #define NUM_KNOBS_PER_BANK                   (8)

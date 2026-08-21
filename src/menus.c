@@ -759,7 +759,9 @@ int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool s
     // same thing: a filter's slope default is not its first entry.
     module.modeCount                              = module_mode_count(module.type);
 
-    for (uint32_t i = 0, seen = 0; i < (uint32_t)array_size_mode_location_list(); i++) {
+    // Bounded by MAX_NUM_MODES as well as by the table: module.mode[] holds that many, and the table
+    // is free to grow a third row for a type without anyone thinking about this loop.
+    for (uint32_t i = 0, seen = 0; (i < (uint32_t)array_size_mode_location_list()) && (seen < MAX_NUM_MODES); i++) {
         if (modeLocationList[i].moduleType == module.type) {
             module.mode[seen].value = modeLocationList[i].defaultValue;
             seen++;
