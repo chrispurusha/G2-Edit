@@ -7,8 +7,8 @@ Check my LEDs fix in parse_led_data
   ledTypePark rows with real ones, so the renderer's ledIndex and the parser's l still agree. Three
   things fixed on top: the exit(1) went (it exits a RELEASE build too, and its LOG_DEBUG prints
   nothing there — LOG_ERROR + EXIT_IN_DEBUG + drop only the surplus instead, per defs.h's own note);
-  the window is now the message's own capacity ((length - 7) * 4) rather than the constant 40, which
-  was only ever safe while one module consumed one value however many LEDs it had; and
+  the startIndex + 40 window went, which was only ever safe while one module consumed one value
+  however many LEDs it had (see the reference note below for what replaced it); and
   render_led_common() bounds ledIndex the same way the parser does. Checked against the connected G2
   with LogicMidi: 8Counter draws eight separate LEDs, and Invert's read green while Gate's read black
   — which is the patch, not a fault. That Gate is an AND with nothing driving it, so it sits low and
@@ -81,6 +81,20 @@ Got a: D parse_command_response() Got unknown sub-command 0x4d - must implement!
   count sane, variation count 9/10, or an all-zero empty section) at BOTH candidate offsets, parses at
   whichever validates, and if neither does, logs a hex dump and parses nothing. Whichever way it goes,
   the first real capture answers the question in the log.
+  CT reports 2026-08-21 that the sequencer-value corruption has stopped, which makes this handler the
+  likely culprit — nothing else changed can reach a parameter value. WHICH WAY IT WENT IS STILL WORTH
+  READING, because "fixed" has two meanings here and they want different follow-ups. The framing is
+  now announced ONCE per run (and again if it ever changes), at LOG_INFO so it survives a Release
+  build:
+    "NO section length in front"          -> the original call was correct, and the corruption came
+                                             from somewhere else and is only hiding.
+    "16-BIT SECTION LENGTH in front"      -> the device does send one, the original was 16 bits early,
+                                             and THAT was the corruption. Question closed; the
+                                             validator can then be simplified to a plain 16-bit skip.
+    "header implausible ... NOT PARSED"   -> a real message is being DROPPED, so params can go stale
+                                             against the instrument. This one logs every time, with a
+                                             hex dump, because it is the case that still needs
+                                             decoding.
 Delete Unused Modules and delete unused cables? Move latter from cable menu to top menu in new column?
 Check this is correct in parse_command_response()          case SUB_RESPONSE_PARAM_LIST:
             parse_param_list(slot, buff, bitPos);
