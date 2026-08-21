@@ -420,6 +420,7 @@ static void parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bit
 
 static void parse_led_data(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int length) {
     uint8_t  start_idx = read_bit_stream(buff, bitPos, 8);
+    uint32_t  ledCountFromModule = 0;
     uint32_t led_count = 0;
 
     // G2 packs 2-bit LED values LSB-first (bits 0-1 = first LED, bits 2-3 = second,
@@ -438,9 +439,15 @@ static void parse_led_data(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int
             tModule *  module = get_module(key);
 
             if (module != NULL) {
-                if (module_led_count(module->type) > 0) {
+                ledCountFromModule =module_led_count(module->type);
+                if (ledCountFromModule>MAX_LEDS_PER_MODULE){
+                    LOG_DEBUG("Module LED count %u > max\n", ledCountFromModule);
+                    exit(1);
+                }
+                for (int l=0; l<ledCountFromModule; l++) {
+                    //printf("%d\n", module_led_count(module->type));
                     if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
-                        module->led.value = read_bit_stream(buff, bitPos, 2);
+                        module->led.value[l] = read_bit_stream(buff, bitPos, 2);
                     }
                     led_count++;
                 }
@@ -981,6 +988,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             // Ack for SUB_COMMAND_CLEAR (Bank Restore erasing an unpopulated location) — no
             // fields we need beyond the fact that it arrived; send_and_receive's caller already
             // knows which location it was clearing.
+            return EXIT_SUCCESS;
+            
+        case SUB_RESPONSE_PARAM_LIST:
+            parse_param_list(slot, buff, bitPos);
             return EXIT_SUCCESS;
 
         default:

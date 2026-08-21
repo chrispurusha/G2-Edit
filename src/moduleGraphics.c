@@ -858,7 +858,7 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
     switch (ledLocationList[ledRef].ledType) {
         case ledTypeYes:
         {
-            uint32_t ledVal = module->led.value;
+            uint32_t ledVal = module->led.value[ledIndex];
             bool     green  = (ledVal >> 1) & 1;
             bool     red    = ledVal & 1;
 
