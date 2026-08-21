@@ -891,19 +891,53 @@ static bool param_list_header_is_plausible(uint8_t * buff, uint32_t bitPos) {
     return (location <= 2) && (moduleCount <= MAX_NUM_MODULES) && ((numVariations == 9) || (numVariations == 10));
 }
 
+// Which way the last 0x4d went. The answer is worth ONE line, not one per message: the point of it is
+// to settle the framing the first time the device sends one, and a run that gets a stream of them
+// would otherwise bury the rest of the log. A CHANGE is always announced, so a device that sends both
+// shapes cannot hide behind the first one.
+typedef enum {
+    paramListFramingNone,
+    paramListFramingNoLength,
+    paramListFramingWithLength,
+    paramListFramingUnrecognised
+} tParamListFraming;
+
+static void report_param_list_framing(tParamListFraming framing, uint32_t slot) {
+    static tParamListFraming reported = paramListFramingNone;
+
+    if (framing == reported) {
+        return;
+    }
+    reported = framing;
+
+    switch (framing) {
+        case paramListFramingNoLength:
+            LOG_INFO("Got param list slot %u — NO section length in front. First one this run.\n", slot);
+            break;
+
+        case paramListFramingWithLength:
+            LOG_INFO("Got param list slot %u — 16-BIT SECTION LENGTH in front, as in a patch dump. First one this run.\n", slot);
+            break;
+
+        default:
+            break;
+    }
+}
+
 static void parse_param_list_message(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     if (param_list_header_is_plausible(buff, *bitPos)) {
-        LOG_DEBUG("Got param list slot %u (no section length)\n", slot);
+        report_param_list_framing(paramListFramingNoLength, slot);
         parse_param_list(slot, buff, bitPos);
         return;
     }
 
     if (param_list_header_is_plausible(buff, *bitPos + 16)) {
-        LOG_DEBUG("Got param list slot %u (16-bit section length in front, as in a patch dump)\n", slot);
+        report_param_list_framing(paramListFramingWithLength, slot);
         *bitPos += 16;
         parse_param_list(slot, buff, bitPos);
         return;
     }
+    report_param_list_framing(paramListFramingUnrecognised, slot);
     uint32_t dumpStart        = BIT_TO_BYTE(*bitPos);
     char     dump[3 * 16 + 1] = {0};
 
@@ -911,7 +945,9 @@ static void parse_param_list_message(uint32_t slot, uint8_t * buff, uint32_t * b
         snprintf(&dump[d * 3], 4, "%02x ", buff[dumpStart + d]);
     }
 
-    LOG_ERROR("param list slot %u: header implausible at either offset, not parsed\n", slot);
+    // LOG_ERROR, and every time rather than once: this is the case where a real message is being
+    // DROPPED, so the patch on screen can go stale against the instrument. It should be loud.
+    LOG_ERROR("param list slot %u: header implausible at either offset, NOT PARSED — params may now be stale\n", slot);
     LOG_ERROR("  bytes from byte %u: %s\n", dumpStart, dump);
 }
 

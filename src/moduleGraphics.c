@@ -145,8 +145,32 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
                 canvas_drag_begin();
             }
         } else if (paramType == paramTypePush) {
-            send_param_value(slot, module->key, ctx->paramIndex, variation, 0);
-            param->value = 0;
+            // A push is MOMENTARY, and it fires on the way DOWN — the mouse button being held is what
+            // gives the pulse its width. This used to be the other way round: 0 on press and 1 on
+            // release, which left the device holding the parameter at 1 for good. That value is
+            // stored in the patch, so the G2 acted on it again every time it recompiled.
+            //
+            // SeqVal's "Rnd" is where that bit: press it once, then add or delete ANY module, and the
+            // instrument re-randomised all 16 steps and reported the new values back — which is the
+            // "sequencer data updates randomly when I add a module" report. The editor was showing
+            // the truth; the latched button was the cause. Confirmed both ways on hardware: clearing
+            // param 36 by hand stopped it dead, and setting it back to 1 randomised the sequence
+            // within two seconds without any other traffic.
+            //
+            // The 0 has to be a separate event rather than the next line down: sent back-to-back in
+            // the same millisecond, the device sees the release before it acts on the trigger and
+            // nothing happens at all.
+            uint32_t listSize = array_size_param_location_list();
+
+            for (uint32_t ref = 0; ref < listSize; ref++) {
+                if ((paramLocationList[ref].moduleType == module->type) && (paramLocationList[ref].type == paramTypeCustomData)) {
+                    send_custom_data_value(slot, module->key);
+                    break;
+                }
+            }
+
+            send_param_value(slot, module->key, ctx->paramIndex, variation, 1);
+            param->value = 0;  // Momentary: there is no pressed state to draw
         }
     } else if (phase == eClickRelease) {
         if ((paramType == paramTypeMenu) || (paramType == paramTypeCustomData)) {
@@ -160,16 +184,8 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             undo_push_param_change(module->key, ctx->paramIndex, variation, oldParamVal, param->value);
             send_param_value_to_links(slot, module->key, ctx->paramIndex, variation, param->value);
         } else if (paramType == paramTypePush) {
-            uint32_t listSize = array_size_param_location_list();
-
-            for (uint32_t ref = 0; ref < listSize; ref++) {
-                if ((paramLocationList[ref].moduleType == module->type) && (paramLocationList[ref].type == paramTypeCustomData)) {
-                    send_custom_data_value(slot, module->key);
-                    break;
-                }
-            }
-
-            send_param_value(slot, module->key, ctx->paramIndex, variation, 1);
+            // The button coming back up. The trigger itself went out on press — see the comment there.
+            send_param_value(slot, module->key, ctx->paramIndex, variation, 0);
             param->value = 0;
         }
     }
