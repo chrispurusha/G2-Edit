@@ -101,9 +101,6 @@
 #define MAX_CABLES_PER_CONNECTOR     (32)
 #define MAX_LEDS_PER_MODULE          (8)
 #define RADIO_MAX_COLUMNS            (4)                                  // Channel Select buttons wrap after four — see radio_columns()
-// The lit Channel Select button. Defined here rather than in SynthLib's palette because it is a
-// G2 module-face colour, not a shared chrome one — the manual calls the selected channel "blue".
-#define RGB_BLUE_SELECTED            {0.35, 0.50, 0.90}
 // Seven characters, PROTOCOL_PARAM_NAME_SIZE, the most a Channel Select name can be. Every group is
 // measured against this so it never changes size as its buttons are renamed.
 // How much of a module's width a Channel Select group may occupy, measured from the group's own left
