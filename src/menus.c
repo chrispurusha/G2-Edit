@@ -1653,16 +1653,25 @@ void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeInde
 
 static void action_rename_param_label(int index) {
     uint32_t  pi     = gMenuContext.paramIndex;
+    // The menu item's own param carries WHICH button, for a Channel Select group; it is 0 for the
+    // single-name case, which is every other parameter.
+    uint32_t  li     = (uint32_t)gContextMenu.items[index].param;
     tModule * module = get_module(gMenuContext.moduleKey);
 
-    if (module != NULL) {
+    if ((module != NULL) && (li < MAX_NUM_LABELS)) {
         gParamNameEdit.active     = true;
         gParamNameEdit.moduleKey  = gMenuContext.moduleKey;
         gParamNameEdit.paramIndex = pi;
+        gParamNameEdit.labelIndex = li;
         memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
 
-        if (module->paramNameSet[pi][0]) {
-            COPY_STRING(gParamNameEdit.buffer, module->paramName[pi][0]);
+        // Seeded with what the box currently READS, not only with a name already stored: renaming a
+        // Channel Select button that still shows its default should start from "Out 3", not empty.
+        if (module->paramNameSet[pi][li]) {
+            COPY_STRING(gParamNameEdit.buffer, module->paramName[pi][li]);
+        } else if (paramLocationList[module->param[gPatchDescr[module->key.slot].activeVariation][pi].paramRef].type == paramTypeRadioEdit) {
+            COPY_STRING(gParamNameEdit.buffer,
+                        radio_caption(module, pi, li, paramLocationList[module->param[gPatchDescr[module->key.slot].activeVariation][pi].paramRef].strMap));
         }
         gParamNameEdit.cursorPos  = (uint32_t)strlen(gParamNameEdit.buffer);
     }
@@ -1922,10 +1931,30 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
         tModule * mod       = get_module(moduleKey);
 
         if ((mod != NULL) && (paramIndex < MAX_NUM_PARAMETERS)) {
-            if (paramLocationList[mod->param[variation][paramIndex].paramRef].type == paramTypeEnable) {
+            uint32_t paramRef = mod->param[variation][paramIndex].paramRef;
+
+            if (paramLocationList[paramRef].type == paramTypeEnable) {
                 menuItems[count++] = (tMenuItem){
                     "Rename", RGB_GREY_3, action_rename_param_label, 0, NULL
                 };
+            } else if (paramLocationList[paramRef].type == paramTypeRadioEdit) {
+                // ONE ENTRY PER BUTTON, captioned with what that button currently reads. The manual
+                // has you right-click the button itself, but the whole group is a single click
+                // region here — the button is geometry inside it, and the right-click path is a
+                // registry QUERY rather than a dispatched press, so it has no captured rectangle to
+                // divide up. Naming the buttons in the menu says the same thing without a second,
+                // parallel record of where each box was drawn, and it also means a 4x2 group can be
+                // renamed without having to hit a small box exactly.
+                static char   renameLabels[MAX_NUM_LABELS][24];
+                uint32_t      buttons = paramLocationList[paramRef].range;
+                const char ** strMap  = paramLocationList[paramRef].strMap;
+
+                for (uint32_t b = 0; (b < buttons) && (b < MAX_NUM_LABELS) && (count < (int)(sizeof(menuItems) / sizeof(menuItems[0])) - 1); b++) {
+                    snprintf(renameLabels[b], sizeof(renameLabels[b]), "Rename \"%s\"", radio_caption(mod, paramIndex, b, strMap));
+                    menuItems[count++] = (tMenuItem){
+                        renameLabels[b], RGB_GREY_3, action_rename_param_label, (int)b, NULL
+                    };
+                }
             }
             // Morph reset. Offered ONLY where there is a morph to remove, so the menu does not grow a
             // permanently greyed entry on the great majority of dials that have none — and named after

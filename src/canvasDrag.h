@@ -176,6 +176,12 @@ void cable_drag_set_end(tCoord coord);
 // canvas_drag_motion() above. This completes the drag: if the pointer is over a connector, the cable
 // is created. Returns true if one was.
 bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location);
+// The cable attached to a connector, and where its other end is — see the definition. Used by the
+// Ctrl-click pick-up, which needs to start a drag from the far end of an existing cable.
+// Is either end of this cable plugged into that hole? Shared with the renderer, which hides every
+// cable on a hole being dragged.
+bool cable_touches_connector(const tCable * cable, uint32_t moduleIndex, uint32_t ioCount, tConnectorDir dir);
+bool find_cable_at_connector(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t ioCount, tConnectorDir dir, tCableKey * key, uint32_t * otherModuleIndex, uint32_t * otherIoCount, tConnectorDir * otherDir);
 
 // Cable-key helpers, used by the connect and by the cable popup commands.
 void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex);

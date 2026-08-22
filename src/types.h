@@ -373,6 +373,12 @@ typedef enum {
     paramTypeFreqShift,
     paramTypeToggle,
     paramTypeMenu,
+    // Channel Select radio buttons — the Switch modules' selector. One button per channel, laid out
+    // in a grid, the selected one lit, and EACH BUTTON separately renamable (manual p221: "These
+    // Channel Select buttons can also be labelled... Right-click on a Channel Select button and
+    // select 'Edit name'"). The names live in paramName[param][label], which the protocol has always
+    // carried a count of — nothing but this type has ever used more than label 0.
+    paramTypeRadioEdit,
     paramTypeCustomData, // value lives in param[] like other params; sent via custom data protocol (0x42)
 } tParamType;
 
@@ -385,10 +391,34 @@ typedef enum {
     volumeTypeSequencer, // Step-position indicator: 2 bytes in wire stream, not a volume level
 } tVolumeType;
 
+// A READ-ONLY READOUT on a module face — not a parameter, and deliberately not in paramLocationList,
+// where every row consumes a parameter index. It shows something DERIVED from a parameter.
+typedef enum {
+    displayTypeNone,
+    // The Switch modules' Ctrl output value. Manual p221 ("Common Switch parameters"): the Control
+    // output "sends out the Ctrl signal value 0 for the initial state, value 4 for the next state,
+    // value 8 for the next and so on", to a maximum of 28 on an eight-way switch — which is what the
+    // Mux modules decode (0<4 = channel 1, 4<8 = channel 2 ...), so that a Switch button always
+    // reaches the same Mux channel whatever the button count.
+    displayTypeSwitchCtrl,
+} tDisplayType;
+
+typedef struct {
+    tModuleType  moduleType;
+    tDisplayType displayType;
+    uint32_t     sourceParam;   // the parameter the readout is derived FROM
+    tRectangle   rectangle;
+    tAnchor      anchor;
+} tDisplayLocation;
+
 typedef enum {
     ledTypeNo,
     ledTypeYes,
     ledTypePark,  // display-only LED: rendered but never counted in LED stream
+    // Part of a MULTI-BIT GROUP: several LEDs driven by ONE value from the multi stream (0x3a)
+    // rather than one 2-bit value each from 0x39. Rendered like ledTypeYes, but it must not be
+    // counted in the 2-bit stream — see module_led_count() and parse_volume_indicator().
+    ledTypeMultiBit,
 } tLedType;
 
 typedef enum {
@@ -630,6 +660,21 @@ typedef struct {
     tModuleKey fromModuleKey;
     uint32_t   fromConnectorIndex;
     tConnector toConnector;
+    // RE-ROUTING an existing cable rather than drawing a new one. Ctrl-click on a connector picks up
+    // the cable already there and drags its free end: drop it on another connector and the cable
+    // moves, drop it on nothing and the cable is gone. Manual p65: "double-click-hold or Ctrl-click
+    // on a connection... and 'pull out' the connector... If you place the 'disconnected' plug on
+    // another connection instead, the cable will be rerouted."
+    //
+    // Recorded at PRESS and acted on at RELEASE, so the whole thing — the delete and whatever
+    // replaces it — lands inside one undo bracket in handle_cable_connect().
+    bool rerouting;
+    // The HOLE that was picked up, not one cable: EVERY cable plugged into it moves together, which
+    // is what the original does — CPatchData::GetMoveCableNodeMolecules() re-parents the whole node,
+    // emitting a delete and a connect for the parent cable and then the same for every child.
+    uint32_t      rerouteModuleIndex;
+    uint32_t      rerouteIoCount;
+    tConnectorDir rerouteDir;
 } tCableDragging;
 
 typedef struct {
@@ -882,6 +927,9 @@ typedef struct {
     bool       active;
     tModuleKey moduleKey;
     uint32_t   paramIndex;
+    // WHICH label of that parameter. 0 for every ordinary parameter — a parameter has one name. A
+    // Channel Select radio group is the exception: one parameter, one name per button.
+    uint32_t   labelIndex;
     char       buffer[PROTOCOL_PARAM_NAME_SIZE + 1];
     uint32_t   cursorPos;
 } tParamNameEdit;
@@ -896,6 +944,9 @@ typedef struct {
     tConnectorDir connectorDir;
     uint32_t      connectorIndex;
     uint32_t      paramIndex;
+    // Which Channel Select button the menu was raised over, for Rename. 0 for everything else — an
+    // ordinary parameter has one name, so the parameter identifies it on its own.
+    uint32_t      labelIndex;
 } tMenuContext;
 
 typedef struct {

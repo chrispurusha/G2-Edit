@@ -311,7 +311,7 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
 
                 if (  paramType != paramTypeToggle && paramType != paramTypeMenu
                    && paramType != paramTypeBypass && paramType != paramTypeEnable
-                   && paramType != paramTypePush) {
+                   && paramType != paramTypePush && paramType != paramTypeRadioEdit) {
                     if (module->key.location == locationMorph) {
                         range     = 128;
                         paramType = paramTypeCommonDial;
@@ -635,6 +635,102 @@ bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tM
     return false;
 }
 
+// Does this cable have an end plugged into that hole? Either end can match: linkType says which
+// direction the FROM end points, which is what makes an input-to-input link (two input ends, see the
+// backdoor-duplicate note in Docs) readable here rather than guessed at.
+bool cable_touches_connector(const tCable * cable, uint32_t moduleIndex, uint32_t ioCount, tConnectorDir dir) {
+    if ((cable == NULL) || !cable->active) {
+        return false;
+    }
+
+    // The TO end is always an input.
+    if (  (cable->key.moduleToIndex == moduleIndex) && (cable->key.connectorToIoCount == ioCount)
+       && (dir == connectorDirIn)) {
+        return true;
+    }
+    return (cable->key.moduleFromIndex == moduleIndex) && (cable->key.connectorFromIoCount == ioCount)
+           && ((tConnectorDir)cable->key.linkType == dir);
+}
+
+// The far end of a cable, given which end is plugged into the hole being moved.
+static void cable_far_end(const tCable * cable, uint32_t moduleIndex, uint32_t ioCount,
+                          uint32_t * farModuleIndex, uint32_t * farIoCount, tConnectorDir * farDir) {
+    if ((cable->key.moduleToIndex == moduleIndex) && (cable->key.connectorToIoCount == ioCount)) {
+        *farModuleIndex = cable->key.moduleFromIndex;
+        *farIoCount     = cable->key.connectorFromIoCount;
+        *farDir         = (tConnectorDir)cable->key.linkType;
+        return;
+    }
+    *farModuleIndex = cable->key.moduleToIndex;
+    *farIoCount     = cable->key.connectorToIoCount;
+    *farDir         = connectorDirIn;
+}
+
+// Builds the key for a cable between two holes, in the form the database and the wire both expect:
+// the TO end is always an input and the FROM end's direction is carried in linkType. Two outputs
+// cannot be joined, which is the one combination this refuses.
+static bool make_cable_key(uint32_t slot, uint32_t location,
+                           uint32_t aModule, uint32_t aIo, tConnectorDir aDir,
+                           uint32_t bModule, uint32_t bIo, tConnectorDir bDir,
+                           tCableKey * key) {
+    if ((aDir == connectorDirOut) && (bDir == connectorDirOut)) {
+        return false;
+    }
+    bool aIsFrom = (bDir == connectorDirIn);   // two inputs is a legal white link; a is the from end
+
+    key->slot                 = slot;
+    key->location             = location;
+    key->moduleFromIndex      = aIsFrom ? aModule : bModule;
+    key->connectorFromIoCount = aIsFrom ? aIo : bIo;
+    key->linkType             = (uint32_t)(aIsFrom ? aDir : bDir);
+    key->moduleToIndex        = aIsFrom ? bModule : aModule;
+    key->connectorToIoCount   = aIsFrom ? bIo : aIo;
+
+    return true;
+}
+
+// The cable attached to a given connector, and where its OTHER end is — what Ctrl-click needs in
+// order to pick a cable up and drag its free end. Either end can be the one clicked: linkType says
+// which direction the FROM end points, which is what makes an input-to-input link (two input ends,
+// see the backdoor-duplicate note in Docs) readable here rather than guessed at.
+//
+// An output can carry several cables. This takes the FIRST it finds, which is deterministic but
+// arbitrary; the original editor has the same ambiguity and the manual does not say how it resolves
+// it. For an input there is only ever one, which is the case that matters.
+bool find_cable_at_connector(uint32_t slot, uint32_t location, uint32_t moduleIndex,
+                             uint32_t ioCount, tConnectorDir dir,
+                             tCableKey * key, uint32_t * otherModuleIndex,
+                             uint32_t * otherIoCount, tConnectorDir * otherDir) {
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable = get_cable_slot(slot, location, i);
+
+        if ((cable == NULL) || !cable->active) {
+            continue;
+        }
+
+        // The TO end is always an input.
+        if (  (cable->key.moduleToIndex == moduleIndex) && (cable->key.connectorToIoCount == ioCount)
+           && (dir == connectorDirIn)) {
+            *key              = cable->key;
+            *otherModuleIndex = cable->key.moduleFromIndex;
+            *otherIoCount     = cable->key.connectorFromIoCount;
+            *otherDir         = (tConnectorDir)cable->key.linkType;
+            return true;
+        }
+
+        if (  (cable->key.moduleFromIndex == moduleIndex) && (cable->key.connectorFromIoCount == ioCount)
+           && ((tConnectorDir)cable->key.linkType == dir)) {
+            *key              = cable->key;
+            *otherModuleIndex = cable->key.moduleToIndex;
+            *otherIoCount     = cable->key.connectorToIoCount;
+            *otherDir         = connectorDirIn;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static bool input_connector_has_cable(uint32_t slot, uint32_t location,
                                       uint32_t moduleIndex, uint32_t ioCount) {
     for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
@@ -650,6 +746,185 @@ static bool input_connector_has_cable(uint32_t slot, uint32_t location,
     }
 
     return false;
+}
+
+// Moving a picked-up hole and everything plugged into it. See tCableDragging: Ctrl-click grabs a
+// CONNECTOR, not a cable, and the original moves the lot as one operation.
+//
+// ALL OR NOTHING when the drop lands on a connector. Every cable is validated before any is deleted,
+// and if one of them cannot be made — most obviously three cables dropped on an input, which accepts
+// exactly one — nothing changes at all. A partial move would leave the patch in a state nobody asked
+// for and would have to be unpicked by hand. Dropped on empty canvas, they are all disconnected,
+// which is the manual's "pull out the connector and release".
+static bool handle_cable_reroute(tCoord coord, uint32_t slot, uint32_t location) {
+    tCableKey oldKeys[MAX_CABLES_PER_CONNECTOR] = {0};
+    tCableKey newKeys[MAX_CABLES_PER_CONNECTOR] = {0};
+    uint32_t  colours[MAX_CABLES_PER_CONNECTOR] = {0};
+    uint32_t  count                             = 0;
+    tModule * toModule                          = NULL;
+    int32_t   toIndex                           = -1;
+
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable = get_cable_slot(slot, location, i);
+
+        if (!cable_touches_connector(cable, gCableDrag.rerouteModuleIndex, gCableDrag.rerouteIoCount, gCableDrag.rerouteDir)) {
+            continue;
+        }
+
+        if (count >= MAX_CABLES_PER_CONNECTOR) {
+            LOG_ERROR("More than %u cables on one connector — not moving any of them\n", MAX_CABLES_PER_CONNECTOR);
+            return false;
+        }
+        oldKeys[count] = cable->key;
+        colours[count] = cable->colour;
+        count++;
+    }
+
+    if (count == 0) {
+        return false;
+    }
+
+    // What is under the cursor, if anything.
+    for (uint32_t idx = 0; (idx < MAX_NUM_MODULES) && (toIndex < 0); idx++) {
+        tModule * module = get_module_slot(slot, location, idx);
+
+        if ((module == NULL) || !module->active) {
+            continue;
+        }
+
+        for (int32_t i = 0; i < (int32_t)module_connector_count(module->type); i++) {
+            if (within_rectangle(coord, module->connector[i].rectangle)) {
+                toModule = module;
+                toIndex  = i;
+                break;
+            }
+        }
+    }
+
+    if (toIndex >= 0) {
+        tConnectorDir toDir = toModule->connector[toIndex].dir;
+        int           toIo  = find_io_count_from_index(toModule, toDir, toIndex);
+
+        if (toIo < 0) {
+            return false;
+        }
+
+        for (uint32_t c = 0; c < count; c++) {
+            uint32_t      farModule = 0;
+            uint32_t      farIo     = 0;
+            tConnectorDir farDir    = connectorDirIn;
+            tCable *      cable     = get_cable(oldKeys[c]);
+
+            if (cable == NULL) {
+                return false;
+            }
+            cable_far_end(cable, gCableDrag.rerouteModuleIndex, gCableDrag.rerouteIoCount, &farModule, &farIo, &farDir);
+
+            // Onto its own far end is a self-connection, and two outputs cannot be joined.
+            if (  ((toModule->key.index == farModule) && ((uint32_t)toIo == farIo) && (toDir == farDir))
+               || !make_cable_key(slot, location, toModule->key.index, (uint32_t)toIo, toDir,
+                                  farModule, farIo, farDir, &newKeys[c])) {
+                return false;
+            }
+
+            // The input at the TO end must be free — ignoring the cables about to be removed, and
+            // counting the ones already claimed by this same move. That second part is what stops
+            // several cables being dropped onto one input.
+            for (uint32_t e = 0; e < c; e++) {
+                if (  (newKeys[e].moduleToIndex == newKeys[c].moduleToIndex)
+                   && (newKeys[e].connectorToIoCount == newKeys[c].connectorToIoCount)) {
+                    return false;
+                }
+            }
+
+            for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+                tCable * existing   = get_cable_slot(slot, location, i);
+
+                if ((existing == NULL) || !existing->active) {
+                    continue;
+                }
+
+                if (  (existing->key.moduleToIndex != newKeys[c].moduleToIndex)
+                   || (existing->key.connectorToIoCount != newKeys[c].connectorToIoCount)) {
+                    continue;
+                }
+                bool     beingMoved = false;
+
+                for (uint32_t o = 0; o < count; o++) {
+                    if (  (existing->key.moduleFromIndex == oldKeys[o].moduleFromIndex)
+                       && (existing->key.connectorFromIoCount == oldKeys[o].connectorFromIoCount)
+                       && (existing->key.moduleToIndex == oldKeys[o].moduleToIndex)
+                       && (existing->key.connectorToIoCount == oldKeys[o].connectorToIoCount)) {
+                        beingMoved = true;
+                        break;
+                    }
+                }
+
+                if (!beingMoved) {
+                    return false;   // occupied by a cable that is staying put
+                }
+            }
+        }
+    }
+
+    // Past every check: take them all out.
+    for (uint32_t c = 0; c < count; c++) {
+        tMessageContent msg = {0};
+
+        msg.cmd                            = eMsgCmdDeleteCable;
+        msg.slot                           = slot;
+        msg.cableData.location             = location;
+        msg.cableData.moduleFromIndex      = oldKeys[c].moduleFromIndex;
+        msg.cableData.connectorFromIoIndex = oldKeys[c].connectorFromIoCount;
+        msg.cableData.moduleToIndex        = oldKeys[c].moduleToIndex;
+        msg.cableData.connectorToIoIndex   = oldKeys[c].connectorToIoCount;
+        msg.cableData.linkType             = oldKeys[c].linkType;
+        msg_send(&gToUsbThread, &msg);
+        delete_cable(oldKeys[c]);
+    }
+
+    if (toIndex < 0) {
+        // Dropped on nothing: they are simply gone, and what each was feeding has lost its source.
+        for (uint32_t c = 0; c < count; c++) {
+            cable_chain_recolour(slot, location, (tCableNode){
+                oldKeys[c].moduleToIndex, oldKeys[c].connectorToIoCount, false
+            });
+        }
+
+        return false;
+    }
+
+    for (uint32_t c = 0; c < count; c++) {
+        tCable          cable = {0};
+        tMessageContent msg   = {0};
+
+        cable.colour                       = colours[c];
+        write_cable(newKeys[c], &cable);
+
+        msg.cmd                            = eMsgCmdWriteCable;
+        msg.slot                           = slot;
+        msg.cableData.location             = location;
+        msg.cableData.moduleFromIndex      = newKeys[c].moduleFromIndex;
+        msg.cableData.connectorFromIoIndex = newKeys[c].connectorFromIoCount;
+        msg.cableData.moduleToIndex        = newKeys[c].moduleToIndex;
+        msg.cableData.connectorToIoIndex   = newKeys[c].connectorToIoCount;
+        msg.cableData.linkType             = newKeys[c].linkType;
+        msg.cableData.colour               = cable.colour;
+        msg_send(&gToUsbThread, &msg);
+    }
+
+    // Topology changed at both ends, so both chains are re-derived — see the note in the connect
+    // path about why this is tied to topology changes only.
+    for (uint32_t c = 0; c < count; c++) {
+        cable_chain_recolour(slot, location, (tCableNode){
+            oldKeys[c].moduleToIndex, oldKeys[c].connectorToIoCount, false
+        });
+        cable_chain_recolour(slot, location, (tCableNode){
+            newKeys[c].moduleToIndex, newKeys[c].connectorToIoCount, false
+        });
+    }
+
+    return true;
 }
 
 bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
@@ -668,6 +943,17 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
     // Bracketed as one cable edit: a connect can repaint the whole tree as well as add the
     // cable, and undo has to put the old colours back along with the topology.
     undo_begin_cable_edit(slot, location);
+
+    // A re-route is its own operation — see handle_cable_reroute(). It runs inside this bracket so
+    // the whole move, however many cables it touches, is one undo step.
+    if (gCableDrag.rerouting) {
+        bool moved = handle_cable_reroute(coord, slot, location);
+
+        update_module_up_rates();
+        undo_commit_cable_edit();
+
+        return moved;
+    }
 
     for (uint32_t idx = 0; idx < MAX_NUM_MODULES && !found; idx++) {
         tModule * toModule = get_module_slot(slot, location, idx);

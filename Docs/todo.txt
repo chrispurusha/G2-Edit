@@ -1,8 +1,146 @@
 G2-Edit TODO (priority order)
 
 CT new:
+MOVING A CABLE FROM ONE CONNECTOR TO ANOTHER — DONE 2026-08-22, and the user who reported it is
+right about the modifier. Manual p65: "right-click on a connection and select Disconnect, or
+double-click-hold or Ctrl-click on a connection... and 'pull out' the connector by dragging the
+connector symbol away from the input/output and release the mouse button. If you place the
+'disconnected' plug on another connection instead, the cable will be rerouted."
+  CTRL-CLICK on a connector now picks up the cable already there and drags its FAR end, so the end
+  under the cursor is the one that moves. Everything after that is the ordinary drag: release on a
+  connector and the cable is re-routed, release on nothing and it is gone. A connector with no cable
+  falls through and draws a new one, exactly as an unmodified click does.
+  IT IS A DELETE PLUS THE EXISTING CONNECT, both done at RELEASE inside handle_cable_connect()'s undo
+  bracket rather than at press. That is what makes it one undo step, and it has to happen before the
+  input-already-has-a-cable test or dropping a cable back on its own input would be refused by its
+  own presence. The old to-end is recoloured on the way out, the way a module delete recolours what
+  it orphans.
+  VERIFIED on a two-module patch: Ctrl-drag Clk -> Rst moved the cable (to=2:0 became to=2:1, still
+  ONE cable, not two — the device treats a write as an add, so a re-route that forgot the delete
+  would have left both); Ctrl-drag to empty canvas removed it; Undo put it back where it was.
+  THE PICKED-UP CABLE IS HIDDEN WHILE THE DRAG IS IN FLIGHT (CT reported it still showing in its old
+  position, 2026-08-22, and confirmed the fix). It still EXISTS until release — that is what keeps
+  the re-route to one undo step — so render_cables() skips it in both of its passes instead. Leaving
+  it drawn showed the cable in its old socket while the rubber band drew the new one, which reads as
+  a second cable being made rather than this one being moved; the manual's "pull out the connector"
+  is what it should look like, the cable leaving its socket and following the cursor.
+  NOT IMPLEMENTED: the manual's other route into the same gesture, double-click-hold. Ctrl-click is
+  the one the user asked for and the one that needs no click-timing machinery.
+  MULTIPLE CABLES ON ONE CONNECTOR — WE ARE CURRENTLY WRONG, and the reference is unambiguous about
+  what should happen. I had assumed the original faced the same ambiguity; it does not, because it
+  never picks a cable at all.
+  ITS MODEL IS HOLE-TO-HOLE, NOT CABLE-BY-CABLE. CCableDragDropManager::Drop() dispatches three
+  actions, all of them in terms of HOLES: InternalCableDisconnect(hole), InternalCableConnect(holeA,
+  holeB) and InternalCableMove(holeA, holeB). The move goes to
+  CPatchData::GetMoveCableNodeMolecules(), which does CTree::find() on the connector's node and then
+  RE-PARENTS THE WHOLE NODE: it emits a delete plus a connect for the cable to the node's PARENT, and
+  then loops over get_child() emitting a delete plus a connect for EVERY CHILD. So moving a connector
+  moves EVERYTHING PLUGGED INTO IT, as one operation.
+  So the answer to "which cable?" is "all of them". For an input there is only ever one and our
+  behaviour is already right; for an output carrying three, ours moves one at random and should move
+  all three.
+  AGREED WITH CT 2026-08-22: MOVE ALL OF THEM, and where the target cannot take them all — an input
+  accepts exactly one — ABORT THE WHOLE MOVE AND PUT THEM BACK WHERE THEY WERE. All-or-nothing. (CT
+  first said "move what fits", then changed to abort, which is the safer of the two: a partial move
+  leaves the patch in a state nobody asked for and has to be unpicked by hand.) The original's tree
+  model cannot express the case at all, so this is our rule rather than a recovered one — and abort
+  is the easier one to get right, because validating every cable BEFORE deleting any is the natural
+  shape of the code.
+  BUILT 2026-08-22 — BUT NOT VERIFIED, see below. What went in:
+    - gCableDrag records the picked-up HOLE (module index, io count, direction) instead of one cable
+      key; the rubber band draws from the first far end it finds.
+    - render_cables() skips EVERY cable touching that hole, not just the one — otherwise the
+      untouched ones stay drawn in their old position, which is the bug CT reported on the single
+      cable version.
+    - handle_cable_connect() finds the target connector FIRST, then for each cable on the hole builds
+      the new key by substituting the moved end, keeping the rule that the TO end is always an input
+      and linkType carries the FROM end's direction (both-ends-output is invalid, both-ends-input is
+      a legal white link). VALIDATE THEM ALL FIRST: if any one cannot be made, change nothing.
+    - Dropping on nothing still disconnects — all of them now, not one.
+    - It all stays inside the one undo bracket, so the whole move is a single undo step.
+  NOT TESTED AT ALL — every attempt to drive it failed for an unrelated reason: System Events stopped
+  being able to see the app's window part way through (the same fault that appeared on 2026-08-21
+  when the machine was not logged in), and with no window, cliclick's clicks go nowhere. Three
+  "failures" I recorded against this code were that, not the code: a diagnostic LOG_INFO in the press
+  handler never printed once, which is what gave it away.
+  SO THIS NEEDS A REAL TEST BEFORE IT IS TRUSTED, and note it also rewrote the SINGLE-cable path that
+  WAS verified on 2026-08-22 (Clk -> Rst moved the cable, empty canvas removed it, Undo restored it).
+  Both need re-running:
+    - one cable on an input, moved to another input, and dropped on empty canvas
+    - an output fanning out to two inputs, moved to another output: BOTH cables should follow
+    - that same two-cable output dropped on a single INPUT: nothing should change at all
+    - Undo after each, which should restore the whole move in one step
+
+CONNECTOR HIT AREAS ARE EXACTLY THE DRAWN CIRCLE — measured 2026-08-22 after CT asked whether they
+feel too small. They do, and here is why: the click region registered for a connector IS the
+rectangle render_circle_part() drew, so the target scales with the zoom and nothing else.
+      zoom 200%   35.0 pt        zoom  50%    8.8 pt
+      zoom 100%   17.5 pt        zoom  25%    4.4 pt
+  17.5 pt at 100% is fine. At 50% it is 8.8 and at 25% it is 4.4, which is where "too small" comes
+  from — and cable work is exactly what you zoom out to do.
+  FIXED 2026-08-22 with CT's suggestion — ONE POINT of padding on every side, hit area only, the
+  circle still drawn at CONNECTOR_SIZE. A constant in screen points rather than a scaled fraction, so
+  it is worth +46% of target at 25% zoom where it is needed and only +11% at 100% where it is not.
+  ONE POINT IS THE CEILING, and that is what makes the modest number the right one: the Gate's
+  stacked input pairs leave 7 pt between edges at 100% but 1.8 pt at 25%, so a point a side stays
+  clear everywhere except 25% zoom, where they overlap by 0.2 pt — under half a retina pixel. Three
+  points a side, which was the other candidate, would have made neighbouring connectors genuinely
+  fight, and the registry resolves an overlap by taking the most recently registered: one of a
+  stacked pair would have become unreachable. The nearest-connector-within-a-tolerance idea is
+  therefore not needed.
+  The padded rectangle is stored in connector[].rectangle, which is used for the click region, for
+  handle_cable_connect()'s release target and for the hover test and nothing else — so press, drop
+  and hover all grew together. The cable end is drawn from .coord, which is untouched.
+  PROVED BY A/B against the previous build at exactly the one-point margin. The connector ring spans
+  fb x 33..66, so its drawn edge is screen x 74 and x 75 is one point outside it. Same gesture, same
+  coordinate, two builds: WITHOUT the padding the press fell through to the module body and left the
+  module selected; WITH it, no selection — the press reached the connector.
+  Finding a valid test took three attempts and the failures are worth remembering: counting changed
+  pixels cannot tell a cable drag from a module drag, and checking whether the module MOVED does not
+  work either, because a press on a module body only SELECTS it. The yellow selection border is the
+  signal that separates the two cases.
+THE ORIGINAL EDITOR'S RESOURCE FILE HOLDS EVERY MODULE FACE AS PLAIN TEXT — surveyed 2026-08-22.
+  194 module definitions, each listing every control on the face with its position, its parameter
+  index (CodeRef) and its type id (InfoFunc): 502 Knob, 517 Input, 352 Output, 195 Led, 264 TextField
+  readouts, 235 ButtonText, 170 ButtonFlat, 75 ButtonIncDec, 32 radio groups, 40 MiniVU meters, 46
+  Graph, 31 PartSelector, plus Text/Line/Symbol/Bitmap decoration. Module blocks also carry Height,
+  Tooltip and a Version number.
+  AN AUDIT OF OUR TABLES AGAINST IT matched 168 modules by name and found remarkably little wrong:
+  1 height, 4 connector-count and 7 param-count differences, and of those, ClkDiv/ClkDivFix/CompLev/
+  Delay/LevMult appear TWICE in the resource (two faces each), which accounts for all four connector
+  differences and Delay's height on its own. SeqNote's 39-vs-37 is the known custom-data pair and the
+  resource confirms 37. Left over and worth an eye: EnvD and EnvH (we have 2 params, it has 1),
+  FltClassic and OscShpB (we draw an LED where it has none), EnvADSR (2 LEDs vs 1).
+  Gate and FlipFlop "missing params" are not missing: their selectors are MODES, and the resource
+  numbers modes in the same CodeRef space as parameters.
+
+  LED GROUPING — INVESTIGATED AND FIXED 2026-08-22, see below. Kept here because the reference is
+  what settled it.
+  TWO THINGS IT COULD SETTLE THAT WE CURRENTLY GUESS AT:
+  1. LED GROUPING, which bears directly on the LED work above. Every Led carries a Type of "Green"
+     (105 of them) or "Sequencer" (90), and a GroupId. The Green/Sequencer split is the 0x39 2-bit
+     stream versus the 0x3a multi stream — Compress's ten and the Seq modules' sixteen are
+     "Sequencer", which is why our LED counts differ there and why we handle them as volume meters
+     instead. That part of ours is right.
+     THE GROUPID IS THE PART TO CHECK. The original walks GROUPS, not LEDs: AddBlinkModule() pushes a
+     module once per LED group, and CPanel::Blink() then collects every LED view in that group and,
+     where there is more than one, spreads the value across them A BIT AT A TIME. Invert has two LEDs
+     in two groups (0 and 1) so it takes two stream indices, exactly as we assume — but 8Counter has
+     EIGHT LEDs all in group 0, which is ONE index carrying eight bits, where we now consume eight.
+     BinCounter, ADConv, Mux8to1, Mux1to8 and Mux8to1X are the same shape. If that reading is right,
+     every LED after one of those modules in the stream is off by seven, which is a candidate for
+     "the Invert module's LEDs don't seem to do anything" (CT, 2026-08-22) whenever such a module
+     sits earlier in the patch. Wants a capture to confirm before changing anything.
+  2. ICONS. The image-based controls carry their pixels inline as colon-separated hex, with
+     ImageWidth and ImageCount; they decode cleanly (the Gate's PartSelector is six 90x26 line
+     drawings, AND/NAND/OR/NOR/XOR/XNOR, each a gate outline). They are simple enough to REDRAW in
+     our own style rather than embed — which also covers the oscillator and LFO waveform pickers, the
+     other 25 image radio groups, and the Gate, whose selector should be a symbol rather than the
+     text menu we give it.
 Add an editor local mode button, to allow drawing of wave on sequencers, across the columns. Ultimately could be a mode switch to represent an actual wave?
 LEDs on invert might not be working at all.
+  ANSWERED — see "DOES THE INVERT MODULE'S LED ACTUALLY DO ANYTHING?" below. Short version: steady is
+  correct for an unpatched inverter, and LedGroups.pch2 now drives one so it visibly blinks.
 Check my LEDs fix in parse_led_data
   REVIEWED 2026-08-21. The per-LED loop is right — 8 is exactly the largest LED count in
   ledLocationList (Mux8to1/Mux1to8/Mux8to1X/BinCounter/ADConv/8Counter), and no module type mixes
@@ -59,17 +197,178 @@ When adding or deleting a new module - even name bar, seqval sequencer data seem
   So the local add path (create_module_at -> write_module -> init_params_on_module_all_variations ->
   shift_modules_down) does not do it, and delete_module() memsets the whole record, so a reused index
   cannot inherit the old one's values either.
-  THAT LEAVES THE DEVICE SIDE, and the first suspect is the 0x4d handler two items down: it went in at
-  14:07 and this was reported at 14:39. parse_param_list() writes every variation of every module it
-  walks, so a 0x4d read at the wrong offset randomises exactly what is described here — sequencer
-  steps (which ARE parameters), across variations. The handler now refuses to parse a header it cannot
-  validate, so if the symptom survives that, the cause is elsewhere. Reproduce with the instrument
-  connected and ENABLE_USB_LOG on, and look for "param list" in the log at the moment of the add.
+  SOLVED 2026-08-21 ON HARDWARE, and it was NOT the 0x4d handler I first suspected — that theory is
+  recorded here only because the suspicion was reasonable and wrong, and the way it was killed is the
+  useful part: a GUI add corrupted the sequences, a BACKDOOR add did not, and the backdoor is the one
+  that never sends the module to the device. That isolated it to the round trip. A USB capture then
+  showed our writes correctly addressed to the new module, followed by the G2 spontaneously pushing
+  sixteen param-changes for module 1:3.
+  THE CAUSE WAS A LATCHED PUSH BUTTON. SeqVal parameter 36 is "Rnd", a paramTypePush, and the click
+  handler had press and release the wrong way round: it sent 0 on press and 1 on RELEASE, leaving the
+  device holding the parameter at 1 for good. That value is stored in the patch, so the G2 acted on it
+  again every time it recompiled — which any module add or delete forces — re-randomising all sixteen
+  steps and reporting them back. The editor was showing the truth. CT's own "I had clicked random on
+  the sequencer, if that makes a difference?" was the whole answer.
+  PROVEN BOTH WAYS: clearing param 36 by hand made the next add produce zero param-change traffic;
+  setting it back to 1 randomised the sequence within two seconds with no other traffic at all.
+  FIXED by firing on PRESS and sending the 0 on RELEASE, so the mouse hold is the pulse width. The
+  two must not be sent back to back — a 1 and 0 in the same millisecond leave the device seeing the
+  release before it acts on the trigger, and nothing happens; 1 ms apart is enough, so no real click
+  can hit it. Verified end to end: Rnd randomises once, param 36 ends at 0, and a later module add
+  leaves both sequences untouched.
+  STILL TO CHECK: the OTHER paramTypePush buttons now that press/release have swapped — SeqVal's
+  "Clr", and whatever Rnd/Clr the rest of the Seq family carry. Same handler, so they should be
+  right, but none of them has been clicked since the change.
+The Gate module's face needs work — its type selector should be a SYMBOL, not a text menu. The
+original draws it as an image picker (a PartSelector) holding six 90x26 line drawings of the gates
+themselves: AND, NAND, OR, NOR, XOR, XNOR, each an outline with its label. We draw two dropdowns of
+words instead. The images decode cleanly from the resource file, and are simple enough to redraw in
+our own style rather than embed — the same goes for the oscillator and LFO waveform pickers and the
+other 25 image radio groups. See the resource-file survey at the top.
 Move the backdoor control functions out of graphics.c, into a backdoor.c source file.
 Move any todos out of code, into this todo file, with descriptions.
 Remove the module number from top right of module for release versions.
+  DONE 2026-08-22 — the index is now inside #ifdef DEBUG, so it is compiled out of Release. The type
+  name beside it is left in: that one names the module, which is worth having on a face whose title
+  the user may have renamed.
 When saving file, file name (path) needs adding to top of recents list.
+  DONE 2026-08-22. recent_files_add() was only ever called from on_file_opened(), so a patch written
+  with Save As — the file you are most likely to want back — was the one thing the menu never listed.
+  Both save routes converge on on_file_saved() (the browser's callback, and File > Save going
+  straight to the remembered path), so the call goes there and covers both; recent_files_add() moves
+  an existing entry to the front and returns early when it is already there, so repeated saves cost
+  nothing. VERIFIED through the GUI: saved a new name through the Save File browser and it appeared
+  at the top of File > Open Recent.
+  The backdoor's SAVEFILE deliberately does NOT go through this path and so does not touch recents —
+  it is a test hook and should not write into the user's list.
 SW1-2 and similar need something new. See manual. The offset box seems to show 0 for first (leftmost) option box, 4 for the next box. Boxes also have names, currently displayed above our menu option. Might need a new param type. New type could also display the offset?
+  CONFIRMED 2026-08-22, and your reading is right on both counts. The manual's "Common Switch
+  parameters" (p221) calls these CHANNEL SELECT RADIO BUTTONS: one button per channel, blue when
+  selected, all others off. "These Channel Select buttons can also be labelled for better overview.
+  Right-click on a Channel Select button and select 'Edit name'... the name cannot be longer than 7
+  characters because of the size of the ASSIGNABLE DISPLAYS on the synth front panel." They cannot be
+  assigned to a Morph Group.
+  THE OFFSET BOX IS THE OTHER HALF OF THE SAME FEATURE, and it is not decoration: the Switch modules
+  have a Ctrl OUTPUT whose value is the selected channel, and the box displays it. The manual gives
+  the rule outright — "value 0 for the initial state, value 4 for the next state, value 8 for the next
+  and so on", max 28 at button 8 — because the Mux modules decode 0<4 as channel 1, 4<8 as channel 2
+  and so on. So a Switch button always lands on the same Mux channel whatever the button count. That
+  is exactly the 0 then 4 you saw. It is DERIVED from the selector, not a parameter of its own.
+  WE ALREADY HAVE THE DATA MODEL. parse_param_names() reads a COUNT of labels per parameter into
+  paramNumLabels[] and fills paramName[param][label][7] for each — up to MAX_NUM_LABELS — and
+  write_param_names() writes them back out. Nothing in the renderer uses more than label 0, and
+  action_rename_param_label() only ever edits label 0. So the work is a new param type plus a rename
+  that takes a label index; the protocol side is done.
+  A SECOND, SEPARATE CONTROL exists that is NOT renamable: a plain radio row with fixed captions or
+  waveform icons, used by ~26 other modules (FltNord's LP/BP/HP/BR, FltClassic 12/18/24, the Out/In
+  bus selectors, the oscillator and LFO waveform pickers, and so on). Same widget shape, no per-button
+  names, no Ctrl offset. Worth building the renamable one first and having the plain one fall out of
+  it, but they are not the same control and the plain ones do not want an Edit name entry.
+
+  RENAMABLE (Channel Select) — 6 modules, always parameter 0:
+      Sw1-2   2 cols x 1 row    Out 1, Out 2
+      Sw1-4   4 x 1             Out 1..Out 4
+      Sw1-8   4 x 2             Out 1..Out 8
+      Sw2-1   2 x 1             In 1, In 2
+      Sw4-1   4 x 1             In 1..In 4
+      Sw8-1   4 x 2             In 1..In 8
+  Note the 8-button ones are TWO ROWS OF FOUR, not a row of eight — a module face is not wide enough.
+
+  PLAIN radio rows — 26 more, no renaming, listed as module/param/buttons:
+      OscB 8/5*    OscA 4/6*     OscShpA 9/6*   Rect 0/4*      ShpStatic 0/4*
+      LfoA 4/6*    LfoB 4/4*     LfoShpA 11/6*  (* = waveform ICONS, not text)
+      OutBusB 0/3 (1/2, 3/4, CVA)      2-Out 0/6 (1/2, 3/4 x3)   4-Out 0/3 (Out, Fx, Bus)
+      2-In 0/4 (1/2, 3/4 x2)           4-In 0/2 (In, Bus)        Fx-In 0/2 (1/2, 3/4)
+      FltClassic 4/3 (12, 18, 24)      FltMulti 5/2 (6, 12)      FltStatic 2/3 (LP, BP, HP)
+      FltNord 8/4 (BR, HP, BP, LP - VERTICAL) and FltNord 5/2 (12, 24)
+      ShelvEQ 2/2 (Hi, Lo - VERTICAL)  DrumSynth 10/3 (HP, BP, LP - VERTICAL)
+      LevConv 1/3 (BiPol, Pos, Neg)    PeakFollow 1/2 (Pos, Neg)  MonoKey 0/3 (Last, Lo, Hi)
+      ShpExp 3/4 (x2..x5)              Saturate 3/4 (1, 2, 3, 4)
+  Three of them are VERTICAL, so the type needs an orientation as well as a button count.
+
+  IMPLEMENTED 2026-08-22 — paramTypeRadioEdit, the renamable half. The six Switch rows now use it.
+    - radio_columns()/radio_rows() DERIVE the grid from the button count (up to four across, then
+      wrap), so 2 is 2x1, 4 is 4x1 and 8 is 4x2 with nothing tabulated.
+    - Buttons are as wide as the WIDEST caption in the group, so a renamed one grows the group
+      instead of clipping. Widths use eNoCache — a renamed caption is a runtime buffer and the width
+      cache is keyed on the string POINTER.
+    - Rename is offered as one menu entry per button, captioned with what that button currently
+      reads ("Rename \"Out 3\""). The manual has you right-click the button itself, but the group is a
+      single click region and the right-click path is a registry QUERY with no captured rectangle to
+      divide up; naming them in the menu avoids keeping a second record of where each box was drawn,
+      and makes a 4x2 group renamable without hitting a small box exactly.
+    - Renaming one button fills in the rest from what they already read, because the wire format
+      sends a parameter's names as a SET — send only the one and the instrument is told an 8-button
+      group has one caption. send_set_param_label() now writes every label of every named parameter;
+      it only ever wrote label 0, which nothing had needed until now.
+    - Sw8-1's captions were sw8to1SelStrMap ("Lo, 64', 32'...", organ footages from somewhere else)
+      and are now In 1..In 8 like its five siblings.
+    - The group no longer takes name 0 as its own label; that name is button 0's caption and was
+      being drawn twice.
+  SIZING, settled 2026-08-22 after CT found two faults with the first version:
+    - FIXED WIDTH, not fitted to the current captions. It measured the widest caption it was showing,
+      so the group changed size — and its click regions moved — the moment a button was renamed, and
+      changed back if the new name was shorter. It is now measured against RADIO_WIDEST_CAPTION, seven
+      of the widest glyph, that being the most a name can hold (manual: 7 characters, because of the
+      synth's assignable displays).
+    - THE SECOND ROW OVERLAPPED THE FIRST on 4x2 groups. draw_button() ADDS DRAW_BUTTON_MARGIN to the
+      rect it is handed, so a cell of exactly textHeight drew a button four points taller than its own
+      row. The cell now carries the margin and the draw hands over the cell minus it. Note that the
+      margin cannot be named from this file — the constant lives in synthlibDefs.h's NON-G2_EDIT
+      branch, so draw_button() sees it and we do not; draw_button_bounds() with a zero-sized probe is
+      the exposed way to ask.
+    - SEVEN WIDE GLYPHS ACROSS FOUR COLUMNS DOES NOT FIT A MODULE, so the cell is capped at the width
+      remaining on the face (from the row's own x in the table, which is why these rows must stay
+      left-anchored) and a caption too wide for its cell is truncated as it is drawn. That keeps the
+      group always-fitting and never-moving, at the cost of clipping a genuinely long name in a
+      four-column group. SETTLED: CT chose the widest glyph plus clipping over dropping back to a
+      narrower reference character that would have fitted without a cap — stable geometry first, and
+      a clipped name is legible enough to identify while a group that moves under the cursor is not.
+  VERIFIED: renders correctly against a real patch (SwTest.pch2, whose Sw1-2 already carries the
+  per-button names "Box1"/"Box2" — which also proves the multi-label parse), selected button lit
+  blue, no duplicate label.
+  VERIFIED BY CLICK 2026-08-22, once the machine was logged in again: clicking either box selects it
+  (value 1 -> 0 -> 1), right-click offers Rename "Box1" / Rename "Box2", the box being renamed edits
+  in place with a caret, and Return commits — the second button now reads "Right", stays selected,
+  and the group re-sizes to the wider caption while button 0 keeps its own name. That last part is
+  the whole point of the type: two names on ONE parameter, which nothing in the app had ever stored.
+  DRIVING THE GUI FOUND TWO REAL BUGS THAT READING IT DID NOT:
+    - THE CLICK REGION WAS REGISTERED IN THE WRONG COORDINATE SPACE. draw_button() returns its rect
+      AFTER scale_scroll_adjust_rectangle(), which is the space the click registry works in; the
+      renderer was returning a rect it built itself in unadjusted module coordinates. The buttons
+      drew in the right place and no click could reach them at any zoom or scroll position. The
+      renderer now returns the union of the rects the buttons actually drew at.
+    - THE RELEASE HANDLER ASKED FOR A CAPTURE THAT WAS ALREADY GONE. dispatch_click_region() clears
+      sCaptureActive BEFORE calling a release handler (deliberately — a handler may re-enter
+      dispatch), so click_region_capture_rect() returned false and left the group rect zeroed. Taken
+      at press now. Found by reading, before the click test could run.
+  FOR THE NEXT GUI TEST, two things cost time here: the app must be FRONTMOST or clicks land on
+  whatever window is above it, and `cliclick kp:return` does not deliver a key GLFW recognises —
+  `osascript -e 'tell application "System Events" to keystroke return'` does. Backspace and typing
+  through cliclick are fine.
+  CTRL OFFSET BOX DONE 2026-08-22. It is not a parameter and could not go in paramLocationList, where
+  every row consumes a parameter index, so it has its own table: displayLocationList, in the manner
+  of ledLocationList, with a tDisplayType saying what the box is DERIVED from. Ten entries — the six
+  Channel Select switches plus SwOnOffM/SwOnOffT/Sw1-2M/Sw2-1M, all of which have a Ctrl output. Each
+  face puts that output at {3, -3}, so the box sits at {16, -3} on all ten, clear of the connector's
+  own label. It registers no click region: it is a readout, and a dead target there would swallow
+  right-clicks meant for the module.
+  The value is calculated, not tabulated — selection * 4, per the manual, which is the same rule for
+  a two-way switch as an eight-way one. The box is sized for "28", the largest value any Switch can
+  show, so it does not change width as the selection moves.
+  VERIFIED: Sw1-2 reads 4 with Out 2 selected and 0 with Out 1 selected, tracking the click. An added
+  Sw8-1 lays its eight buttons out 4x2 (In 1..In 4 over In 5..In 8) with In 8 lit at parameter 7.
+
+  LAYOUT DONE 2026-08-22. The six rows carried the positions they had as a single menu button, and a
+  grid is wider and, for the eight-way ones, twice as tall. All six faces were rendered and adjusted
+  by eye until nothing collides: Sw1-4's grid moved off its output row into the empty band above it,
+  Sw8-1's off its input connectors to the top of the face, and Sw2-1's off its output — that last one
+  I had wrongly called fine from a smaller screenshot, and it needed two passes because the first
+  position clipped the title bar. Sw4-1 and Sw1-8 were already clear, but their Ctrl offset boxes
+  clipped a connector, so those two moved up a row. Sw1-2 needed nothing.
+  Mapping positions across from the reference does NOT work here and was tried first: our faces are
+  hand-laid approximations, not proportional copies, so the two coordinate systems do not agree even
+  after fitting a scale to them. Rendering and looking is the method.
 Add an open recent for patches from bank?
 Got a: D parse_command_response() Got unknown sub-command 0x4d - must implement!!! That's SUB_RESPONSE_PARAM_LIST. We had that implemented at some point in the past, but removed it. Maybe needs case and call to parse_param_list() adding to parse_command_response()? Assume it's unsolicited. Have attempted a fix, but not seen it again. Check my fix as mentioned.
   REVIEWED 2026-08-21 — the CASE is right, the OFFSET is unknowable from here, so it now tests before
@@ -128,12 +427,128 @@ Gate modes aren't saving. 2nd mode string is wrong as per above. Mode count for 
   the patch from the G2, and see which of the two comes back.
 Variables should be of lower camel case type, not using underscores. Claude has generated too many with underscores.
 Yellow border for module selection isn't really obvious enough. Border probably needs to be bigger, maybe twice as wide lines?
+The dialogue asking what to do on G2 reconnection doesn't seem to always appear. Worth checking.
+  A LIKELY CAUSE FOUND 2026-08-22, not yet confirmed against the symptom. The dialog is raised only
+  when device_sync_drain_offline_edits() finds commands still sitting in the queue at reconnect, and
+  it counts a slot as dirty only for commands command_changes_patch() returns true for. That list
+  does NOT include eMsgCmdWritePatch — but SIX places send it: undo.c, menus.c, paramOverview.c,
+  mousePanels.c, mouseHandle.c (patch notes) and graphics.c. It is how a whole patch is pushed to the
+  instrument, and per the bank/bulk note further down it is deliberately how BULK edits go, as one
+  message rather than a burst. So a bulk edit, a mutation, a patch-adjuster sweep, an undo of one, or
+  a patch-notes edit made while the G2 is away leaves no divergence record and the dialog stays
+  silent — while a single knob turn raises it. That would read exactly as "sometimes".
+  The exclusion looks like it was meant for whole-FILE operations (the comment above the function
+  says so); a whole-PATCH push is not one of those.
+  Worth checking at the same time: the record only survives because nothing consumes the queue while
+  offline. Any path that drains it during the disconnected period would lose the evidence too.
+
+DOES THE INVERT MODULE'S LED ACTUALLY DO ANYTHING? YES — and steady is usually CORRECT.
+  Manual, "Common Logic module parameters": "The LED shows the state of the output signal, on a logic
+  HIGH the LED lights up and on a logic LOW the LED is dimmed." Invert holds TWO independent logic
+  inverters with an LED each, and "the output is always the inverse of the input". An unpatched logic
+  input reads LOW, so the output is HIGH and the LED sits LIT and motionless — which is exactly what
+  a patch that does not drive it will show, and is not a fault. It matches what the instrument showed
+  on 2026-08-21: both Invert LEDs steady green while the Gate next to it (an AND with nothing driving
+  it, so LOW) was dark. Drive the input and the LED follows it.
+  ONE COSMETIC DIFFERENCE: the manual says a logic LOW is DIMMED, where we draw it fully black.
+  LedGroups.pch2 now drives Invert channel 1 from the same LFO that clocks the counter, so that LED
+  blinks in antiphase with the LFO's own — a second known-good signal for the alignment check.
+
+LED STREAM ALIGNMENT — 7 MODULES WERE EATING OTHER MODULES' SLOTS. Fixed 2026-08-22.
+  THE RULE, from the original editor: a module takes ONE 2-bit value out of the 0x39 stream PER
+  SINGLE-LED GROUP — not one per LED. Where a group holds several LEDs it is served by the OTHER
+  stream (0x3a) as a single value whose BITS are the LEDs. AddBlinkModule() pushes a module once per
+  group and sorts groups into the two lists; GetLedGroupCnt() counts distinct groups;
+  IsMutliLedGroup() calls a group multi if it holds more than one view (a meter counts as multi on
+  its own, which is why a lone MiniVU still takes a 0x3a slot).
+  WE COUNTED LEDS, NOT GROUPS. Comparing every module against the reference, exactly seven disagree,
+  all the same way — 8Counter, ADConv, BinCounter, Mux1-8, Mux8-1 and Mux8-1X took EIGHT 2-bit slots
+  each where they should take none, and FlipFlop took two. Every LED after one of those in the stream
+  was reading someone else's slot. All 202 other modules already agreed.
+  THAT IS WHY LEDS "MOSTLY WORK" (CT): a patch containing none of the seven is unaffected. Counting
+  the 2-bit demand of each test patch, ten of the twelve are identical before and after; LogicMidi
+  goes from 32 slots to 6 and SwitchSeqNote from 32 to 8. Those two are the patches with counters and
+  muxes in them.
+  THE FIX: a new ledTypeMultiBit marks those 50 rows; module_led_count() now counts ledTypeYes only
+  (it is the 0x39 demand) and module_multibit_led_count() reports the other kind;
+  parse_volume_indicator() consumes the group's one 16-bit value and spreads its bits across the
+  LEDs. Six of the seven previously carried volumeTypeSequencer purely to consume that entry — that
+  is now the LED group's own doing, and their volumeType is None, which is what they are.
+  NOT CONFIRMED ON HARDWARE. The instrument was connected and the patch loaded, but its LEDs sat
+  static even when driven with a note, so there was no moving signal to compare against. The change
+  is arithmetic that follows from the reference, and it cannot affect a patch without one of the
+  seven module types. ALSO A READING, not a certainty: the multi value's top two bits (0x3000) are
+  what the reference tests before spreading it a bit at a time, so we do the same and show nothing
+  when they are absent — if a counter stays dark on real hardware, that test is the thing to revisit.
+
+  TO CHECK IT BY HAND, load PatchTestFiles/LedGroups.pch2 (built for this, 4 modules): an LfoA at
+  index 1 clocks an 8Counter at index 2, then an Invert at 3 and a SLOW LfoA at 4 sit AFTER the
+  counter in the stream. Stream order is VA by ascending index, so 1 is upstream of the counter and
+  3 and 4 are downstream — which is the whole point of the arrangement.
+    - RIGHT: the counter's eight LEDs run in binary at the clock rate, the LfoA at index 4 blinks
+      slowly at ITS own rate (it is set to 40 against index 1's 64), and the Invert's first LED
+      blinks IN ANTIPHASE with the LfoA at index 1 (the same LFO drives both, and an inverter's
+      output is the inverse of its input). Its second LED stays lit — that channel has nothing
+      patched, so its input is LOW and its output is therefore HIGH.
+    - STILL MISALIGNED: index 4's LED flickers in time with the COUNTER instead of its own rate —
+      it would be reading one of the counter's slots.
+    - COUNTER DARK but the other two right: the alignment is fixed and it is the 0x3000 test in
+      parse_volume_indicator() that is wrong, i.e. the multi value is not flagged the way the
+      reference's bit-spread branch expects.
+  A REGRESSION CAUGHT WHILE BUILDING THAT PATCH, worth keeping because it is the same confusion in
+  the other direction: the render loop was bounded by module_led_count(), which after this change
+  answers a WIRE question (how many 2-bit slots), so an 8Counter drew ONE led instead of eight. The
+  loop now uses module_led_row_count(), which answers the DRAWING question. The two were the same
+  number until multi-bit groups were split out.
 
 Requests / bugs from users:
 Replace with similar module mechanism as per OG editor?Rename to something better
 Spacing on modules improved (might be restricted)
 Module palette drag selection
 2nd screen pixelised
+
+Reported 2026-08-22 — none critical, none blocking use, all usability. Kept as sent; the notes are
+only where something is already answered or already half-built.
+
+Not possible to reroute patch cables by pressing ctrl-key while dragging the patch cable to new
+connection input/output
+  DONE 2026-08-22 — see the Ctrl-click re-route item at the top. Same gesture the user asks for. Note
+  the remaining gap: a connector carrying SEVERAL cables still moves only one of them, and the agreed
+  behaviour (move all, move what fits on an input) is specified but not yet built.
+
+Adjustable scrolling sensitivity needed in synth settings. Now scrolling is far too fast for my
+taste. Same with the zoom.
+  The rates are compile-time constants today — WHEEL_SCROLL_STEP and the DRAG_SCROLL_* set in defs.h,
+  which have comments explaining what each is in and why. Making them preferences is mostly plumbing
+  through prefs plus a settings row; nothing about them is load-bearing.
+
+Zoom keyboard shortcuts don't follow the + and - keys related to chosen keyboard layout, but fixed
+keys next to backspace. ( E.g. "+/?" and "´/`" on FI/SWE layout)
+
+On the bottom of canvas, you can place new modules on top of the existing ones as the editor cannot
+move the already existing modules downwards.
+  create_module_at() ends in shift_modules_down(), so it DOES push modules down — the report is that
+  it cannot at the bottom, i.e. the canvas does not grow to make room. Worth checking whether the
+  limit is the shift refusing to run out of rows or the canvas extent being fixed.
+
+No edit menu (Undo, Redo, Cut, Copy, Paste, Delete, Paste params, Select all). Just the de facto menu
+in applications.
+  Every one of those actions already exists — Undo/Redo have topbar buttons, and Cut/Copy/Paste/
+  Delete/Paste Params/Select All are all on the module right-click menu. This is about putting them
+  where people look for them, in the menu bar, not about writing them.
+
+Not possible to adjust values by keyboard arrow keys like in the original editor. This just comes
+from the muscle memory,
+
+Module knobs and sliders don't have the "nudge arrows" to allow adjusting the parameter values step
+by step with mouse/touchpad
+  THE REFERENCE BACKS THIS ONE UP, and it pairs with the arrow-keys request above. The manual, on
+  putting a parameter in focus: "An increment and decrement button appears below the knob or slider
+  parameter as you move the cursor over it, and the current setting of the parameter displays briefly
+  in a yellow hintbox." The original's own module faces carry 75 ButtonIncDec controls, so the
+  positions are recoverable from the resource file the same way the Channel Select layouts were.
+
+Colour of red and orange cables is too close to each other. Just a minor accessibility issue.
 
 
 Purged 2026-07-28: fully-closed items removed. Anything still listed is either open work or

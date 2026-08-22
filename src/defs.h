@@ -73,31 +73,47 @@
 #define ENABLE_MOUSE_CROSSHAIR
 #endif
 
-#define PATCH_FILE_SIZE                      (10 * 1024 * 1024)
-#define PERF_FILE_SIZE                       (40 * 1024 * 1024)
-#define TARGET_FRAME_BUFF_WIDTH              (2560)
-#define TARGET_FRAME_BUFF_HEIGHT             (1440)
+#define PATCH_FILE_SIZE              (10 * 1024 * 1024)
+#define PERF_FILE_SIZE               (40 * 1024 * 1024)
+#define TARGET_FRAME_BUFF_WIDTH      (2560)
+#define TARGET_FRAME_BUFF_HEIGHT     (1440)
 //#define GLOBAL_GUI_SCALE                     (2)  // Should be related to window size
 
-#define WINDOW_TITLE                         "G2 Editor"
+#define WINDOW_TITLE                 "G2 Editor"
 
-#define NUM_VARIATIONS_USB                   (10) // 10 variations per patch, but only fist 8 presented on the GUI
-#define NUM_VARIATIONS                       (9)  // One less variation for file access or without the USB extra = 9
-#define VARIATION_INIT                       (8)
-#define NUM_MORPHS                           (8)  // Not sure if we can go higher with this, so remember to check
-#define MAX_PARAMS_PER_MODULE                (38)
-#define MAX_CONNECTORS_PER_MODULE            (10)
-#define MAX_SLOTS                            (4)
-#define MAX_NUM_MODES                        (2)
-#define MAX_NUM_PARAMETERS                   (128)
-#define MAX_NUM_LABELS                       (32)
-#define MAX_NUM_CONNECTORS                   (13)
-#define MAX_NUM_KNOBS                        (120)                        // G2 always has exactly 120 knob slots
-#define MAX_NUM_CONTROLLERS                  (128)
-#define MAX_NUM_MODULES                      (128)
-#define MAX_NUM_CABLES                       (512)
-#define MAX_LEDS_PER_MODULE                  (8)
-#define LED_STREAM_SIZE                      (40)                         // 2-bit LEDs the G2 reports per slot, VA and FX together — see parse_led_data()
+#define NUM_VARIATIONS_USB           (10)         // 10 variations per patch, but only fist 8 presented on the GUI
+#define NUM_VARIATIONS               (9)          // One less variation for file access or without the USB extra = 9
+#define VARIATION_INIT               (8)
+#define NUM_MORPHS                   (8)          // Not sure if we can go higher with this, so remember to check
+#define MAX_PARAMS_PER_MODULE        (38)
+#define MAX_CONNECTORS_PER_MODULE    (10)
+#define MAX_SLOTS                    (4)
+#define MAX_NUM_MODES                (2)
+#define MAX_NUM_PARAMETERS           (128)
+#define MAX_NUM_LABELS               (32)
+#define MAX_NUM_CONNECTORS           (13)
+#define MAX_NUM_KNOBS                (120)                                // G2 always has exactly 120 knob slots
+#define MAX_NUM_CONTROLLERS          (128)
+#define MAX_NUM_MODULES              (128)
+#define MAX_NUM_CABLES               (512)
+// Cables on ONE connector, for the Ctrl-drag move that takes them all at once. An output fans out
+// to a handful in practice; this is a sanity bound on a stack array, not a limit the G2 imposes.
+#define MAX_CABLES_PER_CONNECTOR     (32)
+#define MAX_LEDS_PER_MODULE          (8)
+#define RADIO_MAX_COLUMNS            (4)                                  // Channel Select buttons wrap after four — see radio_columns()
+// The lit Channel Select button. Defined here rather than in SynthLib's palette because it is a
+// G2 module-face colour, not a shared chrome one — the manual calls the selected channel "blue".
+#define RGB_BLUE_SELECTED            {0.35, 0.50, 0.90}
+// Seven characters, PROTOCOL_PARAM_NAME_SIZE, the most a Channel Select name can be. Every group is
+// measured against this so it never changes size as its buttons are renamed.
+// How much of a module's width a Channel Select group may occupy, measured from the group's own left
+// edge. Leaves a margin at the right so a full-width group does not touch the border.
+#define RADIO_FACE_WIDTH_PERCENT             (94.0)
+#define RADIO_WIDEST_CAPTION                 "WWWWWWW"   // W, not X: the widest glyph the font has
+#define RADIO_BUTTON_PADDING                 (4.0)       // Breathing room either side of a Channel Select caption
+#define SWITCH_CTRL_STEP                     (4)         // Ctrl output units per Switch state — manual p221
+#define DISPLAY_BOX_PADDING                  (6.0)       // Breathing room either side of a readout's digits
+#define LED_STREAM_SIZE                      (40)        // 2-bit LEDs the G2 reports per slot, VA and FX together — see parse_led_data()
 #define NUM_PARAM_PAGES                      (5)
 #define NUM_BANKS_PER_PAGE                   (3)
 #define NUM_KNOBS_PER_BANK                   (8)
@@ -327,18 +343,32 @@
 // topbar, which is why every topbar element's Y coordinate has this added
 // in (topbarControls.def's X macro, and the handful of literal-coordinate
 // exceptions in graphics.cpp's render_top_bar()).
-#define MENU_BAR_HEIGHT        (24.0)
+#define MENU_BAR_HEIGHT    (24.0)
 
-#define CONNECTOR_SIZE         (5)
+#define CONNECTOR_SIZE     (5)
+// Grown by this much on every side for HIT TESTING only — the circle is drawn at CONNECTOR_SIZE and
+// is not touched. A connector's click target used to be exactly the circle, so it shrank with the
+// zoom and nothing else: 17.5 pt across at 100%, but 8.8 at 50% and 4.4 at 25% — and zooming out is
+// exactly what you do for cable work. A CONSTANT in screen points (rather than a scaled fraction) is
+// deliberate: it is worth +46% of target at 25% zoom where it is needed and only +11% at 100% where
+// it is not.
+//
+// ONE POINT IS THE MOST IT CAN BE. The tightest layout in the tables is the Gate's stacked input
+// pairs, 7 units apart, which leaves 7 pt of clear space between their edges at 100% and 1.8 pt at
+// 25%. At one point a side that stays clear everywhere except 25% zoom, where the two overlap by
+// 0.2 pt — under half a retina pixel. Any more and neighbouring connectors would genuinely fight,
+// and the click registry resolves an overlap by taking the most recently registered, so one of a
+// stacked pair would become unreachable.
+#define CONNECTOR_HIT_PADDING    (1.0)
 
-#define MAX_ROWS               (127)
-#define MAX_COLUMNS            (127)
-#define MAX_ROWS_MODULE        (12)               // Operator type is 12 rows - largest we have
+#define MAX_ROWS                 (127)
+#define MAX_COLUMNS              (127)
+#define MAX_ROWS_MODULE          (12)             // Operator type is 12 rows - largest we have
 
-#define LONGEST_PATCH_NAME     "XXXXXXXXXXXXXXXX"
-#define LONGEST_MODULE_NAME    "XXXXXXXXXXXXXXXX"
+#define LONGEST_PATCH_NAME       "XXXXXXXXXXXXXXXX"
+#define LONGEST_MODULE_NAME      "XXXXXXXXXXXXXXXX"
 
-#define NULL_RECTANGLE         {{0.0, 0.0}, {0.0, 0.0}}
+#define NULL_RECTANGLE           {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
 // dst and src are each evaluated EXACTLY ONCE, which they were not until 2026-08-20. The macro used

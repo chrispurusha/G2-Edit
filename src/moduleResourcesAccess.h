@@ -31,6 +31,7 @@ extern const tRgb               gModuleColourMap[];
 extern const tRgb               connectorColourMap[];
 extern const tModuleProperties  gModuleProperties[];
 extern const tParamLocation     paramLocationList[];
+extern const tDisplayLocation   displayLocationList[];
 extern const tModeLocation      modeLocationList[];
 extern const tConnectorLocation connectorLocationList[];
 extern const tVolumeLocation    volumeLocationList[];
@@ -61,6 +62,7 @@ uint32_t array_size_connector_location_list(void);
 uint32_t array_size_mode_location_list(void);
 uint32_t array_size_volume_location_list(void);
 uint32_t array_size_led_location_list(void);
+uint32_t array_size_display_location_list(void);
 uint32_t array_size_str_map(const char ** strMap);
 uint32_t module_param_count(tModuleType moduleType);
 
@@ -75,7 +77,18 @@ void populate_module_connectors(tModule * module);
 uint32_t module_mode_count(tModuleType moduleType);
 uint32_t module_volume_count(tModuleType moduleType);
 uint32_t module_led_count(tModuleType moduleType);
+uint32_t module_multibit_led_count(tModuleType moduleType);
+uint32_t module_led_row_count(tModuleType moduleType);
 bool default_mutation_lock(tModuleType moduleType);
+
+// Channel Select radio groups. The grid is DERIVED from the button count rather than tabulated,
+// because the shape the module faces use is exactly "up to four across, then wrap": 2 buttons sit
+// 2x1, 4 sit 4x1, and 8 sit 4x2 — a module face is not wide enough for a row of eight.
+uint32_t radio_columns(uint32_t buttonCount);
+uint32_t radio_rows(uint32_t buttonCount);
+// What button `buttonIndex` is captioned: the patch's own name for it if one has been set, else the
+// default from the resource table's string map. Never NULL.
+const char * radio_caption(tModule * module, uint32_t paramIndex, uint32_t buttonIndex, const char ** strMap);
 void init_module_resource_cache(void);
 
 #endif // __MODULE_RESOURCE_ACCESS_H__

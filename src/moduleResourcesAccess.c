@@ -91,6 +91,10 @@ uint32_t array_size_led_location_list(void) {
     return ARRAY_SIZE(ledLocationList);
 }
 
+uint32_t array_size_display_location_list(void) {
+    return ARRAY_SIZE(displayLocationList);
+}
+
 uint32_t array_size_str_map(const char ** strMap) {
     uint32_t i = 0;
 
@@ -221,6 +225,33 @@ void populate_module_connectors(tModule * module) {
     }
 }
 
+uint32_t radio_columns(uint32_t buttonCount) {
+    return (buttonCount <= RADIO_MAX_COLUMNS) ? buttonCount : RADIO_MAX_COLUMNS;
+}
+
+uint32_t radio_rows(uint32_t buttonCount) {
+    uint32_t columns = radio_columns(buttonCount);
+
+    if (columns == 0) {
+        return 0;
+    }
+    return (buttonCount + (columns - 1)) / columns;
+}
+
+const char * radio_caption(tModule * module, uint32_t paramIndex, uint32_t buttonIndex, const char ** strMap) {
+    static const char * fallback = "?";
+
+    if (  (module != NULL) && (paramIndex < MAX_NUM_PARAMETERS) && (buttonIndex < MAX_NUM_LABELS)
+       && module->paramNameSet[paramIndex][buttonIndex] && (module->paramName[paramIndex][buttonIndex][0] != '\0')) {
+        return module->paramName[paramIndex][buttonIndex];
+    }
+
+    if ((strMap != NULL) && (buttonIndex < array_size_str_map(strMap))) {
+        return strMap[buttonIndex];
+    }
+    return fallback;
+}
+
 uint32_t module_mode_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};
@@ -270,7 +301,12 @@ uint32_t module_volume_count(tModuleType moduleType) {
 }
 
 // Called from both threads — caches are pre-warmed by init_module_resource_cache() before USB thread starts.
-uint32_t module_led_count(tModuleType moduleType) {
+// How many LED rows the module HAS, of every kind. This is a DRAWING question — how many boxes go on
+// the face — and it is deliberately not the same as module_led_count(), which answers a wire
+// question: how many 2-bit values the module takes out of the 0x39 stream. They were the same thing
+// until multi-bit groups were separated out, and the renderer bounding its loop with the wire count
+// drew one LED where an 8Counter has eight.
+uint32_t module_led_row_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};
 
@@ -278,7 +314,54 @@ uint32_t module_led_count(tModuleType moduleType) {
         uint32_t count = 0;
 
         for (int i = 0; i < array_size_led_location_list(); i++) {
-            if (ledLocationList[i].moduleType == moduleType && ledLocationList[i].ledType != ledTypePark) {
+            if (ledLocationList[i].moduleType == moduleType) {
+                count++;
+            }
+        }
+
+        cache[moduleType]      = count;
+        validCache[moduleType] = true;
+    }
+    return cache[moduleType];
+}
+
+// How many LEDs a module drives from ONE multi-stream value, or 0 if it has no such group. The
+// multi stream (0x3a) carries a 16-bit value per group; where the group holds several LEDs, the bits
+// of that value are the LEDs — see CPanel::Blink in the reference, which spreads it a bit at a time.
+uint32_t module_multibit_led_count(tModuleType moduleType) {
+    static uint32_t cache[moduleTypeMax]      = {0};
+    static bool     validCache[moduleTypeMax] = {0};
+
+    if (validCache[moduleType] == false) {
+        uint32_t count = 0;
+
+        for (int i = 0; i < array_size_led_location_list(); i++) {
+            if (ledLocationList[i].moduleType == moduleType && ledLocationList[i].ledType == ledTypeMultiBit) {
+                count++;
+            }
+        }
+
+        cache[moduleType]      = count;
+        validCache[moduleType] = true;
+    }
+    return cache[moduleType];
+}
+
+uint32_t module_led_count(tModuleType moduleType) {
+    static uint32_t cache[moduleTypeMax]      = {0};
+    static bool     validCache[moduleTypeMax] = {0};
+
+    if (validCache[moduleType] == false) {
+        uint32_t count = 0;
+
+        // ONLY ledTypeYes. This is the count of 2-bit values the module takes out of the 0x39 LED
+        // stream, and that is one per SINGLE-LED GROUP — not one per LED. A module whose LEDs form a
+        // multi-bit group (8Counter and friends) takes ONE value out of the multi stream instead and
+        // none out of this one; counting its eight here consumed eight slots that belong to the
+        // modules after it, which is why LEDs were right in most patches and wrong in any patch
+        // containing one of those. ledTypePark takes none either.
+        for (int i = 0; i < array_size_led_location_list(); i++) {
+            if (ledLocationList[i].moduleType == moduleType && ledLocationList[i].ledType == ledTypeYes) {
                 count++;
             }
         }

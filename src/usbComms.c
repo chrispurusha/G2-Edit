@@ -413,6 +413,27 @@ static void parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bit
                     module->volume.value[i] = read_bit_stream(buff, bitPos, 8);
                     read_bit_stream(buff, bitPos, 8);  // hi byte: unused
                 }
+
+                // A MULTI-BIT LED GROUP TAKES ONE ENTRY OUT OF THIS STREAM, not one 2-bit value per
+                // LED out of the 0x39 one. 8Counter, BinCounter, ADConv, the three Mux modules and
+                // FlipFlop are all of this shape: several LEDs driven by a single value whose BITS
+                // are the LEDs. Consuming them from the other stream cost the modules after them
+                // eight slots each, which is why LEDs looked right until a patch contained one.
+                uint32_t multiBitLeds = module_multibit_led_count(module->type);
+
+                if (multiBitLeds > 0) {
+                    uint32_t value = read_bit_stream(buff, bitPos, 8);
+
+                    value |= read_bit_stream(buff, bitPos, 8) << 8;
+
+                    // The two top flag bits say the value IS a bit set; the reference only spreads it
+                    // a bit at a time when both are present (and only for groups under twelve LEDs,
+                    // which all of these are). Anything else is some other encoding we have not had
+                    // to decode, so show nothing rather than show nonsense.
+                    for (uint32_t l = 0; (l < multiBitLeds) && (l < MAX_LEDS_PER_MODULE); l++) {
+                        module->led.value[l] = ((value & 0x3000) == 0x3000) ? ((value >> l) & 1) : 0;
+                    }
+                }
             }
         }
     }
@@ -2746,6 +2767,17 @@ static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
+// How many names this parameter has. paramNumLabels is what the patch declared, but a label set by
+// hand before the count was maintained would read 0 — so a set name always counts for at least one.
+static uint32_t param_label_count(tModule * module, uint32_t paramIndex) {
+    uint32_t labels = module->paramNumLabels[paramIndex];
+
+    if (labels == 0) {
+        labels = 1;
+    }
+    return (labels < MAX_NUM_LABELS) ? labels : MAX_NUM_LABELS;
+}
+
 static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t paramIndex, const char * name) {
     uint8_t   buff[SEND_MESSAGE_SIZE]          = {0};
     uint32_t  bitPos                           = BYTE_TO_BIT(COMMAND_OFFSET);
@@ -2763,10 +2795,16 @@ static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t pa
         LOG_DEBUG("SET PARAM LABEL get_module FAILED\n");
         return EXIT_FAILURE;
     }
+    // A PARAMETER MAY CARRY MORE THAN ONE NAME. It always could — the wire format is a COUNT of
+    // 7-byte names per parameter, and write_param_names() has always written them all — but nothing
+    // used more than the first until Channel Select radio buttons, which are one parameter with one
+    // name per button. Sending only name 0 told the instrument an 8-button group had one caption.
+    uint32_t  sectionBytes                     = 0;
 
     for (pi = 0; pi < MAX_NUM_PARAMETERS; pi++) {
         if (module->paramNameSet[pi][0]) {
             labelIndices[labelCount++] = pi;
+            sectionBytes              += 3 + (param_label_count(module, pi) * PROTOCOL_PARAM_NAME_SIZE);
         }
     }
 
@@ -2776,16 +2814,21 @@ static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t pa
     usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_PARAM_LABEL);
     write_bit_stream(buff, &bitPos, 8, moduleKey.location);
     write_bit_stream(buff, &bitPos, 8, moduleKey.index);
-    write_bit_stream(buff, &bitPos, 8, (uint8_t)(labelCount * (3 + PROTOCOL_PARAM_NAME_SIZE)));
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)sectionBytes);
 
     for (uint32_t j = 0; j < labelCount; j++) {
-        pi = labelIndices[j];
-        write_bit_stream(buff, &bitPos, 8, 1);                             // isString
-        write_bit_stream(buff, &bitPos, 8, PROTOCOL_PARAM_NAME_SIZE + 1);  // paramLength
-        write_bit_stream(buff, &bitPos, 8, (uint8_t)pi);                   // paramIndex
+        uint32_t labels = 0;
 
-        for (i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
-            write_bit_stream(buff, &bitPos, 8, (uint8_t)module->paramName[pi][0][i]);
+        pi     = labelIndices[j];
+        labels = param_label_count(module, pi);
+        write_bit_stream(buff, &bitPos, 8, 1);                                          // isString
+        write_bit_stream(buff, &bitPos, 8, 1 + (labels * PROTOCOL_PARAM_NAME_SIZE));    // paramLength
+        write_bit_stream(buff, &bitPos, 8, (uint8_t)pi);                                // paramIndex
+
+        for (uint32_t label = 0; label < labels; label++) {
+            for (i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
+                write_bit_stream(buff, &bitPos, 8, (uint8_t)module->paramName[pi][label][i]);
+            }
         }
     }
 

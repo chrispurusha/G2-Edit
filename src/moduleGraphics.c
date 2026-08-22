@@ -77,6 +77,11 @@ typedef struct {
 
 static tParamClickCtx     sParamClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 
+// Where the Channel Select group being pressed was drawn. One press is in flight at a time, so one
+// rectangle is enough — and it is only meaningful between this press and its own release, which is
+// exactly the window the click registry's capture covers.
+static tRectangle         sRadioPressRect;
+
 typedef struct {
     eCanvasWidgetKind kind;
     tModuleKey        key;
@@ -128,7 +133,8 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
 
         if (  paramType != paramTypeToggle && paramType != paramTypeMenu
            && paramType != paramTypeBypass && paramType != paramTypeEnable
-           && paramType != paramTypePush && paramType != paramTypeCustomData) {
+           && paramType != paramTypePush && paramType != paramTypeCustomData
+           && paramType != paramTypeRadioEdit) {
             gParamDragging.moduleKey       = module->key;
             gParamDragging.type3           = paramType3Param;
             gParamDragging.param           = ctx->paramIndex;
@@ -144,6 +150,16 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             if ((synthlib_dial_mode() != eDialModeRotary) || (paramType == paramTypeSlider)) {
                 canvas_drag_begin();
             }
+        } else if (paramType == paramTypeRadioEdit) {
+            // THE GROUP'S RECTANGLE, TAKEN NOW. click_region_capture_rect() answers only while a
+            // press is in flight — dispatch_click_region() clears the capture BEFORE it calls the
+            // release handler, deliberately, so a handler that re-enters dispatch cannot find a
+            // stale one. Asking for it on release returns false and leaves the rect zeroed, and the
+            // hit test then finds no button under any coordinate at all.
+            sRadioPressRect = (tRectangle){
+                0
+            };
+            click_region_capture_rect(&sRadioPressRect);
         } else if (paramType == paramTypePush) {
             // A push is MOMENTARY, and it fires on the way DOWN — the mouse button being held is what
             // gives the pulse its width. This used to be the other way round: 0 on press and 1 on
@@ -175,6 +191,22 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
     } else if (phase == eClickRelease) {
         if ((paramType == paramTypeMenu) || (paramType == paramTypeCustomData)) {
             open_toggle_menu(coord, module->key, ctx->paramIndex, param->paramRef);
+        } else if (paramType == paramTypeRadioEdit) {
+            // Radio: the value IS the button, so there is no cycling — whichever box the cursor is
+            // over becomes the selection. One click region covers the whole group and the button
+            // falls out of the geometry, which keeps the group a single widget everywhere else in
+            // the app (hit tests, knob assignment, the parameter pages) and needs no second table.
+            uint32_t range       = paramLocationList[param->paramRef].range;
+            uint32_t oldParamVal = param->value;
+            int32_t  button      = radio_button_at(sRadioPressRect, range, coord);
+
+            if ((button < 0) || ((uint32_t)button == oldParamVal)) {
+                return;
+            }
+            param->value = (uint32_t)button;
+            send_param_value(slot, module->key, ctx->paramIndex, variation, param->value);
+            undo_push_param_change(module->key, ctx->paramIndex, variation, oldParamVal, param->value);
+            send_param_value_to_links(slot, module->key, ctx->paramIndex, variation, param->value);
         } else if ((paramType == paramTypeToggle) || (paramType == paramTypeBypass) || (paramType == paramTypeEnable)) {
             uint32_t range       = paramLocationList[param->paramRef].range;
             uint32_t oldParamVal = param->value;
@@ -241,6 +273,44 @@ static void connector_click_handler(tCoord coord, eClickPhase phase, void * user
     tConnectorClickCtx * ctx    = (tConnectorClickCtx *)userData;
     tModule *            module = get_module(ctx->key);
 
+    gCableDrag.rerouting = false;
+
+    // CTRL-CLICK PICKS UP THE CABLE THAT IS ALREADY THERE instead of starting a new one, and drags
+    // its FAR end — so the end under the cursor is the one that moves, which is what "pull out the
+    // connector" means. Everything after this point is the ordinary drag: the release either lands
+    // on a connector, and the cable is re-routed, or it does not, and the cable is simply gone.
+    // Manual p65. With no cable on the connector there is nothing to pick up, so it falls through
+    // and draws a new one as an unmodified click would.
+    if (ctrl_modifier_held()) {
+        tConnectorDir dir              = module->connector[ctx->connectorIndex].dir;
+        int           ioCount          = find_io_count_from_index(module, dir, (int)ctx->connectorIndex);
+        tCableKey     key              = {0};
+        uint32_t      otherModuleIndex = 0;
+        uint32_t      otherIoCount     = 0;
+        tConnectorDir otherDir         = connectorDirIn;
+
+        // Finding ONE cable here is only about where to draw the rubber band from — the move itself
+        // takes every cable on this hole (handle_cable_reroute()), which is why what gets recorded is
+        // the hole and not that cable.
+        if (  (ioCount >= 0)
+           && find_cable_at_connector(module->key.slot, module->key.location, module->key.index,
+                                      (uint32_t)ioCount, dir, &key, &otherModuleIndex, &otherIoCount, &otherDir)) {
+            tModule * otherModule = get_module_slot(module->key.slot, module->key.location, otherModuleIndex);
+            int       otherIndex  = (otherModule != NULL) ? find_index_from_io_count(otherModule, otherDir, (int)otherIoCount) : -1;
+
+            if (otherIndex >= 0) {
+                gCableDrag.rerouting          = true;
+                gCableDrag.rerouteModuleIndex = module->key.index;
+                gCableDrag.rerouteIoCount     = (uint32_t)ioCount;
+                gCableDrag.rerouteDir         = dir;
+                gCableDrag.fromModuleKey      = otherModule->key;
+                gCableDrag.fromConnectorIndex = (uint32_t)otherIndex;
+                cable_drag_set_end(coord);
+                gCableDrag.active             = true;
+                return;
+            }
+        }
+    }
     gCableDrag.fromModuleKey      = module->key;
     gCableDrag.fromConnectorIndex = ctx->connectorIndex;
     cable_drag_set_end(coord);   // same placement the motion uses, so the end doesn't jump on the first move
@@ -524,7 +594,10 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
         paramValue = 0;  // If we hit this, the module config needs fixing, but letting it through for now
     }
 
-    if (strlen(module->paramName[paramIndex][0]) > 0) {  // TODO - Work out how labels array works
+    // A renamed parameter is drawn under its new name — EXCEPT a Channel Select group, where name 0
+    // is the first BUTTON's caption, not a name for the group. Taking it as the group label drew
+    // "Box1" both above the group and on the button.
+    if ((strlen(module->paramName[paramIndex][0]) > 0) && (paramLocationList[paramRef].type != paramTypeRadioEdit)) {
         COPY_STRING(label, module->paramName[paramIndex][0]);
     } else if (paramLocationList[paramRef].label != NULL) {
         COPY_STRING(label, paramLocationList[paramRef].label);
@@ -546,6 +619,11 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
             if (render_param_function != NULL) {
                 widgetRect = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
+            break;
+        }
+        case paramTypeRadioEdit:
+        {
+            widgetRect = render_paramType1RadioEdit(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             break;
         }
         case paramTypeBypass:
@@ -881,8 +959,44 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
     }
 }
 
+// A read-only readout — see tDisplayLocation. No click region is registered for it: it is not a
+// control, and giving it one would put a dead target over the module body where a right-click should
+// still reach the module's own menu.
+void render_display_common(tRectangle rectangle, tModule * module, uint32_t displayRef) {
+    uint32_t   slot       = module->key.slot;
+    uint32_t   variation  = gPatchDescr[slot].activeVariation;
+    uint32_t   source     = displayLocationList[displayRef].sourceParam;
+    char       buff[16]   = {0};
+
+    if (source >= MAX_NUM_PARAMETERS) {
+        return;
+    }
+    double     textHeight = (double)STANDARD_BUTTON_TEXT_HEIGHT;
+    tRectangle boxRect    = {{rectangle.coord.x, rectangle.coord.y}, {0.0, textHeight}};
+
+    switch (displayLocationList[displayRef].displayType) {
+        case displayTypeSwitchCtrl:
+        {
+            // Four per step, which is the whole point of the number: it is what the Mux modules
+            // decode back into a channel. Calculated, not tabulated — the rule is the same for a
+            // two-way switch as for an eight-way one, which is exactly why the G2 uses it.
+            snprintf(buff, sizeof(buff), "%u", module->param[variation][source].value * SWITCH_CTRL_STEP);
+            // Sized for the WIDEST value it can ever show rather than the one it happens to be
+            // showing, so the box does not change width as the selection moves. 28 is the largest
+            // any Switch module reaches (button 8 of an eight-way), so two digits covers all ten.
+            boxRect.size.w = get_text_width("28", textHeight, eCache) + DISPLAY_BOX_PADDING;
+            break;
+        }
+
+        default:
+            return;
+    }
+    draw_button(moduleArea, boxRect, buff, (tRgb)RGB_GREY_9);
+}
+
 void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, uint32_t ledIndex) {
     switch (ledLocationList[ledRef].ledType) {
+        case ledTypeMultiBit:  // one bit of a group value rather than a 2-bit value of its own
         case ledTypeYes:
         {
             // Same bound the parser applies, from the other end: the caller's loop counts rows in
@@ -994,6 +1108,15 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
     } else {
         module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, (tRectangle){rectangle.coord, {rectangle.size.w, rectangle.size.h}});
     }
+    // The stored rectangle is the HIT area, not the drawn one — see CONNECTOR_HIT_PADDING. It is the
+    // only thing .rectangle is used for (this registration, handle_cable_connect()'s release target
+    // and the hover test), so padding it here makes all three agree; the cable end itself is drawn
+    // from .coord, which is untouched.
+    module->connector[connectorIndex].rectangle.coord.x                                          -= CONNECTOR_HIT_PADDING;
+    module->connector[connectorIndex].rectangle.coord.y                                          -= CONNECTOR_HIT_PADDING;
+    module->connector[connectorIndex].rectangle.size.w                                           += 2.0 * CONNECTOR_HIT_PADDING;
+    module->connector[connectorIndex].rectangle.size.h                                           += 2.0 * CONNECTOR_HIT_PADDING;
+
     sConnectorClickCtx[module->key.slot][module->key.location][module->key.index][connectorIndex] = (tConnectorClickCtx){
         eCanvasWidgetConnector, module->key, connectorIndex
     };
@@ -1674,6 +1797,16 @@ void render_module_common(tRectangle rectangle, tModule * module) {
         }
     }
 
+    // No index cache for this one, unlike the loops above: displayLocationList has ten entries where
+    // paramLocationList has a thousand, so a scan costs nothing and there is no cache to go stale.
+    for (uint32_t i = 0; i < array_size_display_location_list(); i++) {
+        if (displayLocationList[i].moduleType == module->type) {
+            tRectangle adjusted = adjust_rectangle(rectangle, displayLocationList[i].rectangle, displayLocationList[i].anchor, module);
+
+            render_display_common(adjusted, module, i);
+        }
+    }
+
     for (uint32_t i = module->ledIndexCache; i < array_size_led_location_list(); i++) {
         if (ledLocationList[i].moduleType == module->type) {
             if (module->gotLedIndexCache == false) {
@@ -1684,7 +1817,8 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             adjusted.size.h = adjusted.size.w; // We want this one to be square
             render_led_common(adjusted, module, i, led++);
 
-            if (led >= module_led_count(module->type)) {
+            // Rows, not stream slots — see module_led_row_count().
+            if (led >= module_led_row_count(module->type)) {
                 break;
             }
         }
@@ -1786,8 +1920,13 @@ void render_module(tModule * module) {
 
     render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 180.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
+    // THE MODULE'S INDEX, top right — a development aid, not something a user has any use for, so it
+    // is compiled out of a Release build. The type name above it stays: that one names the module,
+    // which is worth having on a face whose title the user may have renamed.
+#ifdef DEBUG
     snprintf(buff, sizeof(buff), "%u", module->key.index);
     render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + moduleRectangle.size.w - 20.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+#endif
 
     // Mode count — debug only, and the one of these three that says nothing a user would want:
     // the type name and the index both identify the module, this just counts its mode entries.
@@ -1944,6 +2083,19 @@ void render_cable(tCable * cable, double alpha) {
     }
 }
 
+// The cable a Ctrl-drag has picked up is NOT DRAWN while the drag is in flight. It still exists —
+// the delete happens at release, so that the whole re-route is one undo step — but leaving it on
+// screen showed the cable in its old position while the rubber band drew the new one, which reads as
+// though a second cable is being made rather than this one being moved. The manual's "pull out the
+// connector" is what the user should see: the cable leaves its socket and follows the cursor.
+static bool cable_is_being_rerouted(const tCable * cable) {
+    if (!gCableDrag.active || !gCableDrag.rerouting) {
+        return false;
+    }
+    return cable_touches_connector(cable, gCableDrag.rerouteModuleIndex,
+                                   gCableDrag.rerouteIoCount, gCableDrag.rerouteDir);
+}
+
 void render_cables(void) {
     uint32_t slot           = gSlot;
     uint32_t location       = gLocation;
@@ -1959,7 +2111,7 @@ void render_cables(void) {
     for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
         tCable * cable         = get_cable_slot(slot, location, i);
 
-        if (cable == NULL || !cable->active) {
+        if (cable == NULL || !cable->active || cable_is_being_rerouted(cable)) {
             continue;
         }
         bool     colourVisible = gPatchDescr[slot].visible[cable->colour];
@@ -1975,7 +2127,7 @@ void render_cables(void) {
         for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
             tCable * cable         = get_cable_slot(slot, location, i);
 
-            if (cable == NULL || !cable->active) {
+            if (cable == NULL || !cable->active || cable_is_being_rerouted(cable)) {
                 continue;
             }
             bool     colourVisible = gPatchDescr[slot].visible[cable->colour];

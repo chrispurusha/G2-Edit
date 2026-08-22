@@ -256,7 +256,7 @@ const tModuleProperties  gModuleProperties[]  = {
     {"X-Fade",       2, volumeTypeNone,      ledTypeNo },
     {"Mix4-1B",      2, volumeTypeMono,      ledTypeNo },
     {"EnvADSR",      4, volumeTypeNone,      ledTypeYes},
-    {"Mux1-8",       2, volumeTypeSequencer, ledTypeNo },
+    {"Mux1-8",       2, volumeTypeNone,      ledTypeNo },
     {"PartQuant",    2, volumeTypeNone,      ledTypeNo },
     {"ModADSR",      5, volumeTypeNone,      ledTypeNo },
     {"LfoC",         2, volumeTypeNone,      ledTypeNo },
@@ -295,7 +295,7 @@ const tModuleProperties  gModuleProperties[]  = {
     {"Automate",     2, volumeTypeNone,      ledTypeYes},
     {"DrumSynth",    8, volumeTypeNone,      ledTypeNo },
     {"CompLev",      2, volumeTypeNone,      ledTypeYes},
-    {"Mux8-1X",      3, volumeTypeSequencer, ledTypeYes},
+    {"Mux8-1X",      3, volumeTypeNone,      ledTypeYes},
     {"Clip",         2, volumeTypeNone,      ledTypeNo },
     {"Overdrive",    2, volumeTypeNone,      ledTypeNo },
     {"Scratch",      3, volumeTypeNone,      ledTypeNo },
@@ -321,7 +321,7 @@ const tModuleProperties  gModuleProperties[]  = {
     {"ShpStatic",    2, volumeTypeNone,      ledTypeYes},
     {"EnvADR",       3, volumeTypeNone,      ledTypeNo },
     {"WindSw",       2, volumeTypeNone,      ledTypeYes},
-    {"8Counter",     2, volumeTypeSequencer, ledTypeNo },
+    {"8Counter",     2, volumeTypeNone,      ledTypeNo },
     {"FltLP",        2, volumeTypeNone,      ledTypeNo },
     {"Sw1-4",        3, volumeTypeNone,      ledTypeNo },
     {"Flanger",      3, volumeTypeNone,      ledTypeNo },
@@ -359,14 +359,14 @@ const tModuleProperties  gModuleProperties[]  = {
     {"SeqNote",      9, volumeTypeSequencer, ledTypeNo },
     {"Unknown",      0, volumeTypeNone,      ledTypeNo },
     {"Mix4-1C",      4, volumeTypeMono,      ledTypeNo },
-    {"Mux8-1",       2, volumeTypeSequencer, ledTypeNo },
+    {"Mux8-1",       2, volumeTypeNone,      ledTypeNo },
     {"WahWah",       2, volumeTypeNone,      ledTypeNo },
     {"Name",         1, volumeTypeNone,      ledTypeNo },
     {"Fx-In",        2, volumeTypeStereo,    ledTypeYes},
     {"MinMax",       2, volumeTypeNone,      ledTypeNo },
     {"Unknown",      0, volumeTypeNone,      ledTypeNo },
-    {"BinCounter",   2, volumeTypeSequencer, ledTypeNo },
-    {"ADConv",       2, volumeTypeSequencer, ledTypeNo },
+    {"BinCounter",   2, volumeTypeNone,      ledTypeNo },
+    {"ADConv",       2, volumeTypeNone,      ledTypeNo },
     {"DAConv",       2, volumeTypeNone,      ledTypeNo },
     {"Unknown",      0, volumeTypeNone,      ledTypeNo },
     {"FltHP",        2, volumeTypeNone,      ledTypeNo },
@@ -510,7 +510,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscString,  paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                   // 13 OscString Bypass
     // 14 Unknown
     // 15 Sw8-1 *** Needs more resources
-    {moduleTypeSw8to1,     paramTypeMenu,           {{ 10, -14}, { 7,  7}}, anchorBottomLeft,  "Sel",            8,   0, sw8to1SelStrMap,                       NULL          },                      // 15 Sel
+    {moduleTypeSw8to1,     paramTypeRadioEdit,      {{ 30, -30}, { 7,  7}}, anchorBottomLeft,  NULL,             8,   0, in8StrMap,                             NULL          },                     // 15 Sel
     // 16 Unknown
     // 17 ValSw1-2
     {moduleTypeValSw1to2,  paramTypeMenu,           {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                            NULL          },                      // 17 Val
@@ -535,63 +535,63 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeEnvADSR,    paramTypeMenu,           {{  3, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          },                      // 20 Normal/Reset
     // 21 Mux1-8 -- No params
     // 22 PartQuant
-    {moduleTypePartQuant,  paramTypePartials,       {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Range",        128, 127, NULL,                                  NULL          },                     // 22 Range  (bipolar partials -64..+63; default 64 = 0/centre)
+    {moduleTypePartQuant,  paramTypePartials,       {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Range",        128, 127, NULL,                                  NULL          },                  // 22 Range  (bipolar partials -64..+63; default 64 = 0/centre)
     // 23 ModADSR
-    {moduleTypeModADSR,    paramTypeADRTime,        {{ 22, -17}, { 7,  7}}, anchorBottomLeft,  "A",            128,   0, NULL,                                  NULL          },                     // 22 A
-    {moduleTypeModADSR,    paramTypeADRTime,        {{ 37, -17}, { 7,  7}}, anchorBottomLeft,  "D",            128,  54, NULL,                                  NULL          },                     // 22 D
-    {moduleTypeModADSR,    paramTypeUniPol,         {{ 52, -17}, { 7,  7}}, anchorBottomLeft,  "S",            128, 100, NULL,                                  NULL          },                     // 22 S
-    {moduleTypeModADSR,    paramTypeADRTime,        {{ 67, -17}, { 7,  7}}, anchorBottomLeft,  "R",            128,  14, NULL,                                  NULL          },                     // 22 R
-    {moduleTypeModADSR,    paramTypeCommonDial,     {{ 27,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 22 Attack M
-    {moduleTypeModADSR,    paramTypeCommonDial,     {{ 42,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 22 Decay M
-    {moduleTypeModADSR,    paramTypeCommonDial,     {{ 57,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 22 Sustain M
-    {moduleTypeModADSR,    paramTypeCommonDial,     {{ 72,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 22 Release M
-    {moduleTypeModADSR,    paramTypeMenu,           {{-15, -17}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },                     // 22 Output Type
-    {moduleTypeModADSR,    paramTypeToggle,         {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                     // 22 KB
+    {moduleTypeModADSR,    paramTypeADRTime,        {{ 22, -17}, { 7,  7}}, anchorBottomLeft,  "A",            128,   0, NULL,                                  NULL          },                  // 22 A
+    {moduleTypeModADSR,    paramTypeADRTime,        {{ 37, -17}, { 7,  7}}, anchorBottomLeft,  "D",            128,  54, NULL,                                  NULL          },                  // 22 D
+    {moduleTypeModADSR,    paramTypeUniPol,         {{ 52, -17}, { 7,  7}}, anchorBottomLeft,  "S",            128, 100, NULL,                                  NULL          },                  // 22 S
+    {moduleTypeModADSR,    paramTypeADRTime,        {{ 67, -17}, { 7,  7}}, anchorBottomLeft,  "R",            128,  14, NULL,                                  NULL          },                  // 22 R
+    {moduleTypeModADSR,    paramTypeCommonDial,     {{ 27,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 22 Attack M
+    {moduleTypeModADSR,    paramTypeCommonDial,     {{ 42,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 22 Decay M
+    {moduleTypeModADSR,    paramTypeCommonDial,     {{ 57,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 22 Sustain M
+    {moduleTypeModADSR,    paramTypeCommonDial,     {{ 72,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 22 Release M
+    {moduleTypeModADSR,    paramTypeMenu,           {{-15, -17}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },                  // 22 Output Type
+    {moduleTypeModADSR,    paramTypeToggle,         {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                  // 22 KB
     // 24 LfoC
-    {moduleTypeLfoC,       paramTypeLFORate,        {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                     // 24 Rate  *** Could have Freq but tied to Range
-    {moduleTypeLfoC,       paramTypeMenu,           {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                     // 24 Mode
-    {moduleTypeLfoC,       paramTypeMenu,           {{ 76,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   4, posStrMap,                             NULL          },                     // 24 OutType
-    {moduleTypeLfoC,       paramTypeMenu,           {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, rangeLfoCStrMap,                       NULL          },                     // 24 Range  (default 1 = Rate Lo; was 0 which is now Sub after strMap re-order)
-    {moduleTypeLfoC,       paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                     // 24 Bypass
+    {moduleTypeLfoC,       paramTypeLFORate,        {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                  // 24 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoC,       paramTypeMenu,           {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                  // 24 Mode
+    {moduleTypeLfoC,       paramTypeMenu,           {{ 76,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   4, posStrMap,                             NULL          },                  // 24 OutType
+    {moduleTypeLfoC,       paramTypeMenu,           {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, rangeLfoCStrMap,                       NULL          },                  // 24 Range  (default 1 = Rate Lo; was 0 which is now Sub after strMap re-order)
+    {moduleTypeLfoC,       paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                  // 24 Bypass
     // 25 LfoShpA
-    {moduleTypeLfoShpA,    paramTypeLFORate,        {{ 36,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                     // 25 Rate
-    {moduleTypeLfoShpA,    paramTypeMenu,           {{ 36, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   1, rangeLfoStrMap,                        NULL          },                     // 25 Range  (default 1 = Rate Lo)
-    {moduleTypeLfoShpA,    paramTypeMenu,           {{ 25, -25}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                     // 25 Kbt
-    {moduleTypeLfoShpA,    paramTypeCommonDial,     {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 25 Rate M
-    {moduleTypeLfoShpA,    paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                     // 25 Bypass
-    {moduleTypeLfoShpA,    paramTypeCommonDial,     {{ 57, -17}, { 7,  7}}, anchorBottomLeft,  "Shape",        128,  64, NULL,                                  NULL          },                     // 25 Shape
-    {moduleTypeLfoShpA,    paramTypeCommonDial,     {{ 74,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 25 Phase M
-    {moduleTypeLfoShpA,    paramTypePhase,          {{ 74, -17}, { 7,  7}}, anchorBottomLeft,  "Phase",        128,   0, NULL,                                  NULL          },                     // 25 Phase
-    {moduleTypeLfoShpA,    paramTypeCommonDial,     {{ 57,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 25 Shape M
-    {moduleTypeLfoShpA,    paramTypeMenu,           {{ 25, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                     // 25 Mode
-    {moduleTypeLfoShpA,    paramTypeMenu,           {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   4, posStrMap,                             NULL          },                     // 25 OutType
-    {moduleTypeLfoShpA,    paramTypeMenu,           {{ 57, -32}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoShpAWaveStrMap,                     NULL          },                     // 25 Wave
+    {moduleTypeLfoShpA,    paramTypeLFORate,        {{ 36,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                  // 25 Rate
+    {moduleTypeLfoShpA,    paramTypeMenu,           {{ 36, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   1, rangeLfoStrMap,                        NULL          },                  // 25 Range  (default 1 = Rate Lo)
+    {moduleTypeLfoShpA,    paramTypeMenu,           {{ 25, -25}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                  // 25 Kbt
+    {moduleTypeLfoShpA,    paramTypeCommonDial,     {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 25 Rate M
+    {moduleTypeLfoShpA,    paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                  // 25 Bypass
+    {moduleTypeLfoShpA,    paramTypeCommonDial,     {{ 57, -17}, { 7,  7}}, anchorBottomLeft,  "Shape",        128,  64, NULL,                                  NULL          },                  // 25 Shape
+    {moduleTypeLfoShpA,    paramTypeCommonDial,     {{ 74,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 25 Phase M
+    {moduleTypeLfoShpA,    paramTypePhase,          {{ 74, -17}, { 7,  7}}, anchorBottomLeft,  "Phase",        128,   0, NULL,                                  NULL          },                  // 25 Phase
+    {moduleTypeLfoShpA,    paramTypeCommonDial,     {{ 57,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 25 Shape M
+    {moduleTypeLfoShpA,    paramTypeMenu,           {{ 25, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                  // 25 Mode
+    {moduleTypeLfoShpA,    paramTypeMenu,           {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   4, posStrMap,                             NULL          },                  // 25 OutType
+    {moduleTypeLfoShpA,    paramTypeMenu,           {{ 57, -32}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoShpAWaveStrMap,                     NULL          },                  // 25 Wave
     // 26 LfoA
-    {moduleTypeLfoA,       paramTypeLFORate,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                     // 26 Rate
-    {moduleTypeLfoA,       paramTypeMenu,           {{ 20, -1}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                     // 26 Mode
-    {moduleTypeLfoA,       paramTypeMenu,           {{ 65,   -1}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                     // 26 Kbt
-    {moduleTypeLfoA,       paramTypeCommonDial,     {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 26 Rate M
-    {moduleTypeLfoA,       paramTypeMenu,           {{ -15, 7}, { 7,  7}}, anchorTopRight,  NULL,             6,   0, lfoWaveStrMap,                         NULL          },                     // 26 Wave
-    {moduleTypeLfoA,       paramTypeBypass,         {{-3,  0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                     // 26 Bypass
-    {moduleTypeLfoA,       paramTypeMenu,           {{-15, -1}, { 7,  7}}, anchorBottomRight, NULL,             6,   4, posStrMap,                             NULL          },                     // 26 OutType
-    {moduleTypeLfoA,       paramTypeMenu,           {{ 36,  -12}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, rangeLfoCStrMap,                       NULL          },                     // 26 Range  (LfoA has no Clk; default 1 = Rate Lo)
+    {moduleTypeLfoA,       paramTypeLFORate,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                  // 26 Rate
+    {moduleTypeLfoA,       paramTypeMenu,           {{ 20,  -1}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                  // 26 Mode
+    {moduleTypeLfoA,       paramTypeMenu,           {{ 65,  -1}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                  // 26 Kbt
+    {moduleTypeLfoA,       paramTypeCommonDial,     {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 26 Rate M
+    {moduleTypeLfoA,       paramTypeMenu,           {{-15,   7}, { 7,  7}}, anchorTopRight,    NULL,             6,   0, lfoWaveStrMap,                         NULL          },                  // 26 Wave
+    {moduleTypeLfoA,       paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                  // 26 Bypass
+    {moduleTypeLfoA,       paramTypeMenu,           {{-15,  -1}, { 7,  7}}, anchorBottomRight, NULL,             6,   4, posStrMap,                             NULL          },                  // 26 OutType
+    {moduleTypeLfoA,       paramTypeMenu,           {{ 36, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, rangeLfoCStrMap,                       NULL          },                  // 26 Range  (LfoA has no Clk; default 1 = Rate Lo)
     // 27 OscMaster
-    {moduleTypeOscMaster,  paramTypeOscFreq,        {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          },                     // 27 Pitch
-    {moduleTypeOscMaster,  paramTypeFine,           {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                     // 27 Fine
-    {moduleTypeOscMaster,  paramTypeToggle,         {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                     // 27 Kbt
-    {moduleTypeOscMaster,  paramTypeMenu,           {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, pitchTypeStrMap,                       NULL          },                     // 27 Tune mode
-    {moduleTypeOscMaster,  paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch M",      128,   0, NULL,                                  NULL          },                     // 27 Pitch M
+    {moduleTypeOscMaster,  paramTypeOscFreq,        {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          },                  // 27 Pitch
+    {moduleTypeOscMaster,  paramTypeFine,           {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                  // 27 Fine
+    {moduleTypeOscMaster,  paramTypeToggle,         {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                  // 27 Kbt
+    {moduleTypeOscMaster,  paramTypeMenu,           {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, pitchTypeStrMap,                       NULL          },                  // 27 Tune mode
+    {moduleTypeOscMaster,  paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch M",      128,   0, NULL,                                  NULL          },                  // 27 Pitch M
     // 28 Saturate
-    {moduleTypeSaturate,   paramTypeCommonDial,     {{ 54,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 28 Amount
-    {moduleTypeSaturate,   paramTypeCommonDial,     {{ 41,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 28 AmountMod
-    {moduleTypeSaturate,   paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                     // 28 Bypass
-    {moduleTypeSaturate,   paramTypeMenu,           {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Curve",          4,   0, saturateCurveStrMap,                   NULL          },                     // 28 Curve
+    {moduleTypeSaturate,   paramTypeCommonDial,     {{ 54,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 28 Amount
+    {moduleTypeSaturate,   paramTypeCommonDial,     {{ 41,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 28 AmountMod
+    {moduleTypeSaturate,   paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                  // 28 Bypass
+    {moduleTypeSaturate,   paramTypeMenu,           {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Curve",          4,   0, saturateCurveStrMap,                   NULL          },                  // 28 Curve
     // 29 MetNoise
-    {moduleTypeMetNoise,   paramTypeCommonDial,     {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "Color",        128,  64, NULL,                                  NULL          },                     // 29 Color
-    {moduleTypeMetNoise,   paramTypeCommonDial,     {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          },                     // 29 Freq
-    {moduleTypeMetNoise,   paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                     // 28 Bypass
-    {moduleTypeMetNoise,   paramTypeCommonDial,     {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 29 Freq M
-    {moduleTypeMetNoise,   paramTypeCommonDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 29 Color M
+    {moduleTypeMetNoise,   paramTypeCommonDial,     {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "Color",        128,  64, NULL,                                  NULL          },                  // 29 Color
+    {moduleTypeMetNoise,   paramTypeCommonDial,     {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          },                  // 29 Freq
+    {moduleTypeMetNoise,   paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                  // 28 Bypass
+    {moduleTypeMetNoise,   paramTypeCommonDial,     {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 29 Freq M
+    {moduleTypeMetNoise,   paramTypeCommonDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                  // 29 Color M
     // 30 Device - No controls
     // 31 Noise
     {moduleTypeNoise,      paramTypeCommonDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Color",        128,   0, NULL,                                  NULL          },                   // 31 Color  *** Or special dial
@@ -833,9 +833,9 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSwOnOffT,   paramTypeMenu,           {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          },                      // 76 On
     // 77 Unknown
     // 78 Sw1-8
-    {moduleTypeSw1to8,     paramTypeMenu,           {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             8,   0, out8StrMap,                            NULL          },                      // 78 Selector
+    {moduleTypeSw1to8,     paramTypeRadioEdit,      {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             8,   0, out8StrMap,                            NULL          },                           // 78 Selector
     // 79 Sw4-1
-    {moduleTypeSw4to1,     paramTypeMenu,           {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, in8StrMap,                             NULL          },                      // 79 Selector
+    {moduleTypeSw4to1,     paramTypeRadioEdit,      {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, in8StrMap,                             NULL          },                           // 79 Selector
     // 80 Unknown
     // 81 LevAmp
     {moduleTypeLevAmp,     paramTypeLevAmpDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                      // 81 Gain
@@ -869,14 +869,14 @@ const tParamLocation     paramLocationList[] = {
     // matching the G2's own reported count.
     {moduleTypeFltLP,      paramTypeBypass,         {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                      // 87 Bypass
     // 88 Sw1-4
-    {moduleTypeSw1to4,     paramTypeMenu,           {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, out8StrMap,                            NULL          },                      // 88 Selector
+    {moduleTypeSw1to4,     paramTypeRadioEdit,      {{ 30, -14}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, out8StrMap,                            NULL          },                      // 88 Selector
     // 89 Flanger
     {moduleTypeFlanger,    paramTypeFlangerRate,    {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  "Rate",         128,  64, NULL,                                  NULL          },                      // 89 Rate
     {moduleTypeFlanger,    paramTypeCommonDial,     {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  "Range",        128,  64, NULL,                                  NULL          },                      // 89 Range
     {moduleTypeFlanger,    paramTypeCommonDial,     {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  "Feedback",     128,  64, NULL,                                  NULL          },                      // 89 Feedback
     {moduleTypeFlanger,    paramTypeBypass,         {{ -3,  -8}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                      // 89 Bypass
     // 90 Sw1-2
-    {moduleTypeSw1to2,     paramTypeMenu,           {{ 40,  0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, out8StrMap,                            NULL          },                      // 90 Selector
+    {moduleTypeSw1to2,     paramTypeRadioEdit,      {{ 40,   0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, out8StrMap,                            NULL          },                      // 90 Selector
     // 91 FlipFlop
     // 92 FltClassic
     {moduleTypeFltClassic, paramTypeFreq,           {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  75, NULL,                                  NULL          },                        // 92
@@ -913,7 +913,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFreqShift,  paramTypeBypass,         {{-10, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                     // 98 Bypass
     // 99 Unknown
     // 100 Sw2-1
-    {moduleTypeSw2to1,     paramTypeMenu,           {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, in8StrMap,                             NULL          },                      // 100 Selector
+    {moduleTypeSw2to1,     paramTypeRadioEdit,      {{ 40,  -9}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, in8StrMap,                             NULL          },                           // 100 Selector
     // 101 Unknown
     // 102 FltPhase
     {moduleTypeFltPhase,   paramTypeCommonDial,     {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                      // 102 Pitch M
@@ -1751,8 +1751,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeLfoShpA,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // Out
     {moduleTypeLfoShpA,     connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Snc",          labelLocUp   },     // Snc
     // 26 LfoA
-    {moduleTypeLfoA,        connectorDirIn,  connectorTypeControl, {{  3, -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rate",           labelLocUp   },     // Rate
-    {moduleTypeLfoA,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight   },     // Rate
+    {moduleTypeLfoA,        connectorDirIn,  connectorTypeControl, {{  3, -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rate",         labelLocUp   },     // Rate
+    {moduleTypeLfoA,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",            labelLocRight},     // Rate
     {moduleTypeLfoA,        connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // Out
     // 27 OscMaster
     {moduleTypeOscMaster,   connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},     // 9 Pitch
@@ -1895,46 +1895,46 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeResonator,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 56 Out2
     // 57 Automate
     // 58 Drumsynth
-    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeLogic,   {{  3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Trig",         labelLocUp   },        // 58 Trig
-    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Pitch",        labelLocUp   },        // 58 Pitch M
-    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocRight},        // 58 Velocity
-    {moduleTypeDrumSynth,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 58 Out
+    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeLogic,   {{  3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Trig",         labelLocUp   },       // 58 Trig
+    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Pitch",        labelLocUp   },       // 58 Pitch M
+    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocRight},       // 58 Velocity
+    {moduleTypeDrumSynth,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },       // 58 Out
     // 59 CompLev
-    {moduleTypeCompLev,     connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "A",            labelLocLeft },        // 59 A
-    {moduleTypeCompLev,     connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "A>=C",         labelLocLeft },        // 59 Out
+    {moduleTypeCompLev,     connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "A",            labelLocLeft },       // 59 A
+    {moduleTypeCompLev,     connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "A>=C",         labelLocLeft },       // 59 Out
     // 57
-    {moduleTypeAutomate,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "In",           labelLocUp   },        // 57 In
-    {moduleTypeAutomate,    connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Out",          labelLocUp   },        // 57 Out
+    {moduleTypeAutomate,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "In",           labelLocUp   },       // 57 In
+    {moduleTypeAutomate,    connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Out",          labelLocUp   },       // 57 Out
     // 60 Mux8-1X
-    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },        // 60 In1
-    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },        // 60 In2
-    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },        // 60 In3
-    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 34,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },        // 60 In4
-    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 42,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },        // 60 In5
-    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },        // 60 In6
-    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },        // 60 In7
-    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },        // 60 In8
-    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocUp   },        // 60 Ctrl
-    {moduleTypeMux8to1X,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },        // 60 Out
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },       // 60 In1
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },       // 60 In2
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },       // 60 In3
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 34,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },       // 60 In4
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 42,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },       // 60 In5
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },       // 60 In6
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },       // 60 In7
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },       // 60 In8
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocUp   },       // 60 Ctrl
+    {moduleTypeMux8to1X,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 60 Out
     // 61 Clip
-    {moduleTypeClip,        connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 61 In
-    {moduleTypeClip,        connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 61 Mod
-    {moduleTypeClip,        connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },        // 61 Out
+    {moduleTypeClip,        connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },       // 61 In
+    {moduleTypeClip,        connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },       // 61 Mod
+    {moduleTypeClip,        connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 61 Out
     // 62 OverDrive
-    {moduleTypeOverdrive,   connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 62 In
-    {moduleTypeOverdrive,   connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 62 Mod
-    {moduleTypeOverdrive,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },        // 62 Out
+    {moduleTypeOverdrive,   connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },       // 62 In
+    {moduleTypeOverdrive,   connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },       // 62 Mod
+    {moduleTypeOverdrive,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 62 Out
     // 63 Scratch
-    {moduleTypeScratch,     connectorDirIn,  connectorTypeControl, {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 63 In
-    {moduleTypeScratch,     connectorDirIn,  connectorTypeControl, {{  6,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 63 Mod
-    {moduleTypeScratch,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },        // 63 Out
+    {moduleTypeScratch,     connectorDirIn,  connectorTypeControl, {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },       // 63 In
+    {moduleTypeScratch,     connectorDirIn,  connectorTypeControl, {{  6,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },       // 63 Mod
+    {moduleTypeScratch,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 63 Out
     // 64 Gate
-    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 16, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In1_1
-    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 16,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In1_2
-    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 66, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In2_1
-    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In2_2
-    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 40,  2}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },        // 64 Out1
-    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 90,  2}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },        // 64 Out2
+    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 16, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},       // 64 In1_1
+    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 16,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},       // 64 In1_2
+    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 66, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},       // 64 In2_1
+    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},       // 64 In2_2
+    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 40,   2}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },       // 64 Out1
+    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 90,   2}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorMiddleLeft,  NULL,           labelLocLeft },       // 64 Out2
     // 65 Unknown
 
     // 66 Mix2-1B
@@ -1993,64 +1993,64 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSw4to1,      connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight},          // 79 Ctrl
     // 80 Unknown
     // 81 LevAmp
-    {moduleTypeLevAmp,      connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 81 In
-    {moduleTypeLevAmp,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 81 Out
+    {moduleTypeLevAmp,      connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 81 In
+    {moduleTypeLevAmp,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 81 Out
     // 82 Rect
-    {moduleTypeRect,        connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 82 In
-    {moduleTypeRect,        connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 82 Out
+    {moduleTypeRect,        connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 82 In
+    {moduleTypeRect,        connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 82 Out
     // 83 ShpStatic
-    {moduleTypeShpStatic,   connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 82 In
-    {moduleTypeShpStatic,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 82 Out
+    {moduleTypeShpStatic,   connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 82 In
+    {moduleTypeShpStatic,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 82 Out
     // 84 EnvADR
-    {moduleTypeEnvADR,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 84 Trig/Gate
-    {moduleTypeEnvADR,      connectorDirIn,  connectorTypeControl, {{ -3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 84 In
-    {moduleTypeEnvADR,      connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",           labelLocUp   },          // 84 AM
-    {moduleTypeEnvADR,      connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocUp   },          // 84 Env
-    {moduleTypeEnvADR,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 84 Out
-    {moduleTypeEnvADR,      connectorDirOut, connectorTypeLogic,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 84 End
+    {moduleTypeEnvADR,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},         // 84 Trig/Gate
+    {moduleTypeEnvADR,      connectorDirIn,  connectorTypeControl, {{ -3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},         // 84 In
+    {moduleTypeEnvADR,      connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",           labelLocUp   },         // 84 AM
+    {moduleTypeEnvADR,      connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocUp   },         // 84 Env
+    {moduleTypeEnvADR,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 84 Out
+    {moduleTypeEnvADR,      connectorDirOut, connectorTypeLogic,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },         // 84 End
     // 85 WindSw
-    {moduleTypeWindSw,      connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 85 In
-    {moduleTypeWindSw,      connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight},          // 85 In
-    {moduleTypeWindSw,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 85 Out
-    {moduleTypeWindSw,      connectorDirOut, connectorTypeLogic,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 85 Gate
+    {moduleTypeWindSw,      connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},         // 85 In
+    {moduleTypeWindSw,      connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight},         // 85 In
+    {moduleTypeWindSw,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 85 Out
+    {moduleTypeWindSw,      connectorDirOut, connectorTypeLogic,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 85 Gate
     // 86 8Counter
-    {moduleType8Counter,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight},          // 86 Clock
-    {moduleType8Counter,    connectorDirIn,  connectorTypeLogic,   {{ 10, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight},          // 86 Reset
-    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },          // 86 Out1
-    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },          // 86 Out2
-    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },          // 86 Out3
-    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },          // 86 Out4
-    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },          // 86 Out5
-    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },          // 86 Out6
-    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },          // 86 Out7
-    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 90,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },          // 86 Out8
+    {moduleType8Counter,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight},         // 86 Clock
+    {moduleType8Counter,    connectorDirIn,  connectorTypeLogic,   {{ 10, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight},         // 86 Reset
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },         // 86 Out1
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },         // 86 Out2
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },         // 86 Out3
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },         // 86 Out4
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },         // 86 Out5
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },         // 86 Out6
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },         // 86 Out7
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic,   {{ 90,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },         // 86 Out8
     // 87 FltLP
-    {moduleTypeFltLP,       connectorDirIn,  connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 87 In
-    {moduleTypeFltLP,       connectorDirIn,  connectorTypeControl, {{ 28,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 87 Mod
-    {moduleTypeFltLP,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 87 Out
+    {moduleTypeFltLP,       connectorDirIn,  connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 87 In
+    {moduleTypeFltLP,       connectorDirIn,  connectorTypeControl, {{ 28,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },         // 87 Mod
+    {moduleTypeFltLP,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 87 Out
     // 88 Sw1-4
-    {moduleTypeSw1to4,      connectorDirIn,  connectorTypeControl, {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 88 In
-    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocLeft },          // 88 Out1
-    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocLeft },          // 88 Out2
-    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocLeft },          // 88 Out3
-    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocLeft },          // 88 Out4
-    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight},          // 88 Ctrl
+    {moduleTypeSw1to4,      connectorDirIn,  connectorTypeControl, {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },         // 88 In
+    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocLeft },         // 88 Out1
+    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocLeft },         // 88 Out2
+    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocLeft },         // 88 Out3
+    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocLeft },         // 88 Out4
+    {moduleTypeSw1to4,      connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight},         // 88 Ctrl
     // 89 Flanger
-    {moduleTypeFlanger,     connectorDirIn,  connectorTypeAudio,   {{ -3, -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 89 In
-    {moduleTypeFlanger,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 89 Out
+    {moduleTypeFlanger,     connectorDirIn,  connectorTypeAudio,   {{ -3, -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 89 In
+    {moduleTypeFlanger,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },         // 89 Out
     // 90 Sw1-2
-    {moduleTypeSw1to2,      connectorDirIn,  connectorTypeControl, {{ -19,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "In",           labelLocUp   },          // 88 In
-    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "1",            labelLocUp },          // 88 Out1
-    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "2",            labelLocUp },          // 88 Out2
-    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Control",         labelLocUp},          // 88 Ctrl
+    {moduleTypeSw1to2,      connectorDirIn,  connectorTypeControl, {{-19,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "In",           labelLocUp   },         // 88 In
+    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1",            labelLocUp   },         // 88 Out1
+    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "2",            labelLocUp   },         // 88 Out2
+    {moduleTypeSw1to2,      connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Control",      labelLocUp   },         // 88 Ctrl
     // 91 FlipFlop
-    {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocLeft },          // 91 Clock
-    {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{ 15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocLeft },          // 91 Reset
-    {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{ 35, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "In",           labelLocLeft },          // 91 In
-    {moduleTypeFlipFlop,    connectorDirOut, connectorTypeLogic,   {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "NotQ",         labelLocRight},          // 91 NotQ
-    {moduleTypeFlipFlop,    connectorDirOut, connectorTypeLogic,   {{ 80, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Q",            labelLocRight},          // 91 Q
+    {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocLeft },         // 91 Clock
+    {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{ 15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocLeft },         // 91 Reset
+    {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{ 35, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "In",           labelLocLeft },         // 91 In
+    {moduleTypeFlipFlop,    connectorDirOut, connectorTypeLogic,   {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "NotQ",         labelLocRight},         // 91 NotQ
+    {moduleTypeFlipFlop,    connectorDirOut, connectorTypeLogic,   {{ 80, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Q",            labelLocRight},         // 91 Q
     // 92 FltClassic
-    {moduleTypeFltClassic,  connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 92
+    {moduleTypeFltClassic,  connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },         // 92
     {moduleTypeFltClassic,  connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     {moduleTypeFltClassic,  connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },
     {moduleTypeFltClassic,  connectorDirIn,  connectorTypeControl, {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,           labelLocUp   },
@@ -2678,98 +2678,115 @@ const tVolumeMeterConfig volumeMeterConfigList[] = {
     {volumeTypeQuad,      volumeMeterStyleLevelBar,  12, 2.0, RGB_BLACK,   RGB_BLACK  },
     {volumeTypeSequencer, volumeMeterStyleSingleLed, 16, 2.0, RGB_GREEN_7, RGB_GREEN_3}, };
 
-const tLedLocation       ledLocationList[]       = {
-    {moduleTypeInvert,     ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},
-    {moduleTypeInvert,     ledTypeYes,  {{53, 7}, {3, 3}}, anchorTopLeft},
-    {moduleTypeEnvADSR,    ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},
-    {moduleTypeGate,       ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:137 YPos:11 H:2
-    {moduleTypeGate,       ledTypeYes,  {{53, 7}, {3, 3}}, anchorTopLeft},  // XPos:230 YPos:11 H:2
-    {moduleTypeFlipFlop,   ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:204 YPos:17 H:2
-    {moduleTypeFlipFlop,   ledTypeYes,  {{53, 7}, {3, 3}}, anchorTopLeft},  // XPos:230 YPos:7  H:2
-    {moduleTypeValSw1to2,  ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:146 YPos:17 H:2
-    {moduleTypeValSw2to1,  ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:146 YPos:17 H:2
-    {moduleTypeLfoC,       ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:226 YPos:4  H:2
-    {moduleTypeLfoA,       ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:242 YPos:21 H:3
-    {moduleTypeLfoShpA,    ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:242 YPos:51 H:5
-    {moduleTypeLfoB,       ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:242 YPos:36 H:4
-    {moduleTypeModADSR,    ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:6   YPos:33 H:5
-    {moduleTypeModAHD,     ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:6   YPos:19 H:5
-    {moduleTypeEnvAHD,     ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:6   YPos:18 H:4
-    {moduleTypeEnvH,       ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:40  YPos:18 H:2
-    {moduleTypeEnvD,       ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:40  YPos:18 H:2
-    {moduleTypeEnvADR,     ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:6   YPos:18 H:3
-    {moduleTypeEnvMulti,   ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:6   YPos:18 H:6
-    {moduleTypeEnvADDSR,   ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:6   YPos:19 H:5
-    {moduleTypePulse,      ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:242 YPos:4  H:2
-    {moduleTypeDelay,      ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:242 YPos:4  H:2
-    {moduleTypeDrumSynth,  ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:6   YPos:39 H:8
-    {moduleTypeWindSw,     ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:198 YPos:15 H:2
-    {moduleTypeNoteDet,    ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:186 YPos:15 H:2
-    {moduleTypeNoiseGate,  ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:213 YPos:32 H:3
-    {moduleTypePitchTrack, ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:212 YPos:15 H:2
-    {moduleTypeRandomA,    ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:226 YPos:4  H:2
-    {moduleTypeRandomB,    ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:242 YPos:21 H:3
-    {moduleTypeOperator,   ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft},  // XPos:17  YPos:77 H:12
-    // Mux1to8 (ID 21) — 8 LEDs across the upper-right strip
-    {moduleTypeMux1to8,    ledTypeYes,  {{23, 7}, {3, 3}}, anchorTopLeft},  // XPos:102
-    {moduleTypeMux1to8,    ledTypeYes,  {{30, 7}, {3, 3}}, anchorTopLeft},  // XPos:122
-    {moduleTypeMux1to8,    ledTypeYes,  {{37, 7}, {3, 3}}, anchorTopLeft},  // XPos:142
-    {moduleTypeMux1to8,    ledTypeYes,  {{44, 7}, {3, 3}}, anchorTopLeft},  // XPos:162
-    {moduleTypeMux1to8,    ledTypeYes,  {{51, 7}, {3, 3}}, anchorTopLeft},  // XPos:182
-    {moduleTypeMux1to8,    ledTypeYes,  {{58, 7}, {3, 3}}, anchorTopLeft},  // XPos:202
-    {moduleTypeMux1to8,    ledTypeYes,  {{65, 7}, {3, 3}}, anchorTopLeft},  // XPos:222
-    {moduleTypeMux1to8,    ledTypeYes,  {{72, 7}, {3, 3}}, anchorTopLeft},  // XPos:242
-    // Mux8to1X (ID 60) — 8 LEDs spread across the middle
-    {moduleTypeMux8to1X,   ledTypeYes,  {{23, 7}, {3, 3}}, anchorTopLeft},  // XPos:34
-    {moduleTypeMux8to1X,   ledTypeYes,  {{30, 7}, {3, 3}}, anchorTopLeft},  // XPos:54
-    {moduleTypeMux8to1X,   ledTypeYes,  {{37, 7}, {3, 3}}, anchorTopLeft},  // XPos:74
-    {moduleTypeMux8to1X,   ledTypeYes,  {{44, 7}, {3, 3}}, anchorTopLeft},  // XPos:94
-    {moduleTypeMux8to1X,   ledTypeYes,  {{51, 7}, {3, 3}}, anchorTopLeft},  // XPos:114
-    {moduleTypeMux8to1X,   ledTypeYes,  {{58, 7}, {3, 3}}, anchorTopLeft},  // XPos:134
-    {moduleTypeMux8to1X,   ledTypeYes,  {{65, 7}, {3, 3}}, anchorTopLeft},  // XPos:154
-    {moduleTypeMux8to1X,   ledTypeYes,  {{72, 7}, {3, 3}}, anchorTopLeft},  // XPos:174
-    // Mux8to1 (ID 124) — 8 LEDs across the upper-right strip
-    {moduleTypeMux8to1,    ledTypeYes,  {{23, 7}, {3, 3}}, anchorTopLeft},  // XPos:82
-    {moduleTypeMux8to1,    ledTypeYes,  {{30, 7}, {3, 3}}, anchorTopLeft},  // XPos:102
-    {moduleTypeMux8to1,    ledTypeYes,  {{37, 7}, {3, 3}}, anchorTopLeft},  // XPos:122
-    {moduleTypeMux8to1,    ledTypeYes,  {{44, 7}, {3, 3}}, anchorTopLeft},  // XPos:142
-    {moduleTypeMux8to1,    ledTypeYes,  {{51, 7}, {3, 3}}, anchorTopLeft},  // XPos:162
-    {moduleTypeMux8to1,    ledTypeYes,  {{58, 7}, {3, 3}}, anchorTopLeft},  // XPos:202
-    {moduleTypeMux8to1,    ledTypeYes,  {{65, 7}, {3, 3}}, anchorTopLeft},  // XPos:202
-    {moduleTypeMux8to1,    ledTypeYes,  {{72, 7}, {3, 3}}, anchorTopLeft},  // XPos:222
-    // BinCounter (ID 130) — 8 LEDs across the upper-right strip
-    {moduleTypeBinCounter, ledTypeYes,  {{23, 7}, {3, 3}}, anchorTopLeft},  // XPos:81
-    {moduleTypeBinCounter, ledTypeYes,  {{30, 7}, {3, 3}}, anchorTopLeft},  // XPos:104
-    {moduleTypeBinCounter, ledTypeYes,  {{37, 7}, {3, 3}}, anchorTopLeft},  // XPos:127
-    {moduleTypeBinCounter, ledTypeYes,  {{44, 7}, {3, 3}}, anchorTopLeft},  // XPos:150
-    {moduleTypeBinCounter, ledTypeYes,  {{51, 7}, {3, 3}}, anchorTopLeft},  // XPos:173
-    {moduleTypeBinCounter, ledTypeYes,  {{58, 7}, {3, 3}}, anchorTopLeft},  // XPos:196
-    {moduleTypeBinCounter, ledTypeYes,  {{65, 7}, {3, 3}}, anchorTopLeft},  // XPos:219
-    {moduleTypeBinCounter, ledTypeYes,  {{72, 7}, {3, 3}}, anchorTopLeft},  // XPos:242
-    // ADConv (ID 131) — 8 LEDs across the upper-right strip
-    {moduleTypeADConv,     ledTypeYes,  {{23, 7}, {3, 3}}, anchorTopLeft},  // XPos:81
-    {moduleTypeADConv,     ledTypeYes,  {{30, 7}, {3, 3}}, anchorTopLeft},  // XPos:105
-    {moduleTypeADConv,     ledTypeYes,  {{37, 7}, {3, 3}}, anchorTopLeft},  // XPos:127
-    {moduleTypeADConv,     ledTypeYes,  {{44, 7}, {3, 3}}, anchorTopLeft},  // XPos:150
-    {moduleTypeADConv,     ledTypeYes,  {{51, 7}, {3, 3}}, anchorTopLeft},  // XPos:173
-    {moduleTypeADConv,     ledTypeYes,  {{58, 7}, {3, 3}}, anchorTopLeft},  // XPos:196
-    {moduleTypeADConv,     ledTypeYes,  {{65, 7}, {3, 3}}, anchorTopLeft},  // XPos:219
-    {moduleTypeADConv,     ledTypeYes,  {{72, 7}, {3, 3}}, anchorTopLeft},  // XPos:242
-    // 8Counter (ID 86) — 8 LEDs across the upper-right strip
-    {moduleType8Counter,   ledTypeYes,  {{23, 7}, {3, 3}}, anchorTopLeft},  // XPos:81
-    {moduleType8Counter,   ledTypeYes,  {{30, 7}, {3, 3}}, anchorTopLeft},  // XPos:104
-    {moduleType8Counter,   ledTypeYes,  {{37, 7}, {3, 3}}, anchorTopLeft},  // XPos:127
-    {moduleType8Counter,   ledTypeYes,  {{44, 7}, {3, 3}}, anchorTopLeft},  // XPos:150
-    {moduleType8Counter,   ledTypeYes,  {{51, 7}, {3, 3}}, anchorTopLeft},  // XPos:173
-    {moduleType8Counter,   ledTypeYes,  {{58, 7}, {3, 3}}, anchorTopLeft},  // XPos:196
-    {moduleType8Counter,   ledTypeYes,  {{65, 7}, {3, 3}}, anchorTopLeft},  // XPos:219
-    {moduleType8Counter,   ledTypeYes,  {{72, 7}, {3, 3}}, anchorTopLeft},  // XPos:242
+// Read-only readouts. Every Switch module with a Ctrl output has one, showing the value that output
+// is sending — see displayTypeSwitchCtrl in types.h for the rule and where it comes from. The Ctrl
+// connector sits at {3, -3} on all ten faces, so the box sits in the same place on all ten too,
+// clear of the connector's own "Ctrl"/"Control" label.
+const tDisplayLocation   displayLocationList[]   = {
+    {moduleTypeSw1to2,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  90 Sw1-2
+    {moduleTypeSw2to1,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     // 100 Sw2-1
+    {moduleTypeSw1to4,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  88 Sw1-4
+    {moduleTypeSw4to1,   displayTypeSwitchCtrl, 0, {{16, -11}, {10, 7}}, anchorBottomLeft},     //  79 Sw4-1
+    {moduleTypeSw1to8,   displayTypeSwitchCtrl, 0, {{16, -11}, {10, 7}}, anchorBottomLeft},     //  78 Sw1-8
+    {moduleTypeSw8to1,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  15 Sw8-1
+    {moduleTypeSwOnOffM, displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  36 SwOnOffM
+    {moduleTypeSwOnOffT, displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  76 SwOnOffT
+    {moduleTypeSw1to2M,  displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     // 186 Sw1-2M
+    {moduleTypeSw2to1M,  displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     // 187 Sw2-1M
+};
 
-    {moduleTypeSeqEvent,   ledTypePark, {{ 3, 7}, {3, 3}}, anchorTopLeft},  // Park LED — display-only, not in LED stream
-    {moduleTypeSeqNote,    ledTypePark, {{ 3, 7}, {3, 3}}, anchorTopLeft},
-    {moduleTypeSeqVal,     ledTypePark, {{ 3, 7}, {3, 3}}, anchorTopLeft},
-    {moduleTypeSeqLev,     ledTypePark, {{ 3, 7}, {3, 3}}, anchorTopLeft},
-    {moduleTypeSeqCtr,     ledTypePark, {{ 3, 7}, {3, 3}}, anchorTopLeft}};
+const tLedLocation       ledLocationList[]       = {
+    {moduleTypeInvert,     ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft},
+    {moduleTypeInvert,     ledTypeYes,      {{53, 7}, {3, 3}}, anchorTopLeft},
+    {moduleTypeEnvADSR,    ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft},
+    {moduleTypeGate,       ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:137 YPos:11 H:2
+    {moduleTypeGate,       ledTypeYes,      {{53, 7}, {3, 3}}, anchorTopLeft}, // XPos:230 YPos:11 H:2
+    {moduleTypeFlipFlop,   ledTypeMultiBit, {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:204 YPos:17 H:2
+    {moduleTypeFlipFlop,   ledTypeMultiBit, {{53, 7}, {3, 3}}, anchorTopLeft}, // XPos:230 YPos:7  H:2
+    {moduleTypeValSw1to2,  ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:146 YPos:17 H:2
+    {moduleTypeValSw2to1,  ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:146 YPos:17 H:2
+    {moduleTypeLfoC,       ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:226 YPos:4  H:2
+    {moduleTypeLfoA,       ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:242 YPos:21 H:3
+    {moduleTypeLfoShpA,    ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:242 YPos:51 H:5
+    {moduleTypeLfoB,       ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:242 YPos:36 H:4
+    {moduleTypeModADSR,    ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:6   YPos:33 H:5
+    {moduleTypeModAHD,     ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:6   YPos:19 H:5
+    {moduleTypeEnvAHD,     ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:6   YPos:18 H:4
+    {moduleTypeEnvH,       ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:40  YPos:18 H:2
+    {moduleTypeEnvD,       ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:40  YPos:18 H:2
+    {moduleTypeEnvADR,     ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:6   YPos:18 H:3
+    {moduleTypeEnvMulti,   ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:6   YPos:18 H:6
+    {moduleTypeEnvADDSR,   ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:6   YPos:19 H:5
+    {moduleTypePulse,      ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:242 YPos:4  H:2
+    {moduleTypeDelay,      ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:242 YPos:4  H:2
+    {moduleTypeDrumSynth,  ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:6   YPos:39 H:8
+    {moduleTypeWindSw,     ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:198 YPos:15 H:2
+    {moduleTypeNoteDet,    ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:186 YPos:15 H:2
+    {moduleTypeNoiseGate,  ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:213 YPos:32 H:3
+    {moduleTypePitchTrack, ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:212 YPos:15 H:2
+    {moduleTypeRandomA,    ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:226 YPos:4  H:2
+    {moduleTypeRandomB,    ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:242 YPos:21 H:3
+    {moduleTypeOperator,   ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft}, // XPos:17  YPos:77 H:12
+    // Mux1to8 (ID 21) — 8 LEDs across the upper-right strip
+    {moduleTypeMux1to8,    ledTypeMultiBit, {{23, 7}, {3, 3}}, anchorTopLeft}, // XPos:102
+    {moduleTypeMux1to8,    ledTypeMultiBit, {{30, 7}, {3, 3}}, anchorTopLeft}, // XPos:122
+    {moduleTypeMux1to8,    ledTypeMultiBit, {{37, 7}, {3, 3}}, anchorTopLeft}, // XPos:142
+    {moduleTypeMux1to8,    ledTypeMultiBit, {{44, 7}, {3, 3}}, anchorTopLeft}, // XPos:162
+    {moduleTypeMux1to8,    ledTypeMultiBit, {{51, 7}, {3, 3}}, anchorTopLeft}, // XPos:182
+    {moduleTypeMux1to8,    ledTypeMultiBit, {{58, 7}, {3, 3}}, anchorTopLeft}, // XPos:202
+    {moduleTypeMux1to8,    ledTypeMultiBit, {{65, 7}, {3, 3}}, anchorTopLeft}, // XPos:222
+    {moduleTypeMux1to8,    ledTypeMultiBit, {{72, 7}, {3, 3}}, anchorTopLeft}, // XPos:242
+    // Mux8to1X (ID 60) — 8 LEDs spread across the middle
+    {moduleTypeMux8to1X,   ledTypeMultiBit, {{23, 7}, {3, 3}}, anchorTopLeft}, // XPos:34
+    {moduleTypeMux8to1X,   ledTypeMultiBit, {{30, 7}, {3, 3}}, anchorTopLeft}, // XPos:54
+    {moduleTypeMux8to1X,   ledTypeMultiBit, {{37, 7}, {3, 3}}, anchorTopLeft}, // XPos:74
+    {moduleTypeMux8to1X,   ledTypeMultiBit, {{44, 7}, {3, 3}}, anchorTopLeft}, // XPos:94
+    {moduleTypeMux8to1X,   ledTypeMultiBit, {{51, 7}, {3, 3}}, anchorTopLeft}, // XPos:114
+    {moduleTypeMux8to1X,   ledTypeMultiBit, {{58, 7}, {3, 3}}, anchorTopLeft}, // XPos:134
+    {moduleTypeMux8to1X,   ledTypeMultiBit, {{65, 7}, {3, 3}}, anchorTopLeft}, // XPos:154
+    {moduleTypeMux8to1X,   ledTypeMultiBit, {{72, 7}, {3, 3}}, anchorTopLeft}, // XPos:174
+    // Mux8to1 (ID 124) — 8 LEDs across the upper-right strip
+    {moduleTypeMux8to1,    ledTypeMultiBit, {{23, 7}, {3, 3}}, anchorTopLeft}, // XPos:82
+    {moduleTypeMux8to1,    ledTypeMultiBit, {{30, 7}, {3, 3}}, anchorTopLeft}, // XPos:102
+    {moduleTypeMux8to1,    ledTypeMultiBit, {{37, 7}, {3, 3}}, anchorTopLeft}, // XPos:122
+    {moduleTypeMux8to1,    ledTypeMultiBit, {{44, 7}, {3, 3}}, anchorTopLeft}, // XPos:142
+    {moduleTypeMux8to1,    ledTypeMultiBit, {{51, 7}, {3, 3}}, anchorTopLeft}, // XPos:162
+    {moduleTypeMux8to1,    ledTypeMultiBit, {{58, 7}, {3, 3}}, anchorTopLeft}, // XPos:202
+    {moduleTypeMux8to1,    ledTypeMultiBit, {{65, 7}, {3, 3}}, anchorTopLeft}, // XPos:202
+    {moduleTypeMux8to1,    ledTypeMultiBit, {{72, 7}, {3, 3}}, anchorTopLeft}, // XPos:222
+    // BinCounter (ID 130) — 8 LEDs across the upper-right strip
+    {moduleTypeBinCounter, ledTypeMultiBit, {{23, 7}, {3, 3}}, anchorTopLeft}, // XPos:81
+    {moduleTypeBinCounter, ledTypeMultiBit, {{30, 7}, {3, 3}}, anchorTopLeft}, // XPos:104
+    {moduleTypeBinCounter, ledTypeMultiBit, {{37, 7}, {3, 3}}, anchorTopLeft}, // XPos:127
+    {moduleTypeBinCounter, ledTypeMultiBit, {{44, 7}, {3, 3}}, anchorTopLeft}, // XPos:150
+    {moduleTypeBinCounter, ledTypeMultiBit, {{51, 7}, {3, 3}}, anchorTopLeft}, // XPos:173
+    {moduleTypeBinCounter, ledTypeMultiBit, {{58, 7}, {3, 3}}, anchorTopLeft}, // XPos:196
+    {moduleTypeBinCounter, ledTypeMultiBit, {{65, 7}, {3, 3}}, anchorTopLeft}, // XPos:219
+    {moduleTypeBinCounter, ledTypeMultiBit, {{72, 7}, {3, 3}}, anchorTopLeft}, // XPos:242
+    // ADConv (ID 131) — 8 LEDs across the upper-right strip
+    {moduleTypeADConv,     ledTypeMultiBit, {{23, 7}, {3, 3}}, anchorTopLeft}, // XPos:81
+    {moduleTypeADConv,     ledTypeMultiBit, {{30, 7}, {3, 3}}, anchorTopLeft}, // XPos:105
+    {moduleTypeADConv,     ledTypeMultiBit, {{37, 7}, {3, 3}}, anchorTopLeft}, // XPos:127
+    {moduleTypeADConv,     ledTypeMultiBit, {{44, 7}, {3, 3}}, anchorTopLeft}, // XPos:150
+    {moduleTypeADConv,     ledTypeMultiBit, {{51, 7}, {3, 3}}, anchorTopLeft}, // XPos:173
+    {moduleTypeADConv,     ledTypeMultiBit, {{58, 7}, {3, 3}}, anchorTopLeft}, // XPos:196
+    {moduleTypeADConv,     ledTypeMultiBit, {{65, 7}, {3, 3}}, anchorTopLeft}, // XPos:219
+    {moduleTypeADConv,     ledTypeMultiBit, {{72, 7}, {3, 3}}, anchorTopLeft}, // XPos:242
+    // 8Counter (ID 86) — 8 LEDs across the upper-right strip
+    {moduleType8Counter,   ledTypeMultiBit, {{23, 7}, {3, 3}}, anchorTopLeft}, // XPos:81
+    {moduleType8Counter,   ledTypeMultiBit, {{30, 7}, {3, 3}}, anchorTopLeft}, // XPos:104
+    {moduleType8Counter,   ledTypeMultiBit, {{37, 7}, {3, 3}}, anchorTopLeft}, // XPos:127
+    {moduleType8Counter,   ledTypeMultiBit, {{44, 7}, {3, 3}}, anchorTopLeft}, // XPos:150
+    {moduleType8Counter,   ledTypeMultiBit, {{51, 7}, {3, 3}}, anchorTopLeft}, // XPos:173
+    {moduleType8Counter,   ledTypeMultiBit, {{58, 7}, {3, 3}}, anchorTopLeft}, // XPos:196
+    {moduleType8Counter,   ledTypeMultiBit, {{65, 7}, {3, 3}}, anchorTopLeft}, // XPos:219
+    {moduleType8Counter,   ledTypeMultiBit, {{72, 7}, {3, 3}}, anchorTopLeft}, // XPos:242
+
+    {moduleTypeSeqEvent,   ledTypePark,     {{ 3, 7}, {3, 3}}, anchorTopLeft}, // Park LED — display-only, not in LED stream
+    {moduleTypeSeqNote,    ledTypePark,     {{ 3, 7}, {3, 3}}, anchorTopLeft},
+    {moduleTypeSeqVal,     ledTypePark,     {{ 3, 7}, {3, 3}}, anchorTopLeft},
+    {moduleTypeSeqLev,     ledTypePark,     {{ 3, 7}, {3, 3}}, anchorTopLeft},
+    {moduleTypeSeqCtr,     ledTypePark,     {{ 3, 7}, {3, 3}}, anchorTopLeft}};
 
 // moduleType, rectangle, anchor - placement only; each module's own graph function
 // (moduleGraphics.cpp) still owns its drawing/curve logic.

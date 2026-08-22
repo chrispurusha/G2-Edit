@@ -1274,23 +1274,44 @@ void key_callback(int key, int scancode, int action, int mods) {
                 tModule * module = get_module(gParamNameEdit.moduleKey);
 
                 if (module != NULL) {
-                    tMessageContent msg    = {0};
-                    uint32_t        pi     = gParamNameEdit.paramIndex;
-                    bool            oldSet = module->paramNameSet[pi][0];
+                    tMessageContent msg       = {0};
+                    uint32_t        pi        = gParamNameEdit.paramIndex;
+                    uint32_t        li        = gParamNameEdit.labelIndex;
+                    uint32_t        variation = gPatchDescr[module->key.slot].activeVariation;
+                    uint32_t        paramRef  = module->param[variation][pi].paramRef;
+                    bool            oldSet    = module->paramNameSet[pi][li];
                     char            oldName[PROTOCOL_PARAM_NAME_SIZE + 1];
-                    COPY_STRING(oldName, module->paramName[pi][0]);
+                    COPY_STRING(oldName, module->paramName[pi][li]);
 
-                    module->paramNameSet[pi][0]   = true;
-                    COPY_STRING(module->paramName[pi][0], gParamNameEdit.buffer);
-                    module->paramNumLabels[pi]    = 1;
+                    module->paramNameSet[pi][li] = true;
+                    COPY_STRING(module->paramName[pi][li], gParamNameEdit.buffer);
 
+                    if (paramLocationList[paramRef].type == paramTypeRadioEdit) {
+                        // A Channel Select group is named as a SET: the parameter carries one name
+                        // per button and the wire format sends them together, so renaming one button
+                        // has to fill in the others from what they already read. Leave them out and
+                        // the instrument is told the group has fewer buttons than it does.
+                        uint32_t buttons = paramLocationList[paramRef].range;
+
+                        for (uint32_t b = 0; (b < buttons) && (b < MAX_NUM_LABELS); b++) {
+                            if (!module->paramNameSet[pi][b]) {
+                                module->paramNameSet[pi][b] = true;
+                                COPY_STRING(module->paramName[pi][b],
+                                            radio_caption(module, pi, b, paramLocationList[paramRef].strMap));
+                            }
+                        }
+
+                        module->paramNumLabels[pi] = (buttons < MAX_NUM_LABELS) ? buttons : MAX_NUM_LABELS;
+                    } else {
+                        module->paramNumLabels[pi] = 1;
+                    }
                     msg.cmd                       = eMsgCmdSetParamLabel;
                     msg.slot                      = gParamNameEdit.moduleKey.slot;
                     msg.paramLabelData.moduleKey  = gParamNameEdit.moduleKey;
                     msg.paramLabelData.paramIndex = pi;
                     COPY_STRING(msg.paramLabelData.name, gParamNameEdit.buffer);
                     msg_send(&gToUsbThread, &msg);
-                    undo_push_param_name(gParamNameEdit.moduleKey, pi,
+                    undo_push_param_name(gParamNameEdit.moduleKey, pi, li,
                                          oldName, oldSet,
                                          gParamNameEdit.buffer, true);
                 }
