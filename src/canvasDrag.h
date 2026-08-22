@@ -181,6 +181,9 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location);
 // Is either end of this cable plugged into that hole? Shared with the renderer, which hides every
 // cable on a hole being dragged.
 bool cable_touches_connector(const tCable * cable, uint32_t moduleIndex, uint32_t ioCount, tConnectorDir dir);
+// Where a cable's OTHER end is, given which end is plugged into the hole being moved. Shared with the
+// renderer, which draws one dragged line per cable on that hole.
+void cable_far_end(const tCable * cable, uint32_t moduleIndex, uint32_t ioCount, uint32_t * farModuleIndex, uint32_t * farIoCount, tConnectorDir * farDir);
 bool find_cable_at_connector(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t ioCount, tConnectorDir dir, tCableKey * key, uint32_t * otherModuleIndex, uint32_t * otherIoCount, tConnectorDir * otherDir);
 
 // Cable-key helpers, used by the connect and by the cable popup commands.

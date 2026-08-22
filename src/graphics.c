@@ -59,6 +59,7 @@ extern "C" {
 #include "mouseHandle.h"
 #include "dataBase.h"
 #include "moduleGraphics.h"
+#include "canvasDrag.h"
 #include "alertDialog.h"
 #include "moduleResourcesAccess.h"
 #include "topbarResourcesAccess.h"
@@ -2262,12 +2263,41 @@ static void render_frame(void) {
     render_split_bar();
 
     if (gCableDrag.active == true) {
-        tModule * module = get_module(gCableDrag.fromModuleKey);
+        if (gCableDrag.rerouting) {
+            // ONE DRAGGED LINE PER CABLE. A Ctrl-drag picks up the whole hole, so all of its cables
+            // are following the cursor — drawing only the one whose far end happens to be recorded
+            // in fromModuleKey showed a single line while several cables were actually in flight.
+            for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+                tCable *      cable     = get_cable_slot(gSlot, gLocation, i);
 
-        if (module != NULL) {
-            tCableColour dragColour = cable_colour_for_connector_type(module->connector[gCableDrag.fromConnectorIndex].type);
-            set_rgb_colour(gCableColourMap[dragColour]);
-            render_cable_from_to(module->connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
+                if (!cable_touches_connector(cable, gCableDrag.rerouteModuleIndex,
+                                             gCableDrag.rerouteIoCount, gCableDrag.rerouteDir)) {
+                    continue;
+                }
+                uint32_t      farModule = 0;
+                uint32_t      farIo     = 0;
+                tConnectorDir farDir    = connectorDirIn;
+
+                cable_far_end(cable, gCableDrag.rerouteModuleIndex, gCableDrag.rerouteIoCount,
+                              &farModule, &farIo, &farDir);
+
+                tModule *     module    = get_module_slot(gSlot, gLocation, farModule);
+                int           index     = (module != NULL) ? find_index_from_io_count(module, farDir, (int)farIo) : -1;
+
+                if (index < 0) {
+                    continue;
+                }
+                set_rgb_colour(gCableColourMap[cable->colour]);   // the cable's own colour, not the connector's
+                render_cable_from_to(module->connector[index], gCableDrag.toConnector, 4.0);
+            }
+        } else {
+            tModule * module = get_module(gCableDrag.fromModuleKey);
+
+            if (module != NULL) {
+                tCableColour dragColour = cable_colour_for_connector_type(module->connector[gCableDrag.fromConnectorIndex].type);
+                set_rgb_colour(gCableColourMap[dragColour]);
+                render_cable_from_to(module->connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
+            }
         }
     }
     render_top_bar();

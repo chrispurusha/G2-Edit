@@ -653,8 +653,8 @@ bool cable_touches_connector(const tCable * cable, uint32_t moduleIndex, uint32_
 }
 
 // The far end of a cable, given which end is plugged into the hole being moved.
-static void cable_far_end(const tCable * cable, uint32_t moduleIndex, uint32_t ioCount,
-                          uint32_t * farModuleIndex, uint32_t * farIoCount, tConnectorDir * farDir) {
+void cable_far_end(const tCable * cable, uint32_t moduleIndex, uint32_t ioCount,
+                   uint32_t * farModuleIndex, uint32_t * farIoCount, tConnectorDir * farDir) {
     if ((cable->key.moduleToIndex == moduleIndex) && (cable->key.connectorToIoCount == ioCount)) {
         *farModuleIndex = cable->key.moduleFromIndex;
         *farIoCount     = cable->key.connectorFromIoCount;

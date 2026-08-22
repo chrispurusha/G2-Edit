@@ -58,6 +58,10 @@ connector symbol away from the input/output and release the mouse button. If you
       a legal white link). VALIDATE THEM ALL FIRST: if any one cannot be made, change nothing.
     - Dropping on nothing still disconnects — all of them now, not one.
     - It all stays inside the one undo bracket, so the whole move is a single undo step.
+    - ONE DRAGGED LINE PER CABLE while the drag is in flight (CT: "seem to work, but we only render
+      one of them", 2026-08-22). The rubber band was drawn from the single far end recorded in
+      fromModuleKey, which is only there to give the drag a starting point; with a whole hole picked
+      up, every cable on it is in flight and each now draws its own line, in its own colour.
   NOT TESTED AT ALL — every attempt to drive it failed for an unrelated reason: System Events stopped
   being able to see the app's window part way through (the same fault that appeared on 2026-08-21
   when the machine was not logged in), and with no window, cliclick's clicks go nowhere. Three
