@@ -187,13 +187,19 @@ const char *             pulseLoTimeStrMap[]                     = {"1.04ms", "1
 const tRgb               offOnColourMap[]                        = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
 const tRgb               gCableColourMap[cableColourMax]         = {
-    {0.7, 0.1, 0.1},                                    // red a.k.a Audio
-    {0.3, 0.3, 0.7},                                    // blue a.k.a Control
-    {0.7, 0.7, 0.1},                                    // yellow a.k.a Logic BG
-    {0.8, 0.3, 0.2},                                    // orange a.k.a Logic FG
-    {0.1, 0.7, 0.1},                                    // green a.k.a User 1
-    {0.7, 0.1, 0.7},                                    // purple a.k.a User 2
-    {0.9, 0.9, 0.9},                                    // white - apparently not user selectable
+    {0.7,  0.1,  0.1},                                  // red a.k.a Audio
+    {0.3,  0.3,  0.7},                                  // blue a.k.a Control
+    {0.7,  0.7,  0.1},                                  // yellow a.k.a Logic BG
+    // LIGHTENED 2026-08-22. It was {0.8, 0.3, 0.2}, close enough to the red at the top of this list
+    // that the two were hard to tell apart — a reported accessibility problem. This is the midpoint
+    // between what the cable was and what the orange CONNECTOR is ({1.0, 0.75, 0.31}), which pulls it
+    // clear of red mostly in green (0.43 apart now, was 0.20) without turning it yellow. The
+    // connector below is set to the same value so a cable and the connector it plugs into match, and
+    // the topbar's cable-visibility box follows for free — it reads this same map.
+    {0.9, 0.53, 0.26},                                  // orange a.k.a Logic FG
+    {0.1,  0.7,  0.1},                                  // green a.k.a User 1
+    {0.7,  0.1,  0.7},                                  // purple a.k.a User 2
+    {0.9,  0.9,  0.9},                                  // white - apparently not user selectable
 };
 
 const tRgb               gModuleColourMap[]                      = {MODULE_STANDARD_GREY,
@@ -231,7 +237,9 @@ const tRgb               connectorColourMap[] = {
     {0.7,  0.2,  0.2},
     {0.2,  0.2,  0.7},
     {0.9,  0.9,  0.0},
-    {1.0, 0.75, 0.31}, };
+    // Turbo logic — the up-rated orange. Matched to the orange in gCableColourMap so a cable and the
+    // connector it plugs into are the same colour; see the note there.
+    {0.9, 0.53, 0.26}, };
 
 
 const tModuleProperties  gModuleProperties[]  = {
@@ -2683,16 +2691,16 @@ const tVolumeMeterConfig volumeMeterConfigList[] = {
 // connector sits at {3, -3} on all ten faces, so the box sits in the same place on all ten too,
 // clear of the connector's own "Ctrl"/"Control" label.
 const tDisplayLocation   displayLocationList[]   = {
-    {moduleTypeSw1to2,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  90 Sw1-2
-    {moduleTypeSw2to1,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     // 100 Sw2-1
-    {moduleTypeSw1to4,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  88 Sw1-4
-    {moduleTypeSw4to1,   displayTypeSwitchCtrl, 0, {{16, -11}, {10, 7}}, anchorBottomLeft},     //  79 Sw4-1
-    {moduleTypeSw1to8,   displayTypeSwitchCtrl, 0, {{16, -11}, {10, 7}}, anchorBottomLeft},     //  78 Sw1-8
-    {moduleTypeSw8to1,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  15 Sw8-1
-    {moduleTypeSwOnOffM, displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  36 SwOnOffM
-    {moduleTypeSwOnOffT, displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     //  76 SwOnOffT
-    {moduleTypeSw1to2M,  displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     // 186 Sw1-2M
-    {moduleTypeSw2to1M,  displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft},     // 187 Sw2-1M
+    {moduleTypeSw1to2,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  90 Sw1-2
+    {moduleTypeSw2to1,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      // 100 Sw2-1
+    {moduleTypeSw1to4,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  88 Sw1-4
+    {moduleTypeSw4to1,   displayTypeSwitchCtrl, 0, {{16, -11}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  79 Sw4-1
+    {moduleTypeSw1to8,   displayTypeSwitchCtrl, 0, {{16, -11}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  78 Sw1-8
+    {moduleTypeSw8to1,   displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  15 Sw8-1
+    {moduleTypeSwOnOffM, displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  36 SwOnOffM
+    {moduleTypeSwOnOffT, displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  76 SwOnOffT
+    {moduleTypeSw1to2M,  displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      // 186 Sw1-2M
+    {moduleTypeSw2to1M,  displayTypeSwitchCtrl, 0, {{16,  -3}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      // 187 Sw2-1M
 };
 
 const tLedLocation       ledLocationList[]       = {

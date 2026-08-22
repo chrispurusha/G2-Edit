@@ -407,8 +407,14 @@ typedef struct {
     tModuleType  moduleType;
     tDisplayType displayType;
     uint32_t     sourceParam;   // the parameter the readout is derived FROM
+    // The rectangle is the readout's own box. Its SIZE is what the anchor measures from — see
+    // adjust_rectangle(), where a bottom anchor subtracts the height — so it must describe the space
+    // the readout occupies even though the text itself is drawn at STANDARD_TEXT_HEIGHT.
     tRectangle   rectangle;
     tAnchor      anchor;
+    // Optional caption, placed relative to the box exactly as a connector's label is.
+    const char * label;
+    tLabelLoc    labelLoc;
 } tDisplayLocation;
 
 typedef enum {

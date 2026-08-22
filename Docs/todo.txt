@@ -62,7 +62,11 @@ connector symbol away from the input/output and release the mouse button. If you
       one of them", 2026-08-22). The rubber band was drawn from the single far end recorded in
       fromModuleKey, which is only there to give the drag a starting point; with a whole hole picked
       up, every cable on it is in flight and each now draws its own line, in its own colour.
-  NOT TESTED AT ALL — every attempt to drive it failed for an unrelated reason: System Events stopped
+  VERIFIED ON HARDWARE by CT 2026-08-22: the move itself, the abort path (a two-cable output dropped
+  on a single input changes nothing), Undo restoring the whole move in one step, and dropping on
+  empty canvas disconnecting all of them. The one fault found was cosmetic and is fixed — only one
+  dragged line was drawn while several cables were in flight.
+  (Written blind, because every attempt of mine to drive it failed for an unrelated reason: System Events stopped
   being able to see the app's window part way through (the same fault that appeared on 2026-08-21
   when the machine was not logged in), and with no window, cliclick's clicks go nowhere. Three
   "failures" I recorded against this code were that, not the code: a diagnostic LOG_INFO in the press
@@ -70,10 +74,7 @@ connector symbol away from the input/output and release the mouse button. If you
   SO THIS NEEDS A REAL TEST BEFORE IT IS TRUSTED, and note it also rewrote the SINGLE-cable path that
   WAS verified on 2026-08-22 (Clk -> Rst moved the cable, empty canvas removed it, Undo restored it).
   Both need re-running:
-    - one cable on an input, moved to another input, and dropped on empty canvas
-    - an output fanning out to two inputs, moved to another output: BOTH cables should follow
-    - that same two-cable output dropped on a single INPUT: nothing should change at all
-    - Undo after each, which should restore the whole move in one step
+    - all four of those cases have since been run by CT and pass.)
 
 CONNECTOR HIT AREAS ARE EXACTLY THE DRAWN CIRCLE — measured 2026-08-22 after CT asked whether they
 feel too small. They do, and here is why: the click region registered for a connector IS the
@@ -220,9 +221,8 @@ When adding or deleting a new module - even name bar, seqval sequencer data seem
   release before it acts on the trigger, and nothing happens; 1 ms apart is enough, so no real click
   can hit it. Verified end to end: Rnd randomises once, param 36 ends at 0, and a later module add
   leaves both sequences untouched.
-  STILL TO CHECK: the OTHER paramTypePush buttons now that press/release have swapped — SeqVal's
-  "Clr", and whatever Rnd/Clr the rest of the Seq family carry. Same handler, so they should be
-  right, but none of them has been clicked since the change.
+  THE OTHER paramTypePush BUTTONS were checked on hardware by CT 2026-08-22 and behave — SeqVal's
+  "Clr" and the rest of the Seq family share the handler and none of them latches.
 The Gate module's face needs work — its type selector should be a SYMBOL, not a text menu. The
 original draws it as an image picker (a PartSelector) holding six 90x26 line drawings of the gates
 themselves: AND, NAND, OR, NOR, XOR, XNOR, each an outline with its label. We draw two dropdowns of
@@ -309,6 +309,12 @@ SW1-2 and similar need something new. See manual. The offset box seems to show 0
       and are now In 1..In 8 like its five siblings.
     - The group no longer takes name 0 as its own label; that name is button 0's caption and was
       being drawn twice.
+  THE SELECTED BUTTON IS RGB_GREEN_ON, the same green every other "this one is on" control in the
+  app uses — offOnColourMap's on state, the topbar's active control, the slot selector, the MIDI CC
+  list. It was a blue of its own at first because the manual describes the original's selected
+  channel as blue; consistency inside our own UI is worth more than matching the original's palette,
+  so the blue and its define are gone (CT, 2026-08-22).
+
   SIZING, settled 2026-08-22 after CT found two faults with the first version:
     - FIXED WIDTH, not fitted to the current captions. It measured the widest caption it was showing,
       so the group changed size — and its click regions moved — the moment a button was renamed, and
@@ -328,6 +334,10 @@ SW1-2 and similar need something new. See manual. The offset box seems to show 0
       four-column group. SETTLED: CT chose the widest glyph plus clipping over dropping back to a
       narrower reference character that would have fitted without a cap — stable geometry first, and
       a clipped name is legible enough to identify while a group that moves under the cursor is not.
+  THE MULTI-LABEL SET PARAM LABEL MESSAGE IS CONFIRMED ON HARDWARE (CT, 2026-08-22): a renamed
+  parameter survives a re-read from the instrument. That was the one change in this batch that could
+  WRITE bad data — send_set_param_label() now emits every label of every named parameter where it
+  only ever emitted label 0 — and it was the only thing holding up a beta.
   VERIFIED: renders correctly against a real patch (SwTest.pch2, whose Sw1-2 already carries the
   per-button names "Box1"/"Box2" — which also proves the multi-label parse), selected button lit
   blue, no duplicate label.
@@ -553,6 +563,12 @@ by step with mouse/touchpad
   positions are recoverable from the resource file the same way the Channel Select layouts were.
 
 Colour of red and orange cables is too close to each other. Just a minor accessibility issue.
+  DONE 2026-08-22. The cable orange was {0.8, 0.3, 0.2} against a red of {0.7, 0.1, 0.1} — 0.2 apart
+  in green and 0.1 in the other two, which is why they read as the same colour. It is now the
+  MIDPOINT between what the cable was and what the orange CONNECTOR already is ({1.0, 0.75, 0.31}):
+  {0.9, 0.53, 0.26}, which is 0.43 from red in green without straying into yellow. The connector is
+  set to the same value so a cable matches the connector it plugs into, and the topbar's
+  cable-visibility box needed no change at all — it reads the same map the cables do.
 
 
 Purged 2026-07-28: fully-closed items removed. Anything still listed is either open work or

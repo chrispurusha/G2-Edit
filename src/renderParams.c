@@ -1207,7 +1207,7 @@ tRectangle render_paramType1RadioEdit(tModule * module, tRectangle rectangle, ch
                 caption[strlen(caption) - 1] = '\0';
             }
             drawnRect = draw_button(gParamRenderArea, drawRect, caption,
-                                    selected ? (tRgb)RGB_BLUE_SELECTED : (tRgb)RGB_BACKGROUND_GREY);
+                                    selected ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
         }
 
         // THE RECTANGLE THE CALLER REGISTERS HAS TO BE THE ONE THE BUTTON WAS ACTUALLY DRAWN AT.

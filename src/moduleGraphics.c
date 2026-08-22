@@ -963,16 +963,16 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
 // control, and giving it one would put a dead target over the module body where a right-click should
 // still reach the module's own menu.
 void render_display_common(tRectangle rectangle, tModule * module, uint32_t displayRef) {
-    uint32_t   slot       = module->key.slot;
-    uint32_t   variation  = gPatchDescr[slot].activeVariation;
-    uint32_t   source     = displayLocationList[displayRef].sourceParam;
-    char       buff[16]   = {0};
+    uint32_t     slot       = module->key.slot;
+    uint32_t     variation  = gPatchDescr[slot].activeVariation;
+    uint32_t     source     = displayLocationList[displayRef].sourceParam;
+    const char * label      = displayLocationList[displayRef].label;
+    char         buff[16]   = {0};
+    double       textHeight = (double)STANDARD_TEXT_HEIGHT;
 
     if (source >= MAX_NUM_PARAMETERS) {
         return;
     }
-    double     textHeight = (double)STANDARD_BUTTON_TEXT_HEIGHT;
-    tRectangle boxRect    = {{rectangle.coord.x, rectangle.coord.y}, {0.0, textHeight}};
 
     switch (displayLocationList[displayRef].displayType) {
         case displayTypeSwitchCtrl:
@@ -981,17 +981,43 @@ void render_display_common(tRectangle rectangle, tModule * module, uint32_t disp
             // decode back into a channel. Calculated, not tabulated — the rule is the same for a
             // two-way switch as for an eight-way one, which is exactly why the G2 uses it.
             snprintf(buff, sizeof(buff), "%u", module->param[variation][source].value * SWITCH_CTRL_STEP);
-            // Sized for the WIDEST value it can ever show rather than the one it happens to be
-            // showing, so the box does not change width as the selection moves. 28 is the largest
-            // any Switch module reaches (button 8 of an eight-way), so two digits covers all ten.
-            boxRect.size.w = get_text_width("28", textHeight, eCache) + DISPLAY_BOX_PADDING;
             break;
         }
 
         default:
             return;
     }
-    draw_button(moduleArea, boxRect, buff, (tRgb)RGB_GREY_9);
+    // PLAIN TEXT ON THE FACE, not a button. It is a readout — nothing here can be clicked — and
+    // drawing it as a button invited the eye to try. No click region is registered either, so a
+    // right-click over it still reaches the module's own menu.
+    set_rgb_colour((tRgb)RGB_BLACK);
+    render_text(moduleArea, (tRectangle){{rectangle.coord.x, rectangle.coord.y}, {BLANK_SIZE, textHeight}}, buff);
+
+    if (label == NULL) {
+        return;
+    }
+    tRectangle labelRect = {{rectangle.coord.x, rectangle.coord.y}, {BLANK_SIZE, textHeight}};
+
+    // Placed the same four ways a connector's label is, and for the same reasons — see
+    // render_connector_common(), which this deliberately mirrors rather than inventing its own rule.
+    switch (displayLocationList[displayRef].labelLoc) {
+        case labelLocUp:
+            labelRect.coord.y -= textHeight;
+            break;
+
+        case labelLocDown:
+            labelRect.coord.y += (rectangle.size.h + 2.0);
+            break;
+
+        case labelLocLeft:
+            labelRect.coord.x -= (get_text_width((char *)label, textHeight, eCache) + 2.0);
+            break;
+
+        case labelLocRight:
+            labelRect.coord.x += (rectangle.size.w + 2.0);
+            break;
+    }
+    render_text(moduleArea, labelRect, (char *)label);
 }
 
 void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, uint32_t ledIndex) {
