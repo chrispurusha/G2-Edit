@@ -92,7 +92,7 @@ void undo_push_module_exclude(tModuleKey key, uint8_t oldValue, uint8_t newValue
 
 // Record a param label change (old → new). oldSet/newSet indicate whether
 // a custom label existed before/after.
-void undo_push_param_name(tModuleKey key, uint32_t paramIndex, const char * oldName, bool oldSet, const char * newName, bool newSet);
+void undo_push_param_name(tModuleKey key, uint32_t paramIndex, uint32_t labelIndex, const char * oldName, bool oldSet, const char * newName, bool newSet);
 
 // Patch-descriptor field identifiers for undo_push_patch_descr.
 #define UNDO_PATCH_DESCR_VOICE_COUNT    0u

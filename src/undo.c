@@ -132,6 +132,7 @@ typedef struct {
 typedef struct {
     tModuleKey key;
     uint32_t   paramIndex;
+    uint32_t   labelIndex;  // Which name OF that parameter — only a Channel Select group has more than one
     char       oldName[PROTOCOL_PARAM_NAME_SIZE + 1];
     bool       oldSet;
     char       newName[PROTOCOL_PARAM_NAME_SIZE + 1];
@@ -1397,13 +1398,23 @@ static void apply_param_name(tUndoParamNamePayload * p, bool isUndo) {
         return;
     }
     uint32_t        pi   = p->paramIndex;
+    uint32_t        li   = p->labelIndex;
     const char *    name = isUndo ? p->oldName : p->newName;
     bool            set  = isUndo ? p->oldSet : p->newSet;
 
-    mod->paramNameSet[pi][0]      = set;
-    COPY_STRING(mod->paramName[pi][0], name);
-    mod->paramNumLabels[pi]       = set ? 1 : 0;
+    if (li >= MAX_NUM_LABELS) {
+        return;
+    }
+    mod->paramNameSet[pi][li]     = set;
+    COPY_STRING(mod->paramName[pi][li], name);
 
+    // GROW ONLY. Undoing the rename of one Channel Select button must not drop the names of the
+    // others — the count is how many names the parameter HAS, not how many this edit touched.
+    if (set && (mod->paramNumLabels[pi] < (li + 1))) {
+        mod->paramNumLabels[pi] = li + 1;
+    } else if (!set && (li == 0) && (mod->paramNumLabels[pi] <= 1)) {
+        mod->paramNumLabels[pi] = 0;
+    }
     tMessageContent msg  = {0};
 
     msg.cmd                       = eMsgCmdSetParamLabel;
@@ -1415,7 +1426,7 @@ static void apply_param_name(tUndoParamNamePayload * p, bool isUndo) {
     synthlib_request_redraw();
 }
 
-void undo_push_param_name(tModuleKey key, uint32_t paramIndex,
+void undo_push_param_name(tModuleKey key, uint32_t paramIndex, uint32_t labelIndex,
                           const char * oldName, bool oldSet,
                           const char * newName, bool newSet) {
     if (oldSet == newSet && strcmp(oldName, newName) == 0) {
@@ -1428,6 +1439,7 @@ void undo_push_param_name(tModuleKey key, uint32_t paramIndex,
     }
     p->key        = key;
     p->paramIndex = paramIndex;
+    p->labelIndex = labelIndex;
     COPY_STRING(p->oldName, oldName);
     p->oldSet     = oldSet;
     COPY_STRING(p->newName, newName);
