@@ -76,6 +76,12 @@ tRectangle render_paramType1FreqShift(tModule * module, tRectangle rectangle, ch
 tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
 tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
 tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
+tRectangle render_paramType1RadioEdit(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
+// Where button `buttonIndex` of a Channel Select group drew, given where the group as a whole drew.
+// The renderer and the hit test have to agree on this, so they share it rather than each doing the
+// arithmetic; buttons are uniform, so the group rectangle is all it takes.
+tRectangle radio_button_rect(tRectangle groupRect, uint32_t buttonCount, uint32_t buttonIndex);
+int32_t radio_button_at(tRectangle groupRect, uint32_t buttonCount, tCoord coord);
 
 
 #endif // __RENDER_PARAMS_H__

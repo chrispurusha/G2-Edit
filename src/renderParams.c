@@ -1071,6 +1071,182 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
     return draw_button(gParamRenderArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight, eCache), textHeight}}, strMap[(int)paramValue], buttonBackgroundColour);
 }
 
+tRectangle radio_button_rect(tRectangle groupRect, uint32_t buttonCount, uint32_t buttonIndex) {
+    uint32_t   columns = radio_columns(buttonCount);
+    uint32_t   rows    = radio_rows(buttonCount);
+    tRectangle rect    = groupRect;
+
+    if ((columns == 0) || (rows == 0)) {
+        return rect;
+    }
+    rect.size.w   = groupRect.size.w / (double)columns;
+    rect.size.h   = groupRect.size.h / (double)rows;
+    rect.coord.x += rect.size.w * (double)(buttonIndex % columns);
+    rect.coord.y += rect.size.h * (double)(buttonIndex / columns);
+
+    return rect;
+}
+
+// Which button of a Channel Select group a coordinate landed on, or -1 for none. The inverse of
+// radio_button_rect(), and it has to stay that way — the hit test and the drawing are the same
+// geometry read in opposite directions.
+int32_t radio_button_at(tRectangle groupRect, uint32_t buttonCount, tCoord coord) {
+    uint32_t i = 0;
+
+    for (i = 0; i < buttonCount; i++) {
+        tRectangle buttonRect = radio_button_rect(groupRect, buttonCount, i);
+
+        if (  (coord.x >= buttonRect.coord.x) && (coord.x < (buttonRect.coord.x + buttonRect.size.w))
+           && (coord.y >= buttonRect.coord.y) && (coord.y < (buttonRect.coord.y + buttonRect.size.h))) {
+            return (int32_t)i;
+        }
+    }
+
+    return -1;
+}
+
+// Channel Select radio buttons — see paramTypeRadioEdit in types.h. One button per channel, the
+// selected one lit, laid out four across and wrapping. The button width is the WIDEST CAPTION, so
+// the group grows to fit a renamed button instead of clipping it, exactly as the plain toggle does
+// with its string map.
+tRectangle render_paramType1RadioEdit(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+    double     textHeight       = (double)STANDARD_BUTTON_TEXT_HEIGHT;
+    uint32_t   columns          = radio_columns(range);
+    uint32_t   rows             = radio_rows(range);
+    double     buttonWidth      = 0.0;
+    double     rowHeight        = 0.0;
+    tRectangle groupRect        = {{rectangle.coord.x, rectangle.coord.y}, {0.0, 0.0}};
+    tRectangle drawnBounds      = {0};
+    uint32_t   i                = 0;
+
+    if ((range == 0) || (columns == 0)) {
+        return groupRect;
+    }
+    // SIZED FOR THE LONGEST NAME THE G2 CAN HOLD, not for the names it happens to be holding. A
+    // Channel Select button takes up to PROTOCOL_PARAM_NAME_SIZE characters — the manual: "the name
+    // cannot be longer than 7 characters because of the size of the ASSIGNABLE DISPLAYS on the synth
+    // front panel" — so the group is that wide always, whatever the buttons currently read.
+    //
+    // It used to measure the widest CURRENT caption, which meant the group changed size, and its
+    // click regions moved, the moment a button was renamed — and changed back if the new name was
+    // shorter. A control that resizes under the cursor is worse than one wider than it needs to be.
+    // eCache is safe on a string literal; the runtime captions are no longer measured at all.
+    // What draw_button() adds around its text, asked of the library rather than named: the
+    // DRAW_BUTTON_MARGIN constant sits in synthlibDefs.h's NON-G2_EDIT branch, so draw_button() sees
+    // it and this file does not. draw_button_bounds() is the exposed answer — it returns the rect
+    // draw_button() will actually draw for a given input, so a zero-sized probe yields 2 * margin.
+    double     buttonMargin     = draw_button_bounds((tRectangle){{0.0, 0.0}, {0.0, 0.0}}).size.w / 2.0;
+
+    // The cell PITCH, which has to include what draw_button() adds: it grows the rect it is handed by
+    // DRAW_BUTTON_MARGIN on every side, so a cell of exactly textHeight drew a button four points
+    // taller than its own row — which is why the second row of a 4x2 group overlapped the first. The
+    // cell carries the margin, and the draw below hands over the cell MINUS the margin, so the button
+    // lands back at exactly cell size.
+    buttonWidth      = get_text_width(RADIO_WIDEST_CAPTION, textHeight, eCache) + RADIO_BUTTON_PADDING + (2.0 * buttonMargin);
+    rowHeight        = textHeight + (2.0 * buttonMargin);
+
+    // BUT NEVER WIDER THAN THE FACE. Seven of the widest glyph across four columns does not fit a
+    // module — it ran off the right-hand edge and took two of the buttons with it. The row's own x in
+    // the resource table says how much width is left (these rows are all anchored from the left), so
+    // the cell is capped at what remains, shared between the columns. A caption too wide for the cell
+    // it lands in is truncated when it is drawn, which is the price of a group that always fits and
+    // never moves.
+    double     availablePercent = RADIO_FACE_WIDTH_PERCENT - paramLocationList[paramRef].rectangle.coord.x;
+
+    if (availablePercent > 0.0) {
+        double maxButtonWidth = scale_from_percent(availablePercent) / (double)columns;
+
+        if (buttonWidth > maxButtonWidth) {
+            buttonWidth = maxButtonWidth;
+        }
+    }
+    groupRect.size.w = buttonWidth * (double)columns;
+    groupRect.size.h = rowHeight * (double)rows;
+
+    if (strlen(label) > 0) {
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(gParamRenderArea, (tRectangle){{rectangle.coord.x, rectangle.coord.y - textHeight}, {BLANK_SIZE, textHeight}}, label);
+    }
+
+    for (i = 0; i < range; i++) {
+        tRectangle buttonRect = radio_button_rect(groupRect, range, i);
+        tRectangle drawnRect  = {0};
+        // draw_button() adds the margin back, so this lands at exactly buttonRect.
+        tRectangle drawRect   = {
+            {buttonRect.coord.x + buttonMargin,        buttonRect.coord.y + buttonMargin       },
+            {buttonRect.size.w - (2.0 * buttonMargin), buttonRect.size.h - (2.0 * buttonMargin)}
+        };
+        bool       selected   = ((uint32_t)paramValue == i);
+
+        // The button being renamed shows the edit buffer with a caret, in place, the same way an
+        // Enable button does. Renaming a Channel Select button is the one case where the parameter
+        // being edited is not enough to say WHICH box is in edit — hence labelIndex.
+        if (  gParamNameEdit.active
+           && (gParamNameEdit.moduleKey.slot == module->key.slot)
+           && (gParamNameEdit.moduleKey.location == module->key.location)
+           && (gParamNameEdit.moduleKey.index == module->key.index)
+           && (gParamNameEdit.paramIndex == paramIndex)
+           && (gParamNameEdit.labelIndex == i)) {
+            char     editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
+            uint32_t cp                                    = gParamNameEdit.cursorPos;
+
+            memcpy(editBuf, gParamNameEdit.buffer, cp);
+            editBuf[cp] = '|';
+            memcpy(&editBuf[cp + 1], &gParamNameEdit.buffer[cp], strlen(gParamNameEdit.buffer) - cp + 1);
+            drawnRect   = draw_button(gParamRenderArea, drawRect, editBuf, (tRgb)RGB_WHITE);
+        } else {
+            char caption[PROTOCOL_PARAM_NAME_SIZE + 1] = {0};
+
+            COPY_STRING(caption, radio_caption(module, paramIndex, i, strMap));
+
+            // Truncated to fit rather than allowed to spill over the button's edge and into its
+            // neighbour. eNoCache throughout: this is a runtime buffer and the width cache is keyed
+            // on the string POINTER, so caching would pin the first caption ever measured.
+            while (  (strlen(caption) > 1)
+                  && (get_text_width(caption, textHeight, eNoCache) > (drawRect.size.w - RADIO_BUTTON_PADDING))) {
+                caption[strlen(caption) - 1] = '\0';
+            }
+            drawnRect = draw_button(gParamRenderArea, drawRect, caption,
+                                    selected ? (tRgb)RGB_BLUE_SELECTED : (tRgb)RGB_BACKGROUND_GREY);
+        }
+
+        // THE RECTANGLE THE CALLER REGISTERS HAS TO BE THE ONE THE BUTTON WAS ACTUALLY DRAWN AT.
+        // draw_button() returns the rect AFTER scale_scroll_adjust_rectangle(), which is the space
+        // the click registry works in; the layout rect above is in unadjusted module coordinates.
+        // Returning the latter registered the group somewhere else entirely — the buttons drew in
+        // the right place and no click could ever reach them, at any zoom or scroll position.
+        if (i == 0) {
+            drawnBounds = drawnRect;
+        } else {
+            double right  = drawnBounds.coord.x + drawnBounds.size.w;
+            double bottom = drawnBounds.coord.y + drawnBounds.size.h;
+
+            if (drawnRect.coord.x < drawnBounds.coord.x) {
+                drawnBounds.coord.x = drawnRect.coord.x;
+            }
+
+            if (drawnRect.coord.y < drawnBounds.coord.y) {
+                drawnBounds.coord.y = drawnRect.coord.y;
+            }
+
+            if ((drawnRect.coord.x + drawnRect.size.w) > right) {
+                right = drawnRect.coord.x + drawnRect.size.w;
+            }
+
+            if ((drawnRect.coord.y + drawnRect.size.h) > bottom) {
+                bottom = drawnRect.coord.y + drawnRect.size.h;
+            }
+            drawnBounds.size.w = right - drawnBounds.coord.x;
+            drawnBounds.size.h = bottom - drawnBounds.coord.y;
+        }
+    }
+
+    // The grid divides the DRAWN bounds the same way it divided the layout rect: the adjustment is a
+    // uniform scale and translate, so equal cells stay equal cells. That is what lets the hit test
+    // work from this one rectangle.
+    return drawnBounds;
+}
+
 tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
     return draw_power_button(gParamRenderArea, rectangle, paramValue != 0);
 }

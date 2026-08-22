@@ -788,6 +788,14 @@ static void on_file_saved(const char * path) {
             set_patch_name_from_filename(slot, path);
         }
         remember_file_path(path);
+
+        // A SAVE PUTS THE FILE IN File > Open Recent, exactly as an open does. It only used to go in
+        // on the way IN, so a patch written with Save As — the one you are most likely to want back
+        // — was the one file the menu never listed. Both save routes arrive here (the browser's
+        // callback, and File > Save going straight to the remembered path), so this covers them
+        // both; recent_files_add() moves an existing entry to the front and returns early if it is
+        // already there, so saving repeatedly costs nothing.
+        recent_files_add(path);
     }
 
     // The save that a conflict's "Save As..." branch was waiting on. Resolve either way: a

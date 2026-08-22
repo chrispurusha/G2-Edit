@@ -524,7 +524,8 @@ static bool panel_context_menu_click(tCoord coord) {
 static bool param_type_is_dragged(tParamType paramType) {
     return paramType != paramTypeToggle && paramType != paramTypeMenu
            && paramType != paramTypeBypass && paramType != paramTypeEnable
-           && paramType != paramTypePush && paramType != paramTypeCustomData;
+           && paramType != paramTypePush && paramType != paramTypeCustomData
+           && paramType != paramTypeRadioEdit;
 }
 
 // Mouse-down on a knob's widget. Continuous params start a drag through the very same
