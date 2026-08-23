@@ -66,10 +66,117 @@ and draw THAT rather than an idealised curve.
   about the large amplitude changes). Descriptors beat pictures for this work — peak, peak phase, duty
   and the first five harmonics settled in one table what ASCII plots had me guessing at, including
   correcting a wrong call.
-  NEXT STEP IS A FIT, NOT MORE GUESSING: sweep Shape across its range for each of the four (measure.py
-  --sweep-mode / --param 6 does it in one run per wave) and derive the actual transfer, rather than
-  reasoning from the manual's prose as the current model does. The manual's descriptions are still
-  useful as a sanity check on the answer, but they are clearly not precise enough to draw from.
+  ALL EIGHT WAVES ARE NOW FITTED AND FIXED (2026-08-23). Every model in oscshpb_waveform_sample() was
+  refitted against a fresh capture sweep and then CHECKED BY COMPILING THE REAL FUNCTION out of
+  moduleGraphics.c into a standalone harness and correlating its output against the hardware cycle,
+  rather than against a Python restatement of it. That check earned its keep immediately: it caught
+  DblSaw drawn upside down, which the Python version of the same model had scored 0.98 on because the
+  two differed in a polarity convention. Worst correlation anywhere is now 0.954, most are 0.99+:
+    Sine1 1.000-0.984   Sine2 1.000-0.984   Sine3 1.000-0.994   Sine4 1.000-0.954
+    TriSaw 1.000-0.997  DblSaw 0.997-0.993  SymPulse 0.995-0.981  Pulse 0.996-0.987 (to Shape 112)
+
+  THE SHAPE DIAL ACTS OVER ITS WHOLE RANGE, AND THE MANUAL'S "50%" DOES NOT MEAN RAW 64. At raw 0 the
+  harmonics are a pure sine and they grow from raw 16 upward, continuously, with no dead zone. The
+  dial DISPLAYS 50 + 50*shape percent, which is what the manual's percentages refer to: displayed 75%
+  is raw 64, displayed 99% is raw 124. Every one of the manual's figures lands correctly once read
+  that way. THIS MATTERS BEYOND THE GRAPHICS - see the sound-engine note below.
+
+  HOW THE SINE MODELS WERE ACTUALLY DERIVED, because the method generalises: a wave of the form
+  sin(2.pi.w(p)) can have its warp w(p) READ STRAIGHT OFF THE CAPTURE by inverting sin() with branch
+  tracking (asin before the peak, pi - asin between peak and trough, 2.pi + asin after). That turns
+  "what curve is this" into a table of numbers, and the structure fell straight out of it.
+    - SINE1 IS A THREE-SEGMENT SYMMETRIC WARP, NOT THE TWO-SEGMENT ONE WE HAD. The recovered warp has
+      w(0.5) = 0.500 at EVERY Shape, so the descending zero crossing never moves and the duty stays
+      0.500 - where our model's duty WAS the breakpoint and collapsed to 0.10. That is what drew a
+      sine's top lobe crammed into a tenth of a cycle with a full-width bottom lobe hung off it, which
+      is exactly what CT reported seeing ("top half of a sin and bottom half"). It also satisfies
+      w(1-p) = 1 - w(p) to three decimals, and its slope is piecewise constant with ONE breakpoint per
+      half sitting exactly at the peak, where w = 0.25. So it is a ONE-PARAMETER warp, and b = 0.25 is
+      the identity, which is why raw 0 is a clean sine. b measured 0.248 down to 0.055; the quadratic
+      0.25 - 0.255s + 0.060s^2 fits all nine points to +/-0.0016 and its constant came out 0.2491, i.e.
+      the 0.25 the identity requires. At small b the tail becomes a long linear sweep from w=0.25 to
+      w=0.75 - a slow fall from peak to trough, which is the sawtooth the manual promises and which CT
+      independently spotted was missing ("Sine1 at 99 looks closer to a saw").
+    - SINE2's WARP FORM WAS RIGHT AND ITS DIRECTION WAS WRONG. Fitting the two-segment warp against the
+      capture correlates 0.999+, but the breakpoint CLOSES, 0.495 down to 0.030, where our lobeWidth
+      OPENED, 0.5 up to 0.985. So the POSITIVE lobe narrows to a spike and the negative spreads broad
+      and shallow. Same inversion class as the Pulse duty bug.
+      AND ITS 2.9x AMPLITUDE GROWTH IS NOT A GAIN - IT IS AC COUPLING. A narrow positive lobe against a
+      wide negative one has a negative mean; the output removes it, which lifts the spike well above
+      the trough instead of the two being equal. That killed the earlier "Sine2 is not a phase warp at
+      all, a phase warp cannot change peak amplitude" conclusion recorded above: the reasoning was
+      sound but it was applied to a DC-removed measurement. The mean of sin() over this warp is exactly
+      2(2d-1)/pi, so it is now subtracted in closed form and the result renormalised.
+    - SINE3 CONFIRMED A SECOND WAY, independently of the spectrum that produced it. The closed form puts
+      its peak at acos(2r/(1+r^2))/2pi, and that lands within 0.002 of the measured peak phase (0.176,
+      0.109, 0.055) at every setting. Ratio law refined from 0.9*shape to shape*(1 - 0.105*shape).
+    - SINE4 IS SINE3'S TWIN: the SAME geometric series restricted to odd harmonics, measured 1, 0.94,
+      0.88, 0.82 at full Shape with the evens zero to two decimals, and r = 0.94*shape. The three fixed
+      harmonics we had (3rd and 5th pinned at 0.5 and 0.25) put ripples in the wave the hardware does
+      not have - CT: "more bumps than the capture". The odd series sums exactly too:
+        sum over m of r^m sin((2m+1).theta) = (1+r).sin(theta) / (1 - 2r.cos(2.theta) + r^2)
+      with peak (1+r)/(4.sqrt(r).(1-r)) once r >= 3-2.sqrt(2), and 1/(1+r) below that.
+    - THE EARLIER "AMPLITUDE" READINGS FOR SINE3/SINE4 (a dip, a U) WERE ARTEFACTS of comparing raw
+      peaks across waves with different harmonic content and different means. Normalising each cycle
+      before comparing removed them; neither wave needs an amplitude law at all, only a peak-normalised
+      closed form, which is what they now have.
+
+  DBLSAW AND SYMPULSE, both of which needed the analyser first:
+    - DBLSAW'S DETUNE REACHES HALF A CYCLE, not the quarter the manual's "90 degrees" implies. Fitted
+      offsets are 0.125, 0.250, 0.375, 0.500 at Shape 32/64/96/127 - dead linear to shape * 0.5. The
+      peak confirms it independently: it falls to exactly half (0.0387 to 0.0186), which is what two
+      saws a half cycle apart do, summing to a double-rate saw of half the height.
+    - DBLSAW WAS ALSO DRAWN UPSIDE DOWN (0.53 correlation, 0.997 negated, at every Shape). TriSaw shares
+      the same ramp helper and was checked in the same run: it is correct as it stands (1.000, and 0.526
+      if negated), so the polarity difference between the two is REAL and the helper was left alone.
+      Only DblSaw's own use of it is negated.
+    - SYMPULSE'S LAW IS SIMPLY halfSeg = 0.5 * (1 - shape), WITH NO FLOOR. The 0.01 floor we had was a
+      guess that kept a sliver of pulse alive at the top; the hardware goes SILENT there (-86 dBFS at
+      raw 127), with the width shrinking smoothly through 0.240, 0.146, 0.086, 0.057 at 96/108/116/120
+      on the way down. The bare law also lands both of the manual's figures exactly, which the floored
+      version only approximated: displayed 75% gives 0.248 per segment ("25% symmetric pulse width")
+      and displayed 99% gives 0.010 ("1%").
+    - PULSE IS RIGHT FROM SHAPE 0 TO ABOUT 112 and is deliberately LEFT ALONE above that. Its high time
+      floors at about 8 samples rather than following the dial down to 1%, but that floor is neither a
+      fixed time nor a fixed fraction: swept across pitch it measures 5.8 to 30.6 samples and 0.024 to
+      0.16 of a cycle. It is a band-limiting artefact, it depends on a pitch an ICON does not have, and
+      the linear law matches both the dial's displayed percentage and the measurement everywhere below
+      the floor. Drawing the intended duty is the more useful icon; this is a note, not a bug.
+
+  THE ANALYSER THAT MADE THIS POSSIBLE - scratch tooling, worth rebuilding if it is wanted again:
+  autocorrelation period detection (normalised square difference, coarse pass on a 4x decimated copy
+  then a full-rate refine with parabolic interpolation for a FRACTIONAL period, so cycle averaging no
+  longer smears a wave whose period is not a whole number of samples). Three things it needed that are
+  not obvious:
+    - ONLY LOCAL MAXIMA OF THE CORRELATION MAY BE CONSIDERED. Any smooth wave also correlates at ~0.999
+      at a lag of two or three samples, because it has barely moved yet; a plain "shortest lag over the
+      threshold" rule locks onto that and reported a 110 Hz sine as 12 kHz.
+    - PASS THE KNOWN PITCH. A wave built from two identical half cycles (an unshaped DblSaw, a square
+      SymPulse) genuinely IS periodic at half its oscillator period and no analysis can prefer one
+      reading; the capture plays a known note, so hinting it removes the only real ambiguity.
+    - NARROW PULSES DO NOT SURVIVE DECIMATION. The coarse pass erases a pulse a sample or two wide, so
+      SymPulse near the top of its dial correlated at 0.02 while being perfectly periodic; when the
+      cheap pass fails, redo it at full rate over the hinted range.
+  IT IS WORTH IT: zero crossing read DblSaw at 666 Hz and SymPulse at 24000 Hz where the true pitch was
+  329.6 Hz, and autocorrelation gets 329.58 Hz on every wave at every setting.
+
+  THE SOUND ENGINE HAS ITS OWN, DIVERGENT, AND NOW KNOWN-WRONG COPY OF ALL THIS - osc_shp_wave() in
+  soundEngine.c. CT raised this twice ("when we recreate the sound engine, this analysis might also
+  help there"), and it is worse than a missed improvement, because the two implementations disagree on
+  things the measurement has now settled:
+    - it maps the dial as t = (shape - 0.5) / 0.49 CLAMPED AT ZERO, so nothing at all happens below raw
+      64. The capture shows the harmonics growing from raw 16 upward. HALF THE DIAL IS DEAD.
+    - its Sine3 is a rectified sine ("rectification is what produces even harmonics") - the
+      even-harmonic reading the spectrum disproves.
+    - its Sine4 is a tanh soft clip, its Sine1 returns -cos of a warp whose breakpoint runs to 0.02
+      (wrong phase AND wrong endpoint), its DblSaw detunes by only half a cycle * t, and its SymPulse
+      emits 0.0 between pulses, making it a three-level wave the hardware does not produce.
+  THIS IS EXACTLY THE SPLIT paramCurves.c ALREADY EXISTS TO PREVENT - it was pulled out of
+  renderParams.c so a curve could not be corrected in one place and left wrong in another, and these
+  wave models want the same treatment: one platform-free file included by both moduleGraphics.c and
+  soundEngine.c, the way paramCurves.c is shared by the dial text, the drawn curves and the engine.
+  NOT DONE HERE - it is engine work and CT framed it as future work. Recorded so the refit above is not
+  silently lost the next time the engine is touched.
 
   WHICH MODULES WANT ONE: the natural list is the modules whose wave the user PICKS, which the
   original editor draws as image selectors rather than text — OscA, OscB, OscShpA, LfoA, LfoB,
