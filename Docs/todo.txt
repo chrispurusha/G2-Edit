@@ -1,6 +1,80 @@
 G2-Edit TODO (priority order)
 
 CT new:
+CAPTURING REAL WAVEFORMS TO DRAW THEM ACCURATELY — method proven end to end 2026-08-23, nothing built
+yet. CT's idea: set a wave, sweep its shape parameter, record what the instrument actually produces,
+and draw THAT rather than an idealised curve.
+  THE LOOP WORKS, and every piece already existed:
+    - the backdoor builds the patch ON THE INSTRUMENT now (see the backdoor note below), so
+      ADDMODULE/CABLE/DEVMODE/DEVSET set up and step the experiment with no hand-driving
+    - tools/capture records it: ./capture --device "QU-24" --out f.wav --seconds N
+    - tools/measure.py already steps a PARAM or a MODE while capture runs (--sweep-mode is the
+      waveform selector, --param the shape dial, --pre/--pre-mode hold the others still)
+  FACTS ABOUT THE RIG, all confirmed rather than assumed:
+    - the G2 arrives on QU-24 inputs 5 and 6 — capture channels 5 and 6, not 5 and 7
+    - the file is 32 channels, 48 kHz, 32-BIT SIGNED INT. Reading it as 16-bit shows every odd
+      channel pegged at full scale, and as float32 it shows 3.4e38; both are the reader being wrong,
+      not the capture
+    - level is about -34 dBFS, low but clean enough for shape work
+  DEMONSTRATED: OscShpB into 2-Out, wave mode set to Pulse, Shape swept 0/64/127. The captured cycle
+  is visibly a pulse whose width changes with Shape — high for roughly 40% of the cycle at 0 and 20%
+  at 64 — and at 127 it collapses to near-DC, which agrees with the paramLocationList comment that
+  Shape covers 50% to 99% rather than the full range.
+  WHERE THE GRAPHICS GO: the same top-right box OscShpB already uses, graphLocationList's
+  {{-2, 6}, {30, 10}} anchorTopRight (CT). That table has only three entries today — OscShpB's wave,
+  EnvADSR's envelope and FltClassic's response — so every new wave display is a row there plus a
+  renderer, not new machinery.
+  FIRST FINDING, and it is CT's suspicion confirmed — OSCSHPB'S FOUR SINES ARE NOT ALL DRAWN
+  REPRESENTATIVELY. Captured at Shape 0 and Shape 64, kept in G2Captures/oscshpb/:
+    - AT SHAPE 0 ALL FOUR ARE INDISTINGUISHABLE pure sines, which is right and matches the manual
+      ("at 50% Shape the signal is a perfect sine wave"). Everything that separates them lives in the
+      Shape dial, so any comparison done at Shape 0 proves nothing.
+    - AT SHAPE 64 THEY ARE FOUR CLEARLY DIFFERENT SHAPES, and their AMPLITUDES differ too, which our
+      model does not predict at all: taking Sine1 as 1.00, the instrument gives Sine2 1.96, Sine3 0.84
+      and Sine4 0.45. oscshpb_waveform_sample() returns roughly unit amplitude for Sine1/Sine2 and
+      divides Sine3/Sine4 by (1 + shape * 0.75). Neither matches.
+    - SINE1 LOOKS RIGHT: fast rise, long fall, which is the phase warp we model and what the capture
+      shows.
+    - SINE2 LOOKS MIRRORED. The capture is a NARROW positive hump followed by a long shallow negative
+      stretch; our lobeWidth warp stretches the POSITIVE lobe and narrows the negative, the other way
+      round.
+    - SINE4's harmonics are ODD ONLY — measured 1, 0.02, 0.95, 0.02, 0.90 for harmonics 1..5 at full
+      Shape. Our sine + 3rd + 5th is therefore the RIGHT FAMILY, and an earlier reading of mine off an
+      ASCII plot ("double-humped, so our odd-harmonic model must be wrong") was simply wrong: two
+      humps per cycle is what strong odd harmonics look like. Only the amplitude law is wrong — see
+      below.
+    - SINE3 IS NOT AN EVEN-HARMONIC WAVE, whatever the manual says. Measured harmonics at full Shape
+      are 1, 0.90, 0.81, 0.73, 0.65 — a full series, 3rd and 5th as strong as 2nd and 4th. We model it
+      as sine + 2nd + 4th only, which cannot produce that. This is the one the manual actively
+      misleads on ("a lot of even harmonics have been added").
+  THE FULL SHAPE SWEEP (0, 21, 42, 64, 85, 106, 127 on all four) says this:
+    - SINE1: peak amplitude is FLAT (0.0191 to 0.0204 across the whole sweep) and the peak moves
+      steadily earlier, 0.247 of a cycle down to 0.048, with duty pinned at 0.50. That is exactly the
+      phase warp we model, and the constant amplitude confirms it — but the amount is off: the peak
+      phase is a/2, so measured a runs 0.494 down to 0.096, where ours runs 0.5 down to 0.15. The 0.35
+      coefficient wants to be nearer 0.40, and the relationship is slightly non-linear.
+    - SINE2: DUTY FALLS, 0.50 to about 0.40, so the instrument NARROWS the positive part. Our
+      lobeWidth widens it — mirrored, as suspected. And the peak GROWS 2.8x (0.019 to 0.053, dipping
+      back slightly at 127) where we model no amplitude change at all.
+    - SINE3: as above, a full harmonic series. Amplitude dips to 0.0160 mid-sweep then climbs to
+      0.0242.
+    - SINE4: odd harmonics only, and the amplitude is a U — 0.0191 down to 0.0086 at Shape 64, back up
+      to 0.0227 at 127. Our divide-by-(1 + shape * 0.75) falls monotonically and cannot make that
+      shape.
+  A GENERAL LESSON FROM THIS: three of the four models were built from the manual's prose, and the
+  prose is wrong or too loose in at least two places (Sine3's "even harmonics", and nothing anywhere
+  about the large amplitude changes). Descriptors beat pictures for this work — peak, peak phase, duty
+  and the first five harmonics settled in one table what ASCII plots had me guessing at, including
+  correcting a wrong call.
+  NEXT STEP IS A FIT, NOT MORE GUESSING: sweep Shape across its range for each of the four (measure.py
+  --sweep-mode / --param 6 does it in one run per wave) and derive the actual transfer, rather than
+  reasoning from the manual's prose as the current model does. The manual's descriptions are still
+  useful as a sanity check on the answer, but they are clearly not precise enough to draw from.
+
+  WHICH MODULES WANT ONE: the natural list is the modules whose wave the user PICKS, which the
+  original editor draws as image selectors rather than text — OscA, OscB, OscShpA, LfoA, LfoB,
+  LfoShpA, Rect and ShpStatic (see the resource-file survey; those eight carry waveform ICONS on
+  their selector buttons). The manual's oscillator pages should settle any that are ambiguous.
 MOVING A CABLE FROM ONE CONNECTOR TO ANOTHER — DONE 2026-08-22, and the user who reported it is
 right about the modifier. Manual p65: "right-click on a connection and select Disconnect, or
 double-click-hold or Ctrl-click on a connection... and 'pull out' the connector by dragging the
@@ -488,8 +562,59 @@ LED STREAM ALIGNMENT — 7 MODULES WERE EATING OTHER MODULES' SLOTS. Fixed 2026-
   parse_volume_indicator() consumes the group's one 16-bit value and spreads its bits across the
   LEDs. Six of the seven previously carried volumeTypeSequencer purely to consume that entry — that
   is now the LED group's own doing, and their volumeType is None, which is what they are.
-  NOT CONFIRMED ON HARDWARE. The instrument was connected and the patch loaded, but its LEDs sat
-  static even when driven with a note, so there was no moving signal to compare against. The change
+  CONFIRMED ON HARDWARE 2026-08-23, by building configurations of INVERTS AND GATES — CT's idea, and
+  the reason it works is that both have a KNOWN resting state: an unpatched Invert reads LOW in, so it
+  outputs HIGH and both its LEDs are lit; an unpatched Gate is an AND with nothing driving it, so it
+  is dark. A row of them is therefore a pattern that any misalignment visibly breaks, with no need to
+  decode a capture. Two new backdoor commands made it possible: DEVADDMODULE and DEVDELMODULE, which
+  unlike ADDMODULE/CABLE reach the instrument, because every local-only command can only ever produce
+  a freshly-loaded patch and that is the one state already known to behave.
+  ALL OF THESE CAME OUT RIGHT — Inverts lit, Gates dark, in every case:
+    - a fresh load of the pattern
+    - the same pattern built on the DEVICE one module at a time
+    - after deleting a module from the MIDDLE, leaving a gap in the indices
+    - after adding again, which REUSES the freed index so creation order and index order diverge
+    - with an 8Counter (8 LEDs, one multi group) and a FlipFlop (2, one group) sitting AHEAD of two
+      Inverts in the stream — which is the case this whole change is about. Both Inverts stayed lit,
+      so the ten slots really are not in the 2-bit stream and skipping them is correct.
+    - a patch loaded into ANOTHER SLOT changed nothing here, matching the reference, where
+      CLedBlinkData is indexed per slot
+  AND THE SWITCHING STATES ARE RIGHT TOO: with an LFO driving one Invert channel and both inputs of a
+  Gate, the driven Invert channel toggles while its unconnected channel stays lit, the driven Gate
+  toggles, the LFO's own LED blinks — and in the frame where the LFO and the Gate are lit, the
+  Invert's driven channel is dark. Antiphase, which is what an inverter is.
+  TWO TRAPS FOUND WHILE TESTING, both mine rather than the app's: NEWPATCH is LOCAL-ONLY, so the
+  instrument keeps the previous patch's cables and a "clean" device test can silently inherit them —
+  clear the device by loading an empty patch file, not with NEWPATCH. And the first run of this test
+  reported a dark Invert that was correctly dark, because one of those stale cables was driving it.
+  EVERY MODULE TYPE WITH LEDS WAS THEN SWEPT (CT's suggestion), 34 of them, each as
+  [Invert | module | Invert] built on the device — the second Invert sits after the module in index
+  order, so a wrong slot count for that module shows up as a dark Invert. ALL 34 PASS: 8Counter,
+  ADConv, BinCounter, Delay, DrumSynth, EnvADDSR, EnvADR, EnvADSR, EnvAHD, EnvD, EnvH, EnvMulti,
+  FlipFlop, Gate, Invert, LfoA, LfoB, LfoC, LfoShpA, ModADSR, ModAHD, Mux1-8, Mux8-1, Mux8-1X,
+  NoiseGate, NoteDet, Operator, PitchTrack, Pulse, RandomA, RandomB, ValSw1-2, ValSw2-1, WindSw.
+  So no module type has a wrong LED slot count in our tables.
+  STILL OPEN: the ordering fault CT saw on 2026-08-22 was not reproduced by any of the above — not by
+  a device-side add, a middle delete, an index-reusing add, a multi-group module upstream, another
+  slot, or any of the 34. It remains real but uncharacterised. One difference from CT's failing case
+  is not yet ruled out: their 8Counter was CLOCKED, so its multi-stream value was changing, where in
+  every test here it sat idle.
+
+THE BACKDOOR NOW EDITS THE INSTRUMENT, not just our copy of it (CT, 2026-08-23: "your backdoor should
+send to the edit buffers"). ADDMODULE, CABLE, DELCABLE and NEWPATCH used to be local-only, on the
+reasoning that a rendering test should not be able to write to a connected synth by accident. The
+cost of that turned out to be worse: a script and the edit buffer drifted apart with nothing saying
+so, and EVERY index the device reports back — LED slots above all — is relative to ITS copy. It bit
+this very investigation: NEWPATCH cleared our database and left the G2 holding the previous patch's
+cables, so a "clean" test inherited them and reported a dark Invert that was correctly dark.
+  ADDMODULE and DELMODULE go through create_module_at()/delete_module_and_cables(), the same calls the
+  menus use; CABLE and DELCABLE send the same per-edit messages the drag-connect and Disconnect paths
+  send; NEWPATCH now also sends eMsgCmdNewPatch. All of it is a no-op when offline, so the same script
+  still works as an offline layout scratchpad. PUSH remains for genuinely bulk runs, where one
+  versioned whole-patch write still beats a burst of per-entry commands.
+  DEVADDMODULE and DEVDELMODULE stay as synonyms so existing scripts keep working.
+  VERIFIED: NEWPATCH, two ADDMODULEs and a CABLE, then a restart — the device's own copy came back
+  identical, cable included, with nothing left over from the patch before it. The change
   is arithmetic that follows from the reference, and it cannot affect a patch without one of the
   seven module types. ALSO A READING, not a certainty: the multi value's top two bits (0x3000) are
   what the reference tests before spreading it a bit at a time, so we do the same and show nothing

@@ -2365,6 +2365,12 @@ static void render_frame(void) {
 //                       dial reads: an unassigned parameter has nowhere to show itself on the panel.
 //   DEVNOTE <note> <vel> on|off — a Virtual Keyboard note to the G2, for a patch that needs a gate
 //                       rather than a free-running clock (envelope times, for instance)
+//   DEVADDMODULE <name> [col] [row]  — as ADDMODULE, but the module is created ON THE G2 too
+//   DEVDELMODULE <VA|FX> <index>     — deletes a module and its cables, on the G2 as well as here
+//                       These two exist because every LOCAL-ONLY command can only ever produce a
+//                       freshly-loaded patch, and that is the one state where the LED stream is known
+//                       to behave. An edit the DEVICE sees is what is needed to chase the LED
+//                       ordering fault, and without these it could only be done by hand in the GUI.
 //   SAVEFILE <path>   — write the current slot to a path (no save panel)
 //   SCREENSHOT <path> — synchronous render_frame() then glReadPixels + PNG
 //   SCROLL <x> <y>    — scroll the canvas, each 0.0-1.0 of that axis's full travel
@@ -2507,6 +2513,27 @@ static void backdoor_dump_state(char * out, size_t outMax) {
 // Written straight to the result file rather than composed in a buffer the way backdoor_dump_state()
 // is: a full patch runs to tens of modules by tens of parameters, which overruns any fixed buffer
 // worth putting on the stack.
+// Tells the instrument about a cable the backdoor just added or removed, exactly as the drag-connect
+// and Disconnect paths do. Nothing happens when offline, which is what makes the same script usable
+// as an offline layout scratchpad.
+static void backdoor_send_cable(const tCableKey * key, uint32_t colour, bool removing) {
+    if (gCommsState != eCommsOnLine) {
+        return;
+    }
+    tMessageContent msg = {0};
+
+    msg.cmd                            = removing ? eMsgCmdDeleteCable : eMsgCmdWriteCable;
+    msg.slot                           = gSlot;
+    msg.cableData.location             = key->location;
+    msg.cableData.moduleFromIndex      = key->moduleFromIndex;
+    msg.cableData.connectorFromIoIndex = key->connectorFromIoCount;
+    msg.cableData.moduleToIndex        = key->moduleToIndex;
+    msg.cableData.connectorToIoIndex   = key->connectorToIoCount;
+    msg.cableData.linkType             = key->linkType;
+    msg.cableData.colour               = colour;
+    msg_send(&gToUsbThread, &msg);
+}
+
 static void backdoor_param_dump(void) {
     FILE *         file       = fopen(backdoor_result_path(), "w");
 
@@ -2672,14 +2699,31 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "NEWPATCH") == 0) {
-        // Clears the current slot's canvas (modules + cables). Offline layout
-        // scratchpad — a real device New Patch would go through eMsgCmdNewPatch.
+        // Clears the current slot's canvas — AND the instrument's, when there is one. It used to
+        // clear only the local database, which quietly left the G2 holding the previous patch: a test
+        // that built a "clean" patch on the device inherited the old one's cables, and the LEDs it
+        // then reported were correct for a patch nobody could see. Divergence between our copy and
+        // the edit buffer is the one thing a test harness must not introduce.
         database_delete_modules_by_slot(gSlot);
         database_delete_cables_by_slot(gSlot);
         gLocation = (uint32_t)locationVa;
+
+        if (gCommsState == eCommsOnLine) {
+            tMessageContent msg = {0};
+
+            msg.cmd  = eMsgCmdNewPatch;
+            msg.slot = gSlot;
+            msg_send(&gToUsbThread, &msg);
+        }
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
-    } else if (strcmp(cmd, "ADDMODULE") == 0) {
+    } else if ((strcmp(cmd, "ADDMODULE") == 0) || (strcmp(cmd, "DEVADDMODULE") == 0)) {
+        // BOTH SPELLINGS REACH THE INSTRUMENT. ADDMODULE was local-only, which meant a scripted patch
+        // and the G2's edit buffer could drift apart without anything saying so — and every LED, knob
+        // and cable index the device reports is relative to ITS copy. DEVADDMODULE remains as a
+        // synonym so existing scripts keep working.
+        bool        toDevice = true;
+
         // ADDMODULE <name> [col] [row] — name matches gModuleProperties[].name
         // (e.g. "Mix4-1C"). Added to the Voice area at col/row (default 0,0).
         char        name[64] = {0};
@@ -2708,17 +2752,49 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         gLocation = (uint32_t)locationVa;
 
-        int32_t     idx      = create_module_at(found, col, row, false); // false = local-only; the backdoor never writes to the device
+        // DEVADDMODULE syncs to the instrument where ADDMODULE stays local — the DEV prefix means the
+        // same thing here as it does on DEVSET and DEVMODE. It exists because the LOCAL-ONLY commands
+        // can only ever produce a freshly-loaded patch, and a freshly-loaded patch is exactly the
+        // state where the LED stream is known to behave: reproducing the ordering fault needs edits
+        // the DEVICE sees, which until now meant driving the GUI by hand.
+        int32_t idx = create_module_at(found, col, row, toDevice);
 
         synthlib_request_redraw();
         backdoor_write_result((idx < 0) ? "ERROR: location full\n" : "OK\n");
+    } else if (strcmp(cmd, "DEVDELMODULE") == 0) {
+        // DEVDELMODULE <VA|FX> <index> — deletes on the instrument as well as here, cables and all,
+        // which is what the module right-click menu's Delete does.
+        char       area[8]     = {0};
+        uint32_t   moduleIndex = 0;
+
+        if (sscanf(arg, "%7s %u", area, &moduleIndex) != 2) {
+            backdoor_write_result("ERROR: expected 'DEVDELMODULE <VA|FX> <index>'\n");
+            return;
+        }
+        uint32_t   location    = (strcasecmp(area, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        tModuleKey key         = {gSlot, location, moduleIndex};
+
+        if (get_module(key) == NULL) {
+            backdoor_write_result("ERROR: no such module\n");
+            return;
+        }
+        delete_module_and_cables(key);
+        selection_clear();
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
     } else if ((strcmp(cmd, "CABLE") == 0) || (strcmp(cmd, "DELCABLE") == 0)) {
         // CABLE / DELCABLE <VA|FX> <from>:<out> <to>:<in> [link=<0|1>]
         //
-        // LOCAL-ONLY, like ADDMODULE and SET: it edits the database and nothing else. Follow a run of
-        // these with PUSH to send the whole slot to the device as ONE versioned command. Sending each
-        // edit as it is made would race the G2's asynchronous patch-version notification and lose
-        // some of them silently — see the note above send_whole_patch() in menus.c.
+        // SENT TO THE INSTRUMENT, one message per edit — the same eMsgCmdWriteCable/eMsgCmdDeleteCable
+        // the drag-connect path sends, so a scripted cable is indistinguishable from a drawn one.
+        //
+        // These used to be local-only, with PUSH afterwards to send the slot in one versioned
+        // command. That is still the right shape for a BULK run (see the note above
+        // send_whole_patch() in menus.c: a burst of per-entry commands can race the G2's asynchronous
+        // version notification), and PUSH is still there for it. But local-only as the DEFAULT let a
+        // script and the edit buffer drift apart silently, and every index the device reports back —
+        // LED slots above all — is relative to ITS copy, not ours. A harness that can lie about what
+        // the instrument holds is worse than one that is occasionally slow.
         bool      removing      = (cmd[0] == 'D');
         tCableKey key           = {0};
         char      msg[160]      = {0};
@@ -2734,6 +2810,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
                 return;
             }
             delete_cable(key);
+            backdoor_send_cable(&key, 0, true);
             synthlib_request_redraw();
             backdoor_write_result("OK\n");
             return;
@@ -2764,6 +2841,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         cable.colour = (uint32_t)cable_colour_for_connector_type(
             effective_connector_type(fromModule->connector[fromConnector].type, fromModule->upRate));
         write_cable(key, &cable);
+        backdoor_send_cable(&key, cable.colour, false);
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "PUSH") == 0) {
