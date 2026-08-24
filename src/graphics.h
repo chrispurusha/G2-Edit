@@ -32,6 +32,15 @@ void do_graphics_loop(void);
 void clean_up_graphics(void);
 void wake_glfw(void);
 
+// One full frame, drawn and swapped. Public only for the backdoor's SCREENSHOT command, which has to
+// force a frame synchronously rather than wait for the render loop to notice a redraw request — see
+// backdoor.c. Nothing else should call it; ask for a redraw with synthlib_request_redraw() instead.
+void render_frame(void);
+
+// Reads a .pch2/.prf2 from disk into the patch database and redraws. Works offline, which is what
+// makes it the backdoor's LOADFILE as well as the File menu's Open.
+void read_file_into_memory_and_process(const char * filepath);
+
 #ifdef ENABLE_MOUSE_CROSSHAIR
 void toggle_mouse_crosshair(void); // TEMPORARY debug aid — F9, Debug builds only
 #endif
