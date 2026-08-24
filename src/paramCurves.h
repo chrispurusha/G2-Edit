@@ -43,6 +43,7 @@ double osc_freq_hz(double paramValue);          // PitchType 1 "Freq":   8.1758 
 double osc_freq_factor(double paramValue);      // PitchType 2 "Factor": 0.0248x .. 38.072x
 double osc_fine_cents(double paramValue);       // Cent dial:            -50 .. +50 cents
 double osc_shape_percent(double paramValue);    // Shape dial:           50% .. 99%
+double lfo_shape_percent(double paramValue);    // LfoShpA Shape dial:    1% .. 99% (neutral at centre)
 
 // PitchType 4 "Sub": the same note scale as Semi, eleven octaves down. fineSemitones is the Cent
 // dial's offset, (cent - 64) / 128 of a semitone; pass 0.0 if it is not to hand.

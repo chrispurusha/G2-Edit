@@ -333,6 +333,7 @@ typedef enum {
     paramTypeInt,
     paramTypeLFORate,
     paramTypeShape,
+    paramTypeLfoShape,
     paramTypedB,
     paramTypeADRTime,
     paramTypePulseTime,

@@ -30,6 +30,7 @@ extern "C" {
 #include "utils.h"
 #include "utilsGraphics.h"
 #include "msgQueue.h"
+#include "moduleGraphics.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
@@ -1581,12 +1582,31 @@ static void action_set_toggle_value(int index) {
     synthlib_request_redraw();
 }
 
+// Set just before a waveform picker's menu is opened, and read back by the draw callback below.
+static uint32_t sWaveMenuModuleType = 0;
+
+static void draw_wave_menu_item(tRectangle cell, uint32_t param) {
+    render_wave_icon(cell, sWaveMenuModuleType, param, module_wave_icon_shape(sWaveMenuModuleType));
+}
+
 void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef) {
     static tMenuItem menuItems[33];
     static char      labels[32][32];
 
-    const char **    strMap = paramLocationList[paramRef].strMap;
-    uint32_t         range  = paramLocationList[paramRef].range;
+    const char **    strMap  = paramLocationList[paramRef].strMap;
+    uint32_t         range   = paramLocationList[paramRef].range;
+    tModule *        module  = get_module(moduleKey);
+
+    // A WAVEFORM PICKER LISTS PICTURES, NOT WORDS, the way the original hardware editor's does. The
+    // label is still filled in for every entry: the menu engine measures the cell from it, so the
+    // rows come out the width the names would have needed, and only the PAINTING is replaced.
+    // sWaveMenuModuleType carries the one piece of context the callback needs — SynthLib's menu
+    // knows nothing about modules, so the app holds that itself, as its header describes.
+    bool             isWaves = (module != NULL) && module_wave_picker_param(module->type, paramIndex);
+
+    if (isWaves == true) {
+        sWaveMenuModuleType = module->type;
+    }
 
     for (uint32_t v = 0; v < range && v < 32; v++) {
         if (strMap && strMap[v]) {
@@ -1594,9 +1614,10 @@ void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, u
         } else {
             snprintf(labels[v], sizeof(labels[v]), "%u", v);
         }
-        menuItems[v] = (tMenuItem){
+        menuItems[v]          = (tMenuItem){
             labels[v], RGB_GREY_3, action_set_toggle_value, v, NULL
         };
+        menuItems[v].drawItem = (isWaves == true) ? draw_wave_menu_item : NULL;
     }
 
     menuItems[range < 32 ? range : 32] = (tMenuItem){
@@ -1628,8 +1649,17 @@ void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeInde
     static tMenuItem menuItems[33];
     static char      labels[32][32];
 
-    const char **    strMap = modeLocationList[modeRef].strMap;
-    uint32_t         range  = modeLocationList[modeRef].range;
+    const char **    strMap  = modeLocationList[modeRef].strMap;
+    uint32_t         range   = modeLocationList[modeRef].range;
+    tModule *        module  = get_module(moduleKey);
+
+    // Same treatment as the parameter-backed pickers: the entries are painted as waves, while the
+    // labels stay filled in so the engine still measures the rows from them.
+    bool             isWaves = (module != NULL) && module_wave_picker_mode(module->type, modeIndex);
+
+    if (isWaves == true) {
+        sWaveMenuModuleType = module->type;
+    }
 
     for (uint32_t v = 0; v < range && v < 32; v++) {
         if (strMap && strMap[v]) {
@@ -1637,9 +1667,10 @@ void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeInde
         } else {
             snprintf(labels[v], sizeof(labels[v]), "%u", v);
         }
-        menuItems[v] = (tMenuItem){
+        menuItems[v]          = (tMenuItem){
             labels[v], RGB_GREY_3, action_set_mode_value, v, NULL
         };
+        menuItems[v].drawItem = (isWaves == true) ? draw_wave_menu_item : NULL;
     }
 
     menuItems[range < 32 ? range : 32] = (tMenuItem){
