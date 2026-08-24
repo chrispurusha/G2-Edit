@@ -118,6 +118,15 @@ tCanvasGesture canvas_gesture_release(const tCanvasGestureEvent * event, tCanvas
 // one was found there. This is what a shell's bare +/- key should call; the shell decodes the key.
 bool canvas_nudge_param_under_cursor(int delta);
 
+// The same step, but on the FOCUSED parameter - what the Up/Down arrow keys act on. Both false when
+// there is nothing focused, or when what was focused has since gone.
+bool canvas_nudge_focused_param(int delta);
+bool canvas_move_param_focus(int delta);
+
+// Shift+arrows: move the focus to the neighbouring MODULE, by where it sits on the canvas rather
+// than by index. False at the edge of the patch in that direction.
+bool canvas_move_module_focus(int dx, int dy);
+
 // ── Starting a drag: the logic half is shared, the platform half is optional ─────────────────────
 //
 // CALL THIS TO BEGIN ANY CURSOR-CAPTURING DRAG. It records the origin — which every incremental dial

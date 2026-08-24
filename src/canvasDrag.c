@@ -1233,6 +1233,130 @@ static bool nudge_one_mode(tModule * module, uint32_t i, int delta) {
     return true;
 }
 
+// The FOCUSED parameter rather than the hovered one: the arrow keys act on what was last clicked,
+// which is what the original editor does and what MIDI Learn already targets. Bare +/- keep acting on
+// what is under the POINTER - two different questions, deliberately kept as two entry points.
+bool canvas_nudge_focused_param(int delta) {
+    if (!gParamFocus.valid) {
+        return false;
+    }
+    tModule * module    = get_module(gParamFocus.moduleKey);
+
+    if ((module == NULL) || !module->active) {
+        // The module it pointed at has gone - deleted, or a different patch loaded underneath it.
+        gParamFocus.valid = false;
+        return false;
+    }
+    uint32_t  variation = gPatchDescr[gParamFocus.moduleKey.slot].activeVariation;
+
+    return nudge_one_param(module, gParamFocus.paramIndex, variation, delta);
+}
+
+// Left/Right walk the focus along the module's own parameters, wrapping at each end. Manual p84: "To
+// move the focus to another parameter in the module, press the Left/Right arrow buttons on the
+// computer keyboard."
+bool canvas_move_param_focus(int delta) {
+    if (!gParamFocus.valid) {
+        return false;
+    }
+    tModule * module = get_module(gParamFocus.moduleKey);
+
+    if ((module == NULL) || !module->active) {
+        gParamFocus.valid = false;
+        return false;
+    }
+    uint32_t  count  = module_param_count(module->type);
+
+    if (count == 0) {
+        return false;
+    }
+    int32_t   next   = (int32_t)gParamFocus.paramIndex + delta;
+
+    while (next < 0) {
+        next += (int32_t)count;
+    }
+    gParamFocus.paramIndex = (uint32_t)(next % (int32_t)count);
+    return true;
+}
+
+// Shift+arrows walk the focus from module to module. Manual p84: "To move the focus to another
+// module in the Patch, press the Shift key on the computer keyboard together with the
+// Up/Down/Left/Right arrow buttons. The modules in a Patch are accessed depending on how they were
+// visually placed in the Patch window" - so this navigates by COLUMN AND ROW, not by module index.
+// Index order is creation order, which after a few edits bears no relation to what is on screen.
+//
+// Up/Down stay in the column and take the nearest module above or below. Left/Right cross to the
+// nearest column that HAS a module in that direction - skipping empty columns rather than stopping
+// dead at one - and within it take the module whose row is closest to where the focus already was,
+// which is what keeps a sideways move feeling horizontal.
+bool canvas_move_module_focus(int dx, int dy) {
+    if (!gParamFocus.valid) {
+        return false;
+    }
+    tModule * from     = get_module(gParamFocus.moduleKey);
+
+    if ((from == NULL) || !from->active) {
+        gParamFocus.valid = false;
+        return false;
+    }
+    uint32_t  slot     = gParamFocus.moduleKey.slot;
+    uint32_t  location = gParamFocus.moduleKey.location;
+    tModule * best     = NULL;
+    uint32_t  bestKey  = 0;
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * walk = get_module_slot(slot, location, i);
+
+        if ((walk == NULL) || !walk->active || (walk->key.index == from->key.index)) {
+            continue;
+        }
+
+        if (dy != 0) {
+            if (walk->column != from->column) {
+                continue;
+            }
+
+            // Nearest row strictly beyond the current one, in the direction asked for.
+            if (  ((dy < 0) && (walk->row < from->row))
+               || ((dy > 0) && (walk->row > from->row))) {
+                uint32_t distance = (dy < 0) ? (from->row - walk->row) : (walk->row - from->row);
+
+                if ((best == NULL) || (distance < bestKey)) {
+                    best    = walk;
+                    bestKey = distance;
+                }
+            }
+        } else {
+            if (  ((dx < 0) && (walk->column >= from->column))
+               || ((dx > 0) && (walk->column <= from->column))) {
+                continue;
+            }
+            // Column distance dominates so the nearest occupied column wins outright; row distance
+            // only chooses between the modules sharing that column.
+            uint32_t columnGap = (dx < 0) ? (from->column - walk->column) : (walk->column - from->column);
+            uint32_t rowGap    = (walk->row > from->row) ? (walk->row - from->row) : (from->row - walk->row);
+            uint32_t distance  = (columnGap * (MAX_ROWS + 1)) + rowGap;
+
+            if ((best == NULL) || (distance < bestKey)) {
+                best    = walk;
+                bestKey = distance;
+            }
+        }
+    }
+
+    if (best == NULL) {
+        return false;   // edge of the patch in that direction: leave the focus where it is
+    }
+
+    if (module_param_count(best->type) == 0) {
+        return false;   // nothing on it the arrow keys could then act on
+    }
+    gParamFocus.valid      = true;
+    gParamFocus.moduleKey  = best->key;
+    gParamFocus.paramIndex = 0;
+    return true;
+}
+
 bool canvas_nudge_param_under_cursor(int delta) {
     tCoord                coord     = {0};
     uint32_t              slot      = gSlot;
@@ -1271,6 +1395,26 @@ bool canvas_nudge_param_under_cursor(int delta) {
 
     switch (widget->kind) {
         case eCanvasWidgetParam:
+        {
+            // STEPPING A PARAMETER ALSO FOCUSES IT (CT, 2026-08-24), so the arrow keys carry on from
+            // wherever +/- left off instead of from some older click - the two ways of nudging one
+            // value stay on the same value.
+            //
+            // Only on a real step: delta 0 is the "is there anything here?" probe (mouseHandle.c's
+            // alt-hover), and answering it must not move the focus. And only for a canvas parameter -
+            // a morph dial never registers a param click either (see param_click_handler's note), and
+            // a mode is not a parameter, so neither is something MIDI Learn could then act on.
+            uint32_t index = canvas_widget_index(widget);
+            bool     moved = nudge_one_param(module, index, variation, delta);
+
+            if (moved && (delta != 0)) {
+                gParamFocus.valid      = true;
+                gParamFocus.moduleKey  = module->key;
+                gParamFocus.paramIndex = index;
+            }
+            return moved;
+        }
+
         case eCanvasWidgetMorph:
             return nudge_one_param(module, canvas_widget_index(widget), variation, delta);
 
