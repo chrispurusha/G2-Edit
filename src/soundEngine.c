@@ -34,6 +34,7 @@ extern "C" {
 #include "cableChain.h"
 #include "globalVars.h"
 #include "renderParams.h"
+#include "paramCurves.h"
 #include "moduleResourcesAccess.h"
 #include "patchParamsResources.h"
 #include "audioOutput.h"
@@ -1909,46 +1910,6 @@ static double pulse_time_seconds(double value, uint32_t range) {
 
 static double env_time_seconds(double paramValue) {
     return adr_time_seconds(paramValue);
-}
-
-// EnvADSR's Shape scroll button, in envShapeStrMap order: LogExp, LinExp, ExpExp, LinLin. The first
-// half names the ATTACK curve and the second the decay/release curve, so three of the four have an
-// exponential fall and only LinLin is straight throughout.
-//
-// Applied by shaping a linear 0..1 progress rather than by changing the step size, so a segment
-// still takes exactly the time its dial states whatever curve it is drawn with.
-typedef enum {
-    eEnvShapeLogExp = 0,
-    eEnvShapeLinExp,
-    eEnvShapeExpExp,
-    eEnvShapeLinLin,
-} tEnvShape;
-
-// Log rises fast then flattens; Exp starts slow then accelerates; Lin is the straight line.
-static double env_attack_curve(uint32_t shape, double progress) {
-    switch (shape) {
-        case eEnvShapeLogExp:
-        {
-            // 1 - e^-5t, normalised so it still reaches exactly 1 at the end of the segment.
-            return (1.0 - exp(-5.0 * progress)) / (1.0 - exp(-5.0));
-        }
-        case eEnvShapeExpExp:
-        {
-            return (exp(5.0 * progress) - 1.0) / (exp(5.0) - 1.0);
-        }
-        default:
-        {
-            return progress;   // LinExp and LinLin both rise linearly
-        }
-    }
-}
-
-// The falling segments: exponential for everything except LinLin, which is straight.
-static double env_fall_curve(uint32_t shape, double progress) {
-    if (shape == (uint32_t)eEnvShapeLinLin) {
-        return 1.0 - progress;
-    }
-    return (exp(-5.0 * progress) - exp(-5.0)) / (1.0 - exp(-5.0));
 }
 
 static const tLfoParams * lfo_params(tModuleType type) {
@@ -4080,8 +4041,17 @@ static double ladder_filter(double * state, double input, double g, double k, ui
     return state[tapStage];
 }
 
-// One ADSR step. Times are in seconds; each stage moves linearly towards its target, which is
-// plenty for shaping a note and keeps the stage logic obvious.
+// One ADSR step. Times are in seconds.
+//
+// EnvADSR's Shape scroll button selects the curve, in envShapeStrMap order: LogExp, LinExp, ExpExp,
+// LinLin - the first word naming the attack and the second the decay and release. The curves live in
+// paramCurves.c, shared with the envelope the editor DRAWS on the module face; the two carried the
+// same law with different sharpness constants until 2026-08-24, so the drawn envelope and the played
+// one were never quite the same curve.
+//
+// APPLIED BY SHAPING A LINEAR 0..1 PROGRESS rather than by changing the step size, so a segment still
+// takes exactly the time its dial states whatever curve it is drawn with. (This used to say the
+// stages move linearly towards their targets; that stopped being true when the shapes were read.)
 static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * spec, bool gate) {
     double level = gEnvLevel[voice][node];
     double step  = 0.0;
@@ -4119,7 +4089,7 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
                 // From wherever the stage began, so a note struck during release still rises
                 // smoothly from the level it had rather than jumping.
                 level = gEnvStart[voice][node]
-                        + ((1.0 - gEnvStart[voice][node]) * env_attack_curve((uint32_t)spec->wave, gEnvProgress[voice][node]));
+                        + ((1.0 - gEnvStart[voice][node]) * env_attack_level((uint32_t)spec->wave, gEnvProgress[voice][node]));
             }
             break;
         }
@@ -4134,7 +4104,7 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
                 gEnvStage[voice][node]    = eEnvSustain;
             } else {
                 level = spec->sustain
-                        + ((1.0 - spec->sustain) * env_fall_curve((uint32_t)spec->wave, gEnvProgress[voice][node]));
+                        + ((1.0 - spec->sustain) * env_fall_level((uint32_t)spec->wave, gEnvProgress[voice][node]));
             }
 
             if (level <= spec->sustain) {
@@ -4158,7 +4128,7 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
                 level                     = 0.0;
                 gEnvStage[voice][node]    = eEnvIdle;
             } else {
-                level = gEnvStart[voice][node] * env_fall_curve((uint32_t)spec->wave, gEnvProgress[voice][node]);
+                level = gEnvStart[voice][node] * env_fall_level((uint32_t)spec->wave, gEnvProgress[voice][node]);
             }
 
             if (level <= 0.0) {

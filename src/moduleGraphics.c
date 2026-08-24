@@ -42,6 +42,7 @@ extern "C" {
 #include "splitView.h"
 #include "globalVars.h"
 #include "renderParams.h"
+#include "paramCurves.h"
 #include "mouseHandle.h"
 #include "menus.h"
 #include "selection.h"
@@ -2219,43 +2220,15 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
 // - GRAPHS ("Any sustain level is indicated with an orange line; the rest...are green. There is
 //   also a yellow horizontal line which indicates the zero level") - colours below match this
 //   directly.
-static double envadsr_exp_decay(double t, double levelStart, double levelEnd) {
-    const double k    = 4.0; // decay sharpness - normalised below so the curve still lands exactly
-                             // on levelStart/levelEnd at t=0/1 despite exp() itself being asymptotic
-    double       raw  = exp(-k * t) - exp(-k);
-    double       norm = 1.0 - exp(-k);
-
-    return levelEnd + ((levelStart - levelEnd) * (raw / norm));
-}
-
-static double envadsr_exp_accel(double t, double levelStart, double levelEnd) {
-    const double k    = 4.0; // mirror of envadsr_exp_decay's normalisation - grows slowly at
-                             // first, then accelerates near the end (Exp attack, not the Log
-                             // default)
-    double       raw  = exp(k * t) - 1.0;
-    double       norm = exp(k) - 1.0;
-
-    return levelStart + ((levelEnd - levelStart) * (raw / norm));
-}
-
+// The attack and decay/release curves themselves are paramCurves.c's, shared with the sound engine
+// so the envelope drawn here is the one that is actually played. This file keeps only the part that
+// is a DRAWING concern: a segment on the face runs between two arbitrary levels - full down to
+// Sustain, Sustain down to the release target - where the engine's own segments always run 1 to 0.
+//
 // Attack curve types (envShapeStrMap's first word): 0=Log (default), 1=Lin, 2=Exp, 3=Lin.
-static double envadsr_attack_level(double t, uint32_t envShapeIndex) {
-    switch (envShapeIndex) {
-        case 1:
-        case 3: return t;                               // Lin
-
-        case 2: return envadsr_exp_accel(t, 0.0, 1.0);  // Exp - convex
-
-        default: return envadsr_exp_decay(t, 0.0, 1.0); // Log - concave
-    }
-}
-
-// Decay/Release curve types (envShapeStrMap's second word): 0-2=Exp, 3=Lin.
+// Decay/Release curve types (its second word): 0-2=Exp, 3=Lin - which env_fall_level() applies.
 static double envadsr_decay_level(double t, double levelStart, double levelEnd, uint32_t envShapeIndex) {
-    if (envShapeIndex == 3) {
-        return levelStart + ((levelEnd - levelStart) * t); // Lin
-    }
-    return envadsr_exp_decay(t, levelStart, levelEnd); // Exp - concave
+    return levelEnd + ((levelStart - levelEnd) * env_fall_level(envShapeIndex, t));
 }
 
 // Maps an envelope "shape" value (0 at the start, 1 at the attack peak) to a y coordinate.
@@ -2356,7 +2329,7 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
 
     for (int i = 1; i <= numCurveSteps; i++) {
         double t     = (double)i / (double)numCurveSteps;
-        double level = envadsr_attack_level(t, envShapeIndex);
+        double level = env_attack_level(envShapeIndex, t);
         tCoord point = {p0.x + (t * (p1.x - p0.x)), env_level_to_y(level, outputType, zeroY, fullSwing)};
 
         render_line(moduleArea, prev, point, 1.5);
