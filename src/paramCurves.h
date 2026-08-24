@@ -85,6 +85,29 @@ double patch_volume_db(double paramValue);
 // An envelope segment's length in seconds: the 0.5 ms .. 45 s scale the manual quotes.
 double adr_time_seconds(double paramValue);
 
+// An envelope segment's SHAPE - the companion to adr_time_seconds() above, which gives its length.
+// The Shape param names both halves at once (envShapeStrMap is {LogExp, LinExp, ExpExp, LinLin}),
+// the first word naming the attack curve and the second the decay and release, so three of the four
+// fall exponentially and only LinLin is straight throughout.
+//
+// SHARED SO THE DRAWN ENVELOPE AND THE PLAYED ONE CANNOT DISAGREE - and they did. The engine and the
+// module face carried the same law with two different sharpness constants, 5.0 against 4.0, so the
+// curve drawn on an EnvADSR was never quite the curve it played. Nothing announced it, because each
+// file was self-consistent; it is exactly the drift this file exists to prevent. Both constants were
+// also wrong: measured on the hardware 2026-08-24, the rise and the fall are not equally curved, so
+// there are now two of them - see ENV_ATTACK_SHARPNESS and ENV_FALL_SHARPNESS in paramCurves.c.
+typedef enum {
+    eEnvShapeLogExp = 0,
+    eEnvShapeLinExp,
+    eEnvShapeExpExp,
+    eEnvShapeLinLin,
+} tEnvShape;
+
+// Both take a linear 0..1 progress through the segment and shape it, so a segment still takes
+// exactly the time its dial states whatever curve it is drawn with.
+double env_attack_level(uint32_t envShape, double progress);   // rises 0 -> 1 across the segment
+double env_fall_level(uint32_t envShape, double progress);     // falls 1 -> 0 across the segment
+
 // A delay's Time/Clk selector index, which differs per module type; -1 if it has none.
 int delay_time_clk_param_index(tModuleType moduleType);
 

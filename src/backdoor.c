@@ -103,7 +103,9 @@ extern "C" {
 //                       dial reads: an unassigned parameter has nowhere to show itself on the panel.
 //   DEVNOTE <note> <vel> on|off — a Virtual Keyboard note to the G2, for a patch that needs a gate
 //                       rather than a free-running clock (envelope times, for instance)
-//   DEVADDMODULE <name> [col] [row]  — as ADDMODULE, but the module is created ON THE G2 too
+//   DEVADDMODULE <name> [col] [row]  — as ADDMODULE, but the module is created ON THE G2 too.
+//                       OMIT THE ROW to pack it directly under whatever is already in that
+//                       column, from the real module heights rather than a guessed gap
 //   DEVDELMODULE <VA|FX> <index>     — deletes a module and its cables, on the G2 as well as here
 //                       These two exist because every LOCAL-ONLY command can only ever produce a
 //                       freshly-loaded patch, and that is the one state where the LED stream is known
@@ -331,6 +333,30 @@ static int32_t backdoor_connector_for_io_index(tModule * module, bool wantOutput
     return -1;
 }
 
+// The next free row in a column, worked out from the heights gModuleProperties already carries.
+// A scripted patch used to have to guess its own spacing, and a guess is either loose - the envelope
+// measurement patch sat at rows 0/6/11/18 where those modules are 4/2/5/2 tall, so it wasted eight
+// rows and needed scrolling to see - or too tight, which lands one module inside another. Placement
+// was only ever a guess because the caller cannot see the heights; here they are.
+static uint32_t backdoor_next_free_row(uint32_t slot, uint32_t location, uint32_t column) {
+    uint32_t next = 0;
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * walk   = get_module_slot(slot, location, i);
+
+        if ((walk == NULL) || !walk->active || (walk->column != column)) {
+            continue;
+        }
+        uint32_t  bottom = walk->row + gModuleProperties[walk->type].height;
+
+        if (bottom > next) {
+            next = bottom;
+        }
+    }
+
+    return next;
+}
+
 // Shared argument parsing for CABLE and DELCABLE: "<VA|FX> <from>:<out> <to>:<in> [link=<0|1>]",
 // deliberately the same shape DUMP prints, so a dumped cable can be pasted straight back as a
 // command. link defaults to 1 (the from-end is an output); 0 is a fan-out from an input connector.
@@ -468,7 +494,9 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         uint32_t    col      = 0;
         uint32_t    row      = 0;
 
-        if (sscanf(arg, "%63s %u %u", name, &col, &row) < 1) {
+        int         given    = sscanf(arg, "%63s %u %u", name, &col, &row);
+
+        if (given < 1) {
             backdoor_write_result("ERROR: expected 'ADDMODULE <name> [col] [row]'\n");
             return;
         }
@@ -490,6 +518,13 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         gLocation = (uint32_t)locationVa;
 
+        // OMIT THE ROW AND THEY PACK. With a row given, create_module_at() still ends in
+        // shift_modules_down(), so an explicit row landing on top of something pushes it out of the
+        // way rather than drawing garbled - but only an omitted row is placed tight against whatever
+        // is already in the column.
+        if (given < 3) {
+            row = backdoor_next_free_row(gSlot, gLocation, col);
+        }
         // DEVADDMODULE syncs to the instrument where ADDMODULE stays local — the DEV prefix means the
         // same thing here as it does on DEVSET and DEVMODE. It exists because the LOCAL-ONLY commands
         // can only ever produce a freshly-loaded patch, and a freshly-loaded patch is exactly the
@@ -533,9 +568,9 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         // script and the edit buffer drift apart silently, and every index the device reports back —
         // LED slots above all — is relative to ITS copy, not ours. A harness that can lie about what
         // the instrument holds is worse than one that is occasionally slow.
-        bool      removing      = (cmd[0] == 'D');
-        tCableKey key           = {0};
-        char      msg[160]      = {0};
+        bool      removing = (cmd[0] == 'D');
+        tCableKey key      = {0};
+        char      msg[160] = {0};
 
         if (!backdoor_parse_cable(arg, &key, msg, sizeof(msg))) {
             backdoor_write_result(msg);
@@ -549,6 +584,9 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             }
             delete_cable(key);
             backdoor_send_cable(&key, 0, true);
+            // A topology change re-assesses up-rate across the slot, exactly as the drag path does
+            // (canvasDrag.c) — REMOVING a cable can de-rate a module just as adding one promotes it.
+            update_module_up_rates();
             synthlib_request_redraw();
             backdoor_write_result("OK\n");
             return;
@@ -580,6 +618,13 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             effective_connector_type(fromModule->connector[fromConnector].type, fromModule->upRate));
         write_cable(key, &cable);
         backdoor_send_cable(&key, cable.colour, false);
+        // THE COLOUR ABOVE ONLY GUESSES, and until 2026-08-24 nothing corrected it here. Feeding an
+        // audio output into a multi-bandwidth (Control/Logic) input promotes the DESTINATION module to
+        // audio rate, which repaints the cables leaving it and changes the rate the G2 runs it at. The
+        // drag path has always re-assessed that after a connect; a scripted patch never did, so
+        // backdoor-built patches drew a promoted module's outputs in the wrong colour AND left the
+        // instrument running it at control rate, because eMsgCmdSetModuleUpRate was never sent.
+        update_module_up_rates();
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "PUSH") == 0) {
