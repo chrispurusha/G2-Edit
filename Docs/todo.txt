@@ -504,6 +504,44 @@ and draw THAT rather than an idealised curve.
   restore the backup — never git checkout a file you have edited.
 
 
+  LFOA AND LFOC NOW SHOW WAVE ICONS (2026-08-24). Both use lfoWaveStrMap, the same map LfoB uses, but
+  all SIX entries rather than the four LfoB clamps to — LfoA keeps the waveform in a parameter
+  (index 4), LfoC in a mode (index 0). The first four delegate straight to LfoB's measured cycle, so
+  only the two random ones are new.
+    - A RANDOM WAVE HAS NO CYCLE TO MEASURE, so these are the only wave icons in the app that are a
+      REPRESENTATION rather than a fitted law, and the code says so at the definition. What the icon
+      has to convey is the one distinction between the two entries: RndSt holds each value until the
+      next step, Rnd glides between them. Six steps at fixed levels, from a static table — drawing
+      from a real random source would make the icon flicker on every redraw, and two entries that
+      never look the same twice cannot be compared.
+    - VERIFIED BY COMPILING THE REAL FUNCTION, as with every other wave: RndSt holds across 234 of 239
+      sample pairs, Rnd changes across 239 of 239, and the seam rule does the right thing for both —
+      RndSt ends a step away from where it began (+0.55 to -0.60) and gets its vertical, Rnd closes on
+      itself (+0.55 to +0.54) and correctly gets none.
+    - BOTH OPEN CHECKS ARE NOW DONE (2026-08-24, after a power cut that cost nothing — the captures
+      were already on disk and the MacBook was on battery):
+        1. LFOA ACCEPTS ALL SIX WAVES, settling the standing assumption. Waves 4 and 5 are nothing
+           like Squ — RMS 0.006 against Squ's 0.019, median flat runs of 8 and 1 samples against
+           Squ's 134 — where LfoB's 4 and 5 were measured as indistinguishable from it. So the
+           trailing RndSt/Rnd in lfoWaveStrMap do belong to LfoA and LfoC, as suspected.
+        2. RndSt STEPS AND Rnd GLIDES, in that direction. Each wave captured to ITS OWN file rather
+           than as a sweep, so there are no segment boundaries to mis-read, then judged from the
+           distribution of sample-to-sample differences — bimodal for a staircase, not for a glide:
+                          p50/p99    differences at zero    longest hold
+                RndSt      0.057           43.4%             19 samples
+                Rnd        0.123           21.1%              8 samples
+        3. BOTH FACES LOOK RIGHT. LfoA's icon sits clear at the top right; LfoC's wider button had
+           the room and does not overflow the module. Verified on screen.
+      TWO METHOD NOTES WORTH KEEPING:
+        - DO NOT READ STEP-VS-GLIDE OFF A PLOT. Eyeballing 10 ms windows gave the OPPOSITE answer at
+          one point, because two captures autoscale to different vertical ranges and the eye compares
+          shape rather than hold time. The statistic was right where the picture was not.
+        - ONE SETTING PER FILE when the quantity being measured is not periodic. A sweep needs its
+          boundaries located, and for a signal with no cycle there is nothing to locate them with.
+      STILL OPEN, AND SMALL: Rnd holds 21% of the time, so it is more likely a slewed or smoothed
+      random than the linear interpolation the icon draws. The direction it differs from RndSt in is
+      settled; the exact interpolation is not.
+
     - REMAINING PICKER CANDIDATES, same shapeOscATypeStrMap or lfoWaveStrMap families: LfoA (param 4)
       and LfoC (mode 0) share lfoWaveStrMap with the already-measured LfoB, so their first four waves
       are done the moment they are registered — only the trailing RndSt/Rnd are new, and a random wave
