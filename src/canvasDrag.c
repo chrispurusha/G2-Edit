@@ -1279,6 +1279,57 @@ bool canvas_move_param_focus(int delta) {
     return true;
 }
 
+// Bring a module fully into view, scrolling the pane that shows its Location by the smallest amount
+// that does it. Without this, Shift+arrows happily move the focus to a module that is scrolled off
+// the canvas: the marks are drawn correctly, on something nobody can see.
+//
+// MINIMUM MOVEMENT, not centring - a keyboard walk down a column should creep the view along rather
+// than jumping the focused module to the middle each step, which makes the surrounding modules leap
+// about. A module already fully visible scrolls not at all.
+static void scroll_module_into_view(tModule * module) {
+    uint32_t   pane    = (module->key.location == (uint32_t)locationFx) ? 1 : 0;
+    tRectangle area    = module_area_for_pane(pane);
+
+    if (area.size.h <= 0.0) {
+        return;   // that Location's pane is collapsed - nothing to reveal it into
+    }
+    // calc_scroll_x/y read the CURRENT pane, so ask as that pane and put it back. pane_scroll_by()
+    // does the same dance internally for the write.
+    uint32_t   prev    = module_pane();
+
+    set_module_pane(pane);
+    double     scrollX = calc_scroll_x();
+    double     scrollY = calc_scroll_y();
+
+    set_module_pane(prev);
+
+    // The module's box in the same scaled pixels the scroll offsets are in - the terms
+    // render_module() lays it out with, times the zoom.
+    double     zoom    = get_zoom_factor();
+    double     top     = module->row * MODULE_Y_SPAN * zoom;
+    double     bottom  = top + (((gModuleProperties[module->type].height * MODULE_Y_SPAN) - MODULE_Y_GAP) * zoom);
+    double     left    = module->column * MODULE_X_SPAN * zoom;
+    double     right   = left + (MODULE_WIDTH * zoom);
+    double     dx      = 0.0;
+    double     dy      = 0.0;
+
+    if (top < scrollY) {
+        dy = top - scrollY;                            // above the band: pull the view up
+    } else if (bottom > (scrollY + area.size.h)) {
+        dy = bottom - (scrollY + area.size.h);         // below it: push the view down
+    }
+
+    if (left < scrollX) {
+        dx = left - scrollX;
+    } else if (right > (scrollX + area.size.w)) {
+        dx = right - (scrollX + area.size.w);
+    }
+
+    if ((dx != 0.0) || (dy != 0.0)) {
+        pane_scroll_by(pane, dx, dy);
+    }
+}
+
 // Shift+arrows walk the focus from module to module. Manual p84: "To move the focus to another
 // module in the Patch, press the Shift key on the computer keyboard together with the
 // Up/Down/Left/Right arrow buttons. The modules in a Patch are accessed depending on how they were
@@ -1354,6 +1405,7 @@ bool canvas_move_module_focus(int dx, int dy) {
     gParamFocus.valid      = true;
     gParamFocus.moduleKey  = best->key;
     gParamFocus.paramIndex = 0;
+    scroll_module_into_view(best);
     return true;
 }
 
