@@ -601,6 +601,83 @@ and draw THAT rather than an idealised curve.
   original editor draws as image selectors rather than text — OscA, OscB, OscShpA, LfoA, LfoB,
   LfoShpA, Rect and ShpStatic (see the resource-file survey; those eight carry waveform ICONS on
   their selector buttons). The manual's oscillator pages should settle any that are ambiguous.
+THE G2 DOES NOT WORK OUT ITS OWN UP-RATING — the editor is authoritative, and a scripted patch never
+told it. Found by CT 2026-08-24 looking at the envelope measurement patch ("I'm not sure the connector
+colouring, cable colouring or possibly audio processing promotion is working on that patch"), fixed
+the same day.
+  update_module_up_rates() was called from every UI path — canvasDrag, menus, mouseHandle, selection,
+  undo — AND FROM NO SCRIPTED ONE. backdoor.c's CABLE/DELCABLE inherited the from-connector's current
+  colour, which the comment there correctly describes as the same rule the drag path follows, but that
+  rule is only half of it: the drag path then RE-ASSESSES the whole slot, because a new cable can
+  promote the module at its far end. A scripted patch never re-assessed, so nothing downstream of an
+  audio source was ever promoted.
+  IT WAS NOT COSMETIC, which was the surprise. Measured on the hardware with OscB -> LevMod -> 2-Out,
+  the same rig as the envelope work, comparing the carrier's spectrum before and after the fix:
+        before (control rate) : non-harmonic energy above 2 kHz  -15.9 dB rel fundamental,
+                                broad alias peaks about -32 dB scattered over 13-17 kHz
+        after  (up-rated)     : the same measure  -34.1 dB, an 18 dB improvement, with the
+                                residue only up at 23-24 kHz and -48 dB or below
+  So eMsgCmdSetModuleUpRate really does set the rate the instrument RUNS the module at. Every
+  backdoor-built patch until now has been running its promoted modules at control rate with an alias
+  floor 16 dB under the carrier — worth remembering for any earlier measurement made through one.
+  THE ADSR CURVES WERE NOT AFFECTED, checked rather than assumed: re-measured after the fix, attack k
+  2.87 against 2.81 and decay 4.35 against 4.51, both inside the scatter of the repeats. The alias
+  products scale WITH the carrier, so they ride the envelope instead of distorting its shape, and a
+  10 ms RMS window averages them away. LinLin's straight-line fit is what would have caught it
+  otherwise.
+  STILL ASYMMETRIC, and left alone deliberately: the drag path also calls cable_chain_recolour() before
+  re-assessing, so a whole chain carries one colour. The backdoor still does not. It made no difference
+  here — every cable in this patch takes its colour from its own source — but a scripted fan-out, or a
+  scripted input-to-input link (which should come out WHITE), will still colour wrongly.
+
+THE DRAWN ENVELOPE WAS NEVER THE ENVELOPE YOU HEARD — one law, two constants. Fixed 2026-08-24; the
+constant itself is still a guess and wants a capture.
+  soundEngine.c shaped its segments with exp(+/-5t) and moduleGraphics.c drew them with exp(+/-4t).
+  Same law, same normalisation, same shape-index mapping (both give Log/Lin/Exp/Lin for envShapeStrMap's
+  LogExp/LinExp/ExpExp/LinLin) — only the sharpness differed, so an EnvADSR's face and its sound were
+  two different curves and nothing announced it, because each file was self-consistent.
+  THIS IS THE SECOND TIME THE SAME SPLIT HAS BITTEN (osc_shp_wave() was the first, 2026-08-23), and it
+  is what paramCurves.c exists to stop.
+  NOW ONE DEFINITION: tEnvShape, env_attack_level() and env_fall_level() live in paramCurves.c behind
+  ENV_CURVE_SHARPNESS, and both callers go through them. moduleGraphics.c keeps only envadsr_decay_level(),
+  which is the part that really is a drawing concern — a drawn segment runs between two arbitrary levels
+  (full to Sustain, Sustain to the release target) where the engine's always run 1 to 0.
+  WHAT MOVED AND WHAT DID NOT, checked numerically over 1000 points per shape:
+    - the engine is BIT-IDENTICAL (max |delta| 0.0) — 5.0 was already its number, so nothing audible changed
+    - the drawn Lin/LinLin segments are identical to float noise (1.1e-16)
+    - the drawn EXPONENTIAL segments moved by up to 0.076 of full scale: a Log attack a fifth of the way
+      through now reads 0.6364 where it drew 0.5609
+  SETTLED ON THE HARDWARE 2026-08-24, AND IT NEEDS TWO CONSTANTS, NOT ONE. Neither 4.0 nor 5.0 was
+  right, and the rise and the fall are not equally curved:
+        shape    dial   attack k   decay k
+        LogExp    80      2.90       4.25
+        ExpExp    80      2.81       4.51
+        ExpExp    64      2.78       4.20
+  ENV_ATTACK_SHARPNESS is now 2.83 and ENV_FALL_SHARPNESS 4.32. The fall was nearly right at the drawn
+  copy's 4.0; the RISE was wrong in both copies and by a wide margin.
+  THE RIG, for whoever repeats it: EnvADSR modulating a LevMod on a steady 523 Hz OscB into 2-Out,
+  captured on QU-24 5/6 and fitted. Do NOT capture the envelope output directly — it is a slow control
+  signal and the audio output is AC coupled, which bends the curve being measured. Fit the amplitude of
+  a tone the envelope opens instead.
+  FOUR TRAPS, all of which bit before the numbers were trustworthy:
+    - LevMod's ModType must be 127 or the VCA never closes. At its default 64 the oscillator ran
+      straight through at about a quarter level, and the "envelope" was a tone with a bump on it.
+    - THE OTHER SLOTS WERE SOUNDING. A note excites every enabled slot, so slot 0's patch was dominating
+      the capture; with our own oscillator bypassed the level barely changed, which is what proved it.
+      NEWPATCH on the other three slots first.
+    - a fixed amplitude threshold for the segment start CLIPS AN EXP ATTACK, which leaves zero slowly,
+      and the fitted curvature comes out low. Anchor on the peak instead.
+    - fit the segment LENGTH freely and it trades against k — an asymptotic tail sitting in the noise
+      looks just like a longer, shallower curve, which is how the decay first "measured" 5.78 s. Pin the
+      length to what LinLin measures.
+  THE CONTROL SETTING IS WHAT MAKES THE REST BELIEVABLE: LinLin fits a straight line to rms 0.014, so
+  the VCA and the capture chain are linear; and its fitted segment came out 3.20 s against
+  adr_time_seconds(80)'s 3.208 s, so the time law is confirmed in the same take. k also came out the
+  same at two different time dials (2.78 at 1.02 s segments, 2.81 at 3.20 s), which is what says the
+  shape is applied to a normalised progress rather than being a fixed time constant.
+  STILL WORTH AN EAR. Everything above is a curve fit; nobody has listened to the engine against the
+  instrument since it changed.
+
 MOVING A CABLE FROM ONE CONNECTOR TO ANOTHER — DONE 2026-08-22, and the user who reported it is
 right about the modifier. Manual p65: "right-click on a connection and select Disconnect, or
 double-click-hold or Ctrl-click on a connection... and 'pull out' the connector by dragging the

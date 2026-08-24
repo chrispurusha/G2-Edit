@@ -192,6 +192,67 @@ double adr_time_seconds(double paramValue) {
     return ADR_TIME_SCALE * pow(value + ADR_TIME_OFFSET, 8.0);
 }
 
+// How sharply the exponential envelope segments curve. MEASURED ON THE HARDWARE 2026-08-24, and it
+// takes TWO constants, not one: the rise and the fall are not equally curved.
+//
+//     shape    dial   attack k   decay k
+//     LogExp    80      2.90       4.25
+//     ExpExp    80      2.81       4.51
+//     ExpExp    64      2.78       4.20
+//
+// Method: an EnvADSR modulating a LevMod on a steady 523 Hz OscB into 2-Out, captured off the
+// instrument's own outputs and fitted. The envelope output is NOT measured directly - it is a slow
+// control signal and the audio output is AC coupled, which would bend the very curve being measured -
+// so what is fitted is the amplitude of a tone the envelope opens.
+//
+// TWO THINGS THE CONTROL SETTING PROVED, and neither was assumed:
+//   - LinLin fits a straight line to rms 0.014, so the VCA and the capture chain are linear and the
+//     tone's amplitude really does track the envelope. Without that, every k here would be the
+//     product of the envelope and whatever the VCA does.
+//   - the fitted segment length came out 3.20 s against adr_time_seconds(80)'s 3.208 s, which checks
+//     the time law at the same time.
+// k CAME OUT THE SAME AT TWO DIFFERENT TIME DIALS (2.78 at 1.02 s segments, 2.81 at 3.20 s), which is
+// what says the shape is applied to a NORMALISED progress rather than being a fixed time constant.
+// Fit the segment length freely and it trades against k - an asymptotic tail sitting in the noise
+// looks equally like a longer, shallower curve - so the length is pinned to what the control measured.
+//
+// Both figures replace guesses: the engine used 5.0 for both and the drawn envelope used 4.0 for both.
+// The fall was nearly right at 4.0; the rise was wrong in both copies, and noticeably so.
+//
+// Normalised at both ends below, because exp() is asymptotic: a raw exponential would neither leave
+// 0 nor arrive at 1 within the segment, so the segment would not land on its own endpoints.
+#define ENV_ATTACK_SHARPNESS    (2.83)
+#define ENV_FALL_SHARPNESS      (4.32)
+
+double env_attack_level(uint32_t envShape, double progress) {
+    switch (envShape) {
+        case eEnvShapeLogExp:
+        {
+            // Log - rises fast, then flattens towards the peak.
+            return (1.0 - exp(-ENV_ATTACK_SHARPNESS * progress)) / (1.0 - exp(-ENV_ATTACK_SHARPNESS));
+        }
+        case eEnvShapeExpExp:
+        {
+            // Exp - starts slowly, then accelerates into the peak.
+            return (exp(ENV_ATTACK_SHARPNESS * progress) - 1.0) / (exp(ENV_ATTACK_SHARPNESS) - 1.0);
+        }
+        default:
+        {
+            return progress;   // LinExp and LinLin both rise in a straight line
+        }
+    }
+}
+
+// The falling segments - decay and release - are exponential for every shape except LinLin, whose
+// second word is the one that says so.
+double env_fall_level(uint32_t envShape, double progress) {
+    if (envShape == (uint32_t)eEnvShapeLinLin) {
+        return 1.0 - progress;
+    }
+    return (exp(-ENV_FALL_SHARPNESS * progress) - exp(-ENV_FALL_SHARPNESS))
+           / (1.0 - exp(-ENV_FALL_SHARPNESS));
+}
+
 // A filter's resonance, as Q - 0.5 at the bottom of the dial up to 50 at the top, the range the
 // Res dial prints.
 // THE DAMPING FALLS LINEARLY AND Q IS ITS INVERSE SQUARE. Write d for the damping,
