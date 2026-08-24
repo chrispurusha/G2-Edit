@@ -40,6 +40,11 @@
 			path = src;
 			sourceTree = "<group>";
 		};
+		83F1C0012FD5A00100DD4947 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				834E4EEA2FCE334E00468BB7 /* src */,
+				83F1C0012FD5A00100DD4947 /* Resources */,
 				79A07D7F3CD94F70B77FE0B7 /* SynthLib/src */,
 				83C1453C2CFF7104004E572A /* Frameworks */,
 				83C145332CFF6E5F004E572A /* Products */,
@@ -112,6 +118,7 @@
 			fileSystemSynchronizedGroups = (
 				79A07D7F3CD94F70B77FE0B7 /* SynthLib/src */,
 				834E4EEA2FCE334E00468BB7 /* src */,
+				83F1C0012FD5A00100DD4947 /* Resources */,
 			);
 			name = "G2 Editor";
 			packageProductDependencies = (
