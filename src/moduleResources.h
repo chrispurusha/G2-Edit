@@ -1382,7 +1382,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscShpA,    paramTypeMenu,           {{ 62, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fmTypeStrMap,                          NULL          },                // FM Pitch Track
     {moduleTypeOscShpA,    paramTypeShape,          {{ 56,  13}, { 7,  7}}, anchorTopLeft,     "Shape",        128,   0, NULL,                                  NULL          },                // 50% to 99%, not decimals
     {moduleTypeOscShpA,    paramTypeCommonDial,     {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "ShpCtrl",      128,   0, NULL,                                  NULL          },                // 163 Shape M
-    {moduleTypeOscShpA,    paramTypeMenu,           {{ 38,  10}, { 7,  7}}, anchorTopLeft,     "Wave",             6,   0, oscShpAStrMap,                         NULL          },                // 163 Wave
+    {moduleTypeOscShpA,    paramTypeMenu,           {{ 38,  10}, { 7,  7}}, anchorTopLeft,     "Wave",           6,   0, oscShpAStrMap,                         NULL          },                // 163 Wave
     {moduleTypeOscShpA,    paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },
     // 164 OscDual
     {moduleTypeOscDual,    paramTypeOscFreq,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          },                    // 164 Coarse
@@ -2117,48 +2117,48 @@ const tConnectorLocation connectorLocationList[] = {
     // 110 Unknown
     // 111 Unknown
     // 112 LevAdd
-    {moduleTypeLevAdd,      connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 112 In
-    {moduleTypeLevAdd,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 112 Out
+    {moduleTypeLevAdd,      connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 112 In
+    {moduleTypeLevAdd,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 112 Out
     // 113 Fade1-2
-    {moduleTypeFade1to2,    connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 113 In
-    {moduleTypeFade1to2,    connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 113 Ctrl
-    {moduleTypeFade1to2,    connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 113 Out1
-    {moduleTypeFade1to2,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 113 Out2
+    {moduleTypeFade1to2,    connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 113 In
+    {moduleTypeFade1to2,    connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },    // 113 Ctrl
+    {moduleTypeFade1to2,    connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 113 Out1
+    {moduleTypeFade1to2,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 113 Out2
     // 114 Fade2-1
-    {moduleTypeFade2to1,    connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 114 In1
-    {moduleTypeFade2to1,    connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 114 In2
-    {moduleTypeFade2to1,    connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 114 Ctrl
-    {moduleTypeFade2to1,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 114 Out
+    {moduleTypeFade2to1,    connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 114 In1
+    {moduleTypeFade2to1,    connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 114 In2
+    {moduleTypeFade2to1,    connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },    // 114 Ctrl
+    {moduleTypeFade2to1,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 114 Out
     // 115 LevScaler
-    {moduleTypeLevScaler,   connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",         labelLocRight},          // 115 Note
-    {moduleTypeLevScaler,   connectorDirIn,  connectorTypeControl, {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 115 In
-    {moduleTypeLevScaler,   connectorDirOut, connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Level",        labelLocUp   },          // 115 Level
-    {moduleTypeLevScaler,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 115 Out
+    {moduleTypeLevScaler,   connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",         labelLocRight},    // 115 Note
+    {moduleTypeLevScaler,   connectorDirIn,  connectorTypeControl, {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 115 In
+    {moduleTypeLevScaler,   connectorDirOut, connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Level",        labelLocUp   },    // 115 Level
+    {moduleTypeLevScaler,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 115 Out
     // 116 Mix8-1A
-    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 21,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },          // 116 In1
-    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },          // 116 In2
-    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 39,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },          // 116 In3
-    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 48,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },          // 116 In4
-    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 57,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },          // 116 In5
-    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },          // 116 In6
-    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },          // 116 In7
-    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 84,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },          // 116 In8
-    {moduleTypeMix8to1A,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 116 Out
+    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 21,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },    // 116 In1
+    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },    // 116 In2
+    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 39,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },    // 116 In3
+    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 48,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },    // 116 In4
+    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 57,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },    // 116 In5
+    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },    // 116 In6
+    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },    // 116 In7
+    {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 84,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },    // 116 In8
+    {moduleTypeMix8to1A,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 116 Out
     // 117 LevMod
-    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{-3,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL,           labelLocRight},          // 117 In
-    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Mod",          labelLocUp },          // 117 Mod
-    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight   },          // 117 ModDepth
-    {moduleTypeLevMod,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 115 Out
+    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{ -3,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocRight},    // 117 In
+    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Mod",          labelLocUp   },    // 117 Mod
+    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",            labelLocRight},    // 117 ModDepth
+    {moduleTypeLevMod,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 115 Out
     // 118 Digitizer
-    {moduleTypeDigitizer,   connectorDirIn,  connectorTypeControl, {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 118 In
-    {moduleTypeDigitizer,   connectorDirIn,  connectorTypeControl, {{ 13,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 118 Rate M
-    {moduleTypeDigitizer,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 118 Out
+    {moduleTypeDigitizer,   connectorDirIn,  connectorTypeControl, {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},    // 118 In
+    {moduleTypeDigitizer,   connectorDirIn,  connectorTypeControl, {{ 13,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },    // 118 Rate M
+    {moduleTypeDigitizer,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },    // 118 Out
     // 119 EnvADDSR
-    {moduleTypeEnvADDSR,    connectorDirIn,  connectorTypeLogic,   {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",         labelLocRight},          // 119 Gate
-    {moduleTypeEnvADDSR,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",           labelLocRight},          // 119 AM
-    {moduleTypeEnvADDSR,    connectorDirIn,  connectorTypeControl, {{-17,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 119 In
-    {moduleTypeEnvADDSR,    connectorDirOut, connectorTypeControl, {{ -3,  24}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Env",          labelLocLeft },          // 119 Env
-    {moduleTypeEnvADDSR,    connectorDirOut, connectorTypeControl, {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 119 Out
+    {moduleTypeEnvADDSR,    connectorDirIn,  connectorTypeLogic,   {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",         labelLocRight},    // 119 Gate
+    {moduleTypeEnvADDSR,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",           labelLocRight},    // 119 AM
+    {moduleTypeEnvADDSR,    connectorDirIn,  connectorTypeControl, {{-17,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },    // 119 In
+    {moduleTypeEnvADDSR,    connectorDirOut, connectorTypeControl, {{ -3,  24}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Env",          labelLocLeft },    // 119 Env
+    {moduleTypeEnvADDSR,    connectorDirOut, connectorTypeControl, {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },    // 119 Out
     // 120 Unknown
     // 121 SeqNote
     {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   }, // 121 Clk
@@ -2335,68 +2335,68 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqCtr,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },    // 154 Trig
     // 155 Unknown
     // 156 NoteDet
-    {moduleTypeNoteDet,     connectorDirOut, connectorTypeLogic,   {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",         labelLocUp   },          // 156 Gate
-    {moduleTypeNoteDet,     connectorDirOut, connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocUp   },          // 156 Vel
-    {moduleTypeNoteDet,     connectorDirOut, connectorTypeControl, {{ 90,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "RVel",         labelLocUp   },          // 156 Release vel
+    {moduleTypeNoteDet,     connectorDirOut, connectorTypeLogic,   {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",         labelLocUp   },        // 156 Gate
+    {moduleTypeNoteDet,     connectorDirOut, connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocUp   },        // 156 Vel
+    {moduleTypeNoteDet,     connectorDirOut, connectorTypeControl, {{ 90,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "RVel",         labelLocUp   },        // 156 Release vel
     // 157 LevConv
-    {moduleTypeLevConv,     connectorDirIn,  connectorTypeControl, {{-23,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 157 In
-    {moduleTypeLevConv,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 157 Out
+    {moduleTypeLevConv,     connectorDirIn,  connectorTypeControl, {{-23,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 157 In
+    {moduleTypeLevConv,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 157 Out
     // 158 Glide
-    {moduleTypeGlide,       connectorDirIn,  connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 139 In
-    {moduleTypeGlide,       connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Glide on",     labelLocRight},          // 158 Glide On
-    {moduleTypeGlide,       connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 139 Out
+    {moduleTypeGlide,       connectorDirIn,  connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 139 In
+    {moduleTypeGlide,       connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Glide on",     labelLocRight},        // 158 Glide On
+    {moduleTypeGlide,       connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 139 Out
     // 159 CompSig
-    {moduleTypeCompSig,     connectorDirIn,  connectorTypeControl, {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "A",            labelLocLeft },          // 159 A
-    {moduleTypeCompSig,     connectorDirIn,  connectorTypeControl, {{ 75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "B",            labelLocLeft },          // 159 B
-    {moduleTypeCompSig,     connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "A>=B",         labelLocLeft },          // 159 Cmp
+    {moduleTypeCompSig,     connectorDirIn,  connectorTypeControl, {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "A",            labelLocLeft },        // 159 A
+    {moduleTypeCompSig,     connectorDirIn,  connectorTypeControl, {{ 75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "B",            labelLocLeft },        // 159 B
+    {moduleTypeCompSig,     connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "A>=B",         labelLocLeft },        // 159 Cmp
     // 160 ZeroCnt
-    {moduleTypeZeroCnt,     connectorDirIn,  connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 160 In
-    {moduleTypeZeroCnt,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 160 Out
+    {moduleTypeZeroCnt,     connectorDirIn,  connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 160 In
+    {moduleTypeZeroCnt,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 160 Out
     // 161 MixFader
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{  8,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "1",            labelLocUp   },          // 161 In1
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 18,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "2",            labelLocUp   },          // 161 In2
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 28,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "3",            labelLocUp   },          // 161 In3
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 38,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "4",            labelLocUp   },          // 161 In4
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 48,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "5",            labelLocUp   },          // 161 In5
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 58,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "6",            labelLocUp   },          // 161 In6
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 68,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "7",            labelLocUp   },          // 161 In7
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 78,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "8",            labelLocUp   },          // 161 In8
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft },          // 161 Chain
-    {moduleTypeMixFader,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 161 Out
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{  8,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "1",            labelLocUp   },        // 161 In1
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 18,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "2",            labelLocUp   },        // 161 In2
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 28,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "3",            labelLocUp   },        // 161 In3
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 38,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "4",            labelLocUp   },        // 161 In4
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 48,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "5",            labelLocUp   },        // 161 In5
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 58,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "6",            labelLocUp   },        // 161 In6
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 68,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "7",            labelLocUp   },        // 161 In7
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 78,  19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "8",            labelLocUp   },        // 161 In8
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft },        // 161 Chain
+    {moduleTypeMixFader,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 161 Out
     // 162 FltComb
-    {moduleTypeFltComb,     connectorDirIn,  connectorTypeAudio,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 162 In
-    {moduleTypeFltComb,     connectorDirIn,  connectorTypeControl, {{  3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 162 Pitch
-    {moduleTypeFltComb,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 162 PitchVar
-    {moduleTypeFltComb,     connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 162 FM
-    {moduleTypeFltComb,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 162 Out
+    {moduleTypeFltComb,     connectorDirIn,  connectorTypeAudio,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 162 In
+    {moduleTypeFltComb,     connectorDirIn,  connectorTypeControl, {{  3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 162 Pitch
+    {moduleTypeFltComb,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 162 PitchVar
+    {moduleTypeFltComb,     connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 162 FM
+    {moduleTypeFltComb,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 162 Out
     // 163 OscShpA
-    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeControl, {{  3, -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 163 Pitch
-    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",           labelLocRight   },          // 163 PitchVar
-    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeAudio,   {{  3, 7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "Sync",         labelLocRight   },          // 163 Sync
-    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight   },          // FM
-    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeAudio,   {{ 73,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight   },          // 163 Shape
-    {moduleTypeOscShpA,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // Out
+    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeControl, {{  3, -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 163 Pitch
+    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",           labelLocRight},        // 163 PitchVar
+    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeAudio,   {{  3,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Sync",         labelLocRight},        // 163 Sync
+    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",            labelLocRight},        // FM
+    {moduleTypeOscShpA,     connectorDirIn,  connectorTypeAudio,   {{ 73,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",            labelLocRight},        // 163 Shape
+    {moduleTypeOscShpA,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // Out
     // 164 OscDual
-    {moduleTypeOscDual,     connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 164 Pitch
-    {moduleTypeOscDual,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 164 PitchVar
-    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sync",         labelLocUp   },          // 164 Sync
-    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{ 48, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 164 PW
-    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{ 48,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 164 Phase
-    {moduleTypeOscDual,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 164 Out
+    {moduleTypeOscDual,     connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 164 Pitch
+    {moduleTypeOscDual,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 164 PitchVar
+    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sync",         labelLocUp   },        // 164 Sync
+    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{ 48, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 164 PW
+    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{ 48,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },        // 164 Phase
+    {moduleTypeOscDual,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 164 Out
     // 165 DXRouter
-    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{  5,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocLeft },          // 164 In1
-    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 11,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 164 Out1
-    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocLeft },          // 164 In2
-    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 164 Out2
-    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocLeft },          // 164 In3
-    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 41,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 164 Out3
-    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocLeft },          // 164 In4
-    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 56,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 164 Out4
-    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocLeft },          // 164 In5
-    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 71,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 164 Out5
-    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocLeft },          // 164 In6
-    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 86,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 164 Out6
-    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Main",         labelLocUp   },          // 164 Out
+    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{  5,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocLeft },        // 164 In1
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 11,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 164 Out1
+    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocLeft },        // 164 In2
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 164 Out2
+    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocLeft },        // 164 In3
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 41,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 164 Out3
+    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocLeft },        // 164 In4
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 56,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 164 Out4
+    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocLeft },        // 164 In5
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 71,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 164 Out5
+    {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocLeft },        // 164 In6
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 86,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 164 Out6
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Main",         labelLocUp   },        // 164 Out
     // 166 Unknown
     // 167 PShift
     {moduleTypePShift,      connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 167 PitchVar
