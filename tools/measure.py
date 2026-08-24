@@ -125,6 +125,21 @@ def main():
     if not os.path.exists(tool):
         sys.exit(f"error: {tool} is not built — see the build line at the top of capture.c")
 
+    # IS THE EDITOR ACTUALLY TALKING TO THE G2? Checked here rather than assumed, because every DEV
+    # command answers OK when it is not: they write the local database first and post to the USB
+    # thread second, and that post goes nowhere when the instrument is not connected. A sweep run
+    # against an offline editor therefore completes, prints every setting, and writes a file full of
+    # SILENCE. That cost a capture on 2026-08-24 — and the editor's own top bar could not have warned
+    # us either, since it says "Offline" both when no G2 is plugged in and when a SECOND COPY of the
+    # editor holds the USB claim, which is what had happened.
+    comms = backdoor("COMMS")
+    if "online" not in comms:
+        sys.exit("error: the editor is not connected to the G2 (COMMS said: "
+                 + comms.strip().replace("\n", " ") + ").\n"
+                 "       A sweep would run to completion and record silence. Check that no OTHER copy\n"
+                 "       of G2-Edit is running — whichever one starts first holds the USB claim, and\n"
+                 "       the loser shows 'Offline' exactly as an unplugged G2 does.")
+
     print(f"recording -> {args.out}  ({len(values)} settings x {dwell:.1f}s = {total:.0f}s total)")
     cmd = [tool, "--device", args.device, "--out", args.out, "--seconds", f"{total:.2f}"]
     if args.rate:

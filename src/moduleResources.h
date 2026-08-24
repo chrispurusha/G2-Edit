@@ -911,7 +911,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscA,       paramTypeToggle,         {{ 12, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},                    // 97 Kbt
     {moduleTypeOscA,       paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                    // 97 Pitch M
     {moduleTypeOscA,       paramTypeMenu,           {{ 45,  10}, { 7,  7}}, anchorTopLeft,     "Wave",           6,   2, shapeOscATypeStrMap,                   NULL          },                    // 97 Waveform
-    {moduleTypeOscA,       paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                    // 97 Bypass
+    {moduleTypeOscA,       paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                    // 97 Bypass  (moved off middle-right to clear the wave graph — CT, 2026-08-24. NOT to the bottom corner: the audio output already sits at {-3,-3}, and the two drew on top of each other)
     {moduleTypeOscA,       paramTypeMenu,           {{ 29, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },                    // 97 Pitch Type
 
     // 98 FreqShift
@@ -2803,6 +2803,15 @@ const tGraphLocation     graphLocationList[] = {
     {moduleTypeOscShpA,    {{-2,  6}, {30, 10}}, anchorTopRight },
     {moduleTypeLfoShpA,    {{-2,  6}, {30, 10}}, anchorTopRight },
     {moduleTypeLfoB,       {{-2,  6}, {30, 10}}, anchorTopRight },
+    // OscB carries one too (CT, 2026-08-24): its face has the room, and its Shape genuinely changes
+    // two of its five waves — Sqr's pulse width and DualSaw's detune — which is what a graph is for.
+    // The other three are inert under Shape, so for those it simply draws the wave larger.
+    {moduleTypeOscB,       {{-2,  6}, {30, 10}}, anchorTopRight },
+    // OscA gets one as well (CT). It is the SHORTEST face of the group at three rows against
+    // OscShpB's four, so its Bypass moved from middle-right to the bottom corner to clear the box.
+    // OscA has no Shape dial, so this graph is static per waveform — a legible enlargement of the
+    // picker icon rather than a live display, which is the honest description of what it adds.
+    {moduleTypeOscA,       {{-2,  6}, {30, 10}}, anchorTopRight },
     {moduleTypeEnvADSR,    {{20,  8}, {60, 16}}, anchorTopLeft  },
     {moduleTypeFltClassic, {{ 0, 10}, {30, 10}}, anchorTopMiddle}, };
 

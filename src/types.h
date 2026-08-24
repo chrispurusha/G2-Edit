@@ -31,6 +31,25 @@
 #include "floatingPanel.h"   // tFloatingPanel, for the panels below that float
 #include "geometry.h"
 
+// MODULE TYPES, INDEXED BY THE NUMBER THE PATCH FORMAT USES — so the order is the instrument's, not
+// ours, and the moduleTypeUnknownNN entries are real slots we have not identified rather than padding
+// to be tidied away. gModuleProperties[] in moduleResources.h is this list's name table and must stay
+// in step with it.
+//
+// NAMES THAT DIFFER FROM WHAT THE G2 CALLS THEM — check here before concluding a module is missing:
+//     moduleTypeSandH        the instrument labels it "S&H" ('&' is awkward in an identifier)
+// That is the only alias at present. Everything else either matches the instrument's own label or is
+// still an Unknown slot.
+//
+// STILL UNIDENTIFIED, and known to exist: comparing this table against the full set of modules the
+// instrument supports leaves 22 of its names with no slot filled here. In rough order of how likely
+// they are to matter for the editor's graphics work:
+//     ShelvEQ  PulseOsc  LfoD  EnvDX  AR-Env  SeqA  Mux8-1X        (all draw a graph on the face)
+//     SyncOsc  S&H  T&H  PeakFollow  RndStep  RndState  RndChaos
+//     PolarPan  PolarFade  Mixer6-1A  Mixer6-1B  OutBusA  OutBusB  ClkDivFix  AudioIn  BusIn
+// HOW TO FILL ONE: the type NUMBER is what is missing, and the instrument's own patches carry it —
+// load a factory patch that uses the module and DUMP reports its type against a name we render as
+// "Unknown". That is the only route; nothing about the number is derivable from the name.
 typedef enum {
     moduleTypeUnknown0,
     moduleTypeKeyboard,
@@ -85,7 +104,7 @@ typedef enum {
     moduleTypeConstSwT,
     moduleTypeFltNord,
     moduleTypeEnvMulti,
-    moduleTypeSandH,
+    moduleTypeSandH,               // the instrument calls this "S&H"
     moduleTypeFltStatic,
     moduleTypeEnvD,
     moduleTypeResonator,
