@@ -675,8 +675,9 @@ constant itself is still a guess and wants a capture.
   adr_time_seconds(80)'s 3.208 s, so the time law is confirmed in the same take. k also came out the
   same at two different time dials (2.78 at 1.02 s segments, 2.81 at 3.20 s), which is what says the
   shape is applied to a normalised progress rather than being a fixed time constant.
-  STILL WORTH AN EAR. Everything above is a curve fit; nobody has listened to the engine against the
-  instrument since it changed.
+  HEARD AND ACCEPTED (CT, 2026-08-24): "Envelope sounds OK". Everything above is a curve fit, so that
+  check was the one thing the measurements could not supply themselves - the constants are now both
+  measured AND listened to.
 
 MOVING A CABLE FROM ONE CONNECTOR TO ANOTHER — DONE 2026-08-22, and the user who reported it is
 right about the modifier. Manual p65: "right-click on a connection and select Disconnect, or
