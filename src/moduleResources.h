@@ -2145,9 +2145,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix8to1A,    connectorDirIn,  connectorTypeControl, {{ 84,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },          // 116 In8
     {moduleTypeMix8to1A,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 116 Out
     // 117 LevMod
-    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 117 In
-    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{-10, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Mod",          labelLocLeft },          // 117 Mod
-    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 117 ModDepth
+    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{-3,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL,           labelLocRight},          // 117 In
+    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Mod",          labelLocUp },          // 117 Mod
+    {moduleTypeLevMod,      connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight   },          // 117 ModDepth
     {moduleTypeLevMod,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 115 Out
     // 118 Digitizer
     {moduleTypeDigitizer,   connectorDirIn,  connectorTypeControl, {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 118 In
