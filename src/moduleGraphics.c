@@ -1710,6 +1710,72 @@ static double lfob_waveform_sample(uint32_t waveformIndex, double phase) {
     }
 }
 
+// LfoA's and LfoC's set — lfoWaveStrMap, the SAME map LfoB uses, but all six entries rather than the
+// four LfoB clamps to. The first four are LfoB's measured cycle and are simply delegated; only the
+// two random ones are new, and they are a different kind of thing entirely.
+//
+// A RANDOM WAVE HAS NO CYCLE TO MEASURE, so this is the one wave icon in the app that is a
+// REPRESENTATION rather than a fitted law, and it should not pretend otherwise. What it has to convey
+// is the single distinction between the two entries: RndSt holds each new value until the next step
+// (a sample-and-hold staircase) while Rnd glides between them. Everything else about it — how many
+// steps, which levels — is a drawing decision.
+//
+// THE LEVELS ARE A FIXED TABLE, deliberately. Drawing from an actual random source would make the
+// icon flicker on every redraw, which is worse than useless on a picker: two entries that never look
+// the same twice cannot be compared. Six steps reads clearly at the ~30 pixels a button gives.
+//
+// MEASURED 2026-08-24, and the direction is confirmed. LfoA at audio rate (Range = Rate Hi, the trick
+// that made LfoShpA measurable), each wave captured to ITS OWN file so there are no sweep boundaries
+// to mis-segment. Read from the distribution of sample-to-sample differences, since a staircase is
+// bimodal — nearly all differences zero, a few very large — where a glide is not:
+//                p50/p99      differences at zero    longest hold
+//     RndSt        0.057            43.4%             19 samples
+//     Rnd          0.123            21.1%              8 samples
+// So RndSt holds twice as often and twice as long, which is the distinction the two icons draw.
+//
+// DO NOT READ THESE OFF A PLOT. Eyeballing 10 ms windows of the two gave the OPPOSITE answer at one
+// point, because the two captures autoscale to different vertical ranges and the eye compares shapes
+// rather than hold times. The statistic is trustworthy where the picture is not.
+//
+// Rnd IS NOT A PURE GLIDE, though — it still holds 21% of the time, so it is more likely a slewed or
+// smoothed random than the linear interpolation drawn here. That refinement is open; the direction it
+// differs from RndSt in is not.
+#define LFO_RANDOM_STEPS    (6)
+
+static double lfo_random_sample(double phase, bool stepped) {
+    static const double levels[LFO_RANDOM_STEPS] = {0.55, -0.30, 0.90, -0.75, 0.20, -0.60};
+    double              scaled                   = phase * (double)LFO_RANDOM_STEPS;
+    uint32_t            step                     = (uint32_t)scaled;
+    double              within                   = scaled - (double)step;
+
+    if (step >= LFO_RANDOM_STEPS) {
+        step   = LFO_RANDOM_STEPS - 1;
+        within = 1.0;
+    }
+
+    if (stepped == true) {
+        return levels[step];
+    }
+    // Glides to the NEXT level, wrapping at the end so the drawn cycle closes on itself rather than
+    // stepping across the seam — the same rule the seam logic in render_wave_icon() applies.
+    return levels[step] + (within * (levels[(step + 1) % LFO_RANDOM_STEPS] - levels[step]));
+}
+
+// LfoA keeps its waveform in a parameter (index 4) and LfoC in a mode (index 0); the wave itself is
+// the same either way, which is why one function serves both.
+static double lfoa_waveform_sample(uint32_t waveformIndex, double phase) {
+    switch (waveformIndex) {
+        case 4:
+            return lfo_random_sample(phase, true);      // RndSt — held between steps
+
+        case 5:
+            return lfo_random_sample(phase, false);     // Rnd — glides between the same values
+
+        default:
+            return lfob_waveform_sample(waveformIndex, phase);   // Sin, Tri, Saw, Squ — measured
+    }
+}
+
 // OscA's family — shapeOscATypeStrMap: Sine, Tri, Saw, Sqr50, Sqr25, Sqr10 — shared by OscA, OscC
 // and OscD, which is why one function serves three modules. None of the three has a Shape dial, so
 // like LfoB each selection is one static shape.
@@ -1801,7 +1867,8 @@ static double osc_b_waveform_sample(uint32_t waveformIndex, double phase, double
 bool module_wave_picker_mode(uint32_t moduleType, uint32_t modeIndex) {
     return ((moduleType == moduleTypeOscShpB) && (modeIndex == 0))
            || ((moduleType == moduleTypeOscC) && (modeIndex == 0))
-           || ((moduleType == moduleTypeOscD) && (modeIndex == 0));
+           || ((moduleType == moduleTypeOscD) && (modeIndex == 0))
+           || ((moduleType == moduleTypeLfoC) && (modeIndex == 0));
 }
 
 bool module_wave_picker_param(uint32_t moduleType, uint32_t paramIndex) {
@@ -1809,7 +1876,8 @@ bool module_wave_picker_param(uint32_t moduleType, uint32_t paramIndex) {
            || ((moduleType == moduleTypeLfoShpA) && (paramIndex == 11))
            || ((moduleType == moduleTypeLfoB) && (paramIndex == 4))
            || ((moduleType == moduleTypeOscA) && (paramIndex == 4))
-           || ((moduleType == moduleTypeOscB) && (paramIndex == 8));
+           || ((moduleType == moduleTypeOscB) && (paramIndex == 8))
+           || ((moduleType == moduleTypeLfoA) && (paramIndex == 4));
 }
 
 // One sample of whichever wave family the module in hand belongs to. The four waveform pickers reach
@@ -1835,6 +1903,10 @@ static double module_wave_sample(uint32_t moduleType, uint32_t waveValue, double
         return osc_b_waveform_sample(waveValue, phase, shape);
     }
 
+    if ((moduleType == moduleTypeLfoA) || (moduleType == moduleTypeLfoC)) {
+        return lfoa_waveform_sample(waveValue, phase);
+    }
+
     if (moduleType == moduleTypeOscShpA) {
         static const uint32_t shpAToShpB[] = {0, 1, 2, 3, 4, 7};
 
@@ -1853,9 +1925,10 @@ static double module_wave_sample(uint32_t moduleType, uint32_t waveValue, double
 // third copy of the same knowledge.
 static uint32_t module_wave_value(tModule * module, uint32_t variation) {
     switch (module->type) {
-        case moduleTypeOscShpB:                     // a MODE on this one, and only on this one
+        case moduleTypeOscShpB:                     // a MODE on these, a parameter on the rest
         case moduleTypeOscC:
         case moduleTypeOscD:
+        case moduleTypeLfoC:
             return module->mode[0].value;
 
         case moduleTypeOscShpA:
@@ -1866,6 +1939,7 @@ static uint32_t module_wave_value(tModule * module, uint32_t variation) {
 
         case moduleTypeLfoB:
         case moduleTypeOscA:
+        case moduleTypeLfoA:
             return module->param[variation][4].value;
 
         case moduleTypeOscB:
