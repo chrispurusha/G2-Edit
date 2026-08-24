@@ -54,9 +54,16 @@ double osc_sub_freq_hz(double paramValue, double fineSemitones);
 double flt_cutoff_hz(double paramValue);                   // Freq dial:  13.75 Hz .. ~21 kHz
 double flt_resonance_q(double paramValue);                 // Res dial:   Q 0.5 .. 50
 uint32_t flt_slope_extra_poles(uint32_t slopeValue);       // 0/1/2 extra one-pole stages: 12/18/24 dB
-double flt_kbt_amount(uint32_t kbtValue);                  // Kbt scroll: 0, 0.25, 0.5, 0.75, 1.0
-double lev_amp_gain(double paramValue);                    // LevAmp multiplier: 0.25x .. 4.0x, unity at 64
-double lfo_rate_hz(uint32_t rangeMode, double paramValue); // LFO speed in Hz for a Range setting
+
+// FltClassic as the ladder it actually is, measured 2026-08-24: the resonance loop is ALWAYS four
+// poles and the dB switch only moves the output tap, which is why the Res dial means the same thing
+// in every slope mode. See the note above flt_ladder_feedback() in paramCurves.c.
+double flt_ladder_feedback(double paramValue);                            // Res dial:   feedback 0 .. 4 (self-oscillation)
+uint32_t flt_ladder_tap(uint32_t slopeValue);                             // 2/3/4 poles tapped: 12/18/24 dB
+double flt_ladder_magnitude(double ratio, double feedback, uint32_t tap); // |G^tap / (1 + k.G^4)| at f/fc
+double flt_kbt_amount(uint32_t kbtValue);                                 // Kbt scroll: 0, 0.25, 0.5, 0.75, 1.0
+double lev_amp_gain(double paramValue);                                   // LevAmp multiplier: 0.25x .. 4.0x, unity at 64
+double lfo_rate_hz(uint32_t rangeMode, double paramValue);                // LFO speed in Hz for a Range setting
 
 // These four were read off the hardware at raw 0, 64 and 127 rather than inferred.
 double pshift_semitones(double paramValue);                // PShift Semi:  -16.0 .. +15.75, quarter semitones

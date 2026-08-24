@@ -216,6 +216,32 @@ double adr_time_seconds(double paramValue) {
 // step of Q at the very bottom of the knob is not worth holding up the change for.
 #define FLT_RESONANCE_DAMPING_SPAN    (0.9)
 
+// Four one-poles in a loop reach 180 degrees of phase exactly at the corner, where each has
+// contributed 45, and |G|^4 is then 1/4 - so the loop sustains itself at a feedback of 4 and the
+// response there is infinite. The Res dial runs linearly up to JUST SHORT of that.
+//
+// 3.914 rather than 4.0, and the 2% matters: it is what gives maximum resonance a peak of +24.4 dB
+// instead of an infinite one. It is not a taste decision - it is solved from the measured 4-pole peak
+// and then CHECKED against the other two taps, which it was not fitted to:
+//
+// WHY NOT THE 4.08 THE CURVE FITS RETURN: least squares over a whole response is dominated by the
+// passband and the skirts and is nearly blind to the height of a peak two decades narrower than
+// either. The measured peak is FINITE, which by itself requires k below 4, and 3.914 is what
+// reproduces it. The two numbers are not in conflict; one of them is simply the one that can see the
+// peak.
+//     tap    model peak    measured        model passband    measured
+//      2       +30.33       +30.64            -13.7 dB       -13.8 dB
+//      3       +27.35       +27.37            -13.7 dB       -15.0 dB
+//      4       +24.36       +24.36            -13.8 dB       -14.8 dB
+// Six readings from one constant, the worst of them 1.3 dB out. The peak SPACING falls out of the
+// topology rather than being fitted at all - 5.97 and 2.99 dB against 6.28 and 3.01 measured - which
+// is the strongest evidence that the four-pole loop is right, since a loop matching the tap predicts
+// no such spacing.
+//
+// It also says the hardware does not quite self-oscillate at the top of the dial, which the finite
+// measured peak had already implied.
+#define FLT_LADDER_K_MAX    (3.914)
+
 double flt_resonance_q(double paramValue) {
     double value = paramValue;
     double damping;
@@ -227,6 +253,82 @@ double flt_resonance_q(double paramValue) {
     }
     damping = 1.0 - (FLT_RESONANCE_DAMPING_SPAN * value / 127.0);
     return 0.5 / (damping * damping);
+}
+
+// FLTCLASSIC IS A LADDER, AND ITS FEEDBACK ALWAYS GOES ROUND ALL FOUR POLES. The dB switch does not
+// change the loop — it only chooses which stage the output is TAPPED from, stage 2, 3 or 4. Measured
+// 2026-08-24 (noise through the filter, every setting divided by the same patch bypassed) and it is
+// what settles a contradiction that had held this up: the passband droop said the feedback amount was
+// the same in all three slope modes, while the peak heights said it had to be normalised per mode.
+// Both are true of THIS topology and of no simpler one. Fitting each slope setting separately gives
+// the SAME k to within 0.011 — 4.079 / 4.087 / 4.090 at Res 127 for the three taps, all at a fitted
+// corner of 1040 Hz — where a loop that matched the tap gives 1.25 / 1.62 / 2.01 and fits three to
+// six times worse (rms 0.5-0.9 dB against 3-6 dB).
+//
+// MASK THE NOISE FLOOR BEFORE FITTING. The 24 dB tap first fitted three times worse than the other
+// two (rms 2.9 dB, k 3.83) purely because its stopband falls below the G2's own noise inside the
+// window, so the fit was being asked to match the INSTRUMENT'S NOISE. Dropping every point below
+// -45 dB took it to rms 0.91 dB and k 4.090. The 12 dB tap never reaches the floor in that window and
+// does not move at all when the same mask is applied, which is what proves the cause.
+//
+// IT IS ALSO THE MUSICAL CHOICE, which is presumably why it was built this way: with the loop fixed
+// at four poles, self-oscillation arrives at k = 4 whatever slope is selected, so the Res dial means
+// the same thing in all three modes and a patch keeps its character when the slope is changed.
+//
+// The dial is LINEAR in k, k = 4 x Res/127: fitted 0.000, 0.987, 2.157, 3.169, 4.079 at Res 0, 32,
+// 64, 96, 127, a straight line through the origin to within +/-0.08. The top of the dial therefore
+// lands exactly on the self-oscillation threshold rather than short of it or past it.
+//
+// NOT flt_resonance_q() ABOVE, WHICH STAYS: that one is a biquad's Q, and the numbers it produces
+// still match the values the synth DISPLAYS for the Res dial. This is the feedback amount the
+// response actually has. Two different questions about the same knob.
+double flt_ladder_feedback(double paramValue) {
+    double value = paramValue;
+
+    if (value < 0.0) {
+        value = 0.0;
+    } else if (value > 127.0) {
+        value = 127.0;
+    }
+    return FLT_LADDER_K_MAX * value / 127.0;
+}
+
+// Which stage the output is tapped from: 2, 3 or 4 poles for 12, 18 or 24 dB per octave. The loop
+// length is NOT this — see flt_ladder_feedback() — it is always four.
+uint32_t flt_ladder_tap(uint32_t slopeValue) {
+    return 2 + flt_slope_extra_poles(slopeValue);
+}
+
+// The magnitude of G^tap / (1 + k.G^4) at f/fc = ratio, where G = 1/(1 + j.ratio) is one pole.
+// Written out in real arithmetic so it carries no complex.h dependency into either caller.
+//
+// A CONTINUOUS-TIME MODEL, FOR DRAWING. The shape is shared with the engine — same topology, same
+// linear-in-Res feedback, same tap — but the CONSTANT is not, and unifying them would be a mistake:
+//   - this one is the ideal analogue ladder, where four one-poles reach 180 degrees exactly at the
+//     corner and sustain at k = 4, so the dial's 3.914 sits just under it;
+//   - soundEngine.c's LADDER_K_MAX is 4.3, and is right to be different: its loop carries a sample of
+//     delay whose phase depends on the sample rate, and its stages saturate, both of which move the k
+//     at which the loop actually oscillates. Its figure is measured against the instrument too, by a
+//     different method (saw harmonics rather than noise), and the two agree on everything that IS
+//     shared.
+// So: take the topology from here, never the number.
+double flt_ladder_magnitude(double ratio, double feedback, uint32_t tap) {
+    double onePoleMag   = 1.0 / sqrt(1.0 + (ratio * ratio));
+    double onePolePhase = -atan(ratio);
+    double loopMag      = onePoleMag * onePoleMag * onePoleMag * onePoleMag;  // |G|^4
+    double loopPhase    = 4.0 * onePolePhase;
+    double denomReal    = 1.0 + (feedback * loopMag * cos(loopPhase));
+    double denomImag    = feedback * loopMag * sin(loopPhase);
+    double denom        = sqrt((denomReal * denomReal) + (denomImag * denomImag));
+    double numerator    = pow(onePoleMag, (double)tap);
+
+    // At the self-oscillation threshold the denominator goes to zero and the magnitude to infinity.
+    // A drawn curve has to stay on the page, so the floor here is what stops a peak at maximum Res
+    // from becoming a vertical line; it sits far above anything the box can show.
+    if (denom < 1e-4) {
+        denom = 1e-4;
+    }
+    return numerator / denom;
 }
 
 // The dB scroll button selects how many one-pole stages sit on top of the base two: 12, 18 or 24 dB
