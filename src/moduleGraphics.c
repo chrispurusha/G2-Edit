@@ -577,6 +577,47 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
 // This might be too generic and won't be able to use, or we add extra params!
 // TODO: possibly move all the type cases into functions in a new source file, references by function pointer?
+// The focused parameter - the one the arrow keys would act on, and the one MIDI Learn targets.
+// Marked with four corner brackets rather than a full outline, because a full one is already taken:
+// a SELECTED MODULE draws a complete yellow box (see below), and a second complete box inside it
+// would read as the same idea at a smaller size. Corners are also the only frame that fits a widget
+// whose rectangle is mostly text - a dial's rect carries its label and value, so a full border would
+// box up words that are not part of the control.
+static void render_param_focus_marks(tRectangle rect) {
+    double x         = rect.coord.x;
+    double y         = rect.coord.y;
+    double w         = rect.size.w;
+    double h         = rect.size.h;
+    // BOTH SIZES COME FROM THE RECT, and that is what makes them zoom. widgetRect is already in
+    // screen space, so it grows with the canvas zoom; anything derived from it grows with it, while
+    // a constant does not. An earlier version capped the arm at 3.5 and set the thickness to a flat
+    // 1.5 - the cap was already biting at 100% zoom (a dial rect is about 24.5 across, so 0.175 of
+    // it is 4.3), which left the marks a fixed size while the dial they bracket grew underneath.
+    //
+    // Short on purpose: a third of the side crowds the dial, so this is half the length that first
+    // looked right.
+    double len       = fmin(w, h) * 0.175;
+    double thickness = fmax(fmin(w, h) * 0.06, 1.0);
+
+    if ((w <= 0.0) || (h <= 0.0) || (len < 1.0)) {
+        return;
+    }
+    // mainArea, NOT moduleArea, and that is the whole trick. render_line() applies the canvas zoom
+    // and scroll for moduleArea - but widgetRect has ALREADY had them applied: it is the rectangle
+    // handed to register_click_region() and hit-tested against raw mouse coordinates, so it is in
+    // screen space before it gets here. Passing moduleArea transforms it a second time and the marks
+    // land off-canvas, drawn perfectly and nowhere near the dial.
+    set_rgb_colour((tRgb)RGB_BLACK);
+    render_line(mainArea, (tCoord){x, y}, (tCoord){x + len, y}, thickness);                          // top left
+    render_line(mainArea, (tCoord){x, y}, (tCoord){x, y + len}, thickness);
+    render_line(mainArea, (tCoord){x + w, y}, (tCoord){x + w - len, y}, thickness);                  // top right
+    render_line(mainArea, (tCoord){x + w, y}, (tCoord){x + w, y + len}, thickness);
+    render_line(mainArea, (tCoord){x + w, y + h}, (tCoord){x + w - len, y + h}, thickness);          // bottom right
+    render_line(mainArea, (tCoord){x + w, y + h}, (tCoord){x + w, y + h - len}, thickness);
+    render_line(mainArea, (tCoord){x, y + h}, (tCoord){x + len, y + h}, thickness);                  // bottom left
+    render_line(mainArea, (tCoord){x, y + h}, (tCoord){x, y + h - len}, thickness);
+}
+
 tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
     // WHERE THE WIDGET ACTUALLY WENT. A local, because that is all it ever was: the value is written
     // here, handed to register_click_region() a few lines down and returned to the caller, and
@@ -795,6 +836,13 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
                           &sParamClickCtx[module->key.slot][module->key.location][module->key.index][paramIndex]);
     param_overlay_note_param(module, paramIndex, rectangle, buff);
 
+    if (  gParamFocus.valid
+       && (gParamFocus.moduleKey.slot == module->key.slot)
+       && (gParamFocus.moduleKey.location == module->key.location)
+       && (gParamFocus.moduleKey.index == module->key.index)
+       && (gParamFocus.paramIndex == paramIndex)) {
+        render_param_focus_marks(widgetRect);
+    }
     // Hand back where the widget actually went, for a caller that needs it for its own hit-testing.
     return widgetRect;
 }

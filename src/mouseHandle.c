@@ -1437,6 +1437,38 @@ void key_callback(int key, int scancode, int action, int mods) {
         // right-click assign menu, and a dialog every time a stray L is typed would defeat that.
         LOG_INFO("L pressed - MIDI Learn\n");
         midi_learn_focused_param();
+    } else if (  (  (key == GLFW_KEY_UP) || (key == GLFW_KEY_DOWN)
+                 || (key == GLFW_KEY_LEFT) || (key == GLFW_KEY_RIGHT))
+              && ((action == GLFW_PRESS) || (action == GLFW_REPEAT))
+              && (gCommandKeyPressed == false)
+              && ((mods & (GLFW_MOD_SUPER | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0)) {
+        // THE FOCUSED PARAMETER, not the hovered one. Manual p84: "You can also use the computer
+        // keyboard's Up/Down arrow keys to increase and decrease the focused parameter value", and
+        // "To move the focus to another parameter in the module, press the Left/Right arrow buttons".
+        // Focus is set by clicking a parameter, and now also by stepping one with bare +/-.
+        //
+        // Reached only after the text editors above have had the key: every one of them returns or is
+        // guarded by any_text_edit_active(), which is what stops an arrow in the patch-notes field
+        // also moving a dial. GLFW_REPEAT is honoured so holding an arrow walks the range, matching
+        // the +/- branch below.
+        bool acted = false;
+
+        if ((mods & GLFW_MOD_SHIFT) != 0) {
+            // SHIFT MOVES BETWEEN MODULES, all four directions - manual p84. Without shift, Up/Down
+            // are the value and Left/Right walk the parameters of the module already focused.
+            int dx = (key == GLFW_KEY_LEFT) ? -1 : ((key == GLFW_KEY_RIGHT) ? 1 : 0);
+            int dy = (key == GLFW_KEY_UP) ? -1 : ((key == GLFW_KEY_DOWN) ? 1 : 0);
+
+            acted = canvas_move_module_focus(dx, dy);
+        } else if ((key == GLFW_KEY_UP) || (key == GLFW_KEY_DOWN)) {
+            acted = canvas_nudge_focused_param((key == GLFW_KEY_UP) ? 1 : -1);
+        } else {
+            acted = canvas_move_param_focus((key == GLFW_KEY_RIGHT) ? 1 : -1);
+        }
+
+        if (acted) {
+            synthlib_request_redraw();
+        }
     } else if (  (  (key == GLFW_KEY_EQUAL) || (key == GLFW_KEY_KP_ADD)
                  || (key == GLFW_KEY_MINUS) || (key == GLFW_KEY_KP_SUBTRACT))
               && ((action == GLFW_PRESS) || (action == GLFW_REPEAT))

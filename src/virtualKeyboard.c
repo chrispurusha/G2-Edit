@@ -477,7 +477,8 @@ bool handle_virtual_keyboard_mouse(tCoord coord, tMouseButton mouseButton) {
 
 // The computer keyboard as note entry: the home row is the white keys and the row above holds the
 // blacks, the layout every tracker and DAW uses — a = C, w = C#, s = D, e = D#, d = E, f = F and so
-// on, with k and l carrying on into the octave above where the home row runs out.
+// on, with k carrying on into the octave above where the home row runs out. L is the one gap, and
+// deliberately so — see its case below.
 //
 // Returns the semitone offset from the leftmost DRAWN note, or -1 for a key that is not a note.
 // Offsets rather than absolute notes so the played octave follows gVirtualKeyboard.firstNote, which
@@ -512,8 +513,13 @@ static int32_t note_offset_for_key(int key) {
 
         case GLFW_KEY_O: return 13;   // C#
 
-        case GLFW_KEY_L: return 14;   // D
-
+        // L IS DELIBERATELY NOT A NOTE. It is MIDI Learn - the original editor's only bare-key
+        // shortcut, and the reason gParamFocus exists at all. Note entry is dispatched BEFORE the
+        // shortcuts in key_callback() and returns once it claims a key, so while L mapped to D here
+        // a bare L played a note and midi_learn_focused_param() was simply unreachable. The guard
+        // below suppresses note entry for Cmd/Ctrl/Alt so a modified shortcut can never also play;
+        // that cannot help a shortcut which is bare by design, so this one is dropped from the map.
+        // Costs the D above the home row's octave; K and O either side of it still play.
         case GLFW_KEY_P: return 15;   // D#
 
         default: return -1;
