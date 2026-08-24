@@ -4562,6 +4562,26 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     //
     // RE-MEASURE IF ENGINE_OVERSAMPLE CHANGES — the loop's phase, and so the k at which it reaches
     // oscillation, is a property of the rate rather than of the filter.
+    //
+    // CONFIRMED INDEPENDENTLY 2026-08-24, by a measurement that shares nothing with the one above
+    // except the instrument: noise through FltClassic, every setting divided by the same patch
+    // bypassed, fitted against G^tap / (1 + k.G^4). It agrees with what this code already does, which
+    // is worth recording precisely because it could have disagreed —
+    //   - THE LOOP IS FOUR POLES LONG WHATEVER THE SLOPE, and the dB switch only moves the tap. That
+    //     is what ladder_filter() has always done (feedback from state[LADDER_POLES - 1], return
+    //     state[tapStage]) and it is now measured rather than assumed. Fitting each slope on its own
+    //     gives the same k to within 0.011; a loop that matched the tap fits three to six times worse.
+    //   - THE PEAK SPACING BETWEEN TAPS falls out of that topology at 3.01 dB and needs no fitting.
+    //     The saw measurement above got 2.8 and 2.8; the noise one 3.2 and 3.0.
+    //   - THE Res DIAL IS LINEAR IN FEEDBACK, which is how resonance is scaled here.
+    //   - THE PASSBAND DROP AT FULL RESONANCE MEASURES -13.8 to -15.0 dB, against the "about 12 dB"
+    //     the manual quotes and ladder_filter()'s note cites. Deliberately NOT compensating for it
+    //     therefore remains right, and the real figure is a shade deeper than the manual's.
+    // The continuous-time model used for the DRAWN response (flt_ladder_feedback(), paramCurves.c)
+    // puts the top of the dial at k = 3.914, just under the ideal ladder's threshold of 4. That is
+    // NOT this number and must not replace it: that model has no delay in its loop and no saturation
+    // in its stages, both of which move where oscillation actually starts. Same topology, different
+    // constant, each measured for what it describes.
 #define LADDER_K_MAX    (4.3)
 
     return ladder_filter(gLadder[voice][node], input, g, LADDER_K_MAX * resonance, 1 + spec->extraPoles);

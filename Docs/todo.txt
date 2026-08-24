@@ -288,6 +288,159 @@ and draw THAT rather than an idealised curve.
   original are listed above (PulseOsc — which is not in our enum under that name and wants checking —
   OscNoise, LfoD, Operator, DrumSynth).
 
+  FLTCLASSIC'S DRAWN RESPONSE IS THE WRONG TOPOLOGY — MEASURED 2026-08-24, NOT YET FIXED (CT asked
+  for this: "capture the filter effect, for better graphical representation"). Noise through the
+  filter into 2-Out, swept with measure.py, each setting's spectrum divided by the same patch with the
+  filter BYPASSED — which cancels the noise source, the converters and the cabling in one step, since
+  both went through the identical path. Welch-averaged, 4096-point, stdlib FFT.
+  WHAT WE DRAW NOW (render_fltclassic_response_graph, moduleGraphics.c): a BIQUAD, Q from
+  flt_resonance_q(), with flt_slope_extra_poles() one-poles bolted on top. A biquad's DC gain is 1 no
+  matter what Q is, so the drawn passband is FLAT at every resonance setting.
+  WHAT THE INSTRUMENT ACTUALLY DOES:
+    - THE PASSBAND DROOPS WITH RESONANCE, and that is the most visible error. At Freq 75, 100 Hz:
+        Res     0     32     64     96    127
+        24db  +0.2   -5.7   -9.5  -10.4  -14.8 dB
+      and the same droop appears in all three slope modes (12db -13.8, 18db -15.0, 24db -14.8 at
+      Res 127). Confirmed a second way with the corner pushed above the audio band (Freq 110), where
+      the passband is wide and unambiguous: -13.2 dB at 150 Hz, monotonic in Res the whole way.
+      This is feedback-around-a-cascade behaviour (DC gain 1/(1+k)), not a biquad's.
+    - THE RESONANT PEAK IS AT THE CORNER, WELL ABOVE THE -3 dB POINT. At Freq 75 the peak sits at
+      ~1050 Hz at every slope, while the composite -3 dB point is 569 / 418 / 301 Hz for 12 / 18 /
+      24 db. That gap — the more poles, the LOWER the -3 dB point at the same Freq — is the signature
+      of N cascaded one-poles each at the same corner, and it is what the drawing does not reproduce.
+    - PEAK HEIGHT AT MAX RESONANCE, and it is ordered the opposite way to intuition:
+        12db +30.6 dB    18db +27.4 dB    24db +24.4 dB
+      all at Res 127, all at ~1050 Hz. At Res 0 there is no peak at all (+0.2 to +2.0 dB).
+  SOLVED, AND FIXED, 2026-08-24 — CT's guess that there were "furtle factors to make it more musical"
+  was right, and it is one factor rather than several:
+    THE RESONANCE LOOP IS ALWAYS FOUR POLES. THE dB SWITCH ONLY MOVES THE OUTPUT TAP.
+      H = G^tap / (1 + k.G^4),   G = 1/(1 + j.f/fc),   tap = 2 / 3 / 4 for 12 / 18 / 24 db
+  That dissolves the contradiction above: the passband droop is 1/(1+k) and so is the same in every
+  mode, while the peak differs because the numerator is a different power of G — both true at once,
+  of this topology and of no simpler one. IT IS ALSO THE MUSICAL CHOICE, which is presumably why it
+  was built this way: self-oscillation arrives at the same place on the dial whatever slope is
+  selected, so a patch keeps its character when the slope is changed.
+  THE DECISIVE TEST was fitting each slope setting on its own. If the loop is fixed at four poles, k
+  must come out the SAME for all three taps, and it does:
+                       k at Res 64   k at Res 127   rms      k if loop matched tap   rms
+      tap 2 (12 db)       2.157         4.079     0.5-0.8 dB        1.249         3.3-6.1 dB
+      tap 3 (18 db)       2.036         4.087     0.6-0.9 dB        1.620         2.0-4.4 dB
+      tap 4 (24 db)       2.008         3.834     2.9-3.2 dB        2.008         2.9-3.2 dB
+  THE PEAK SPACING IS NOT FITTED AT ALL, it falls out of the topology: tapping one stage earlier in
+  the same loop raises the output by |G|^-1 at the corner, which is 3.01 dB. Model 5.97 and 2.99 dB,
+  hardware 6.28 and 3.01. A loop matching the tap predicts no such spacing, so this is the evidence,
+  not the fit.
+  THE DIAL IS LINEAR IN FEEDBACK: k = 0.000, 0.987, 2.157, 3.169, 4.079 at Res 0/32/64/96/127, a
+  straight line through the origin to +/-0.08. It stops JUST SHORT of self-oscillation — four poles
+  sustain at exactly k = 4 and the dial reaches 3.914, which is what makes maximum resonance a
+  +24.4 dB peak rather than an infinite one, and says the hardware does not quite self-oscillate at
+  the top. That constant is solved from the 4-pole peak alone and then CHECKED against five readings
+  it was never fitted to, worst 1.3 dB out:
+      tap    model peak    measured        model passband    measured
+       2       +30.33       +30.64            -13.7 dB       -13.8 dB
+       3       +27.35       +27.37            -13.7 dB       -15.0 dB
+       4       +24.36       +24.36            -13.8 dB       -14.8 dB
+  THE CORNER IS WHERE THE DIAL SAYS IT IS: fitted 1040-1105 Hz at Freq 75 against the 1046.5 Hz that
+  flt_cutoff_hz()'s 13.75 * 2^(v/12) gives. No correction needed there.
+  NOW IN THE CODE: flt_ladder_feedback(), flt_ladder_tap() and flt_ladder_magnitude() in
+  paramCurves.c — platform-free and shared, so whatever plays it and whatever draws it come from one
+  definition. render_fltclassic_response_graph() calls them instead of its biquad.
+  flt_resonance_q() STAYS: that one is a biquad's Q and still matches the values the synth DISPLAYS
+  for the Res dial. Two different questions about the same knob.
+  THE 24 dB TAP'S WORSE FIT WAS THE G2'S OWN NOISE FLOOR — CT called it, and it is now closed. That
+  tap's stopband falls below the instrument's noise inside the fitting window, so least squares was
+  being asked to match noise. Dropping every point below -45 dB takes it from rms 2.9 dB / k 3.83 to
+  rms 0.91 dB / k 4.090. The 12 dB tap never reaches the floor in that window and does not move at all
+  under the same mask, which is the control that proves the cause. With the mask, ALL THREE TAPS AGREE
+  TO 0.011 IN k — 4.079 / 4.087 / 4.090 — at a fitted corner of 1040 Hz apiece.
+  MASK THE FLOOR BEFORE FITTING ANYTHING ELSE. This will recur on every module whose stopband is
+  deeper than about -50 dB, which is most filters.
+
+  DOES ANY OF IT CHANGE THE ENGINE? ALMOST NOTHING — IT CONFIRMS IT. I had this wrong in the note that
+  used to sit here, and the error came from trusting a stale summary instead of reading
+  soundEngine.c: it does NOT carry LADDER_K_MAX = 5.0 (that was superseded; it is 4.3, measured
+  against the instrument by a saw-harmonic method) and its topology is NOT the old biquad one — 
+  ladder_filter() already feeds back from state[LADDER_POLES - 1] and returns state[tapStage], which
+  is exactly the fixed four-pole loop with a movable tap that this measurement has now confirmed from
+  a completely independent direction.
+  WHAT THE MEASUREMENT ADDS TO THE ENGINE, all of it confirmation rather than correction:
+    - the four-pole loop and the movable tap are now MEASURED rather than assumed
+    - the peak spacing between taps is 3.01 dB by construction; the saw method got 2.8/2.8, the noise
+      method 3.2/3.0
+    - the Res dial is linear in feedback, which is how the engine already scales it
+    - the passband drop at full resonance measures -13.8 to -15.0 dB against the manual's "about
+      12 dB", so ladder_filter()'s deliberate refusal to compensate stays right and the real figure is
+      a shade deeper than the manual's
+  DO NOT UNIFY THE TWO CONSTANTS. The drawing's 3.914 is a continuous-time ideal ladder with no delay
+  and no saturation; the engine's 4.3 is a discrete loop carrying a sample of delay at an oversampled
+  rate, with saturating stages. Same topology, different constant, each measured for what it
+  describes. paramCurves.c now says so at the definition, because the tidy-up that merges them is
+  exactly the sort of thing that looks like an improvement.
+
+    THE GRAPH FOLLOWS THE ORIGINAL, THE ICON DOES NOT HAVE TO — CT, 2026-08-24: if the original editor
+  draws no green-on-black graph for a module, we do not need one either. So the <#Graph list above IS
+  the graph list, and it is closed; a module absent from it gets wave ICONS on its picker and nothing
+  more. That is what settles the scope for everything below.
+
+  OSCA, OSCC AND OSCD NOW SHOW WAVE ICONS (2026-08-24). One set — shapeOscATypeStrMap: Sine, Tri, Saw,
+  Sqr50, Sqr25, Sqr10 — shared by all three, so one sample function serves three modules. None of the
+  three is in the <#Graph list, so per the rule above they get icons only, no top-right graph.
+    - THEY REACH IT BY TWO DIFFERENT ROUTES. OscA keeps the waveform in a PARAMETER (index 4); OscC
+      and OscD keep it in a MODE (index 0 each, modeLocationList). Both routes already existed —
+      module_wave_picker_param() for the first, module_wave_picker_mode() for the other two, which is
+      the path OscShpB opened — so this was three lines plus the sample function.
+    - THE FOUR TEXTBOOK WAVES ARE NOW PRIMITIVES, not copies: basic_sine(), basic_triangle(),
+      basic_falling_saw() and basic_pulse(duty) sit above lfob_waveform_sample(), which now delegates
+      to them and is otherwise unchanged. LfoB's measured cycle is untouched by being named.
+    - THE THREE SQUARES ARE PULSE WIDTHS AND THE NAMES SAY SO — 50%, 25%, 10% — which is the one part
+      of this set that needs no interpretation.
+    - NOT YET CAPTURED, AND THE CODE SAYS SO. The shapes are transferred from measurements of OTHER
+      modules: LfoB's cycle for the first four, OscShpB's Pulse for the convention that a pulse is
+      drawn full-swing with no DC removal. Two things to settle on the hardware, both of which this
+      family has already proved can go either way:
+        - THE SAW'S DIRECTION. LfoB's falls, OscShpB's DblSaw rises. An oscillator saw cannot be
+          assumed to match the LFO's; if OscA's rises, this is one negation.
+        - WHETHER THE PULSES CARRY EDGE RAMPS. OscShpB's measured Pulse ramps into and out of its
+          steps (pulse_edge_width()); these are drawn as ideal steps for now.
+      MEASURED 2026-08-24, AND BOTH TRANSFERS WERE WRONG. OscA into 2-Out, waveform swept 0-5 with
+      measure.py, cycle recovered by autocorrelation and cycle averaging, model checked by COMPILING
+      osc_a_waveform_sample() straight out of moduleGraphics.c — the same harness discipline that
+      caught DblSaw upside down, and it earned its keep twice more here:
+        - THE SAW RISES. Drawn falling, carried over from LfoB whose saw genuinely does fall, it
+          correlated 0.516; rising, 0.988. Three saws measured on this instrument now, in two
+          directions (LfoB falls, TriSaw falls, DblSaw and OscA rise), so saw polarity is per-module
+          and must never be carried across unmeasured.
+        - "SQR10" IS A 1/16 PULSE, NOT A 10% ONE. Fitting ideal pulses of every width against the
+          captured cycle puts it at 6.25%: 10% scores 0.787, 6.25% scores 0.990. Measured twice — at
+          E4 (145 samples per cycle) and three octaves down (1165) — agreeing to within the fit's own
+          resolution. THE MANUAL SAYS 10% (p174: "Sine, Triangle, Sawtooth, Square, 25% Pulse or 10%
+          Pulse") AND IS WRONG on that one entry; its 25% is exact and so is the square's 50%. All
+          three widths are then binary fractions, 1/2, 1/4, 1/16, which is what a DSP would give.
+          The NAME is left alone — it is the manual's and the original's — only the drawn width moved.
+        - THE PULSES NEED NO EDGE RAMPS. Drawn as ideal steps they correlate 0.992 and 0.989, so the
+          band-limiting OscShpB's Pulse needed does not show on this family.
+      Final correlations, rotation-free, against the instrument's own cycle:
+        Sine 1.0000  Tri 0.9981  Saw 0.9880  Sqr50 0.9917  Sqr25 0.9888  Sqr10 0.9903
+      CT confirmed all three modules look right on menu selection.
+
+      TWO TRAPS IN THE ANALYSIS ITSELF, both worth knowing before the next sweep:
+        - AUTOCORRELATION READ A FIFTH OF THE PITCH. Normalising by only the first window's energy
+          makes the score climb with lag, so the search settled on 728 samples for a 145-sample wave
+          and every "averaged cycle" held five real ones. Duty still measured correctly (it is a
+          fraction of time either way), which is what made the error look like a modelling failure
+          rather than an analysis one. Normalise by BOTH windows and take the SMALLEST lag scoring
+          within 10% of the best.
+        - THE LEAD-IN IS NOT A SETTING. measure.py holds each value for period*repeats seconds after a
+          2 s settle, and during that settle the module still holds whatever it was set to before —
+          which reads as an extra region and shifts every label by one. Detect change points only to
+          locate the first boundary, then lay the known grid out from there.
+    - REMAINING PICKER CANDIDATES, same shapeOscATypeStrMap or lfoWaveStrMap families: LfoA (param 4)
+      and LfoC (mode 0) share lfoWaveStrMap with the already-measured LfoB, so their first four waves
+      are done the moment they are registered — only the trailing RndSt/Rnd are new, and a random wave
+      has no single cycle to measure, so its icon is a representational choice (a fixed pseudo-random
+      staircase, and the same levels smoothed) rather than a fitted law. Rect and ShpStatic carry
+      their own small sets and want a look.
+
   THE SOUND ENGINE HAS ITS OWN, DIVERGENT, AND NOW KNOWN-WRONG COPY OF ALL THIS - osc_shp_wave() in
   soundEngine.c. CT raised this twice ("when we recreate the sound engine, this analysis might also
   help there"), and it is worse than a missed improvement, because the two implementations disagree on
@@ -547,6 +700,54 @@ Move the backdoor control functions out of graphics.c, into a backdoor.c source 
   loop); render_frame() and read_file_into_memory_and_process() went into graphics.h to reach them,
   and render_frame() is the one thing the split makes non-static. graphics.c lost 1069 lines and the
   stb_image_write implementation include with them.
+  MORE MECHANISMS IN THE WRONG FILE, surveyed 2026-08-24 straight after the backdoor move. None is
+  urgent and none is a bug; they are listed in the order the case for moving them is strongest.
+  1. THE WAVEFORM MATHS, and this one is not just placement — it is DUPLICATED. moduleGraphics.c
+     1286-2168 (~880 lines, a third of the file) is the sample functions for OscShpB/LfoShpA/LfoB,
+     render_wave_icon() and the three graph renderers. It already behaves like a module: four
+     functions are exported through moduleGraphics.h and only menus.c calls them. Meanwhile the
+     measured laws exist TWICE, character for character —
+       moduleGraphics.c:1346  b = 0.25 - (0.255 * shape) + (0.060 * shape * shape)
+       soundEngine.c:3150     b = 0.25 - (0.255 * shape) + (0.060 * shape * shape)
+       moduleGraphics.c:1372  d = 0.5 - (0.51 * shape) + (0.026 * shape * shape)
+       soundEngine.c:3171     d = 0.5 - (0.51 * shape) + (0.026 * shape * shape)
+     — which is the shared platform-free file the wave section at the top of this file already
+     argued for, and which paramCurves.c exists to make unnecessary. The sample functions are pure
+     maths with no GL, exactly like paramCurves.c, so the split is available. Constant sets already
+     differ by one (the drawn saws carry peak = 0.97, the engine has no counterpart), so the drift
+     the shared file would prevent has arguably started. DO THIS ONE FIRST, and do it before the
+     remaining wave modules land, not after — every module added writes the same law out twice.
+  2. PATCH FILE I/O, currently split across two files that are about neither. graphics.c 352-877
+     (~526 lines: read_file_into_memory_and_process, write_database_to_file, write_perf_to_file,
+     recent files, the open/save callbacks, the offline-conflict dialogue, the four confirmations)
+     and usbComms.c 3846-4000 (read_g2_file_payload, load_perf_from_payload, load_patch_from_payload).
+     One mechanism, two homes, chosen by which thread happens to run it.
+  3. BANK AND FOLDER BACKUP/RESTORE inside usbComms.c — 1807-2742 plus 3399-3526, roughly 1060 lines
+     of filename building, Patches.txt manifest parsing, folder walking and text-file synth-settings
+     backup. It sits there because it runs on the USB thread, but it is a filesystem mechanism, and
+     SYNTHEDIT HAS ALREADY MADE THIS EXACT SPLIT: SynthEdit/src/synthBackup.c is the same subsystem
+     in its own file. The strongest precedent argument of the group.
+  4. THE THREE SETTINGS PANEL RENDERERS, graphics.c 1136-1655 (~520 lines). Their resource tables
+     already have dedicated files — synthSettingsResources.c, patchParamsResources.c,
+     perfSettingsResources.c — and only the renderers stayed behind.
+  5. THE NOTES EDITOR, graphics.c 1656-1871 plus the seven file-scope statics at 100-112
+     (gNoteLines, gNoteScrollLine, gNoteTextX and the rest). Those statics are the tell: since the
+     backdoor left, they are the only mutable state in the file besides the FreeType handles, and
+     they all belong to one panel.
+  WEAKER, RECORDED SO THEY ARE NOT RE-SURVEYED: the floating-panel registry (graphics.c 1930-2215)
+  has a stated reason in graphics.h for sitting beside the popup registration; and soundEngine.c has
+  a real seam at about line 3086 between "patch -> node graph" and the DSP, but at 5265 lines that is
+  a project rather than a move.
+A SECOND INSTANCE SPINS ON LIBUSB_ERROR_ACCESS INSTEAD OF BACKING OFF — seen 2026-08-24, worth a
+retry delay. Two copies of G2-Edit running and one G2 plugged in: the copy that loses the race logged
+  E open_and_claim_device() Failed to claim interface: LIBUSB_ERROR_ACCESS
+  D close_device() Device closed
+290 times in a few seconds, and while it did so it STOPPED SERVICING THE BACKDOOR — command files sat
+unread until the process ended. So the cost is not just a noisy log: a harness run driving the second
+instance simply hangs, with nothing anywhere saying why. A claim failure that is ACCESS (someone else
+holds it) is not the same as a transient one and should back off rather than retry flat out; the
+top-bar state could say so too, since "Offline" is what it shows whether the device is absent or
+merely taken.
 Move any todos out of code, into this todo file, with descriptions.
 Remove the module number from top right of module for release versions.
   DONE 2026-08-22 — the index is now inside #ifdef DEBUG, so it is compiled out of Release. The type
