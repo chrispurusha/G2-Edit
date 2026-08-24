@@ -542,6 +542,11 @@ words instead. The images decode cleanly from the resource file, and are simple 
 our own style rather than embed — the same goes for the oscillator and LFO waveform pickers and the
 other 25 image radio groups. See the resource-file survey at the top.
 Move the backdoor control functions out of graphics.c, into a backdoor.c source file.
+  DONE 2026-08-24 — src/backdoor.c and src/backdoor.h, the whole block moved verbatim. Only two
+  entry points are exported (backdoor_poll() and backdoor_enabled(), both called from the render
+  loop); render_frame() and read_file_into_memory_and_process() went into graphics.h to reach them,
+  and render_frame() is the one thing the split makes non-static. graphics.c lost 1069 lines and the
+  stb_image_write implementation include with them.
 Move any todos out of code, into this todo file, with descriptions.
 Remove the module number from top right of module for release versions.
   DONE 2026-08-22 — the index is now inside #ifdef DEBUG, so it is compiled out of Release. The type
