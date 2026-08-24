@@ -1710,6 +1710,61 @@ static double lfob_waveform_sample(uint32_t waveformIndex, double phase) {
     }
 }
 
+// RECT AND SHPSTATIC ARE NOT WAVES AT ALL — they are TRANSFER CURVES, so their icon plots output
+// against INPUT rather than against phase, and the horizontal axis runs -1 to +1 instead of round a
+// cycle. Everything else about the picker is the same, which is why they arrive through the same
+// plumbing: module_wave_sample() is handed a position across the box either way.
+//
+// MEASURED 2026-08-24 with a dry/wet rig — a triangle sent BOTH straight to one output and through
+// the shaper to the other, so pairing the two channels sample by sample gives the transfer curve
+// directly, with the source cancelling out. The fit leaves the gain free, because the two channels
+// have unknown relative gain and an input that never reaches full scale would otherwise masquerade
+// as curvature (it did: peak-normalising first pulled every exponent toward 1).
+//
+// RECT IS EXACTLY WHAT THE MANUAL SAYS (p207), which is worth recording given how often it is not:
+// discard negatives, discard positives, mirror negatives up, mirror positives down.
+//
+// SHPSTATIC IS y = sign(x).|x|^p, and the two positive powers are exact:
+//     x2      p = 1.98   rms 0.00002      x3      p = 2.97   rms 0.00002
+//     Inv x2  p = 0.65   rms 0.00079      Inv x3  p = 0.49   rms 0.00122
+// The two inverse curves fit a pure power law FORTY TIMES WORSE than the other two and land well
+// above their nominal 1/2 and 1/3, so those exponents are the measured shape rather than the named
+// one, and the shape is only approximately a power law. Good enough for a 30-pixel icon; worth a
+// second look before anything depends on it more precisely than that.
+static double shaper_transfer_sample(uint32_t moduleType, uint32_t modeValue, double input) {
+    if (moduleType == moduleTypeRect) {
+        switch (modeValue) {
+            case 0:
+                return (input > 0.0) ? input : 0.0;         // HalfPos — discards negatives
+
+            case 1:
+                return (input < 0.0) ? input : 0.0;         // HalfNeg — discards positives
+
+            case 2:
+                return fabs(input);                         // FullPos — mirrors negatives up
+
+            default:
+                return -fabs(input);                        // FullNeg — mirrors positives down
+        }
+    }
+    {
+        // shpStaticStrMap order is Inv x3, Inv x2, x2, x3 — gentlest inverse first.
+        static const double exponents[] = {0.49, 0.65, 1.98, 2.97};
+        uint32_t            index       = (modeValue < 4) ? modeValue : 0;
+        double              magnitude   = pow(fabs(input), exponents[index]);
+
+        return (input < 0.0) ? -magnitude : magnitude;
+    }
+}
+
+// A transfer curve has ENDS, not a seam. render_wave_icon() closes a cycle by drawing the step
+// between its last sample and its first, which is right for a saw and nonsense here — the two ends of
+// a rectifier's curve are simply its extremes, and joining them would draw a vertical through the
+// middle of the picture.
+static bool module_wave_is_transfer(uint32_t moduleType) {
+    return (moduleType == moduleTypeRect) || (moduleType == moduleTypeShpStatic);
+}
+
 // LfoA's and LfoC's set — lfoWaveStrMap, the SAME map LfoB uses, but all six entries rather than the
 // four LfoB clamps to. The first four are LfoB's measured cycle and are simply delegated; only the
 // two random ones are new, and they are a different kind of thing entirely.
@@ -1877,7 +1932,9 @@ bool module_wave_picker_param(uint32_t moduleType, uint32_t paramIndex) {
            || ((moduleType == moduleTypeLfoB) && (paramIndex == 4))
            || ((moduleType == moduleTypeOscA) && (paramIndex == 4))
            || ((moduleType == moduleTypeOscB) && (paramIndex == 8))
-           || ((moduleType == moduleTypeLfoA) && (paramIndex == 4));
+           || ((moduleType == moduleTypeLfoA) && (paramIndex == 4))
+           || ((moduleType == moduleTypeRect) && (paramIndex == 0))
+           || ((moduleType == moduleTypeShpStatic) && (paramIndex == 0));
 }
 
 // One sample of whichever wave family the module in hand belongs to. The four waveform pickers reach
@@ -1905,6 +1962,11 @@ static double module_wave_sample(uint32_t moduleType, uint32_t waveValue, double
 
     if ((moduleType == moduleTypeLfoA) || (moduleType == moduleTypeLfoC)) {
         return lfoa_waveform_sample(waveValue, phase);
+    }
+
+    // The box's horizontal axis is the INPUT for these two, not phase — see shaper_transfer_sample().
+    if (module_wave_is_transfer(moduleType) == true) {
+        return shaper_transfer_sample(moduleType, waveValue, (phase * 2.0) - 1.0);
     }
 
     if (moduleType == moduleTypeOscShpA) {
@@ -1944,6 +2006,10 @@ static uint32_t module_wave_value(tModule * module, uint32_t variation) {
 
         case moduleTypeOscB:
             return module->param[variation][8].value;
+
+        case moduleTypeRect:                        // a transfer curve, not a wave — see
+        case moduleTypeShpStatic:                   // shaper_transfer_sample()
+            return module->param[variation][0].value;
 
         default:
             return 0;
@@ -2034,7 +2100,8 @@ void render_wave_icon(tRectangle buttonRect, uint32_t moduleType, uint32_t waveV
     // ends to where it begins — and only when there is a step to draw. A triangle ends where it
     // started, so nothing is drawn and it closes on its own; a saw or a square ends a full swing
     // away from its start, and gets the single vertical edge that identifies it.
-    if (fabs(previous.y - first.y) > (buttonRect.size.h * 0.05)) {
+    if (  (module_wave_is_transfer(moduleType) == false)
+       && (fabs(previous.y - first.y) > (buttonRect.size.h * 0.05))) {
         // DRAWN AT BOTH ENDS, because the wave repeats: the step across the seam is the same edge
         // whether you meet it leaving one cycle or entering the next, and showing it only on the
         // right left the saw and the square looking like they began in mid-air (CT). With both, one

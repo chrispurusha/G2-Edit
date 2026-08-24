@@ -542,6 +542,33 @@ and draw THAT rather than an idealised curve.
       random than the linear interpolation the icon draws. The direction it differs from RndSt in is
       settled; the exact interpolation is not.
 
+  RECT AND SHPSTATIC FINISH THE SET (2026-08-24), and they are a different KIND of picture: transfer
+  curves, not waves. The box plots output against INPUT, -1 to +1 across, so the cycle-seam rule had to
+  be suppressed for them — a rectifier's two ends are its extremes, and joining them would draw a
+  vertical through the middle of the icon. Everything else goes through the same plumbing.
+    - MEASURED WITH A DRY/WET RIG, which is the right shape for any transfer curve: a triangle sent
+      BOTH straight to one output and through the shaper to the other, so pairing the two channels
+      sample by sample gives the curve directly and the source cancels out.
+    - FIT THE GAIN, DO NOT NORMALISE. Peak-normalising the recovered curve first pulled every exponent
+      toward 1 (x3 read as 2.58), because the two channels have unknown relative gain and an input
+      that never reaches full scale looks exactly like less curvature. With gain free the same data
+      gives x3 = 2.97. Worth remembering for any transfer curve measured this way.
+    - RECT IS EXACTLY WHAT THE MANUAL SAYS (p207) — discard negatives, discard positives, mirror
+      negatives up, mirror positives down — which is worth recording precisely because the manual has
+      been wrong so often elsewhere in this work.
+    - SHPSTATIC IS y = sign(x).|x|^p:
+          x2      p = 1.98   rms 0.00002        x3      p = 2.97   rms 0.00002
+          Inv x2  p = 0.65   rms 0.00079        Inv x3  p = 0.49   rms 0.00122
+      The two positive powers are exact. THE TWO INVERSE CURVES ARE NOT: they fit a pure power law
+      forty times worse and sit well above their nominal 1/2 and 1/3. The drawn exponents are the
+      measured shape rather than the named one, which is good enough for a 30-pixel icon and wants a
+      second look before anything depends on it more precisely.
+    - Both faces verified on screen: HalfPos draws flat-then-rising, FullPos a V, Inv x3 steep through
+      the centre, x3 flat through it. No spurious seam verticals.
+
+  THE WAVE SET IS NOW COMPLETE. Pickers on OscShpA, OscShpB, LfoShpA, LfoB, OscA, OscB, OscC, OscD,
+  LfoA, LfoC, Rect and ShpStatic; graphs on OscShpA, OscShpB, LfoShpA, LfoB, OscA and OscB.
+
     - REMAINING PICKER CANDIDATES, same shapeOscATypeStrMap or lfoWaveStrMap families: LfoA (param 4)
       and LfoC (mode 0) share lfoWaveStrMap with the already-measured LfoB, so their first four waves
       are done the moment they are registered — only the trailing RndSt/Rnd are new, and a random wave
