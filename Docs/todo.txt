@@ -377,6 +377,30 @@ and draw THAT rather than an idealised curve.
   describes. paramCurves.c now says so at the definition, because the tidy-up that merges them is
   exactly the sort of thing that looks like an improvement.
 
+    THE FULL GRAPH LIST, ENUMERATED AT LAST (2026-08-24). The survey had only ever been recorded as "43
+  modules", with seven of them named, which is not enough to plan from. All 43, by family, with the six
+  already drawn marked:
+    FILTERS (7)      FltClassic*  FltNord  FltLP  FltHP  FltComb  FltStatic  FltPhase
+    EQ (4)           EqPeak  ShelvEQ  Eq2Band  Eq3band
+    ENVELOPES (11)   EnvADSR*  EnvH  EnvD  AR-Env  EnvADDSR  EnvMulti  EnvADR  EnvAHD  ModADSR
+                     ModAHD  EnvDX
+    OSC / LFO (7)    OscShpB*  OscShpA*  LfoB*  LfoShpA*  PulseOsc  LfoD  OscNoise
+    SHAPERS (6)      Clip  Overdrive  WaveWrap  ShpExp  Saturate  LevScaler
+    OTHER (8)        Mux8-1X  SeqA  Vocoder  SeqNote  DXRouter  Operator  DrumSynth  RndTrig
+  Vocoder, SeqNote and Operator carry TWO graphs each; everything else one.
+  THOSE THREE ARE NOT ALIASES, THEY ARE GAPS — settled 2026-08-24 by comparing gModuleProperties[]
+  against the full set of modules the instrument supports. ShelvEQ, PulseOsc and LfoD are simply
+  Unknown slots in our table, along with 19 others:
+     ShelvEQ  PulseOsc  LfoD  EnvDX  AR-Env  SeqA  Mux8-1X      (these seven all draw a graph)
+     SyncOsc  S&H  T&H  PeakFollow  RndStep  RndState  RndChaos
+     PolarPan  PolarFade  Mixer6-1A  Mixer6-1B  OutBusA  OutBusB  ClkDivFix  AudioIn  BusIn
+  ONLY ONE REAL ALIAS EXISTS in the whole table: moduleTypeSandH is the instrument's "S&H". Both
+  facts are now commented on the enum itself in types.h, which is where someone will look.
+  HOW TO FILL A SLOT: the type NUMBER is the missing piece and nothing about it is derivable from the
+  name. The instrument's own patches carry it — load a factory patch that uses the module and DUMP
+  reports its type against a name we render as "Unknown". A sweep of the factory banks would identify
+  most of the 22 in one pass, and is worth doing before any of them is planned as a graphics job.
+
     THE GRAPH FOLLOWS THE ORIGINAL, THE ICON DOES NOT HAVE TO — CT, 2026-08-24: if the original editor
   draws no green-on-black graph for a module, we do not need one either. So the <#Graph list above IS
   the graph list, and it is closed; a module absent from it gets wave ICONS on its picker and nothing
@@ -434,6 +458,52 @@ and draw THAT rather than an idealised curve.
           2 s settle, and during that settle the module still holds whatever it was set to before —
           which reads as an extra region and shifts every label by one. Detect change points only to
           locate the first boundary, then lay the known grid out from there.
+
+  OSCB NOW SHOWS WAVE ICONS TOO (2026-08-24), measured in Slot A. Every one of its five turned out to
+  be a law we already had, so it is an index remap rather than a new family — param 8, five entries.
+    - SHAPE ONLY REACHES TWO OF THE FIVE. Swept across the whole dial, Sine stays a pure sine (no
+      harmonic above the first exceeds 0.01 at any setting), Tri stays a triangle and Saw stays a
+      sawtooth with harmonics at 1/n to two decimals. Only Sqr and DualSaw respond at all.
+    - SAW RISES — 0.988 against the rising form, 0.516 against the falling one. Same as OscA, opposite
+      to LfoB. That is now three oscillator saws rising and two LFO ramps falling.
+    - SQR IS OSCSHPB'S PULSE, law and all: duty 0.500 / 0.375 / 0.250 / 0.125 at Shape 0/32/64/96,
+      i.e. 0.5 - 0.49*shape, exactly what we already draw. AND IT SHARES THE 8-SAMPLE FLOOR: at the top
+      of the dial it lands on 0.055 rather than 0.010, and 0.055 of a 145.6-sample cycle is 8.0
+      samples — the same floor OscShpB's Pulse was measured to have, so that floor belongs to the
+      instrument's pulse generator and not to one module.
+    - DUALSAW IS OSCSHPB'S DBLSAW at 0.999 across the dial, runner-up 0.87 at best.
+    - THE MANUAL MISCOUNTS OSCB (p174): "one of five waveforms", then it lists six by adding a
+      symmetric pulse. There is no sixth — writing 5 to the waveform parameter returns a cycle
+      IDENTICAL to DualSaw at 1.000, so the device clamps and our declared range of 5 is right. That
+      was the open question and it is closed.
+    - Verified on screen: the rising saw and the narrow pulse both draw correctly on the face.
+
+  OSCB AND OSCA NOW CARRY THE GREEN-ON-BLACK GRAPH TOO (CT's call, 2026-08-24). Neither is in the
+  original's graph list, so this is us going further than it did rather than catching up — CT: "it's
+  worth adding, to fill the space".
+    - ON OSCB THE GRAPH EARNS ITS KEEP DIRECTLY: Shape genuinely changes two of its five waves, so
+      the box moves as the dial does. On the other three it simply draws the wave larger.
+    - ON OSCA IT IS STATIC, and that is the honest description: OscA has no Shape dial at all, so its
+      graph is a legible enlargement of the picker icon and nothing more.
+    - OSCA'S BYPASS HAD TO MOVE and the first move was wrong. anchorBottomRight {-3,-3} put it exactly
+      where the audio OUTPUT already sits, and the two drew on top of each other. It now sits at
+      {-3,-14}, stacked above the connector, with the graph above that — three things down the right
+      edge of a three-row face, which is the shortest of the group (OscShpB is four rows, OscB five).
+    - THE RENDERER NO LONGER KNOWS ABOUT MODULES. render_oscshpb_waveform_graph() used to carry a
+      chain of isShpA / isLfoShpA / isLfoB tests to find each module's waveform and Shape, duplicating
+      what module_wave_sample() already knew for the icons; adding OscB would have made that a third
+      copy. Two resolvers — module_wave_value() and module_shape_value() — now answer those questions
+      once for both the big graph and the little button, and the graph calls module_wave_sample() like
+      the icon does. So a law corrected in one place corrects both, and a module added there gets both.
+
+  A PROCESS TRAP WORTH NOT REPEATING: do-uncrustify reflows moduleResources.h wholesale, so I had got
+  into the habit of reverting that file after every format pass. It then silently reverted a REAL edit
+  (OscB's graphLocationList row), and the resulting build had the graph dispatch calling for a module
+  whose table row was gone. An hour went into suspecting the refactor before rebuilding into a clean
+  derived-data path showed the same source rendering perfectly. Back the file up, run uncrustify, then
+  restore the backup — never git checkout a file you have edited.
+
+
     - REMAINING PICKER CANDIDATES, same shapeOscATypeStrMap or lfoWaveStrMap families: LfoA (param 4)
       and LfoC (mode 0) share lfoWaveStrMap with the already-measured LfoB, so their first four waves
       are done the moment they are registered — only the trailing RndSt/Rnd are new, and a random wave
@@ -738,6 +808,22 @@ Move the backdoor control functions out of graphics.c, into a backdoor.c source 
   has a stated reason in graphics.h for sitting beside the popup registration; and soundEngine.c has
   a real seam at about line 3086 between "patch -> node graph" and the DSP, but at 5265 lines that is
   a project rather than a move.
+AN OFFLINE EDITOR MAKES A CAPTURE THAT LOOKS PERFECTLY VALID — and this one bit, 2026-08-24, costing
+an OscB waveform sweep that was analysed for some time before anyone doubted it. Two copies of the
+editor were running, mine had lost the USB claim, and so:
+  - DEVADDMODULE, CABLE and every DEVSET in the sweep updated the LOCAL database and posted to a USB
+    thread with nothing on the other end. Each returned OK, because each had done its local half.
+  - measure.py printed all six settings and wrote its .wav and .json.
+  - DUMP showed exactly the patch that was asked for — because DUMP reads the same local database.
+  - the file was silence at -100 dBFS, and the first sign of trouble was an autocorrelation of 0.04.
+FIXED, both halves: the backdoor gained a COMMS command reporting online/offline, and measure.py now
+asks it before recording and refuses to start otherwise, naming the second-copy case in the error
+because the editor's own top bar cannot distinguish it — "Offline" means both "no G2 plugged in" and
+"another copy has the claim".
+THE GENERAL SHAPE OF THIS, worth remembering beyond the G2: a command that does a local half and a
+remote half, and reports on the local half, will report success through a total failure of the remote
+one. Anything driving hardware needs a way to ask whether the hardware is there, and needs to ask.
+
 A SECOND INSTANCE SPINS ON LIBUSB_ERROR_ACCESS INSTEAD OF BACKING OFF — seen 2026-08-24, worth a
 retry delay. Two copies of G2-Edit running and one G2 plugged in: the copy that loses the race logged
   E open_and_claim_device() Failed to claim interface: LIBUSB_ERROR_ACCESS

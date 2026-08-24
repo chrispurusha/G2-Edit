@@ -1754,6 +1754,45 @@ static double osc_a_waveform_sample(uint32_t waveformIndex, double phase) {
     }
 }
 
+// OscB's five — shapeTypeStrMap: Sine, Tri, Saw, Sqr, DualSaw. MEASURED 2026-08-24, and every one of
+// them turned out to be a law we already had, so this is an index remap and not a new family.
+//
+// SHAPE ONLY REACHES TWO OF THE FIVE. Sweeping it across the whole dial leaves Sine a pure sine (no
+// harmonic above the first rises above 0.01 at any setting), Tri a triangle and Saw a sawtooth whose
+// harmonics stay at 1/n to two decimals. Only Sqr and DualSaw respond to it at all — which is worth
+// knowing before anyone models a Shape law for the other three.
+//   - SINE, TRI: the plain primitives.
+//   - SAW RISES, like OscA's and unlike LfoB's: 0.988 against the rising form, 0.516 against the
+//     falling one.
+//   - SQR IS OscShpB's PULSE, law and all. Measured duty runs 0.500, 0.375, 0.250, 0.125 at Shape
+//     0/32/64/96 — a straight 0.5 - 0.49*shape, which is exactly what oscshpb_waveform_sample() case
+//     6 already draws. At the top of the dial it lands on 0.055 rather than continuing to 0.010, and
+//     0.055 of a 145.6-sample cycle is EIGHT SAMPLES: the same floor OscShpB's Pulse was measured to
+//     have. So the floor belongs to the instrument's pulse generator rather than to one module.
+//   - DUALSAW IS OscShpB's DBLSAW, at 0.999 across the dial and clearly separated from every runner-up
+//     (0.87 at best). Its Shape is the same detune.
+// THE MANUAL MISCOUNTS THIS MODULE (p174): it says "one of five waveforms" and then lists six, adding
+// a symmetric pulse. There is no sixth — writing 5 to the waveform parameter gives a cycle identical
+// to DualSaw at 1.000, so the instrument clamps and paramLocationList's declared range of 5 is right.
+static double osc_b_waveform_sample(uint32_t waveformIndex, double phase, double shape) {
+    switch (waveformIndex) {
+        case 0:
+            return basic_sine(phase);                            // Sine — Shape does nothing
+
+        case 1:
+            return basic_triangle(phase);                        // Tri — Shape does nothing
+
+        case 2:
+            return basic_rising_saw(phase);                      // Saw — Shape does nothing
+
+        case 3:
+            return oscshpb_waveform_sample(6, phase, shape);     // Sqr — OscShpB's Pulse
+
+        default:
+            return oscshpb_waveform_sample(5, phase, shape);     // DualSaw — OscShpB's DblSaw
+    }
+}
+
 // Which parameter, on which module, is the waveform picker whose button should show a PICTURE. Kept
 // as a list in one place rather than spread through the render code, so adding a module is one line.
 // OscShpB keeps its waveform in a MODE rather than a parameter, so it reaches the button through
@@ -1769,7 +1808,8 @@ bool module_wave_picker_param(uint32_t moduleType, uint32_t paramIndex) {
     return ((moduleType == moduleTypeOscShpA) && (paramIndex == 9))
            || ((moduleType == moduleTypeLfoShpA) && (paramIndex == 11))
            || ((moduleType == moduleTypeLfoB) && (paramIndex == 4))
-           || ((moduleType == moduleTypeOscA) && (paramIndex == 4));
+           || ((moduleType == moduleTypeOscA) && (paramIndex == 4))
+           || ((moduleType == moduleTypeOscB) && (paramIndex == 8));
 }
 
 // One sample of whichever wave family the module in hand belongs to. The four waveform pickers reach
@@ -1791,6 +1831,10 @@ static double module_wave_sample(uint32_t moduleType, uint32_t waveValue, double
         return lfoshpa_waveform_sample(waveValue, phase, shape);
     }
 
+    if (moduleType == moduleTypeOscB) {
+        return osc_b_waveform_sample(waveValue, phase, shape);
+    }
+
     if (moduleType == moduleTypeOscShpA) {
         static const uint32_t shpAToShpB[] = {0, 1, 2, 3, 4, 7};
 
@@ -1802,6 +1846,61 @@ static double module_wave_sample(uint32_t moduleType, uint32_t waveValue, double
     return oscshpb_waveform_sample(waveValue, phase, shape);
 }
 
+// WHERE EACH MODULE KEEPS ITS WAVEFORM, AND THE SHAPE THAT GOES WITH IT. The picker predicates above
+// name the INDEX; these return the VALUE, so the small icon and the big graph ask the same question in
+// the same way. This used to be written out twice — once for the icon and once inside the graph
+// renderer, as a chain of isLfoB / isLfoShpA / isShpA tests — and adding OscB would have made it a
+// third copy of the same knowledge.
+static uint32_t module_wave_value(tModule * module, uint32_t variation) {
+    switch (module->type) {
+        case moduleTypeOscShpB:                     // a MODE on this one, and only on this one
+        case moduleTypeOscC:
+        case moduleTypeOscD:
+            return module->mode[0].value;
+
+        case moduleTypeOscShpA:
+            return module->param[variation][9].value;
+
+        case moduleTypeLfoShpA:
+            return module->param[variation][11].value;
+
+        case moduleTypeLfoB:
+        case moduleTypeOscA:
+            return module->param[variation][4].value;
+
+        case moduleTypeOscB:
+            return module->param[variation][8].value;
+
+        default:
+            return 0;
+    }
+}
+
+// 0..1, or the icons' fixed stand-in for a module that has no Shape dial at all. The sample functions
+// for those modules ignore the argument, so the value only has to be harmless.
+static double module_shape_value(tModule * module, uint32_t variation) {
+    uint32_t index = 0;
+
+    switch (module->type) {
+        case moduleTypeOscShpB:
+        case moduleTypeOscB:
+            index = 6;
+            break;
+
+        case moduleTypeOscShpA:
+            index = 7;
+            break;
+
+        case moduleTypeLfoShpA:
+            index = 5;
+            break;
+
+        default:
+            return WAVE_ICON_FIXED_SHAPE;           // LfoB, OscA, OscC, OscD — no Shape dial
+    }
+    return (double)module->param[variation][index].value / 127.0;
+}
+
 // THE ORIGINAL EDITOR PICKS WAVEFORMS WITH PICTURES, NOT WORDS — its selector buttons carry little
 // line drawings of the wave. This draws the same idea in our own style rather than lifting its
 // bitmaps: the pixels are in its resource file and decode cleanly, but they are Clavia's artwork, and
@@ -1811,7 +1910,7 @@ static double module_wave_sample(uint32_t moduleType, uint32_t waveValue, double
 // refined. (CT agreed this approach 2026-08-23.)
 double module_wave_icon_shape(uint32_t moduleType) {
     // See the note at the picker's render site: a FIXED shape, chosen so the waves are told apart.
-    return (moduleType == moduleTypeLfoShpA) ? 0.5 : 0.75;
+    return (moduleType == moduleTypeLfoShpA) ? WAVE_ICON_LFOSHPA_SHAPE : WAVE_ICON_FIXED_SHAPE;
 }
 
 void render_wave_icon(tRectangle buttonRect, uint32_t moduleType, uint32_t waveValue, double shape) {
@@ -1872,9 +1971,11 @@ void render_wave_icon(tRectangle buttonRect, uint32_t moduleType, uint32_t waveV
 }
 
 static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module) {
-    // Shape (param index 6) - fixed position for moduleTypeOscShpB's entries in
-    // paramLocationList. Waveform is a MODE here (not a param, unlike OscB) - OscShpB's only
-    // mode entry, "Wave" (modeLocationList, oscShpBStrMap), so index 0.
+    // ONE PERIOD OF WHATEVER WAVE THIS MODULE IS SET TO, green on grey, in the box graphLocationList
+    // gives it. Four modules share this renderer — OscShpB, OscShpA, LfoB and OscB — and they keep
+    // their waveform in three different places and their Shape in three more. None of that is decided
+    // here any more: module_wave_value(), module_shape_value() and module_wave_sample() answer those
+    // three questions for every module, so this function is only the drawing.
     // OSCSHPA SHARES THIS RENDERER, AND ITS WAVES ARE THE SAME WAVES. Measured 2026-08-23: each of
     // OscShpA's six correlates 0.990-0.999 with one of OscShpB's laws and is clearly separated from
     // the runner-up, so the same sample function serves both. What differs is only how the module
@@ -1885,35 +1986,18 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
     //     question when this was planned; the hardware settled it, and paramLocationList was right.
     //   - OscShpA offers SIX waves, not eight: it drops DblSaw and Pulse, so its index 5 is
     //     OscShpB's SymPulse (7) and the first five map straight across.
-    const bool             isShpA            = (module->type == moduleTypeOscShpA);
-    const bool             isLfoShpA         = (module->type == moduleTypeLfoShpA);
-    const bool             isLfoB            = (module->type == moduleTypeLfoB);
-    const uint32_t         shapeParamIndex   = isLfoB ? 0 : (isLfoShpA ? 5 : (isShpA ? 7 : 6));
-    const uint32_t         waveformModeIndex = 0;
-    uint32_t               slot              = module->key.slot;
-    uint32_t               variation         = gPatchDescr[slot].activeVariation;
-    uint32_t               waveformValue     = isLfoB ? module->param[variation][4].value
-                                               : isLfoShpA ? module->param[variation][11].value
-                                               : (isShpA ? module->param[variation][9].value
-                                                  : module->mode[waveformModeIndex].value);
-    double                 shape             = (double)module->param[variation][shapeParamIndex].value / 127.0;
-
-    if (isShpA == true) {
-        static const uint32_t shpAToShpB[] = {0, 1, 2, 3, 4, 7};
-
-        if (waveformValue >= (sizeof(shpAToShpB) / sizeof(shpAToShpB[0]))) {
-            waveformValue = 0;
-        }
-        waveformValue = shpAToShpB[waveformValue];
-    }
-    const tGraphLocation * graphLoc          = find_graph_location(module->type);
-    tRectangle             graphRect         = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
-    double                 midY              = graphRect.coord.y + (graphRect.size.h / 2.0);
-    const int              numSamples        = 200; // fine enough to resolve Pulse/SymPulse's narrow
+    uint32_t               slot          = module->key.slot;
+    uint32_t               variation     = gPatchDescr[slot].activeVariation;
+    uint32_t               waveformValue = module_wave_value(module, variation);
+    double                 shape         = module_shape_value(module, variation);
+    const tGraphLocation * graphLoc      = find_graph_location(module->type);
+    tRectangle             graphRect     = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+    double                 midY          = graphRect.coord.y + (graphRect.size.h / 2.0);
+    const int              numSamples    = 200;     // fine enough to resolve Pulse/SymPulse's narrow
                                                     // sub-sample-width edge ramps, not just the coarser
                                                     // per-cycle shapes
-    const int              numCycles         = 1;   // one period across the box, matching the original editor
-    tCoord                 prev              = {0};
+    const int              numCycles     = 1;       // one period across the box, matching the original editor
+    tCoord                 prev          = {0};
 
     set_rgb_colour((tRgb)RGB_GREY_2);
     render_rectangle(moduleArea, graphRect);
@@ -1923,15 +2007,16 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
 
     set_rgb_colour((tRgb)RGB_GREEN_ON);
 
-    tCoord                 firstPoint        = {0};
-    double                 preWrapY          = 0.0;
+    tCoord                 firstPoint    = {0};
+    double                 preWrapY      = 0.0;
 
     for (int i = 0; i <= numSamples; i++) {
         double xFraction = (double)i / (double)numSamples;                 // raw position across the box, 0..1
         double phase     = fmod(xFraction * numCycles, 1.0);               // wrapped per-cycle phase for the sample
-        double sample    = isLfoB ? lfob_waveform_sample(waveformValue, phase)
-                           : (isLfoShpA ? lfoshpa_waveform_sample(waveformValue, phase, shape)
-                              : oscshpb_waveform_sample(waveformValue, phase, shape));
+        // THE SAME CALL THE ICON MAKES. Which family a module belongs to, and any index remapping
+        // between families, is decided once in module_wave_sample() — so a law corrected there
+        // corrects the big graph and the little button together, and a module added there gets both.
+        double sample    = module_wave_sample(module->type, waveformValue, phase, shape);
         tCoord point     = {
             graphRect.coord.x + (xFraction * graphRect.size.w),
             graphRect.coord.y + (graphRect.size.h / 2.0) - (sample * graphRect.size.h * 0.45)
@@ -2297,7 +2382,8 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     render_module_connectors(rectangle, module);
 
     if (  (module->type == moduleTypeOscShpB) || (module->type == moduleTypeOscShpA)
-       || (module->type == moduleTypeLfoShpA) || (module->type == moduleTypeLfoB)) {
+       || (module->type == moduleTypeLfoShpA) || (module->type == moduleTypeLfoB)
+       || (module->type == moduleTypeOscB) || (module->type == moduleTypeOscA)) {
         render_oscshpb_waveform_graph(rectangle, module);
     }
 

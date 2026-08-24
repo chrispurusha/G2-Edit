@@ -109,7 +109,16 @@
 // The wave-icon pickers draw a PICTURE instead of a caption, but the button still takes its width
 // from the text it is given — pass it nothing and it collapses to an invisible sliver, which is
 // exactly what happened. These spaces reserve a face wide enough to read a waveform in.
-#define WAVE_MENU_CAPTION                    "          "
+#define WAVE_MENU_CAPTION    "          "
+
+// The FIXED Shape a waveform ICON is drawn at. Not the module's live value, deliberately: all four
+// shape-oscillator sines are identical at Shape 0, so a live icon would draw the same picture for
+// every entry in the drop-down and there would be nothing to choose between. Full Shape is no good
+// either — SymPulse falls silent there and Pulse narrows to a sliver.
+#define WAVE_ICON_FIXED_SHAPE                (0.75)
+// LfoShpA's Shape is BIPOLAR and neutral at the centre, unlike the oscillators' which start at 0 and
+// only open, so its icon is drawn at the middle rather than three quarters up.
+#define WAVE_ICON_LFOSHPA_SHAPE              (0.5)
 
 #define RADIO_WIDEST_CAPTION                 "WWWWWWW"   // W, not X: the widest glyph the font has
 #define RADIO_BUTTON_PADDING                 (4.0)       // Breathing room either side of a Channel Select caption

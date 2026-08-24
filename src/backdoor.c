@@ -80,6 +80,8 @@ extern "C" {
 // caller polls for the command file's disappearance to know it's done.
 //   LOADFILE <path>   — read_file_into_memory_and_process() (works offline)
 //   SLOT <0-3|A-D>    — select the slot the canvas renders
+//   COMMS             — "online" or "offline". ASK THIS BEFORE ANY DEV COMMAND YOU INTEND TO TRUST:
+//                       every one of them reports OK when the instrument is not listening
 //   DUMP              — current slot + every module: type, name, location, col/row
 //   PARAMDUMP         — the same modules with their variation-0 PARAMETER and MODE values, plus the
 //                       parameter count the patch declared against the one our table gives
@@ -794,6 +796,21 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         msg.playNoteData.on       = (state[0] == 'o') && (state[1] == 'n');
         msg_send(&gToUsbThread, &msg);
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "COMMS") == 0) {
+        // ONLINE OR OFFLINE, ASKED DIRECTLY — and it exists because nothing else here can tell you.
+        // Every DEV command reports OK whether or not the instrument is listening: they update the
+        // local database first and post to the USB thread second, and that post is a no-op when
+        // nothing is connected. So a measurement sweep driven at an offline editor runs to
+        // completion, writes its files, and records SILENCE, with every step along the way saying
+        // OK. That happened on 2026-08-24 and cost a capture that looked perfectly valid.
+        //
+        // The obvious tell is missing too: the top bar says "Offline" both when no G2 is plugged in
+        // and when another copy of the editor holds the USB claim.
+        char text[64];
+
+        snprintf(text, sizeof(text), "OK\ncomms=%s\n",
+                 (gCommsState == eCommsOnLine) ? "online" : "offline");
+        backdoor_write_result(text);
     } else if (strcmp(cmd, "DUMP") == 0) {
         char dump[16384];
 
