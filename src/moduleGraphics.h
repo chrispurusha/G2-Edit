@@ -84,4 +84,12 @@ void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle modu
 void render_cable_from_to(tConnector from, tConnector to, double thickness);
 tRectangle module_area(void);
 
+// Waveform pickers draw a picture of the wave instead of its name — on the module's button face and,
+// via tMenuItem::drawItem, on the drop-down's entries too.
+bool module_wave_picker_param(uint32_t moduleType, uint32_t paramIndex);
+bool module_wave_picker_mode(uint32_t moduleType, uint32_t modeIndex);
+double module_wave_icon_shape(uint32_t moduleType);
+void render_wave_icon(tRectangle buttonRect, uint32_t moduleType, uint32_t waveValue, double shape);
+
 #endif // __MODULE_GRAPHICS_H__
+

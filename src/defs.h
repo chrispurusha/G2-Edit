@@ -105,7 +105,12 @@
 // measured against this so it never changes size as its buttons are renamed.
 // How much of a module's width a Channel Select group may occupy, measured from the group's own left
 // edge. Leaves a margin at the right so a full-width group does not touch the border.
-#define RADIO_FACE_WIDTH_PERCENT             (94.0)
+#define RADIO_FACE_WIDTH_PERCENT    (94.0)
+// The wave-icon pickers draw a PICTURE instead of a caption, but the button still takes its width
+// from the text it is given — pass it nothing and it collapses to an invisible sliver, which is
+// exactly what happened. These spaces reserve a face wide enough to read a waveform in.
+#define WAVE_MENU_CAPTION                    "          "
+
 #define RADIO_WIDEST_CAPTION                 "WWWWWWW"   // W, not X: the widest glyph the font has
 #define RADIO_BUTTON_PADDING                 (4.0)       // Breathing room either side of a Channel Select caption
 #define SWITCH_CTRL_STEP                     (4)         // Ctrl output units per Switch state — manual p221
