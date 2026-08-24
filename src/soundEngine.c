@@ -3132,88 +3132,127 @@ static double osc_triangle(double phase, double width) {
 //
 // `t` below is Shape mapped to 0..1 across that 50%..99% range.
 static double osc_shp_wave(uint32_t waveform, double phase, double dt, double shape) {
-    double t = (shape - 0.5) / 0.49;
-
-    if (t < 0.0) {
-        t = 0.0;
-    } else if (t > 1.0) {
-        t = 1.0;
-    }
-
+    // MEASURED FROM THE HARDWARE 2026-08-23 and shared, law for law, with the wave the editor DRAWS in
+    // oscshpb_waveform_sample() (moduleGraphics.c) - see Docs/todo.txt for the capture method and the
+    // correlation figures. Everything here previously came from the manual's prose, which is wrong in
+    // several places, and from a dial mapping that was wrong everywhere:
+    //
+    // THE SHAPE DIAL ACTS OVER ITS WHOLE RANGE. This used to remap it as (shape - 0.5) / 0.49 clamped
+    // at zero, so NOTHING HAPPENED below raw 64 and half the dial was dead. The capture shows the
+    // harmonics growing continuously from raw 16 upward. The manual's percentages are not raw values:
+    // the dial DISPLAYS 50 + 50.shape percent, so its "50%" is raw 0 and its "99%" is raw 124, and
+    // every figure it quotes lands correctly once read that way.
     switch (waveform) {
         case 0:
         {
-            // Sine1 — "a phase modulated sine wave... at 99% similar to a sawtooth". A two segment
-            // phase warp: at 50% the warp is the identity and this is a plain sine; as Shape opens,
-            // the first half of the cosine is crammed into an ever smaller part of the cycle, giving
-            // a fast rise and a long fall.
-            double d = (0.5 * (1.0 - t)) + (0.02 * t);
-            double w = (phase < d) ? (0.5 * phase / d)
-                       : (0.5 + (0.5 * (phase - d) / (1.0 - d)));
+            // Sine1 - a three-segment symmetric phase warp, breakpoint at the peak where w = 0.25.
+            // b = 0.25 is the identity, which is why raw 0 is a clean sine. Measured 0.248 to 0.055.
+            double b = 0.25 - (0.255 * shape) + (0.060 * shape * shape);
+            double w = 0.0;
 
-            return -cos(w * 2.0 * M_PI);
+            if (b < 0.02) {
+                b = 0.02;
+            }
+
+            if (phase < b) {
+                w = 0.25 * (phase / b);
+            } else if (phase < (1.0 - b)) {
+                w = 0.25 + (0.5 * ((phase - b) / (1.0 - (2.0 * b))));
+            } else {
+                w = 0.75 + (0.25 * ((phase - (1.0 - b)) / b));
+            }
+            return sin(2.0 * M_PI * w);
         }
         case 1:
         {
-            // Sine2 — "Sine -> Double Sine". The two half cycles keep their shape but not their
-            // width: at 99% the first covers almost the whole period and the second is a spike.
-            double d = (0.5 * (1.0 - t)) + (0.99 * t);
+            // Sine2 - two-segment warp whose breakpoint CLOSES, 0.495 to 0.030, narrowing the POSITIVE
+            // lobe to a spike. The mean of sin() over this warp is exactly 2(2d - 1)/pi; removing it
+            // is what lifts the spike above the trough, and the hardware's output is AC coupled.
+            double d    = 0.5 - (0.51 * shape) + (0.026 * shape * shape);
 
-            return (phase < d) ? sin(M_PI * phase / d)
-                   : -sin(M_PI * (phase - d) / (1.0 - d));
+            if (d < 0.03) {
+                d = 0.03;
+            }
+            double w    = (phase < d) ? (0.5 * (phase / d)) : (0.5 + (0.5 * ((phase - d) / (1.0 - d))));
+            double mean = 2.0 * ((2.0 * d) - 1.0) / M_PI;
+
+            return (sin(2.0 * M_PI * w) - mean) / (1.0 - mean);
         }
         case 2:
         {
-            // Sine3 — "Sine -> Even harmonics". Rectification is what produces even harmonics, so
-            // blend towards a full wave rectified sine with its DC removed.
-            double raw = sin(phase * 2.0 * M_PI);
+            // Sine3 - NOT the even-harmonic wave the manual describes and this code assumed: the
+            // measured harmonics are a full geometric series (1, 0.90, 0.81, 0.72 at full Shape), which
+            // sums exactly to sin(t)/(1 - 2r.cos(t) + r^2) with peak 1/(1 - r^2).
+            double ratio = shape * (1.0 - (0.105 * shape));
+            double theta = 2.0 * M_PI * phase;
+            double denom = 1.0 - (2.0 * ratio * cos(theta)) + (ratio * ratio);
 
-            return ((1.0 - t) * raw) + (t * ((2.0 * fabs(raw)) - 1.0));
+            if (denom < 1e-9) {
+                denom = 1e-9;
+            }
+            return (sin(theta) / denom) * (1.0 - (ratio * ratio));
         }
         case 3:
         {
-            // Sine4 — "Sine -> Odd harmonics". A square holds only odd harmonics, so drive the sine
-            // progressively harder into a soft clip, which approaches one.
-            double raw   = sin(phase * 2.0 * M_PI);
-            double drive = 1.0 + (30.0 * t);
+            // Sine4 - the same series restricted to ODD harmonics (measured 1, 0.94, 0.88, 0.82, evens
+            // zero), not a tanh clip. Peak is (1 + r)/(4.sqrt(r).(1 - r)) once r >= 3 - 2.sqrt(2).
+            double ratio = 0.94 * shape;
+            double theta = 2.0 * M_PI * phase;
+            double denom = 1.0 - (2.0 * ratio * cos(2.0 * theta)) + (ratio * ratio);
 
-            return tanh(drive * raw) / tanh(drive);
+            if (denom < 1e-9) {
+                denom = 1e-9;
+            }
+            double y     = (1.0 + ratio) * sin(theta) / denom;
+            double peak  = (ratio >= (3.0 - (2.0 * sqrt(2.0))))
+                          ? ((1.0 + ratio) / (4.0 * sqrt(ratio) * (1.0 - ratio)))
+                          : (1.0 / (1.0 + ratio));
+
+            return y / peak;
         }
         case 4:
         {
-            // TriSaw — "Triangle -> Sawtooth", perfect triangle at 50% and a perfect saw at 99%.
-            return osc_triangle(phase, (0.5 * (1.0 - t)) + (0.99 * t));
+            // TriSaw - triangle at raw 0 through to a near-full ramp at the top.
+            return osc_triangle(phase, 0.5 + (0.47 * shape));
         }
         case 5:
         {
-            // DblSaw — two sawtooths, the second drifting away from the first as Shape opens.
-            // Approximate: the manual does not describe this one in the detail it gives the others.
-            double second = fmod(phase + (0.5 * t), 1.0);
+            // DblSaw - the detune reaches HALF a cycle, not the quarter the manual's "90 degrees"
+            // implies: measured 0.125, 0.250, 0.375, 0.500 across the sweep, and the peak falls to
+            // exactly half, which is what two saws a half cycle apart do.
+            double second = fmod(phase + (0.5 * shape), 1.0);
 
             return (osc_saw(phase, dt) + osc_saw(second, dt)) * 0.5;
         }
         case 6:
         {
-            // Pulse — square at 50%, down to a 1% pulse at 99%. This one is a plain pulse width, so
-            // the band limited square already does it.
-            return osc_square(phase, dt, shape);
+            // Pulse - the HIGH portion is 100% MINUS the dial's displayed percentage, measured 0.500,
+            // 0.379, 0.258, 0.137 across the sweep. Above about raw 112 the hardware's high time stops
+            // shrinking, but that floor is a band-limiting artefact and depends on pitch, so the dial's
+            // own law is what is rendered here.
+            return osc_square(phase, dt, 0.5 - (0.49 * shape));
         }
         default:
         {
-            // SymPulse — a SYMMETRIC pulse width: a positive pulse and an equally narrow negative
-            // one, square at 50% and 1% wide at 99%. Not band limited; at narrow widths it is a
-            // brighter waveform than this engine renders cleanly.
-            double w = (0.5 * (1.0 - t)) + (0.01 * t);
+            // SymPulse - a positive pulse and an equally narrow negative one, and ZERO for the rest of
+            // the cycle: that three-level shape is correct and matches the capture at 0.995. Only the
+            // width law was wrong. It is simply half the remaining Shape with NO floor under it - the
+            // hardware goes genuinely SILENT at the top of the dial (-86 dBFS at raw 127), and the bare
+            // law also lands both of the manual's own figures exactly (0.248 per segment at displayed
+            // 75%, 0.010 at displayed 99%).
+            // THE TWO PULSES ARE ADJACENT, not half a cycle apart. This used to place the negative
+            // one at the half cycle, which agrees with the positive one only at Shape 0 (where both
+            // arrangements are the same perfect square) and diverges from there: against the capture
+            // the adjacent form scores 0.995/0.994/0.991/0.981 across the sweep where the half-cycle
+            // form falls to 0.849, 0.516, 0.501. "Symmetric" names the two pulses being equally
+            // WIDE, not their being spread across the cycle.
+            double w = 0.5 * (1.0 - shape);
 
             if (phase < w) {
                 return 1.0;
             }
 
-            if (phase < 0.5) {
-                return 0.0;
-            }
-
-            if (phase < (0.5 + w)) {
+            if (phase < (2.0 * w)) {
                 return -1.0;
             }
             return 0.0;

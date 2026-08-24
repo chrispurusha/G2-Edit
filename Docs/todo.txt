@@ -160,6 +160,134 @@ and draw THAT rather than an idealised curve.
   IT IS WORTH IT: zero crossing read DblSaw at 666 Hz and SymPulse at 24000 Hz where the true pitch was
   329.6 Hz, and autocorrelation gets 329.58 Hz on every wave at every setting.
 
+  NEXT: OSCSHPA'S WAVE GRAPH (CT, agreed 2026-08-23). The original editor DOES draw one — the .rsrc
+  survey finds a <#Graph element in 43 modules and OscShpA is among them, alongside OscShpB, EnvADSR
+  and FltClassic, which are the three we already draw (that overlap is what validates the parse).
+  The other oscillator/LFO modules carrying one, for later: PulseOsc, OscNoise, LfoB, LfoShpA, LfoD,
+  Operator, DrumSynth.
+  WHY OSCSHPA IS THE RIGHT NEXT ONE: it is OscShpB's sibling, so the expensive half of the job — the
+  eight measured laws — is already done and most should transfer intact. It reuses the existing
+  graphLocationList row and renderer, so the work is a table entry plus a sample function.
+  DO NOT ASSUME THEY MATCH, THOUGH:
+    - OscShpA's waveform set is SIX entries (oscShpAStrMap), not OscShpB's eight, so the mapping from
+      selector index to law has to be established, not copied.
+    - On OscShpB the waveform is a MODE; on OscShpA the table has it as a paramTypeMenu. One of those
+      is wrong and it matters (see the "modes are not params" trap) — settle it against the hardware
+      before building on it.
+    - Its Shape row was moved off anchorTopRight on 2026-08-23 precisely so that corner is free for
+      the graph, matching OscShpB's {{-2, 6}, {30, 10}} anchorTopRight.
+  METHOD IS UNCHANGED and is written up above: backdoor builds the patch on the instrument, measure.py
+  sweeps Shape per waveform, autocorrelation period detection plus cycle averaging gives the cycle, and
+  the model is checked by COMPILING the real function out of moduleGraphics.c rather than restating it
+  in Python — that check is what caught DblSaw drawn upside down.
+
+  FOUR MORE MODULES NOW DRAW THEIR WAVE (2026-08-23), all measured the same way and all checked by
+  compiling the real function out of moduleGraphics.c and correlating it against the capture:
+    - OSCSHPA reuses OscShpB's laws OUTRIGHT. Each of its six correlates 0.990-0.999 with one of the
+      eight and is clearly separated from the runner-up, so it shares the sample function through an
+      index remap rather than getting a copy: A drops DblSaw and Pulse, so its 5 is OscShpB's 7.
+      IT HAS NO MODES AT ALL — the instrument answers "module has 0" — so its waveform is a genuine
+      parameter (9, with Shape at 7) where OscShpB's is a mode. That was the open question; the
+      hardware settled it and paramLocationList was right.
+    - LFOSHPA IS A DIFFERENT FAMILY — Sine, CosBell, TriBell, Saw2Tri, Sqr2Tri, Sqr — so nothing
+      carried over wholesale. Measured by running the LFO at AUDIO RATE (Range = Rate Hi puts it at
+      ~147 Hz), which brings the whole audio capture rig to bear on a module it was never built for.
+      Worth remembering for any other control-rate module. Its Sine turned out to be THE SAME
+      three-segment warp as OscShpB's Sine1, so that one model now serves three modules. The rest:
+      the two bells simply widen with the dial (floors differ, 0.08 and 0.05 — forcing one figure
+      visibly costs the other); Saw2Tri is a triangle whose apex slides across the cycle; Sqr2Tri is a
+      triangle driven into a clip, gain 1 to 4.9; Sqr is a pulse width. 0.98 to 1.000 throughout
+      except Sqr at the very bottom of its dial (0.80), where the wave is a degenerate spike.
+      ITS SHAPE DIAL IS BIPOLAR AND DEFAULTS TO 64, unlike the oscillators' which start at 0 and only
+      open — the neutral wave sits at the CENTRE and Shape skews it either way.
+    - LFOB has NO Shape at all, so its graph is one static shape per selection: 0.9865 to 1.0000.
+      ITS WAVE PARAMETER CLAMPS AT 3 even though lfoWaveStrMap carries six names — 4 and 5 give a
+      cycle indistinguishable from Squ. The declared range of 4 is right and the trailing RndSt/Rnd
+      belong to another LFO. Its Saw FALLS, like TriSaw's ramp, which confirms DblSaw is the odd one
+      out in rising.
+    - LFOSHPA'S SHAPE PARAM TYPE WAS WRONG and is now paramTypeLfoShape (1%..99%, neutral at centre)
+      rather than a raw CommonDial. It is NOT the oscillators' paramTypeShape, which runs 50%..99%.
+      LOGGED FOR CT TO VALIDATE against the original editor — see Docs/param-validation.txt, which
+      states what is solid (the three ends, from the manual AND from measurement) and what is assumed
+      (linearity between them).
+
+  WAVEFORM PICKERS NOW SHOW THE WAVE, NOT ITS NAME, on OscShpA, LfoShpA and LfoB — button face and
+  drop-down entries both. The original editor does this with bitmaps; CT's call was to represent them
+  in our own style rather than embed, which is also what the resource-file survey above already
+  concluded. Generating them from the measured models beats copying: resolution independent, themed,
+  and automatically right if a law is ever corrected. Four things learned the hard way:
+    - DO NOT GIVE IT A NEW PARAM TYPE. paramTypeWaveMenu was tried and broke the drop-down outright:
+      the type is read in a dozen places (canvasDrag, paramPages, mutator, the click routing) and each
+      would have to learn it. The pickers are ordinary paramTypeMenu rows and the decision is made
+      INSIDE the renderer, by module_wave_picker_param(), so everything else sees the menu it always
+      saw. Adding a module is one line there.
+    - THE BUTTON TAKES ITS WIDTH FROM ITS CAPTION. Passing an empty one collapsed it to an invisible
+      sliver; WAVE_MENU_CAPTION reserves the face, the same text-derived sizing RADIO_WIDEST_CAPTION
+      already relies on.
+    - draw_button() RETURNS ALREADY-ADJUSTED COORDINATES, so anything drawing into that rectangle must
+      NOT ask for the zoom and scroll again. render_line(moduleArea, ...) applies them itself; the
+      icon has to use mainArea, or it lands at the wrong size and position and stands still while the
+      canvas moves. Same trap as the radio buttons' click regions earlier this month, so it is worth
+      treating as a known sharp edge: a function whose output is in a different space from its input.
+    - THE ICON IS DRAWN AT A FIXED SHAPE, not the module's live one — all four shape-oscillator sines
+      are IDENTICAL at Shape 0, so a live icon draws the same picture for every entry there. 0.75 for
+      the oscillators (full Shape is no good: SymPulse falls silent and Pulse narrows to a sliver) and
+      0.5 for LfoShpA, its neutral centre.
+  Drop-down entries are painted through a new OPTIONAL tMenuItem::drawItem callback in SynthLib: when
+  set, the engine paints the cell with it but still measures and lays out from the label, so rows come
+  out the width the names needed. Additive, so every existing menu is untouched. SYNTHLIB CHANGE —
+  commits in that repo, and G2-Edit's pin then needs advancing.
+
+  ONE CYCLE HAS TO HAVE ITS SEAM CLOSED, and the rule is about DISCONTINUITY, not the zero line. First
+  attempt dropped a vertical to the midline at each end: it fixed the saw and grew half-height stubs
+  on the triangle, which starts and ends at -1 (CT). What the seam actually is, is a WRAP, so what to
+  draw is the step across it — end to start — and only when there is a step. A triangle, sine or bell
+  ends where it began and closes on its own; a saw or square ends a full swing away and gets the
+  vertical that identifies it. No per-waveform list: it falls out of the wave. Drawn at BOTH ends,
+  because the wave repeats and that edge belongs to the start of the cycle as much as to the end.
+  The big graph needed the same thing but only on the LEFT: it sweeps to xFraction 1.0, where fmod()
+  wraps the phase to 0, so its final segment already paints the flyback on the right.
+
+  OSCSHPB IS CONVERTED TOO (2026-08-23), so all four pickers now show waves. Its waveform is a MODE
+  rather than a parameter, so it reaches the button through render_mode_common() and its drop-down
+  through open_mode_toggle_menu() — a separate path from the three parameter menus, which is why it
+  was last. Both got the same treatment: module_wave_picker_mode() names it, the caption is blanked
+  with the width still taken from WAVE_MENU_CAPTION, and the menu entries share the same drawItem
+  callback.
+  THE ORIGINAL PICKS WAVES WITH RADIO GROUPS AND PART SELECTORS, NOT DROP-DOWNS (CT raised this;
+  surveyed from the resource file 2026-08-23). We give all of them a drop-down, which now shows wave
+  ICONS rather than words — a real improvement, but still not the original's LAYOUT. The split is:
+    - BUTTONRADIO, carrying pixel art: OscA, OscB, OscShpA, LfoA, LfoB, LfoShpA, Rect, ShpStatic —
+      exactly the eight the earlier icon survey named. The MANUAL says so for LfoShpA in as many
+      words: "Select one of six shapable LFO waveforms by clicking one of the radio buttons."
+    - PARTSELECTOR, also pixel art: OscC, OscD, OscPM, OscShpB, PulseOsc, LfoC, LfoD, SyncOsc, Pulse.
+    - BUTTONRADIO with TEXT, not art: Sw1-2, Sw1-4, Sw1-8, Sw2-1, Sw4-1, Sw8-1 — the six we already
+      render as paramTypeRadioEdit, which is a good sign the reading of the file is right.
+  WE ALREADY HAVE THE WIDGET: paramTypeRadioEdit was built for those six Sw modules this month, and
+  render_wave_icon() draws into any rectangle. So a radio wave picker is close to those two parts
+  meeting — the row becomes a radio group and each button draws an icon instead of a caption, the
+  same swap already made for the drop-down. What it costs is FACE SPACE: six or eight radio buttons
+  need far more room than one button does, so the modules' layouts would have to be re-planned rather
+  than just re-typed. That is the real work, not the drawing.
+  NOT A WHOLESALE CONVERSION — CT's call, 2026-08-23: do it only where it earns its place, not to
+  match the original for its own sake. The drop-down with icons is functional and compact, and the
+  waveform is mostly a set-once choice, which is exactly what a drop-down is good at. A radio group
+  wins when the options are FEW and the face has ROOM, because its whole advantage is showing every
+  choice at once without a click.
+  WHERE IT PLAUSIBLY EARNS IT: LfoB is the clearest — only four waves (its parameter clamps at 3,
+  measured), so four small buttons are no worse than one button plus a menu, and the module is not a
+  crowded one. Rect and ShpStatic are worth a look on the same grounds if their sets are similarly
+  small.
+  WHERE IT PROBABLY DOES NOT: OscShpB with eight waves, and OscShpA/LfoShpA with six, all on faces
+  that already carry a wave graph in the top-right corner plus a full set of dials. Eight icon
+  buttons would crowd out the graph, which is the more informative of the two.
+  JUDGEMENT, NOT MEASUREMENT — nobody has tried laying one out yet, so treat the above as a starting
+  opinion rather than a finding.
+
+  STILL TO DO ON THE PICKERS: nothing on these four. The other modules that carry a <#Graph in the
+  original are listed above (PulseOsc — which is not in our enum under that name and wants checking —
+  OscNoise, LfoD, Operator, DrumSynth).
+
   THE SOUND ENGINE HAS ITS OWN, DIVERGENT, AND NOW KNOWN-WRONG COPY OF ALL THIS - osc_shp_wave() in
   soundEngine.c. CT raised this twice ("when we recreate the sound engine, this analysis might also
   help there"), and it is worse than a missed improvement, because the two implementations disagree on
@@ -170,13 +298,16 @@ and draw THAT rather than an idealised curve.
       even-harmonic reading the spectrum disproves.
     - its Sine4 is a tanh soft clip, its Sine1 returns -cos of a warp whose breakpoint runs to 0.02
       (wrong phase AND wrong endpoint), its DblSaw detunes by only half a cycle * t, and its SymPulse
-      emits 0.0 between pulses, making it a three-level wave the hardware does not produce.
+      detunes DblSaw by only a quarter cycle. (Its SymPulse emitting 0.0 between pulses is NOT a bug -
+      I first wrote that it was; the drawn wave does the same and correlates 0.995, so the three-level
+      shape is correct and only the width law was wrong.)
   THIS IS EXACTLY THE SPLIT paramCurves.c ALREADY EXISTS TO PREVENT - it was pulled out of
   renderParams.c so a curve could not be corrected in one place and left wrong in another, and these
   wave models want the same treatment: one platform-free file included by both moduleGraphics.c and
   soundEngine.c, the way paramCurves.c is shared by the dial text, the drawn curves and the engine.
-  NOT DONE HERE - it is engine work and CT framed it as future work. Recorded so the refit above is not
-  silently lost the next time the engine is touched.
+  DONE 2026-08-23: osc_shp_wave() now carries the same laws, law for law, with the dead half of its
+  Shape dial removed. The two copies still exist as separate code - the shared platform-free file is
+  still the right end state, and is what would stop them drifting apart again.
 
   WHICH MODULES WANT ONE: the natural list is the modules whose wave the user PICKS, which the
   original editor draws as image selectors rather than text — OscA, OscB, OscShpA, LfoA, LfoB,

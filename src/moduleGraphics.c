@@ -419,6 +419,10 @@ static void * morph_click_ctx(const tModule * module, uint32_t index) {
     return ctx;
 }
 
+// Defined further down, beside the wave models they draw from.
+static double module_wave_sample(uint32_t moduleType, uint32_t waveValue, double phase, double shape);
+bool module_wave_picker_mode(uint32_t moduleType, uint32_t modeIndex);
+
 static void morph_param_click_handler(tCoord coord, eClickPhase phase, void * userData) {
     (void)coord;
     uint32_t  i         = ((const tParamClickCtx *)userData)->paramIndex;
@@ -613,11 +617,34 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
         case paramTypeToggle:
         case paramTypeMenu:
         {
-            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
-            render_param_function = &render_paramType1StandardToggle;
+            // A WAVEFORM PICKER IS STILL AN ORDINARY paramTypeMenu — only its FACE differs. It was
+            // briefly given a param type of its own, and that broke the drop-down: the type is read
+            // in a dozen places (canvasDrag, paramPages, mutator, the click routing below) and every
+            // one of them has to learn a new value. Deciding here instead leaves all of that code
+            // seeing exactly the menu it saw before, so dragging, the popup and the name list keep
+            // working with no changes anywhere else.
+            static const char * blankCaptions[] = {
+                WAVE_MENU_CAPTION, WAVE_MENU_CAPTION, WAVE_MENU_CAPTION,
+                WAVE_MENU_CAPTION, WAVE_MENU_CAPTION, WAVE_MENU_CAPTION,
+                WAVE_MENU_CAPTION, WAVE_MENU_CAPTION, NULL
+            };
+            bool                isWavePicker    = module_wave_picker_param(module->type, paramIndex);
+            const char **       captions        = isWavePicker ? blankCaptions : paramLocationList[paramRef].strMap;
 
-            if (render_param_function != NULL) {
-                widgetRect = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+            widgetRect = render_paramType1StandardToggle(module, rectangle, label, buff, sizeof(buff), paramValue,
+                                                         paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5,
+                                                         paramIndex, paramRef, captions);
+
+            if (isWavePicker == true) {
+                // Drawn at a FIXED shape, not the module's current one: measured 2026-08-23, all four
+                // of the shape oscillators' sines are identical pure sines at Shape 0, so a live icon
+                // would draw the same picture for every entry there. Three quarters develops every
+                // oscillator wave without going so far that SymPulse falls silent (it does, at the
+                // top of its dial) or Pulse narrows to a sliver; LfoShpA's dial is bipolar with its
+                // neutral wave at the CENTRE, so it takes 0.5, which is also where its Sqr2Tri reads
+                // as a trapezoid rather than a second square beside Sqr.
+                render_wave_icon(widgetRect, module->type, (uint32_t)paramValue,
+                                 module_wave_icon_shape(module->type));
             }
             break;
         }
@@ -662,6 +689,8 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
                 case paramTypeGeneralFreq:    render_param_function      = &render_paramType1GeneralFreq;
                     break;
                 case paramTypeShape:          render_param_function      = &render_paramType1Shape;
+                    break;
+                case paramTypeLfoShape:       render_param_function      = &render_paramType1LfoShape;
                     break;
                 case paramTypeFreqDrum:       render_param_function      = &render_paramType1FreqDrum;
                     break;
@@ -896,7 +925,18 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
                             (tRectangle){{rectangle.coord.x, y - textHeight}, {rectangle.size.w, textHeight}},
                             (char *)modeLocationList[modeRef].label);
             }
-            module->mode[modeIndex].rectangle                                                   = draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight, eCache), textHeight}}, strMap[modeValue], (tRgb)RGB_BACKGROUND_GREY);
+            // A waveform picker shows the WAVE, not its name — see module_wave_picker_mode(). The
+            // caption is blanked so the picture has the button to itself, but the width still comes
+            // from text, as everywhere else: WAVE_MENU_CAPTION reserves a face wide enough to read a
+            // waveform in, where an empty string would collapse the button to a sliver.
+            bool isWaves = module_wave_picker_mode(module->type, modeIndex);
+
+            module->mode[modeIndex].rectangle                                                   = draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {isWaves ? get_text_width(WAVE_MENU_CAPTION, textHeight, eNoCache) : largest_text_width(modeLocationList[modeRef].range, strMap, textHeight, eCache), textHeight}}, isWaves ? "" : strMap[modeValue], (tRgb)RGB_BACKGROUND_GREY);
+
+            if (isWaves == true) {
+                render_wave_icon(module->mode[modeIndex].rectangle, module->type, modeValue,
+                                 module_wave_icon_shape(module->type));
+            }
             sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
                 eCanvasWidgetMode, module->key, modeIndex
             };
@@ -1508,16 +1548,279 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
     }
 }
 
+// LfoShpA's six waves are a DIFFERENT FAMILY from the two shape oscillators' - Sine, CosBell,
+// TriBell, Saw2Tri, Sqr2Tri, Sqr - so none of OscShpB's laws carry over wholesale. MEASURED
+// 2026-08-23 by running the LFO at audio rate (Range = Rate Hi) so the same capture rig applies,
+// then fitting candidate families against the captured cycle; every wave landed on one cleanly,
+// at 0.98 to 1.000.
+//
+// ITS SHAPE DIAL IS BIPOLAR AND DEFAULTS TO 64, unlike the oscillators' Shape which starts at 0 and
+// only opens. At 64 each wave is its neutral self - a pure sine, a symmetric triangle, a square -
+// and Shape skews it either way from there. paramLocationList already carries that default.
+static double lfoshpa_waveform_sample(uint32_t waveformIndex, double phase, double shape) {
+    switch (waveformIndex) {
+        case 0:
+        {
+            // Sine - THE SAME three-segment symmetric phase warp as OscShpB's Sine1, which is a
+            // pleasing result: one model now serves OscShpA, OscShpB and this. Only the breakpoint
+            // law differs, and here it is linear and passes through the identity (0.25) at the
+            // dial's centre: measured 0.02, 0.13, 0.25, 0.37, 0.48 across the sweep.
+            double b = 0.02 + (0.46 * shape);
+            double w = 0.0;
+
+            if (b < 0.02) {
+                b = 0.02;
+            }
+
+            if (phase < b) {
+                w = 0.25 * (phase / b);
+            } else if (phase < (1.0 - b)) {
+                w = 0.25 + (0.5 * ((phase - b) / (1.0 - (2.0 * b))));
+            } else {
+                w = 0.75 + (0.25 * ((phase - (1.0 - b)) / b));
+            }
+            return sin(2.0 * M_PI * w);
+        }
+        case 1:
+        case 2:
+        {
+            // CosBell and TriBell - one bell per cycle, silent for the rest of it, and the bell simply
+            // WIDENS with Shape: measured width 0.05, 0.26, 0.50, 0.74, 0.98, i.e. the dial itself.
+            // The two differ only in the bell's own profile, a raised cosine against a triangle.
+            // The output is AC coupled, so the bell's mean is removed - exactly 0.5 * width for both
+            // profiles - and what is left is renormalised, which is what puts the bell above the line
+            // and a shallow negative shelf below it rather than a bell sitting on zero.
+            // Neither bell closes completely, and they do not stop at the same place: at Shape 0
+            // CosBell measures about 0.08 wide and TriBell about 0.05. Forcing both to one figure
+            // costs the other one visibly, so the floor is per wave.
+            double floorWidth = (waveformIndex == 1) ? 0.08 : 0.05;
+            double width      = shape;
+            double y          = 0.0;
+
+            if (width < floorWidth) {
+                width = floorWidth;
+            }
+
+            if (phase < width) {
+                double u = phase / width;
+
+                y = (waveformIndex == 1) ? (0.5 * (1.0 - cos(2.0 * M_PI * u)))
+                    : ((u < 0.5) ? (u * 2.0) : ((1.0 - u) * 2.0));
+            }
+            double mean       = 0.5 * width;
+            double peak       = fmax(1.0 - mean, mean);
+
+            return (y - mean) / peak;
+        }
+        case 3:
+        {
+            // Saw2Tri - a triangle whose APEX slides right across the cycle, so it is a falling saw at
+            // one end of the dial, a symmetric triangle at the centre and a rising saw at the other.
+            // Measured apex 0.02, 0.26, 0.50, 0.74, 0.98 - the dial again, near enough exactly.
+            double apex = 0.02 + (0.96 * shape);
+
+            return (phase < apex) ? ((phase / apex) * 2.0 - 1.0)
+                    : (((1.0 - phase) / (1.0 - apex)) * 2.0 - 1.0);
+        }
+        case 4:
+        {
+            // Sqr2Tri - a symmetric triangle driven progressively harder into a clip, so it fills out
+            // from triangle through trapezoid towards a square. Measured gain 1.0, 2.0, 3.0, 3.9, 4.9,
+            // which is 1 + 3.9 * Shape and reaches a trapezoid rather than a true square at the top.
+            double gain = 1.0 + (3.9 * shape);
+            double tri  = (phase < 0.5) ? ((phase / 0.5) * 2.0 - 1.0) : (((1.0 - phase) / 0.5) * 2.0 - 1.0);
+            double y    = gain * tri;
+
+            return (y > 1.0) ? 1.0 : ((y < -1.0) ? -1.0 : y);
+        }
+        default:
+        {
+            // Sqr - a plain pulse width, and the width IS the dial: measured 0.26, 0.50, 0.74, 0.96.
+            // It correlates a little lower than the others (0.90 to 0.99) because the instrument's
+            // edges are not vertical, which a drawn icon has no way to show at this size anyway.
+            // Measured 0.08, 0.26, 0.50, 0.74, 0.96 - very nearly the dial itself, but it neither
+            // closes nor fills completely, so the fitted line and its floor are used rather than the
+            // bare dial value.
+            double duty = 0.024 + (0.936 * shape);
+
+            if (duty < 0.08) {
+                duty = 0.08;
+            }
+            return (phase < duty) ? 1.0 : -1.0;
+        }
+    }
+}
+
+// LfoB has NO Shape parameter — it picks one of four fixed waveforms, so its graph is one static
+// shape per selection rather than a morphing one. Captured 2026-08-23 by running the LFO at audio
+// rate (Range = Rate Hi), the same trick that makes any of these measurable with the audio rig.
+//
+// ITS WAVE PARAMETER STOPS AT 3, even though lfoWaveStrMap carries six names: setting 4 or 5 gives a
+// cycle indistinguishable from Squ, so the device clamps there. paramLocationList's declared range of
+// 4 is right, and the map's trailing "RndSt"/"Rnd" belong to a different LFO. Random waves could not
+// be drawn as a single cycle in any case.
+static double lfob_waveform_sample(uint32_t waveformIndex, double phase) {
+    switch (waveformIndex) {
+        case 0:
+            return sin(2.0 * M_PI * phase);           // Sin
+
+        case 1:
+            // Tri — symmetric triangle, apex at the quarter cycle so it starts at a rising zero.
+            return (phase < 0.25) ? (phase * 4.0)
+                   : ((phase < 0.75) ? (2.0 - (phase * 4.0)) : ((phase * 4.0) - 4.0));
+
+        case 2:
+            // Saw — falls across the cycle, the same direction as TriSaw's ramp (and the opposite of
+            // DblSaw's, which the capture showed rises).
+            return 1.0 - (2.0 * phase);
+
+        default:
+            return (phase < 0.5) ? 1.0 : -1.0;        // Squ
+    }
+}
+
+// Which parameter, on which module, is the waveform picker whose button should show a PICTURE. Kept
+// as a list in one place rather than spread through the render code, so adding a module is one line.
+// OscShpB keeps its waveform in a MODE rather than a parameter, so it reaches the button through
+// render_mode_common() instead of the parameter path — which is why it was the last picker still
+// showing words after the other three were converted.
+bool module_wave_picker_mode(uint32_t moduleType, uint32_t modeIndex) {
+    return (moduleType == moduleTypeOscShpB) && (modeIndex == 0);
+}
+
+bool module_wave_picker_param(uint32_t moduleType, uint32_t paramIndex) {
+    return ((moduleType == moduleTypeOscShpA) && (paramIndex == 9))
+           || ((moduleType == moduleTypeLfoShpA) && (paramIndex == 11))
+           || ((moduleType == moduleTypeLfoB) && (paramIndex == 4));
+}
+
+// One sample of whichever wave family the module in hand belongs to. The four waveform pickers reach
+// three different sample functions and keep their waveform in three different places, so the choice
+// is made once here rather than at each call site.
+static double module_wave_sample(uint32_t moduleType, uint32_t waveValue, double phase, double shape) {
+    if (moduleType == moduleTypeLfoB) {
+        return lfob_waveform_sample(waveValue, phase);
+    }
+
+    if (moduleType == moduleTypeLfoShpA) {
+        return lfoshpa_waveform_sample(waveValue, phase, shape);
+    }
+
+    if (moduleType == moduleTypeOscShpA) {
+        static const uint32_t shpAToShpB[] = {0, 1, 2, 3, 4, 7};
+
+        if (waveValue >= (sizeof(shpAToShpB) / sizeof(shpAToShpB[0]))) {
+            waveValue = 0;
+        }
+        return oscshpb_waveform_sample(shpAToShpB[waveValue], phase, shape);
+    }
+    return oscshpb_waveform_sample(waveValue, phase, shape);
+}
+
+// THE ORIGINAL EDITOR PICKS WAVEFORMS WITH PICTURES, NOT WORDS — its selector buttons carry little
+// line drawings of the wave. This draws the same idea in our own style rather than lifting its
+// bitmaps: the pixels are in its resource file and decode cleanly, but they are Clavia's artwork, and
+// we can do better than copy them anyway. Every one of these waves now has a MEASURED model behind
+// it, so the icon is generated from the same function that draws the module's big graph — which makes
+// it resolution independent, themed like everything else, and automatically correct if a law is ever
+// refined. (CT agreed this approach 2026-08-23.)
+double module_wave_icon_shape(uint32_t moduleType) {
+    // See the note at the picker's render site: a FIXED shape, chosen so the waves are told apart.
+    return (moduleType == moduleTypeLfoShpA) ? 0.5 : 0.75;
+}
+
+void render_wave_icon(tRectangle buttonRect, uint32_t moduleType, uint32_t waveValue, double shape) {
+    const int    numSamples = 48;   // enough for a 30-pixel-wide button; the big graph uses 200
+    const double inset      = 2.0;
+    double       left       = buttonRect.coord.x + inset;
+    double       width      = buttonRect.size.w - (2.0 * inset);
+    double       midY       = buttonRect.coord.y + (buttonRect.size.h / 2.0);
+    double       halfHeight = (buttonRect.size.h / 2.0) - inset;
+    tCoord       previous   = {0};
+    tCoord       first      = {0};
+    // The face is already zoomed, so the trace's own width has to be too, or it stays hairline-thin
+    // when the canvas is zoomed in and coarse when zoomed out.
+    double       thickness  = fmax(1.0, buttonRect.size.h / 12.0);
+
+    if ((width <= 0.0) || (halfHeight <= 0.0)) {
+        return;
+    }
+
+    for (int i = 0; i <= numSamples; i++) {
+        double xFraction = (double)i / (double)numSamples;
+        double sample    = module_wave_sample(moduleType, waveValue, xFraction, shape);
+        tCoord point     = {left + (xFraction * width), midY - (sample * halfHeight)};
+
+        if (i == 0) {
+            first = point;
+        } else {
+            // mainArea, NOT moduleArea, and that is the whole point. render_line() applies the
+            // canvas's zoom and scroll itself when it is given moduleArea — but the rectangle this
+            // draws into came back from the button renderer with that transform ALREADY applied, so
+            // asking for it again placed the icon at neither the right size nor the right position
+            // and left it standing still while the canvas moved under it. mainArea skips the second
+            // adjustment and keeps the global scaling both paths share. (Same trap as the radio
+            // buttons' click regions earlier: draw_button returns ADJUSTED coordinates.)
+            render_line(mainArea, previous, point, thickness);
+        }
+        previous = point;
+    }
+
+    // CLOSE THE SEAM ONLY WHERE THE WAVE ACTUALLY JUMPS. A single cycle drawn on its own leaves its
+    // two ends unjoined, so a saw came out as a bare diagonal with nothing to show the flyback that
+    // makes it a saw (CT). The first attempt dropped a vertical to the ZERO LINE at each end, which
+    // fixed the saw and broke the triangle: Saw2Tri starts and ends at -1, so it grew a half-height
+    // stub at both ends that is not part of the wave (CT again).
+    //
+    // The seam is a WRAP, so the honest thing to draw is the step across it — from where the cycle
+    // ends to where it begins — and only when there is a step to draw. A triangle ends where it
+    // started, so nothing is drawn and it closes on its own; a saw or a square ends a full swing
+    // away from its start, and gets the single vertical edge that identifies it.
+    if (fabs(previous.y - first.y) > (buttonRect.size.h * 0.05)) {
+        // DRAWN AT BOTH ENDS, because the wave repeats: the step across the seam is the same edge
+        // whether you meet it leaving one cycle or entering the next, and showing it only on the
+        // right left the saw and the square looking like they began in mid-air (CT). With both, one
+        // cycle reads as a complete, bounded waveform.
+        render_line(mainArea, previous, (tCoord){previous.x, first.y}, thickness);
+        render_line(mainArea, first, (tCoord){first.x, previous.y}, thickness);
+    }
+}
+
 static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module) {
     // Shape (param index 6) - fixed position for moduleTypeOscShpB's entries in
     // paramLocationList. Waveform is a MODE here (not a param, unlike OscB) - OscShpB's only
     // mode entry, "Wave" (modeLocationList, oscShpBStrMap), so index 0.
-    const uint32_t         shapeParamIndex   = 6;
+    // OSCSHPA SHARES THIS RENDERER, AND ITS WAVES ARE THE SAME WAVES. Measured 2026-08-23: each of
+    // OscShpA's six correlates 0.990-0.999 with one of OscShpB's laws and is clearly separated from
+    // the runner-up, so the same sample function serves both. What differs is only how the module
+    // says which wave and how shaped:
+    //   - OscShpB keeps the waveform in a MODE (its only one) and Shape at param 6.
+    //   - OSCSHPA HAS NO MODES AT ALL — the instrument answers "module has 0" when asked — so its
+    //     waveform is a genuine parameter, index 9, with Shape at 7. That difference was the open
+    //     question when this was planned; the hardware settled it, and paramLocationList was right.
+    //   - OscShpA offers SIX waves, not eight: it drops DblSaw and Pulse, so its index 5 is
+    //     OscShpB's SymPulse (7) and the first five map straight across.
+    const bool             isShpA            = (module->type == moduleTypeOscShpA);
+    const bool             isLfoShpA         = (module->type == moduleTypeLfoShpA);
+    const bool             isLfoB            = (module->type == moduleTypeLfoB);
+    const uint32_t         shapeParamIndex   = isLfoB ? 0 : (isLfoShpA ? 5 : (isShpA ? 7 : 6));
     const uint32_t         waveformModeIndex = 0;
     uint32_t               slot              = module->key.slot;
     uint32_t               variation         = gPatchDescr[slot].activeVariation;
-    uint32_t               waveformValue     = module->mode[waveformModeIndex].value;
+    uint32_t               waveformValue     = isLfoB ? module->param[variation][4].value
+                                               : isLfoShpA ? module->param[variation][11].value
+                                               : (isShpA ? module->param[variation][9].value
+                                                  : module->mode[waveformModeIndex].value);
     double                 shape             = (double)module->param[variation][shapeParamIndex].value / 127.0;
+
+    if (isShpA == true) {
+        static const uint32_t shpAToShpB[] = {0, 1, 2, 3, 4, 7};
+
+        if (waveformValue >= (sizeof(shpAToShpB) / sizeof(shpAToShpB[0]))) {
+            waveformValue = 0;
+        }
+        waveformValue = shpAToShpB[waveformValue];
+    }
     const tGraphLocation * graphLoc          = find_graph_location(module->type);
     tRectangle             graphRect         = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
     double                 midY              = graphRect.coord.y + (graphRect.size.h / 2.0);
@@ -1535,19 +1838,43 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
 
     set_rgb_colour((tRgb)RGB_GREEN_ON);
 
+    tCoord                 firstPoint        = {0};
+    double                 preWrapY          = 0.0;
+
     for (int i = 0; i <= numSamples; i++) {
         double xFraction = (double)i / (double)numSamples;                 // raw position across the box, 0..1
         double phase     = fmod(xFraction * numCycles, 1.0);               // wrapped per-cycle phase for the sample
-        double sample    = oscshpb_waveform_sample(waveformValue, phase, shape);
+        double sample    = isLfoB ? lfob_waveform_sample(waveformValue, phase)
+                           : (isLfoShpA ? lfoshpa_waveform_sample(waveformValue, phase, shape)
+                              : oscshpb_waveform_sample(waveformValue, phase, shape));
         tCoord point     = {
             graphRect.coord.x + (xFraction * graphRect.size.w),
             graphRect.coord.y + (graphRect.size.h / 2.0) - (sample * graphRect.size.h * 0.45)
         };
 
-        if (i > 0) {
+        if (i == 0) {
+            firstPoint = point;
+        } else {
             render_line(moduleArea, prev, point, 1.5);
         }
+
+        if (i == numSamples) {
+            preWrapY = prev.y;      // the sample BEFORE the trace wraps back to where it began
+        }
         prev = point;
+    }
+
+    // THE RIGHT-HAND EDGE DRAWS ITSELF, THE LEFT-HAND ONE DOES NOT. The sweep runs to xFraction 1.0,
+    // where fmod() wraps the phase back to 0 — so the final segment leaps from the end of the cycle
+    // to its start and paints the flyback at the right of the box. Nothing precedes the first sample,
+    // so the same edge is missing on the left, and a saw sat in its box bounded on one side only
+    // (CT). Mirroring it there completes the shape.
+    //
+    // Gated on a real step, exactly as the picker's icon is: a wave that ends where it began — a
+    // triangle, a sine, a bell — must NOT be given a vertical, or it grows a stub that is not part of
+    // the wave.
+    if (fabs(preWrapY - firstPoint.y) > (graphRect.size.h * 0.05)) {
+        render_line(moduleArea, firstPoint, (tCoord){firstPoint.x, preWrapY}, 1.5);
     }
 }
 
@@ -1883,7 +2210,8 @@ void render_module_common(tRectangle rectangle, tModule * module) {
 
     render_module_connectors(rectangle, module);
 
-    if (module->type == moduleTypeOscShpB) {
+    if (  (module->type == moduleTypeOscShpB) || (module->type == moduleTypeOscShpA)
+       || (module->type == moduleTypeLfoShpA) || (module->type == moduleTypeLfoB)) {
         render_oscshpb_waveform_graph(rectangle, module);
     }
 

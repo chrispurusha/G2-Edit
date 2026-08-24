@@ -146,7 +146,24 @@ LfoShpA   [module type 25]
    2. Kbt      Menu          --   enumerated selector - name list not yet cross-checked
    3. Rate M   CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Bypass   Bypass        OK   confirmed by the owner
-   5. Shape    CommonDial    --   declared as LfoShpAPW, but rendered as the plain percent dial - check
+   5. Shape    LfoShape      --   NEEDS VALIDATING AGAINST THE ORIGINAL EDITOR (2026-08-23). It was a
+                                 raw CommonDial; it is now its own type showing 1%..99% with the
+                                 neutral wave at the CENTRE of the dial, which is why its default is
+                                 64 and not 0 like the oscillators'. NOT the oscillators' Shape: that
+                                 one runs 50%..99% (osc_shape_percent) because an oscillator's Shape
+                                 only ever opens from neutral.
+                                 THE THREE ENDS ARE FROM THE MANUAL, which pins them for Sine ("At
+                                 50% Shape, the signal is a pure sine wave. At 1% Shape, the signal
+                                 is a down sawtooth and at 99% Shape, an up sawtooth") and quotes the
+                                 same 1%/99% ends for CosBell and TriBell. Measurement agrees
+                                 independently: the phase-warp breakpoint recovered from a capture
+                                 runs 0.02 to 0.48 and passes through the identity at the centre.
+                                 WHAT IS UNCONFIRMED IS THE SHAPE OF THE CURVE BETWEEN THEM. Linear
+                                 is assumed, giving 25.7% at raw 32 and 75.1% at raw 96 (and 50.4%
+                                 rather than exactly 50 at raw 64). If the original editor shows
+                                 anything else at those points, lfo_shape_percent() needs a curve.
+                                 The device declares this param as LfoShpAPW, which may name a
+                                 specific formatter worth matching.
    6. Phase M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    7. Phase    Phase         OK   degrees = raw*360/128, 0 to 357   [was showing the raw number, 2026-08-10]
    8. Shape M  CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100

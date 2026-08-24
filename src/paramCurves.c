@@ -129,6 +129,17 @@ double osc_shape_percent(double paramValue) {
     return paramValue * 49.0 / 127.0 + 50.0;
 }
 
+// THE LFO'S SHAPE DIAL IS NOT THE OSCILLATORS'. OscShpA/OscShpB run 50%..99%, so their Shape only
+// ever opens from a neutral wave; LfoShpA's runs the FULL 1%..99% with the neutral wave at its
+// CENTRE, and skews either way from there — which is why its default is 64 rather than 0. The manual
+// pins all three points for the Sine wave: "At 50% Shape, the signal is a pure sine wave. At 1%
+// Shape, the signal is a down sawtooth and at 99% Shape, an up sawtooth", and the same 1%/99% ends
+// are quoted for CosBell and TriBell. Measurement agrees: the recovered phase-warp breakpoint runs
+// 0.02 to 0.48 and passes through the identity at the dial's centre.
+double lfo_shape_percent(double paramValue) {
+    return paramValue * 98.0 / 127.0 + 1.0;
+}
+
 // 13.75 Hz is A-1, so like the oscillators' Tune the filter's Freq dial is really a pitch — its
 // value counts semitones up from there, reaching about 21 kHz at 127 (manual: "13.76 Hz to 21.1 kHz").
 double flt_cutoff_hz(double paramValue) {
