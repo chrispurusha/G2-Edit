@@ -1659,23 +1659,98 @@ static double lfoshpa_waveform_sample(uint32_t waveformIndex, double phase, doub
 // cycle indistinguishable from Squ, so the device clamps there. paramLocationList's declared range of
 // 4 is right, and the map's trailing "RndSt"/"Rnd" belong to a different LFO. Random waves could not
 // be drawn as a single cycle in any case.
+// THE FOUR TEXTBOOK WAVES, as four primitives rather than four copies. LfoB's measured cycle and the
+// OscA family's first four are the same shapes, and every one of the G2's plain (non-shapable)
+// waveform selectors is built out of these — so they are written once here and the per-module sample
+// functions below choose among them. The bodies came from LfoB's capture and are unchanged by being
+// named: this is the same code it always ran.
+static double basic_sine(double phase) {
+    return sin(2.0 * M_PI * phase);
+}
+
+// Symmetric triangle, apex at the quarter cycle so it starts at a rising zero.
+static double basic_triangle(double phase) {
+    return (phase < 0.25) ? (phase * 4.0)
+           : ((phase < 0.75) ? (2.0 - (phase * 4.0)) : ((phase * 4.0) - 4.0));
+}
+
+// FALLS across the cycle, the same direction as TriSaw's ramp — and the opposite of DblSaw's and of
+// OscA's, both of which the captures show rise. THREE MEASUREMENTS, TWO DIRECTIONS: saw polarity is
+// per-module on this instrument and must never be carried from one module to another unmeasured.
+static double basic_falling_saw(double phase) {
+    return 1.0 - (2.0 * phase);
+}
+
+// RISES across the cycle. OscA's saw, measured 2026-08-24: correlating the captured cycle against the
+// falling form scored 0.516 and against the rising one 0.988 — the same test, and the same size of
+// gap, that caught DblSaw drawn upside down.
+static double basic_rising_saw(double phase) {
+    return (2.0 * phase) - 1.0;
+}
+
+// High for the first `duty` of the cycle, low for the rest. Full swing, with no DC removal: that is
+// what LfoB's Squ measured as, and what OscShpB's measured Pulse draws at every width.
+static double basic_pulse(double phase, double duty) {
+    return (phase < duty) ? 1.0 : -1.0;
+}
+
 static double lfob_waveform_sample(uint32_t waveformIndex, double phase) {
     switch (waveformIndex) {
         case 0:
-            return sin(2.0 * M_PI * phase);           // Sin
+            return basic_sine(phase);              // Sin
 
         case 1:
-            // Tri — symmetric triangle, apex at the quarter cycle so it starts at a rising zero.
-            return (phase < 0.25) ? (phase * 4.0)
-                   : ((phase < 0.75) ? (2.0 - (phase * 4.0)) : ((phase * 4.0) - 4.0));
+            return basic_triangle(phase);          // Tri
 
         case 2:
-            // Saw — falls across the cycle, the same direction as TriSaw's ramp (and the opposite of
-            // DblSaw's, which the capture showed rises).
-            return 1.0 - (2.0 * phase);
+            return basic_falling_saw(phase);       // Saw
 
         default:
-            return (phase < 0.5) ? 1.0 : -1.0;        // Squ
+            return basic_pulse(phase, 0.5);        // Squ
+    }
+}
+
+// OscA's family — shapeOscATypeStrMap: Sine, Tri, Saw, Sqr50, Sqr25, Sqr10 — shared by OscA, OscC
+// and OscD, which is why one function serves three modules. None of the three has a Shape dial, so
+// like LfoB each selection is one static shape.
+//
+// THE THREE SQUARES ARE PULSE WIDTHS AND THE NAMES SAY SO: Sqr50 is the square, Sqr25 a quarter-cycle
+// pulse, Sqr10 a tenth. That is the one part of this set that needs no interpretation at all.
+//
+// MEASURED ON THE HARDWARE 2026-08-24, on OscA at E4 and again three octaves down, and both of the
+// things that were transferred from other modules on the first pass turned out to need correcting:
+//   - THE SAW RISES. Drawn falling (carried over from LfoB, whose saw genuinely does fall) it scored
+//     0.516; rising, 0.988.
+//   - "SQR10" IS NOT A 10% PULSE. Fitting ideal pulses of every width against the captured cycle puts
+//     it at 1/16 — 6.25% — where 10% scores 0.79 and 6.25% scores 0.99. Measured twice, at 145 and at
+//     1165 samples per cycle, agreeing to within the fit's own resolution. THE MANUAL SAYS 10% (p174,
+//     "Sine, Triangle, Sawtooth, Square, 25% Pulse or 10% Pulse") AND IS WRONG, which by now is the
+//     expected outcome rather than a surprise. Its 25% is exact, though, and so is the square's 50%,
+//     so the name is only wrong on the one entry — and 1/2, 1/4, 1/16 are all binary fractions, which
+//     is what a DSP would be expected to produce.
+// The pulses need NO edge ramps: drawn as ideal steps they correlate 0.992 and 0.989, so whatever
+// band-limiting OscShpB's Pulse needed (pulse_edge_width() above) does not show here.
+// Correlations, rotation-free, against the cycle the instrument produced:
+//   Sine 1.0000   Tri 0.9981   Saw 0.9880   Sqr50 0.9917   Sqr25 0.9888   Sqr10 0.9903
+static double osc_a_waveform_sample(uint32_t waveformIndex, double phase) {
+    switch (waveformIndex) {
+        case 0:
+            return basic_sine(phase);              // Sine
+
+        case 1:
+            return basic_triangle(phase);          // Tri
+
+        case 2:
+            return basic_rising_saw(phase);        // Saw — RISES, measured; see above
+
+        case 3:
+            return basic_pulse(phase, 0.5000);     // Sqr50 — measured 0.4975
+
+        case 4:
+            return basic_pulse(phase, 0.2500);     // Sqr25 — measured 0.2500
+
+        default:
+            return basic_pulse(phase, 0.0625);     // Sqr10 — measured 1/16, NOT the manual's 10%
     }
 }
 
@@ -1685,13 +1760,16 @@ static double lfob_waveform_sample(uint32_t waveformIndex, double phase) {
 // render_mode_common() instead of the parameter path — which is why it was the last picker still
 // showing words after the other three were converted.
 bool module_wave_picker_mode(uint32_t moduleType, uint32_t modeIndex) {
-    return (moduleType == moduleTypeOscShpB) && (modeIndex == 0);
+    return ((moduleType == moduleTypeOscShpB) && (modeIndex == 0))
+           || ((moduleType == moduleTypeOscC) && (modeIndex == 0))
+           || ((moduleType == moduleTypeOscD) && (modeIndex == 0));
 }
 
 bool module_wave_picker_param(uint32_t moduleType, uint32_t paramIndex) {
     return ((moduleType == moduleTypeOscShpA) && (paramIndex == 9))
            || ((moduleType == moduleTypeLfoShpA) && (paramIndex == 11))
-           || ((moduleType == moduleTypeLfoB) && (paramIndex == 4));
+           || ((moduleType == moduleTypeLfoB) && (paramIndex == 4))
+           || ((moduleType == moduleTypeOscA) && (paramIndex == 4));
 }
 
 // One sample of whichever wave family the module in hand belongs to. The four waveform pickers reach
@@ -1700,6 +1778,13 @@ bool module_wave_picker_param(uint32_t moduleType, uint32_t paramIndex) {
 static double module_wave_sample(uint32_t moduleType, uint32_t waveValue, double phase, double shape) {
     if (moduleType == moduleTypeLfoB) {
         return lfob_waveform_sample(waveValue, phase);
+    }
+
+    // OscA, OscC and OscD share one waveform set, and it reaches them by two different routes: OscA
+    // keeps it in a parameter, the other two in a mode. That difference belongs to the pickers, not
+    // to the wave, so all three arrive here together.
+    if ((moduleType == moduleTypeOscA) || (moduleType == moduleTypeOscC) || (moduleType == moduleTypeOscD)) {
+        return osc_a_waveform_sample(waveValue, phase);
     }
 
     if (moduleType == moduleTypeLfoShpA) {
@@ -2115,8 +2200,16 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
 
     // Shared with the dial text and the sound engine — see renderParams.h. What the curve draws and
     // what the engine plays come from one definition.
-    double                 q               = flt_resonance_q((double)module->param[variation][resParamIndex].value);
-    int                    extraPoles      = (int)flt_slope_extra_poles(slopeIndex);           // 12/18/24 dB/octave
+    //
+    // MEASURED, NOT ASSUMED (2026-08-24). This used to draw a BIQUAD with extra one-poles bolted on,
+    // and a biquad's gain at DC is 1 whatever its Q — so the drawn passband stayed pinned at 0 dB and
+    // only the peak grew. The instrument does the opposite: winding Res up pulls the whole passband
+    // DOWN, about 14 dB by the top of the dial, because the resonance is feedback around the poles
+    // rather than a Q inside a biquad. See flt_ladder_feedback() in paramCurves.c for the capture and
+    // for the part that took the longest to see — the loop is always four poles long and the dB
+    // switch only moves the output tap.
+    double                 feedback        = flt_ladder_feedback((double)module->param[variation][resParamIndex].value);
+    uint32_t               tap             = flt_ladder_tap(slopeIndex);                       // 2/3/4 poles: 12/18/24 dB
 
     const tGraphLocation * graphLoc        = find_graph_location(module->type);
     tRectangle             graphRect       = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
@@ -2138,14 +2231,7 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
         double x         = (double)i / (double)numSamples;
         double octaves   = (x - cutoffX) * 10.0;   // ~10 octaves span the box, matching Freq's own real range
         double ratio     = pow(2.0, octaves);      // f/fc
-        double ratioSq   = ratio * ratio;
-
-        double denomSq   = ((1.0 - ratioSq) * (1.0 - ratioSq)) + ((ratio / q) * (ratio / q));
-        double magnitude = 1.0 / sqrt(fmax(denomSq, 1e-6));
-
-        if (extraPoles > 0) {
-            magnitude /= sqrt(1.0 + pow(ratio, 2.0 * extraPoles));
-        }
+        double magnitude = flt_ladder_magnitude(ratio, feedback, tap);
         double levelDb   = 20.0 * log10(fmax(magnitude, 1e-4));
         double level     = fmax(-1.0, fmin(1.0, levelDb / 24.0)); // +-24dB fills the box vertically
 
