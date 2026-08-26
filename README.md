@@ -236,3 +236,11 @@ The plug-in inherits exactly what the sound engine can do, which is a **subset**
 `PatchTestFiles/SimpleLead.pch2` is known to work.
 
 See [THIRD_PARTY.md](./THIRD_PARTY.md) for open-source acknowledgments.
+
+### An alternative...
+
+There are at least 2 other editors in development. The one linked below is a different approach by
+someone I'm in touch with, who has contributed to this project and I have been having technical discussions
+with. Different approaches is a good thing I'd say!
+
+[Burpy's Editor](https://github.com/JanBurp/NordModularG2-Editor)
