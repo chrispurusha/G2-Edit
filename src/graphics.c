@@ -2214,8 +2214,7 @@ static void register_app_popups(void) {
 // so the backdoor SCREENSHOT command can force a synchronous frame (see backdoor_screenshot() in
 // backdoor.c) — which is the only reason it is not static.
 void render_frame(void) {
-    glClearColor(0.8, 0.8, 0.8, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    render_backend_clear((tRgb){0.8, 0.8, 0.8});
 
     // The sound engine reads the selected module's parameters from here. A redraw is exactly the
     // event it needs — every parameter change and every selection change causes one, whether it came

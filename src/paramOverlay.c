@@ -22,14 +22,6 @@ extern "C" {
 #endif
 
 // Disable warnings from external library headers etc.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Weverything"
-
-#define GL_SILENCE_DEPRECATION    1
-#include <GLFW/glfw3.h>
-
-#pragma clang diagnostic pop
-
 #include "paramOverlay.h"
 #include "moduleGraphics.h"   // param_is_under_cursor()
 #include "defs.h"
@@ -130,13 +122,9 @@ void param_overlay_render_pane(uint32_t pane) {
         // only because the label never repeats what the widget already shows - see
         // param_overlay_note_param() - so the chip stays small enough to sit in a corner of a
         // button rather than across its face.
-        // TODO - blend enables belong inside the drawing primitives, the way render_text() already
-        // manages its own; see the GL_BLEND note in todo.txt.
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // No blend enable/disable: blending is on for the whole session (render_backend_init()).
         set_rgba_colour((tRgba){backing.red, backing.green, backing.blue, OVERLAY_BOX_ALPHA});
         render_rectangle(moduleArea, box);
-        glDisable(GL_BLEND);
 
         set_rgb_colour((tRgb)RGB_BLACK);
         render_text(moduleArea, gOverlayRect[i], gOverlayLabel[i]);
