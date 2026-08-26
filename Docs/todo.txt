@@ -2991,11 +2991,59 @@ resources already hold.
 
 - Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist).
 
-- moduleGraphics.c/graphics.c — GL_BLEND enable/disable sits at each caller
-  (moduleGraphics.c:1239/1254, graphics.c:590) rather than inside the shared drawing primitive
-  (render_cable_from_to() et al., utilsGraphics.c) the way render_text() already manages its own
-  blend state. Not a bug — correct today, just a cosmetic/architectural inconsistency. Low priority;
-  real regression risk if rushed, since these primitives are reused everywhere.
+- DONE 2026-08-26 — RENDER BACKEND SEAM (was: "GL_BLEND enable/disable sits at each caller").
+  The blend pairs are gone, and so are the three other things that reached past the drawing
+  primitives for the same reason. What replaced them is four functions in utilsGraphics.c, declared
+  in utilsGraphics.h, which is now THE ONLY FILE IN EITHER THE APP OR THE PLUG-IN THAT NAMES THE
+  GRAPHICS API:
+      render_backend_init()             session-wide drawing state
+      render_backend_set_surface(w, h)  viewport + orthographic projection
+      render_backend_clear(colour)
+      render_backend_read_pixels_rgb()  frame read-back; backs the backdoor SCREENSHOT
+  Callers that lost their own copy: synthlibWindow.c (glEnable(GL_BLEND) at window creation),
+  synthlibScale.c (glViewport + glOrtho), graphics.c render_frame() (glClearColor/glClear),
+  backdoor.c (glPixelStorei + glReadPixels), and vst3/g2GlDraw.c, which had its OWN copy of the
+  first three because it has no GLFW underneath it. That last one closes the refactor step
+  plugin-gui-notes.md was holding open and retires g2GlDraw.c's "repeated rather than called"
+  comment: only the GLFW-dependent half of synthlib_scale_update() was ever the problem, and the
+  graphics half is now shared, so synthlibScale.c never needed splitting after all.
+
+  THE BLEND STORY IS WORTH KEEPING, because synthlibWindow.c's old comment was wrong. It said
+  blending was enabled once at window creation and that "once, here, is enough". It was not:
+  internal_render_text() ended by DISABLING blend, so the session-wide enable was revoked by the
+  first string drawn and stayed off for the rest of the session. That — not decoration — is why
+  moduleGraphics.c and paramOverlay.c each carried an enable/disable pair: they were compensating
+  for render_text(). Now init sets it, render_text() no longer clears it, and both pairs are
+  deleted. The invariant, stated in utilsGraphics.h: BLENDING IS ON FOR THE WHOLE SESSION and
+  nothing turns it off. Opaque drawing pays nothing for it, because alpha == 1.0 resolves to the
+  source colour whether blending is enabled or not.
+
+  THE OLD NOTE WAS RIGHT THAT IT WAS NOT A BUG. The only two genuinely translucent draws were the
+  two that wrapped themselves. RGBA_BLACK_ON_TRANSPARENT is alpha 1.0 despite the name, and both of
+  its uses go through render_text() anyway. Nothing renders differently: checked on screen, canvas
+  and hover-dimmed cables both (CT).
+
+  moduleGraphics.c and paramOverlay.c no longer include a graphics header AT ALL, which is the part
+  a compiler enforces — a renderer that cannot name GL cannot quietly reacquire a dependency on it.
+
+- WINDOWS / LINUX BUILDS — wanted eventually (CT, 2026-08-26). Nothing started, no schedule; this is
+  a note of where the port surface actually is, so it is not re-surveyed from scratch later.
+  ALREADY PORTABLE, and mostly on purpose: GLFW covers Win32/X11/Wayland and is pinned at the 3.5.1
+  release (2026-08-26); the drawing API is behind the four render_backend_* calls above; settings
+  are a plain text file via SynthLib's prefs.h rather than NSUserDefaults; file dialogs are
+  SynthLib's in-window fileBrowser.cpp, not NSOpenPanel; the menus are the in-window bar in
+  appMenuBar.c. Each of those was a deliberate step away from Cocoa and they add up.
+  WHAT IS STILL MAC-ONLY, and it is a short list:
+    - src/misc.mm (79 lines) — the minimal native Cocoa app menu, and NSWorkspace sleep/wake
+      notifications, which have no cross-platform equivalent in this codebase
+    - src/audioOutput.c — CoreAudio/AudioToolbox
+    - src/midiInput.c — CoreMIDI
+    - the build itself: an Xcode project, plus do-release/do-vst3 as shell scripts. This is
+      probably the biggest single piece of work, not the code.
+  libusb is already cross-platform, so the G2 comms layer should not need touching.
+  soundEngine.c is platform-free and stays that way — it names CoreAudio only in comments.
+  NOT IN SCOPE OF THAT LIST: the VST3 plug-in's editor (g2Editor.mm, g2GlView.m) is a second
+  platform layer and a separate question from the application.
 
 - Compress(150) — module height may be 1 row too many (currently 5 rows, moduleResources.h). The
   original editor's module-info structs are opaque in the reference (SModuleInfo/CBuildModule are
