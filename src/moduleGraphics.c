@@ -22,14 +22,6 @@ extern "C" {
 #endif
 
 // Disable warnings from external library headers etc.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Weverything"
-
-#define GL_SILENCE_DEPRECATION    1
-#include <GLFW/glfw3.h>
-
-#pragma clang diagnostic pop
-
 #include <math.h>
 #include <stdint.h>
 
@@ -2838,9 +2830,9 @@ void render_cable(tCable * cable, double alpha) {
         return;
     }
 
+    // No blend enable/disable: blending is on for the whole session (render_backend_init()).
+    // The pair that used to sit here was compensating for render_text() disabling it.
     if (alpha < 1.0) {
-        glEnable(GL_BLEND);  // TODO - move blend enables to graphics routines
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         set_rgba_colour((tRgba){colour.red, colour.green, colour.blue, alpha});
     } else {
         set_rgb_colour(colour);
@@ -2851,10 +2843,6 @@ void render_cable(tCable * cable, double alpha) {
 
     if (fromConnectorIndex != -1 && toConnectorIndex != -1) {
         render_cable_from_to(moduleFrom->connector[fromConnectorIndex], moduleTo->connector[toConnectorIndex], 4.0);
-    }
-
-    if (alpha < 1.0) {
-        glDisable(GL_BLEND);  // TODO - move blend disable to graphics routines
     }
 }
 

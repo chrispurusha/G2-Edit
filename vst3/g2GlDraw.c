@@ -102,9 +102,9 @@ static void g2_on_file_chosen(const char * path) {
 }
 
 void g2_gl_draw_init(void) {
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_DEPTH_TEST);
+    // The same session-wide drawing state the application sets from synthlibWindow.c. Shared
+    // rather than repeated, so the plug-in and the application cannot drift apart on it.
+    render_backend_init();
 
     // The renderer asks the host application what its colours mean rather than including that app's
     // defs.h, so it has to be told before anything is drawn — exactly as init_graphics() does. The
@@ -170,16 +170,12 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     // canvas's own coordinate space, which is what every render call below expects.
     (void)backingScale;
 
-    // What synthlibScale.c's synthlib_scale_update() does, minus the part that needs GLFW. It is
-    // repeated rather than called because that file's two OTHER functions call glfwGetWindowContentScale,
-    // so linking it would drag GLFW into the plug-in. Splitting those two out is the next refactor
-    // step — see plugin-gui-notes.md — and then this becomes one call.
-    glViewport(0, 0, pixelWidth, pixelHeight);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, (GLdouble)pixelWidth, (GLdouble)pixelHeight, 0.0, -1.0, 1.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    // The viewport-and-projection half of synthlibScale.c's synthlib_scale_update(). That file
+    // cannot be linked here — its two OTHER functions call glfwGetWindowContentScale, which would
+    // drag GLFW into the plug-in — but the graphics half now lives in utilsGraphics.c, which the
+    // plug-in already compiles, so it is shared rather than repeated. What stays below is the
+    // scaling arithmetic, which genuinely does differ from the application's.
+    render_backend_set_surface(pixelWidth, pixelHeight);
 
     set_render_width(pixelWidth);
     set_render_height(pixelHeight);
@@ -202,8 +198,7 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     pointWidth      = (double)pixelWidth / gGlobalGuiScale;
     pointHeight     = (double)pixelHeight / gGlobalGuiScale;
 
-    glClearColor((GLfloat)BACKGROUND_GREY, (GLfloat)BACKGROUND_GREY, (GLfloat)BACKGROUND_GREY, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    render_backend_clear((tRgb){BACKGROUND_GREY, BACKGROUND_GREY, BACKGROUND_GREY});
 
     // PUSH THE PATCH TO THE ENGINE, exactly as the application's render_frame() does (graphics.c).
     //
