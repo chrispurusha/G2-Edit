@@ -846,6 +846,23 @@ typedef struct {
     const tAnchor     anchor;
 } tLedLocation;
 
+// Static text on a module face — a section heading, not a control. The original editor ships these
+// as pre-rendered <#Bitmap> images (the Operator's two decode to "Envelope" and "KB Lev Scale");
+// we draw them as ordinary text in our own style, per Docs/module-layout-rules.md.
+//
+// DELIBERATELY ITS OWN TABLE, NOT A paramLocationList ROW. A row's POSITION in that list IS the
+// parameter index — module_param_count() counts rows — so a heading dropped into the middle of a
+// face would shift every parameter after it and take the wire mapping, copy/paste, undo and the
+// sound engine with it. paramTypeCustomData gets away with living there only because those rows are
+// appended past the end, which a heading in the middle of a face cannot be. Same shape, and the
+// same reasoning, as ledLocationList and volumeLocationList.
+typedef struct {
+    const tModuleType moduleType;
+    const tRectangle  rectangle;
+    const tAnchor     anchor;
+    const char *      text;
+} tLabelLocation;
+
 // Placement for the per-module custom preview graphs (render_oscshpb_waveform_graph(),
 // render_envadsr_graph(), render_fltclassic_response_graph(), moduleGraphics.cpp) - each graph's
 // own drawing/curve logic stays in its dedicated function, only the rect+anchor is table-driven.
