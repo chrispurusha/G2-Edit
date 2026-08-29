@@ -30,6 +30,7 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
+#include "waveModels.h"
 #include "moduleGraphics.h"
 #include "splitView.h"
 #include "globalVars.h"
@@ -1359,179 +1360,34 @@ static double ramp_to_zero(double phaseIntoRamp, double edgeWidth) {
 // Shape 50%/75%/99% appearance - not guesses. DblSaw's manual description hasn't been
 // reconciled with what's actually implemented below yet (see its own comment).
 static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, double shape) {
+    // THE LAWS LIVE IN waveModels.c, shared with the sound engine so the wave that is drawn and the
+    // wave that is heard cannot drift apart — which they had, badly, before it existed. What stays
+    // here is how a law is turned into a DRAWN curve, and that is genuinely this file's business:
+    // the render loop takes 200 samples, so a hard step between two of them is simply missed and the
+    // drawn line never passes through zero where the real wave does. Hence the explicit ramps below,
+    // which the engine neither has nor wants — it band-limits instead.
     switch (waveformIndex) {
-        case 0: // Sine1 - "a phase modulated sine wave. At 50% Shape setting, the signal is a
-                // perfect sine wave and at 99% similar to a sawtooth wave" (manual). The manual's
-                // 50% IS WRONG, and so was the two-segment warp this replaces. MEASURED 2026-08-23
-                // over a nine-point Shape sweep, recovered by inverting sin() on the captured cycle
-                // to read the phase warp w(p) off the hardware directly:
-                //
-                //   - Shape 0 gives w(p) = p to three decimals, i.e. a pure sine. The dial acts over
-                //     its WHOLE range, not just above half: the harmonics grow from Shape 16 upwards.
-                //   - w(0.5) = 0.500 at every Shape, so the descending zero crossing never moves and
-                //     the duty stays at 0.500. The old model's duty collapsed to 0.10, which is what
-                //     drew a sine's top lobe crammed into a tenth of the cycle with a full-width
-                //     bottom lobe hung off it (CT: "top half of a sine and bottom half").
-                //   - w(1 - p) = 1 - w(p), so the warp is odd-symmetric about the centre.
-                //   - The slope is piecewise constant with ONE breakpoint per half, and that
-                //     breakpoint sits exactly at the peak, where w = 0.25.
-                //
-                // So it is a one-parameter warp: b is the breakpoint, and b = 0.25 is the identity,
-                // which is why Shape 0 is a clean sine. As b shrinks the rise is compressed into the
-                // front of the cycle and the remainder becomes a long linear sweep from w = 0.25 to
-                // w = 0.75 - a slow fall from peak to trough, which is the sawtooth the manual
-                // describes (CT: "Sine1 at 99 looks closer to a saw").
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            // Closed-form and continuous: nothing to decide, so the shared value is used as it is.
+            return wave_sine_by_index(waveformIndex, phase, shape);
+
+        case 4: // TriSaw
         {
-            // b measured 0.248 down to 0.055; the quadratic fits all nine points to +/-0.0016, and
-            // its constant term came out 0.2491, i.e. the 0.25 the identity warp requires.
-            double b = 0.25 - (0.255 * shape) + (0.060 * shape * shape);
-            double w = 0.0;
-
-            if (b < 0.02) {
-                b = 0.02;
-            }
-
-            if (phase < b) {
-                w = 0.25 * (phase / b);
-            } else if (phase < (1.0 - b)) {
-                w = 0.25 + (0.5 * ((phase - b) / (1.0 - (2.0 * b))));
-            } else {
-                w = 0.75 + (0.25 * ((phase - (1.0 - b)) / b));
-            }
-            return sin(2.0 * M_PI * w);
+            return skewed_ramp_zero_start(phase, wave_trisaw_peak(shape));
         }
-        case 1: // Sine2 - "a Sine -> Double Sine signal" (manual). The two-segment phase warp was the
-                // right FORM - it correlates 0.999+ with the capture - but it ran the wrong way:
-                // the breakpoint was opened from 0.5 out to 0.985, making the first lobe fill the
-                // cycle and the second a spike. MEASURED 2026-08-23 over an eleven-point sweep, the
-                // breakpoint CLOSES, 0.495 down to 0.030, so it is the POSITIVE lobe that narrows to
-                // a spike while the negative one spreads out broad and shallow. Same inversion class
-                // as the Pulse duty bug.
+        case 5: // DblSaw — two near-full sawtooths, the second detuned
         {
-            // d is linear in Shape to within the fit's own error; the small quadratic term only
-            // catches the flattening at the very top, where the spike stops narrowing.
-            double d    = 0.5 - (0.51 * shape) + (0.026 * shape * shape);
+            double detune = wave_dblsaw_detune(shape);
 
-            if (d < 0.03) {
-                d = 0.03;
-            }
-            double w    = (phase < d) ? (0.5 * (phase / d))
-                       : (0.5 + (0.5 * ((phase - d) / (1.0 - d))));
-
-            // AC COUPLING IS PART OF THE SHAPE HERE. A narrow positive lobe against a wide negative
-            // one has a negative mean, and the G2's output removes it - which lifts the spike well
-            // above the trough instead of the two being equal. That asymmetry is not cosmetic: it is
-            // why the captured peak GROWS 2.9x across the sweep while Sine1's stays flat. The mean of
-            // sin() over this warp is exactly 2(2d - 1)/pi, so it is subtracted in closed form and the
-            // result renormalised to a peak of 1 rather than left to overflow the graph box.
-            double mean = 2.0 * ((2.0 * d) - 1.0) / M_PI;
-
-            return (sin(2.0 * M_PI * w) - mean) / (1.0 - mean);
+            return -(skewed_ramp_zero_start(phase, WAVE_DBLSAW_PEAK)
+                     + skewed_ramp_zero_start(phase + detune, WAVE_DBLSAW_PEAK)) * 0.5;
         }
-        case 2: // Sine3 - the manual calls this "a Sine -> Even harmonics signal", AND THE MANUAL IS
-                // WRONG. Measured 2026-08-23: the harmonics are a FULL geometric series, 1, 0.90,
-                // 0.81, 0.72, 0.64 at full Shape, where an even-harmonic wave would show the 3rd and
-                // 5th at zero. Confirmed a second way, independently of the spectrum: the closed form
-                // below puts its peak at acos(2r/(1+r^2))/2pi, which lands within 0.002 of the
-                // measured peak phase (0.176, 0.109, 0.055) at every Shape setting.
+        case 6: // Pulse — asymmetric width
         {
-            // The geometric harmonic series SUMS EXACTLY, so there is no need to truncate it:
-            //     sum over n of r^(n-1) sin(n.theta) = sin(theta) / (1 - 2r.cos(theta) + r^2)
-            // and its peak over a cycle is exactly 1 / (1 - r^2) - the maximum sits at
-            // cos(theta) = 2r / (1 + r^2), which reduces to that. Multiplying by (1 - r^2) therefore
-            // normalises the drawn wave to a peak of exactly 1 whatever the ratio, which the
-            // hand-picked scale it replaces did not: at r = 0.9 the true peak is 5.26, so the wave ran
-            // off the top and bottom of its box (CT, 2026-08-23).
-            double ratio = shape * (1.0 - (0.105 * shape)); // measured 0.24, 0.48, 0.71, 0.90
-            double theta = 2.0 * M_PI * phase;
-            double denom = 1.0 - (2.0 * ratio * cos(theta)) + (ratio * ratio);
-
-            if (denom < 1e-9) {
-                denom = 1e-9;
-            }
-            return (sin(theta) / denom) * (1.0 - (ratio * ratio));
-        }
-        case 3: // Sine4 - "a Sine -> Odd harmonics signal" (manual), and this time the manual is
-                // right: measured 2026-08-23, the even harmonics are zero to two decimals at every
-                // Shape. It is Sine3's twin - the SAME geometric series restricted to odd harmonics,
-                // 1, 0.94, 0.88, 0.82 at full Shape. The three fixed harmonics it replaces (a 3rd and
-                // 5th at hard-coded 0.5 and 0.25) put ripples in the waveform that the hardware does
-                // not have (CT: "more bumps than the capture").
-        {
-            // Restricting the series to odd terms sums just as exactly:
-            //     sum over m of r^m sin((2m+1).theta) = (1 + r).sin(theta) / (1 - 2r.cos(2.theta) + r^2)
-            // Its peak is (1 + r) / (4.sqrt(r).(1 - r)), reached at sin(theta) = (1 - r)/(2.sqrt(r)) -
-            // but only once that is a reachable value, i.e. r >= 3 - 2.sqrt(2). Below that the peak is
-            // simply at the quarter cycle and equals 1/(1 + r). Dividing by whichever applies keeps
-            // the drawn wave at a peak of exactly 1.
-            double ratio = 0.94 * shape;                    // measured 0.24, 0.48, 0.71, 0.94
-            double theta = 2.0 * M_PI * phase;
-            double denom = 1.0 - (2.0 * ratio * cos(2.0 * theta)) + (ratio * ratio);
-
-            if (denom < 1e-9) {
-                denom = 1e-9;
-            }
-            double y     = (1.0 + ratio) * sin(theta) / denom;
-            double peak  = (ratio >= (3.0 - (2.0 * sqrt(2.0))))
-                          ? ((1.0 + ratio) / (4.0 * sqrt(ratio) * (1.0 - ratio)))
-                          : (1.0 / (1.0 + ratio));
-
-            return y / peak;
-        }
-        case 4: // TriSaw - Shape skews the breakpoint from a symmetric triangle towards a sawtooth.
-                // Confirmed against the real original editor: Shape at its displayed minimum
-                // (50%) is a single-cycle symmetric triangle, and at its displayed maximum (99%)
-                // a single-cycle ramp, both starting at a rising zero-crossing.
-        {
-            double peak = 0.5 + (shape * 0.47); // shape 0 (displayed 50%) -> 0.5 (triangle),
-                                                // shape 1 (displayed 99%) -> 0.97 (near-full ramp)
-
-            return skewed_ramp_zero_start(phase, peak);
-        }
-        case 5: // DblSaw - "Double Saw signal. At 50% Shape setting, the signal consists of two
-                // Sawtooth waves in phase with each other, at 75% two Sawtooth waves slightly
-                // phase shifted and at 99% two Sawtooth waves 90 degrees phase shifted" (manual)
-                // - a pure phase detune between two same-frequency ramps, capped at a quarter
-                // cycle, not a frequency change.
-        {
-            // MEASURED 2026-08-23: the detune reaches HALF a cycle, not the quarter the manual's
-            // "90 degrees" implies. Fitting the offset against the captured cycle gives 0.125, 0.250,
-            // 0.375, 0.500 at Shape 32, 64, 96, 127 — dead linear to shape * 0.5. The peak confirms it
-            // independently: it falls to exactly half (0.0387 to 0.0186) across the sweep, which is
-            // what two saws a half cycle apart do, summing to a double-rate saw of half the height.
-            const double peak   = 0.97;        // both saws are near-full sawtooths, not triangles
-            double       detune = shape * 0.5; // 0 (in phase) .. 0.5 (antiphase, measured)
-
-            // DblSaw's ramps RISE, where TriSaw's fall. Measured 2026-08-23 the sum came out
-            // upside down against the capture (0.53 correlation, 0.997 once negated, at every Shape),
-            // and the same capture run shows TriSaw descending and matching as it stands — so the
-            // polarity difference between the two is real and the shared helper is left alone. A
-            // negation cannot be told from a time reversal for a wave like this, and nothing here
-            // needs to tell them apart; what matters is that the drawn ramp runs the way the
-            // hardware's does.
-            return -(skewed_ramp_zero_start(phase, peak) + skewed_ramp_zero_start(phase + detune, peak)) * 0.5;
-        }
-        case 6: // Pulse - "a Pulse with selectable ASYMMETRIC pulse width...at 50% Shape
-                // setting, the signal is a perfect Square, at 75% a Pulse with 25%/75% pulse
-                // width and at 99% a Pulse with 1%/99% pulse width" (manual) - duty is simply
-                // the Shape dial's own displayed percentage. The falling edge moves right,
-                // cutting into the LOW time, not the high time (confirmed against the real
-                // original editor). The High/Low step itself is a hard step that never actually
-                // produces a sample AT zero, so the rising crossing that belongs at the wrap
-                // seam was invisible - phase 0 and 1 ramp to/from 0.0 explicitly so that
-                // crossing is a real plotted point at both ends of the display, instead of
-                // starting already at the top. Those two ramps only span half the vertical
-                // distance of the middle (high-to-low) transition (0->+1 rather than +1->-1),
-                // so they're given half its width too, to come out the same slope rather than
-                // looking shallower.
-        {
-            // MEASURED 2026-08-23: the HIGH portion is 100% MINUS the dial's displayed percentage,
-            // not the percentage itself. At displayed 75% the instrument gives a cycle that is high
-            // for 25.3% of its length, and at displayed 91% high for 9.7% — so "25%/75% pulse width"
-            // in the manual means 25 high and 75 low, and this had it the other way round. At the top
-            // of the dial the high part vanishes altogether, which is why a capture there has no
-            // periodic zero crossing at all.
-            double duty      = 0.5 - (shape * 0.49); // 50% high down to 1% high (measured)
+            double duty      = wave_pulse_duty(shape);
             double edgeWidth = pulse_edge_width(fmin(duty, 1.0 - duty));
 
             if (phase < edgeWidth) {
@@ -1543,28 +1399,9 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
             }
             return (phase < duty) ? 1.0 : -1.0;
         }
-        case 7: // SymPulse - single cycle: 0 (start) -> ramp -> High (hold) -> Low (hold, a
-                // direct step from High, same as Pulse's middle transition) -> ramp -> Zero
-                // (hold for the remainder) -> 0 (end). "A Pulse with selectable SYMMETRIC pulse
-                // width. At 50% Shape setting, the signal is a perfect Square, at 75% a Pulse
-                // with 25% symmetric pulse width and at 99% a Pulse with 1% symmetric pulse
-                // width" (manual) - matches this exactly (see the halfSeg rescale below). Same
-                // edge-ramp treatment as Pulse above and for the same reason: a hard step never
-                // produces an actual sample AT zero, and the half-magnitude ramps (0->+1, -1->0)
-                // need half the width of the full-magnitude High->Low step to come out the same
-                // slope.
+        case 7: // SymPulse — High, then Low, then silence for the remainder of the cycle
         {
-            // High/Low segment length each. MEASURED 2026-08-23: the law is simply half the
-            // remaining Shape, with NO floor under it. The 0.01 floor this replaces was a guess that
-            // kept a sliver of pulse alive at the top of the dial; the hardware instead goes SILENT
-            // there — at Shape 127 the capture is -86 dBFS, with the width shrinking smoothly through
-            // 0.240, 0.146, 0.086, 0.057 at 96, 108, 116, 120 on the way down to nothing.
-            //
-            // It also lands both of the manual's own figures exactly, which the floored version only
-            // approximated: the dial displays 50 + 50.shape percent, so displayed 75% is Shape 0.504
-            // and gives 0.248 per segment ("25% symmetric pulse width"), and displayed 99% is Shape
-            // 0.98 and gives 0.010 ("1% symmetric pulse width").
-            double halfSeg   = 0.5 * (1.0 - shape);
+            double halfSeg   = wave_sympulse_half_segment(shape);
             double edgeWidth = pulse_edge_width(halfSeg);
 
             if (phase < edgeWidth) {

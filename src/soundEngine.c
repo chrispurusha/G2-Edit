@@ -39,6 +39,7 @@ extern "C" {
 #include "patchParamsResources.h"
 #include "audioOutput.h"
 #include "midiInput.h"
+#include "waveModels.h"
 #include "soundEngine.h"
 
 // See soundEngine.h for what this does and does not attempt.
@@ -3093,121 +3094,44 @@ static double osc_triangle(double phase, double width) {
 //
 // `t` below is Shape mapped to 0..1 across that 50%..99% range.
 static double osc_shp_wave(uint32_t waveform, double phase, double dt, double shape) {
-    // MEASURED FROM THE HARDWARE 2026-08-23 and shared, law for law, with the wave the editor DRAWS in
-    // oscshpb_waveform_sample() (moduleGraphics.c) - see Docs/todo.txt for the capture method and the
-    // correlation figures. Everything here previously came from the manual's prose, which is wrong in
-    // several places, and from a dial mapping that was wrong everywhere:
+    // THE LAWS LIVE IN waveModels.c, shared with the wave the editor DRAWS so the two cannot drift
+    // apart. They had: everything here once came from the manual's prose, which is wrong in several
+    // places, and from a dial mapping that was wrong everywhere — (shape - 0.5)/0.49 clamped at
+    // zero, so nothing happened below raw 64 and HALF THE DIAL WAS DEAD. That is fixed and, more to
+    // the point, can no longer come back on one side only.
     //
-    // THE SHAPE DIAL ACTS OVER ITS WHOLE RANGE. This used to remap it as (shape - 0.5) / 0.49 clamped
-    // at zero, so NOTHING HAPPENED below raw 64 and half the dial was dead. The capture shows the
-    // harmonics growing continuously from raw 16 upward. The manual's percentages are not raw values:
-    // the dial DISPLAYS 50 + 50.shape percent, so its "50%" is raw 0 and its "99%" is raw 124, and
-    // every figure it quotes lands correctly once read that way.
+    // What stays here is BAND-LIMITING, which is this file's business and not the drawing's: a step
+    // rendered as a step aliases across the whole spectrum, so the four waves that contain one are
+    // built from osc_saw/osc_square/osc_triangle, which take dt and limit accordingly.
     switch (waveform) {
         case 0:
-        {
-            // Sine1 - a three-segment symmetric phase warp, breakpoint at the peak where w = 0.25.
-            // b = 0.25 is the identity, which is why raw 0 is a clean sine. Measured 0.248 to 0.055.
-            double b = 0.25 - (0.255 * shape) + (0.060 * shape * shape);
-            double w = 0.0;
-
-            if (b < 0.02) {
-                b = 0.02;
-            }
-
-            if (phase < b) {
-                w = 0.25 * (phase / b);
-            } else if (phase < (1.0 - b)) {
-                w = 0.25 + (0.5 * ((phase - b) / (1.0 - (2.0 * b))));
-            } else {
-                w = 0.75 + (0.25 * ((phase - (1.0 - b)) / b));
-            }
-            return sin(2.0 * M_PI * w);
-        }
         case 1:
-        {
-            // Sine2 - two-segment warp whose breakpoint CLOSES, 0.495 to 0.030, narrowing the POSITIVE
-            // lobe to a spike. The mean of sin() over this warp is exactly 2(2d - 1)/pi; removing it
-            // is what lifts the spike above the trough, and the hardware's output is AC coupled.
-            double d    = 0.5 - (0.51 * shape) + (0.026 * shape * shape);
-
-            if (d < 0.03) {
-                d = 0.03;
-            }
-            double w    = (phase < d) ? (0.5 * (phase / d)) : (0.5 + (0.5 * ((phase - d) / (1.0 - d))));
-            double mean = 2.0 * ((2.0 * d) - 1.0) / M_PI;
-
-            return (sin(2.0 * M_PI * w) - mean) / (1.0 - mean);
-        }
         case 2:
-        {
-            // Sine3 - NOT the even-harmonic wave the manual describes and this code assumed: the
-            // measured harmonics are a full geometric series (1, 0.90, 0.81, 0.72 at full Shape), which
-            // sums exactly to sin(t)/(1 - 2r.cos(t) + r^2) with peak 1/(1 - r^2).
-            double ratio = shape * (1.0 - (0.105 * shape));
-            double theta = 2.0 * M_PI * phase;
-            double denom = 1.0 - (2.0 * ratio * cos(theta)) + (ratio * ratio);
-
-            if (denom < 1e-9) {
-                denom = 1e-9;
-            }
-            return (sin(theta) / denom) * (1.0 - (ratio * ratio));
-        }
         case 3:
-        {
-            // Sine4 - the same series restricted to ODD harmonics (measured 1, 0.94, 0.88, 0.82, evens
-            // zero), not a tanh clip. Peak is (1 + r)/(4.sqrt(r).(1 - r)) once r >= 3 - 2.sqrt(2).
-            double ratio = 0.94 * shape;
-            double theta = 2.0 * M_PI * phase;
-            double denom = 1.0 - (2.0 * ratio * cos(2.0 * theta)) + (ratio * ratio);
+            // Closed-form and continuous — no step to band-limit, so the shared value is used as it
+            // is, and is bit-for-bit what the editor draws.
+            return wave_sine_by_index(waveform, phase, shape);
 
-            if (denom < 1e-9) {
-                denom = 1e-9;
-            }
-            double y     = (1.0 + ratio) * sin(theta) / denom;
-            double peak  = (ratio >= (3.0 - (2.0 * sqrt(2.0))))
-                          ? ((1.0 + ratio) / (4.0 * sqrt(ratio) * (1.0 - ratio)))
-                          : (1.0 / (1.0 + ratio));
-
-            return y / peak;
-        }
         case 4:
         {
-            // TriSaw - triangle at raw 0 through to a near-full ramp at the top.
-            return osc_triangle(phase, 0.5 + (0.47 * shape));
+            return osc_triangle(phase, wave_trisaw_peak(shape));
         }
         case 5:
         {
-            // DblSaw - the detune reaches HALF a cycle, not the quarter the manual's "90 degrees"
-            // implies: measured 0.125, 0.250, 0.375, 0.500 across the sweep, and the peak falls to
-            // exactly half, which is what two saws a half cycle apart do.
-            double second = fmod(phase + (0.5 * shape), 1.0);
+            double second = fmod(phase + wave_dblsaw_detune(shape), 1.0);
 
             return (osc_saw(phase, dt) + osc_saw(second, dt)) * 0.5;
         }
         case 6:
         {
-            // Pulse - the HIGH portion is 100% MINUS the dial's displayed percentage, measured 0.500,
-            // 0.379, 0.258, 0.137 across the sweep. Above about raw 112 the hardware's high time stops
-            // shrinking, but that floor is a band-limiting artefact and depends on pitch, so the dial's
-            // own law is what is rendered here.
-            return osc_square(phase, dt, 0.5 - (0.49 * shape));
+            return osc_square(phase, dt, wave_pulse_duty(shape));
         }
         default:
         {
-            // SymPulse - a positive pulse and an equally narrow negative one, and ZERO for the rest of
-            // the cycle: that three-level shape is correct and matches the capture at 0.995. Only the
-            // width law was wrong. It is simply half the remaining Shape with NO floor under it - the
-            // hardware goes genuinely SILENT at the top of the dial (-86 dBFS at raw 127), and the bare
-            // law also lands both of the manual's own figures exactly (0.248 per segment at displayed
-            // 75%, 0.010 at displayed 99%).
-            // THE TWO PULSES ARE ADJACENT, not half a cycle apart. This used to place the negative
-            // one at the half cycle, which agrees with the positive one only at Shape 0 (where both
-            // arrangements are the same perfect square) and diverges from there: against the capture
-            // the adjacent form scores 0.995/0.994/0.991/0.981 across the sweep where the half-cycle
-            // form falls to 0.849, 0.516, 0.501. "Symmetric" names the two pulses being equally
-            // WIDE, not their being spread across the cycle.
-            double w = 0.5 * (1.0 - shape);
+            // SymPulse: High, then Low, then silence for the rest of the cycle. Not band-limited,
+            // and deliberately so — its edges are already the two the square shares, and at Shape 1
+            // the wave vanishes entirely, which is what the capture shows.
+            double w = wave_sympulse_half_segment(shape);
 
             if (phase < w) {
                 return 1.0;
