@@ -3,6 +3,24 @@ G2-Edit TODO (priority order)
 CT new:
 
 When G2 gives an indication of voice limit, I wonder if we're off by 1? Seem to have a limit of 15, when I'd really expect 16 - maybe? Not definite.
+  ANSWERED 2026-08-29 — NO OFF-BY-ONE, ours matches the device. Measured live while CT turned the
+  knob: requested 14 -> assigned 14, requested 15 -> assigned 15, requested 16 -> assigned 15. A read
+  that was one low would have returned 13 and 14 for the first two; it did not. The device saturates
+  at 15 for that patch.
+  THE REFERENCE AGREES: CCurrentVoiceInfo::SetNumber() clamps at 32 and stores the wire byte AS IS,
+  CSynth::GetCurrentNumberOfVoices() returns it unmodified, and the original prints it with a bare
+  %d. No +/-1 anywhere on that path. (gPatchDescr.voiceCount IS count-minus-one, and we add 1 at
+  every display and comparison, which is a different field and already consistent.)
+  WHAT IS ACTUALLY MISSING IS THE ASSIGNED NUMBER ON SCREEN. The original's Voice Mode box prints
+  "%d (%d)" — ACTUAL (REQUESTED) — so it reads "15 (16)" and the gap is explicit. We show only the
+  requested value (topbarRender.c:124), turning the button red when they disagree, and the voice-count
+  menu reds out anything above the assigned count. So the user sees a red 16, a menu stopping at 15,
+  and no number anywhere saying the device gave 15. That is the whole reason it looked like a bug.
+  Offered to CT; not built. It is a couple of lines in topbarRender.c.
+  WHY 15 AND NOT 16 IS THE HARDWARE, and the manual is explicit (p.138): polyphony is quantised PER
+  DSP and the limit is set by whichever of Cycles or Memory is higher. That patch runs VA Cycles at
+  39.5% — just past the 33% cliff the manual names — so only two voices fit per DSP, and the FX area
+  (99% memory) can take a whole DSP to itself. An odd total is exactly what that arithmetic gives.
 
 ONLINE LIGHTS LATE, AND THE LAMPS NEVER GO OUT — MEASURED 2026-08-29 with the G2 connected. CT:
 "if we're pulling data, we're online - right?" Yes. Steps 1 and 2 below are DONE; step 3, which is
@@ -143,6 +161,12 @@ the actual behaviour change, is NOT.
     - VERIFIED on the connected G2: 423 names across patch banks 1-5 and performance bank 1 in
       cache.txt, and a backdoor screenshot of the Load Patch picker listing entries from Banks 1, 2
       and 3 — the banks the old sweep never reached.
+  DEMOTED 2026-08-29, AND BY THIS SESSION'S OWN WORK: represent the pull with the busy overlay.
+  The justification for it was "the editor says Online and shows an empty canvas for 8 seconds with
+  no indication it is loading". THAT WINDOW NO LONGER EXISTS — moving the name sweep out of the pull
+  took send_init_sequence_pull() from ~8.1 s to 365 ms, measured end to end from process start, so
+  there is nothing left to cover. Keep the item for bulk operations (bank restore, folder export),
+  which genuinely are long, but it is no longer about the pull. Original note follows.
   STILL NOT DONE: represent the pull with the busy overlay
   (gDeviceOpInProgress + render_device_busy_overlay(), built 2026-07-26, still never hardware
   tested). It cannot be set from the USB thread — it is a plain int owned by the UI thread — so it
