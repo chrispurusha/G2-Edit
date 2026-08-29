@@ -77,6 +77,33 @@ the actual behaviour change, is NOT.
   SO THE REAL QUESTION IS WHY THE SWEEP BLOCKS. gCommsState = eCommsOnLine is set after the whole of
   send_init_sequence_pull(), sweep included, and device_ready() keys off that — so every bulk
   operation and menu stays disabled for eight seconds waiting for data that only three of them need.
+  CROSS-CHECKED 2026-08-29 against an independent decode (CT: "I know the author of the editor
+  below... He might have implemented some mechanisms or module which may be of use" —
+  https://github.com/JanBurp/NordModularG2-Editor, docs/technical/usb-protocol.md). It names the
+  LIST_PATCHES control-code vocabulary our parser had been silently discarding:
+      0x01 JUMP (next byte a location)   0x02 SKIP one slot   0x03 BANK (next two bytes)
+      0x04 MODE (patch <-> performance)  0x05 CONTINUE (resume from where you got to)
+  MEASURED on the connected G2: every response of a full sweep ends 0x05 and NO OTHER CODE IS EVER
+  SEEN, so the rest are documented in parse_list_names_response() rather than implemented. 0x05 is
+  also the proper explanation for the bank-boundary spin: CONTINUE says "resume from where you got
+  to", and at the end of a bank that is location 128, which is not a location. The roll-over in
+  name_sweep_step() is the correct reading of CONTINUE, not a workaround.
+  LICENCE: that project is AGPL-3.0 and this one is GPLv3, so NOTHING IS COPIED FROM IT — only
+  facts about the instrument, which carry no licence. Keep it that way.
+  DID WE MISS DATA? NO — checked, don't re-open it. The 423 swept records have locations strictly
+  ascending within every bank, no non-printable characters, no empty names, and banks 1 and 2 full
+  at 128/128. A control byte eaten as a name would desync the rest of that response and show as a
+  jumbled location sequence; there is none.
+  AND 0x01/0x02/0x04 ARE NOT WORTH IMPLEMENTING. The instrument never sends them — measured — so the
+  code would be untestable guesswork, and 0x05 needs nothing beyond the resume we already do.
+  WHAT WAS WORTH DOING was the discriminator: the device's own rule is that a NAME ENTRY ALWAYS
+  BEGINS WITH A BYTE GREATER THAN 5, and parse_list_names_response()'s pre-entry peek tested for
+  0x03 alone. That was enough only because 0x03 is the one code seen mid-stream and a trailing 0x05
+  has so far always been the final byte — a property of the responses we happen to have seen, not of
+  the format. Any control byte with two bytes behind it would have been read as the start of a
+  Clavia string. The peek is now `<= 0x05`, which covers all five without implementing any of them.
+  PROVEN NEUTRAL: cache blob byte-for-byte identical across the change, 9319 bytes, same 423 names.
+
   DONE 2026-08-29 — NAME CACHE + BACKGROUND PACING (CT: "go for the cache and background pacing,
   making it closer to SynthEdit"), and it turned up the real cause of the eight seconds.
   THE SWEEP WAS NEVER SLOW. IT WAS STUCK. The device only emits its inline 0x03 [bank][location]
@@ -376,6 +403,55 @@ and draw THAT rather than an idealised curve.
   and FltClassic, which are the three we already draw (that overlap is what validates the parse).
   The other oscillator/LFO modules carrying one, for later: PulseOsc, OscNoise, LfoB, LfoShpA, LfoD,
   Operator, DrumSynth.
+
+DONE 2026-08-29 — OPERATOR RE-LAID FROM THE ORIGINAL EDITOR'S OWN LAYOUT TABLE. CT: "Back to the
+operator module representation issue? Should be more straight-forward now that we have the
+percentage Y location sorted" — and it was: the fix is the whole face converted from bottom-anchored
+negative offsets to anchorTopLeft against the new y=0-at-body-top convention.
+  THE SOURCE IS THE .rsrc, AND IT IS PLAIN TEXT. Original Editor/EditorResources/Nord Modular G2
+  Editor.rsrc holds a <#Module> block per module — 119 of them — listing every control with XPos/
+  YPos, and CodeRef on each control IS the parameter index, which is the same order as our
+  paramLocationList rows. So the mapping needed no guessing at all. Full procedure, the coordinate
+  transform and its derivation are now in Docs/module-layout-rules.md, because the other ~40 faces
+  can be ported the same way.
+  WHAT WAS WRONG: the top half of a 511px module was dead space and everything was crammed into the
+  bottom 210px, because every row was bottom-anchored with offsets no larger than -60 in a
+  percent-of-WIDTH system where the body is 141% tall. RateScale ran off the right edge.
+  FOUR DEVIATIONS FROM THE ORIGINAL, all forced by our larger text:
+    - Coarse/Fine needed spreading (50/65 not 57/69): the original shares ONE frequency readout for
+      the pair (TextField MasterRef=4, Dependencies 3,4,2) where we draw a value per dial.
+    - Detune, RateScale and the FM jack moved left; the original's x put their labels off our edge.
+    - Every band snapped to a single y. The original's few-pixel stagger is invisible at its 9px
+      font and reads as misalignment at ours — CT: "Alignment is inconsistent."
+    - The AMod jack lost its label: the original has ONE "AMod" text serving the value box and the
+      jack below it, and our param label above the box already is that text.
+  VALIDATE AT THE SMALLEST ZOOM. Below ~0.7 the font stops shrinking with the module, so labels are
+  proportionally WIDER at low zoom. The top row fitted at ZOOM 1.0 and still ran off the edge at the
+  0.59 CT actually works at — which is exactly what CT saw ("Some text is off the right of the
+  module"). Capture at both.
+  STILL TO DO ON THIS FACE — AND THE .rsrc NAMES ALL FOUR PIECES (CT: "Were there some generated
+  graphics for this module in the OG editor?"). Two kinds:
+    - TWO GENERATED GRAPHS, with their driving parameters listed:
+        <#Graph> 87,43  85x28  Graph Func:29  Dependencies 8,9,10,11,12,13,14,15  -> the DX envelope
+        <#Graph> 103,127 63x24 Graph Func:41  Dependencies 17,18,19,20,21         -> KB level scaling
+      "Graph Func" is an index into the original's graph-drawing routines, so these are computed
+      curves, not art. The port deliberately leaves their space empty — DO NOT CLOSE THE GAPS UP.
+    - TWO SECTION HEADINGS, which are <#Bitmap> pixel data (Data: RRRGGGBBB triplets, colon
+      separated, 255000255 magenta as the transparency key). Decoded, they read "Envelope" (34,39)
+      and "KB Lev Scale" (35,123): white-on-grey text 215x12, only the first ~55px carrying the
+      word. DONE 2026-08-29 — drawn as ordinary text in our own style (CT: "We don't need to match
+      the colour scheme exactly"), from a new labelLocationList/tLabelLocation table. It is a table
+      of its own, and that is the whole design decision: a paramLocationList row's POSITION is the
+      parameter index (module_param_count() counts rows), so a heading in the middle of a face would
+      shift every parameter after it and break the wire mapping, copy/paste, undo and the sound
+      engine. paramTypeCustomData only gets away with living in that list because those rows are
+      appended past the end. Same shape as ledLocationList/volumeLocationList; no hit-testing, no
+      mouse handling, no undo, no wire traffic — about 60 lines across five files.
+  WORTH KNOWING BEFORE EITHER JOB IS PLANNED: across the whole .rsrc, 43 modules carry <#Graph>
+  elements (46 graphs) and 42 carry <#Bitmap> elements (59 bitmaps). The 43 is an exact independent
+  confirmation of the graph survey's long-standing "43 modules" figure. The bitmaps are a MIX of
+  section headings and small signal-flow icons — PolarPan, PolarFade and OscDual carry three each,
+  Invert/S&H/T&H two each, which are far more likely icons than headings.
   WHY OSCSHPA IS THE RIGHT NEXT ONE: it is OscShpB's sibling, so the expensive half of the job — the
   eight measured laws — is already done and most should transfer intact. It reuses the existing
   graphLocationList row and renderer, so the work is a table entry plus a sample function.

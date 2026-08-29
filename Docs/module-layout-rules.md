@@ -36,6 +36,83 @@ layout cleanup (2026-07), but they apply to any module.
   do not "restore" the taller figure, and do not write `""` in place of `NULL`
   to reserve a blank row.
 
+## Porting a module face from the original editor
+
+**The original editor's own layout tables are readable text inside
+`Original Editor/EditorResources/Nord Modular G2 Editor.rsrc`.** `strings` on
+that file yields one `<#Module ... #>` block per module — 119 of them — each
+listing every `<#Knob>`, `<#Input>`, `<#Output>`, `<#ButtonFlat>`,
+`<#ButtonIncDec>`, `<#ButtonText>`, `<#TextField>`, `<#Text>`, `<#Led>`,
+`<#Graph>` and `<#Bitmap>` with `XPos`/`YPos`. This is far better ground truth
+than a screenshot of the manual, and it settles arrangement questions outright.
+
+**`CodeRef` is the parameter index**, and our `paramLocationList` rows for a
+module are in that same index order, so the mapping is exact and needs no
+guesswork. `Input`/`Output` `CodeRef`s likewise match `connectorLocationList`
+order. A `TextField` carries `MasterRef` naming the control it displays — pair
+it with its control rather than treating it as a separate item.
+
+**The coordinate transform.** The original's space is **255 px wide × 15 px per
+row**; ours is `MODULE_WIDTH` (350) wide × `MODULE_Y_SPAN` (43) per row, less
+`MODULE_Y_GAP`, less the body inset. For a module of `n` rows:
+
+    x_pct = x_orig * 100 / 255
+    y_pct = y_orig * bodyPct / (n * 15)      where bodyPct = (n*43 - 5 - 17.5) * 100 / 350
+
+For the 12-row Operator that is `x * 0.392` and `y * 0.783`. **Our faces are
+about 2.1x taller relative to their width than the original's**, so this is a
+deliberately anisotropic transform — the arrangement is preserved, the
+proportions are not, and the extra vertical room is what stops our larger
+controls colliding.
+
+**What to place at which element.** A dial goes at the `<#Knob>` position (its
+value and label are drawn *above* it by the renderer, so the `<#Text>` and
+`<#TextField>` rows for it are not separate items). A menu or toggle goes at the
+`<#TextField>` position, not at its `<#ButtonIncDec>` spinner — the value box is
+the visual anchor, and the label lands above it.
+
+**Take the arrangement, not the appearance.** What the original is authoritative
+about is *what sits where* — which control belongs beside which, what the bands
+are, which parameters drive a graph. It is not authoritative about how any of it
+looks. Colours, fonts, dial and jack styling stay ours (CT, 2026-08-29: "We don't
+need to match the colour scheme exactly. Our own style is good."). So a heading
+the original ships as a pre-rendered white-on-grey bitmap becomes ordinary text
+in our style, and a graph it draws in its palette gets drawn in ours. This is the
+same line the graph survey already drew for module icons.
+
+**Then throw the original's stagger away.** Its few-pixel vertical offsets are
+invisible at a 9 px font in a 255-wide face; at our scale the same offsets read
+as sloppiness. Snap everything in a band to one `y`. Keep the *arrangement*, not
+the pixel offsets.
+
+**VALIDATE AT THE SMALLEST ZOOM, NOT AT 1.0.** Below roughly 0.7 the font stops
+shrinking with the module, so every label is proportionally *wider* at low zoom
+than at high. A top row that fits perfectly at `ZOOM 1.0` can run off the right
+edge at the 0.59 a user actually works at. Capture at both.
+
+**Two things the original draws that we do not (yet):**
+
+- `<#Graph>` — computed curves, with `Graph Func` naming the drawing routine and
+  `Dependencies` listing the parameters that drive it. The Operator has two: an
+  envelope over params 8-15, and a keyboard level-scaling curve over 17-21.
+  43 modules across the file carry one, which independently confirms the graph
+  survey's "43 modules" figure.
+- `<#Bitmap>` — pixel data in the `Data:` field as colon-separated `RRRGGGBBB`
+  triplets, with `255000255` (magenta) as the transparency key. **These are not
+  separators.** Decoded, the Operator's two read "Envelope" and "KB Lev Scale":
+  section headings, pre-rendered as white-on-grey text 215x12 with only the first
+  ~55px carrying the word. 42 modules carry them, 59 in all, and they are a mix
+  of headings and small signal-flow icons (PolarPan, PolarFade and OscDual have
+  three each; Invert, S&H and T&H two each — far more likely icons). Per the rule
+  above, a heading becomes ordinary text in our style, never a copied bitmap.
+  Headings go in `labelLocationList` (`tLabelLocation`, added 2026-08-29), which
+  is a table of its own precisely because a `paramLocationList` row's *position*
+  is the parameter index — a heading in the middle of a face would shift every
+  parameter after it.
+
+Their space is left empty by a faithful port, which is correct — do not close the
+gaps up, or the graphs will have nowhere to go.
+
 ## The rules
 1. **Nothing overlaps.** No component may sit on top of another — and that
    includes a control's **label / value text**, not just its body. The rightmost

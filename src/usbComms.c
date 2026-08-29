@@ -788,10 +788,18 @@ static void parse_list_names_response(uint8_t * buff, uint32_t * bitPos, int len
             uint32_t peekBitPos                 = *bitPos;
             uint8_t  peekByte                   = (uint8_t)read_bit_stream(buff, &peekBitPos, 8);
 
-            if (peekByte == 0x03) {
-                break; // bank/location transition marker — a sparse bank can end well
-                       // before location 128, so this must be checked before every
-                       // entry, not just after the loop naturally exhausts the bank
+            if (peekByte <= 0x05) {
+                break; // A CONTROL CODE, NOT A NAME. The device's own discriminator is that a name
+                       // entry always begins with a byte GREATER THAN 5 — the low six values are
+                       // the control vocabulary (0x01 JUMP, 0x02 SKIP, 0x03 BANK, 0x04 MODE,
+                       // 0x05 CONTINUE). This used to test for 0x03 alone, which was enough in
+                       // practice because 0x03 is the only one that ever appears mid-stream and a
+                       // trailing 0x05 was always the last byte — but "always the last byte" is a
+                       // property of the responses we happen to have seen, and any control byte
+                       // with two bytes behind it would have been read as the start of a Clavia
+                       // string and desynced the rest of the response. Checked before every entry,
+                       // not just after the loop exhausts the bank, because a sparse bank can end
+                       // well before location 128.
             }
 
             if (bytesLeft < 2) {
@@ -834,7 +842,20 @@ static void parse_list_names_response(uint8_t * buff, uint32_t * bitPos, int len
             location = (uint8_t)read_bit_stream(buff, bitPos, 8);
             continue;
         }
-        break; // some other trailing status code — always safe to just resume from (bank, location)
+        // ANYTHING ELSE MEANS "RESUME FROM (bank, location)". The control-code vocabulary is
+        // 0x01 JUMP (next byte is a location), 0x02 SKIP one slot, 0x03 BANK (the two bytes above),
+        // 0x04 MODE (switch patch/performance) and 0x05 CONTINUE — named in JanBurp's independent
+        // reverse-engineering of this protocol (NordModularG2-Editor, docs/technical/usb-protocol.md).
+        // MEASURED 2026-08-29 against the connected G2: EVERY response of a full sweep ends 0x05 and
+        // no other code is ever seen here, so the others are documented rather than implemented —
+        // handling codes the instrument does not send would be untestable guesswork.
+        //
+        // 0x05 is also the whole story behind the bank-boundary spin that name_sweep_step() rolls
+        // over: CONTINUE says "there is more, resume from where you got to", and at the end of a
+        // bank where you got to is location 128 — which is not a location, so asking for it returns
+        // the same answer for ever. The device does not emit an 0x03 to cross a bank when the
+        // crossing falls on a response boundary.
+        break;
     }
 
     sListNamesNextBank = bank;

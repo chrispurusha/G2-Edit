@@ -91,6 +91,10 @@ uint32_t array_size_led_location_list(void) {
     return ARRAY_SIZE(ledLocationList);
 }
 
+uint32_t array_size_label_location_list(void) {
+    return ARRAY_SIZE(labelLocationList);
+}
+
 uint32_t array_size_display_location_list(void) {
     return ARRAY_SIZE(displayLocationList);
 }
