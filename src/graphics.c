@@ -361,7 +361,7 @@ void read_file_into_memory_and_process(const char * filepath) {
     uint32_t  calcCrc    = 0;
     uint32_t  slot       = gSlot;
 
-    if (gCommsState == eCommsOnLine) {
+    if (device_ready()) {
         // Online: hand the entire load to the USB thread as one ordered command. It opens the file,
         // validates the CRC, sniffs the type byte (patch vs perf) and does the clear/parse/push
         // itself, so the UI thread touches neither the file nor the shared DB. See load_file_to_device().
@@ -755,7 +755,7 @@ static void on_file_saved(const char * path) {
         LOG_INFO("Saving file: %s", path);
 
         if (gGlobalSettings.perfMode == 1) {
-            if (gCommsState == eCommsOnLine) {
+            if (device_ready()) {
                 // Online: serialise the whole DB (all 4 slots) on the USB thread — same reason as the
                 // patch save below: the DB read must be atomic against this thread's async reparses.
                 tMessageContent msg = {0};
@@ -766,7 +766,7 @@ static void on_file_saved(const char * path) {
             } else {
                 write_perf_to_file(path);
             }
-        } else if (gCommsState == eCommsOnLine) {
+        } else if (device_ready()) {
             // Online: serialise the slot on the USB thread so the DB read can't tear against the USB
             // thread's own DB writes (e.g. an async patch-change reparse). Name update (a single
             // field, harmless) stays here so the title bar reflects the saved filename immediately.
@@ -2358,6 +2358,13 @@ void do_graphics_loop(void) {
             glfwWaitEventsTimeout(0.016);
         } else if (gDeviceOpInProgress > 0) {
             glfwWaitEventsTimeout(0.05); // tick while busy so the device-op safety timeout can fire even with no events
+        } else if (comms_lamps_lit()) {
+            // A Tx/Rx lamp is lit and has to be drawn going out when traffic stops. Coming back on
+            // a timeout costs one redraw every 100ms; the topbar used to ask for one every FRAME
+            // while a lamp was lit, which with the G2's continuous interrupt stream meant 60 fps
+            // for the whole session. Lighting a lamp needs no help from here — the USB thread wakes
+            // the loop when data arrives.
+            glfwWaitEventsTimeout(0.1);
         } else if (virtual_keyboard_wants_ticks()) {
             glfwWaitEventsTimeout(0.02); // Repeat is running — glfwWaitEvents() would stall it until the next input event
         } else if (backdoor_enabled()) {

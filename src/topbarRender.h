@@ -24,4 +24,7 @@
 // plug-in — see topbarRender.c for why it is not in graphics.c any more.
 void render_top_bar(void);
 
+// See topbarRender.c — used by the render loop to time the Tx/Rx lamps going out.
+bool comms_lamps_lit(void);
+
 #endif // __TOPBAR_RENDER_H__

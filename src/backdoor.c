@@ -258,7 +258,7 @@ static void backdoor_dump_state(char * out, size_t outMax) {
 // and Disconnect paths do. Nothing happens when offline, which is what makes the same script usable
 // as an offline layout scratchpad.
 static void backdoor_send_cable(const tCableKey * key, uint32_t colour, bool removing) {
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         return;
     }
     tMessageContent msg = {0};
@@ -473,7 +473,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         database_delete_cables_by_slot(gSlot);
         gLocation = (uint32_t)locationVa;
 
-        if (gCommsState == eCommsOnLine) {
+        if (device_ready()) {
             tMessageContent msg = {0};
 
             msg.cmd  = eMsgCmdNewPatch;
@@ -875,7 +875,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         char text[64];
 
         snprintf(text, sizeof(text), "OK\ncomms=%s\n",
-                 (gCommsState == eCommsOnLine) ? "online" : "offline");
+                 device_ready() ? "online" : "offline");
         backdoor_write_result(text);
     } else if (strcmp(cmd, "DUMP") == 0) {
         char dump[16384];

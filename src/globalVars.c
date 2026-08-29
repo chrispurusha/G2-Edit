@@ -73,6 +73,7 @@ char                    gSavedPatchPath[MAX_SLOTS][FILE_PATH_SIZE]              
 char                    gSavedPerfPath[FILE_PATH_SIZE]                           = {0};
 //_Atomic uint8_t     gPatchVersion[MAX_SLOTS]                                                     = {0};
 tGlobalSettings         gGlobalSettings                                          = {0};                      // Note - should reflect settings in the G2
+_Atomic bool            gDeviceConnected                                         = false;
 _Atomic tCommsState     gCommsState                                              = eCommsNeverConnected;
 _Atomic uint8_t         gGlobalPage                                              = 0;
 tNameEdit               gPatchNameEdit                                           = {0};

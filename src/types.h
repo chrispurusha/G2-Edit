@@ -926,7 +926,6 @@ typedef enum {
     eCommsReconnecting,
     eCommsWaitingReady,
     eCommsAwaitingSyncDecision,  // Device is ready, but offline edits diverged — waiting on the user
-    eCommsInitialising,
     eCommsOnLine
 } tCommsState;
 
