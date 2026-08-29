@@ -25,6 +25,7 @@
 void render_top_bar(void);
 
 // See topbarRender.c — used by the render loop to time the Tx/Rx lamps going out.
+uint32_t comms_lamp_state(void);
 bool comms_lamps_lit(void);
 
 #endif // __TOPBAR_RENDER_H__
