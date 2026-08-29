@@ -1,6 +1,119 @@
 G2-Edit TODO (priority order)
 
 CT new:
+
+ONLINE LIGHTS LATE, AND THE LAMPS NEVER GO OUT — MEASURED 2026-08-29 with the G2 connected. CT:
+"if we're pulling data, we're online - right?" Yes. Steps 1 and 2 below are DONE; step 3, which is
+the actual behaviour change, is NOT.
+  WHAT THE INSTRUMENTATION SHOWED (every TX/RX stamp, every lamp edge, and a frame counter, logged
+  through one real connect):
+      the initial pull takes 8,167 ms       2,033 TX and 2,022 RX round trips, ~249/s, ~4ms each
+      DURING the pull                       frames 60/s
+      AFTER online, 20s idle, nothing touched   TX 0, RX 20.6/s, frames STILL 60/s
+      1,716 RX stamps after online          MAX GAP 88 ms — never once over 100
+  THREE CONCLUSIONS:
+  1. ONLINE IS NOT LATE, IT IS LITERAL. gCommsState = eCommsOnLine is set the instant
+     send_init_sequence_pull() returns (usbComms.c). The 8.2 second wait IS the pull. Nothing is
+     queued, nothing is delayed: gCommsState is a plain _Atomic read straight by topbarRender.c, and
+     the TX/RX lamps are timestamp comparisons, not messages. CT's queue-overload theory does not
+     hold — there is no queue involved in any of the three indicators.
+  2. THE RX LAMP IS HONEST BUT CAN NEVER GO OUT. The G2 pushes its interrupt stream continuously
+     once connected, and the gap never reaches the lamp's 100ms window. So RX is permanently lit
+     whenever a G2 is attached, which is why it looks stuck. It is not lit longer than the traffic;
+     the traffic never stops.
+  3. AND THE REAL BUG THE QUESTION UNCOVERED: topbarRender.c wakes the render loop every frame while
+     either lamp is lit — and since RX is permanently lit, THE APP RUNS AT 60 fps FOR THE WHOLE
+     SESSION whenever a G2 is attached. The same build idles at 1 fps with no device. It is also
+     running flat out during the pull, competing with the USB thread for the very seconds being
+     waited on. NOT YET FIXED.
+  DONE — STEP 1: eCommsInitialising deleted. It was assigned twice in usbComms.c and READ NOWHERE, a
+  write-only state conveying nothing.
+  DONE — STEP 2: device_ready() in globalVars.h, and every user-initiated device operation routed
+  through it with NO behaviour change: 12 bulk operations in usbComms.c, 13 menu actions, 4 menu
+  enable/disable gates, MIDI-to-synth forwarding, 3 backdoor commands, 3 in graphics.c. That is over
+  thirty open-coded copies of "gCommsState == eCommsOnLine" reduced to one predicate. Verified
+  against the connected G2: lamp green, COMMS reports online, DUMP works, no errors.
+  DELIBERATELY LEFT READING gCommsState DIRECTLY: topbarRender.c:193 (the lamp — the thing step 3
+  changes) and usbComms.c:4298 (internal to the USB thread).
+  THE SYNC LEAD-UP IS SAFE, checked because CT asked about the pull/send/backup prompt:
+  push_slot_to_device() is NOT among the guarded functions, so choosing "send my edits to the G2"
+  during eCommsAwaitingSyncDecision works even though we are not yet Online. The twelve guards cover
+  only bulk user operations — backup, restore, store, delete, load-from-bank, synth settings — and
+  those genuinely want "loaded and idle", so they are right to be gated late. Only the LAMP is
+  reporting the wrong thing.
+  DONE — STEP 3 (CT: "If device answers, then it's online"): gDeviceConnected, a separate _Atomic
+  bool set the moment send_get_patch_version() gets a reply — the point at which traffic is
+  demonstrably working both ways — and cleared where the link drops. The topbar reads THAT. It is
+  deliberately not gCommsState: that is a load SEQUENCE which moves through several values while the
+  device sits there answering perfectly well, and asking it gave the wrong answer twice over —
+  Offline for the 8 seconds of the pull, and Offline again during the sync prompt.
+  device_ready() was deliberately NOT changed, so every bulk operation stays gated on the pull
+  having finished, which is what those twelve guards actually want. Only the indicator moved.
+  VERIFIED on the connected G2: screenshot at 3 seconds, mid-pull, shows Online GREEN; it read
+  Offline for the full 8.2s before.
+  DONE — THE PER-FRAME WAKE. topbarRender.c no longer calls wake_glfw() while a lamp is lit. It was
+  never needed to light one — the USB thread wakes the loop on data in two dozen places — only to
+  put one out, and do_graphics_loop() now has a comms_lamps_lit() branch waiting on a 0.1s timeout
+  for that.
+  MEASURED, same session: steady state fell from 60 fps to 21 fps. The remaining 21 is the USB
+  thread's own wake on each interrupt packet (20.6/s, measured), which is data-driven and a separate
+  question from the self-wake loop that has gone. During the pull it is still 60, because the pull
+  itself wakes the loop ~249 times a second.
+  AND THE 8 SECONDS IS NOT THE PATCH — IT IS THE NAME SWEEP. Measured 2026-08-29 by bracketing the
+  phases inside send_init_sequence_pull():
+      patch data, all four slots      116 ms
+      send_list_names_sweep()       8,012 ms      <- 98% of the wait
+  CT spotted this before it was measured ("it's not an empty canvas for 8 seconds. Patch is visible
+  almost immediately"), and was right: the canvas is populated in a tenth of a second. My claim that
+  it showed an empty canvas was an assumption and was wrong.
+  CT's LED-flood theory does not fit, though, and the reason is worth keeping: the pull sends 2,033
+  OUTGOING requests, and the LED stream is receive-only. What sends two thousand requests is the
+  sweep — every populated patch and performance name across every bank, for the Load/Store/Delete
+  pickers. Nothing to do with the current patch, and nothing to do with being online.
+  SO THE REAL QUESTION IS WHY THE SWEEP BLOCKS. gCommsState = eCommsOnLine is set after the whole of
+  send_init_sequence_pull(), sweep included, and device_ready() keys off that — so every bulk
+  operation and menu stays disabled for eight seconds waiting for data that only three of them need.
+  CACHE THE NAMES, AS SYNTHEDIT ALREADY DOES (CT, 2026-08-29) — the best of the options below, and
+  the mechanism is already in SynthLib and simply unused here. prefs.cpp maintains a SECOND store,
+  cache.txt, beside prefs.txt; SynthEdit writes the whole name list into it as one blob
+  (cache_set_string("nameCacheKorg_Korg Z1", ...)) with a companion "...Done_..." flag, so a sweep
+  that was interrupted resumes instead of being trusted. G2-Edit calls neither function.
+  WHY IT IS SAFE HERE, and this is the part that matters given the standing rule that destructive
+  operations must never trust the cache: G2-Edit ALREADY peeks live before every destructive act —
+  peek_store_target(), peek_delete_target() and peek_load_target() each ask the instrument what is
+  really at that bank location before writing. So a cached list would only ever populate the PICKER,
+  and the confirmation still comes from the device. The cache must not be allowed to leak past that
+  line into anything that decides whether a location is occupied.
+  WHAT IT NEEDS: somewhere to serialise the name table, a key (the G2 offers no obvious device id —
+  patch version or a synth setting may serve), and an invalidation story, because the instrument's
+  contents change from its own front panel and from other editors. The safe shape is SynthEdit's:
+  show the cache immediately, re-sweep in the background, and let the fresh names replace the stale
+  ones as they arrive — which also answers the stall problem below, since a background sweep that
+  nobody is waiting on can be paced.
+  OPTIONS, none taken yet:
+    - Set eCommsOnLine BEFORE the sweep and let it run afterwards. Cheapest, and the pickers fill in
+      as names arrive. Two caveats: a picker opened during the sweep shows a partial list, and the
+      USB thread is in a tight request/response loop throughout, so a user command issued at t=1s
+      would stall behind it rather than run.
+    - Make the sweep genuinely background and interruptible, which is what SynthEdit already does for
+      the Voyager and Z1 — see the name-sweep generic mechanism note. More work, but it is the
+      version that does not stall a user command.
+    - Leave it, and simply say what it is doing. See the busy overlay below.
+  STILL NOT DONE: represent the pull with the busy overlay
+  (gDeviceOpInProgress + render_device_busy_overlay(), built 2026-07-26, still never hardware
+  tested). It cannot be set from the USB thread — it is a plain int owned by the UI thread — so it
+  needs a message through the reverse queue. Worth doing: the editor currently says Online and shows
+  an empty canvas for 8 seconds with no indication it is loading.
+  SUPERSEDED — the original STEP 3 plan: set Online when the device ANSWERS (send_get_patch_version succeeds at
+  usbComms.c:4507 — at that point traffic is provably working both ways), and represent the 8.2s
+  pull with the busy overlay that already exists (gDeviceOpInProgress, render_device_busy_overlay(),
+  built 2026-07-26 and still never hardware-tested). device_ready() then becomes connected && !busy,
+  which is a ONE-LINE change now rather than thirty. Note the present behaviour is at its worst
+  during the sync prompt: the editor asks the user to choose between their edits and the G2's while
+  the indicator says Offline.
+  ALSO WORTH DOING, independent of all the above: stop the per-frame wake. The lamp needs a redraw
+  only when its state changes — one wake scheduled at lastActivity + 100ms, not one every frame.
+
 It's taking the online indication a while to light-up, even though comms has already happened. Is that the message queue being full from USB to Graphics? Tx and RX are lit constantly until Online is shown. Maybe it's TX and RX which are over-loading the message queue as patch is pulled? Perhaps we need to only send those on a state change in USB, if we're not already?
 
 DONE 2026-08-29 — MODULE Y PERCENTAGES NOW START BELOW THE TITLE BAR (CT: "0% should start after

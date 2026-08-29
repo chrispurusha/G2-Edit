@@ -189,7 +189,8 @@ void render_top_bar(void) {
 
     commsStateColour = (tRgb)RGB_BACKGROUND_GREY;
 
-    switch (commsState) {
+    // The connection, not the load sequence — see gDeviceConnected in globalVars.h.
+    switch (gDeviceConnected ? eCommsOnLine : commsState) {
         case eCommsOnLine:
             commsStateText   = "Online";
             commsStateColour = (tRgb)RGB_GREEN_7;
@@ -223,9 +224,15 @@ void render_top_bar(void) {
     draw_button(mainArea, (tRectangle){{txrxX, onlineY}, {boxW, boxH}}, "", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
     draw_button(mainArea, (tRectangle){{txrxX, onlineY + boxH + txrxGap}, {boxW, boxH}}, "", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
 
-    if (txActive || rxActive) {
-        wake_glfw();
-    }
+    // NO WAKE HERE. This used to call wake_glfw() on every frame either lamp was lit — and since
+    // the G2's interrupt stream never pauses for as long as the lamp's 100ms window, "lit" means
+    // "for the rest of the session". The application therefore ran at 60 fps for as long as a G2
+    // was attached, measured against 1 fps with no device, and it was doing so during the initial
+    // pull, competing with the USB thread for the very seconds being waited on.
+    //
+    // It is not needed to light a lamp: the USB thread already wakes the render loop when data
+    // arrives, in two dozen places. It was only ever needed to put one OUT once traffic stops, and
+    // do_graphics_loop() now waits with a timeout for that instead — see comms_lamps_lit().
     // Cable colour visibility toggles — 6 small squares
     //uint32_t hiddenMask = gHiddenCableMask;
 
@@ -335,4 +342,15 @@ void render_top_bar(void) {
         snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationFx]);
         draw_button(mainArea, (tRectangle){{col2X, row2Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
     }
+}
+
+// Is either activity lamp currently lit? Used only by do_graphics_loop() to decide how long to
+// wait: while one is lit the loop needs to come back when it is due to expire, so the lamp can be
+// drawn going out. When neither is lit there is nothing to time and the loop can sleep properly.
+bool comms_lamps_lit(void) {
+    uint64_t nowMs = (uint64_t)get_time_ms();
+    uint64_t tx    = gUsbTxTime;
+    uint64_t rx    = gUsbRxTime;
+
+    return ((tx != 0) && ((nowMs - tx) < 100)) || ((rx != 0) && ((nowMs - rx) < 100));
 }

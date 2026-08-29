@@ -132,7 +132,7 @@ void app_menu_set_device_capable(bool capable) {
 
 void open_file_menu(tCoord anchor) {
     static tMenuItem items[11];  // 10 entries + the NULL terminator
-    bool             online      = gCommsState == eCommsOnLine;
+    bool             online      = device_ready();
     bool             isPerf      = gGlobalSettings.perfMode == 1;
     int              i           = 0;
 
@@ -327,7 +327,7 @@ static void action_backup_everything(int index) {
 
 void open_backup_menu(tCoord anchor) {
     static tMenuItem items[6];
-    bool             online = gCommsState == eCommsOnLine;
+    bool             online = device_ready();
     int              i      = 0;
 
     items[i++] = (tMenuItem){
@@ -371,7 +371,7 @@ static void action_restore_everything(int index) {
 
 void open_restore_menu(tCoord anchor) {
     static tMenuItem items[6];
-    bool             online = gCommsState == eCommsOnLine;
+    bool             online = device_ready();
     int              i      = 0;
 
     items[i++] = (tMenuItem){
@@ -733,7 +733,7 @@ void open_tools_menu(tCoord anchor) {
     // The two selection entries have nothing to act on without one, and the original greys them
     // the same way rather than letting the click be a silent no-op.
     bool             haveSelection = gSelection.count > 0;
-    bool             online        = gCommsState == eCommsOnLine;
+    bool             online        = device_ready();
     int              i             = 0;
 
     // Label reflects current state the same way Controls' dial-mode items do (checkmark-style

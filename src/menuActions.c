@@ -391,7 +391,7 @@ void file_menu_store_to_bank(void) {
     char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t           count        = 0;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before storing to a bank.");
         return;
     }
@@ -412,7 +412,7 @@ void file_menu_delete_patch_location(void) {
     char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t           count = 0;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a patch.");
         return;
     }
@@ -432,7 +432,7 @@ void file_menu_delete_perf_location(void) {
     char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t           count = 0;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a performance.");
         return;
     }
@@ -452,7 +452,7 @@ void file_menu_load_patch_location(void) {
     char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t           count = 0;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a patch.");
         return;
     }
@@ -472,7 +472,7 @@ void file_menu_load_perf_location(void) {
     char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t           count = 0;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a performance.");
         return;
     }
@@ -541,7 +541,7 @@ void settings_menu_open_notes(void) {
 }
 
 void backup_menu_patch_bank(void) {
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a bank.");
         return;
     }
@@ -552,7 +552,7 @@ void backup_menu_patch_bank(void) {
 }
 
 void backup_menu_perf_bank(void) {
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a performance bank.");
         return;
     }
@@ -563,7 +563,7 @@ void backup_menu_perf_bank(void) {
 }
 
 void backup_menu_synth_settings(void) {
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up synth settings.");
         return;
     }
@@ -571,7 +571,7 @@ void backup_menu_synth_settings(void) {
 }
 
 void backup_menu_everything(void) {
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up everything.");
         return;
     }
@@ -579,7 +579,7 @@ void backup_menu_everything(void) {
 }
 
 void restore_menu_patch_bank(void) {
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a bank.");
         return;
     }
@@ -590,7 +590,7 @@ void restore_menu_patch_bank(void) {
 }
 
 void restore_menu_perf_bank(void) {
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a performance bank.");
         return;
     }
@@ -601,7 +601,7 @@ void restore_menu_perf_bank(void) {
 }
 
 void restore_menu_synth_settings(void) {
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring synth settings.");
         return;
     }
@@ -609,7 +609,7 @@ void restore_menu_synth_settings(void) {
 }
 
 void restore_menu_everything(void) {
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring everything.");
         return;
     }
