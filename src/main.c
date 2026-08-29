@@ -31,6 +31,7 @@ extern "C" {
 #include "usbComms.h"
 #include "misc.h"
 #include "globalVars.h"
+#include "prefs.h"
 #include "moduleResourcesAccess.h"
 #include "mouseHandle.h"
 #include "soundEngine.h"
@@ -84,6 +85,13 @@ int main(int argc, char ** argv) {
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         init_patch(slot);
     }
+
+    // BEFORE init_graphics(), and the order is load-bearing. The window is built differently for
+    // each render backend — OpenGL needs a GL context created alongside it, Metal needs none — so
+    // synthlib_window_create() reads the saved choice before it makes the window. prefs_init() also
+    // runs from setup_main_menu() below, where it always did; it clears and re-reads, so calling it
+    // twice is harmless and nothing has written a preference in between.
+    prefs_init("G2-Edit");
 
     init_graphics();
 

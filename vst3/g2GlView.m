@@ -29,6 +29,18 @@
 // for years; the layer-backed routes are what people reach for when they hit trouble, and starting
 // at the trouble is a poor way to find out whether there is any.
 
+// THE PLUG-IN'S BACKEND IS A BUILD-TIME CHOICE, unlike the application's.
+//
+// The application picks its backend at start-up from a saved setting, because all that differs is
+// how the window is made. Here the difference reaches further: the view's SUPERCLASS is either
+// NSOpenGLView or NSView, and a superclass is fixed when the file is compiled. Selecting at run
+// time would mean two view classes and so two copies of the four hundred lines of input handling
+// below — a bad trade for a plug-in whose editor is opened and closed by a host anyway.
+//
+// So: G2_VST3_METAL, set by do-vst3, and OpenGL without it. The macro is tested by name rather
+// than compared against RENDER_BACKEND, which no longer exists — when it did, and both sides of
+// the comparison became undefined, this file quietly compiled the OpenGL path because 0 == 0.
+//
 // THE SURFACE IS THE ONLY PART THAT DIFFERS BETWEEN BACKENDS. Roughly thirty lines below are
 // conditional — the superclass, the pixel format, prepareOpenGL/reshape, and the body of
 // -drawRect:. The other four hundred and fifty are mouse, keyboard, tracking areas and the drag
@@ -44,7 +56,7 @@
 
 #include "renderBackend.h"
 
-#if RENDER_BACKEND == RENDER_BACKEND_GL
+#ifndef G2_VST3_METAL
  #import <OpenGL/OpenGL.h>
  #import <OpenGL/gl.h>
 #endif
@@ -54,7 +66,7 @@
 #include "g2Input.h"
 #include "inputState.h"
 
-#if RENDER_BACKEND == RENDER_BACKEND_GL
+#ifndef G2_VST3_METAL
 @interface G2GlView : NSOpenGLView
 #else
 // A PLAIN NSView. Under Metal there is no context to own, so there is nothing for NSOpenGLView to
@@ -167,7 +179,7 @@ static __weak G2GlView * gCurrentView = nil;
 
 @implementation G2GlView
 
-#if RENDER_BACKEND == RENDER_BACKEND_GL
+#ifndef G2_VST3_METAL
 
 - (instancetype)initWithFrame:(NSRect)frame {
     // No profile attribute, so this is the legacy (compatibility) profile. That is deliberate and
@@ -234,7 +246,7 @@ static __weak G2GlView * gCurrentView = nil;
     [[self openGLContext] update];
 }
 
-#else  // RENDER_BACKEND != RENDER_BACKEND_GL
+#else  // G2_VST3_METAL
 
 - (instancetype)initWithFrame:(NSRect)frame {
     self = [super initWithFrame:frame];
@@ -242,6 +254,10 @@ static __weak G2GlView * gCurrentView = nil;
     if (self == nil) {
         return nil;
     }
+    // The application does this from its window layer, reading a saved setting; the plug-in has
+    // neither, so the build-time choice is asserted here before anything touches the backend.
+    gfx_backend_choose(eRenderBackendMetal);
+
     // LAYER-HOSTING, and the order matters: gfx_attach_window() assigns the layer and only then
     // sets wantsLayer, which is what tells AppKit the contents are the layer's and that it must not
     // draw over them. Handing it the VIEW rather than a window is the whole difference from the
@@ -254,7 +270,7 @@ static __weak G2GlView * gCurrentView = nil;
 // No -prepareOpenGL and no -reshape: there is no context to prepare and nothing to -update. The
 // layer is resized from gfx_set_surface(), which every frame calls with the view's backing size.
 
-#endif  // RENDER_BACKEND
+#endif  // G2_VST3_METAL
 
 // WITHOUT A TRACKING AREA, -mouseMoved: IS NEVER CALLED. That is why menu items did not highlight:
 // the highlight is drawn from the pointer position (render_context_menu reads it), and the position
@@ -541,7 +557,7 @@ static __weak G2GlView * gCurrentView = nil;
     NSRect backing = [self convertRectToBacking:bounds];
     double scale   = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
 
-#if RENDER_BACKEND == RENDER_BACKEND_GL
+#ifndef G2_VST3_METAL
     NSOpenGLContext * context = [self openGLContext];
     CGLContextObj     cgl     = [context CGLContextObj];
 
