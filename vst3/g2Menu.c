@@ -39,6 +39,8 @@
 #include "geometry.h"
 #include "utilsGraphics.h"
 #include "contextMenu.h"
+#include "alertDialog.h"
+#include "synthlibVersion.h"
 #include "menuBar.h"
 #include "globalVars.h"
 #include "soundEngine.h"
@@ -60,12 +62,37 @@
 // toggle the sound engine the plug-in IS. The bank entries inside File and Tools are dropped too,
 // via app_menu_set_device_capable(false) — the application GREYS those while offline because going
 // online is possible; here it never is, and a permanently greyed row is worse than no row.
+
+// ── Help menu ─────────────────────────────────────────────────────────────────
+// WHICH BUILD IS THIS. Version, compile time and the render backend in force. A .vst3 sitting in a host's plug-in folder carries nothing that says where it came
+// from, and the editor looks the same whether it was built this morning or three weeks ago —
+// which is exactly what prompted this (CT, 2026-08-29).
+static void action_about(int index) {
+    (void)index;
+    show_alert("About", synthlib_about_text("G2 Alike"));
+}
+
+// Named apart from the application's open_help_menu(), which appMenuBar.h declares and this
+// file can see — the plug-in's Help menu holds only About, the application's holds more.
+static void open_plugin_help_menu(tCoord anchor) {
+    static tMenuItem items[2] = {0};
+
+    items[0] = (tMenuItem){
+        "About G2 Alike...", (tRgb)RGB_GREY_3, action_about, 0, NULL, 0, 0.0
+    };
+    items[1] = (tMenuItem){
+        NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+    };
+    open_context_menu(anchor, items, 0, 0.0);
+}
+
 tMenuBarItem gPluginMenuBar[] = {
     {"File",     open_file_menu    },
     {"Settings", open_settings_menu},
     {"Controls", open_controls_menu},
     {"Tools",    open_tools_menu   },
     {"View",     open_view_menu    },
+    {"Help",     open_plugin_help_menu},
     {NULL,       NULL              },
 };
 

@@ -94,6 +94,7 @@ SOURCES=(
     # renderBackendSelect.h picks it — so adding renderBackendMetal.m here later is additive,
     # not a swap. Omitting one entirely breaks the plug-in alone, and only at link time.
     "$HERE/SynthLib/src/renderBackend.c"
+    "$HERE/SynthLib/src/synthlibVersion.c"
     "$HERE/SynthLib/src/renderBackendGL.c"
     # Both backends are always in the list. Each compiles to nothing unless renderBackendSelect.h
     # picks it, so this is not a swap — see G2_VST3_METAL below for how to choose.
@@ -148,7 +149,26 @@ WARNFLAGS=(-Werror)
 # differs between the two (NSOpenGLView against NSView) and a superclass is fixed at compile time.
 # G2_VST3_METAL=1 selects Metal; without it the plug-in is OpenGL, which is what has been in a real
 # host and remains the default.
-BACKEND_DEFS=()
+# WHICH VERSION THIS BINARY CLAIMS TO BE, and the sequencing matters — see the About box in
+# SynthLib's synthlibVersion.h.
+#
+# Standalone, `git describe` is the truth: the last tag, the commits since, the commit itself, and
+# "-dirty" if the tree does not match any of them.
+#
+# BUT DO-RELEASE BUILDS BEFORE THE TAG EXISTS. It works out the NEXT version from the newest tag and
+# only prints the `git tag` command to run once the .dmg has been checked — so at the moment it
+# calls this script, `git describe` still names the PREVIOUS release. A .dmg labelled 0.6.4-beta.6
+# whose plug-in says 0.6.4-beta.5 is worse than no version at all, because a wrong version number is
+# believed. do-release therefore sets G2_VERSION_STRING and that wins.
+if [ -n "$G2_VERSION_STRING" ]; then
+    VERSION_STRING="$G2_VERSION_STRING"
+else
+    VERSION_STRING="$(git describe --tags --always --dirty 2>/dev/null || echo 'development build')"
+fi
+
+echo "Version: $VERSION_STRING"
+
+BACKEND_DEFS=(-DSYNTHLIB_VERSION_STRING="\"$VERSION_STRING\"")
 BACKEND_LIBS=(-framework Metal -framework QuartzCore)
 
 # METAL IS THE DEFAULT HERE, unlike the application, and deliberately so: the plug-in is
@@ -159,7 +179,7 @@ BACKEND_LIBS=(-framework Metal -framework QuartzCore)
 if [ "$G2_VST3_OPENGL" = "1" ]; then
     echo "Plug-in backend: OpenGL"
 else
-    BACKEND_DEFS=(-DG2_VST3_METAL=1)
+    BACKEND_DEFS+=(-DG2_VST3_METAL=1)
     echo "Plug-in backend: Metal (set G2_VST3_OPENGL=1 for OpenGL)"
 fi
 
