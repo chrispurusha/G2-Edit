@@ -225,12 +225,56 @@ the actual behaviour change, is NOT.
   WHAT IS NOW THE BIGGEST IDLE COST IS THE RX LAMP, not the data. At 6.77 frames/s against 2.00
   wakes/s, roughly two thirds of the remaining frames are the lamp: each burst of traffic lights it
   (one frame) and COMMS_LAMP_MS later it goes out (another frame). Two full canvas redraws to
-  animate a six-pixel indicator. Worth its own item — either damp the lamp, or redraw only the
-  topbar for it.
+  animate a six-pixel indicator. REVIEWED AND CLOSED 2026-08-29 — NO CHANGE MADE. CT, having seen
+  the options: "I like the current pattern and timing (before any mods you might have made), so OK
+  as is."
+  THE LAMP COSTS FRAMES, NOT WAKEUPS, and that is what turns this from a battery item into a
+  cosmetic one. state_handler() falls through to int_rec(ePollYes, ..., USB_RECV_POLL_MS) — a 50ms
+  blocking read inside an unbounded loop, usbComms.c — so THE PROCESS ALREADY WAKES 20 TIMES A
+  SECOND for as long as a G2 is attached, whatever the UI does. Damping the lamp cannot save a
+  single wakeup. It could only save a few full canvas redraws on a machine that is awake anyway.
+  THE 2-FRAMES-PER-MESSAGE COST IS THE CONSTANT, NOT A BUG. note_usb_activity() wakes only on the
+  dark->lit edge and do_graphics_loop()'s lampState comparison asks for the second frame when the
+  lamp expires, so every Rx message arriving more than COMMS_LAMP_MS after its predecessor costs one
+  redraw coming on and one going out. The logic is right; COMMS_LAMP_MS alone sets the rate.
+  THE THREE OPTIONS, AND WHY EACH IS SHUT:
+    - WIDEN COMMS_LAMP_MS (defs.h) past the typical inter-message gap. One constant, and at the
+      measured 5.85 msgs/s a 250-300ms window would have collapsed the ~2.4 on/off cycles/s to about
+      zero — 6.77 frames/s down to ~2/s. REJECTED because it is the only option that changes what
+      the lamp looks like: solid while the instrument streams, dark 300ms after traffic really
+      stops. That is CT's call and CT has made it. DO NOT RE-TRY without asking again.
+    - REDRAW ONLY THE TOPBAR. Not economic, and the reason is structural rather than effort: there
+      is no dirty-rect or scissor concept anywhere. render_frame() clears the whole surface,
+      render_present() submits one batch and presents it, the GL backend swaps buffers and the Metal
+      one presents a fresh drawable. NEITHER BACKEND PRESERVES THE PREVIOUS FRAME, so a partial
+      update needs offscreen composition built in both — for 4.8 frames/s.
+    - GATE ON WINDOW VISIBILITY. Still open and still worth doing, but it is NOT a lamp fix: it
+      drops EVERY redraw request while the window is minimised or fully covered, and changes nothing
+      whenever anyone is looking at it. Nothing in src/ or SynthLib/src/ tracks visibility today —
+      no GLFW_ICONIFIED, no GLFW_VISIBLE, no occlusion anywhere — and misc.mm already owns the
+      NSWorkspace notification plumbing, so NSWindowDidChangeOcclusionState is where it belongs. It
+      catches "covered by another window", which is the common case beside a DAW.
+  ONE FREE TIDY IF THAT FILE IS EVER OPEN FOR OTHER REASONS: do_graphics_loop() samples
+  comms_lamp_state() at one instant and render_top_bar() re-derives txActive/rxActive at its own
+  later one, so an expiry falling between the two records "lit" for a frame that drew "dark" and
+  costs one redundant redraw. Vanishingly rare and self-correcting; the loop handing the renderer
+  the state it compared would be tidier than both deriving it separately.
+  CHECKING THE RIG: USE ioreg, NOT system_profiler. `system_profiler SPUSBDataType | grep -i nord`
+  returned NOTHING with the G2 plugged in and answering, and no output reads exactly like no device
+  — it was reported here as "no G2 attached", wrongly. `ioreg -p IOUSB -w0 -l` finds it at once:
+  idVendor 4092 (0x0FFC, VENDOR_ID in usbComms.c), kUSBProductString "Nord Modular G2". Same family
+  as the pgrep trap below — a check that can fail QUIETLY is worse than no check at all.
   AND THERE IS A BIGGER LEVER STILL, unexplored: the stream is ARMABLE. SUB_COMMAND_START_STOP
   (0x7d) is already used by send_stop()/send_start() around reloads, and the reference decode below
   confirms 0x41 0x7D 0x00/0x01 as START/STOP_COMM for exactly this notification stream. Disarming it
   while the window is hidden or minimised would take the idle cost to zero rather than reduce it.
+  CORRECTED 2026-08-29 — NOT ON ITS OWN IT WOULD NOT. Disarming stops the traffic, but
+  state_handler()'s idle int_rec() poll runs regardless and would simply time out every 50ms, so the
+  20 wakes/s stay exactly where they are. Reaching the wakeups needs THE POLL to stop as well while
+  disarmed. It is still the only lever that can reach them, which is what leaves it the one open
+  item in this section now the lamp is closed — with the obligation that a disarmed link reports
+  neither the G2's own panel edits nor patch-version changes, so restoring the window owes a
+  re-sync: the same shape as the gotPerfSettingsChangeIndication stop / query / start path.
 
 CROSS-CHECK AGAINST JanBurp/NordModularG2-Editor, 2026-08-29 (docs/technical/usb-protocol.md).
 Read while doing the idle-render work above, since CT asked whether it held anything useful. LICENCE
@@ -812,6 +856,96 @@ negative offsets to anchorTopLeft against the new y=0-at-body-top convention.
   modules", with seven of them named, which is not enough to plan from. All 43, by family, with the six
   already drawn marked:
     FILTERS (7)      FltClassic*  FltNord  FltLP  FltHP  FltComb  FltStatic  FltPhase
+
+    ALL SIX REMAINING FILTERS MEASURED 2026-08-29 — the responses, not the drawings. Noise -> filter
+    -> 2-Out, every setting divided by THE SAME PATCH WITH THE FILTER BYPASSED, which cancels the
+    noise source, the converters and the cabling in one step. Welch-averaged, stdlib FFT, no numpy
+    on this machine. The analyser self-tests to 0.1 dB against a synthetic one-pole before it is
+    pointed at anything, and the bypassed reference measured FLAT to +/-0.4 dB from 21 Hz to 12 kHz,
+    so the noise source needed no characterising of its own.
+    THE HEADLINE: THESE ARE THREE DIFFERENT TOPOLOGIES, NOT ONE WITH SETTINGS. Anything that draws
+    them from a single model will be wrong for four of the six.
+
+    FltLP / FltHP — N IDENTICAL ONE-POLES AT A COMMON CORNER, AND THE MODE NAME IS THE POLE COUNT.
+      Fitting |H| = 1/(1+(f/fc)^2)^(N/2) with both N and fc free returns, at Freq 75:
+          mode      0     1     2     3     4     5
+          name    6db  12db  18db  24db  30db  36db
+          N         1     2     3     4     5     6      <- exactly the name divided by 6
+          fc Hz  1008  1075  1069  1053  1084  1087      (nominal 13.75*2^(75/12) = 1047)
+      rms residual 0.37 to 0.63 dB across every one, which is the measurement's own noise. FltHP
+      gives the same answer (N = 1,2,3,4 clean; 5 and 6 less certain, see the floor note below).
+      THE DIAL IS THE PER-POLE CORNER, NOT THE COMPOSITE -3 dB POINT, and that is the thing a naive
+      drawing gets wrong: the composite -3 dB point falls as the slope rises, to fc*sqrt(2^(1/N)-1),
+      so 36db reads about 366 Hz where the dial says 1047.
+      N IS INDEPENDENT OF Freq — the Freq sweep returns N = 4 at every one of 45/60/75/90/105 — and
+      fc tracks 13.75*2^(v/12) to within 8% up to Freq 90. At Freq 105 the fitted fc runs 29% high,
+      which is the analog model being fitted to a DIGITAL one-pole whose response flattens towards
+      Nyquist rather than the dial being wrong.
+      AND FltHP'S OWN STOPBAND FLOORS NEAR -45 dB, where FltLP's reaches -58. That is the INSTRUMENT,
+      not the rig: the reference is flat and the noise floor is 60 dB down, and a high-pass with
+      poles near DC is exactly where a fixed-point implementation loses its stopband. It is why the
+      two steepest FltHP modes fit less certainly.
+
+    FltStatic — A PLAIN RESONANT BIQUAD, AND THE ONLY ONE OF THE SIX THAT IS. 12 dB/oct measured
+      (11.6 over three octaves), LP/BP/HP from its FilterType, and THE PASSBAND DOES NOT MOVE WITH
+      RESONANCE: LF gain +0.15 / +0.56 / +0.19 dB at Res 0 / 64 / 127. So the biquad that
+      render_fltclassic_response_graph was originally written around is the RIGHT model here, having
+      been the wrong one there.
+          Res       0      64     127
+          peak   +0.5   +6.9   +36.5 dB    (LP, absolute, vs bypassed)
+      CAUTION ON THAT +36.5, AND ON ANY Q READ FROM A SPECTRUM: at 2048-point resolution the same
+      peak reads +17.3 dB. A Q=50 peak at 1 kHz is 21 Hz wide, which is NARROWER THAN ONE 2048-POINT
+      BIN, so the log-binned view under-reads it and the Q taken off it is a floor, not a
+      measurement. 8192 points gives +36.5 dB and a bandwidth Q of ~25; those two still disagree
+      (peak gain implies ~67), so the peak is STILL not fully resolved and the Res-to-Q law is NOT
+      settled by this run. It wants a longer capture and a finer transform. Do not quote a Q from it.
+
+    FltNord — THE SAME FAMILY AS FltClassic, AND THE PASSBAND DROOP PROVES IT. LF gain against Res,
+      LP at 24 dB/oct:
+          Res       0      32      64      96     127
+          LF     -0.4    -2.6    -5.8   -11.5   -38.2 dB
+      That is feedback around a cascade, DC gain 1/(1+k) — a biquad's passband would not move at
+      all, and FltStatic's above does not. THE DROOP IS THE SAME IN BOTH SLOPE MODES (-11.61 dB at
+      12 dB/oct against -11.49 at 24, both at Res 96), which is precisely the FltClassic signature:
+      one resonance loop, the dB switch moving only the output tap. Its dB/Oct selector measures
+      13.2 and 20.6 dB/oct asymptotically, i.e. the 12 and 24 it claims.
+      ITS RESONANCE GOES MUCH FURTHER THAN FltClassic'S: -38 dB of droop implies 1+k = 79 against
+      FltClassic's measured k of about 4, and at Res 127 the peak stands 63 dB above the passband.
+      ALL FOUR FilterType SETTINGS BEHAVE: LP, BP, HP as expected, BR a notch about 14 dB deep at
+      the corner. The HP passband sits at the SAME -11 dB as the LP's at Res 96, so the 1/(1+k)
+      scaling is applied to the whole response and not just below the corner.
+
+    FltComb — TUNED BY THE SAME EXPONENTIAL LAW AS EVERY OTHER Freq DIAL, BUT A CONSTANT FACTOR
+      BELOW IT. Notch spacing measured on a LINEAR axis (a comb is periodic in linear frequency; the
+      log view that suits every other filter here is the wrong picture and hides it):
+          Freq         51      63      75      87
+          nominal   261.6   523.3  1046.5  2093.0 Hz
+          spacing   155.7   312.4   626.4  1275.9 Hz
+          ratio      1.680   1.675   1.671   1.640
+      So it doubles every 12 dial steps exactly as the dial does, but the teeth land at
+      nominal / 1.67 — about 8.9 semitones flat of what the dial reads. Whether that constant is
+      5/3 or an integer delay-line length is NOT settled; the small drift at Freq 87 is the shape a
+      delay quantised to whole samples would make, and is worth one more sweep to pin.
+      FB IS BIPOLAR AND 64 REALLY IS ZERO — at FB 64 the response is flat to +/-0.3 dB across the
+      band, no comb at all. Above 64 the teeth deepen with FB; below 64 the pattern INVERTS, peaks
+      landing where the positive-feedback case has notches.
+
+    FltPhase — A PHASER, AND THE Notch PARAMETER IS THE NOTCH COUNT. First notch frequency against
+      that parameter, at Freq 75: 2098, 1254, 1020, 750, 656, 539 Hz for settings 0..5, with more
+      notches appearing across the band as it rises. FB sets depth and nothing else: -7 dB at FB 96,
+      -13 at 112, -28 at 127, and FB 64 is again exactly flat. The three Type settings are real and
+      distinct — Notch and Deep differ by about 5 dB of notch depth, and Peak inverts the sense.
+      THIS ONE IS THE LEAST FINISHED OF THE SIX: no Freq sweep was taken, so the notch positions are
+      not yet tied to the dial, and the module adds up to +8 dB of its own gain which needs
+      separating from Level before any drawing is scaled from it.
+
+    WHAT IS NOT DONE, so nobody reads this as finished: nothing has been drawn. These are the
+    responses only. The Res-to-Q law for FltStatic and FltNord, FltComb's 1.67, and FltPhase's Freq
+    tracking are the three loose ends, and each is one short sweep.
+    HARNESS NOTE — MASK THE FLOOR FROM THE DATA, NEVER BY A CONSTANT. The first pass fixed the mask
+    at -45 dB, which is below FltLP's floor (-58) and ABOVE FltHP's (-45): the FltLP fits were clean
+    and the FltHP ones returned confident nonsense, N=1 at five times the right corner with a 5 dB
+    residual. Estimating each curve's own floor and masking 15 dB above it fixed every one of them.
     EQ (4)           EqPeak  ShelvEQ  Eq2Band  Eq3band
     ENVELOPES (11)   EnvADSR*  EnvH  EnvD  AR-Env  EnvADDSR  EnvMulti  EnvADR  EnvAHD  ModADSR
                      ModAHD  EnvDX
@@ -1096,8 +1230,12 @@ the same day.
   first attempt at this test used link=1, built two perfectly ordinary cables, and showed no
   difference before or after — which looked like the fix doing nothing.
 
-THE DRAWN ENVELOPE WAS NEVER THE ENVELOPE YOU HEARD — one law, two constants. Fixed 2026-08-24; the
-constant itself is still a guess and wants a capture.
+THE DRAWN ENVELOPE WAS NEVER THE ENVELOPE YOU HEARD — one law, two constants. Fixed AND MEASURED
+2026-08-24. HEADLINE CORRECTED 2026-08-29: it read "the constant itself is still a guess and wants a
+capture", which was true when written and was made false further down THIS SAME ENTRY a few hours
+later — see "SETTLED ON THE HARDWARE" below, and ENV_ATTACK_SHARPNESS / ENV_FALL_SHARPNESS in
+paramCurves.c. Read to the end of an entry before quoting its first line: this one was relayed as
+open work on the strength of the headline alone.
   soundEngine.c shaped its segments with exp(+/-5t) and moduleGraphics.c drew them with exp(+/-4t).
   Same law, same normalisation, same shape-index mapping (both give Log/Lin/Exp/Lin for envShapeStrMap's
   LogExp/LinExp/ExpExp/LinLin) — only the sharpness differed, so an EnvADSR's face and its sound were
@@ -3321,6 +3459,39 @@ resources already hold.
   slow-signal capture can be CORRECTED rather than avoided, which makes the carrier-modulation trick
   optional. It also gives an amplitude calibration, so control captures land in real units instead
   of normalised guesses.
+  MEASURED 2026-08-29, AND THE CARRIER TRICK IS NOT OPTIONAL AFTER ALL. Done with an LfoB square
+  rather than a sequencer — same known input, one module instead of three, and the rate dial sweeps
+  it directly. LfoB (Range Rate Lo, Wave Squ, OutType Bip) straight into 2-Out, captured on QU-24
+  5/6, the post-edge segments sign-corrected and averaged, and the step response fitted.
+  IT IS NOT ONE POLE, WHICH IS THE WHOLE POINT. A single exponential fits at r2 = 0.763 and the
+  measured step CROSSES ZERO AND UNDERSHOOTS, which one pole cannot do. Fitting a general 2nd-order
+  high-pass (so the fit chooses the damping instead of being told it) gives, at two rates a quarter
+  apart:
+        1.02 Hz square (12 edges)    fc 1.859 Hz   zeta 0.884
+        0.254 Hz square (19 edges)   fc 1.912 Hz   zeta 0.882
+  Agreement that close across a 4x change of rate is what says these belong to the CHAIN and not to
+  the signal. A third pole is real too: the 2nd-order residual has a systematic slow lobe, and
+  2nd-order + 1st-order lifts r2 from 0.980 to 0.997 at fc 1.453 Hz / zeta 1.094 plus a pole at
+  0.459 Hz — three real corners at roughly 0.46, 0.95 and 2.24 Hz.
+  VALIDATED THE ONLY WAY THAT COUNTS: the 3-pole model fitted on the 0.254 Hz capture ALONE predicts
+  the 1.02 Hz capture, which took no part in that fit, at r2 = 0.998 (correlation 0.9992).
+  WHAT THE CHAIN DOES TO A SLOW SIGNAL, from that model:
+        0.1 Hz  -60.0 dB      1 Hz  -11.4 dB      10 Hz  -0.26 dB
+        0.2 Hz  -42.7 dB      2 Hz   -4.6 dB      20 Hz  -0.07 dB
+        0.5 Hz  -22.5 dB      5 Hz   -1.0 dB      50 Hz  -0.01 dB
+  SO THE RULE FOR EVERY FUTURE CONTROL CAPTURE: a stage shorter than about 200 ms comes back intact
+  (under 1 dB) and needs no correction at all; between roughly 200 ms and 1 s it can be corrected;
+  beyond that it cannot, because inverting a 3-pole high-pass means +43 dB of boost at 0.2 Hz and
+  +60 dB at 0.1 Hz applied to a floor measured at -105 dBFS. THAT IS WHY THE ENVELOPE WORK ABOVE WAS
+  RIGHT TO MODULATE A CARRIER, and it is the quantified version of the warning it recorded.
+  TWO INCIDENTAL CONFIRMATIONS from the same captures, neither of them the point:
+    - lfo_rate_hz()'s Rate Lo law. Raw 72 predicts 1.0176 Hz; the captured edge spacing gives
+      1.02 Hz, and raw 48 and 96 land where the law says too.
+    - THE G2 ARRIVES ON QU-24 INPUTS 5 AND 6 ONLY. Channels 7/8 sat at the -105 dBFS floor with Out
+      1/2 driven, so Out 3/4 is NOT patched to the desk on this rig — the README's reverb example
+      line (--dry-channel 5 --wet-channel 7) does not describe the cabling as it stands today.
+    - THE EDGE IS NOT INSTANTANEOUS: about 0.5 ms to full value, so skip the first few ms of any
+      post-edge fit or the rise contaminates the constant.
   WATCH THE ZERO-ORDER HOLD: a sequencer's output is a staircase, so the recording is the steps PLUS
   whatever the DSP does crossing the control-to-audio boundary. That is not contamination — an LFO's
   output crosses the same boundary, so it is exactly the behaviour the drawn LFO should reflect.
