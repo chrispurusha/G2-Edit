@@ -70,8 +70,11 @@ the `-update` calls. If a host ever resizes the view without the surface followi
 move to a bare `NSView` with a hand-managed `NSOpenGLContext` and this notification.
 
 **Use the legacy (compatibility) profile** — no `NSOpenGLProfileVersion3_2Core` attribute. The whole
-renderer is fixed-function (`glOrtho`, `glBegin`, `glVertex`), so a core-profile context would draw
-nothing, silently.
+renderer is fixed-function (`glOrtho`, client-side vertex arrays, `GL_TEXTURE_2D` with no shader
+behind it), so a core-profile context would draw nothing, silently. Immediate mode itself is gone —
+`utilsGraphics.c` batches geometry into one `glDrawArrays` since 2026-08-28 — but batching is a step
+towards a Metal backend, not away from the compatibility profile, and this attribute stays until
+that backend exists.
 
 ### Scaling
 

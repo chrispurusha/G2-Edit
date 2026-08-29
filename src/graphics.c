@@ -2313,7 +2313,10 @@ void render_frame(void) {
     render_mouse_crosshair();     // TEMPORARY debug aid (F9) — above even the modal, so it is never hidden
 #endif
 
-    glfwSwapBuffers((GLFWwindow *)synthlib_window());
+    // Submits the frame's one vertex array and puts it on screen. This was a render_backend_flush()
+    // followed by glfwSwapBuffers() — the last GLFW call in this loop, and one that cannot exist
+    // under Metal, where the window is created with no context to swap. See utilsGraphics.h.
+    render_present();
 }
 
 void do_graphics_loop(void) {
