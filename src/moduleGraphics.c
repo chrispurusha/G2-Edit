@@ -1234,6 +1234,27 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
     render_circle_part(moduleArea, (tCoord){rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 4.0, 10.0, 0.0, 10.0);
 }
 
+// THE FACE IS POSITIONED WITHIN THE BODY, NOT THE WHOLE MODULE — y = 0 is just below the title
+// bar, not the module's outer top edge.
+//
+// It used to be the outer edge: render_module() drew the title bar INSIDE the module rectangle and
+// then handed that same whole rectangle to the face renderers, so every top-anchored row had to
+// leave room for the bar by hand. They did, and they all settled on y = 5% — which is why the inset
+// is 5% and not the bar's own 4.857%: it is the figure the tables were already written against, so
+// the change is exact and leaves every coordinate a whole number. The bar itself is 17 units
+// (3 + STANDARD_TEXT_HEIGHT + 2) and the body starts at 17.5, half a unit clear of it.
+//
+// Bottom-anchored rows are unaffected — the bottom edge does not move — which is most of them.
+#define MODULE_BODY_TOP_PERCENT    (5.0)
+
+static tRectangle module_body_rectangle(tRectangle moduleRectangle) {
+    double inset = (MODULE_BODY_TOP_PERCENT / 100.0) * MODULE_WIDTH;
+
+    moduleRectangle.coord.y += inset;
+    moduleRectangle.size.h  -= inset;
+    return moduleRectangle;
+}
+
 tRectangle adjust_rectangle(tRectangle moduleBase, tRectangle relative, tAnchor anchor, tModule * module) {
     relative = rectangle_scale_from_percent(relative);
 
@@ -2487,7 +2508,7 @@ void render_module(tModule * module) {
     register_click_region(module->dragArea, eClickLayerCanvas, drag_area_click_handler,
                           &sModuleClickCtx[module->key.slot][module->key.location][module->key.index]);
 
-    render_module_common(moduleRectangle, module);
+    render_module_common(module_body_rectangle(moduleRectangle), module);
 
     if (  gModuleNameEdit.active
        && gModuleNameEdit.moduleKey.slot == module->key.slot
@@ -2564,7 +2585,7 @@ void render_modules(void) {
             if (!rectangle_visible_in_module_area(moduleRectangle)) {
                 // Still off-screen — but cables reference this module's connector positions
                 // regardless of whether it's currently visible, so those must stay registered.
-                render_module_connectors(moduleRectangle, module);
+                render_module_connectors(module_body_rectangle(moduleRectangle), module);
                 continue;
             }
             render_module(module);
