@@ -569,12 +569,10 @@ and draw THAT rather than an idealised curve.
   THE WAVE SET IS NOW COMPLETE. Pickers on OscShpA, OscShpB, LfoShpA, LfoB, OscA, OscB, OscC, OscD,
   LfoA, LfoC, Rect and ShpStatic; graphs on OscShpA, OscShpB, LfoShpA, LfoB, OscA and OscB.
 
-    - REMAINING PICKER CANDIDATES, same shapeOscATypeStrMap or lfoWaveStrMap families: LfoA (param 4)
-      and LfoC (mode 0) share lfoWaveStrMap with the already-measured LfoB, so their first four waves
-      are done the moment they are registered — only the trailing RndSt/Rnd are new, and a random wave
-      has no single cycle to measure, so its icon is a representational choice (a fixed pseudo-random
-      staircase, and the same levels smoothed) rather than a fitted law. Rect and ShpStatic carry
-      their own small sets and want a look.
+    - (STALE, and cleared 2026-08-29: this bullet listed LfoA, LfoC, Rect and ShpStatic as still
+      wanting pickers, but the entries above record all four as done on 2026-08-24 and the summary
+      line says the set is complete. Kept only as a note that it was checked, so nobody chases it a
+      third time.)
 
   THE SOUND ENGINE HAS ITS OWN, DIVERGENT, AND NOW KNOWN-WRONG COPY OF ALL THIS - osc_shp_wave() in
   soundEngine.c. CT raised this twice ("when we recreate the sound engine, this analysis might also
@@ -594,8 +592,34 @@ and draw THAT rather than an idealised curve.
   wave models want the same treatment: one platform-free file included by both moduleGraphics.c and
   soundEngine.c, the way paramCurves.c is shared by the dial text, the drawn curves and the engine.
   DONE 2026-08-23: osc_shp_wave() now carries the same laws, law for law, with the dead half of its
-  Shape dial removed. The two copies still exist as separate code - the shared platform-free file is
-  still the right end state, and is what would stop them drifting apart again.
+  Shape dial removed.
+  AND DONE PROPERLY 2026-08-29 — src/waveModels.c and .h, platform-free, included by both
+  moduleGraphics.c and soundEngine.c. The two copies are gone; there is now one home for every
+  measured constant, which is what paramCurves.c does for the dial curves and what this always
+  wanted.
+  THE SPLIT IS NOT "MOVE THE FUNCTION", and that is the part worth understanding before touching it.
+  The two implementations were 230 and 128 lines and they did NOT share their code — they shared
+  their LAWS:
+    - SINE1..SINE4 ARE COMPLETE and identical, character for character. Closed-form, no
+      discontinuity, so every consumer wants the same number at a given phase. waveModels.c returns
+      the value and both callers use it as it is.
+    - TRISAW, DBLSAW, PULSE AND SYMPULSE EXPORT PARAMETERS ONLY — the peak, the detune, the duty, the
+      half-segment. All four contain a STEP, and how a step is rendered belongs to what it is being
+      rendered into, not to the wave: the engine BAND-LIMITS (an unlimited step aliases across the
+      spectrum), while the editor draws a 200-point curve and has to add explicit narrow ramps at the
+      crossings, because a hard step between two sample points is simply missed. A single shared
+      "sample" function would have forced one of them to undo the other's work.
+  Net effect: 230 lines became 66 in moduleGraphics.c and 128 became 51 in soundEngine.c, and the
+  measurement documentation moved to waveModels.c where it describes the one implementation.
+  PROVED EXACT, not assumed: a harness compared the original formulas, written out inline as they
+  stood, against the shared file over 10,173,084 points — every wave, 1271 Shape values, 2000 phases
+  — and found ZERO differences. It first reported 4912 differing by 3.3e-16, which was THE HARNESS,
+  not the code: the old copies were static and got inlined while the shared ones were out-of-line
+  calls, so sin() vectorised in one and not the other. Marking the old copies noinline made it exact.
+  Worth remembering before trusting a last-bit comparison between an inlined and a called function.
+  The drawn output is byte-identical: the same backdoor SCREENSHOT of SimpleLead before and after.
+  waveModels.c is in do-vst3's manual source list, added at the same time — that list is exactly the
+  trap this file warns about elsewhere, and it has now caught three new files in a week.
 
   WHICH MODULES WANT ONE: the natural list is the modules whose wave the user PICKS, which the
   original editor draws as image selectors rather than text — OscA, OscB, OscShpA, LfoA, LfoB,
@@ -3612,6 +3636,48 @@ resources already hold.
   the MENU backdoor command (which is why that was ported in the first place), and the plug-in's
   binary was checked with `strings` to carry V0.6.4-beta.5-9-g4fc085a-dirty. The three applications
   say "development build" when built in Xcode, which is the intended answer there.
+
+- CROSS-PLATFORM IS DEFERRED BY DECISION, NOT FORGOTTEN (CT, 2026-08-29: "Not sure I'm quite ready
+  to make the CMake jump yet. Lots to complete on MacOS, before making this cross platform.").
+  Nothing is half-built — everything below was surveyed, not started, so there is no partial state
+  to clean up. Recorded so it is not worked out from scratch again.
+  THE BLOCKER IS CMAKE, and nothing else can start without it. The only build systems here are an
+  Xcode project and shell scripts. It can be written and validated ENTIRELY ON MACOS — build the app
+  with CMake on the Mac and diff the backdoor screenshots against the Xcode build to prove it is the
+  same program — before any other platform exists.
+  DO NOT GENERATE ONE BUILD SYSTEM FROM THE OTHER. No supported tool reads an .xcodeproj and emits
+  CMake, and here there would be almost nothing to read: the project is 468 lines with FIVE
+  PBXFileSystemSynchronizedRootGroups, so it contains NO FILE LISTS AT ALL — only about a dozen
+  settings (11.5 deployment target, gnu17, the warning flags, ARC/modules, hardened runtime, the
+  three static libs). The reverse, cmake -G Xcode, is the conventional single-source answer and
+  would be a REGRESSION here: generated Xcode projects emit explicit file lists, so it would lose
+  synchronized folders and reintroduce exactly the list-maintenance problem worth avoiding.
+  THE ANSWER IS file(GLOB ... CONFIGURE_DEPENDS). Globbing is normally discouraged in CMake; here it
+  is right, because it reproduces the synchronized-folder behaviour this project already depends on.
+  Then NEITHER build system holds a file list. Roughly a dozen settings stay duplicated; they change
+  rarely (the deployment target moved once, in August) and want a comment in both files.
+  AND IT WOULD RETIRE A KNOWN TRAP: do-vst3 keeps its source list BY HAND, which the notes already
+  warn about ("a new file called from a shared one breaks only the plug-in") and which bit twice on
+  2026-08-29 alone, adding renderBackend.c and synthlibVersion.c. A globbing CMake build could
+  subsume the plug-in and make CMake a net REDUCTION in list-maintenance.
+  HOW TO BUILD AND TEST EACH PLATFORM FROM THIS MAC, since CT has no Windows or Linux hardware:
+    - LINUX: a Docker/Colima/OrbStack container, and it can RUN as well as build. The backdoor
+      SCREENSHOT is glReadPixels on the framebuffer, not a screen grab, so it needs no visible
+      window: Xvfb for a display, Mesa llvmpipe for OpenGL in software — and llvmpipe is ample
+      because renderBackendGL.c is entirely GL 1.1. Build, run headless, capture, and diff the PNGs
+      against the macOS ones with tools/pngdiff. No VM licence, no GPU.
+    - WINDOWS: mingw-w64 from Homebrew cross-compiles from macOS, and is EASIER than cross-compiling
+      to Linux because it ships the whole Win32 SDK where a Linux target needs a sysroot with X11
+      headers. But it is a COMPILE CHECK ONLY — Wine on Apple Silicon emulates x86 and translates
+      OpenGL, so a failure there proves nothing. Real Windows (Parallels or hardware) is needed for
+      the runtime and for libusb, which additionally wants the WinUSB driver via Zadig.
+    - Straight cross-compilation to Linux from macOS (clang --target + sysroot, or zig cc) works but
+      is not worth it: the effort goes into assembling a sysroot and cross-built dependencies, and
+      the result cannot be run.
+    - GITHUB ACTIONS is the cheap half of all this and comes first: a Linux build job costs nothing
+      and catches the compile breakage that otherwise rots silently.
+  NOTHING IS INSTALLED for any of it as of 2026-08-29 — no docker, colima, podman, orbstack, mingw
+  or zig — but Homebrew is, so each is one install away.
 
 - WINDOWS / LINUX BUILDS — wanted eventually (CT, 2026-08-26). Nothing started, no schedule; this is
   a note of where the port surface actually is, so it is not re-surveyed from scratch later.
