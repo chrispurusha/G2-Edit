@@ -183,6 +183,7 @@ xcodebuild \
     CODE_SIGN_STYLE=Manual \
     DEVELOPMENT_TEAM="" \
     MARKETING_VERSION="$VERSION_CLEAN" \
+    GCC_PREPROCESSOR_DEFINITIONS='$(inherited) SYNTHLIB_VERSION_STRING=\"'"$VERSION"'\"' \
     clean build
 
 APP="$DERIVED/Build/Products/Release/$APP_NAME"
@@ -248,7 +249,9 @@ else
     # with "lipo: can't create temporary output file ... (No such file or directory)". Keeping it in
     # $DERIVED also means a release never overwrites the developer's own build/G2 Alike.vst3, which is
     # the copy normally installed for testing.
-    if ! G2_VST3_OUT="$PWD/$DERIVED/vst3/G2 Alike.vst3" ./do-vst3 >/dev/null; then
+    # G2_VERSION_STRING, because do-vst3's own `git describe` would name the PREVIOUS release: the
+    # tag for this one is not created until after the .dmg has been checked. See do-vst3.
+    if ! G2_VERSION_STRING="$VERSION" G2_VST3_OUT="$PWD/$DERIVED/vst3/G2 Alike.vst3" ./do-vst3 >/dev/null; then
         echo "error: the VST3 build failed - see ./do-vst3 for the reason" >&2
         echo "       (needs the VST3 SDK; set VST3_SDK if it is not in ~/Documents/vst3sdk)" >&2
         echo "       set G2_RELEASE_SKIP_VST3=1 to release the app without the plug-in" >&2

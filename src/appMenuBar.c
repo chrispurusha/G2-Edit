@@ -28,6 +28,7 @@ extern "C" {
 #include "types.h"
 #include "utilsGraphics.h"
 #include "contextMenu.h"
+#include "synthlibVersion.h"
 #include "globalVars.h"
 #include "misc.h"
 #include "graphics.h"
@@ -485,13 +486,24 @@ static void action_open_help(int index) {
 
 // The keyboard and mouse reference. Its own top-level menu rather than an entry buried in Tools:
 // a shortcut list nobody can find is a shortcut list nobody reads.
+static void action_about(int index) {
+    (void)index;
+    show_alert("About", synthlib_about_text("G2-Edit"));
+}
+
 void open_help_menu(tCoord anchor) {
-    static tMenuItem items[2] = {0};
+    static tMenuItem items[3] = {0};
 
     items[0] = (tMenuItem){
         "Keyboard and Mouse...", (tRgb)RGB_GREY_3, action_open_help, 0, NULL, 0, 0.0
     };
+    // WHICH BUILD IS THIS. Version, compile time and the render backend in force — the last
+    // because the backend is a preference now, and "it looks wrong" and "it looks wrong on Metal"
+    // are different reports.
     items[1] = (tMenuItem){
+        "About G2-Edit...", (tRgb)RGB_GREY_3, action_about, 0, NULL, 0, 0.0
+    };
+    items[2] = (tMenuItem){
         NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
     };
     open_context_menu(anchor, items, 0, 0.0);
