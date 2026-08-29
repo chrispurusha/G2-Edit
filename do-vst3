@@ -151,11 +151,16 @@ WARNFLAGS=(-Werror)
 BACKEND_DEFS=()
 BACKEND_LIBS=(-framework Metal -framework QuartzCore)
 
-if [ "$G2_VST3_METAL" = "1" ]; then
-    BACKEND_DEFS=(-DG2_VST3_METAL=1)
-    echo "Plug-in backend: Metal"
+# METAL IS THE DEFAULT HERE, unlike the application, and deliberately so: the plug-in is
+# experimental in its entirety, it cannot offer the runtime choice the application does (its view's
+# superclass is fixed at compile time), and Metal is where this is going. G2_VST3_OPENGL=1 builds
+# the OpenGL one instead — worth keeping, because it is the path with the most hours in a real host
+# and so the thing to fall back to if a host misbehaves.
+if [ "$G2_VST3_OPENGL" = "1" ]; then
+    echo "Plug-in backend: OpenGL"
 else
-    echo "Plug-in backend: OpenGL (set G2_VST3_METAL=1 for Metal)"
+    BACKEND_DEFS=(-DG2_VST3_METAL=1)
+    echo "Plug-in backend: Metal (set G2_VST3_OPENGL=1 for OpenGL)"
 fi
 
 INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/vst3" -I"$SDK"
