@@ -3341,8 +3341,9 @@ resources already hold.
       "should" is not a test.
     - vsync under Metal is whatever CAMetalLayer does by default.
 
-- OPEN — TEXT ON NON-RETINA DISPLAYS IS THE WORST OF THE 1x RENDERING (CT, 2026-08-28). CT is
-  switching a display to non-Retina to dig into it. Nothing built; this is where the thread was left.
+- DONE 2026-08-29 — TEXT ON NON-RETINA DISPLAYS (raised by CT 2026-08-28 as the worst of the 1x
+  rendering). Measured on a real 1280x720 display, diagnosed, fixed and verified; the fix and its
+  numbers are further down this entry. The heading said OPEN until 2026-08-29 and no longer does.
   METAL DOES NOT HELP AND NEITHER WOULD MSAA. The Metal port renders the identical picture — 17
   pixels in 5,166,528 for the application, 58 in 4,199,424 for the plug-in — so this is not a
   backend question. MSAA is worth nothing here either: glyphs are TEXTURED QUADS and multisampling
@@ -3678,6 +3679,34 @@ resources already hold.
       and catches the compile breakage that otherwise rots silently.
   NOTHING IS INSTALLED for any of it as of 2026-08-29 — no docker, colima, podman, orbstack, mingw
   or zig — but Homebrew is, so each is one install away.
+
+- FIXED 2026-08-29 — TWO PROJECTS WERE LINKING AN OLD GLFW, and it took CT asking to find it ("Did
+  you rebuild glfw across all 3 projects when we updated it?"). They were not.
+  THE MECHANISM, which is the part to remember: THE BUILT STATIC LIBRARIES ARE NOT TRACKED IN GIT.
+  Each project links its own SynthLib/ThirdParty/glfw/build/src/libglfw3.a, and a submodule pull
+  brings the new SOURCE but never a new BINARY. So updating GLFW in SynthLib and advancing all three
+  pins leaves two of the three still linking whatever they last built.
+      G2-Edit     libglfw3.a built 2026-08-26 -> 3.5.1   (rebuilt at the time of the update)
+      SynthEdit   libglfw3.a built 2026-07-28 -> 3.5.0
+      EmuUtility  libglfw3.a built 2026-07-28 -> 3.5.0
+  All three had 3.5.1 HEADERS, so those two were compiling against one version and linking another.
+  It linked and ran — a patch-level GLFW does not break ABI — which is exactly why it went unnoticed
+  for a month.
+  REBUILT BOTH with the recipe in Third Party build notes.txt (delete build/ first: cmake caches the
+  architecture and deployment target, so re-running over an existing build directory silently keeps
+  the old values). All three are now 3.5.1, minos 11.5, x86_64+arm64.
+  NOTHING CHANGED ON SCREEN, checked rather than assumed: captures before and after differ by 455
+  and 432 pixels, all of them the word "Help" in the menu bar — the menu added earlier the same day.
+  THE OTHER TWO LIBRARIES ARE FINE, checked at the same time. FreeType is 2.14.3 from the same source
+  in all three, all 11.5 and universal; the differing checksums are embedded build paths, not
+  versions. libusb is present ONLY in G2-Edit and that is correct — neither sibling references it in
+  its project file, because only the G2 talks over USB.
+  A STANDING CHECK, worth running whenever a ThirdParty submodule is updated:
+      for p in G2-Edit SynthEdit EmuUtility; do
+          strings $p/SynthLib/ThirdParty/glfw/build/src/libglfw3.a | grep -oE '^3\.[0-9]+\.[0-9]+ [A-Za-z]' | head -1
+      done
+  and compare against GLFW_VERSION_* in each project's glfw3.h. The same trap applies to FreeType and
+  libusb, and it will apply to any ThirdParty library added later.
 
 - WINDOWS / LINUX BUILDS — wanted eventually (CT, 2026-08-26). Nothing started, no schedule; this is
   a note of where the port surface actually is, so it is not re-surveyed from scratch later.
