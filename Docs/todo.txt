@@ -198,11 +198,131 @@ the actual behaviour change, is NOT.
       made uncrustify re-column the whole #define block around it — that is the 35-line defs.h diff,
       and none of it is a value change.
     - CONFIRMED BY CT on the connected G2: "lamp is now going out as expected."
-  STILL OPEN: THE IDLE RENDER RATE. Measured while instrumenting the above, G2 connected, nothing
-  touched: ~26 renders/sec, of which only ~9 are the lamps. The rest are the USB thread's other
-  wakes, one per arriving interrupt packet (~20/s, matching the earlier count). So the lamp is no
-  longer the reason the app redraws when nothing visible has changed — the LED/knob stream is.
-  Worth the same treatment: wake on a CHANGE, not on arrival.
+  DONE 2026-08-29 — THE IDLE RENDER RATE: WAKE ON A CHANGE, NOT ON ARRIVAL. parse_incoming() ended
+  with an unconditional call_wake_glfw() — every message the G2 pushed asked for a frame, whether or
+  not it carried anything new. The two streams that dominate that traffic are the only ones in a
+  position to know: parse_led_data() and parse_volume_indicator() now compare each value against
+  what is already stored, return whether anything actually moved, and parse_command_response()
+  passes that back through a wantsRedraw out-param. It comes in TRUE and is only ever cleared, so
+  every other message — a response to something we asked for, or an unsolicited report of a real
+  event — still wakes the loop exactly as before.
+  AND THE SLOT COUNTS AS MUCH AS THE VALUE. render_modules() draws gSlot alone, so a change in
+  another slot's LEDs is a change to something nothing is looking at. The values are stored either
+  way; switching slot asks for its own frame and finds them already current.
+  MEASURED ON THE CONNECTED G2, A/B in the same session with a G2_WAKE_ALWAYS=1 env switch
+  restoring the old behaviour, same patch (SimpleLead pushed to slot D), same slot selected, both
+  left untouched for 30 s after the meters had settled:
+      OLD   msgs 6.28/s   wakes 6.28/s (100%)   frames 10.18/s
+      NEW   msgs 5.85/s   wakes 2.00/s ( 34%)   frames  6.77/s
+  and in the fully-settled tail the new build reports wakes 0.0/s against 2.2-5.4 msgs/s, while the
+  old one is 1:1 forever. So a patch with nothing moving now costs no frames at all; one that IS
+  blinking still redraws at the rate the instrument reports it, which is the point.
+  THE ~20/s IN THE NOTE ABOVE WAS NOT REPRODUCED, and the figure should not be trusted as the
+  general case: on this rig the LED/volume stream ran at 1-8 messages/s depending on the patch, and
+  an EMPTY patch produces none at all — the app sat in glfwWaitEvents() with the Rx lamp dark and
+  zero renders, which is also why the first measurement attempt logged nothing. The earlier 20.6/s
+  counted raw RX stamps (every USB packet, extended transfers included), not parsed messages.
+  WHAT IS NOW THE BIGGEST IDLE COST IS THE RX LAMP, not the data. At 6.77 frames/s against 2.00
+  wakes/s, roughly two thirds of the remaining frames are the lamp: each burst of traffic lights it
+  (one frame) and COMMS_LAMP_MS later it goes out (another frame). Two full canvas redraws to
+  animate a six-pixel indicator. Worth its own item — either damp the lamp, or redraw only the
+  topbar for it.
+  AND THERE IS A BIGGER LEVER STILL, unexplored: the stream is ARMABLE. SUB_COMMAND_START_STOP
+  (0x7d) is already used by send_stop()/send_start() around reloads, and the reference decode below
+  confirms 0x41 0x7D 0x00/0x01 as START/STOP_COMM for exactly this notification stream. Disarming it
+  while the window is hidden or minimised would take the idle cost to zero rather than reduce it.
+
+CROSS-CHECK AGAINST JanBurp/NordModularG2-Editor, 2026-08-29 (docs/technical/usb-protocol.md).
+Read while doing the idle-render work above, since CT asked whether it held anything useful. LICENCE
+FIRST: that project is AGPL-3.0 and this one is GPLv3, so NOTHING IS COPIED FROM IT — only facts
+about the instrument, which carry no licence. Its decode is INDEPENDENT of ours (theirs comes from
+the Delphi BVE editor, ours from the original C++ one), which is what makes an agreement worth
+something and a disagreement worth chasing. Three of each.
+
+  AGREES, AND CONFIRMS THE IDLE WORK ABOVE:
+  - Their daemon's recv_interrupt() shim skips exactly two sub-commands while waiting for a real
+    response: LED (0x39) and volume (0x3a). Our SUB_RESPONSE_LED_DATA and
+    SUB_RESPONSE_VOLUME_INDICATOR, same values. Independent agreement that those two are the noise.
+  - Their listener queue is 64 entries and DROPS THE OLDEST when full, annotated "LED/vol dominate,
+    losing one frame is imperceptible". Someone else reached the same conclusion about the same two
+    streams from the other end.
+  - START/STOP of the notification stream is system cmd 0x41 0x7D 0x00 / 0x41 0x7D 0x01, matching
+    our SUB_COMMAND_START_STOP (0x7d). Their CLI must RE-ARM with START_COMM after a performance
+    switch, because the G2 emits its version_update and then stops streaming; our
+    gotPerfSettingsChangeIndication path already does send_stop() / query / send_start() around the
+    same event (SUB_RESPONSE_PERF_PATCH_VERSIONS, 0x1f), so we are covered — but that is why.
+
+  DISAGREED ON THREE POINTS — TWO NOW TESTED ON THE HARDWARE AND SETTLED IN OUR FAVOUR, 2026-08-29.
+  All three are in the LED/volume decode, which is the one part of the protocol where a wrong reading
+  still LOOKS right most of the time. CT: "Burpy hasn't necessarily got it right or better, but might
+  have some interesting takes." That is exactly how it turned out.
+
+  1. RESOLVED — LED PAIR ORDER WITHIN A BYTE. OURS IS RIGHT. They have it MSB-first (bits 7-6 =
+     LED n); parse_led_data() has it LSB-first, from CSynthPort::InterruptHandleBlinkData(). Measured
+     on the connected G2 with two LfoA modules at deliberately different rates and the raw 0x39
+     bytes logged: the two blinks land in bits 0-1 and bits 2-3 of the first data byte, and bits 4-7
+     are constant. Under our LSB-first reading those are stream indices 0 and 1 — where the parser
+     puts the patch's only two LEDs, and the app renders both correctly. Under MSB-first they would
+     be indices 3 and 2, leaving indices 0 and 1 (which is what the renderer reads) constant zero,
+     i.e. both LEDs permanently dark. They are not. LSB-first confirmed.
+
+  2. RESOLVED — AREA ORDER. OURS IS RIGHT, AND THERE IS NO GAP. They say the index space runs FX
+     first then VA. parse_led_data() walks `location = 1 -> 0`, which in our enum (locationFx = 0,
+     locationVa = 1) is VA first. Measured the same way, rate-tagging each area — VA LfoA at rate 30
+     (slow), FX LfoA at rate 64 (fast), 67 frames over 45 s:
+         index 0:  8 transitions  <- the SLOW one, i.e. the VA module
+         index 1: 58 transitions  <- the FAST one, i.e. the FX module
+         index 2+ constant
+     VA then FX, directly concatenated, no padding between the areas. Confirmed end to end: the same
+     run polled through the new LEDDUMP shows the VA module changing once in 30 samples and the FX
+     module ten times, the same ratio and the same way round.
+     NOTE THE COMMENT ABOVE parse_led_data() IS STILL MISLEADING even though the code is right: it
+     cites CPatch::UpdateBlink calling GetBkg(1) before GetBkg(0) and calls that "VA then FX", which
+     is only true if the original numbers VA as area 1. The behaviour is now measured directly and
+     does not depend on that reading, so the comment should cite the measurement instead.
+
+  3. STILL UNTESTED — VOLUME BYTE ORDER. They read 2-byte pairs as (unknown, value) — the SECOND
+     byte is the level. parse_volume_indicator() reads the FIRST as the value and discards the second
+     as "hi byte: unused". Directly opposed, and not covered by the LED work above. Note we do NOT
+     ignore the second byte everywhere: the multi-bit LED group in the same function tests bits
+     12-13, which live in it. The same rate-tagging method would settle it — a meter fed a slow
+     envelope in one area and a fast one in the other.
+
+  WHAT THE TEST NEEDED, AND NOW EXISTS. Two additions to backdoor.c, both test-only and env-gated:
+    - ADDMODULE/DEVADDMODULE take an optional leading VA|FX. It defaulted to VA and hard-coded
+      `gLocation = locationVa`, so there was NO scripted way to put a module in the FX area at all —
+      which is very likely why the corpus below looks the way it does.
+    - LEDDUMP reports the live LED and volume values per module, as the renderer reads them. A blink
+      RATE is invisible in a screenshot; this is what makes "which module is stream index n"
+      answerable without eyeballing pixels.
+
+  AND THE CORPUS REALLY IS BLIND TO THIS — CHECKED, not assumed. All 18 files in PatchTestFiles were
+  loaded through the backdoor and their module lists cross-referenced against ledLocationList's
+  ledTypeYes rows:
+      Corrupt 2/0   DelayLevel 1/0   EnvFx 9/0   ExpAudio 1/0   GateLedBug 4/0   LedGroups 4/0
+      LedInvertA 12/0   LedInvertB 16/0   LedInvertC 11/0   LedsTest 3/0   LogicMidi 6/0
+      RndFilter 2/0   SeqOscExp 6/0   SimpleLead 2/0   SwitchSeqNote 8/0   ioosc 3/0
+                                                                        (VA LEDs / FX LEDs)
+  NOT ONE LED-BEARING MODULE IN THE FX AREA, IN ANY OF THEM. SimpleLead and SeqOscExp do have FX
+  modules — 21 and 23 — but they are delays, reverbs, mixers and outputs, none of which takes an
+  entry out of the 0x39 stream. With zero entries from one area both orderings concatenate to the
+  same index space, so every LED test ever run here would have passed either way. The area order was
+  not verified before today; it is now. A patch of the shape used above is worth adding to
+  PatchTestFiles so it stays that way.
+
+  TWO METHODOLOGY TRAPS COST MOST OF THE TIME AND WILL COST IT AGAIN. Both produced confident,
+  repeatable, WRONG answers — an apparent two-entry gap between the areas, which does not exist:
+    - MORE THAN ONE COPY OF THE EDITOR WAS RUNNING. A killed instance had not exited, and two
+      editors fought over the USB device: the log filled with "Device closed", the LED stream
+      stopped, and each was writing to the same slot. ALWAYS check `pgrep -fl "MacOS/G2 Editor"`
+      returns exactly one line before trusting a measurement. Note that `ps aux | grep -c` is not a
+      valid check here: the harness's own command line contains the app's name and matches itself.
+    - INCREMENTAL DEVADDMODULE LET THE DEVICE AND THE EDITOR DIVERGE. Modules accumulated on the
+      instrument that the editor's own DUMP did not show, so the "known" patch under test was not
+      the patch the G2 was running. Build the patch, then PUSH it as ONE whole-patch write, then
+      RESTART the editor and DUMP to read back what the instrument actually holds. That is the only
+      state worth measuring against, and it agrees with the memory note on bulk edits going as a
+      single eMsgCmdWritePatch.
 
 It's taking the online indication a while to light-up, even though comms has already happened. Is that the message queue being full from USB to Graphics? Tx and RX are lit constantly until Online is shown. Maybe it's TX and RX which are over-loading the message queue as patch is pulled? Perhaps we need to only send those on a state change in USB, if we're not already?
 
