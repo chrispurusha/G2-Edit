@@ -3026,6 +3026,467 @@ resources already hold.
   moduleGraphics.c and paramOverlay.c no longer include a graphics header AT ALL, which is the part
   a compiler enforces — a renderer that cannot name GL cannot quietly reacquire a dependency on it.
 
+- DONE 2026-08-28 — GEOMETRY BATCHING (immediate mode retired). The step after the render backend
+  seam above, and the prerequisite for a Metal backend: nothing after OpenGL HAS an immediate mode.
+  Metal, D3D and Vulkan all want a buffer of vertices and one submission, so glBegin/glVertex/glEnd
+  had to go before a backend swap could even be attempted. Every primitive in utilsGraphics.c now
+  appends triangles to one vertex array, and the array goes out in a single glDrawArrays.
+  WHAT IT IS NOT: a reordering. A 2D UI is painted back to front and every overlap depends on draw
+  order, so the batch is flushed the moment anything changes how following vertices rasterize — the
+  texture, the module-pane scissor, the projection, a clear, the SCREENSHOT read-back, and the end
+  of the frame. Consecutive draws that share all of those merge; nothing else does.
+  THE FOUR TOPOLOGIES (GL_QUADS, GL_POLYGON, GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP) all become plain
+  triangle lists, the one topology every backend agrees on. Winding is not normalised: nothing in
+  any of the three apps enables face culling.
+  THE CURRENT COLOUR IS OURS NOW, not GL's. set_rgb_colour()/set_rgba_colour() — ~188 calls across
+  the three apps — write a variable that is copied into each vertex at append time. That also
+  retires the one place in the file that READ GL state: render_bezier_curve() used to recover the
+  caller's colour with glGetFloatv(GL_CURRENT_COLOR), a pipeline stall for a value the caller had
+  just set.
+  ONE NEW SEAM CALL, render_backend_flush(), which is why utilsGraphics.h now says five and not
+  four. It must be called immediately before the buffer swap, and IS, in render_frame() (graphics.c)
+  and g2_gl_draw_frame() (vst3/g2GlDraw.c). Everything else that needs it calls it inside
+  utilsGraphics.c.
+  THE TRAP, found by looking at the result rather than by reasoning: THE TEXTURE IS STICKY. In
+  immediate mode every textured draw cleaned up after itself (unbind + glDisable(GL_TEXTURE_2D)),
+  so a rectangle drawn afterwards was untextured by inheritance. The batch inherits nothing of the
+  sort — the first version drew the whole UI except its text INVISIBLE, because every shape after
+  the first string sampled texel (0,0) of the glyph atlas, which is empty. Untextured primitives
+  now say so explicitly (batch_untextured()).
+  VERIFIED PIXEL-FOR-PIXEL, not by eye: six backdoor SCREENSHOTs — empty canvas, SimpleLead (cables,
+  envelope graphs, split panes), RndFilter, zoom 2.0 (the scissor path), a selected module, and the
+  menu bar — captured from a build of this change and from a build of the commit before it. All six
+  PNGs are byte-for-byte identical. Debug build; app and plug-in both build clean.
+  THE SIBLING PROJECTS ARE WRITTEN AND WAITING ON THE PIN (see the texture entry below, which
+  landed with it): SynthEdit/src/graphics.c and EmuUtility/src/graphics.c now call
+  render_backend_flush() immediately before their glfwSwapBuffers(). Without it they present an
+  empty window — not a subtle regression, a black screen. EmuUtility additionally owns the one
+  caller of render_texture() (its LCD); that path keeps the old glColor3f(1,1,1) side effect of
+  leaving white as the current colour, deliberately, so nothing after it changes.
+  NOT VERIFIED BY EYE: the VST3 editor. It builds and its flush is in the right place, but a host
+  was not opened.
+
+- DONE 2026-08-28 — TEXTURES JOIN THE SEAM, and with them the seam claim finally becomes true.
+  utilsGraphics.h said it was the only file naming the graphics API. That was true of G2-Edit and
+  SynthEdit and FALSE of EmuUtility, which created and uploaded its LCD texture with raw GL in its
+  own emuGraphics.c — with a "TODO - move into utilsGraphics" written beside each of the two places.
+  Both TODOs are now done and the file has NO GRAPHICS HEADER AT ALL, which is the part a compiler
+  enforces.
+  THREE CALLS, and the seam is eight:
+      render_backend_texture_create(w, h, rgba)      rgba may be NULL to allocate only
+      render_backend_texture_update(tex, x, y, w, h, rgba)
+      render_backend_texture_destroy(tex)
+  A HANDLE IS OPAQUE, NOT A GLuint. It stays uint32_t under Metal, where it will index a table the
+  backend keeps because an id<MTLTexture> does not fit in an integer. Both things that hold one —
+  this file's glyph atlases and EmuUtility's gLcdTexture — were already plain integers, so nothing
+  outside changes when the backend does. That is the whole reason to do this before writing Metal
+  rather than during.
+  NO FILTER OR WRAP PARAMETER. Every texture is RGBA8, nearest, clamp-to-edge, because both callers
+  blit one texel per pixel: filtering could only blur a sample already landing dead centre on its
+  texel, and no UV leaves [0,1] so the wrap mode is unobservable. The LCD was on GL's default
+  GL_REPEAT and moving it to clamp changes nothing for that reason.
+  A HAZARD THAT ONLY EXISTS BECAUSE OF BATCHING, and it is the reason _update() and _destroy() are
+  not thin wrappers: in immediate mode every draw was submitted before the next statement ran, so
+  an upload could never overtake one. Queued vertices now outlive the call that appended them, and
+  they were appended to sample what the texture held THEN. So both calls flush first if the batch
+  is still referencing that texture. Owning that rule inside the two functions is why the glyph
+  atlas eviction and free_textures() no longer flush by hand — they did, for one day.
+  VERIFIED: the same six backdoor SCREENSHOTs, still byte-for-byte identical to a build of the
+  commit BEFORE the batching work. That is now the whole chain — batching plus the texture seam —
+  against the original, with no pixel moved. App and plug-in both build clean.
+
+- DONE 2026-08-28 — THE BACKEND IS ITS OWN FILE NOW. utilsGraphics.c names no graphics API at all,
+  and the compiler enforces it: there is no GL header in scope any more. Three new files in
+  SynthLib/src:
+      renderBackend.h        the contract — nine gfx_* calls and one tVertex
+      renderBackendSelect.h  which backend gets compiled
+      renderBackendGL.c      the OpenGL implementation, ~200 lines
+  THE NAMING IS THE MAP. render_* is the portable drawing API, implemented once in
+  utilsGraphics.c. gfx_* is the platform contract, implemented once per platform. A call site
+  says which side of the line it is on without looking anything up.
+  WHAT STAYED PORTABLE, and this is the part worth arguing about later if anyone is tempted to move
+  it: THE BATCH. Which triangles merge into one submission, and the rule that a submission is
+  forced by anything changing how following vertices rasterize, is identical on every backend —
+  so a backend receives finished triangles and draws them, and gfx_submit() is its whole
+  involvement. Same for the flush-before-you-touch-it rule around textures: it lives in
+  render_backend_texture_update()/_destroy(), so gfx_texture_write()/_free() are handed a texture
+  nothing is waiting on and A NEW BACKEND CANNOT FORGET THE RULE BECAUSE IT NEVER SEES IT.
+  TWO THINGS MOVED INTO THE GL FILE THAT WOULD OTHERWISE HAVE BECOME #ifdefs in the middle of the
+  drawing code — both are properties of OpenGL, not of the UI:
+    - THE SCISSOR Y-FLIP. GL's scissor origin is bottom-left; everything here is top-left. The
+      flip is now inside gfx_scissor(), which takes DOUBLES for exactly one reason: the flip must
+      happen in floating point BEFORE the truncation. Flipping already-truncated integers moves
+      the bottom edge by a pixel whenever y or height has a fraction, which at some window sizes
+      it always does. Metal's origin is top-left and it will need no flip at all.
+    - THE PROJECTION. glOrtho is GL's business; the portable side only says "the surface is w by h,
+      origin top left".
+  CONDITIONAL COMPILATION IS ONE #if PER BACKEND FILE, at file scope, and there are none anywhere
+  else. It is done that way rather than by letting the build list one file and omit the other
+  because neither build system here can: SynthLib/src is a PBXFileSystemSynchronizedRootGroup in
+  all three Xcode projects, so every .c in it compiles automatically, and do-vst3 keeps its list
+  by hand. renderBackendGL.c has been added to that list.
+  THE PORT IS TWO BACKENDS, NOT FOUR, and this is the thing that was wrong in the earlier plan.
+  Only Apple deprecated OpenGL. Every call in renderBackendGL.c is GL 1.1 or earlier — glDrawArrays,
+  the client-side array pointers, glTexImage2D, glScissor, glOrtho, glBlendFunc — so that file IS
+  the Windows and Linux answer, unchanged. The matrix is: GL on Windows and Linux, GL or Metal on
+  macOS. Windows/Linux is therefore not blocked on Metal in any way; it is a build-system and
+  platform-layer job (see the entry below).
+  AND KEEP THE GL BACKEND ALIVE ON MACOS once Metal exists. Building the same app both ways on one
+  machine and diffing the backdoor SCREENSHOTs is the only cheap way to prove the Metal port moved
+  no pixel. Retiring GL the moment Metal works throws that away.
+  VERIFIED: the same six SCREENSHOTs, still byte-for-byte identical to a build of the commit before
+  the batching work — now including the scissor path, which the zoom-2.0 capture exercises. App and
+  plug-in both build clean.
+  DROPPED FROM THE PLAN, deliberately: an intermediate step rendering to an FBO under GL so the
+  read-back would already be "Metal-shaped". On a second look it buys nothing — Metal can copy the
+  drawable into a staging texture with a blit encoder before presenting, which needs no change to
+  the render pass and no change here. It would have been churn for a problem that does not exist.
+  NEXT, and it is the first step that can legitimately move a pixel: renderBackendMetal.m, plus a
+  window layer to test it through. Those two have to land together — a backend with nothing to
+  draw into cannot be run. Plug-in first: a layer-hosting NSView with a CAMetalLayer is ~30 lines
+  and replaces the NSOpenGLView machinery in vst3/g2GlView.m (CGLLockContext, -update on reshape,
+  the deprecated surface-update notification) rather than adding to it. The application follows,
+  via glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API) + glfwGetCocoaWindow() — the documented
+  Vulkan/MoltenVK route, and both are present in the bundled GLFW 3.5.1.
+  THERE IS NO APPLE OPENGL-TO-METAL SHIM to read or adopt (CT asked). Apple deprecated GL and
+  shipped no translation layer; on Apple Silicon the system GL driver is already sitting on Metal
+  internally, so the shim is what this runs on today and is not something that can be opened. The
+  references that do exist: Apple's "Migrating OpenGL Code to Metal" for vocabulary, ANGLE's Metal
+  backend for completeness (but it takes GL ES 2.0+, which has no fixed-function pipeline, so it
+  would not accept this code either), and — much the closest — Dear ImGui's imgui_impl_opengl2.cpp
+  beside imgui_impl_metal.mm. That pair solves exactly this problem: one batched vertex array of
+  position/UV/colour, a single font atlas, scissor rects, an ortho projection, alpha blending, no
+  depth, painted back to front. MIT licensed; read it, do not paste it, and if anything is borrowed
+  it goes in THIRD_PARTY.md.
+
+- 2026-08-28 — METAL BACKEND: IT DRAWS, AND IT AGREES WITH OPENGL TO 17 PIXELS IN 5,166,528.
+  SynthLib/src/renderBackendMetal.m, ~500 lines, the same nine gfx_* calls renderBackendGL.c
+  implements. Built with:
+      xcodebuild ... GCC_PREPROCESSOR_DEFINITIONS='$(inherited) RENDER_BACKEND=2' \
+                     OTHER_LDFLAGS='$(inherited) -framework Metal'
+  IT RENDERS OFFSCREEN AND PRESENTS NOTHING, deliberately, and that is the intended intermediate
+  state rather than an unfinished one. The frame is drawn into a texture the backend owns, so
+  SCREENSHOT returns a real frame while the window stays blank. Two reasons to build it this way
+  round: gfx_read_pixels_rgb() cannot reliably read a drawable back once presented, and doing it
+  offscreen means THE DRAWING can be proved right against OpenGL before any windowing code exists
+  to argue with. Which is exactly what happened — see the defect below.
+  WHAT THE COMPARISON FOUND, and it is the whole argument for having built the harness:
+    - THE SCISSOR RECTANGLE WAS A ROW OUT. OpenGL truncates the flipped bottom edge and the height
+      SEPARATELY, which lands its rect one row lower than truncating the top and bottom edges does.
+      Two rows out of 1704, invisible to the eye, and it would have gone unnoticed forever while
+      quietly costing the ability to say the backends agree. FIXED IN PORTABLE CODE, not in either
+      backend: module_pane_clip_begin() now rounds once and gfx_scissor() takes ints, so the
+      rectangle covers exactly the pixels whose top-left corner is inside it and neither backend
+      gets a say. This CHANGED THE OPENGL OUTPUT by those same rows (and one column, which only
+      shows at zoom 2.0 where modules reach that far) — a deliberate, understood, one-pixel change,
+      and the last time these two disagree.
+    - THE CAPTURES WERE NOT COMPARABLE AT ALL until the persisted state was pinned. zoomFactor,
+      the window geometry and the recent-file list all live in prefs.txt and are restored at
+      start-up, so a capture inherited whatever the previous run left behind. This produced a
+      "difference" of 2058 pixels that moved between runs of the SAME BINARY. The harness now
+      writes a fixed prefs.txt before every launch. ANY FUTURE PIXEL COMPARISON MUST DO THIS.
+  WHAT IS LEFT, all 17 pixels of it, measured rather than assumed:
+    - 15 pixels differ by +/-1 in one or two channels, all of them on the RED CABLES, which are the
+      only geometry drawn with per-vertex interpolated colour (render_bezier_curve's lighting).
+      Two different interpolators rounding to 8 bits. Not fixable and not worth trying.
+    - 2 pixels differ hard (grey against black): single edge pixels on circle geometry where the
+      two rasterizers include or exclude a pixel whose centre lands on a triangle edge. Both APIs
+      use top-left fill rules; the vertex positions differ in the last float bits.
+    Matching the vertex transform to glOrtho's exact form — one multiply-add per axis with the
+    scale and bias computed on the CPU, rather than a divide in the shader — was tried and is kept,
+    because it is the right thing to do, but it moved none of these 17.
+  THE DESIGN DECISIONS WORTH REMEMBERING:
+    - shaders are compiled AT RUNTIME from a string in the .m. A .metallib would need a build step
+      in do-vst3 (a shell script, not an Xcode target) and a bundle lookup that differs between the
+      app and a sandboxed plug-in. A string costs tens of milliseconds once and behaves identically
+      in both.
+    - a 1x1 opaque white texture is bound for untextured geometry, so ONE pipeline state covers
+      both cases with no branch. White times anything is anything, which is GL_MODULATE.
+    - the render target is MTLStorageModeManaged with an explicit synchronizeResource before the
+      read-back. Shared is not allowed for a render target on Intel macOS and this ships universal.
+    - texture handles are INDICES into a table, because renderBackend.h promises a uint32_t and an
+      id<MTLTexture> does not fit in one. Slot 0 is never handed out.
+    - the read-back flips rows and swizzles BGRA to RGB, because the contract promises what
+      glReadPixels gave: tightly-packed RGB, bottom row first.
+    - one command buffer per frame, committed at the next gfx_clear(). Without that every frame
+      since the last SCREENSHOT accumulated into one buffer, holding a vertex buffer per submission.
+  NEXT, and it is the only thing between here and a Metal build you can actually look at: the
+  WINDOW LAYER. A CAMetalLayer, and a blit from the offscreen target to its drawable. For the
+  application that means glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API) + glfwGetCocoaWindow() (both
+  present in the bundled GLFW 3.5.1), which also retires glfwSwapBuffers() from all three frame
+  loops — so presenting has to join the seam. For the plug-in it means a layer-hosting NSView in
+  place of the NSOpenGLView in vst3/g2GlView.m, which DELETES the CGLLockContext / -update /
+  surface-notification machinery rather than adding to it.
+  DO THE APPLICATION FIRST, which reverses what this file said on 2026-08-27. The plug-in is the
+  simpler of the two, but simplicity is not the deciding factor — VERIFIABILITY is. The app has the
+  backdoor and can be diffed; the plug-in needs a host and a human.
+
+- 2026-08-28 — G2-EDIT RUNS ON METAL. Not a read-back: the application window, on screen, drawn by
+  renderBackendMetal.m, captured with screencapture to prove it. Modules, cables, envelope graphs,
+  split panes, scrollbars, menu bar — the lot.
+      xcodebuild ... GCC_PREPROCESSOR_DEFINITIONS='$(inherited) RENDER_BACKEND=2' \
+                     OTHER_LDFLAGS='$(inherited) -framework Metal -framework QuartzCore'
+  THE WINDOW IS STILL GLFW'S. glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API) — the same hint a Vulkan
+  application uses — makes GLFW create the window and deliver the events while creating no context
+  and no swap chain. glfwGetCocoaWindow() then hands over the NSWindow and the backend puts a
+  CAMetalLayer on its content view. That is the whole macOS windowing change, and it is why this
+  route keeps the Windows/Linux door open: GLFW stays the window and input layer everywhere.
+  PRESENTING JOINED THE SEAM, and renderBackend.h now says so where it previously said the opposite.
+  Presenting looked like a window concern; it is not separable from the API. Under OpenGL it is a
+  buffer swap on the context GLFW made, under Metal a blit into a drawable a CAMetalLayer vends
+  using the same device the frame was rendered with. No form of words covers both without naming an
+  API. So: gfx_attach_window() and gfx_present(), and one new portable call, render_present(),
+  which submits the batch and then presents.
+  ALL THREE FRAME LOOPS LOST THEIR LAST GLFW CALL. render_backend_flush() followed by
+  glfwSwapBuffers() became render_present(), in G2-Edit, SynthEdit and EmuUtility alike. The old
+  pair could not survive Metal, where there is no context to swap.
+  THE PLUG-IN BROKE THE BUILD, once, and the reason is worth keeping: gfx_present() under OpenGL
+  calls glfwSwapBuffers, and THE PLUG-IN HAS NO GLFW — not merely no window, no library. It
+  includes renderBackendGL.c for the drawing and gets its GL headers via glfw3.h, but nothing links
+  libglfw, so the call was an undefined symbol at link time rather than a harmless no-op. Compiled
+  out under G2_VST3_BUILD, which do-vst3 already defines. Nothing is lost: a plug-in draws into a
+  view the host presents, so g2GlDraw.c still ends at render_backend_flush() and g2GlView.m calls
+  [context flushBuffer].
+  THE BLIT, NOT A SECOND RENDER PASS. The frame already exists in the offscreen target; rendering
+  it again into the drawable would mean a full-screen quad, another pipeline and a sampler to copy
+  pixels that are already right. The layer is framebufferOnly = NO so it can be a blit destination,
+  layer-HOSTING rather than layer-backed (assign the layer, then set wantsLayer, or AppKit draws
+  over it), and contentsScale is the window's backingScaleFactor or every frame presents at half
+  resolution on a Retina display.
+  STILL 17 PIXELS IN 5,166,528 against OpenGL, unchanged by any of this — 15 at +/-1 on the
+  interpolated-colour cables, 2 rasterizer edge pixels on circles. And the OpenGL build is
+  BYTE-IDENTICAL across the render_present() refactor, all six captures.
+  WHAT IS NOT DONE:
+    - the VST3 plug-in is still OpenGL. It needs a layer-hosting NSView in place of the
+      NSOpenGLView in vst3/g2GlView.m, and -framework Metal in do-vst3's link line. That DELETES
+      the CGLLockContext / -update / surface-notification machinery rather than adding to it.
+    - no resize handling for the CAMetalLayer beyond gfx_set_surface() keeping drawableSize in step
+      with the target. Worth a real drag-resize test before trusting it.
+    - Metal is not the default and should not become one until the plug-in follows and the whole
+      thing has been used in anger for a while. renderBackendSelect.h is the one-line switch.
+    - vsync under Metal is whatever CAMetalLayer does by default; the GL path explicitly asked for
+      glfwSwapInterval(1). Not investigated.
+
+- 2026-08-28 — THE VST3 PLUG-IN EDITOR RUNS ON METAL TOO, and there is now a test host in the
+  repository to prove it with.
+      G2_VST3_METAL=1 ./do-vst3          (OpenGL remains the default)
+  THE TEST HOST IS COMMITTED THIS TIME. tools/vst3host.mm + tools/do-vst3host. It has been written
+  twice before and lost twice, both times because it was left in a scratchpad — see the older note
+  in this file that says exactly that. It loads the bundle, instantiates the COMPONENT as well as
+  the controller (the component's initialize() is what loads the patch; a harness that skips it
+  gets a correct-looking editor drawing an empty database), asks for the editor view and puts it in
+  a window it owns. --seconds and --shot make it scriptable, so a plug-in rendering change is
+  diffed exactly like an application one. It reports whether IPluginFactory2 is present, because
+  its absence is what Ableton rejected the plug-in for and the previous harness could not see it.
+  ONE FILE, FOUR #ifs. g2GlView.m is ~520 lines of which about thirty differ between backends: the
+  superclass, the pixel format, prepareOpenGL/reshape, and the body of -drawRect:. The other 450
+  are mouse, keyboard, tracking areas and the drag timer, and none of them care what draws.
+  Duplicating all that to avoid four conditionals would have been a bad trade and the copies would
+  have drifted.
+  THREE BUGS, AND NONE OF THEM WOULD HAVE BEEN FOUND BY LOOKING AT IT:
+    1. LAYER-HOSTING KILLED THE EDITOR STONE DEAD. Assigning view.layer and then setting wantsLayer
+       tells AppKit the layer's contents ARE the view's, so it stops calling -drawRect: entirely —
+       and -drawRect: is how every redraw in this view happens, since they all arrive as
+       -setNeedsDisplay:. Blank window, no error. The application does not care because its render
+       loop drives every frame and nothing waits to be asked. So: a WINDOW gets the layer assigned
+       (application), a VIEW gets it as a SUBLAYER and stays layer-backed (plug-in).
+    2. THE LAYER WAS RESAMPLING THE WHOLE FRAME. A host asked for 1367x768 and the view came out
+       768.9 POINTS tall; convertRectToBacking truncates 1537.8 pixels to 1537, which is what gets
+       rendered — and Core Animation then scaled that 1537-pixel frame into a 1537.8-pixel box.
+       A 0.9995 resample never looks broken, just faintly soft. It was 6.5% of pixels and blurred
+       every glyph. The layer is now sized at drawableSize/contentsScale so the mapping is exactly
+       1:1; it can sit a fraction of a point short of the view, which is invisible, where a
+       resampled frame is not.
+    3. CORE ANIMATION WAS COLOUR-MATCHING THE LAYER. A CAMetalLayer is colour-managed by default;
+       an NSOpenGLView's pixels go to the screen as written. RGB_GREEN_ON arrived as (75,179,87)
+       where OpenGL wrote (77,178,77) — invisible, but a real difference in what the user sees, and
+       it would have made every future screen-level comparison useless. gLayer.colorspace = nil.
+  THE NUMBERS: 99.99% of pixels differing, then 6.5%, then 2.5%, then 0.001% — 58 pixels in
+  4,199,424, the same residual class as the application (rasterizer edges and the interpolated
+  cable colours). AND NOTE THIS IS A SCREEN CAPTURE, not a framebuffer read-back: it includes
+  compositing and colour management, so it is a stricter test than the application's SCREENSHOT
+  comparison, which is why bug 3 showed up here and not there.
+  UNCHANGED, RE-VERIFIED: the OpenGL plug-in is byte-identical to before this work, and the
+  application's OpenGL build is byte-identical across all six captures with Metal still at 17
+  pixels. The OpenGL plug-in is what is installed in ~/Library/Audio/Plug-Ins/VST3.
+  STILL TO DO:
+    - a real host. The harness is not Ableton, and the notes above say why that distinction has
+      already cost this project once.
+    - resize. Neither the application's CAMetalLayer nor the plug-in's has been drag-resized; the
+      plug-in's layer is re-sized from gfx_set_surface() on every frame, which should cover it, but
+      "should" is not a test.
+    - vsync under Metal is whatever CAMetalLayer does by default.
+
+- OPEN — TEXT ON NON-RETINA DISPLAYS IS THE WORST OF THE 1x RENDERING (CT, 2026-08-28). CT is
+  switching a display to non-Retina to dig into it. Nothing built; this is where the thread was left.
+  METAL DOES NOT HELP AND NEITHER WOULD MSAA. The Metal port renders the identical picture — 17
+  pixels in 5,166,528 for the application, 58 in 4,199,424 for the plug-in — so this is not a
+  backend question. MSAA is worth nothing here either: glyphs are TEXTURED QUADS and multisampling
+  antialiases geometry edges only. It would help the dial rims and cables; it would not touch text.
+  ALREADY RULED OUT: the atlas is not being clamped and rescaled. GLYPH_ATLAS_MIN_PX is 4 and a 1x
+  window draws text at about 4.6px and 6.6px, so atlas_for_height() returns the requested size and
+  the 1:1 blit still holds.
+  MEASURED 2026-08-28 ON A REAL 1280x720 DISPLAY, and the complaint is correct: text is about 14%
+  smaller than proportion demands. Same "Patch Mode" button, same patch, ink height against its own
+  box height:
+      framebuffer 884  (scale 0.69)   box 13px   ink 5px   ink/box 0.385
+      framebuffer 1120 (scale 0.88)   box 16px   ink 8px   ink/box 0.500
+      framebuffer 3032 (scale 2.37)   box 38px   ink 20px  ink/box 0.526
+  TEXT'S SHARE OF ITS BOX CLIMBS WITH THE RENDERING SCALE and converges on the Retina value. That
+  is the shape of a QUANTISATION error, not a constant factor — which rules out a plain scaling bug
+  and rules in the rounding.
+  TWO CANDIDATE CAUSES TESTED AND BOTH ARE INNOCENT, so do not spend the time again:
+    - FreeType size truncation. FT_Set_Pixel_Sizes takes (FT_UInt)fontSize, so it looked like a
+      one-line bug. Instrumented: fontSize comes out EXACTLY 6.000 and 8.000 at 1x, because
+      gCanonEmPx equals GLYPH_REFERENCE_PX. Nothing is truncated.
+    - Hinting. FT_LOAD_TARGET_LIGHT snaps vertically, which is the axis losing the height. Swapped
+      for FT_LOAD_NO_HINTING and rebuilt: cap height stayed at exactly 5px. Not it.
+  WHAT IS LEFT is the design's own 1:1 rule. pixelHeight = lround(rectangle.size.h) picks an INTEGER
+  em, the glyph bitmaps come out at whatever integer size that rasterizes to, and they are blitted
+  at that size with no correction toward the height actually asked for. At an em of 6 one pixel is
+  17%; at 21 it is 5%. The sweep above is exactly that curve. Going 6px -> 8px em moved the ink from
+  5px to 8px, a 60% jump for one integer step.
+  DONE 2026-08-29 — SUPERSAMPLED SMALL TEXT. Below a drawn height of GLYPH_SUPERSAMPLE_BELOW_PX
+  (12) the atlas is rasterized at GLYPH_SUPERSAMPLE_FACTOR (2) times the size and the glyph quads
+  are drawn scaled down, linear-filtered, at FRACTIONAL positions. Above it nothing changes: the
+  crisp one-texel-per-pixel blit and the whole-pixel pen are exactly as they were.
+  THE TRIGGER IS THE DRAWN HEIGHT, NOT THE DISPLAY, and that was CT's idea improved rather than
+  taken as stated. "Retina or not" is a proxy: gGlobalGuiScale runs continuously with window size
+  (0.69, 0.88 and 2.37 all measured on one machine), so a zoomed-out canvas on a Retina display
+  draws 6px text and wants the same treatment. A size test needs no platform query, is local to
+  atlas_for_height(), and covers that case for free.
+  THE SCALE IS CORRECTED FOR THE ROUNDING, not merely halved: glyphScale is
+  (rectangle.size.h / pixelHeight) / supersample, so the drawn height is the one actually asked
+  for rather than the integer the atlas was built at. That removes the last of the quantisation
+  instead of just reducing it.
+  IT FORCED THE FILTER PARAMETER utilsGraphics.h had been deferring. That header said there was no
+  need for one "because both callers blit one texel per pixel" and that it should be added "then,
+  with the case in front of you". This is that case: point-sampling a 2x atlas would throw half the
+  texels away. gfx_texture_alloc() and render_backend_texture_create() take a tTextureFilter in
+  both backends, and EmuUtility's LCD passes eTextureNearest explicitly.
+  RESULT, same button, same 1280x720 display: the ascender gained a row (5px to 6px) and the ink
+  went from thin and washed out to solid — the row-darkness profile under the box went from
+  2,38,38,44,34 to 2,11,6,9,20,12. Legibility is visibly better across the whole frame.
+  VERIFIED, and the second one matters more than the first:
+    - METAL AND OPENGL ARE PIXEL-IDENTICAL with the change in, 0 of 439,348 pixels.
+    - THE CRISP PATH IS UNTOUCHED. Captured at ZOOM 3.0, where canvas text is well above the
+      threshold, before and after: the only differences are in y5..68 — the menu and top bar, which
+      do not zoom and so are still small. The zoomed canvas is byte-identical.
+  NOT VERIFIED: how this looks on the Retina display, because the machine was on 1280x720 all
+  session. By construction nothing above 12px changes, but a zoomed-OUT canvas on Retina will now
+  take the new path, which is intended and still worth an eye.
+
+  DONE 2026-08-29 — MSAA, 4x, BOTH BACKENDS, application and plug-in. GFX_MSAA_SAMPLES in
+  renderBackend.h is the single value; 0 or 1 disables it.
+  IT IS NOT SELECTIVE and that is the thing to know before changing it. Multisampling is a property
+  of the render pass, so it smooths EVERY geometry edge at once — the circles and diagonal cables it
+  was aimed at, the radial dial pointers and triangles too, and also axis-aligned rectangle edges
+  that land on fractional coordinates, which were previously hard. At 1x that reads as an
+  improvement (a one-pixel border that used to vanish or double becomes a consistent line) but it is
+  a change everywhere, not a targeted one. It does NOTHING for text: a glyph is a textured quad, so
+  the only edges it can see are the quad's corners.
+  WHERE IT HAD TO GO IN EACH BACKEND:
+    - OpenGL: the multisample BUFFER belongs to the pixel format and cannot be asked for after the
+      context exists. So it is a GLFW_SAMPLES hint in synthlibWindow.c for the application AND a
+      second copy in the plug-in's NSOpenGLPixelFormat in vst3/g2GlView.m, which has no GLFW to
+      ask. gfx_init() only switches it on. Keep the two requests in step.
+    - Metal: a rasterSampleCount on the pipeline plus a SECOND, multisampled, private texture that
+      is rendered into and resolved down into gTarget — which stays the readable, presentable one.
+      Every pass uses StoreAndMultisampleResolve rather than resolving once at the end, because a
+      frame here is not one pass: the batch is submitted and the pass ended at every scissor and
+      texture change, so there is no way to know which pass is last.
+  BYTE-IDENTITY BETWEEN BACKENDS IS GONE, deliberately and unavoidably — two rasterizers do not use
+  the same sample positions. What replaced it is nearly as good: Metal and OpenGL differ on 0.87% of
+  pixels with a MAX CHANNEL DELTA OF 1. Future comparisons need a tolerance of 1, not a cmp.
+  MEASURED ACROSS ZOOM (1280x720 display, SimpleLead, share of pixels MSAA changes):
+      zoom 0.5   7.29%        zoom 1.0   8.81%        zoom 3.0   6.64%
+  So it earns its keep zoomed in as well as out. But ZOOMED IN THE LIMIT STOPS BEING THE SAMPLING
+  AND BECOMES THE SEGMENT COUNT: every circle is a fixed-sided polygon regardless of radius —
+  moduleGraphics.c draws connectors with 10 segments, splitView.c thumbs with 12, patchAdjuster.c
+  knobs with 16, all literals. Enlarged, a connector is a visible decagon; MSAA smooths the joins
+  between facets but cannot add curvature. If zoomed-in circles still look wrong, that is the thing
+  to fix, and scaling segments with the drawn radius is a cheap change.
+  VERIFIED AT RETINA 2026-08-29 (3840x2160 panel, 1920x1080 logical, framebuffer 2800x1574,
+  gGlobalGuiScale 2.19):
+    - THE SUPERSAMPLED TEXT IS BYTE-IDENTICAL AT RETINA. Nothing above the 12px threshold changes,
+      which is what the design claimed and could not be checked while the machine was at 1280x720.
+    - MSAA changes 2.36% of pixels at Retina against 8.81% at 1x — less to fix where a jagged step
+      is already half a pixel, but still visible on the curves and diagonals.
+    - Metal against OpenGL with everything on: 0.36% of pixels, MAX CHANNEL DELTA 58. That is
+      larger than the +/-1 seen at 1x and it is the multisample resolve, not a defect: with 4
+      samples an edge pixel where the two rasterizers disagree by one sample moves by about a
+      quarter of the local contrast. Any future comparison of the two backends needs that tolerance.
+  A RACE IN THE TEST HARNESS, not the app, and it cost an hour: the backdoor DELETES THE COMMAND
+  FILE BEFORE PROCESSING THE COMMAND, so waiting for that file to disappear is not waiting for the
+  command to finish. Every capture script in this file's history did exactly that. It never bit at
+  1280x720 because commands completed inside the following sleep; at 4K the app is slower and all
+  four captures silently produced no file while every command reported OK — the OK being the
+  PREVIOUS command's, still in the result file. WAIT FOR THE RESULT FILE TO APPEAR, having deleted
+  it first. Do not wait on the command file.
+
+  NOT VERIFIED: the PLUG-IN comparison. Both backends build and the host runs them, but the editor
+  view is 1367x768 POINTS and the screen was 1280x720, so the window does not fit and the capture
+  caught a clipped, repositioned window — a meaningless 47% "difference" over a 1280x658 region.
+  Redo it on the 4K display. Nothing suggests a real problem; the capture is simply invalid.
+
+  THE REMAINING HALF, CIRCLES (CT reports those as visibly jagged at this resolution, and
+  they are): SUPERSAMPLE. Render the offscreen target at 2x and downscale. Text is then rasterized
+  at an em of 12-16 where the quantisation is a few percent, and every curve gets antialiased on the
+  way down. MSAA would fix the circles and do NOTHING for text, since glyphs are textured quads —
+  so supersampling is the single change that answers both complaints.
+  THE OLD SUSPECT LIST, kept because it is still the fallback if supersampling is rejected:
+    1. PER-GLYPH POSITION ROUNDING. internal_render_text() rounds every glyph to a whole pixel
+       (round(originX + xCharOffset)) while the pen advances by the canonical fractional advance.
+       The comment there calls it "the right trade at these sizes" — and at 2x it plainly is. At
+       6px a half-pixel is a large fraction of a character, so the same trade may be what makes 1x
+       text look unevenly spaced. Test by drawing at fractional x with a LINEAR-filtered atlas and
+       comparing; note that would also mean giving up the GL_NEAREST 1:1 blit, so it is a real
+       trade rather than a free fix.
+    2. HINTING. FreeType's default hinting distorts glyph shapes hard at 5-6px. Light hinting, the
+       autohinter, or no hinting with accurate positioning often reads better that small.
+  THE THIRD OPTION, which sidesteps both: SUPERSAMPLE — render the offscreen target at 2x and
+  downscale. Helps text, curves and thin lines at once and needs no decision about hinting. Costs
+  4x the fragment work (nothing, at this complexity) and one full-screen-quad pass, because a
+  MTLBlitCommandEncoder copy cannot rescale. This is the use the FBO step would have earned; it was
+  dropped for the read-back, which was right, but not for this.
+  HOW TO GET A 1x FRAME: I could not reproduce one on the Retina machine — the framebuffer stayed
+  at 3032x1704 with GLFW_SCALE_FRAMEBUFFER and GLFW_COCOA_RETINA_FRAMEBUFFER both set false, and I
+  did not chase why. With a real non-Retina display, the backdoor SCREENSHOT is the capture and the
+  comparison method is the one used throughout the Metal port; REMEMBER TO PIN prefs.txt first
+  (zoomFactor and the window geometry persist and will otherwise differ between captures).
+
+- SMALL: synthlibWindow.c:259 uses GLFW_COCOA_RETINA_FRAMEBUFFER, which the bundled GLFW 3.5.1
+  header marks deprecated in favour of GLFW_SCALE_FRAMEBUFFER "for compatibility with earlier
+  versions". Still works; worth the one-word change. Found while trying to force a 1x framebuffer.
+
+- 2026-08-29 — VSYNC UNDER METAL, and a presentation fix for the plug-in. CT asked whether Metal
+  syncs to the monitor and reported possibly seeing tearing. It DOES: CAMetalLayer's
+  displaySyncEnabled defaults to YES. But nothing in this codebase said so, while the OpenGL path
+  asks out loud in two places (glfwSwapInterval(1) in synthlibWindow.c, the swap interval on the
+  plug-in's context in g2GlView.m) — an invariant explicit in one backend and inherited in the
+  other is one nobody can answer a question about. It is now set explicitly.
+  THE LIKELIER CAUSE OF ACTUAL TEARING, and it is fixed: presentDrawable: hands the frame over
+  ASYNCHRONOUSLY, outside the Core Animation transaction AppKit is running. When we own the frame
+  loop that is correct and cheapest — the application keeps it. The PLUG-IN does not own its frame
+  loop: it draws from -drawRect:, inside a view hierarchy the host is laying out, so its pixels and
+  AppKit's layout landed at different moments. That shows up as tearing or edge jitter, worst while
+  dragging or resizing. The plug-in now sets presentsWithTransaction and presents by hand —
+  commit, waitUntilScheduled, [drawable present] — so the frame becomes visible as part of the same
+  transaction. Costs one synchronisation point per frame, which is why the application does not pay it.
+  VERIFIED: the application's frames are BYTE-IDENTICAL across the change (it only gained the
+  explicit displaySyncEnabled, which was already the default), and the plug-in's are byte-identical
+  to the pre-change Metal build — so this is a presentation change and not a rendering one.
+  STILL UNMEASURED: an actual frame rate. Both apps redraw on demand rather than free-running, so
+  there is no steady rate to count without driving a continuous drag. If tearing is still visible,
+  that is the experiment to build.
+
+- 2026-08-29 — tools/vst3host would not close until the mouse was moved (CT noticed). -[NSApplication
+  stop:] does NOT end the run loop; it sets a flag acted on only after the CURRENT event finishes
+  dispatching, so with the pointer still, -run stayed blocked in nextEventMatchingMask: and never
+  reached it. Any stray event released it, which is why moving the mouse appeared to let the window
+  close. Fixed by posting a dummy application-defined event straight after stop:. It now exits on
+  its own timer with nothing touched.
+
 - WINDOWS / LINUX BUILDS — wanted eventually (CT, 2026-08-26). Nothing started, no schedule; this is
   a note of where the port surface actually is, so it is not re-surveyed from scratch later.
   ALREADY PORTABLE, and mostly on purpose: GLFW covers Win32/X11/Wayland and is pinned at the 3.5.1

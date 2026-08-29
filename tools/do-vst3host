@@ -1,0 +1,28 @@
+#!/bin/bash
+# Builds tools/vst3host — a minimal VST3 host for looking at our own editor view.
+# See vst3host.mm for what it proves and, more importantly, what it does not.
+set -e
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+SDK="${VST3_SDK:-$HOME/Documents/vst3sdk}"
+
+if [ ! -d "$SDK/pluginterfaces" ]; then
+    echo "VST3 SDK not found at $SDK — set \$VST3_SDK" >&2
+    exit 1
+fi
+
+# The headers, plus the two SDK files that instantiate the interface IDs the headers only declare:
+# vstinitiids.cpp for the Vst:: ones (which is all do-vst3 needs, because a plug-in only ever
+# implements interfaces) and coreiids.cpp for the base ones — FUnknown, IPluginFactory2, IPlugFrame.
+# A HOST needs those and a plug-in does not, which is why this list is one file longer than
+# do-vst3's. No CMake, no vstgui, no helper classes.
+clang++ -O2 -std=gnu++17 -fobjc-arc -Wall \
+    -I "$SDK" \
+    -o "$HERE/vst3host" \
+    "$HERE/vst3host.mm" \
+    "$SDK/public.sdk/source/vst/vstinitiids.cpp" \
+    "$SDK/pluginterfaces/base/coreiids.cpp" \
+    -framework Cocoa
+
+echo "Built: $HERE/vst3host"
+echo "  ./vst3host \"../build/G2 Alike.vst3\" --shot /tmp/editor.png"

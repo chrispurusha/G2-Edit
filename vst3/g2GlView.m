@@ -29,18 +29,40 @@
 // for years; the layer-backed routes are what people reach for when they hit trouble, and starting
 // at the trouble is a poor way to find out whether there is any.
 
+// THE SURFACE IS THE ONLY PART THAT DIFFERS BETWEEN BACKENDS. Roughly thirty lines below are
+// conditional — the superclass, the pixel format, prepareOpenGL/reshape, and the body of
+// -drawRect:. The other four hundred and fifty are mouse, keyboard, tracking areas and the drag
+// timer, none of which care what draws. That is why this is one file with a few #ifs rather than
+// two files sharing a base class: duplicating the input handling to avoid four conditionals would
+// be a bad trade, and the two copies would drift.
+
 #define GL_SILENCE_DEPRECATION    1
 
 #import <Cocoa/Cocoa.h>
-#import <OpenGL/OpenGL.h>
-#import <OpenGL/gl.h>
+
+#include "renderBackendSelect.h"
+
+#include "renderBackend.h"
+
+#if RENDER_BACKEND == RENDER_BACKEND_GL
+ #import <OpenGL/OpenGL.h>
+ #import <OpenGL/gl.h>
+#endif
 
 #include "g2GlDraw.h"
 #include "g2GlView.h"
 #include "g2Input.h"
 #include "inputState.h"
 
+#if RENDER_BACKEND == RENDER_BACKEND_GL
 @interface G2GlView : NSOpenGLView
+#else
+// A PLAIN NSView. Under Metal there is no context to own, so there is nothing for NSOpenGLView to
+// provide — the view is layer-hosting and the CAMetalLayer on it is the surface. Everything
+// NSOpenGLView was doing for us (the -update on resize, the deprecated surface notification it
+// watches on our behalf) simply stops being a problem rather than needing replacing.
+@interface G2GlView : NSView
+#endif
 @property (strong) NSTimer * dragTimer;
 @end
 
@@ -145,16 +167,27 @@ static __weak G2GlView * gCurrentView = nil;
 
 @implementation G2GlView
 
+#if RENDER_BACKEND == RENDER_BACKEND_GL
+
 - (instancetype)initWithFrame:(NSRect)frame {
     // No profile attribute, so this is the legacy (compatibility) profile. That is deliberate and
-    // not laziness: the application's renderer is fixed-function throughout — glOrtho, glBegin,
-    // glVertex — so a core-profile context here would draw nothing when the real renderer is
-    // eventually pointed at it, and would do so silently.
+    // not laziness: the application's renderer is fixed-function throughout — glOrtho, the
+    // client-side vertex arrays the geometry batch submits through, and GL_TEXTURE_2D texturing
+    // with no shader behind it — so a core-profile context here would draw nothing, silently.
+    // (glBegin/glVertex went when the batch arrived, 2026-08-28; the profile requirement did not.)
+    // The multisample buffer has to be in the pixel format; there is no enabling it afterwards.
+    // The application asks GLFW for the same thing with GLFW_SAMPLES — this is the plug-in's copy,
+    // because it has no GLFW to ask. Keep the two in step; GFX_MSAA_SAMPLES is the single value.
     NSOpenGLPixelFormatAttribute attrs[] = {
         NSOpenGLPFADoubleBuffer,
         NSOpenGLPFAAccelerated,
         NSOpenGLPFAColorSize, 24,
         NSOpenGLPFAAlphaSize,  8,
+#if GFX_MSAA_SAMPLES > 1
+        NSOpenGLPFAMultisample,
+        NSOpenGLPFASampleBuffers, 1,
+        NSOpenGLPFASamples,       GFX_MSAA_SAMPLES,
+#endif
         0
     };
 
@@ -200,6 +233,28 @@ static __weak G2GlView * gCurrentView = nil;
     [super reshape];
     [[self openGLContext] update];
 }
+
+#else  // RENDER_BACKEND != RENDER_BACKEND_GL
+
+- (instancetype)initWithFrame:(NSRect)frame {
+    self = [super initWithFrame:frame];
+
+    if (self == nil) {
+        return nil;
+    }
+    // LAYER-HOSTING, and the order matters: gfx_attach_window() assigns the layer and only then
+    // sets wantsLayer, which is what tells AppKit the contents are the layer's and that it must not
+    // draw over them. Handing it the VIEW rather than a window is the whole difference from the
+    // application — in a plug-in the window belongs to the host.
+    gfx_attach_window((__bridge void *)self);
+    g2_gl_draw_init();
+    return self;
+}
+
+// No -prepareOpenGL and no -reshape: there is no context to prepare and nothing to -update. The
+// layer is resized from gfx_set_surface(), which every frame calls with the view's backing size.
+
+#endif  // RENDER_BACKEND
 
 // WITHOUT A TRACKING AREA, -mouseMoved: IS NEVER CALLED. That is why menu items did not highlight:
 // the highlight is drawn from the pointer position (render_context_menu reads it), and the position
@@ -479,6 +534,14 @@ static __weak G2GlView * gCurrentView = nil;
 - (void)drawRect:(NSRect)dirtyRect {
     (void)dirtyRect;
 
+    // Physical pixels, not points. Asking the view to convert is the whole of the backing-scale
+    // question on macOS — there is no host-supplied scale factor to plumb through, because VST3's
+    // setContentScaleFactor() is not used on this platform.
+    NSRect bounds  = [self bounds];
+    NSRect backing = [self convertRectToBacking:bounds];
+    double scale   = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
+
+#if RENDER_BACKEND == RENDER_BACKEND_GL
     NSOpenGLContext * context = [self openGLContext];
     CGLContextObj     cgl     = [context CGLContextObj];
 
@@ -489,17 +552,19 @@ static __weak G2GlView * gCurrentView = nil;
     CGLLockContext(cgl);
     [context makeCurrentContext];
 
-    // Physical pixels, not points. Asking the view to convert is the whole of the backing-scale
-    // question on macOS — there is no host-supplied scale factor to plumb through, because VST3's
-    // setContentScaleFactor() is not used on this platform.
-    NSRect bounds  = [self bounds];
-    NSRect backing = [self convertRectToBacking:bounds];
-    double scale   = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
-
     g2_gl_draw_frame((int)backing.size.width, (int)backing.size.height, scale);
 
     [context flushBuffer];
     CGLUnlockContext(cgl);
+#else
+    // No lock and no current-context dance: a Metal command buffer is built and committed here and
+    // nowhere else, and the backend owns its own state. The frame is drawn into the backend's
+    // offscreen target and gfx_present() blits it to this view's layer — the same two calls the
+    // application's render_present() makes, spelled out because a plug-in's frame is driven by
+    // AppKit rather than by a render loop.
+    g2_gl_draw_frame((int)backing.size.width, (int)backing.size.height, scale);
+    gfx_present();
+#endif
 }
 
 @end
