@@ -2432,6 +2432,19 @@ void render_module_common(tRectangle rectangle, tModule * module) {
         }
     }
 
+    // Section headings. No index cache and no hit-testing: there are a handful of rows in the whole
+    // table, they never respond to the mouse, and nothing about them depends on the module's state.
+    for (uint32_t i = 0; i < array_size_label_location_list(); i++) {
+        if (labelLocationList[i].moduleType == module->type) {
+            tRectangle adjusted = adjust_rectangle(rectangle, labelLocationList[i].rectangle, labelLocationList[i].anchor, module);
+
+            adjusted.size.w = BLANK_SIZE;
+            adjusted.size.h = STANDARD_TEXT_HEIGHT;
+            set_rgb_colour((tRgb)RGB_BLACK);
+            render_text(moduleArea, adjusted, (char *)labelLocationList[i].text);
+        }
+    }
+
     for (uint32_t i = module->ledIndexCache; i < array_size_led_location_list(); i++) {
         if (ledLocationList[i].moduleType == module->type) {
             if (module->gotLedIndexCache == false) {
