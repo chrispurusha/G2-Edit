@@ -63,8 +63,8 @@ void render_top_bar(void) {
     uint64_t    txTime                              = gUsbTxTime;
     uint64_t    rxTime                              = gUsbRxTime;
     uint64_t    nowMs                               = (uint64_t)get_time_ms();
-    bool        txActive                            = (txTime != 0) && ((nowMs - txTime) < 100);
-    bool        rxActive                            = (rxTime != 0) && ((nowMs - rxTime) < 100);
+    bool        txActive                            = (txTime != 0) && ((nowMs - txTime) < COMMS_LAMP_MS);
+    bool        rxActive                            = (rxTime != 0) && ((nowMs - rxTime) < COMMS_LAMP_MS);
     tRectangle  commsStateRect                      = {0};
 
     set_rgb_colour((tRgb)RGB_GREY_5);
@@ -344,13 +344,30 @@ void render_top_bar(void) {
     }
 }
 
+// Which activity lamps are lit right now, as bit 0 = Tx, bit 1 = Rx. The Tx/Rx lamps are the only
+// thing on screen that changes with no event behind it — a lamp goes out because time passed, not
+// because anything happened — so do_graphics_loop() compares this against what it last drew and
+// asks for a frame when it differs. Per lamp rather than "either", so Tx going out while Rx stays
+// lit is still a change.
+uint32_t comms_lamp_state(void) {
+    uint64_t nowMs = (uint64_t)get_time_ms();
+    uint64_t tx    = gUsbTxTime;
+    uint64_t rx    = gUsbRxTime;
+    uint32_t state = 0;
+
+    if ((tx != 0) && ((nowMs - tx) < COMMS_LAMP_MS)) {
+        state |= 1u;
+    }
+
+    if ((rx != 0) && ((nowMs - rx) < COMMS_LAMP_MS)) {
+        state |= 2u;
+    }
+    return state;
+}
+
 // Is either activity lamp currently lit? Used only by do_graphics_loop() to decide how long to
 // wait: while one is lit the loop needs to come back when it is due to expire, so the lamp can be
 // drawn going out. When neither is lit there is nothing to time and the loop can sleep properly.
 bool comms_lamps_lit(void) {
-    uint64_t nowMs = (uint64_t)get_time_ms();
-    uint64_t tx    = gUsbTxTime;
-    uint64_t rx    = gUsbRxTime;
-
-    return ((tx != 0) && ((nowMs - tx) < 100)) || ((rx != 0) && ((nowMs - rx) < 100));
+    return comms_lamp_state() != 0;
 }
