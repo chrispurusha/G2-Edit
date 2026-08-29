@@ -2,6 +2,8 @@ G2-Edit TODO (priority order)
 
 CT new:
 
+When G2 gives an indication of voice limit, I wonder if we're off by 1? Seem to have a limit of 15, when I'd really expect 16 - maybe? Not definite.
+
 ONLINE LIGHTS LATE, AND THE LAMPS NEVER GO OUT — MEASURED 2026-08-29 with the G2 connected. CT:
 "if we're pulling data, we're online - right?" Yes. Steps 1 and 2 below are DONE; step 3, which is
 the actual behaviour change, is NOT.
@@ -63,6 +65,8 @@ the actual behaviour change, is NOT.
   phases inside send_init_sequence_pull():
       patch data, all four slots      116 ms
       send_list_names_sweep()       8,012 ms      <- 98% of the wait
+  (and see below: that 8,012 ms turned out to be a bug, not a workload — the sweep was spinning on
+  a bank boundary. The real cost of reading every name is about 130 ms.)
   CT spotted this before it was measured ("it's not an empty canvas for 8 seconds. Patch is visible
   almost immediately"), and was right: the canvas is populated in a tenth of a second. My claim that
   it showed an empty canvas was an assumption and was wrong.
@@ -73,32 +77,45 @@ the actual behaviour change, is NOT.
   SO THE REAL QUESTION IS WHY THE SWEEP BLOCKS. gCommsState = eCommsOnLine is set after the whole of
   send_init_sequence_pull(), sweep included, and device_ready() keys off that — so every bulk
   operation and menu stays disabled for eight seconds waiting for data that only three of them need.
-  CACHE THE NAMES, AS SYNTHEDIT ALREADY DOES (CT, 2026-08-29) — the best of the options below, and
-  the mechanism is already in SynthLib and simply unused here. prefs.cpp maintains a SECOND store,
-  cache.txt, beside prefs.txt; SynthEdit writes the whole name list into it as one blob
-  (cache_set_string("nameCacheKorg_Korg Z1", ...)) with a companion "...Done_..." flag, so a sweep
-  that was interrupted resumes instead of being trusted. G2-Edit calls neither function.
-  WHY IT IS SAFE HERE, and this is the part that matters given the standing rule that destructive
-  operations must never trust the cache: G2-Edit ALREADY peeks live before every destructive act —
-  peek_store_target(), peek_delete_target() and peek_load_target() each ask the instrument what is
-  really at that bank location before writing. So a cached list would only ever populate the PICKER,
-  and the confirmation still comes from the device. The cache must not be allowed to leak past that
-  line into anything that decides whether a location is occupied.
-  WHAT IT NEEDS: somewhere to serialise the name table, a key (the G2 offers no obvious device id —
-  patch version or a synth setting may serve), and an invalidation story, because the instrument's
-  contents change from its own front panel and from other editors. The safe shape is SynthEdit's:
-  show the cache immediately, re-sweep in the background, and let the fresh names replace the stale
-  ones as they arrive — which also answers the stall problem below, since a background sweep that
-  nobody is waiting on can be paced.
-  OPTIONS, none taken yet:
-    - Set eCommsOnLine BEFORE the sweep and let it run afterwards. Cheapest, and the pickers fill in
-      as names arrive. Two caveats: a picker opened during the sweep shows a partial list, and the
-      USB thread is in a tight request/response loop throughout, so a user command issued at t=1s
-      would stall behind it rather than run.
-    - Make the sweep genuinely background and interruptible, which is what SynthEdit already does for
-      the Voyager and Z1 — see the name-sweep generic mechanism note. More work, but it is the
-      version that does not stall a user command.
-    - Leave it, and simply say what it is doing. See the busy overlay below.
+  DONE 2026-08-29 — NAME CACHE + BACKGROUND PACING (CT: "go for the cache and background pacing,
+  making it closer to SynthEdit"), and it turned up the real cause of the eight seconds.
+  THE SWEEP WAS NEVER SLOW. IT WAS STUCK. The device only emits its inline 0x03 [bank][location]
+  transition when the next bank's entries are in the SAME response; a response that ends exactly on
+  a bank boundary just says "bank b, location 128", and asking for location 128 of bank b returns
+  that same answer forever. send_list_names_sweep() followed that continuation literally, so it spun
+  on bank 1 until its 2,000-request guard tripped, gave up on the whole domain, and did the same
+  again for performances. THE 8,012 ms WAS 4,000 WASTED REQUESTS, and every bank past the first was
+  never read at all — which is why the pickers only ever listed Bank 1. name_sweep_step() now rolls
+  the bank over itself when the location runs past 128, or when a response reports no progress.
+  Measured after the fix, on the connected G2: THE WHOLE SWEEP IS 33 REQUESTS AND ~130 ms.
+  WHAT SHIPPED, all in usbComms.c plus the new src/nameCache.[ch]:
+    - The sweep is out of send_init_sequence_pull() entirely. Pull init now completes 365 ms after
+      launch (was ~8.1 s), measured end to end from process start.
+    - It is paced by state_handler(): ONE request per pass, and only after the UI command queue has
+      been found empty, so an interactive edit never waits behind a bank read.
+    - Names are read into a STAGING pair of tables and swapped in whole on completion. A sweep that
+      is interrupted is discarded rather than swapped: a partial list is worse than a stale one.
+      parse_list_names_response() writes through sPatchNameTarget/sPerfNameTarget to allow that.
+    - nameCache.[ch] keeps the tables in SynthLib's cache.txt between runs — one fixed-width record
+      per populated location (mode, bank, loc, category, 16-char padded name), no delimiters, since
+      cache.txt is line-based and a patch name could contain very nearly anything. Names are
+      sanitised to printable ASCII on the way out for the same reason. A companion
+      g2NameTableComplete flag means an interrupted sweep is re-read rather than trusted.
+      MEASURED WARM: names restored at 364 ms, before the pull sequence finishes; the background
+      sweep confirms them at 492 ms.
+    - Store, Delete and Bank Restore edit the live tables directly, so they now call
+      name_tables_edited(): restart a sweep in flight (its staging copy predates the edit and would
+      undo it), or re-save the cache if none is running.
+    - THE RULE HELD: the cache populates the PICKER and nothing else. peek_store_target(),
+      peek_delete_target() and peek_load_target() still ask the instrument before every destructive
+      act, and nothing in this change reads the tables to decide whether a location is occupied.
+    - SynthLib's prefs.cpp needed a lock: the cache is written from the USB thread while the UI
+      thread is reading window geometry, and prefs_get_string() returned a pointer into ONE shared
+      std::string. It is a recursive_mutex plus a thread_local scratch buffer now. THAT CHANGE IS IN
+      THE SUBMODULE and the other two projects want it.
+    - VERIFIED on the connected G2: 423 names across patch banks 1-5 and performance bank 1 in
+      cache.txt, and a backdoor screenshot of the Load Patch picker listing entries from Banks 1, 2
+      and 3 — the banks the old sweep never reached.
   STILL NOT DONE: represent the pull with the busy overlay
   (gDeviceOpInProgress + render_device_busy_overlay(), built 2026-07-26, still never hardware
   tested). It cannot be set from the USB thread — it is a plain int owned by the UI thread — so it
