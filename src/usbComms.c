@@ -48,6 +48,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
 #include "paramPages.h"
+#include "nameCache.h"
 #include "graphics.h"      // set_patch_name_from_filename / write_database_to_file (extern "C")
 #include "mouseHandle.h"   // init_patch (extern "C")
 #include <stdatomic.h>
@@ -105,15 +106,27 @@ static uint8_t * ensure_bank_scratch_buffer(uint8_t ** buffer) {
 // fills this in immediately before setting gSynthRestorePeekComplete; apply_synth_settings_restore()
 // copies it into the live gSynthSettings once the user has confirmed (single-threaded round trip
 // through the USB thread, same reasoning as the scratch state above).
-static tSynthSettings         sSynthSettingsRestoreStaged = {0};
+static tSynthSettings sSynthSettingsRestoreStaged = {0};
 
 // List Names sweep scratch state — parse_list_names_response() fills these in on each response;
 // send_list_names_sweep() reads them immediately after each send_and_receive() call returns
 // (single-threaded round trip, no locking needed, same reasoning as the scratch state above).
-static uint8_t                sListNamesMode              = 0;
-static uint8_t                sListNamesNextBank          = 0;
-static uint8_t                sListNamesNextLoc           = 0;
-static bool                   sListNamesFinished          = false;
+static uint8_t        sListNamesMode              = 0;
+static uint8_t        sListNamesNextBank          = 0;
+static uint8_t        sListNamesNextLoc           = 0;
+static bool           sListNamesFinished          = false;
+
+// WHERE parse_list_names_response() DEPOSITS WHAT IT READS. It points at the live tables for the
+// one-entry responses that come back from a Store, and at a staging pair while a background sweep
+// is running — see name_sweep_begin(). The sweep must not write into the live tables as it goes:
+// the picker is drawn from them, and they hold either the previous run's cached names or the
+// previous sweep's, so filling them in location by location would mean a Load dialogue opened
+// during the refresh showed a bank that empties and refills over eight seconds.
+static tNameTableEntry(*sPatchNameTarget)[NUM_LOCATIONS_PER_BANK] = gPatchNameTable;
+static tNameTableEntry(*sPerfNameTarget)[NUM_LOCATIONS_PER_BANK]  = gPerfNameTable;
+
+// Defined with the sweep, below; Store, Delete and Bank Restore all sit above it.
+static void name_tables_edited(void);
 
 // Set around send_store_patch()'s send_and_receive() call — Store's ack reuses this exact
 // one-entry response format (see parse_list_names_response()'s comment), but it is not a List
@@ -122,23 +135,23 @@ static bool                   sListNamesFinished          = false;
 // continuation, so parsing them as one would fabricate phantom entries. This suppresses just the
 // name-table writes for that call, harmlessly leaving the rest of parse_list_names_response's
 // bookkeeping (sListNamesMode/NextBank/NextLoc) alone since nothing consults it for a Store ack.
-static bool                   sSuppressNameTableUpdate    = false;
+static bool                   sSuppressNameTableUpdate = false;
 
 // Protected by usbStaticMutex
-static pthread_t              usbThread                   = NULL;
-static libusb_context *       libUsbCtx                   = NULL;
-static libusb_device_handle * devHandle                   = NULL;
+static pthread_t              usbThread                = NULL;
+static libusb_context *       libUsbCtx                = NULL;
+static libusb_device_handle * devHandle                = NULL;
 
 // Callback pointers protected by callbackMutex
 static void                   (*wake_glfw_func_ptr)(void) = NULL;
 static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
 
 // Mutexes
-static pthread_mutex_t        usbStaticMutex              = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t        callbackMutex               = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        usbStaticMutex           = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        callbackMutex            = PTHREAD_MUTEX_INITIALIZER;
 
 // Keepalive: timestamp of the last successful inbound or outbound USB transfer
-static time_t                 gLastActivityTime           = 0;
+static time_t                 gLastActivityTime        = 0;
 
 // ---------------------------------------------------------------------------
 // Callback registration
@@ -771,7 +784,7 @@ static void parse_list_names_response(uint8_t * buff, uint32_t * bitPos, int len
 
             if (!sSuppressNameTableUpdate) {
                 if ((mode == BANK_UPLOAD_DOMAIN_PATCH) && (bank < NUM_PATCH_BANKS)) {
-                    gPatchNameTable[bank][location].populated = true;
+                    sPatchNameTarget[bank][location].populated = true;
                     // COPY_STRING, NOT strncpy. strncpy pads with zeros only when the source is
                     // SHORTER than n: at exactly CLAVIA_NAME_SIZE it writes 16 bytes and no
                     // terminator, and the reader then runs on into whatever follows the field. That
@@ -779,12 +792,12 @@ static void parse_list_names_response(uint8_t * buff, uint32_t * bitPos, int len
                     // Load Patch picker as "distant activity Ringmod Basses". The tables are globals
                     // so the byte is zero at startup, which is why it only showed up once an entry
                     // had been rewritten by a re-sweep, a Store or a Delete.
-                    COPY_STRING(gPatchNameTable[bank][location].name, name);
-                    gPatchNameTable[bank][location].category  = category;
+                    COPY_STRING(sPatchNameTarget[bank][location].name, name);
+                    sPatchNameTarget[bank][location].category  = category;
                 } else if ((mode == BANK_UPLOAD_DOMAIN_PERFORMANCE) && (bank < NUM_PERF_BANKS)) {
-                    gPerfNameTable[bank][location].populated = true;
-                    COPY_STRING(gPerfNameTable[bank][location].name, name);
-                    gPerfNameTable[bank][location].category  = category;
+                    sPerfNameTarget[bank][location].populated = true;
+                    COPY_STRING(sPerfNameTarget[bank][location].name, name);
+                    sPerfNameTarget[bank][location].category  = category;
                 }
             }
             location++;
@@ -2109,6 +2122,8 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
         call_wake_glfw();
     }
 
+    name_tables_edited();
+
     if (!silent) {
         if (aborted) {
             snprintf(msg, sizeof(msg),
@@ -2195,6 +2210,7 @@ static int store_patch_to_bank(uint32_t bank, uint32_t location, bool isPerf) {
             COPY_STRING(gPatchNameTable[bank][location].name, gGlobalSettings.slot[slot].patchName);
             gPatchNameTable[bank][location].category  = gPatchDescr[slot].category;
         }
+        name_tables_edited();
     } else {
         snprintf(msg, sizeof(msg), "Store of %s to Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
     }
@@ -2266,6 +2282,7 @@ static int delete_bank_location(uint32_t bank, uint32_t location, bool isPerf) {
             gPatchNameTable[bank][location].name[0]   = '\0';
             gPatchNameTable[bank][location].category  = 0;
         }
+        name_tables_edited();
     } else {
         snprintf(msg, sizeof(msg), "Delete of %s Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
     }
@@ -3609,80 +3626,135 @@ static int send_perf_mode_change(uint8_t perfMode) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PERF_PATCH_VERSIONS, USB_RECV_ACK_MS);
 }
 
-// Sends SUB_COMMAND_LIST_NAMES (0x14) repeatedly, following whatever continuation
+// ── The bank name sweep, run in the background ──────────────────────────────────────────────────
+//
+// SUB_COMMAND_LIST_NAMES (0x14), sent repeatedly, following whatever continuation
 // parse_list_names_response() reports, until both the Patch and Performance domains report
-// "finished" — populating gPatchNameTable/gPerfNameTable with every currently-populated location's
-// name and category, device-wide, in one sweep. Placed at the same point in the init sequence
-// where a real startup capture showed the stock editor doing this same read (right after the
-// master clock query, at the very end of the pull sequence).
-static int send_list_names_sweep(void) {
-    for (uint8_t mode = BANK_UPLOAD_DOMAIN_PATCH; mode <= BANK_UPLOAD_DOMAIN_PERFORMANCE; mode++) {
-        uint8_t bank     = 0;
-        uint8_t location = 0;
-        int     guard    = 0;  // safety cap in case a response is ever malformed enough to not converge
+// "finished" — reading every currently-populated location's name and category, device-wide.
+//
+// IT USED TO RUN AS A BLOCKING LOOP AT THE END OF THE PULL, and cost 8,012 ms of the 8,128 ms
+// before the editor called itself online (the patch data itself is 116 ms of that). So it is a
+// paced background task now: name_sweep_step() sends exactly ONE request per pass of
+// state_handler(), and only when the UI has nothing queued, so an interactive edit never waits
+// behind a bank read. The names are wanted by the Load/Store/Delete pickers and by nothing else,
+// and nameCache.h remembers them between runs, so in the ordinary case the pickers are already
+// populated from cache.txt before the sweep confirms them.
+//
+// It writes into a STAGING pair of tables and swaps them in whole on completion, so the live
+// tables — and therefore the pickers — never show a half-read bank. A sweep that never completes
+// is discarded rather than swapped: a partial list is worse than a stale one.
+static tNameTableEntry sSweepPatchNames[NUM_PATCH_BANKS][NUM_LOCATIONS_PER_BANK];
+static tNameTableEntry sSweepPerfNames[NUM_PERF_BANKS][NUM_LOCATIONS_PER_BANK];
 
-        for ( ; ;) {
-            uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-            uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+static bool            sNameSweepActive = false;
+static uint8_t         sNameSweepMode   = BANK_UPLOAD_DOMAIN_PATCH;
+static uint8_t         sNameSweepBank   = 0;
+static uint8_t         sNameSweepLoc    = 0;
+static uint32_t        sNameSweepGuard  = 0; // safety cap in case a response is ever malformed enough to not converge
 
-            usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_LIST_NAMES);
-            write_bit_stream(buff, &bitPos, 8, mode);
-            write_bit_stream(buff, &bitPos, 8, bank);
-            write_bit_stream(buff, &bitPos, 8, location);
-
-            if (send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_LIST_NAMES, USB_RECV_DATA_MS) != EXIT_SUCCESS) {
-                LOG_ERROR("send_list_names_sweep: request failed for mode=%u bank=%u location=%u\n", mode, bank, location);
-                return EXIT_FAILURE;
-            }
-
-            if (sListNamesFinished) {
-                break;
-            }
-            bank     = sListNamesNextBank;
-            location = sListNamesNextLoc;
-
-            if (++guard > 2000) {
-                LOG_ERROR("send_list_names_sweep: guard tripped for mode=%u, aborting to avoid an infinite loop\n", mode);
-                break;
-            }
-        }
-    }
-
-    return EXIT_SUCCESS;
+// Points the parser back at the live tables. Any sweep in progress is abandoned, staging and all.
+static void name_sweep_stop(void) {
+    sPatchNameTarget = gPatchNameTable;
+    sPerfNameTarget  = gPerfNameTable;
+    sNameSweepActive = false;
 }
 
-// Debug-only: dumps every populated entry in gPatchNameTable/gPerfNameTable to the console. No UI
-// consumes this table yet — this is purely so the sweep's results can be eyeballed during
-// development.
-static void debug_dump_name_tables(void) {
-    uint32_t patchCount = 0;
-    uint32_t perfCount  = 0;
+static void name_sweep_begin(void) {
+    memset(sSweepPatchNames, 0, sizeof(sSweepPatchNames));
+    memset(sSweepPerfNames, 0, sizeof(sSweepPerfNames));
+    sPatchNameTarget = sSweepPatchNames;
+    sPerfNameTarget  = sSweepPerfNames;
+    sNameSweepMode   = BANK_UPLOAD_DOMAIN_PATCH;
+    sNameSweepBank   = 0;
+    sNameSweepLoc    = 0;
+    sNameSweepGuard  = 0;
+    sNameSweepActive = true;
 
-    LOG_DEBUG("List Names: Patch table:\n");
+    // Marked incomplete for the whole of the sweep, so a run that is interrupted by a disconnect
+    // or a quit leaves the saved cache flagged as partial and the next run re-reads it.
+    name_cache_set_complete(false);
+}
 
-    for (uint32_t bank = 0; bank < NUM_PATCH_BANKS; bank++) {
-        for (uint32_t location = 0; location < NUM_LOCATIONS_PER_BANK; location++) {
-            if (gPatchNameTable[bank][location].populated) {
-                LOG_DEBUG_DIRECT("  Bank %2u Loc %3u: \"%s\" (cat %u)\n", bank + 1, location + 1,
-                                 gPatchNameTable[bank][location].name, gPatchNameTable[bank][location].category);
-                patchCount++;
-            }
-        }
+// Called after Store, Delete and Bank Restore, which edit the live tables directly from what they
+// just told the device to do — so the remembered copy has to follow. A sweep in flight holds a
+// staging copy that predates the edit and would undo it on the swap, so it starts again rather
+// than finishing with data it read before the change.
+static void name_tables_edited(void) {
+    if (sNameSweepActive) {
+        name_sweep_begin();
+    } else {
+        name_cache_save();
+    }
+}
+
+// One request per call. Returns true while there is more to read.
+static bool name_sweep_step(void) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    if (!sNameSweepActive) {
+        return false;
+    }
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_LIST_NAMES);
+    write_bit_stream(buff, &bitPos, 8, sNameSweepMode);
+    write_bit_stream(buff, &bitPos, 8, sNameSweepBank);
+    write_bit_stream(buff, &bitPos, 8, sNameSweepLoc);
+
+    if (send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_LIST_NAMES, USB_RECV_DATA_MS) != EXIT_SUCCESS) {
+        LOG_ERROR("name_sweep_step: request failed for mode=%u bank=%u location=%u — abandoning sweep\n",
+                  sNameSweepMode, sNameSweepBank, sNameSweepLoc);
+        name_sweep_stop();
+        return false;
     }
 
-    LOG_DEBUG("List Names: Performance table:\n");
-
-    for (uint32_t bank = 0; bank < NUM_PERF_BANKS; bank++) {
-        for (uint32_t location = 0; location < NUM_LOCATIONS_PER_BANK; location++) {
-            if (gPerfNameTable[bank][location].populated) {
-                LOG_DEBUG_DIRECT("  Bank %2u Loc %3u: \"%s\" (cat %u)\n", bank + 1, location + 1,
-                                 gPerfNameTable[bank][location].name, gPerfNameTable[bank][location].category);
-                perfCount++;
-            }
-        }
+    if (++sNameSweepGuard > 4000) {
+        LOG_ERROR("name_sweep_step: guard tripped for mode=%u, abandoning sweep\n", sNameSweepMode);
+        name_sweep_stop();
+        return false;
     }
 
-    LOG_DEBUG("List Names: %u patches, %u performances total\n", patchCount, perfCount);
+    if (!sListNamesFinished) {
+        uint8_t nextBank = sListNamesNextBank;
+        uint8_t nextLoc  = sListNamesNextLoc;
+        uint8_t maxBanks = (sNameSweepMode == BANK_UPLOAD_DOMAIN_PATCH) ? NUM_PATCH_BANKS : NUM_PERF_BANKS;
+
+        // THE DEVICE ONLY EMITS ITS INLINE 0x03 [bank][location] transition when the next bank's
+        // entries are in the SAME response. A response that ends exactly on a bank boundary carries
+        // no transition — it comes back saying "bank b, location 128" — and asking for location 128
+        // of bank b returns that same answer again, forever. Rolling the bank over here is what
+        // makes the sweep terminate. It is also where the old blocking sweep's eight seconds
+        // actually went: it spun on bank 1 until its 2000-request guard tripped, gave up on the
+        // whole domain, and did the same again for performances. Every bank past the first was
+        // never read at all, which is why the pickers only ever showed Bank 1.
+        if (  (nextLoc >= NUM_LOCATIONS_PER_BANK)
+           || ((nextBank == sNameSweepBank) && (nextLoc <= sNameSweepLoc))) {
+            nextBank++;
+            nextLoc = 0;
+        }
+
+        if (nextBank < maxBanks) {
+            sNameSweepBank = nextBank;
+            sNameSweepLoc  = nextLoc;
+            return true;
+        }
+        sListNamesFinished = true;  // ran off the end of the domain without the device saying so
+    }
+
+    if (sNameSweepMode < BANK_UPLOAD_DOMAIN_PERFORMANCE) {
+        sNameSweepMode++;
+        sNameSweepBank = 0;
+        sNameSweepLoc  = 0;
+        return true;
+    }
+    // Both domains read. Swap the staging tables in, remember them, and stand down.
+    memcpy(gPatchNameTable, sSweepPatchNames, sizeof(gPatchNameTable));
+    memcpy(gPerfNameTable, sSweepPerfNames, sizeof(gPerfNameTable));
+    name_sweep_stop();
+    name_cache_save();
+    name_cache_set_complete(true);
+    LOG_DEBUG("Name sweep complete (%u requests) — cache written\n", sNameSweepGuard);
+    call_wake_glfw();
+    return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -3724,13 +3796,20 @@ static int send_init_sequence_pull(void) {
     send_get_global_knobs();
     send_get_master_clock();
 
-    // Clear before re-sweeping — the sweep only overwrites locations the device actually reports
-    // as populated, so without this, a location that's since been erased on the device (or a stale
-    // entry from a previous connection) would keep showing here forever across reconnects.
-    memset(gPatchNameTable, 0, sizeof(gPatchNameTable));
-    memset(gPerfNameTable, 0, sizeof(gPerfNameTable));
-    send_list_names_sweep();
-    debug_dump_name_tables();
+    // THE NAME SWEEP IS NO LONGER PART OF THIS SEQUENCE. It was 8,012 ms of the 8,128 ms this
+    // function used to take, for data no part of the editor needs in order to open a patch. What
+    // happens instead: last run's names come back off disk immediately, and the sweep that confirms
+    // them is armed here and paced out one request at a time by state_handler().
+    //
+    // The tables are NOT cleared first. The cache is the best answer available until the sweep
+    // replaces it wholesale, and clearing would leave the pickers empty for the eight seconds it
+    // takes to fill them again — which is the entire delay this change exists to remove. Stale
+    // entries are dealt with by the swap at the end of the sweep, not by a memset at the start.
+    if (name_cache_load()) {
+        LOG_DEBUG("Name tables restored from cache (%s)\n",
+                  name_cache_is_complete() ? "complete" : "partial, will be re-read");
+    }
+    name_sweep_begin();
 
     send_start();
 
@@ -4445,6 +4524,7 @@ static void state_handler(void) {
         gotBadConnectionIndication = false;
         gDeviceConnected           = false;
         gCommsState                = eCommsReconnecting;
+        name_sweep_stop();         // half a bank list is not worth swapping in, and the cache stays flagged partial
 
         pthread_mutex_lock(&usbStaticMutex);
         close_device();
@@ -4593,6 +4673,14 @@ static void state_handler(void) {
     if (msg_receive(&gToUsbThread, eRcvPoll, &messageContent) == EXIT_SUCCESS) {
         send_write_data(&messageContent);
 
+        return;
+    }
+
+    // Background bank-name sweep: ONE request per pass, and only having found nothing else to do,
+    // so it fills the Load/Store/Delete pickers out of the idle time between the user's actions
+    // rather than out of the eight seconds after connecting. See name_sweep_step().
+    if (sNameSweepActive) {
+        name_sweep_step();
         return;
     }
 #if 0
