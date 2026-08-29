@@ -2330,6 +2330,23 @@ void do_graphics_loop(void) {
         // apps. See synthlibPopups.h.
         synthlib_popups_tick();
 
+        // THE ACTIVITY LAMPS ARE THE ONE THING ON SCREEN THAT CHANGES WITH NO EVENT BEHIND IT. A
+        // lamp goes out because COMMS_LAMP_MS elapsed, not because anything happened, and the loop
+        // below only renders when a redraw has been REQUESTED — waking on a timeout is not the same
+        // as asking for a frame. So the Rx lamp used to change state only when some unrelated event
+        // (a mouse move, an LED message) happened to request a redraw for its own reasons. Ask for
+        // exactly the frames the lamps need: one when either changes, none at all while they sit
+        // still. Lighting one is handled at the other end, in usbComms.c's note_usb_activity().
+        {
+            static uint32_t lastLampState = 0;
+            uint32_t        lampState     = comms_lamp_state();
+
+            if (lampState != lastLampState) {
+                lastLampState = lampState;
+                synthlib_request_redraw();
+            }
+        }
+
         reDraw = synthlib_consume_redraw();
 
         if (reDraw == true) {

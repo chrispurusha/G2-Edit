@@ -183,6 +183,27 @@ static void call_wake_glfw(void) {
     func_ptr();
 }
 
+// A lamp timestamp on its own does not put a lamp on screen. The render loop only draws when a
+// redraw has been REQUESTED, and when nothing else is going on it is asleep in glfwWaitEvents() —
+// so stamping gUsbRxTime and stopping there meant the Rx indicator changed when the mouse moved
+// and not when data arrived. Wake the loop, but ONLY on the dark->lit transition: the G2's
+// interrupt stream runs at around twenty packets a second and a lamp stays lit for COMMS_LAMP_MS,
+// so waking on every packet would be waking the UI twenty times a second for a lamp that is
+// already on. Putting one OUT is the render loop's own job — see comms_lamp_state().
+//
+// Single writer: both timestamps are written only from the USB thread, so the read-then-write here
+// is not the read-modify-write hazard that _Atomic does not protect against.
+static void note_usb_activity(_Atomic uint64_t * lampTime) {
+    uint64_t now      = (uint64_t)get_time_ms();
+    uint64_t previous = *lampTime;
+
+    *lampTime = now;
+
+    if ((previous == 0) || ((now - previous) >= COMMS_LAMP_MS)) {
+        call_wake_glfw();
+    }
+}
+
 static void call_full_patch_change_notify(void) {
     void (*func_ptr)(void) = NULL;
 
@@ -1251,7 +1272,7 @@ static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms)
 
                 if (  (responseType == RESPONSE_TYPE_INIT)
                    || (responseType == RESPONSE_TYPE_COMMAND)) {
-                    gUsbRxTime = (uint64_t)get_time_ms();
+                    note_usb_activity(&gUsbRxTime);
                     usb_log_message("EX", buff, (size_t)readLength);
                     break;
                 } else {
@@ -1323,7 +1344,7 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
 
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
-                gUsbRxTime = (uint64_t)get_time_ms();
+                note_usb_activity(&gUsbRxTime);
                 usb_log_message("RX", buff, (size_t)readLength);
             }
         } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
@@ -1435,7 +1456,7 @@ static int send_message(uint8_t * buff, int pos) {
 
     if ((result == 0) && (actualLength == msgLength)) {
         gLastActivityTime = time(NULL);
-        gUsbTxTime        = (uint64_t)get_time_ms();
+        note_usb_activity(&gUsbTxTime);
         usb_log_message("TX", buff, (size_t)msgLength);
         return EXIT_SUCCESS;
     }
