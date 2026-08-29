@@ -128,8 +128,30 @@ the actual behaviour change, is NOT.
   which is a ONE-LINE change now rather than thirty. Note the present behaviour is at its worst
   during the sync prompt: the editor asks the user to choose between their edits and the G2's while
   the indicator says Offline.
-  ALSO WORTH DOING, independent of all the above: stop the per-frame wake. The lamp needs a redraw
-  only when its state changes — one wake scheduled at lastActivity + 100ms, not one every frame.
+  DONE 2026-08-29 — THE TX/RX LAMPS NOW LIGHT AND GO OUT ON THEIR OWN (CT: "on-screen USB Rx
+  indication changes when I move mouse!"). Two halves were missing, at opposite ends:
+    - GOING OUT. The 0.1s timeout branch in do_graphics_loop() was already there and already right
+      — but WAKING ON A TIMEOUT IS NOT THE SAME AS ASKING FOR A FRAME. The loop renders only when
+      synthlib_consume_redraw() returns true, and nothing set that flag for a lamp expiring, so the
+      loop woke every 100ms and drew nothing. It now compares comms_lamp_state() (new: a per-lamp
+      bitmask, so Tx going out while Rx stays lit still counts) against what it last drew and asks
+      for a frame only when they differ.
+    - COMING ON. gUsbTxTime/gUsbRxTime were stamped at the raw transport level in usbComms.c with
+      no wake and no redraw request at all, so a lamp appeared only when some unrelated path
+      happened to want a frame. CT's own observation pinned this precisely: "LFO Leds are changing
+      as they should" — LED messages go through a parser that DOES wake the loop, which is why they
+      worked and the lamps did not. note_usb_activity() now wakes, but ONLY on the dark->lit
+      transition: the G2 sends ~20 packets a second and a lamp stays lit for COMMS_LAMP_MS, so
+      waking per packet would be waking the UI twenty times a second for a lamp already on.
+    - The 100ms figure was written out in three places and is now COMMS_LAMP_MS in defs.h. Adding it
+      made uncrustify re-column the whole #define block around it — that is the 35-line defs.h diff,
+      and none of it is a value change.
+    - CONFIRMED BY CT on the connected G2: "lamp is now going out as expected."
+  STILL OPEN: THE IDLE RENDER RATE. Measured while instrumenting the above, G2 connected, nothing
+  touched: ~26 renders/sec, of which only ~9 are the lamps. The rest are the USB thread's other
+  wakes, one per arriving interrupt packet (~20/s, matching the earlier count). So the lamp is no
+  longer the reason the app redraws when nothing visible has changed — the LED/knob stream is.
+  Worth the same treatment: wake on a CHANGE, not on arrival.
 
 It's taking the online indication a while to light-up, even though comms has already happened. Is that the message queue being full from USB to Graphics? Tx and RX are lit constantly until Online is shown. Maybe it's TX and RX which are over-loading the message queue as patch is pulled? Perhaps we need to only send those on a state change in USB, if we're not already?
 
