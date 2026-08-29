@@ -83,6 +83,8 @@ extern "C" {
 //   COMMS             — "online" or "offline". ASK THIS BEFORE ANY DEV COMMAND YOU INTEND TO TRUST:
 //                       every one of them reports OK when the instrument is not listening
 //   DUMP              — current slot + every module: type, name, location, col/row
+//   LEDDUMP           — live LED and volume-meter values per module, as the renderer reads them.
+//                       Poll it to measure a blink RATE, which no screenshot can show
 //   PARAMDUMP         — the same modules with their variation-0 PARAMETER and MODE values, plus the
 //                       parameter count the patch declared against the one our table gives
 //   MENU <bar>[/<item>[/<sub>]] — run a menu item by label (leading substring, case-insensitive,
@@ -103,7 +105,9 @@ extern "C" {
 //                       dial reads: an unassigned parameter has nowhere to show itself on the panel.
 //   DEVNOTE <note> <vel> on|off — a Virtual Keyboard note to the G2, for a patch that needs a gate
 //                       rather than a free-running clock (envelope times, for instance)
-//   DEVADDMODULE <name> [col] [row]  — as ADDMODULE, but the module is created ON THE G2 too.
+//   DEVADDMODULE [VA|FX] <name> [col] [row]  — as ADDMODULE, but created ON THE G2 too. The area
+//                       is optional and defaults to VA; FX is the only scripted route into the
+//                       effects area, and without it no test patch can have LEDs in both.
 //                       OMIT THE ROW to pack it directly under whatever is already in that
 //                       column, from the real module heights rather than a guessed gap
 //   DEVDELMODULE <VA|FX> <index>     — deletes a module and its cables, on the G2 as well as here
@@ -241,6 +245,79 @@ static void backdoor_dump_state(char * out, size_t outMax) {
                                      (unsigned)cable->colour);
         }
     }
+}
+
+// LEDDUMP — the live LED and volume-meter state of every module in the current slot, exactly as
+// render_module() reads it. Eyeballing a screenshot cannot answer "which module is stream index 3",
+// and a blink RATE is invisible in a still; this reports the numbers the renderer draws from, so a
+// caller can poll it and count transitions per module.
+//
+// leds= is one 0-3 value per LED in ledLocationList order (the order parse_led_data() fills), vols=
+// one 0-255 per meter. A module with neither is skipped, which keeps the output to the few modules
+// an LED test actually cares about.
+static void backdoor_led_dump(void) {
+    FILE *         file       = fopen(backdoor_result_path(), "w");
+
+    if (file == NULL) {
+        return;
+    }
+    const uint32_t locs[]     = {(uint32_t)locationVa, (uint32_t)locationFx};
+    const char *   locNames[] = {"VA", "FX"};
+
+    // glfwGetTime() rather than get_time_ms(): this file already has glfw3.h, runs on the UI
+    // thread, and the caller only needs the samples ORDERED and spaced, not wall-clock.
+    fprintf(file, "OK\nslot=%u t=%.3f\n", (unsigned)gSlot, glfwGetTime());
+
+    for (uint32_t l = 0; l < 2; l++) {
+        for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
+            tModule * module   = get_module_slot(gSlot, locs[l], index);
+
+            if ((module == NULL) || (module->type == 0)) {
+                continue; // type 0 == empty slot in the sparse per-index store
+            }
+            uint32_t  ledCount = module_led_count(module->type) + module_multibit_led_count(module->type);
+            uint32_t  volCount = 0;
+
+            switch (gModuleProperties[module->type].volumeType) {
+                case volumeTypeMono:
+                case volumeTypeCompress:
+                case volumeTypeSequencer: volCount = 1;
+                    break;
+                case volumeTypeStereo:    volCount = 2;
+                    break;
+                case volumeTypeQuad:      volCount = 4;
+                    break;
+                case volumeTypeNone:      volCount = 0;
+                    break;
+            }
+
+            if ((ledCount == 0) && (volCount == 0)) {
+                continue;
+            }
+            fprintf(file, "loc=%s index=%u type=%u name=\"%s\" leds=",
+                    locNames[l], (unsigned)index, (unsigned)module->type, module->name);
+
+            for (uint32_t i = 0; (i < ledCount) && (i < MAX_LEDS_PER_MODULE); i++) {
+                fprintf(file, "%s%u", (i == 0) ? "" : ",", (unsigned)module->led.value[i]);
+            }
+
+            if (ledCount == 0) {
+                fprintf(file, "-");
+            }
+            fprintf(file, " vols=");
+
+            for (uint32_t i = 0; i < volCount; i++) {
+                fprintf(file, "%s%u", (i == 0) ? "" : ",", (unsigned)module->volume.value[i]);
+            }
+
+            if (volCount == 0) {
+                fprintf(file, "-");
+            }
+            fprintf(file, "\n");
+        }
+    }
+
+    fclose(file);
 }
 
 // PARAMDUMP — every active module in the current slot with its VARIATION 0 parameter values and its
@@ -487,21 +564,42 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         // and the G2's edit buffer could drift apart without anything saying so — and every LED, knob
         // and cable index the device reports is relative to ITS copy. DEVADDMODULE remains as a
         // synonym so existing scripts keep working.
-        bool        toDevice = true;
+        bool         toDevice = true;
 
-        // ADDMODULE <name> [col] [row] — name matches gModuleProperties[].name
-        // (e.g. "Mix4-1C"). Added to the Voice area at col/row (default 0,0).
-        char        name[64] = {0};
-        uint32_t    col      = 0;
-        uint32_t    row      = 0;
+        // ADDMODULE [VA|FX] <name> [col] [row] — name matches gModuleProperties[].name
+        // (e.g. "Mix4-1C"). The area is optional and defaults to VA, which is what this command did
+        // before it existed, so every existing script is unaffected.
+        //
+        // THE AREA ARGUMENT IS NOT A CONVENIENCE. Until it was added there was no scripted way to
+        // put a module in the FX area at all, and that shows in the test corpus: all 18 files in
+        // PatchTestFiles have their LED-bearing modules in VA and none in FX. The 0x39 stream's
+        // index space is the two areas concatenated, so with one of them empty both possible area
+        // orderings give the same answer and every LED test we have passes either way. Settling
+        // which order the instrument really uses needs LEDs in both areas — see todo.txt.
+        char         name[64] = {0};
+        uint32_t     col      = 0;
+        uint32_t     row      = 0;
+        uint32_t     area     = (uint32_t)locationVa;
+        const char * rest     = arg;
+        char         first[8] = {0};
 
-        int         given    = sscanf(arg, "%63s %u %u", name, &col, &row);
+        if (sscanf(rest, "%7s", first) == 1) {
+            if ((strcasecmp(first, "VA") == 0) || (strcasecmp(first, "FX") == 0)) {
+                area  = (strcasecmp(first, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+                rest += strlen(first);
+
+                while ((*rest == ' ') || (*rest == '\t')) {
+                    rest++;
+                }
+            }
+        }
+        int          given    = sscanf(rest, "%63s %u %u", name, &col, &row);
 
         if (given < 1) {
-            backdoor_write_result("ERROR: expected 'ADDMODULE <name> [col] [row]'\n");
+            backdoor_write_result("ERROR: expected 'ADDMODULE [VA|FX] <name> [col] [row]'\n");
             return;
         }
-        tModuleType found    = (tModuleType)0;
+        tModuleType  found    = (tModuleType)0;
 
         for (uint32_t t = 1; t < (uint32_t)moduleTypeMax; t++) {
             if (strcmp(gModuleProperties[t].name, name) == 0) {
@@ -517,7 +615,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             backdoor_write_result(msg);
             return;
         }
-        gLocation = (uint32_t)locationVa;
+        gLocation = area;
 
         // OMIT THE ROW AND THEY PACK. With a row given, create_module_at() still ends in
         // shift_modules_down(), so an explicit row landing on top of something pushes it out of the
@@ -882,6 +980,8 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
         backdoor_dump_state(dump, sizeof(dump));
         backdoor_write_result(dump);
+    } else if (strcmp(cmd, "LEDDUMP") == 0) {
+        backdoor_led_dump();
     } else if (strcmp(cmd, "PARAMDUMP") == 0) {
         backdoor_param_dump();
     } else if (strcmp(cmd, "MENU") == 0) {
