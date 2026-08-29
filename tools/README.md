@@ -9,6 +9,7 @@ stdlib only, deliberately, so they run wherever the editor builds.
 
 ```
 cc -O2 -Wall -o capture capture.c -framework CoreAudio -framework AudioToolbox -framework CoreFoundation
+./do-vst3host      # the VST3 host; needs the VST3 SDK, same as do-vst3
 ```
 
 ## The three parts
@@ -18,6 +19,7 @@ cc -O2 -Wall -o capture capture.c -framework CoreAudio -framework AudioToolbox -
 | `capture.c` | Multichannel recorder, through CoreAudio's HAL. `./capture --list`, then `--device Fireface --out f.wav --seconds N`. |
 | `measure.py` | Steps a parameter or a mode on the hardware while `capture` records, and writes a `.json` sidecar describing the plan. |
 | `analyse_ir.py` | Turns a capture into numbers: pre-delay, arrivals, recirculating delays, decay time, spectra. `--selftest` checks it against a synthetic response with known answers. |
+| `vst3host.mm` + `do-vst3host` | A minimal VST3 host, for looking at our own editor. `./vst3host "../build/G2 Alike.vst3" --shot out.png`. Loads the bundle, instantiates component and controller, asks for the editor view and puts it in a window it owns — the one relationship with a plug-in view that cannot be tested any other way. `--seconds N` and `--shot PATH` make it scriptable, so a plug-in rendering change is diffed exactly like an application one. **It proves the plug-in works, not that a host will accept it** — read the header comment before trusting it. |
 | `render.c` + `do-render` | Renders **our own engine's** reverb response into a file shaped like a hardware capture, so one analyser command line measures both and the difference is a diff. |
 
 ## Measuring the engine against the instrument

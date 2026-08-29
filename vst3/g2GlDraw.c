@@ -302,4 +302,8 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
         set_rgb_colour((tRgb){0.7, 0.1, 0.1});
         render_rectangle(mainArea, (tRectangle){{0.0, 0.0}, {pointWidth, 6.0}});
     }
+    // LAST, and required: the drawing above only QUEUED geometry. The caller flushes the GL
+    // context straight after this returns, which presents whatever has been submitted — so
+    // without this the plug-in's editor draws nothing. See utilsGraphics.h.
+    render_backend_flush();
 }

@@ -90,6 +90,13 @@ SOURCES=(
     # makes no GLFW CALL, so it needs the include path below and not the library — which is the
     # whole reason the editor's drawing can appear in a plug-in at all.
     "$HERE/SynthLib/src/utilsGraphics.c"
+    # The chosen render backend. THIS LIST IS MANUAL, and the file compiles to nothing unless
+    # renderBackendSelect.h picks it — so adding renderBackendMetal.m here later is additive,
+    # not a swap. Omitting one entirely breaks the plug-in alone, and only at link time.
+    "$HERE/SynthLib/src/renderBackendGL.c"
+    # Both backends are always in the list. Each compiles to nothing unless renderBackendSelect.h
+    # picks it, so this is not a swap — see G2_VST3_METAL below for how to choose.
+    "$HERE/SynthLib/src/renderBackendMetal.m"
     "$HERE/SynthLib/src/geometry.c"
 )
 
@@ -134,6 +141,21 @@ CXX_SOURCES=(
 # ever gains -Wall or -Weverything, or other people's headers will start failing our build.
 WARNFLAGS=(-Werror)
 
+# METAL, OPTIONALLY. G2_VST3_METAL=1 selects the Metal backend and links the two frameworks it
+# needs; without it the plug-in is OpenGL exactly as before, which is still the default because the
+# GL path is the one that has been in a real host. Both backend files are compiled either way — the
+# unselected one compiles to nothing — so this only sets the define and the link line.
+BACKEND_DEFS=()
+BACKEND_LIBS=()
+
+if [ "$G2_VST3_METAL" = "1" ]; then
+    BACKEND_DEFS=(-DRENDER_BACKEND=2)
+    BACKEND_LIBS=(-framework Metal -framework QuartzCore)
+    echo "Backend: Metal"
+else
+    echo "Backend: OpenGL (set G2_VST3_METAL=1 for Metal)"
+fi
+
 INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/vst3" -I"$SDK"
           # Headers only. GLFW's is here because utilsGraphics.c includes it for the GL
           # declarations; freetype's because the text renderer is built on it. The bundled copies
@@ -163,25 +185,25 @@ OBJECTS=()
 
 for src in "${SOURCES[@]}"; do
     obj="$OBJDIR/$(basename "$src" .c).o"
-    clang $ARCHS $MIN -O2 -std=gnu11 "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -c "$src" -o "$obj"
+    clang $ARCHS $MIN -O2 -std=gnu11 "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${BACKEND_DEFS[@]}" "${INCLUDES[@]}" -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
 
 for src in "${CXX_SOURCES[@]}"; do
     obj="$OBJDIR/$(basename "${src%.*}").oxx"
-    clang++ $ARCHS $MIN -O2 -std=gnu++17 "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -c "$src" -o "$obj"
+    clang++ $ARCHS $MIN -O2 -std=gnu++17 "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${BACKEND_DEFS[@]}" "${INCLUDES[@]}" -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
 
 for src in "${OBJC_SOURCES[@]}"; do
     obj="$OBJDIR/$(basename "${src%.*}").om"
-    clang $ARCHS $MIN -O2 -std=gnu11 -fobjc-arc "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -x objective-c -c "$src" -o "$obj"
+    clang $ARCHS $MIN -O2 -std=gnu11 -fobjc-arc "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${BACKEND_DEFS[@]}" "${INCLUDES[@]}" -x objective-c -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
 
 for src in "${OBJCXX_SOURCES[@]}"; do
     obj="$OBJDIR/$(basename "${src%.*}").omm"
-    clang++ $ARCHS $MIN -O2 -std=gnu++17 -fobjc-arc "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -x objective-c++ -c "$src" -o "$obj"
+    clang++ $ARCHS $MIN -O2 -std=gnu++17 -fobjc-arc "${WARNFLAGS[@]}" -DG2_VST3_BUILD=1 "${BACKEND_DEFS[@]}" "${INCLUDES[@]}" -x objective-c++ -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
 
@@ -190,7 +212,7 @@ done
 mkdir -p "$OUT/Contents/MacOS"
 
 clang++ $ARCHS $MIN -bundle "${OBJECTS[@]}" "$FREETYPE_LIB" \
-    -framework CoreFoundation -framework Cocoa -framework OpenGL -o "$BIN"
+    -framework CoreFoundation -framework Cocoa -framework OpenGL "${BACKEND_LIBS[@]}" -o "$BIN"
 
 # A bundle needs its Info.plist and the four-character PkgInfo, or the host will not look inside it.
 cat > "$OUT/Contents/Info.plist" <<PLIST
