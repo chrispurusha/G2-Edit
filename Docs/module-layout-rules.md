@@ -9,6 +9,18 @@ layout cleanup (2026-07), but they apply to any module.
 - Rect coords are **percentages**, scaled to `MODULE_WIDTH` (350px) on **both
   axes** (`rectangle_scale_from_percent` in SynthLib `utilsGraphics.cpp`) — so
   `y` values are also a fraction of 350, not of the module height.
+- **`y = 0` is the top of the BODY, just below the title bar** — not the
+  module's outer edge (changed 2026-08-29). The face renderers are handed a body
+  rectangle inset by `MODULE_BODY_TOP_PERCENT` (5%, i.e. 17.5px); the bar itself
+  is 17px, so the body starts half a pixel clear of it. Before this, every
+  top-anchored row had to leave room for the bar by hand, and they all settled on
+  `y = 5` — which is exactly why the inset is 5% and not the bar's own 4.857%:
+  the tables were already written against that figure, so the change cost no
+  coordinate its whole number and moved no pixel.
+- Which anchor you choose decides whether the inset touches you at all:
+  **bottom-anchored rows are unaffected** (the bottom edge does not move), top
+  ones start below the bar, and middle ones are centred on the body, which sits
+  8.75px lower than the module's own centre.
 - Module width is a fixed `MODULE_WIDTH` for **every** module; only height
   varies (`tModuleProperties.height` = number of rows; drawn height =
   `rows * MODULE_Y_SPAN - MODULE_Y_GAP`). You cannot widen a single module — fit
