@@ -1,6 +1,64 @@
 G2-Edit TODO (priority order)
 
 CT new:
+
+DONE 2026-08-29 — MODULE Y PERCENTAGES NOW START BELOW THE TITLE BAR (CT: "0% should start after
+the title bar on the Y axis... Worth understanding and noting so that we can throw a switch to do
+everything in one go"). Done as one batch, and it moved no pixel.
+  THE INSET IS 5%, NOT THE BAR'S OWN 4.857%, and that is the whole reason this was clean. The bar
+  occupies 17px (3 + STANDARD_TEXT_HEIGHT + 2). But the smallest y in any top-anchored row was
+  exactly 5.0 — every author had hand-allowed for the bar and settled on the same figure — so
+  making the body start at 5% (17.5px, half a pixel clear of the bar) means every row shifts by a
+  WHOLE NUMBER and lands exactly where it already drew. Using 4.857 would have left 307 rows
+  carrying six decimal places for no benefit.
+  WHAT CHANGED: module_body_rectangle() in moduleGraphics.c, used at the two places that hand a
+  rectangle to the face renderers — render_module_common() and the standalone
+  render_module_connectors() call in the cable-drag path. Everything else inherits it.
+  AND 330 ROWS in moduleResources.h: 307 top-anchored by -5, 23 middle-anchored by -2.5 (the body's
+  centre sits 8.75px below the module's), 1516 bottom-anchored untouched. 1846 of 1846 anchored rows
+  accounted for.
+  A TRAP IN THE BATCH ITSELF, worth remembering for any future sweep of these tables: the first
+  regex required numeric width/height and so silently skipped all 759 CONNECTOR rows, which use the
+  CONNECTOR_SIZE macro — it reported "1087 rows converted" and looked like a complete run. Always
+  reconcile the count against the number of anchor tokens in the file before trusting it.
+  VERIFIED THE WAY THIS KIND OF CHANGE HAS TO BE: four patches (SimpleLead, RndFilter, LedsTest,
+  SeqOscExp) captured before and after through the backdoor. Three byte-identical; the fourth
+  differed only in the menu bar, where the mouse pointer happened to be hovering, and its canvas
+  (y >= 170) was zero pixels different. A module that HAD moved would have been a module whose row
+  was wrong beforehand — none did.
+  WHAT IS TRUE TODAY. render_module() draws the title bar INSIDE the module rectangle — at
+  moduleRectangle.coord.y + 3, STANDARD_TEXT_HEIGHT + 2 tall — and then passes THAT SAME WHOLE
+  rectangle to render_module_common(), which hands it to adjust_rectangle(). So anchorTopLeft's
+  y = 0 is the module's outer top edge, ABOVE the title, and every author of a top-anchored row has
+  had to leave room for the title by hand. That is the flaw.
+  THE SIZE OF IT. STANDARD_TEXT_HEIGHT is 12, so the bar occupies 3 + 12 + 2 = 17px of the module's
+  height. Percentages are of MODULE_WIDTH (350) on both axes, so the bar is 17/350 = 4.857% — the
+  constant every top-anchored row would shift by.
+  WHAT WOULD ACTUALLY HAVE TO CHANGE, counted:
+      paramLocationList       928 rows    96 anchorTopLeft +  5 anchorTopRight  = 101 to adjust
+      connectorLocationList   759 rows    38 anchorTopLeft + 41 anchorTopRight  =  79 to adjust
+      volumeLocationList       34 rows     5 anchorTopLeft + 19 anchorTopRight  =  24 to adjust
+      modeLocationList         25 rows     6 anchorTopLeft +  3 anchorTopRight  =   9 to adjust
+  So roughly 213 rows of 1746, and the edit is mechanical: subtract 4.857 from y on every
+  anchorTop* row.
+  THE OTHER ANCHORS ARE NOT ALL FREE, which is the part that makes this a batch and not a sed:
+    - anchorBottom* (1495 rows, the large majority) measure UP from the module's bottom edge, which
+      does not move. UNCHANGED.
+    - anchorMiddle* (23 rows) measure from the vertical centre, and the centre moves DOWN by half
+      the bar — so those shift by 2.43%, not 4.857%.
+    - Anything whose SIZE is a fraction of the height rather than a position — the volume meters in
+      particular — needs its height re-checked, because the usable height shrinks by 17px.
+  AND THE AVAILABLE HEIGHT CHANGES, which is the real reason to want this: a module's usable body
+  becomes rows * MODULE_Y_SPAN - MODULE_Y_GAP - 17 rather than the full figure, so "100% of the
+  body" finally means what it says. On a 2-row module that is 81px dropping to 64px — the bar is a
+  fifth of it — which is exactly where hand-allowing for it has been most error-prone.
+  HOW TO DO IT SAFELY WHEN THE TIME COMES: change adjust_rectangle()'s caller to pass a BODY
+  rectangle (inset by the bar) rather than the whole one, adjust the 213 top/middle rows in the same
+  commit, and prove it with the backdoor SCREENSHOT diff — every module rendered before and after,
+  expecting NO pixel to move. That is what makes it a switch rather than a migration: if the
+  numbers are right the picture is identical, and any module that moves is a module whose row was
+  wrong before.
+
 CAPTURING REAL WAVEFORMS TO DRAW THEM ACCURATELY — method proven end to end 2026-08-23, nothing built
 yet. CT's idea: set a wave, sweep its shape parameter, record what the instrument actually produces,
 and draw THAT rather than an idealised curve.
