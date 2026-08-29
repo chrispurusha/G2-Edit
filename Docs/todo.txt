@@ -1,7 +1,7 @@
 G2-Edit TODO (priority order)
 
 CT new:
-It's taking the online indication a while to light-up, even though comms has already happened. Is that the message queue being full from USB to Graphics? Tx and RX are lit constantly until Online is shown. Maybe it's TX and RX which are over-loading the message queue? Perhaps we need to only send those on a state change in USB?
+It's taking the online indication a while to light-up, even though comms has already happened. Is that the message queue being full from USB to Graphics? Tx and RX are lit constantly until Online is shown. Maybe it's TX and RX which are over-loading the message queue as patch is pulled? Perhaps we need to only send those on a state change in USB, if we're not already?
 
 DONE 2026-08-29 — MODULE Y PERCENTAGES NOW START BELOW THE TITLE BAR (CT: "0% should start after
 the title bar on the Y axis... Worth understanding and noting so that we can throw a switch to do
