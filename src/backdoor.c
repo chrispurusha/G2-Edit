@@ -619,12 +619,32 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             effective_connector_type(fromModule->connector[fromConnector].type, fromModule->upRate));
         write_cable(key, &cable);
         backdoor_send_cable(&key, cable.colour, false);
-        // THE COLOUR ABOVE ONLY GUESSES, and until 2026-08-24 nothing corrected it here. Feeding an
-        // audio output into a multi-bandwidth (Control/Logic) input promotes the DESTINATION module to
-        // audio rate, which repaints the cables leaving it and changes the rate the G2 runs it at. The
-        // drag path has always re-assessed that after a connect; a scripted patch never did, so
-        // backdoor-built patches drew a promoted module's outputs in the wrong colour AND left the
-        // instrument running it at control rate, because eMsgCmdSetModuleUpRate was never sent.
+        // THE COLOUR ABOVE ONLY GUESSES, and two separate things correct it — the drag path does both,
+        // and until now this did only the second.
+        //
+        // FIRST, RE-DERIVE THE CHAIN'S COLOUR ACROSS THE WHOLE TREE, which is what maintains the
+        // invariant the guess cannot: every cable in a chain carries ONE colour, its source output's,
+        // or WHITE when the chain has no source at all. A scripted fan-out inherited each cable's
+        // colour from its own from-connector and so could paint one chain two colours, and a scripted
+        // input-to-input link — which is sourceless and must come out WHITE (the manual's
+        // "non-functional input-to-input connections") — came out whatever the from-input happened to
+        // be. Neither showed up in the measurement patches built so far, because every cable in them
+        // takes its colour from its own source, which is exactly the sort of luck that stops being
+        // true the first time a patch fans out.
+        //
+        // The to-end is always an input, whichever link type this is, so the node needs no database
+        // lookup — the same construction canvasDrag.c uses. cable_chain_apply_colour() sends
+        // eMsgCmdSetCableColour per cable it actually changes, so the instrument follows; it is a
+        // RECOLOUR and not a write, which is what stops the G2 holding each cable twice.
+        cable_chain_recolour(key.slot, key.location,
+                             (tCableNode){key.moduleToIndex, key.connectorToIoCount, false});
+
+        // SECOND, re-assess up-rate across the slot. Feeding an audio output into a multi-bandwidth
+        // (Control/Logic) input promotes the DESTINATION module to audio rate, which repaints the
+        // cables leaving it and changes the rate the G2 runs it at. Before 2026-08-24 a scripted patch
+        // never did this, so backdoor-built patches drew a promoted module's outputs in the wrong
+        // colour AND left the instrument running it at control rate, with eMsgCmdSetModuleUpRate never
+        // sent. Ordered after the recolour, as in canvasDrag.c.
         update_module_up_rates();
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
