@@ -98,7 +98,7 @@ static _Atomic int32_t  gLastCC          = -1;
 static void send_note_to_synth(uint8_t note, uint8_t velocity, bool on) {
     tMessageContent msg = {0};
 
-    if ((atomic_load(&gSendsToSynth) == false) || (gCommsState != eCommsOnLine)) {
+    if ((atomic_load(&gSendsToSynth) == false) || (!device_ready())) {
         return;
     }
 

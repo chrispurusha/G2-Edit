@@ -92,7 +92,31 @@ extern char                    gSavedPerfPath[FILE_PATH_SIZE];
 extern tGlobalSettings         gGlobalSettings;
 //extern _Atomic uint8_t     gPerfMode;
 //extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
+// IS THE G2 ANSWERING? Set the moment it replies to the patch-version request, which is the point
+// at which traffic is demonstrably working both ways. Deliberately SEPARATE from gCommsState:
+// that is a load SEQUENCE (waiting-ready, awaiting-sync-decision, online-and-loaded) and it moves
+// on through several values while the device is sitting there answering perfectly well. The lamp
+// wants the simple question, and asking the sequence gave the wrong answer twice over — "Offline"
+// for the 8 seconds of the initial pull, and "Offline" again while the editor asks the user to
+// choose between their offline edits and the G2's patches.
+extern _Atomic bool            gDeviceConnected;
+
 extern _Atomic tCommsState     gCommsState;
+
+// IS IT SAFE TO ISSUE A DEVICE OPERATION? One predicate, because this was open-coded as
+// "gCommsState == eCommsOnLine" in more than thirty places — twelve bulk operations in usbComms.c,
+// thirteen menu actions, the menu enable/disable gates, MIDI-to-synth forwarding and the backdoor —
+// and a rule spread over thirty copies is a rule that gets changed in twenty-nine.
+//
+// Note what it is NOT: it is not "is a G2 attached". eCommsOnLine is only reached once the initial
+// pull has finished, so this asks "has the editor finished loading and is it safe to start
+// something big" — which is exactly right for a Backup or a bank Store, and exactly wrong for the
+// Online lamp, which should light as soon as the device answers. Splitting those two meanings is
+// what this predicate exists to make possible.
+static inline bool device_ready(void) {
+    return gCommsState == eCommsOnLine;
+}
+
 //extern _Atomic uint32_t    gChangedSlot;
 extern _Atomic uint8_t         gGlobalPage;
 extern tNameEdit               gPatchNameEdit;

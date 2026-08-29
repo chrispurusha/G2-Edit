@@ -1843,7 +1843,7 @@ static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf, bool
     const char * alertTitle         = isPerf ? "Performance Bank Backup" : "Patch Bank Backup";
     char         msg[256]           = {0};
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         // Fail fast rather than looping NUM_LOCATIONS_PER_BANK times at USB_RECV_DATA_MS each
         // (over 6 minutes) waiting for a device that isn't there.
         LOG_ERROR("backup_bank: G2 is not connected\n");
@@ -1994,7 +1994,7 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
 
     memset(fileNames, 0, sizeof(fileNames));
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("restore_bank: G2 is not connected\n");
 
         if (!silent) {
@@ -2142,7 +2142,7 @@ static int peek_store_target(uint32_t bank, uint32_t location, bool isPerf) {
     gStorePeekLocation  = location;
     gStorePeekIsPerf    = isPerf;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("peek_store_target: G2 is not connected\n");
         gStorePeekFailed = true;
         post_response(eRspStorePeek);
@@ -2168,7 +2168,7 @@ static int store_patch_to_bank(uint32_t bank, uint32_t location, bool isPerf) {
 
     char         msg[256]  = {0};
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("store_patch_to_bank: G2 is not connected\n");
         post_alert_response("Store to Bank", "Store failed: the G2 is not connected");
         return EXIT_FAILURE;
@@ -2216,7 +2216,7 @@ static int peek_delete_target(uint32_t bank, uint32_t location, bool isPerf) {
     gDeletePeekLocation  = location;
     gDeletePeekIsPerf    = isPerf;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("peek_delete_target: G2 is not connected\n");
         gDeletePeekFailed = true;
         post_response(eRspDeletePeek);
@@ -2244,7 +2244,7 @@ static int delete_bank_location(uint32_t bank, uint32_t location, bool isPerf) {
 
     char         msg[256]  = {0};
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("delete_bank_location: G2 is not connected\n");
         post_alert_response("Delete", "Delete failed: the G2 is not connected");
         return EXIT_FAILURE;
@@ -2289,7 +2289,7 @@ static int peek_load_target(uint32_t bank, uint32_t location, bool isPerf) {
     gLoadPeekLocation  = location;
     gLoadPeekIsPerf    = isPerf;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("peek_load_target: G2 is not connected\n");
         gLoadPeekFailed = true;
         post_response(eRspLoadPeek);
@@ -2314,7 +2314,7 @@ static int load_patch_from_bank(uint32_t bank, uint32_t location, bool isPerf) {
     const char * typeLabel = isPerf ? "Performance" : "Patch";
     int          result    = EXIT_FAILURE;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("load_patch_from_bank: G2 is not connected\n");
         post_alert_response("Load", "Load failed: the G2 is not connected");
         return EXIT_FAILURE;
@@ -2391,7 +2391,7 @@ static int backup_synth_settings(const char * destFolder, bool silent) {
     char   msg[256]         = {0};
     FILE * file             = NULL;
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("backup_synth_settings: G2 is not connected\n");
 
         if (!silent) {
@@ -2679,7 +2679,7 @@ static int backup_everything(const char * destFolder) {
     bool     aborted      = false;
     char     msg[256]     = {0};
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("backup_everything: G2 is not connected\n");
         post_alert_response("Backup Everything", "Backup Everything failed: the G2 is not connected");
         return EXIT_FAILURE;
@@ -3401,7 +3401,7 @@ static int apply_synth_settings_restore(void) {
 
     char msg[256] = {0};
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("apply_synth_settings_restore: G2 is not connected\n");
         post_alert_response("Restore Synth Settings", "Restore failed: the G2 is not connected");
         return EXIT_FAILURE;
@@ -3438,7 +3438,7 @@ static int restore_everything(const char * srcFolder) {
     char         manifestPath[1280] = {0};
     char         msg[256]           = {0};
 
-    if (gCommsState != eCommsOnLine) {
+    if (!device_ready()) {
         LOG_ERROR("restore_everything: G2 is not connected\n");
         post_alert_response("Restore Everything", "Restore Everything failed: the G2 is not connected");
         return EXIT_FAILURE;
@@ -3692,7 +3692,6 @@ static void debug_dump_name_tables(void) {
 // First connection: G2 is authoritative — pull all patch data from hardware.
 static int send_init_sequence_pull(void) {
     LOG_DEBUG("Init sequence: pulling from G2\n");
-    gCommsState = eCommsInitialising;
 
     // Clear any stale data before pulling fresh state
     database_clear_cables();
@@ -3757,7 +3756,6 @@ __attribute__((unused))
 
 static int send_init_sequence_push(void) {
     LOG_DEBUG("Init sequence: pushing editor data to G2\n");
-    gCommsState = eCommsInitialising;
 
     send_init();
     send_stop();
@@ -4445,6 +4443,7 @@ static void state_handler(void) {
     if (gotBadConnectionIndication) {
         LOG_DEBUG("Bad connection — closing device\n");
         gotBadConnectionIndication = false;
+        gDeviceConnected           = false;
         gCommsState                = eCommsReconnecting;
 
         pthread_mutex_lock(&usbStaticMutex);
@@ -4505,6 +4504,11 @@ static void state_handler(void) {
 
     if (gCommsState == eCommsWaitingReady) {
         if (send_get_patch_version(0) == EXIT_SUCCESS) {
+            // IT ANSWERED, SO WE ARE ONLINE — whatever the load sequence does next. Everything
+            // below this point is loading, not connecting, and the indicator should say so.
+            gDeviceConnected = true;
+            call_wake_glfw();
+
             // Anything still queued was enqueued while the G2 was away, so it is both the record
             // of what diverged and a set of increments that must NOT be replayed over the patch
             // the pull is about to install. Drain it, and ask before pulling if it held real edits.
@@ -4531,7 +4535,8 @@ static void state_handler(void) {
                 pthread_mutex_lock(&usbStaticMutex);
                 close_device();
                 pthread_mutex_unlock(&usbStaticMutex);
-                gCommsState = eCommsReconnecting;
+                gDeviceConnected = false;
+                gCommsState      = eCommsReconnecting;
             }
         } else if (!gotBadConnectionIndication) {
             LOG_DEBUG("G2 not ready yet — polling\n");
