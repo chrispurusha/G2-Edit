@@ -3522,10 +3522,28 @@ resources already hold.
   "Renderer: Metal"; and one binary with the pref flipped produces frames BYTE-IDENTICAL to the two
   dedicated single-backend builds it replaced. Plug-in unchanged in both backends.
 
-- OPEN — THE SAME RENDERER CHOICE FOR SYNTHEDIT AND EMUUTILITY (CT, 2026-08-29). Wanted once
-  G2-Edit's has settled, not before. All of the machinery is in SynthLib already: both backends are
-  compiled, synthlib_window_create() reads the "renderBackend" preference itself, so a sibling needs
-  only the ordering and a menu item. Surveyed, so it is not surveyed again:
+- DONE 2026-08-29 — THE SAME RENDERER CHOICE IN SYNTHEDIT AND EMUUTILITY. Both now carry an
+  "Experimental" menu of their own — neither had one — holding the same toggle and the same greyed
+  "Renderer: <name>" line. Copied from G2-Edit's rather than shared: three menu tables that are
+  already per-app, and the item is forty lines.
+  EMUUTILITY NEEDED THE ORDERING FIX, SynthEdit did not. SynthEdit's main.c already called
+  init_settings() before init_graphics() for an unrelated reason (the saved layouts folder), which
+  happens to satisfy this too. EmuUtility's prefs_init() sat in setup_main_menu(), after the window
+  was made; it is now called from main() first, exactly as G2-Edit's is.
+  VERIFIED: SynthEdit's frames differ between the backends by 0.041% with a max channel delta of
+  57 — the multisample-resolve signature, smaller than G2-Edit's 0.36% simply because its panel has
+  far fewer curved edges.
+  EMUUTILITY IS BYTE-IDENTICAL BETWEEN THE TWO, AND THAT IS NOT A FAILURE — it was misread as one
+  first. Instrumenting the selection showed the app reporting "running Metal" while producing a
+  frame indistinguishable from the OpenGL one. Its panel is almost entirely axis-aligned rectangles
+  and text: text is a textured quad that multisampling cannot touch, and a rectangle edge on a whole
+  pixel is either fully covered or not, so no pixel lands near a sample-position tie and the two
+  rasterizers agree exactly. An identical frame is evidence the port is right, not that the switch
+  did nothing — check with a log before concluding otherwise.
+  The menu entries were confirmed present in both bars by screenshot; the ITEM has not been clicked
+  in either sibling, only in G2-Edit, because neither backdoor has a MENU command.
+
+- SUPERSEDED — the survey that preceded the above, kept for the facts in it:
     - SYNTHEDIT'S ORDERING IS ALREADY CORRECT. main.c calls init_settings() before init_graphics(),
       with a comment explaining that prefs must be loaded first for an unrelated reason (the saved
       layouts folder). That happens to satisfy this too. Nothing to change.
