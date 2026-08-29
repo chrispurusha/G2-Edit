@@ -3487,6 +3487,62 @@ resources already hold.
   close. Fixed by posting a dummy application-defined event straight after stop:. It now exits on
   its own timer with nothing touched.
 
+- DONE 2026-08-29 — THE BACKEND IS CHOSEN AT START-UP, AND THERE IS A MENU ITEM FOR IT.
+  Experimental ▸ "Use Metal Renderer (on restart)", with a greyed "Renderer: OpenGL" line under it
+  saying what is running. Writes renderBackend to prefs.txt; OpenGL is 0 and the default.
+  BOTH BACKENDS ARE NOW IN ONE BINARY. They used to be mutually exclusive at compile time — each
+  file wrapped in an #if that compiled it to nothing when it was not the chosen one. Two files
+  cannot both define gfx_init(), so each backend's eleven entry points are now file-local (gl_*,
+  mtl_*) and reached only through a tGfxBackend TABLE, with renderBackend.c forwarding the public
+  gfx_* calls to whichever is selected. The cost is one call through a pointer PER BATCH
+  SUBMISSION — a few dozen a frame — which is nothing.
+  renderBackendSelect.h now holds only the DEFAULT. renderBackendMetal.m is excluded by #ifdef
+  __APPLE__, which is a platform fact rather than a preference.
+  IT CANNOT CHANGE WHILE RUNNING, and the menu says so rather than pretending otherwise. The window
+  itself differs: OpenGL needs GLFW to create a context alongside it, Metal needs GLFW_NO_API and
+  then takes the NSWindow. Switching live means destroying and rebuilding the window, the context,
+  every glyph atlas and texture, and every callback established around them.
+  ORDERING THAT IS LOAD-BEARING: prefs_init("G2-Edit") now runs in main.c BEFORE init_graphics(),
+  because synthlib_window_create() reads the choice before making the window. It also still runs
+  from setup_main_menu() where it always did — prefs_init clears and re-reads, so twice is harmless.
+  THE FIRST ATTEMPT SILENTLY DID NOTHING for exactly this reason: the pref read returned the
+  default because prefs had not been initialised yet, and both settings produced OpenGL.
+  SYNTHEDIT AND EMUUTILITY WILL NEED THE SAME ONE-LINE ORDERING when they take the pin. Without it
+  they simply always get the default, with no error.
+  THE PLUG-IN STILL CHOOSES AT BUILD TIME, and that is not laziness: its view's SUPERCLASS is either
+  NSOpenGLView or NSView, which is fixed when the file compiles. Selecting at run time would mean
+  two view classes and two copies of g2GlView.m's four hundred lines of input handling. So
+  G2_VST3_METAL=1 ./do-vst3, OpenGL without it. Worth knowing: while RENDER_BACKEND briefly did not
+  exist, g2GlView.m's `#if RENDER_BACKEND == RENDER_BACKEND_GL` compared two undefined macros and
+  quietly compiled the OpenGL path because 0 == 0. It tests the macro by name now.
+  METAL LINKS ITSELF. No project-file change was needed: clang's module auto-linking pulls in Metal
+  and QuartzCore from the #import in renderBackendMetal.m, verified in both Debug and Release. The
+  Xcode project is untouched. do-vst3 asks for the frameworks explicitly since it is plain clang.
+  VERIFIED END TO END: clicking the item writes renderBackend=1; the next launch reports
+  "Renderer: Metal"; and one binary with the pref flipped produces frames BYTE-IDENTICAL to the two
+  dedicated single-backend builds it replaced. Plug-in unchanged in both backends.
+
+- OPEN — THE SAME RENDERER CHOICE FOR SYNTHEDIT AND EMUUTILITY (CT, 2026-08-29). Wanted once
+  G2-Edit's has settled, not before. All of the machinery is in SynthLib already: both backends are
+  compiled, synthlib_window_create() reads the "renderBackend" preference itself, so a sibling needs
+  only the ordering and a menu item. Surveyed, so it is not surveyed again:
+    - SYNTHEDIT'S ORDERING IS ALREADY CORRECT. main.c calls init_settings() before init_graphics(),
+      with a comment explaining that prefs must be loaded first for an unrelated reason (the saved
+      layouts folder). That happens to satisfy this too. Nothing to change.
+    - EMUUTILITY'S IS NOT. prefs_init("EmuUtility") sits in setup_main_menu() (misc.mm:45), which
+      main.c calls AFTER init_graphics(). Same one-line fix G2-Edit needed: call prefs_init before
+      init_graphics. WITHOUT IT THE SETTING IS SILENTLY IGNORED — the read returns the default and
+      both values give OpenGL, with no error and nothing in the log. That is exactly how it failed
+      here the first time.
+    - NEITHER HAS AN "EXPERIMENTAL" MENU. SynthEdit has File/Device/Controls/Layouts/Backup/Restore,
+      EmuUtility has Device/Controls. CT wants the menu itself, not just the item — which is right:
+      it is where anything new goes until it has settled, and both apps will want somewhere to put
+      such things. G2-Edit's open_experimental_menu() in appMenuBar.c is the model, and
+      action_toggle_render_backend() beside it is the item, both small enough to copy rather than
+      share.
+  AND THE PIN. Both siblings are behind, and EmuUtility already has an uncommitted emuGraphics.c
+  carrying the texture-filter change; that has to land in the same commit as its pin bump.
+
 - WINDOWS / LINUX BUILDS — wanted eventually (CT, 2026-08-26). Nothing started, no schedule; this is
   a note of where the port surface actually is, so it is not re-surveyed from scratch later.
   ALREADY PORTABLE, and mostly on purpose: GLFW covers Win32/X11/Wayland and is pinned at the 3.5.1
