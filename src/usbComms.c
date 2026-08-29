@@ -415,8 +415,12 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     }
 }
 
-static void parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
-    int volumesToRead = 0;
+// Returns true if any value it stored DIFFERS from the one already there. The G2 pushes this
+// stream continuously whether or not a meter has moved, so "a message arrived" is not a reason to
+// draw a frame — see parse_incoming().
+static bool parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    int  volumesToRead = 0;
+    bool changed       = false;
 
     read_bit_stream(buff, bitPos, 8);  // start_idx (always 0 in practice)
 
@@ -444,8 +448,14 @@ static void parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bit
                 }
 
                 for (int i = 0; i < volumesToRead; i++) {
-                    module->volume.value[i] = read_bit_stream(buff, bitPos, 8);
+                    uint32_t value = read_bit_stream(buff, bitPos, 8);
+
                     read_bit_stream(buff, bitPos, 8);  // hi byte: unused
+
+                    if (module->volume.value[i] != value) {
+                        module->volume.value[i] = value;
+                        changed                 = true;
+                    }
                 }
 
                 // A MULTI-BIT LED GROUP TAKES ONE ENTRY OUT OF THIS STREAM, not one 2-bit value per
@@ -465,12 +475,19 @@ static void parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bit
                     // which all of these are). Anything else is some other encoding we have not had
                     // to decode, so show nothing rather than show nonsense.
                     for (uint32_t l = 0; (l < multiBitLeds) && (l < MAX_LEDS_PER_MODULE); l++) {
-                        module->led.value[l] = ((value & 0x3000) == 0x3000) ? ((value >> l) & 1) : 0;
+                        uint32_t ledValue = ((value & 0x3000) == 0x3000) ? ((value >> l) & 1) : 0;
+
+                        if (module->led.value[l] != ledValue) {
+                            module->led.value[l] = ledValue;
+                            changed              = true;
+                        }
                     }
                 }
             }
         }
     }
+
+    return changed;
 }
 
 // LED (blink) data, sub-command 0x39. THE WIRE FORMAT IS THE ORIGINAL EDITOR'S, read out of
@@ -497,10 +514,13 @@ static void parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bit
 // 40 is the whole index space for both areas together and a patch with more LEDs than that has the
 // surplus unreported by the instrument. A message therefore covers startIndex..LED_STREAM_SIZE-1 —
 // it is NOT startIndex + 40.
-static void parse_led_data(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int length) {
+// Returns true if any LED it stored DIFFERS from the one already there — same reason as
+// parse_volume_indicator() above.
+static bool parse_led_data(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int length) {
     uint32_t startIndex         = read_bit_stream(buff, bitPos, 8);
     uint32_t ledCount           = 0;
     uint32_t ledCountFromModule = 0;
+    bool     changed            = false;
     uint32_t dataStart          = BIT_TO_BYTE(*bitPos);
     uint32_t dataBytes          = 0;
 
@@ -532,8 +552,9 @@ static void parse_led_data(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int
                         if ((offset / 4) < dataBytes) {
                             uint32_t ledValue = (buff[dataStart + (offset / 4)] >> ((offset % 4) * 2)) & 0x3;
 
-                            if (l < MAX_LEDS_PER_MODULE) {
+                            if ((l < MAX_LEDS_PER_MODULE) && (module->led.value[l] != ledValue)) {
                                 module->led.value[l] = ledValue;
+                                changed              = true;
                             }
                         }
                     }
@@ -542,6 +563,8 @@ static void parse_led_data(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int
             }
         }
     }
+
+    return changed;
 }
 
 static int parse_resources_used(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int length) {
@@ -1027,18 +1050,26 @@ static void parse_param_list_message(uint32_t slot, uint8_t * buff, uint32_t * b
     LOG_ERROR("  bytes from byte %u: %s\n", dumpStart, dump);
 }
 
+// wantsRedraw comes in true and is only ever cleared: a message is assumed to have changed
+// something until a parser says otherwise. Only the two continuously-pushed streams are in a
+// position to say so — everything else here is a response to something we asked for, or an
+// unsolicited report of a real event, and is worth a frame on arrival.
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
-                                  int length) {
+                                  int length, bool * wantsRedraw) {
     uint32_t slot = commandResponse & 0x03;
 
     switch (subCommand) {
+        // AND THE SLOT MATTERS AS MUCH AS THE VALUE. The G2 meters and blinks every slot that is
+        // running, but render_modules() draws gSlot alone, so a change in another slot's LEDs is a
+        // change to something nothing is looking at. The values are stored either way — switching
+        // slot asks for its own frame and finds them already current.
         case SUB_RESPONSE_VOLUME_INDICATOR:
-            parse_volume_indicator(slot, buff, bitPos);
+            *wantsRedraw = parse_volume_indicator(slot, buff, bitPos) && (slot == gSlot);
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_LED_DATA:
-            parse_led_data(slot, buff, bitPos, length);
+            *wantsRedraw = parse_led_data(slot, buff, bitPos, length) && (slot == gSlot);
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_ERROR:
@@ -1210,6 +1241,7 @@ static int parse_incoming(uint8_t * buff, int length, int * response) {
     uint32_t bitPos       = 0;
     uint8_t  responseType = read_bit_stream(buff, &bitPos, 8);
     int      ret          = EXIT_FAILURE;
+    bool     wantsRedraw  = true;
 
     switch (responseType) {
         case RESPONSE_TYPE_INIT:
@@ -1226,7 +1258,7 @@ static int parse_incoming(uint8_t * buff, int length, int * response) {
             uint8_t commandResponse = read_bit_stream(buff, &bitPos, 8);
             /* version */            read_bit_stream(buff, &bitPos, 8);
             uint8_t subCommand      = read_bit_stream(buff, &bitPos, 8);
-            ret = parse_command_response(buff, &bitPos, commandResponse, subCommand, length);
+            ret = parse_command_response(buff, &bitPos, commandResponse, subCommand, length, &wantsRedraw);
 
             if (ret == EXIT_SUCCESS) {
                 if (response != NULL) {
@@ -1241,7 +1273,16 @@ static int parse_incoming(uint8_t * buff, int length, int * response) {
             ret = EXIT_FAILURE;
             break;
     }
-    call_wake_glfw();
+
+    // WAKE ON A CHANGE, NOT ON ARRIVAL. This was unconditional, and with a G2 attached the LED and
+    // volume streams arrive around twenty times a second forever — so the editor redrew twenty
+    // times a second while sitting untouched in front of a patch whose meters were not moving. The
+    // parsers now report whether they actually changed a pixel's worth of state, and a patch with
+    // nothing blinking costs no frames at all. One that IS blinking still redraws at the rate the
+    // instrument reports it, which is the point.
+    if (wantsRedraw) {
+        call_wake_glfw();
+    }
     return ret;
 }
 
