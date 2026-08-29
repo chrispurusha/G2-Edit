@@ -3540,8 +3540,22 @@ resources already hold.
   pixel is either fully covered or not, so no pixel lands near a sample-position tie and the two
   rasterizers agree exactly. An identical frame is evidence the port is right, not that the switch
   did nothing — check with a log before concluding otherwise.
-  The menu entries were confirmed present in both bars by screenshot; the ITEM has not been clicked
-  in either sibling, only in G2-Edit, because neither backdoor has a MENU command.
+  BOTH SIBLINGS NOW HAVE A MENU BACKDOOR COMMAND, ported from G2-Edit's (CT asked for whatever
+  access was needed). MENU <bar>[/<item>[/<sub>]], matching a label anywhere in its text and
+  case-insensitively; omit the last level and that menu is LISTED rather than clicked, which is how
+  a test finds what is there. It is what makes a state-dependent label ("Use Metal Renderer" against
+  "Use OpenGL Renderer") checkable at all, since the label IS the state.
+  SO THE TOGGLE IS NOW VERIFIED END TO END IN ALL THREE: list the menu, click the item, confirm
+  renderBackend flips in the preferences file, restart, and see the menu report the other one.
+
+- 2026-08-29 — THE VST3 PLUG-IN DEFAULTS TO METAL (CT: "the vst3 plugin is experimental anyhow, so
+  if it can't switch, I'd default it to metal"). It cannot offer the runtime choice the application
+  does — its view's superclass is fixed at compile time — so the default is the decision.
+      ./do-vst3                     Metal
+      G2_VST3_OPENGL=1 ./do-vst3    OpenGL
+  The OpenGL build is kept rather than deleted: it is the path with the most hours in a real host,
+  so it is the thing to fall back to if a host misbehaves. Verified the default build is
+  byte-identical to the Metal capture it replaces, and installed.
 
 - SUPERSEDED — the survey that preceded the above, kept for the facts in it:
     - SYNTHEDIT'S ORDERING IS ALREADY CORRECT. main.c calls init_settings() before init_graphics(),
@@ -3560,6 +3574,44 @@ resources already hold.
       share.
   AND THE PIN. Both siblings are behind, and EmuUtility already has an uncommitted emuGraphics.c
   carrying the texture-filter change; that has to land in the same commit as its pin bump.
+
+- DONE 2026-08-29 — AN ABOUT BOX, because a .vst3 in a host's plug-in folder carries nothing that
+  says where it came from (CT, after the Metal plug-in was confirmed working in Ableton). Help ▸
+  About, in G2-Edit, in the plug-in, and in both siblings. It reports four things:
+      G2-Edit
+      Version:  V0.6.4-beta.5-9-g4fc085a-dirty
+      Compiled: Aug 29 2026 07:52:37
+      Renderer: OpenGL
+  THE RENDERER LINE EARNS ITS PLACE now the backend is a preference: "it looks wrong" and "it looks
+  wrong on Metal" are different reports, and nothing else on screen says which is running.
+  THE VERSION COMES FROM GIT, and the SEQUENCING IS THE SUBTLE PART — CT flagged it before it was
+  written, which saved a wrong answer being shipped:
+    - ./do-vst3 standalone uses `git describe --tags --always --dirty`, giving the last tag, the
+      commits since, the commit, and -dirty when the tree matches none of them.
+    - ./do-release MUST NOT. It builds the .dmg BEFORE the tag exists — it computes the NEXT version
+      from the newest tag and only prints the `git tag` command to run once the .dmg is checked. So
+      `git describe` at that moment names the PREVIOUS release, and a .dmg labelled 0.6.4-beta.6
+      whose plug-in says 0.6.4-beta.5 is worse than no version at all, because a wrong version
+      number is believed. do-release therefore passes G2_VERSION_STRING="$VERSION" to do-vst3 and
+      the same value into the app's build, and that overrides the git lookup.
+    - A PLAIN XCODE BUILD SAYS "development build". Xcode cannot run git without a Run Script phase,
+      and MARKETING_VERSION in the project is stale and documented as not being the source of truth,
+      so reporting it would be the same lie. The compile time identifies a dev build instead. If
+      Xcode builds ever need the real version, a Run Script phase writing the define is the way —
+      it was not added because it means editing the project file.
+  __DATE__/__TIME__ ARE THE MOMENT synthlibVersion.c WAS COMPILED, which is exact for do-vst3 and
+  do-release (both compile everything every run) but can lag on an incremental Xcode build. Hence
+  the label says "Compiled", which is true either way, rather than "Built", which would not be.
+  ALSO FIXED: G2_VERSION in g2Vst3.cpp was hardcoded "0.1.0" — nine minor versions stale — and is
+  what the plug-in reports to the host in PClassInfo2. Left alone for now because changing what a
+  host sees as the plug-in version can invalidate saved projects; worth a decision rather than a
+  drive-by edit. NOTED HERE SO IT IS NOT FORGOTTEN.
+  The plug-in's Help menu function is open_plugin_help_menu(), named apart from the application's
+  open_help_menu() which appMenuBar.h declares and g2Menu.c can see.
+  VERIFIED IN ALL FOUR: the box was opened and read in G2-Edit, SynthEdit and EmuUtility, through
+  the MENU backdoor command (which is why that was ported in the first place), and the plug-in's
+  binary was checked with `strings` to carry V0.6.4-beta.5-9-g4fc085a-dirty. The three applications
+  say "development build" when built in Xcode, which is the intended answer there.
 
 - WINDOWS / LINUX BUILDS — wanted eventually (CT, 2026-08-26). Nothing started, no schedule; this is
   a note of where the port surface actually is, so it is not re-surveyed from scratch later.
