@@ -649,10 +649,21 @@ the same day.
   products scale WITH the carrier, so they ride the envelope instead of distorting its shape, and a
   10 ms RMS window averages them away. LinLin's straight-line fit is what would have caught it
   otherwise.
-  STILL ASYMMETRIC, and left alone deliberately: the drag path also calls cable_chain_recolour() before
-  re-assessing, so a whole chain carries one colour. The backdoor still does not. It made no difference
-  here — every cable in this patch takes its colour from its own source — but a scripted fan-out, or a
-  scripted input-to-input link (which should come out WHITE), will still colour wrongly.
+  THE ASYMMETRY IS GONE, 2026-08-29 (CT: "Backdoor recolour is worth doing"). backdoor.c's CABLE now
+  calls cable_chain_recolour() on the to-end before update_module_up_rates(), in the same order
+  canvasDrag.c uses, so a scripted patch derives a chain's colour across the whole tree exactly as a
+  drawn one does. cable_chain_apply_colour() sends eMsgCmdSetCableColour per cable it changes, so the
+  instrument follows — a RECOLOUR, not a write, which is what stops the G2 holding each cable twice.
+  DEMONSTRATED, not assumed. A sourceless input-to-input link — the case the old note predicted would
+  be wrong — built offline through the backdoor on the build before and after:
+      before:  cable loc=VA from=1:0 link=0 to=2:0 colour=1   (blue, inherited from the from-connector)
+      after:   cable loc=VA from=1:0 link=0 to=2:0 colour=6   (white)
+  White is what the manual calls a "non-functional input-to-input connection", and it is what the drag
+  path has always produced.
+  A TRAP IN TESTING IT: cableLinkTypeFromInput is 0 and cableLinkTypeFromOutput is 1, so "link=1" on
+  the CABLE command is the ORDINARY output-to-input cable and "link=0" is the input-to-input one. The
+  first attempt at this test used link=1, built two perfectly ordinary cables, and showed no
+  difference before or after — which looked like the fix doing nothing.
 
 THE DRAWN ENVELOPE WAS NEVER THE ENVELOPE YOU HEARD — one law, two constants. Fixed 2026-08-24; the
 constant itself is still a guess and wants a capture.
