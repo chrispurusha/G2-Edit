@@ -93,6 +93,7 @@ SOURCES=(
     # The chosen render backend. THIS LIST IS MANUAL, and the file compiles to nothing unless
     # renderBackendSelect.h picks it — so adding renderBackendMetal.m here later is additive,
     # not a swap. Omitting one entirely breaks the plug-in alone, and only at link time.
+    "$HERE/SynthLib/src/renderBackend.c"
     "$HERE/SynthLib/src/renderBackendGL.c"
     # Both backends are always in the list. Each compiles to nothing unless renderBackendSelect.h
     # picks it, so this is not a swap — see G2_VST3_METAL below for how to choose.
@@ -141,19 +142,20 @@ CXX_SOURCES=(
 # ever gains -Wall or -Weverything, or other people's headers will start failing our build.
 WARNFLAGS=(-Werror)
 
-# METAL, OPTIONALLY. G2_VST3_METAL=1 selects the Metal backend and links the two frameworks it
-# needs; without it the plug-in is OpenGL exactly as before, which is still the default because the
-# GL path is the one that has been in a real host. Both backend files are compiled either way — the
-# unselected one compiles to nothing — so this only sets the define and the link line.
+# Both backend files are always compiled and both frameworks always linked — see renderBackend.h.
+#
+# BUT THE PLUG-IN STILL CHOOSES AT BUILD TIME, unlike the application, because its view's SUPERCLASS
+# differs between the two (NSOpenGLView against NSView) and a superclass is fixed at compile time.
+# G2_VST3_METAL=1 selects Metal; without it the plug-in is OpenGL, which is what has been in a real
+# host and remains the default.
 BACKEND_DEFS=()
-BACKEND_LIBS=()
+BACKEND_LIBS=(-framework Metal -framework QuartzCore)
 
 if [ "$G2_VST3_METAL" = "1" ]; then
-    BACKEND_DEFS=(-DRENDER_BACKEND=2)
-    BACKEND_LIBS=(-framework Metal -framework QuartzCore)
-    echo "Backend: Metal"
+    BACKEND_DEFS=(-DG2_VST3_METAL=1)
+    echo "Plug-in backend: Metal"
 else
-    echo "Backend: OpenGL (set G2_VST3_METAL=1 for Metal)"
+    echo "Plug-in backend: OpenGL (set G2_VST3_METAL=1 for Metal)"
 fi
 
 INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/vst3" -I"$SDK"
