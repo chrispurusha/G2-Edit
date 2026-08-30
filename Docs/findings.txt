@@ -6815,3 +6815,30 @@ apply to ones I haven't touched too...?" then "My mods were mostly about spacing
   So the real work is about 19 faces. And since arranged faces use more rows than untouched ones,
   and the title bar has just freed 17.5 px, the untouched faces are precisely the ones with room to
   gain from being spread out.
+
+
+FREE-RUNNING OSCILLATORS - WHY NOTHING SOUNDS BETWEEN NOTES (2026-08-30, owner-reported)
+
+  Owner reports patches that depend on an oscillator running with no note held. They produce
+  silence, and the reason is one line: soundEngine.c:5112 skips the WHOLE voice graph when
+
+      if (voice->sounding == false) { continue; }   // costs nothing when it is not playing
+
+  so between notes no node in that voice advances at all - not the oscillators, not the LFOs, not
+  a clock, not a delay tail. The skip is a deliberate cost saving and is right for the common case;
+  what is wrong is that it is unconditional.
+
+  This is a voice-model question, not an oscillator one. The G2 runs a patch continuously and a
+  note gates the ENVELOPE, whereas the engine treats "voice" and "sounding" as the same thing:
+  gVoice[].sounding both allocates the per-voice state (gPhase, gLadder, gOscHistory and the rest
+  of the [MAX_VOICES][MAX_ENGINE_NODES] arrays) and decides whether to render. Free-running needs
+  those two jobs separated, so a node can advance in a voice no note owns.
+
+  Cheapest shape that would work: keep the skip, but render voice 0 unconditionally whenever the
+  patch contains any always-on node, and let the envelope gate the audio as the hardware does. That
+  costs one voice of CPU at idle rather than 32. Which nodes count as always-on is the open
+  question - an oscillator patched only into a modulation input clearly does, one feeding an
+  envelope's audio input arguably does not.
+
+  Owner asked for it to be CONFIGURABLE rather than simply switched on, so the idle cost stays a
+  choice. Not started; the todo.txt line under SOUND ENGINE is the reminder.

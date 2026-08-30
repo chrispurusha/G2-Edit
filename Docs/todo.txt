@@ -5,12 +5,9 @@ Measurements, reasoning and completed-work narrative go in findings.txt, NOT her
 Built-but-unchecked work goes in to-test.txt.
 
 FROM CT
-- Show the ASSIGNED voice count beside the requested one, "15 (16)", topbarRender.c:124
 - Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
-- Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE <ctrl>V is already Paste
+- Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE <ctrl>V should Paste
 - Zoom to Fit from a right click, fitting the area under the cursor
-- Port module faces to the original's positions, using the top-of-face space the title bar freed
-- Then consider shrinking MODULE_HEIGHT (38px/row against the original's 15) - separate step
 
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
@@ -54,6 +51,7 @@ SOUND ENGINE
 - Extend engine module coverage; recount the supported types, 23 predates the filter work
 - Run the engine-vs-hardware diff: both sides can produce the file, the comparison has not been run
 - Notes are not sent to the G2 while the local engine is sounding (owner's request)
+- Let oscillators free-run rather than only while a note sounds - some patches depend on it; make it configurable
 - Sound engine across cores - investigated and deprioritised, kept for later
 
 MEASUREMENT PROGRAMME
