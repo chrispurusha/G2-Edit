@@ -153,14 +153,33 @@ static bool module_drag_motion(tCoord coord) {
             tModule * module = get_module(gModuleDrag.moduleKey);
 
             if (module != NULL) {
-                convert_mouse_coord_to_module_column_row(&module->column, &module->row, coord);
+                // BY THE DELTA, exactly as the multi path above does, so the module keeps the offset
+                // it was grabbed by. This used to assign the cursor's cell straight into
+                // column/row, which put the module's TOP-LEFT under the pointer and made it jump the
+                // moment a drag started anywhere but the title strip.
+                uint32_t newCol = 0;
+                uint32_t newRow = 0;
 
-                if (module->row > MAX_ROWS) {
-                    module->row = MAX_ROWS;
+                convert_mouse_coord_to_module_column_row(&newCol, &newRow, coord);
+
+                if (newCol > MAX_COLUMNS) {
+                    newCol = MAX_COLUMNS;
                 }
 
-                if (module->column > MAX_COLUMNS) {
-                    module->column = MAX_COLUMNS;
+                if (newRow > MAX_ROWS) {
+                    newRow = MAX_ROWS;
+                }
+                int32_t  dc     = (int32_t)newCol - (int32_t)gModuleDrag.prevColumn;
+                int32_t  dr     = (int32_t)newRow - (int32_t)gModuleDrag.prevRow;
+
+                if ((dc != 0) || (dr != 0)) {
+                    int32_t nc = (int32_t)module->column + dc;
+                    int32_t nr = (int32_t)module->row + dr;
+
+                    module->column         = (uint32_t)((nc < 0) ? 0 : ((nc > (int32_t)MAX_COLUMNS) ? (int32_t)MAX_COLUMNS : nc));
+                    module->row            = (uint32_t)((nr < 0) ? 0 : ((nr > (int32_t)MAX_ROWS) ? (int32_t)MAX_ROWS : nr));
+                    gModuleDrag.prevColumn = newCol;
+                    gModuleDrag.prevRow    = newRow;
                 }
             }
         }

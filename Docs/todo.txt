@@ -9,7 +9,7 @@ FROM CT
 - Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
 - Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE <ctrl>V is already Paste
 - Zoom to Fit from a right click, fitting the area under the cursor
-- To move closer to the original editor module layout, we should probably remove the module number from the module's top right and the module type. We can display those when right-clicking on the module. Further down the line, a more whole-sale improvement would be to not have the module title bar - same as original editor. That would mean that a click anywhere on a module where there's no adjustable component, would allow dragging. Would mean some module layout adjustments. Would also mean that we can use the current module top bar, f
+- To move closer to the original editor module layout, we should probably remove the module number from the module's top right and the module type. We can display those when right-clicking on the module. Further down the line, a more whole-sale improvement would be to not have the module title bar - same as original editor. That would mean that a click anywhere on a module where there's no adjustable component, would allow dragging. Would mean some module layout adjustments. Module vertical height could shrink to follow. E.g. Name bar currently has a lot of spare space.
 
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
@@ -22,7 +22,6 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Second screen renders pixelated
 - Yellow module-selection border is not obvious enough; try twice the line width
 - Reconnection dialogue does not always appear
-- Remove the module number from the top right of each module for release builds
 - Open Recent for patches loaded from a bank
 - Move Delete Unused Cables out of the cable popup to a top-level menu
 - Local mode button: draw a wave across sequencer columns, ultimately as a wave-representation mode
