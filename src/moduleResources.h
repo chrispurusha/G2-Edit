@@ -1274,12 +1274,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeNoteZone,   paramTypeMenu,           {{   83,     0}, { 7,  7}}, anchorBottomLeft,  "SChan",         21,   0, midiChanStrMap,                        NULL          },                // 149 Send Channel
     {moduleTypeNoteZone,   paramTypeMenu,           {{   60,   -14}, { 7,  7}}, anchorBottomLeft,  "Thru",           2,   0, thruStrMap,                            NULL          },                // 149 Thru mode
     // 150 Compress
-    {moduleTypeCompress,   paramTypeCommonDial,     {{    6,    -3}, { 7,  7}}, anchorBottomLeft,  "Thr",           43,  18, NULL,                                  NULL          },                // 150
+    {moduleTypeCompress,   paramTypeCommonDial,     {{    5,    -3}, { 7,  7}}, anchorBottomLeft,  "Thr",           43,  18, NULL,                                  NULL          },                // 150
     {moduleTypeCompress,   paramTypeCommonDial,     {{   20,    -3}, { 7,  7}}, anchorBottomLeft,  "Ratio",         67,  20, NULL,                                  NULL          },
-    {moduleTypeCompress,   paramTypeStrMap,         {{   34,    -3}, { 7,  7}}, anchorBottomLeft,  "Att",          128,   1, compr_attack_timesStrMap,              NULL          },
-    {moduleTypeCompress,   paramTypeStrMap,         {{   48,    -3}, { 7,  7}}, anchorBottomLeft,  "Rel",          128,  20, compr_release_timesStrMap,             NULL          },
-    {moduleTypeCompress,   paramTypeCommonDial,     {{   62,    -3}, { 7,  7}}, anchorBottomLeft,  "RefLvl",        43,  30, NULL,                                  NULL          },
-    {moduleTypeCompress,   paramTypeToggle,         {{   27,     5}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, sideChainStrMap,                       offOnColourMap},
+    {moduleTypeCompress,   paramTypeStrMap,         {{   35,    -3}, { 7,  7}}, anchorBottomLeft,  "Att",          128,   1, compr_attack_timesStrMap,              NULL          },
+    {moduleTypeCompress,   paramTypeStrMap,         {{   50,    -3}, { 7,  7}}, anchorBottomLeft,  "Rel",          128,  20, compr_release_timesStrMap,             NULL          },
+    {moduleTypeCompress,   paramTypeCommonDial,     {{   65,    -3}, { 7,  7}}, anchorBottomLeft,  "RefLvl",        43,  30, NULL,                                  NULL          },
+    {moduleTypeCompress,   paramTypeToggle,         {{   10,     7}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, sideChainStrMap,                       offOnColourMap},
     {moduleTypeCompress,   paramTypeBypass,         {{   -3,     0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
     // 151 Unknown
     // 152 KeyQuant
@@ -2320,9 +2320,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeNoteRcv,     connectorDirOut, connectorTypeControl, {{   88,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "RVel",         labelLocUp   },      // 148 Release vel
     // 149 NoteZone
     // 150 Compress
-    {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{  -10,     5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },      // 150
-    {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{   -3,     5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },
-    {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{   20,     5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,           labelLocUp   },
+    {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{  -10,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },      // 150
+    {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{   -3,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },
+    {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{   3,     7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,           labelLocUp   },
     {moduleTypeCompress,    connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     {moduleTypeCompress,    connectorDirOut, connectorTypeAudio,   {{  -10,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
 
@@ -2657,7 +2657,7 @@ const tModeLocation      modeLocationList[] = {
 
 const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight},
-    {moduleTypeCompress,  volumeTypeCompress,  {{-19,  7}, { 4, 50}}, anchorTopRight},
+    {moduleTypeCompress,  volumeTypeCompress,  {{-11,  0}, { 3, 30}}, anchorMiddleRight},
     {moduleType2toOut,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
     {moduleType4toOut,    volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight},
     {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
