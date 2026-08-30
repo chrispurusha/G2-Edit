@@ -583,8 +583,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeLfoA,       paramTypeMenu,           {{   20,    -1}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },           // 26 Mode
     {moduleTypeLfoA,       paramTypeMenu,           {{   65,    -1}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },           // 26 Kbt
     {moduleTypeLfoA,       paramTypeCommonDial,     {{   10,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },           // 26 Rate M
-    {moduleTypeLfoA,       paramTypeMenu,           {{  -15,     7}, { 7,  7}}, anchorTopRight,    NULL,             6,   0, lfoWaveStrMap,                         NULL          },           // 26 Wave
-    {moduleTypeLfoA,       paramTypeBypass,         {{   -3,     0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },           // 26 Bypass
+    {moduleTypeLfoA,       paramTypeMenu,           {{  -15,     0}, { 7,  7}}, anchorMiddleRight,    NULL,             6,   0, lfoWaveStrMap,                         NULL          },           // 26 Wave
+    {moduleTypeLfoA,       paramTypeBypass,         {{   -3,     3}, { 5,  5}}, anchorTopRight, "Bypass",         2,   1, NULL,                                  NULL          },           // 26 Bypass
     {moduleTypeLfoA,       paramTypeMenu,           {{  -15,    -1}, { 7,  7}}, anchorBottomRight, NULL,             6,   4, posStrMap,                             NULL          },           // 26 OutType
     {moduleTypeLfoA,       paramTypeMenu,           {{   36,   -12}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, rangeLfoCStrMap,                       NULL          },           // 26 Range  (LfoA has no Clk; default 1 = Rate Lo)
     // 27 OscMaster
@@ -1721,7 +1721,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{    3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Chain",        labelLocRight},      // 19 Chain
     {moduleTypeMix4to1B,    connectorDirOut, connectorTypeControl, {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },      // 19 Out
     // 20 EnvADSR
-    {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeControl, {{   -3,     6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },      // 20
+    {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeControl, {{   -3,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },      // 20
     {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeLogic,   {{    3,    15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",         labelLocRight},
     {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeControl, {{    3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",           labelLocRight},
     {moduleTypeEnvADSR,     connectorDirOut, connectorTypeControl, {{   -3,   -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocLeft },
@@ -2062,13 +2062,13 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFlipFlop,    connectorDirOut, connectorTypeLogic,   {{   70,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "NotQ",         labelLocRight},     // 91 NotQ
     {moduleTypeFlipFlop,    connectorDirOut, connectorTypeLogic,   {{   80,   -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Q",            labelLocRight},     // 91 Q
     // 92 FltClassic
-    {moduleTypeFltClassic,  connectorDirIn,  connectorTypeAudio,   {{   -3,     5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },     // 92
+    {moduleTypeFltClassic,  connectorDirIn,  connectorTypeAudio,   {{   -3,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },     // 92
     {moduleTypeFltClassic,  connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     {moduleTypeFltClassic,  connectorDirIn,  connectorTypeControl, {{    3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },
     {moduleTypeFltClassic,  connectorDirIn,  connectorTypeControl, {{    3,    15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,           labelLocUp   },
     // 93 Unknown
     // 94 StChorus
-    {moduleTypeStChorus,    connectorDirIn,  connectorTypeAudio,   {{   -3,     6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },      // 94
+    {moduleTypeStChorus,    connectorDirIn,  connectorTypeAudio,   {{   -3,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },      // 94
     {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{  -10,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },
     {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },
     // 95 Unknown
@@ -2183,7 +2183,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{   32,    20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "2",            labelLocUp   }, // 123 In2
     {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{   52,    20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "3",            labelLocUp   }, // 123 In3
     {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{   72,    20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "4",            labelLocUp   }, // 123 In4
-    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{   -3,     6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft }, // 123 Chain
+    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{   -3,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft }, // 123 Chain
     {moduleTypeMix4to1C,    connectorDirOut, connectorTypeControl, {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 123 Out
     // 124 Mux8-1
     {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{   22,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   }, // 60 In1
@@ -2265,8 +2265,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{   56,    20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "R",            labelLocUp   }, // 140 In3R
     {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{   69,    20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "L",            labelLocUp   }, // 140 In4L
     {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{   76,    20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "R",            labelLocUp   }, // 140 In4R
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{  -10,     6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft }, // 140 ChainL
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{   -3,     6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   }, // 140 ChainR
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{  -10,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft }, // 140 ChainL
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{   -3,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   }, // 140 ChainR
     // 141 CtrlSend
     {moduleTypeCtrlSend,    connectorDirIn,  connectorTypeLogic,   {{  3.9,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Send",         labelLocRight}, // 141 Send In
     {moduleTypeCtrlSend,    connectorDirOut, connectorTypeLogic,   {{ 25.5,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 141 Send Out
@@ -2656,16 +2656,16 @@ const tModeLocation      modeLocationList[] = {
 
 
 const tVolumeLocation    volumeLocationList[] = {
-    {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight   },
+    {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4, 0}, { 3, 24}}, anchorMiddleRight   },
     {moduleTypeCompress,  volumeTypeCompress,  {{-11,  0}, { 3, 30}}, anchorMiddleRight},
-    {moduleType2toOut,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight   },
-    {moduleType4toOut,    volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight   },
-    {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight   },
-    {moduleTypeMix4to1S,  volumeTypeStereo,    {{ -9, 13}, { 3, 24}}, anchorTopRight   },
-    {moduleTypeMix4to1B,  volumeTypeMono,      {{-11,  7}, { 3, 14}}, anchorTopRight   }, // XPos:231 YPos:10 H:2  (moved left + extended down, symmetric top/bottom gap)
+    {moduleType2toOut,    volumeTypeStereo,    {{-25,  0}, { 3, 14}}, anchorMiddleRight   },
+    {moduleType4toOut,    volumeTypeQuad,      {{-50,  0}, { 3, 14}}, anchorMiddleRight   },
+    {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  0}, { 3, 14}}, anchorMiddleRight   },
+    {moduleTypeMix4to1S,  volumeTypeStereo,    {{ -9, 0}, { 3, 24}}, anchorMiddleRight   },
+    {moduleTypeMix4to1B,  volumeTypeMono,      {{-11,  0}, { 3, 14}}, anchorMiddleRight   }, // XPos:231 YPos:10 H:2  (moved left + extended down, symmetric top/bottom gap)
     {moduleTypeMix8to1A,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight   }, // XPos:231 YPos:10 H:2
     {moduleTypeMix8to1B,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight   }, // XPos:242 YPos:27 H:4  (far-right column, below Chain / above Out)
-    {moduleTypeMixStereo, volumeTypeStereo,    {{-17, 22}, { 3, 15}}, anchorTopRight   }, // XPos:207+231 YPos:55 H:5
+    {moduleTypeMixStereo, volumeTypeStereo,    {{-17, 0}, { 3, 15}}, anchorMiddleRight   }, // XPos:207+231 YPos:55 H:5
     {moduleTypeMixFader,  volumeTypeMono,      {{ -4, 16}, { 3, 80}}, anchorTopRight   }, // XPos:242 YPos:102 H:9
     {moduleTypeEq2Band,   volumeTypeMono,      {{-11,  6}, { 3, 28}}, anchorTopRight   }, // XPos:227 YPos:25 H:3
     {moduleTypeEq3band,   volumeTypeMono,      {{-11,  6}, { 3, 40}}, anchorTopRight   }, // XPos:227 YPos:40 H:4
@@ -2673,8 +2673,8 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeFltVoice,  volumeTypeMono,      {{-10, 20}, { 3, 22}}, anchorTopRight   }, // XPos:230 YPos:40 H:4
     {moduleTypeFltPhase,  volumeTypeMono,      {{-11, 22}, { 3, 18}}, anchorTopRight   }, // XPos:227 YPos:55 H:5
     {moduleTypeFltComb,   volumeTypeMono,      {{-11,  6}, { 3, 20}}, anchorTopRight   }, // XPos:227 YPos:40 H:4  (raised to top-right so it clears the bottom-row Level dial)
-    {moduleType2toIn,     volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight   }, // XPos:205+231 YPos:10 H:2
-    {moduleType4toIn,     volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight   }, // XPos:153..231 YPos:10 H:2
+    {moduleType2toIn,     volumeTypeStereo,    {{-25,  0}, { 3, 14}}, anchorMiddleRight   }, // XPos:205+231 YPos:10 H:2
+    {moduleType4toIn,     volumeTypeQuad,      {{-50,  0}, { 3, 14}}, anchorMiddleRight   }, // XPos:153..231 YPos:10 H:2
     {moduleTypeSeqEvent,  volumeTypeSequencer, {{ 20, 24}, {64,  5}}, anchorTopLeft    },
     {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft    },
     {moduleTypeSeqVal,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft    },
