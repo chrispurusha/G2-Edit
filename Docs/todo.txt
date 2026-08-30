@@ -9,8 +9,7 @@ FROM CT
 - Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
 - Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE <ctrl>V is already Paste
 - Zoom to Fit from a right click, fitting the area under the cursor
-- Drop the module title bar entirely, as the original has none - do it WITH the layout port,
-  since the original's own x positions already reserve the top-left for the module name
+- Port module faces to the original's positions, using the top-of-face space the title bar freed
 - Then consider shrinking MODULE_HEIGHT (38px/row against the original's 15) - separate step
 - Then the layout drift sweep, against the settled geometry
 
