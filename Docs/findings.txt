@@ -6300,3 +6300,42 @@ one module face).
   the patch dirty and the change travels to the G2 and to file like any other edit - unlike SCROLL
   and ZOOM, which are local to the view. Frame with SPLIT before building a patch under test, never
   part-way through one.
+
+
+2026-08-30 — TODO.TXT AUDITED AGAINST THE CODE (CT: "I think there are quite a lot of items in
+todo.txt, which have actually already been done").
+
+  Correct, and it was my doing: the list was rebuilt from an automated extraction of the old file and
+  I kept anything ambiguous rather than checking it, on the reasoning that an item wrongly kept is
+  visible while one wrongly dropped is lost. That is true, but it produced a list that cannot be
+  trusted at a glance - which is the whole point of a todo list.
+
+  VERIFIED DONE AND REMOVED:
+    - Keyboard arrow keys adjusting values. Fully implemented in mouseHandle.c, citing manual p84:
+      Up/Down move the focused parameter, Left/Right walk the parameters, Shift moves between
+      modules, with GLFW_REPEAT honoured.
+    - A save adding its path to File > Open Recent. graphics.c does it on both save routes, with a
+      comment saying so.
+    - A stale soundEngine.c comment about a "LADDER_M" constant. The constant is LADDER_MAX_G and
+      the comment describes it correctly; the line the item named is now unrelated code.
+    - OscShpA's wave graph - it has a graphLocationList row and the renderer dispatches to it.
+
+  VERIFIED PARTLY DONE AND REWORDED, which is the more useful outcome:
+    - Delete Unused MODULES exists; only moving Delete Unused CABLES off the cable popup is left.
+    - Zoom to Fit exists in the View menu; only the right-click route is missing.
+    - Cut/Copy/Paste/Paste Params/Select All all exist, in context menus and as shortcuts. What is
+      missing is a top-level Edit menu - the menu bar is File/Settings/Backup/Restore/Controls/
+      Tools/View/Patch/Experimental/Help.
+    - "Press V to toggle the split" - V IS ALREADY PASTE. Whoever does it has to resolve that first,
+      which the item now says.
+    - clear_slot_data(): named precisely. The morph-defaults block above it sets the patch name to
+      "Init" and does not bump gPatchGeneration; clear_slot_data() deletes modules and cables and
+      does not set the name. They really do disagree.
+    - The Unknown module slots: 39 of 209, not the 22 the item claimed.
+
+  STILL OPEN, CONFIRMED BY LOOKING: nudge arrows on dials, module palette drag selection, the
+  module number drawn top-right of every face, Gate's two text dropdowns where the original has a
+  symbol picker, scroll/zoom sensitivity settings, a master-clock panel.
+
+  WHAT I DID NOT DO: verify every one of the 87 by reading. The cheaply checkable ones are checked;
+  anything needing hardware or a long read is unverified and may also be stale.
