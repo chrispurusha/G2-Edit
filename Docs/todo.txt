@@ -37,6 +37,8 @@ MODULES AND GRAPHICS
 - Fill the 39 Unknown slots in gModuleProperties (of 209) by sweeping factory banks for type numbers
 
 FILTERS
+- FltNord's LP/BP/HP/BR modes are NOT implemented - fltShape is read but the ladder path ignores it
+- Try FltNord as a state-variable filter (svf_filter already takes a shape); evidence in findings.txt
 - FltNord's PEAK shape still borrows FltClassic's k law; its LEVEL behaviour is now measured and fixed
 - Whether FltNord's GC follows the same law on the 12dB slope and on BP/HP/BR is not established
 - Pin FltComb's tuning constant: teeth land at nominal/1.67, is it 5/3 or an integer delay length?
