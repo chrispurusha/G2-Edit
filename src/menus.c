@@ -2435,6 +2435,13 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
 
 static char gExcludeMutationMenuLabel[40];
 
+// The module's type name and index, which used to be printed on the FACE - the type in brackets
+// across the middle of the title bar and the index in its top-right corner. Neither is patch data
+// and neither is something a user reads often; the original editor shows neither, and the face is
+// the scarcest space we have. They live here now, on the module's own right-click menu, where they
+// are one gesture away when you actually want them. CT, 2026-08-30.
+static char gModuleInfoMenuLabel[64];
+
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     static tMenuItem colourMenuItems[] = {
         {"",   MODULE_RED_1,         action_set_module_colour,  6, NULL},
@@ -2470,6 +2477,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     // label was being written to, which deleted the Delete entry from the menu. Named indices make
     // the next insertion harmless.
     enum {
+        kItemInfo,
         kItemRename,
         kItemColour,
         kItemCopy,
@@ -2483,6 +2491,9 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     };
 
     static tMenuItem menuItems[]    = {
+        // A HEADING, NOT A COMMAND: no action and the disabled colour, the same way Paste Params
+        // greys itself out below. It names the module you right-clicked and gives its index.
+        {NULL,           RGB_GREY_5, NULL,                                0, NULL,            0,                      0.0},
         {"Rename",       RGB_GREY_3, action_rename_module,                0, NULL,            0,                      0.0},
         {"Set colour",   RGB_GREY_3, NULL,                                0, colourMenuItems, 6, STANDARD_TEXT_HEIGHT * 2},
         {"Copy",         RGB_GREY_3, menu_action_copy_module,             0, NULL,            0,                      0.0},
@@ -2528,6 +2539,11 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     snprintf(gExcludeMutationMenuLabel, sizeof(gExcludeMutationMenuLabel), "[%s] Exclude From Mutation",
              excluded ? "x" : " ");
     menuItems[kItemExclude].label         = gExcludeMutationMenuLabel;
+
+    snprintf(gModuleInfoMenuLabel, sizeof(gModuleInfoMenuLabel), "%s  -  type %u, index %u",
+             (module != NULL) ? gModuleProperties[module->type].name : "?",
+             (module != NULL) ? (unsigned)module->type : 0u, (unsigned)moduleKey.index);
+    menuItems[kItemInfo].label            = gModuleInfoMenuLabel;
 
     gMenuContext.moduleKey                = moduleKey;
     open_context_menu(coord, menuItems, 0, 0.0);
