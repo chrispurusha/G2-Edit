@@ -5,6 +5,8 @@ Confirmed -> delete the line. Check failed -> move it to todo.txt.
 Full detail for each is in findings.txt, searchable by the wording below.
 
 HARDWARE CHECKS
+- ValSw1-2/ValSw2-1 Ctrl Value: now a 0-64 dial (top step reads 64). Confirm the range really is 64,
+  not 128, against the G2's own panel - the device ACCEPTED a raw 127 when written directly
 - FltHP, FltStatic and FltNord now play in the sound engine - all three need an ear, none is tuned
 - FltStatic's engine damping uses the measured Q, which is far sharper than the dial's printed Q
 - FltLP slope now reaches the engine (was stuck on 1 pole, read from Bypass) - 6 settings, 1-6 poles

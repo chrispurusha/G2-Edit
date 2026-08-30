@@ -6453,3 +6453,81 @@ patch, should minimise the FX area. We're initially working in the VA area for n
   loud failure rather than a silent fallback.
 
   IN THE SUBMODULE, so it is committed with SynthLib rather than with G2-Edit.
+
+
+2026-08-30 — THE TWO SWITCH ITEMS IN todo.txt WERE BOTH ALREADY DONE (CT: "Not sure they actually
+mean anything now though. Could check against the original editor's resources" - and: "You did
+already add radio buttons for some switches", and "Isn't the bare '0' box, the offset - which is
+calculated?"). Both hunches were right.
+
+  "SW1-2 AND SIMILAR NEED A NEW PARAM TYPE: PER-BOX NAMES, AND AN OFFSET THAT READS 0, 4, ..."
+  Both halves exist:
+    - paramTypeRadioEdit is the new param type - one parameter, one name per button (types.h) -
+      and all ten Sw* modules use it. Sw8-1 draws a full eight-button grid, In 1..In 8.
+    - displayTypeSwitchCtrl is the offset box, and it is CALCULATED: param * SWITCH_CTRL_STEP with
+      the step defined as 4 in defs.h, cited to manual p221. That is the "0 for the first box, 4 for
+      the next" the item described, and the code comment already says "Calculated, not tabulated".
+
+  "Sw8-1(15) AND ValSw1-2(17) NEED MORE LAYOUT RESOURCES" - Sw8-1 has its radio grid, all ten
+  connectors and the offset box. Nothing missing.
+
+  THE MANUAL EXPLAINS WHY THE BOX EXISTS AT ALL, which is worth keeping: "the Control output sends
+  out a control signal offset depending on which button you select. The offset value is also shown
+  in the Display Box" - it is designed to drive the Ctrl input of a Multiplexer, so the number is
+  the channel selector a Mux decodes. Not decoration.
+
+  WHAT WAS ACTUALLY LEFT, and it is a different and smaller thing: ValSw1-2 (17) and ValSw2-1 (105)
+  are NOT button switches and correctly have no offset box. Their single parameter is a threshold -
+  manual p223, "Set the lower limit where the switch should redirect the input signal to the On
+  output. Range: 0-64 units in steps of 1 unit" - and we draw it as paramTypeMenu over u128StrMap,
+  a 128-entry table of strings that spell the integers 0 to 127. So the range is wrong AND the
+  presentation is a 128-item dropdown for what the original gives arrow buttons.
+  u128StrMap has exactly two users, both of them these; correcting them retires the table, which
+  the "calculate, do not tabulate" rule would have caught.
+
+  METHOD NOTE: the instrument settled the param counts in one command - all four switch modules
+  report filecount=1 tablecount=1, so nothing was under-declared and the question was only ever
+  about presentation. My attempt to read control CodeRefs out of the .rsrc for this was unreliable:
+  the parser bled across module boundaries and showed ValSw1-2 owning controls that were not its.
+  The .rsrc is good for Height and for graph geometry, where the values are per-module and obvious
+  when wrong; it needs a proper block-scoped parse before its control lists can be trusted.
+
+
+2026-08-30 — ValSw1-2 / ValSw2-1 Ctrl Value FIXED: a 128-entry dropdown became a 0-64 dial.
+
+  WHAT IT WAS: paramTypeMenu over u128StrMap, a table of 128 string literals spelling the integers
+  0 to 127. Clicking the control opened a 128-item menu to choose a number.
+
+  WHAT THE MANUAL SAYS (p223, ValSw1-2): "Set the lower limit where the switch should redirect the
+  input signal to the On output. Range: 0-64 units in steps of 1 unit." So the range was wrong as
+  well as the presentation - we offered 128 positions where the module has 64.
+
+  AND THE ORIGINAL EDITOR AGREES, in a way that settles the top step: its readout for this control
+  prints the raw number directly, with the TOP position shown as "64". So the display runs
+  0, 1, ... 62, 64 and the value 63 is never shown as itself. That gap is the instrument's own -
+  64 raw positions over a range the manual calls 0 to 64 - and it is reproduced rather than tidied.
+  ITS CONTROL IS A LEFT/RIGHT INC/DEC PAIR, not a menu, which is the other half of why a dropdown
+  was the wrong shape.
+
+  NOT paramTypeUniPol, which was the tempting reuse: that one HALVES the raw value and prints
+  N.0/N.5 across 128 steps (EnvADSR Sustain). Using it here would have read 0.0 to 31.5 on a control
+  the panel reads 0 to 64. New paramTypeUniPolShort instead, whole steps, top step 64.
+
+  u128StrMap IS RETIRED. It had exactly two users, both of them these rows, and existed only to
+  spell integers - which is what the "calculate, do not tabulate" rule exists to prevent.
+
+  STILL WANTS CT'S EYE ON THE PANEL, and it is in to-test.txt: the range of 64 comes from the manual
+  and the original's formatter, NOT from the instrument. Written directly through the backdoor the
+  G2 accepted and stored a raw 127, so nothing on the wire enforces 64 - only the module's own UI
+  range does, and I cannot read the G2's display from here.
+
+  METHOD: the earlier caveat about the .rsrc is now lifted. A properly block-scoped parse - tracking
+  <#Tag / #> nesting rather than assuming one control per module - reads the control lists correctly,
+  and it is what turned up the inc/dec pair and the formatter id in the first place.
+
+  ALIGNMENT (CT: "Dial on ValSw1-2 needs bottom anchored, same as ValSw2-1"). Both rows were already
+  anchorBottomLeft at y -3; what differed was the HEIGHT - 14 against ValSw2-1's 7. A bottom-anchored
+  rect twice as tall reaches twice as far UP, taking the dial and its readout with it, so the two
+  identical faces sat at different heights. Now both 7.
+  That re-render also confirmed the plain readout path, which the top-step check had not: raw 31
+  reads "31" while raw 63 reads "64".

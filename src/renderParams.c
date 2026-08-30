@@ -332,6 +332,25 @@ tRectangle render_paramType1Int(tModule * module, tRectangle rectangle, char * l
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// 0 to 64 units in WHOLE steps, which is a different control from paramTypeUniPol's half-steps
+// despite the similar name. The manual (p223, ValSw1-2) gives it as "Range: 0-64 units in steps of
+// 1 unit", and the original editor prints the raw number straight out with the TOP STEP shown as
+// "64" — so the readout runs 0, 1, ... 62, 64 and the value 63 is never displayed. That gap is the
+// instrument's, not ours: the control has 64 raw positions and a range the manual calls 0 to 64.
+//
+// NOT paramTypeUniPol, which halves the raw value and prints N.0/N.5 over a 128-step range. Using
+// that here would show 0.0 to 31.5 for a dial the panel reads as 0 to 64.
+tRectangle render_paramType1UniPolShort(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    int raw = (int)paramValue;
+
+    if (raw >= 63) {
+        snprintf(buff, buffSize, "64");
+    } else {
+        snprintf(buff, buffSize, "%d", raw);
+    }
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
 tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double dB       = 0.0;
     double dB_range = 1.0;
