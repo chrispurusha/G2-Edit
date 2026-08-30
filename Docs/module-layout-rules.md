@@ -52,6 +52,41 @@ guesswork. `Input`/`Output` `CodeRef`s likewise match `connectorLocationList`
 order. A `TextField` carries `MasterRef` naming the control it displays — pair
 it with its control rather than treating it as a separate item.
 
+**READING THE .rsrc — GET THIS RIGHT OR EVERY NUMBER IS ANOTHER MODULE'S.** Use
+`tools/rsrc_layout.py`; it encodes the rules below and reads the resource file directly.
+
+- A `<#Module` block is **opened but never closed** — it ends where the next one begins.
+- **A block can hold several modules.** Each starts at its own indent-2 `Name:` line. The DelayQuad
+  block holds six (DelayQuad, DlyClock, DlyShiftReg, DelayA, DelayB, DlyEight); the Eq3band block
+  holds seven. **Split on indent-2 `Name:`, never on `<#Module`.**
+- Parsed correctly the file yields **189 modules**. A parse returning ~119 has counted blocks, and
+  the numbers it gives will look plausible while belonging to the wrong module.
+- The failure is silent, so check the OUTPUT against the instrument rather than the parser against
+  itself: "34 connectors on a quad delay" is what exposed it, after two earlier parses were believed.
+
+**What `CodeRef` means, which is not one thing.** It is the original's index into whichever space
+that control class belongs to:
+
+| control | `CodeRef` indexes |
+|---|---|
+| `Knob`, `ButtonFlat`, `ButtonText`, `ButtonIncDec`, `ButtonRadioEdit` | our **parameter** index (`paramLocationList` order) |
+| `PartSelector` | our **mode** index (`modeLocationList`) |
+| `Input` / `Output` | our **connector I/O** index, counted per direction |
+
+Verified on FltClassic, where it lands exactly: Knob 0→Freq, Knob 1→Env, ButtonFlat 2→Kbt,
+Knob 3→Res, ButtonText 5→Bypass. `InfoFunc` is the id of the original's text formatter for that
+control — worth reading when a readout's units are in doubt (it is what settled ValSw's 0–64 range).
+
+**A control in the .rsrc is not proof of a parameter.** Delay draws a `ButtonText` at `CodeRef 3`,
+but the instrument stores only three parameters for it and a device-authored patch agrees. Some
+bypass buttons are not patch parameters. Check the module against the hardware before adding a row —
+and note `filecount == tablecount` proves nothing for a module the editor created, since we wrote
+both numbers; only a device-authored patch settles a count.
+
+**The comparison is worth more than the import.** Heights and connector counts were swept against
+all shared modules on 2026-08-30 and agree (168/168 and 163/164), so there is no backlog of missing
+controls — the outstanding work is *arrangement*, which only positions reveal.
+
 **The coordinate transform.** The original's space is **255 px wide × 15 px per
 row**; ours is `MODULE_WIDTH` (350) wide × `MODULE_Y_SPAN` (43) per row, less
 `MODULE_Y_GAP`, less the body inset. For a module of `n` rows:
