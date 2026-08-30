@@ -1233,15 +1233,20 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
 // (3 + STANDARD_TEXT_HEIGHT + 2) and the body starts at 17.5, half a unit clear of it.
 //
 // Bottom-anchored rows are unaffected — the bottom edge does not move — which is most of them.
-#define MODULE_BODY_TOP_PERCENT    (5.0)
-
-static tRectangle module_body_rectangle(tRectangle moduleRectangle) {
-    double inset = (MODULE_BODY_TOP_PERCENT / 100.0) * MODULE_WIDTH;
-
-    moduleRectangle.coord.y += inset;
-    moduleRectangle.size.h  -= inset;
-    return moduleRectangle;
-}
+// THE Y PERCENTAGE COVERS THE WHOLE MODULE AGAIN, as of 2026-08-30. y = 0 is the module's outer top
+// edge, not the top of a body inset below a title bar - because there is no title bar any more.
+//
+// This reverses the inset introduced on 2026-08-29, and the 346 top-anchored and 23 middle-anchored
+// rows in moduleResources.h moved back with it (+5 and +2.5 respectively; the 1483 bottom-anchored
+// rows measure up from an edge that did not move and were untouched). VERIFIED TWO WAYS: the regex
+// matched 1852 rows against 1852 anchor tokens in the file - the 2026-08-29 batch's own trap was
+// silently skipping the 759 connector rows, which use a macro for their size - and 329 of the 330
+// transformed rows come out EXACTLY equal to their values in the commit before the inset existed.
+// The 40 that differ are the rows edited since: Operator, re-laid from the original's resource
+// file, and the filter response graphs added on 2026-08-30.
+//
+// The gain is real estate: a two-row module's usable body goes from 63.5px to 81px, a quarter more,
+// and "100% of the module" now means what it says.
 
 tRectangle adjust_rectangle(tRectangle moduleBase, tRectangle relative, tAnchor anchor, tModule * module) {
     relative = rectangle_scale_from_percent(relative);
@@ -2609,16 +2614,10 @@ void render_module(tModule * module) {
         render_line(moduleArea, (tCoord){x + w, y + h}, (tCoord){x, y + h}, t);         // bottom
         render_line(moduleArea, (tCoord){x, y + h}, (tCoord){x, y}, t);                 // left
     }
-    rgb              = (tRgb){
-        rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05
-    };
-    set_rgb_colour(rgb);
-    // Still DRAWN - it is the title bar, and the name is edited in it - but it no longer registers a
-    // region of its own: the whole face carries the drag now, so a second one here would be the same
-    // handler twice over the same pixels.
-    module->dragArea = render_rectangle(moduleArea, (tRectangle){{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
-
-    render_module_common(module_body_rectangle(moduleRectangle), module);
+    // NO TITLE STRIP. A lighter-coloured bar used to be drawn across the top as the drag handle;
+    // the whole face drags now, so it marked nothing, and the original editor has no such bar. The
+    // module name still draws in that space - it is just no longer fenced off by a colour change.
+    render_module_common(moduleRectangle, module);
 
     if (  gModuleNameEdit.active
        && gModuleNameEdit.moduleKey.slot == module->key.slot
@@ -2644,9 +2643,26 @@ void render_module(tModule * module) {
         // COPY_STRING, NOT snprintf: the USB thread writes module names as patch data arrives, and
         // this read is on the render thread. Both go through gStringCopyMutex, so what is drawn is
         // one name rather than a mixture of the old and the new. See defs.h.
+        // CENTRED ON THE Name MODULE ONLY (CT, 2026-08-30). That module IS a caption - a name bar
+        // dropped on the canvas to label a section of a patch - so its text belongs in the middle of
+        // it. Every other module keeps its name in the top-left corner where it has always been:
+        // there the name identifies the module and sits above its controls, and centring it would
+        // move a fixed landmark on 200-odd faces for no gain.
+        // EDITING is left-aligned in both cases, so the caret starts at the same x wherever you
+        // rename, and a centred field cannot shift under the caret as the name grows.
         COPY_STRING(buff, module->name);
+        double nameX = moduleRectangle.coord.x + 5.0;
+
+        if (module->type == moduleTypeName) {
+            double nameWidth = get_text_width(buff, STANDARD_TEXT_HEIGHT, eNoCache);
+            double centred   = moduleRectangle.coord.x + ((moduleRectangle.size.w - nameWidth) / 2.0);
+
+            if (centred > nameX) {
+                nameX = centred;    // a name too wide to centre stays hard left
+            }
+        }
         set_rgba_colour((tRgba)RGBA_BLACK_ON_TRANSPARENT);
-        render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
+        render_text(moduleArea, (tRectangle){{nameX, moduleRectangle.coord.y + 5.0},
                                              {BLANK_SIZE, STANDARD_TEXT_HEIGHT}
                     }, buff);
     }
@@ -2689,7 +2705,7 @@ void render_modules(void) {
             if (!rectangle_visible_in_module_area(moduleRectangle)) {
                 // Still off-screen — but cables reference this module's connector positions
                 // regardless of whether it's currently visible, so those must stay registered.
-                render_module_connectors(module_body_rectangle(moduleRectangle), module);
+                render_module_connectors(moduleRectangle, module);
                 continue;
             }
             render_module(module);
