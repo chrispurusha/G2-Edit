@@ -16,7 +16,7 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Modules can be dropped on top of existing ones at the bottom of the canvas
 - Red and orange cable colours are too close together (accessibility)
 - Replace-with-similar-module mechanism, as the original editor has
-- Module palette drag selection
+- Module palette: topbar mode + drag/double-click to add - design settled, see module-palette-design.md
 - Second screen renders pixelated
 - Yellow module-selection border is not obvious enough; try twice the line width
 - Reconnection dialogue does not always appear
