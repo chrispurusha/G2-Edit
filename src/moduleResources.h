@@ -284,11 +284,12 @@ const tModuleProperties  gModuleProperties[]  = {
     {"Unknown",      0, volumeTypeNone,      ledTypeNo },
     {"Mix8-1B",      4, volumeTypeMono,      ledTypeNo },
     {"EnvH",         2, volumeTypeNone,      ledTypeNo },
-    // THREE ROWS, NOT TWO. Checked against the original editor's own <#Module Height for all 103
-    // modules the two tables share, 2026-08-30: Delay was the ONLY height that disagreed, and it has
-    // nine parameters to fit. Compress, which todo.txt had suspected of being a row too tall, agrees
-    // with the original at 5.
-    {"Delay",        3, volumeTypeNone,      ledTypeYes},
+    // TWO ROWS. This was briefly changed to 3 on 2026-08-30 and that was WRONG: the original's
+    // resource file contains TWO modules named "Delay" - FileName "LogicDelay" at height 2 and
+    // FileName "FXDelay" at height 3 - and a parser keyed on the name alone kept whichever came
+    // last. Ours is type 42, the LOGIC delay, and the manual's picture of it (p237) is a single row
+    // of controls. Match on FileName/Tooltip, never on Name alone; see Docs/module-layout-rules.md.
+    {"Delay",        2, volumeTypeNone,      ledTypeYes},
     {"Constant",     2, volumeTypeNone,      ledTypeNo },
     {"LevMult",      2, volumeTypeNone,      ledTypeNo },
     {"FltVoice",     4, volumeTypeMono,      ledTypeNo },
