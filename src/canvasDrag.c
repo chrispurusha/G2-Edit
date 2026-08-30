@@ -117,35 +117,73 @@ static bool module_drag_motion(tCoord coord) {
 
             // Everything selected moves by the SAME delta, rather than each module jumping to the
             // pointer — otherwise a multiple selection collapses onto one square as soon as it moves.
+            //
+            // AND THE DELTA IS CLAMPED ONCE FOR THE WHOLE GROUP, not each module against the grid
+            // separately. Clamping per module was the bug (CT, 2026-08-30: "relative position of the
+            // group to each other should remain the same. currently, individuals can reposition vs
+            // the rest"): drag a selection at the left edge and the members already in column 0 stay
+            // put while the rest keep moving, so the shape of the selection is permanently deformed.
+            // The clamp belongs on the movement, not on the destination.
             if ((dc != 0) || (dr != 0)) {
+                int32_t minCol = (int32_t)MAX_COLUMNS;
+                int32_t minRow = (int32_t)MAX_ROWS;
+                int32_t maxCol = 0;
+                int32_t maxRow = 0;
+
                 for (uint32_t i = 0; i < gSelection.count; i++) {
                     tModule * sel = get_module(gSelection.keys[i]);
 
                     if (sel == NULL) {
                         continue;
                     }
-                    int32_t   nc  = (int32_t)sel->column + dc;
-                    int32_t   nr  = (int32_t)sel->row + dr;
 
-                    if (nc < 0) {
-                        nc = 0;
+                    if ((int32_t)sel->column < minCol) {
+                        minCol = (int32_t)sel->column;
                     }
 
-                    if (nr < 0) {
-                        nr = 0;
+                    if ((int32_t)sel->column > maxCol) {
+                        maxCol = (int32_t)sel->column;
                     }
 
-                    if (nc > (int32_t)MAX_COLUMNS) {
-                        nc = (int32_t)MAX_COLUMNS;
+                    if ((int32_t)sel->row < minRow) {
+                        minRow = (int32_t)sel->row;
                     }
 
-                    if (nr > (int32_t)MAX_ROWS) {
-                        nr = (int32_t)MAX_ROWS;
+                    if ((int32_t)sel->row > maxRow) {
+                        maxRow = (int32_t)sel->row;
                     }
-                    sel->column = (uint32_t)nc;
-                    sel->row    = (uint32_t)nr;
                 }
 
+                // The furthest the whole group may travel before any member leaves the grid.
+                if (dc < -minCol) {
+                    dc = -minCol;
+                }
+
+                if (dc > ((int32_t)MAX_COLUMNS - maxCol)) {
+                    dc = (int32_t)MAX_COLUMNS - maxCol;
+                }
+
+                if (dr < -minRow) {
+                    dr = -minRow;
+                }
+
+                if (dr > ((int32_t)MAX_ROWS - maxRow)) {
+                    dr = (int32_t)MAX_ROWS - maxRow;
+                }
+
+                for (uint32_t i = 0; i < gSelection.count; i++) {
+                    tModule * sel = get_module(gSelection.keys[i]);
+
+                    if (sel == NULL) {
+                        continue;
+                    }
+                    sel->column = (uint32_t)((int32_t)sel->column + dc);
+                    sel->row    = (uint32_t)((int32_t)sel->row + dr);
+                }
+
+                // prev follows the CURSOR, not the (possibly clamped) movement. Banking the refused
+                // travel would make the group feel stuck: having pushed it into the left edge, the
+                // user would have to drag back through all that refused distance before it moved.
                 gModuleDrag.prevColumn = newCol;
                 gModuleDrag.prevRow    = newRow;
             }

@@ -6708,3 +6708,23 @@ inset of 2026-08-29 (commit 5c3c7c8), now that nothing needs reserving at the to
   left-aligned in both cases so the caret starts at the same x wherever you rename.
   The rename box is now measured on SIXTEEN 'W's rather than sixteen 'X's - a name of all Ws
   overflowed the old box, and the box has to hold whatever CLAVIA_NAME_SIZE allows.
+
+
+2026-08-30 — A DRAGGED GROUP DEFORMED AGAINST THE GRID EDGES (CT: "relative position of the group to
+each other should remain the same. currently, individuals can reposition vs the rest").
+
+  THE CLAMP WAS ON THE DESTINATION, NOT THE MOVEMENT. Each selected module had its new column/row
+  clamped to [0, MAX] independently, so pushing a selection into an edge stopped the members that
+  had arrived while the rest kept travelling - and the shape of the selection was permanently lost,
+  since nothing restored it on the way back.
+  The delta is now bounded ONCE for the whole group, from the selection's own min/max column and
+  row, and every member moves by that same bounded delta. Relative positions cannot change.
+
+  prev STILL FOLLOWS THE CURSOR, not the movement actually applied. Banking the refused travel would
+  make the group feel stuck: having pushed it into the left edge, the user would have to drag back
+  through all the refused distance before it moved at all.
+
+  WHAT WAS ALREADY RIGHT, and stays: the re-ordering of modules underneath happens on RELEASE
+  (shift_selection_down() for a group, shift_modules_down() for one), not during the drag - which is
+  what CT asked for. Selected modules are also transparent to one another, so a group shuffles only
+  what it lands on and not its own members.
