@@ -10,11 +10,6 @@ FROM CT
 - Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE V is already Paste
 - Zoom to Fit from a right click, fitting the area under the cursor
 
-BUGS
-- Re-lay Delay's face from the .rsrc: it is 3 rows now but its controls are all bottom-anchored
-- Sw8-1(15) and ValSw1-2(17) need more layout resources
-- SW1-2 and similar need a new param type: per-box names, and an offset that reads 0, 4, ...
-
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
 - Add a top-level Edit menu (Undo, Redo, Cut, Copy, Paste, Delete, Paste Params, Select All)
