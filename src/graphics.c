@@ -317,19 +317,25 @@ void init_graphics(void) {
     register_app_popups();
 
     synthlib_window_create(&(tSynthLibWindowConfig){
-        .title        = title,
-        .targetWidth  = TARGET_FRAME_BUFF_WIDTH,
-        .targetHeight = TARGET_FRAME_BUFF_HEIGHT,
-        .dialMode     = eDialModeRotary,
-        .theme        = (tSynthLibTheme){
+        .title           = title,
+        .targetWidth     = TARGET_FRAME_BUFF_WIDTH,
+        .targetHeight    = TARGET_FRAME_BUFF_HEIGHT,
+        .dialMode        = eDialModeRotary,
+        .theme           = (tSynthLibTheme){
             .topBarHeight   = TOP_BAR_HEIGHT + MENU_BAR_HEIGHT,
             .orange1        = (tRgb)RGB_ORANGE_1,
             .orange2        = (tRgb)RGB_ORANGE_2,
             .greenOn        = (tRgb)RGB_GREEN_ON,
             .backgroundGrey = (tRgb)RGB_BACKGROUND_GREY,
         },
-        .mouseCoord   = get_global_gui_scaled_mouse_coord,
-        .handlers     = &(const tSynthLibInputHandlers){
+        .mouseCoord      = get_global_gui_scaled_mouse_coord,
+        // While a dial drag hides the pointer, its reported position is a relative-delta
+        // accumulator - it drifts, and anything that highlights "what is under the mouse" lights
+        // the wrong thing. CT: "If I drag a dial, and hidden mouse coincides with top menu, top
+        // menu item lights!" paramOverlay.c already suppressed itself this way; the shared menu bar
+        // could not, having no way to ask. Now it can.
+        .pointerCaptured = is_cursor_hidden_dragging,
+        .handlers        = &(const tSynthLibInputHandlers){
             .mouseButton = mouse_button,
             .cursorPos   = cursor_pos,
             .key         = key_callback,
