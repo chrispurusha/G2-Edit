@@ -6363,8 +6363,9 @@ AND THE AUDIT FOUND A REAL BUG NOBODY HAD LOOKED FOR.
   <#Module>, so all 103 modules the two tables share can be compared in one pass instead of arguing
   about one. EXACTLY ONE DISAGREED.
 
-  DELAY IS 2 ROWS AND SHOULD BE 3 - a real bug, not on anyone's list, and it has nine parameters to
-  fit in those rows. Fixed. WHY IT MATTERS beyond looking cramped: a module's height decides how the
+  DELAY IS 2 ROWS AND SHOULD BE 3 - WRONG, AND REVERTED 2026-08-30. See the correction below.
+  What follows was written believing it; it is kept because the reasoning about WHY height matters
+  still holds, but the premise did not. WHY IT MATTERS beyond looking cramped: a module's height decides how the
   canvas packs the ones below it, so a patch laid out in the original editor with three rows of
   Delay draws with a gap here - and one laid out here can overlap when opened there.
   THE FACE NOW NEEDS RE-LAYING, which the fix does not do. The original's controls run YPos 5 to 32
@@ -6580,3 +6581,61 @@ CT: "34 connectors for DelayQuad can't be correct." It was not.
     - Delay showed that copying one attribute without re-laying the face leaves it half-done.
   THE USEFUL TOOL IS A COMPARISON, NOT AN IMPORTER: report per module how far each control sits from
   its transformed original position, and the ~40 faces become a ranked worklist instead of a slog.
+
+
+2026-08-30 — CORRECTION: THE DELAY HEIGHT CHANGE WAS WRONG, AND REVERTED. CT's idea of comparing
+against the MANUAL'S OWN PICTURE is what caught it.
+
+  THE ORIGINAL'S RESOURCE FILE CONTAINS TWO MODULES CALLED "Delay":
+      Name "Delay"  FileName "LogicDelay"  Tooltip "Logic Delay"  Height 2
+      Name "Delay"  FileName "FXDelay"     Tooltip "Audio delay"  Height 3
+  A parser keyed on Name alone keeps whichever comes last. Ours is type 42, the LOGIC delay, and its
+  original height is 2 - exactly what the table already said. The "one mismatch in 103" that started
+  this was the audio delay's height being compared against the logic delay's row.
+
+  THE MANUAL SETTLED IT IN ONE LOOK. Page 237 pictures the Logic Delay as a SINGLE ROW of controls:
+  ctrl in, attenuator knob, Lo button, 95.2m readout, time knob, logic in, edge-type selector, LED,
+  out. Nothing like three rows. Rendering the resource coordinates as a schematic agreed once the
+  right module was selected, and disagreed loudly before.
+
+  FIVE NAMES ARE DUPLICATED: ClkDiv, ClkDivFix, CompLev, Delay, LevMult. That also explains the one
+  "connector mismatch" found earlier - LevMult is one of them.
+
+  THE SWEEP, REDONE HONESTLY, keying on Name and reporting ambiguity instead of guessing:
+      171 module names compared - 164 unambiguous, 4 ambiguous, 3 absent from the .rsrc
+      HEIGHT DISAGREEMENTS: 0.  The four ambiguous ones match one of their candidates.
+  So the earlier conclusion survives in a stronger form: our heights already agree with the original
+  everywhere, and there was never a height bug to fix.
+
+  tools/rsrc_layout.py NOW REFUSES TO GUESS: duplicated names are reported by --list, and asking for
+  one prints its candidates and exits rather than returning the wrong module.
+
+  THE WIDER LESSON, and it is the third time this file records a version of it: a name is not a key.
+  The parse was "fixed" twice and believed twice, and both times what exposed it was a number that
+  could not be true of the instrument - 34 connectors on a quad delay, then a three-row module the
+  manual draws in one row. CHECK OUTPUT AGAINST THE HARDWARE OR THE MANUAL, never the parser
+  against itself.
+
+
+2026-08-30 — MENU BAR LIT UNDER A HIDDEN CURSOR DURING A DIAL DRAG (CT: "If I drag a dial, and
+hidden mouse coincides with top menu, top menu item lights!"). Fixed; CT confirmed by test.
+
+  WHILE A DIAL IS DRAGGED THE POINTER IS CAPTURED (CURSOR_DISABLED) and its reported position stops
+  being a place on screen - it becomes a relative-delta accumulator that drifts wherever the drag
+  takes it. render_menu_bar() highlighted purely on within_rectangle(mouseCoord, itemRect), so a
+  long enough drag walked the phantom coordinate into the bar and lit an item under a cursor that
+  was not there.
+
+  THE PREDICATE ALREADY EXISTED AND THE HAZARD WAS ALREADY WRITTEN DOWN. mouseHandle.h's comment on
+  is_cursor_hidden_dragging() says in as many words that "anything that hover-highlights what is
+  under the mouse needs to suppress itself while this is true", and paramOverlay.c already did.
+  THE MENU BAR COULD NOT: it lives in SynthLib, which has no way to ask the app about its pointer.
+
+  SO THE FIX IS A HOST HOOK, not a special case: tSynthLibHost gains pointerCaptured, G2-Edit passes
+  is_cursor_hidden_dragging, and synthlib_host_pointer_captured() returns false for any host that
+  supplies none. menuBar.c and contextMenu.c both consult it. An OPEN menu still stays lit -
+  sOpenIndex is deliberately untouched - because a menu the user actually opened should not go dark
+  because the pointer is busy elsewhere.
+
+  contextMenu.c was guarded too though it is unlikely to be reached: a drag and an open menu rarely
+  coexist, but the defect there is identical and the guard is one call.
