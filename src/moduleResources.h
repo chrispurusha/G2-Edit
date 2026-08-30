@@ -479,9 +479,9 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscB,       paramTypeCommonDial,     {{   12,    -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },          // 7 Pitch M
     {moduleTypeOscB,       paramTypeMenu,           {{   29,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },          // 7 Pitch Type
     {moduleTypeOscB,       paramTypeCommonDial,     {{   62,    -3}, { 7,  7}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },          // FM M
-    {moduleTypeOscB,       paramTypeShape,          {{   56,    13}, { 7,  7}}, anchorTopLeft,     "Shape",        128,   0, NULL,                                  NULL          },          // 7 Shape 50% to 99%, not decimals
+    {moduleTypeOscB,       paramTypeShape,          {{   55,    10}, { 7,  7}}, anchorTopLeft,     "Shape",        128,   0, NULL,                                  NULL          },          // 7 Shape 50% to 99%, not decimals
     {moduleTypeOscB,       paramTypeCommonDial,     {{   80,    -3}, { 7,  7}}, anchorBottomLeft,  "ShpM",         128,   0, NULL,                                  NULL          },          // 7 Shape M
-    {moduleTypeOscB,       paramTypeMenu,           {{   39,    10}, { 7,  7}}, anchorTopLeft,     "Wave",           5,   2, shapeTypeStrMap,                       NULL          },          // 7 Waveform
+    {moduleTypeOscB,       paramTypeMenu,           {{   39,    12}, { 7,  7}}, anchorTopLeft,     "Wave",           5,   2, shapeTypeStrMap,                       NULL          },          // 7 Waveform
     {moduleTypeOscB,       paramTypeBypass,         {{   -3,     0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },          // 7 Bypass
     {moduleTypeOscB,       paramTypeMenu,           {{   62,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fmTypeStrMap,                          NULL          },          // 7 FM Type
     // 8 OscShpB
@@ -1660,10 +1660,10 @@ const tConnectorLocation connectorLocationList[] = {
     //  6 Unknown
     //  7 OscB
     {moduleTypeOscB,        connectorDirIn,  connectorTypeControl, {{    3,   -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 7 OscB Pitch
-    {moduleTypeOscB,        connectorDirIn,  connectorTypeControl, {{    3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // PitchVar
+    {moduleTypeOscB,        connectorDirIn,  connectorTypeControl, {{    3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",           labelLocRight}, // PitchVar
     {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{    3,     7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Sync",         labelLocRight}, // Sync
-    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{   55,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // FmMod
-    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{   73,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // Shape Mod
+    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{   55,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight}, // FmMod
+    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{   73,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",           labelLocRight}, // Shape Mod
     {moduleTypeOscB,        connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // Out
     //  8 OscShpB
     {moduleTypeOscShpB,     connectorDirIn,  connectorTypeControl, {{    3,   -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 8 OscShpB
@@ -2811,19 +2811,19 @@ const tLedLocation       ledLocationList[]       = {
 // moduleType, rectangle, anchor - placement only; each module's own graph function
 // (moduleGraphics.cpp) still owns its drawing/curve logic.
 const tGraphLocation     graphLocationList[] = {
-    {moduleTypeOscShpB,    {{   -2,  6}, {  30, 10}}, anchorTopRight },
-    {moduleTypeOscShpA,    {{   -2,  6}, {  30, 10}}, anchorTopRight },
-    {moduleTypeLfoShpA,    {{   -2,  6}, {  30, 10}}, anchorTopRight },
-    {moduleTypeLfoB,       {{   -2,  6}, {  30, 10}}, anchorTopRight },
+    {moduleTypeOscShpB,    {{   -3,  3}, {  30, 10}}, anchorTopRight },
+    {moduleTypeOscShpA,    {{   -3,  3}, {  30, 10}}, anchorTopRight },
+    {moduleTypeLfoShpA,    {{   -3,  3}, {  30, 10}}, anchorTopRight },
+    {moduleTypeLfoB,       {{   -3,  3}, {  30, 10}}, anchorTopRight },
     // OscB carries one too (CT, 2026-08-24): its face has the room, and its Shape genuinely changes
     // two of its five waves — Sqr's pulse width and DualSaw's detune — which is what a graph is for.
     // The other three are inert under Shape, so for those it simply draws the wave larger.
-    {moduleTypeOscB,       {{   -2,  6}, {  30, 10}}, anchorTopRight },
+    {moduleTypeOscB,       {{   -3,  3}, {  30, 10}}, anchorTopRight },
     // OscA gets one as well (CT). It is the SHORTEST face of the group at three rows against
     // OscShpB's four, so its Bypass moved from middle-right to the bottom corner to clear the box.
     // OscA has no Shape dial, so this graph is static per waveform — a legible enlargement of the
     // picker icon rather than a live display, which is the honest description of what it adds.
-    {moduleTypeOscA,       {{   -2,  6}, {  30, 10}}, anchorTopRight },
+    {moduleTypeOscA,       {{   -3,  3}, {  30, 10}}, anchorTopRight },
     {moduleTypeEnvADSR,    {{   20,  8}, {  60, 16}}, anchorTopLeft  },
     {moduleTypeFltClassic, {{    0, 10}, {  30, 10}}, anchorTopMiddle},
     // THE ORIGINAL'S OWN GRAPH POSITIONS, read from its .rsrc rather than chosen by eye. Of the
