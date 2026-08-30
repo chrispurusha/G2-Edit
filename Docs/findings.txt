@@ -6521,9 +6521,15 @@ calculated?"). Both hunches were right.
   G2 accepted and stored a raw 127, so nothing on the wire enforces 64 - only the module's own UI
   range does, and I cannot read the G2's display from here.
 
-  METHOD: the earlier caveat about the .rsrc is now lifted. A properly block-scoped parse - tracking
-  <#Tag / #> nesting rather than assuming one control per module - reads the control lists correctly,
-  and it is what turned up the inc/dec pair and the formatter id in the first place.
+  METHOD: the block-scoped parse - tracking <#Tag / #> nesting - is what turned up the inc/dec pair
+  and the formatter id, and for reading ONE named module's controls it is reliable.
+  CORRECTION, 2026-08-30 (later): I wrote here that the earlier caveat was "lifted". It is not.
+  Swept across all modules the same parse returns control counts that match neither our tables nor
+  the instrument - 38 inputs/outputs for DelayQuad where we have 10 and the device confirms our 9
+  parameters, 21 for Eq3band against our 2. De-duplicating identical entries barely dents it. So the
+  block structure is still not understood, and .rsrc CONTROL LISTS MUST NOT DRIVE A BULK COMPARISON
+  until it is. Per-module scalars from the same file - Height, graph presence and geometry - have
+  been checked against 103 modules and are sound.
 
   ALIGNMENT (CT: "Dial on ValSw1-2 needs bottom anchored, same as ValSw2-1"). Both rows were already
   anchorBottomLeft at y -3; what differed was the HEIGHT - 14 against ValSw2-1's 7. A bottom-anchored
@@ -6531,3 +6537,46 @@ calculated?"). Both hunches were right.
   identical faces sat at different heights. Now both 7.
   That re-render also confirmed the plain readout path, which the top-step check had not: raw 31
   reads "31" while raw 63 reads "64".
+
+
+2026-08-30 — THE .rsrc PARSER, FINALLY RIGHT, AND WHAT IT SAYS ABOUT THE LAYOUT BACKLOG.
+CT: "34 connectors for DelayQuad can't be correct." It was not.
+
+  THE STRUCTURE IS NOT ONE MODULE PER <#Module BLOCK. A block is opened by <#Module and closed
+  IMPLICITLY by the next one, and it can hold SEVERAL modules, each introduced by its own indent-2
+  Name: line. The DelayQuad block holds six - DelayQuad, DlyClock, DlyShiftReg, DelayA, DelayB,
+  DlyEight - and the Eq3band block holds seven. Every earlier parse attributed all of them to the
+  first name, which is where "38 inputs for DelayQuad" came from.
+  THE RULE: split on indent-2 Name:, not on <#Module. That gives 189 modules, against the 119 the
+  block count suggested.
+
+  I GOT THIS WRONG TWICE IN ONE SESSION and should have caught it sooner: first with a bleeding
+  stack-based parse, then with a "corrected" one that I recorded here as trustworthy and was not.
+  What exposed it both times was a number that could not be true of the instrument - 34 connectors
+  on a quad delay - not anything in the parse itself. Sanity-check the OUTPUT against the hardware,
+  not the parser against itself.
+
+  WITH IT FIXED, THE COMPARISON IS STRIKING AND CHANGES WHERE THE WORK IS:
+      module HEIGHTS      168 of 168 shared modules agree
+      CONNECTOR COUNTS    163 of 164 agree; the one exception (LevMult) is a duplicate-name
+                          artefact - both tables really have In, Mod, Out
+  So there is NO backlog of missing controls or wrong module shapes. Our tables and the original
+  agree on structure almost everywhere, and the instrument confirms the parameter counts separately
+  (filecount == tablecount on every module checked).
+
+  IT ALSO CONFIRMS THE Delay FIX: its original height really is 3. The broken parser happened to get
+  that one right because Delay is the FIRST name in its block. Compress is 5 in both, as suspected.
+
+  WHAT IS ACTUALLY LEFT IS ARRANGEMENT - where each control sits on a face - which counts cannot
+  see. That is the real "lot of module layouts to do", and CodeRef on each control IS our parameter
+  index, so the .rsrc gives an exact per-control target. It is how Operator was re-laid.
+  WHAT IT MUST NOT BE IS AN AUTOMATIC IMPORT:
+    - the transform is deliberately ANISOTROPIC (our faces are ~2.1x taller relative to width), so
+      it preserves arrangement and not proportion - the filter graph boxes had to be opened out from
+      its near-square result to stay legible;
+    - the original is not always what we want - FltStatic has no graph there and earns one here,
+      OscA and OscB gained graphs by CT's call, and Gate's PartSelector symbol pickers are something
+      we still need to ADOPT rather than something we already match;
+    - Delay showed that copying one attribute without re-laying the face leaves it half-done.
+  THE USEFUL TOOL IS A COMPARISON, NOT AN IMPORTER: report per module how far each control sits from
+  its transformed original position, and the ~40 faces become a ranked worklist instead of a slog.
