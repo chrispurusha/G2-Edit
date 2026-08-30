@@ -6969,3 +6969,26 @@ FLTNORD IS NOT FLTCLASSIC'S LADDER, AND GC IS WHY IT LOOKED LIKE ONE (2026-08-30
   STILL OPEN: the PEAK's shape for FltNord is still FltClassic's k law, only the level is measured.
   And the GC law was fitted on the 24 dB low-pass alone; the 12 dB band-pass self-oscillates at Res
   127 even with GC on, which this does not model.
+
+  AND THE FOUR MODES ARE NOT IMPLEMENTED AT ALL. node->fltShape is read for FltNord (map.shape = 8)
+  but the ladder path ignores it - ladder_filter() takes a tap, not a shape, and flt_ladder_magnitude()
+  has no shape argument either. So LP, BP, HP and BR all render AND draw as low-pass. Measured at
+  Res 110, 24 dB, GC on, they are plainly different (dB against the bypassed path):
+
+      type   500Hz   1kHz    2kHz    4kHz
+      LP     -12.6   +8.4   -32.1   -46.0
+      BP     -25.3   +8.3   -23.3   -38.9
+      HP     -36.7   +8.1   -10.3   -19.2
+      BR      -5.8  -25.3    -4.9    -5.4    a notch at the corner
+
+  WHAT THIS POINTS AT: FltNord is probably a STATE-VARIABLE filter, not a ladder. Its passband is
+  flat with GC off, which is what an SVF's low-pass does at any Q and what a ladder's does not; LP/
+  BP/HP/BR are the four outputs an SVF gives for nothing; 12/24 dB is one or two cascaded sections;
+  and it needs a gain control precisely because the peak grows while the passband stays put. The
+  engine already has svf_filter(state, input, f, q, shape) for FltStatic. If that is right it
+  replaces the (1 + k) droop cancellation with the correct topology rather than a correction bolted
+  onto the wrong one.
+
+  DO NOT FIT THE MODES FROM THE CAPTURES ABOVE. The HP row falls away above 2 kHz where a high-pass
+  should stay flat, which is either the measurement floor or something not yet understood. A capture
+  aimed at the STOPBANDS, with the floor characterised first, is needed before any shape is fitted.
