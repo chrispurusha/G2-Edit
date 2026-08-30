@@ -6728,3 +6728,90 @@ each other should remain the same. currently, individuals can reposition vs the 
   (shift_selection_down() for a group, shift_modules_down() for one), not during the drag - which is
   what CT asked for. Selected modules are also transparent to one another, so a group shuffles only
   what it lands on and not its own members.
+
+
+2026-08-30 — LAYOUT DRIFT SWEEP, AND TELLING DELIBERATE LAYOUTS FROM UNTOUCHED ONES.
+CT: "Some of my layouts - I prefer to the originals. However, there are a lot I've not really
+touched, which could default to similar to OG editor."
+
+  tools/layout_drift.py resolves every positional row through adjust_rectangle()'s anchor rules and
+  matches it to the original's control with the same CodeRef. 154 faces compare.
+
+  IT RANKS BY RESIDUAL SPREAD, NOT DISTANCE, and that choice is the whole reason the numbers mean
+  anything. The original's XPos/YPos is not necessarily measured from the same corner as ours, and
+  some faces have been deliberately moved; both show up as the SAME offset on every control of a
+  module, which says nothing about arrangement. The median offset is subtracted first, so what is
+  ranked is how far controls have moved RELATIVE TO EACH OTHER.
+
+  CALIBRATED ON A KNOWN ANSWER, as tools/README.md insists. OPERATOR WAS PORTED FROM THE ORIGINAL'S
+  OWN TABLE on 2026-08-29, and it scores 6.0 px spread with a median x offset of EXACTLY +0. That
+  fixes the scale: under 10 px is a faithful arrangement, over 40 px is a different one.
+      <10 px  29 faces      10-20  50 faces      20-40  61 faces      >40  14 faces
+  The near-universal y offset of about -11 px is the measuring convention, not drift.
+
+  TALL CONTROLS INFLATE THE SCORE, so there is a second column. SeqVal tops the table at 83.6, but
+  its 47 sliders all show the same ~133 px residual to within a pixel - far too uniform to be
+  arrangement. A slider can be measured from its top in one editor and its base in the other.
+  Connectors are small and least prone to it, so a connector-only spread is reported beside the
+  overall one; where the two disagree, believe the connectors.
+
+  WHICH FACES HAVE ACTUALLY BEEN WORKED ON: --history walks every revision of the table and records
+  when each module's X coordinates last changed. X IS THE RIGHT THING TO WATCH because the two
+  mechanical batches - the 2026-08-29 body inset and its reversal a day later - only ever touched Y,
+  so any change to an x is somebody positioning a face by hand.
+  56 OF 154 FACES HAVE NEVER HAD AN X COORDINATE HAND-CHANGED. Those are the port candidates; the
+  ones that have been positioned are where CT's own preferences live and should be left alone.
+  Top candidates by drift: FreqShift 61.5, LevAmp 40.7, EnvFollow 37.6, LevMult 33.4, PCSend 32.8,
+  OscPM 30.6, NoteQuant 28.5, LevScaler 25.2, CtrlSend 25.0 - small utility modules, which is
+  exactly the kind you would expect to have been laid out once and never revisited.
+
+  THE LIMIT OF THAT SIGNAL, and it must be read with the output: it sees CHANGES after a module
+  first appears. A face laid out carefully when first written and never revised reads as "NEVER",
+  the same as one nobody has looked at. It tells you what has definitely been worked on, not what
+  definitely has not.
+  And "Fix LED positioning" moved LEDs on 25 modules - enough to mark them hand-positioned, though
+  it says nothing about whether the rest of those faces were ever considered. The exclusion list is
+  therefore generous: it will keep some faces that could still be ported.
+
+  A BUG THIS SWEEP NEARLY HID: the first run silently dropped every module whose name contains "to",
+  because stripping "moduleType" and replacing "to" with "-" turns moduleTypeOperator into
+  "opera-r". Operator - the one face with a known answer - was simply missing from the table, and
+  the ranking looked perfectly plausible without it. The tool now reports what it could not match.
+
+
+2026-08-30 — LOOKED FOR A TRANSFERABLE PATTERN IN CT'S OWN LAYOUT EDITS. Did not find one, and the
+reason is interesting. CT: "If you can spot obvious patterns from my component location mods, to
+apply to ones I haven't touched too...?" then "My mods were mostly about spacing and alignment."
+
+  THE HYPOTHESIS WAS WRONG, AND ITS FAILURE IS THE ANSWER. I expected hand-edited faces to sit
+  CLOSER to the original than untouched ones - that CT's work converged on it. The opposite holds:
+      hand-positioned   n=98   median drift 21.3 px
+      never x-changed   n=56   median drift 14.1 px
+  Faces CT has worked on are FURTHER from the original, which is exactly what "some of my layouts I
+  prefer to the originals" means. They are deliberate divergences, so there is no convention in them
+  to carry across - each is a judgement about one face.
+
+  TESTING "SPACING AND ALIGNMENT" DIRECTLY, on the authored percentages rather than rendered pixels,
+  and after separating the faces that only ever had an LED nudged from those actually re-arranged
+  (about 30 of the 101 "touched" faces were LED/meter placement, not control layout):
+                        faces  same-row  same-col  even gaps  rows/face
+      layout-arranged      18      54%       22%       22%        4.0
+      LED-only edits       17      60%       20%       44%        6.0
+      never touched        48      58%        8%       33%        3.0
+  ONE SIGNAL SURVIVES: column alignment. An arranged face is about three times more likely to have
+  controls sharing an x coordinate (22% against 8%), and that held on both cuts of the data (17% vs
+  5% on the looser split). Arranged faces also use more vertical rows, 4 against 3.
+  WHAT IS NOT THERE: even spacing (untouched score HIGHER, 33% against 22%), row alignment
+  (identical), whole numbers (100% everywhere), multiples of five (untouched higher).
+  Neither surviving signal is a rule a script can apply: "align some controls into columns and use
+  more rows" does not say WHICH controls belong in a column. That is the judgement, and it is the
+  part that does not automate.
+
+  WHAT IS ACTIONABLE INSTEAD - the 56 untouched faces are not 56 jobs:
+      already the original's layout, nothing to do    15
+      close already                                   22
+      noticeably different, worth a look              17
+      genuinely different, worth porting               2   (FreqShift, LevAmp)
+  So the real work is about 19 faces. And since arranged faces use more rows than untouched ones,
+  and the title bar has just freed 17.5 px, the untouched faces are precisely the ones with room to
+  gain from being spread out.

@@ -84,8 +84,11 @@ def _fields(block):
         if m: yield m.group(1), m.group(2)
 
 def transform(x, y, rows):
-    """Original 255x(15*rows) -> our percentages of MODULE_WIDTH, y=0 at the body top."""
-    body_pct = (rows * 43.0 - 5.0 - 17.5) * 100.0 / 350.0
+    """Original 255x(15*rows) -> our percentages of MODULE_WIDTH, y=0 at the module top.
+
+       Since the title bar was removed the face has no reserved strip, so the full
+       module height (rows * MODULE_Y_SPAN - MODULE_Y_GAP) maps onto the original's."""
+    body_pct = (rows * 43.0 - 5.0) * 100.0 / 350.0
     return x * 100.0 / 255.0, y * body_pct / (rows * 15.0)
 
 def main():
