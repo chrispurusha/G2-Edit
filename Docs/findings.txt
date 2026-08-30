@@ -6639,3 +6639,33 @@ hidden mouse coincides with top menu, top menu item lights!"). Fixed; CT confirm
 
   contextMenu.c was guarded too though it is unlikely to be reached: a drag and an open menu rarely
   coexist, but the defect there is identical and the guard is one call.
+
+
+2026-08-30 — TWO STEPS TOWARDS THE ORIGINAL'S MODULE FACE (CT). Both small; the third and big one -
+removing the title bar altogether - is deliberately NOT done here.
+
+  THE TYPE NAME AND INDEX ARE OFF THE FACE. "(Delay)" across the middle of the title bar and the
+  index in its top-right corner are gone; open_module_context_menu() now heads the module's own
+  right-click menu with "<type name>  -  type <n>, index <n>". Neither is patch data, the original
+  editor draws neither, and the title row is the scarcest space on a module. The index had been
+  Debug-only already; the type name was drawn in every build.
+
+  THE WHOLE FACE DRAGS, AND IT NEEDED NO NEW HIT-TESTING. The click registry already registered the
+  entire module rectangle (selection only) and a 14px title strip on top of it (selection + drag),
+  the later registration winning on overlap. Every parameter, mode, connector and graph registers
+  its own region afterwards, so they still win. Binding the drag handler to the whole rectangle
+  therefore gives "drag anywhere there is nothing adjustable" as a FALL-THROUGH, which is what the
+  original does. module_body_click_handler became unreachable and was removed.
+
+  AND IT IMMEDIATELY EXPOSED A LATENT BUG THAT THE OLD HIT AREA HAD BEEN HIDING (CT: "handle seems
+  to snap/anchor mouse hold to top"). module_drag_motion()'s single-module path assigned the
+  cursor's cell STRAIGHT INTO column/row, so the module jumped to put its top-left corner under the
+  pointer. That was survivable only while a drag could start nowhere but the title strip, where the
+  pointer is already within a few pixels of the top-left. Grab a four-row module by its bottom edge
+  and it leapt.
+  THE MULTI-MODULE PATH HAD ALWAYS DONE IT PROPERLY, moving everything by a DELTA, with a comment
+  saying why: "otherwise a multiple selection collapses onto one square as soon as it moves". The
+  single path now does the same, and drag_area_click_handler records the CURSOR's cell at the grab
+  rather than the module's, so the offset a module is picked up by is the offset it keeps.
+  Worth noting the shape of it: the bug was always there, and only a change of hit area made it
+  reachable. A fix that "works" because of where the user is forced to click is not a fix.
