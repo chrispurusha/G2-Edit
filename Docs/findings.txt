@@ -6339,3 +6339,91 @@ todo.txt, which have actually already been done").
 
   WHAT I DID NOT DO: verify every one of the 87 by reading. The cheaply checkable ones are checked;
   anything needing hardware or a long read is unverified and may also be stale.
+
+
+2026-08-30 — THE "BUGS" LIST WORKED THROUGH. THREE OF SIX WERE ALREADY FIXED, ONE WAS UNFOUNDED,
+AND THE AUDIT FOUND A REAL BUG NOBODY HAD LOOKED FOR.
+
+  GATE, BOTH ENTRIES: ALREADY FIXED, and the code says so in both places.
+    - "the 2nd mode selector shows Sine1/Sine2" - render_mode_common() carries a comment describing
+      exactly that symptom: mode[0] used to take every mode's modeRef, so the last one rendered won
+      and the rest fell back to modeLocationList[0], which is OscShpB's waveform. modeRef is stored
+      per mode now.
+    - "modes are not saving" - menus.c sets modeCount from module_mode_count() when a module is
+      created in the editor, with a comment reading "Add a module in the editor, set its waveform,
+      save, and the waveform was gone". It was only ever set by parse_module_list() before.
+    - AND THE GATE'S TABLES ARE RIGHT: the instrument reports filecount=0 tablecount=0 params with
+      modes count=2, so its two selectors really are modes and only modes. What looked at a glance
+      like the same two rows appearing in both paramLocationList and modeLocationList was one grep
+      matching both tables.
+
+  COMPRESS'S HEIGHT: UNFOUNDED. Ours is 5 rows and so is the original's.
+
+  HOW THAT WAS SETTLED, AND IT IS WORTH REUSING: the original's .rsrc carries a Height for every
+  <#Module>, so all 103 modules the two tables share can be compared in one pass instead of arguing
+  about one. EXACTLY ONE DISAGREED.
+
+  DELAY IS 2 ROWS AND SHOULD BE 3 - a real bug, not on anyone's list, and it has nine parameters to
+  fit in those rows. Fixed. WHY IT MATTERS beyond looking cramped: a module's height decides how the
+  canvas packs the ones below it, so a patch laid out in the original editor with three rows of
+  Delay draws with a gap here - and one laid out here can overlap when opened there.
+  THE FACE NOW NEEDS RE-LAYING, which the fix does not do. The original's controls run YPos 5 to 32
+  of its 45px body - the top two thirds - while ours are bottom-anchored and sit in the bottom two,
+  so the added row appears as dead space at the top. Same job as Operator on 2026-08-29, same
+  procedure in module-layout-rules.md. In todo.txt.
+
+  NOT TOUCHED: GLFW_COCOA_RETINA_FRAMEBUFFER. Removing a deprecated window hint changes behaviour
+  only if the new default differs, and Retina rendering here is already flagged as not re-verified
+  since the glyph rewrite. Not a change to make blind on a non-Retina display.
+
+
+2026-08-30 — A SELECTION SURVIVED NEW PATCH. Found while chasing todo.txt's "clear_slot_data() and
+the morph-defaults block disagree", which turned out to be the wrong description of a real fault.
+
+  THE ITEM'S OWN CLAIM WAS NOT A BUG. init_patch() sets the patch name to "Init" and
+  clear_slot_data() does not - but they are not two attempts at one job. init_patch() makes a
+  USABLE empty patch (voice count, bar position, visible flags, the morph pseudo-module and its
+  defaults); clear_slot_data() TEARS A SLOT DOWN, and every one of its callers parses a patch
+  immediately afterwards, which supplies the name. Nothing reads a name in between.
+
+  THE REAL ASYMMETRY WAS THE OTHER WAY ROUND: clear_slot_data() bumps gPatchGeneration and
+  init_patch() does not, although both delete every module and cable in the slot.
+  selection_validate() watches that counter to throw away a selection whose modules have gone. So:
+      select a module -> New Patch -> add a module -> THE NEW MODULE IS ALREADY SELECTED
+  because the selection still holds the slot/location/index key the old module had, and the fresh
+  one lands on the same key. Reproduced on screen before the fix and gone after it, with a
+  deliberate selection still working.
+  The backdoor's NEWPATCH had the same hole: it calls the two delete functions directly.
+
+  FIXED IN ONE PLACE: database_delete_modules_by_slot() bumps the generation itself, so a slot
+  cannot be wiped without invalidating what points into it. Three callers already bumped it by hand
+  and are left alone - the counter is only ever compared for INEQUALITY, so counting twice for one
+  clear costs nothing, and removing their bumps would be a wider change than the fix needs.
+
+  THE LESSON, WHICH IS THE REUSABLE PART: an invariant enforced by every caller remembering to do
+  something is not enforced. Three of five callers remembered.
+
+
+2026-08-30 — A NEW PATCH NOW OPENS WITH THE FX AREA MINIMISED (CT: "initialising patch for new
+patch, should minimise the FX area. We're initially working in the VA area for new patches").
+
+  init_patch() set barPosition to 300 - both areas visible. It is now SPLIT_POS_MAX, which clamps to
+  "Voice Area takes everything".
+
+  THIS REVERSES A CALL THAT WAS RECORDED AS DELIBERATE. The comment at that line said G2-Edit showed
+  both areas on a new patch, owner's call, "because the divider is the point of the window and a new
+  patch is exactly when you want to see it". Flagged rather than quietly overwritten, and the
+  comment now records the reversal and its reason.
+
+  IT ALSO LANDS BACK ON THE ORIGINAL EDITOR'S OWN BEHAVIOUR: its default is 4000, larger than any
+  window, so it clamps to Voice-Area-full exactly as SPLIT_POS_MAX does. The earlier decision was
+  the departure; this restores it.
+
+  WHAT IT DOES NOT AFFECT: patches loaded from file or pulled from the G2 carry their own
+  barPosition and are untouched - which is why the first attempt to verify this looked like a
+  failure. The editor had pulled slot A's existing patch at startup and was showing ITS divider
+  position, not the new-patch default. Test it through New Patch, not through a restart.
+
+  The divider stays on screen at the bottom either way - there is no separate one-area mode, see
+  splitView.h - so nothing is hidden and dragging it back costs one gesture. Focus follows: with the
+  FX pane collapsed, split_view_apply() moves the focused pane to the Voice Area.

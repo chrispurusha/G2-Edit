@@ -26,6 +26,8 @@ HARDWARE CHECKS
 - Reconnection sync dialogue: confirm it appears every time
 
 UI / VISUAL CHECKS
+- New Patch now opens with the FX area minimised (was both areas) - confirm it feels right in use
+- Delay is 3 rows now, matching the original; its face still needs re-laying, so it looks top-empty
 - Response graphs on FltNord, FltLP, FltHP and FltStatic - check against the real modules on hardware
 - Escape no longer quits the application
 - File > Save vs Save As, and the Save crash fix - confirm it stops recurring
