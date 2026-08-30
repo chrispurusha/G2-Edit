@@ -6427,3 +6427,29 @@ patch, should minimise the FX area. We're initially working in the VA area for n
   The divider stays on screen at the bottom either way - there is no separate one-area mode, see
   splitView.h - so nothing is hidden and dragging it back costs one gesture. Focus follows: with the
   FX pane collapsed, split_view_apply() moves the focused pane to the Voice Area.
+
+
+2026-08-30 — GLFW_COCOA_RETINA_FRAMEBUFFER RENAMED, AND IT WAS NEVER THE RISK I TOOK IT FOR.
+
+  I had declined this earlier on the grounds that removing a deprecated window hint changes
+  behaviour if the new default differs, and that it was not a change to make blind on a non-Retina
+  display. BOTH HALVES OF THAT WERE WRONG, and reading two files settled it in a minute.
+
+  IT IS A LEGACY ALIAS, NOT A DEPRECATED BEHAVIOUR. The bundled glfw3.h says so directly - "This is
+  an alias for the GLFW_SCALE_FRAMEBUFFER window hint for compatibility with earlier versions" - and
+  glfw/src/window.c falls BOTH cases through to the same assignment:
+      case GLFW_SCALE_FRAMEBUFFER:
+      case GLFW_COCOA_RETINA_FRAMEBUFFER:
+          _glfw.hints.window.scaleFramebuffer = value;
+  So it is a rename and nothing else. The new name is the honest one: the hint stopped being
+  macOS-specific in GLFW 3.4, which matters for the cross-platform build.
+
+  AND THIS MACHINE IS SCALED. The display is 3840x2160 presented as 1920x1080, backing scale 2.0, so
+  the hint does real work here and the check is worth something: the framebuffer measured 2800x1574
+  before the change and 2800x1574 after. I had assumed otherwise without looking.
+
+  NEEDS GLFW >= 3.4. The bundled copy is 3.5.1 and Homebrew's is past it. Building against anything
+  older now fails at compile time with an undefined identifier, which is the right way round - a
+  loud failure rather than a silent fallback.
+
+  IN THE SUBMODULE, so it is committed with SynthLib rather than with G2-Edit.

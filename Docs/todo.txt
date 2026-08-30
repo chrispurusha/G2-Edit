@@ -14,7 +14,6 @@ BUGS
 - Re-lay Delay's face from the .rsrc: it is 3 rows now but its controls are all bottom-anchored
 - Sw8-1(15) and ValSw1-2(17) need more layout resources
 - SW1-2 and similar need a new param type: per-box names, and an offset that reads 0, 4, ...
-- synthlibWindow.c:272 uses GLFW_COCOA_RETINA_FRAMEBUFFER, deprecated in the bundled GLFW 3.5.1
 
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
