@@ -9,7 +9,10 @@ FROM CT
 - Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
 - Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE <ctrl>V is already Paste
 - Zoom to Fit from a right click, fitting the area under the cursor
-- To move closer to the original editor module layout, we should probably remove the module number from the module's top right and the module type. We can display those when right-clicking on the module. Further down the line, a more whole-sale improvement would be to not have the module title bar - same as original editor. That would mean that a click anywhere on a module where there's no adjustable component, would allow dragging. Would mean some module layout adjustments. Module vertical height could shrink to follow. E.g. Name bar currently has a lot of spare space.
+- Drop the module title bar entirely, as the original has none - do it WITH the layout port,
+  since the original's own x positions already reserve the top-left for the module name
+- Then consider shrinking MODULE_HEIGHT (38px/row against the original's 15) - separate step
+- Then the layout drift sweep, against the settled geometry
 
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast

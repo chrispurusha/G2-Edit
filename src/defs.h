@@ -382,9 +382,12 @@
 #define MAX_ROWS_MODULE          (12)             // Operator type is 12 rows - largest we have
 
 #define LONGEST_PATCH_NAME       "XXXXXXXXXXXXXXXX"
-#define LONGEST_MODULE_NAME      "XXXXXXXXXXXXXXXX"
+// The widest a CLAVIA_NAME_SIZE (16) name can render, used to size the rename box. SIXTEEN Ws,
+// not Xs: a name of all Ws overflowed a box measured on Xs, and the box has to hold whatever
+// the field allows (CT, 2026-08-30).
+#define LONGEST_MODULE_NAME    "WWWWWWWWWWWWWWWW"
 
-#define NULL_RECTANGLE           {{0.0, 0.0}, {0.0, 0.0}}
+#define NULL_RECTANGLE         {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
 // dst and src are each evaluated EXACTLY ONCE, which they were not until 2026-08-20. The macro used
