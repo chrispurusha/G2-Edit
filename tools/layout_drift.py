@@ -18,7 +18,7 @@ original, just shifted; a large residual is a face that is genuinely arranged di
 
 Requires tools/rsrc_layout.py beside it.
 """
-import argparse, importlib.util, os, re, statistics, sys
+import argparse, collections, importlib.util, json, os, re, statistics, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 spec = importlib.util.spec_from_file_location("rl", os.path.join(HERE, "rsrc_layout.py"))
@@ -121,14 +121,50 @@ def compare(name, mine, rec):
             "worst": max(res), "pairs": pairs, "dx": dxs, "dy": dys, "res": res,
             "cn": len(cres), "cspread": statistics.median(cres) if cres else None}
 
+def x_history(path="src/moduleResources.h"):
+    """module enum -> (sha, date, subject, how many modules that commit repositioned).
+
+    WHICH FACES HAVE ACTUALLY BEEN WORKED ON, as opposed to merely drifting. Walks every revision of
+    the table and records when each module's X COORDINATES last changed. X is the right thing to
+    watch: the two mechanical batches (the 2026-08-29 body inset and its 2026-08-30 reversal) only
+    ever touched Y, so any change to an x is necessarily somebody positioning a face by hand.
+
+    LIMIT, and it matters when reading the output: this sees CHANGES after a module first appears.
+    A face laid out carefully when it was first written and never revised since reads as "never" -
+    the same as one nobody has looked at. It tells you what has definitely been worked on, not what
+    definitely has not."""
+    revs = subprocess.run(["git", "log", "--reverse", "--format=%h|%ad|%s", "--date=short", "--", path],
+                          capture_output=True, text=True).stdout.strip().split("\n")
+    ROW = re.compile(r'\{(moduleType\w+)[^{]*\{\{\s*(-?[\d.]+)\s*,')
+    prev, last = {}, {}
+    for r in revs:
+        if "|" not in r: continue
+        h, date, subj = r.split("|", 2)
+        t = subprocess.run(["git", "show", "%s:%s" % (h, path)], capture_output=True, text=True).stdout
+        if not t: continue
+        cur = collections.defaultdict(list)
+        for m in ROW.finditer(t): cur[m.group(1)].append(m.group(2))
+        cur = {k: tuple(v) for k, v in cur.items()}
+        changed = [m for m in cur if prev.get(m) != cur[m]]
+        if prev:
+            for m in changed: last[m] = (h, date, subj, len(changed))
+        prev = cur
+    return last
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("module", nargs="?")
     ap.add_argument("--min", type=int, default=3, help="skip faces with fewer matched controls")
+    ap.add_argument("--history", action="store_true",
+                    help="add when each face was last positioned by hand (walks git; slow)")
     args = ap.parse_args()
 
     mods = rl.read_modules(rl.DEFAULT_RSRC)
     mine, heights = ours()
+    _src = open("src/moduleResources.h", errors="replace").read()
+    enum_name = {re.sub(r'[^a-z0-9]', '', m.group(1).lower()): m.group(1)
+                 for m in re.finditer(r'\{"([^"]+)",\s*\d+,', re.search(
+                     r'gModuleProperties\[\]\s*=\s*\{(.*?)\n\};', _src, re.S).group(1))}
     rows, ambiguous, unmatched = [], [], []
     for name, m in sorted(mine.items()):
         if name not in mods: unmatched.append(name); continue
@@ -154,13 +190,28 @@ def main():
         print("no data for %r" % args.module); return 1
 
     rows.sort(reverse=True)
-    print("%-14s %7s %8s %8s %6s %8s   %s" %
-          ("module", "matched", "spread", "worst", "conns", "conn-spr", "median offset"))
+    touched = {}
+    if args.history:
+        hist = x_history()
+        for e, v in hist.items():
+            k = re.sub(r'(?<=\d)to(?=\d)', '-', e.replace("moduleType", ""))
+            nm = enum_name.get(re.sub(r'[^a-z0-9]', '', k.lower()))
+            if nm: touched[nm] = v
+    hdr = "%-14s %7s %8s %8s %6s %8s   %s" % ("module", "matched", "spread", "worst", "conns", "conn-spr", "median offset")
+    print(hdr + ("   hand-positioned" if args.history else ""))
     for sp, wo, n, name, c in rows:
-        print("%-14s %7d %8.1f %8.1f %6d %8s   (%+.0f, %+.0f)" %
-              (name, n, sp, wo, c["cn"],
-               ("%.1f" % c["cspread"]) if c["cspread"] is not None else "-",
-               c["median"][0], c["median"][1]))
+        line = "%-14s %7d %8.1f %8.1f %6d %8s   (%+.0f, %+.0f)" % (
+            name, n, sp, wo, c["cn"],
+            ("%.1f" % c["cspread"]) if c["cspread"] is not None else "-",
+            c["median"][0], c["median"][1])
+        if args.history:
+            t = touched.get(name)
+            line += "   %s" % ("%s %s" % (t[1], t[2][:26]) if t else "NEVER")
+        print(line)
+    if args.history:
+        never = [r[3] for r in rows if r[3] not in touched]
+        print("\n%d of %d faces have never had an x coordinate hand-changed - the port candidates."
+              % (len(never), len(rows)))
     print("\n%d faces compared. spread/worst are PIXELS after removing each module's median offset." % len(rows))
     if ambiguous: print("ambiguous names, skipped: %s" % ", ".join(ambiguous))
     if unmatched:
