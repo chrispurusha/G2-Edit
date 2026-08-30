@@ -20,6 +20,7 @@
 #ifndef __PARAM_CURVES_H__
 #define __PARAM_CURVES_H__
 
+#include <stdbool.h>
 #include "types.h"
 
 // What a dial's raw 0..127 value means in real units. Deliberately carries NO drawing dependency -
@@ -61,8 +62,38 @@ uint32_t flt_slope_extra_poles(uint32_t slopeValue);       // 0/1/2 extra one-po
 double flt_ladder_feedback(double paramValue);                            // Res dial:   feedback 0 .. 4 (self-oscillation)
 uint32_t flt_ladder_tap(uint32_t slopeValue);                             // 2/3/4 poles tapped: 12/18/24 dB
 double flt_ladder_magnitude(double ratio, double feedback, uint32_t tap); // |G^tap / (1 + k.G^4)| at f/fc
+
+// Which shape a multi-mode filter is currently producing. FltStatic's FilterType selects among the
+// first three; FltNord adds the fourth.
+// Which of the three measured topologies a filter module uses. They are not variants of one
+// another - see the notes in paramCurves.c.
+typedef enum {
+    eFilterTopologyLadder = 0,     // FltClassic, FltNord: four-pole loop, the dB switch moves the tap
+    eFilterTopologyCascadeLP,      // FltLP:  N identical one-poles, no resonance
+    eFilterTopologyCascadeHP,      // FltHP:  the same, high-pass
+    eFilterTopologyBiquad          // FltStatic: two poles, flat passband, resonance as Q
+} tFilterTopology;
+
+typedef enum {
+    eFilterShapeLowPass = 0,
+    eFilterShapeBandPass,
+    eFilterShapeHighPass,
+    eFilterShapeBandReject
+} tFilterShape;
+
+// FltLP / FltHP: N identical one-poles at the dial's corner, N being the slope mode plus one.
+uint32_t flt_cascade_poles(uint32_t slopeMode);
+double flt_cascade_magnitude(double ratio, uint32_t poles, bool highPass);
+
+// FltStatic: a plain resonant biquad, flat passband. Its Q is NOT the Q the dial prints -
+// see the note in paramCurves.c before using flt_resonance_q() for a curve.
+double flt_static_q(double paramValue);
+double flt_biquad_magnitude(double ratio, double q, tFilterShape shape);
+
+// FltNord: FltClassic's four-pole loop; the dB/Oct selector moves the tap, it does not shorten it.
+uint32_t flt_nord_tap(uint32_t dbOctValue);
 double flt_kbt_amount(uint32_t kbtValue);                                 // Kbt scroll: 0, 0.25, 0.5, 0.75, 1.0
-double lev_amp_gain(double paramValue);                                   // LevAmp multiplier: 0.25x .. 4.0x, unity at 64
+double lev_amp_gain(double paramValue);                                   // LevAmp multiplier: 0 (silent) .. 4.0x, unity at 64; measured, piecewise
 double lfo_rate_hz(uint32_t rangeMode, double paramValue);                // LFO speed in Hz for a Range setting
 
 // These four were read off the hardware at raw 0, 64 and 127 rather than inferred.

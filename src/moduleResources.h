@@ -2807,20 +2807,41 @@ const tLedLocation       ledLocationList[]       = {
 // moduleType, rectangle, anchor - placement only; each module's own graph function
 // (moduleGraphics.cpp) still owns its drawing/curve logic.
 const tGraphLocation     graphLocationList[] = {
-    {moduleTypeOscShpB,    {{-2, 1}, {30, 10}}, anchorTopRight },
-    {moduleTypeOscShpA,    {{-2, 1}, {30, 10}}, anchorTopRight },
-    {moduleTypeLfoShpA,    {{-2, 1}, {30, 10}}, anchorTopRight },
-    {moduleTypeLfoB,       {{-2, 1}, {30, 10}}, anchorTopRight },
+    {moduleTypeOscShpB,    {{   -2, 1}, {  30, 10}}, anchorTopRight },
+    {moduleTypeOscShpA,    {{   -2, 1}, {  30, 10}}, anchorTopRight },
+    {moduleTypeLfoShpA,    {{   -2, 1}, {  30, 10}}, anchorTopRight },
+    {moduleTypeLfoB,       {{   -2, 1}, {  30, 10}}, anchorTopRight },
     // OscB carries one too (CT, 2026-08-24): its face has the room, and its Shape genuinely changes
     // two of its five waves — Sqr's pulse width and DualSaw's detune — which is what a graph is for.
     // The other three are inert under Shape, so for those it simply draws the wave larger.
-    {moduleTypeOscB,       {{-2, 1}, {30, 10}}, anchorTopRight },
+    {moduleTypeOscB,       {{   -2, 1}, {  30, 10}}, anchorTopRight },
     // OscA gets one as well (CT). It is the SHORTEST face of the group at three rows against
     // OscShpB's four, so its Bypass moved from middle-right to the bottom corner to clear the box.
     // OscA has no Shape dial, so this graph is static per waveform — a legible enlargement of the
     // picker icon rather than a live display, which is the honest description of what it adds.
-    {moduleTypeOscA,       {{-2, 1}, {30, 10}}, anchorTopRight },
-    {moduleTypeEnvADSR,    {{20, 3}, {60, 16}}, anchorTopLeft  },
-    {moduleTypeFltClassic, {{ 0, 5}, {30, 10}}, anchorTopMiddle}, };
+    {moduleTypeOscA,       {{   -2, 1}, {  30, 10}}, anchorTopRight },
+    {moduleTypeEnvADSR,    {{   20, 3}, {  60, 16}}, anchorTopLeft  },
+    {moduleTypeFltClassic, {{    0, 5}, {  30, 10}}, anchorTopMiddle},
+    // THE ORIGINAL'S OWN GRAPH POSITIONS, read from its .rsrc rather than chosen by eye. Of the
+    // seven filter modules it draws a <#Graph on six - FltClassic, FltNord, FltLP, FltHP, FltComb
+    // and FltPhase - and NOT on FltStatic or FltVoice or FltMulti, so those three get none here
+    // either (CT: "If graph didn't exist in OG editor, no need to implement for those modules").
+    //
+    // Its boxes are 52x28 at XPos 182 on the four- and five-row filters, and a smaller 32x22 at
+    // XPos 168 on the two-row FltLP and FltHP. Through the transform in module-layout-rules.md that
+    // is a 20.4% box inset 8.2% from the right, and a 12.5% box inset 21.6%. The heights are opened
+    // out from the transform's near-square result: a response curve needs to be wider than it is
+    // tall to be read at all, which is why FltClassic's existing box was hand-set that way too.
+    // The two-row pair are SHRUNK further still, to 6% tall at y=1: at the transform's own height
+    // the Slope selector underneath ran into the bottom of the box (CT: "You could just shrink the
+    // graphics for some modules"). Two rows leave 18.1% of body to share between the two.
+    {moduleTypeFltNord,    {{ -8.2, 3}, {20.4, 12}}, anchorTopRight },
+    {moduleTypeFltLP,      {{-21.6, 1}, {12.5,  6}}, anchorTopRight },
+    {moduleTypeFltHP,      {{-21.6, 1}, {12.5,  6}}, anchorTopRight },
+    // FltStatic has NO <#Graph in the original, but it is a filter with a response worth showing and
+    // its three-row face has the room, so it gets one anyway (CT: "May as well have all of the
+    // filters showing the graph though, if they fit"). Placed like FltNord's, sat a couple of
+    // percent higher on y to clear its own controls (CT).
+    {moduleTypeFltStatic,  {{ -8.2, 1}, {20.4, 12}}, anchorTopRight }, };
 
 #endif // __MODULE_RESOURCES_H__

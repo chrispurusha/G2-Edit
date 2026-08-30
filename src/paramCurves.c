@@ -281,27 +281,43 @@ double env_fall_level(uint32_t envShape, double progress) {
 // contributed 45, and |G|^4 is then 1/4 - so the loop sustains itself at a feedback of 4 and the
 // response there is infinite. The Res dial runs linearly up to JUST SHORT of that.
 //
-// 3.914 rather than 4.0, and the 2% matters: it is what gives maximum resonance a peak of +24.4 dB
-// instead of an infinite one. It is not a taste decision - it is solved from the measured 4-pole peak
-// and then CHECKED against the other two taps, which it was not fitted to:
+// 4.0 EXACTLY, AND THE DIAL REACHES SELF-OSCILLATION AT ITS TOP. Four one-poles in a loop reach
+// 180 degrees of phase at the corner where |G|^4 is 1/4, so the loop sustains itself at k = 4.
 //
-// WHY NOT THE 4.08 THE CURVE FITS RETURN: least squares over a whole response is dominated by the
-// passband and the skirts and is nearly blind to the height of a peak two decades narrower than
-// either. The measured peak is FINITE, which by itself requires k below 4, and 3.914 is what
-// reproduces it. The two numbers are not in conflict; one of them is simply the one that can see the
-// peak.
-//     tap    model peak    measured        model passband    measured
-//      2       +30.33       +30.64            -13.7 dB       -13.8 dB
-//      3       +27.35       +27.37            -13.7 dB       -15.0 dB
-//      4       +24.36       +24.36            -13.8 dB       -14.8 dB
-// Six readings from one constant, the worst of them 1.3 dB out. The peak SPACING falls out of the
-// topology rather than being fitted at all - 5.97 and 2.99 dB against 6.28 and 3.01 measured - which
-// is the strongest evidence that the four-pole loop is right, since a loop matching the tap predicts
-// no such spacing.
+// THIS WAS 3.914 UNTIL 2026-08-30, solved from a measured maximum-resonance peak of +24.4 dB on the
+// reasoning that a FINITE peak requires k below 4. THE PEAK WAS NOT THE FILTER. CT spotted the
+// output sitting in the clipping red, and re-measuring showed the +24.4 dB was the LIMITED
+// AMPLITUDE OF AN OSCILLATION, not a linear response - the loop was already at unity gain and
+// something downstream was setting the level.
 //
-// It also says the hardware does not quite self-oscillate at the top of the dial, which the finite
-// measured peak had already implied.
-#define FLT_LADDER_K_MAX    (3.914)
+// TWO INDEPENDENT MEASUREMENTS NOW AGREE, and neither can see a peak at all:
+//   - IT SUSTAINS. At Res 127 with the input cable DELETED, the module holds a 1054.7 Hz tone at
+//     -45.7 dBFS indefinitely - unchanged over three successive captures. It does not SELF-START
+//     from silence (never excited, it reads the -101.6 dBFS noise floor), which is precisely what
+//     unity loop gain looks like: marginally stable, sustaining whatever starts it. Stepping the
+//     dial up from 121 to 127 with no input therefore finds nothing, and stepping down from an
+//     excited 127 finds a tone at every setting - the same filter, two answers, and only the
+//     excitation history separates them.
+//   - THE PASSBAND DROOP GIVES k WITHOUT GOING NEAR THE PEAK. DC gain is 1/(1+k), so k falls out of
+//     the low-frequency shelf, which is 60 dB below the resonance and cannot be driven into
+//     limiting. Measured with the rig's own noise floor subtracted, input level chosen per setting
+//     to keep the output below -20 dBFS, and each point checked against a quieter drive:
+//         Res            0     32     64     96    110    120
+//         droop dB   -0.31  -5.87  -9.81 -12.39 -12.95 -13.59
+//         k           0.036  0.967  2.094  3.165  3.442  3.778
+//         4 * v/127   0.000  1.008  2.016  3.024  3.465  3.780
+//     Least squares through the origin gives k = 4.045 * v/127. The dial is linear in feedback and
+//     lands on the self-oscillation point at the top, which is the musically obvious design and
+//     what the sustained tone independently confirms.
+//
+// WHY THE OLD READING SURVIVED SO LONG: the six numbers it was checked against (three peaks, three
+// passbands) were all taken through the same limiting, so they agreed with each other. Only the
+// droop, measured on its own, could tell them apart.
+//
+// flt_ladder_magnitude() already floors its denominator, and the renderer clamps to the box, so
+// k = 4 draws a curve that reaches the top of the graph at maximum Res rather than dividing by zero.
+// That is the honest picture of a filter that oscillates.
+#define FLT_LADDER_K_MAX    (4.0)
 
 double flt_resonance_q(double paramValue) {
     double value = paramValue;
@@ -366,7 +382,8 @@ uint32_t flt_ladder_tap(uint32_t slopeValue) {
 // A CONTINUOUS-TIME MODEL, FOR DRAWING. The shape is shared with the engine — same topology, same
 // linear-in-Res feedback, same tap — but the CONSTANT is not, and unifying them would be a mistake:
 //   - this one is the ideal analogue ladder, where four one-poles reach 180 degrees exactly at the
-//     corner and sustain at k = 4, so the dial's 3.914 sits just under it;
+//     corner and sustain at k = 4, which is exactly where the dial's top now lands (measured
+//     2026-08-30: the hardware sustains an oscillation at Res 127);
 //   - soundEngine.c's LADDER_K_MAX is 4.3, and is right to be different: its loop carries a sample of
 //     delay whose phase depends on the sample rate, and its stages saturate, both of which move the k
 //     at which the loop actually oscillates. Its figure is measured against the instrument too, by a
@@ -390,6 +407,114 @@ double flt_ladder_magnitude(double ratio, double feedback, uint32_t tap) {
         denom = 1e-4;
     }
     return numerator / denom;
+}
+
+// ── The filters that are NOT ladders ─────────────────────────────────────────
+// Three topologies cover the seven filter modules, and they are genuinely different - anything that
+// draws them from one model is wrong for four of the six. All measured 2026-08-29/30 by putting
+// noise through the module and dividing by the same patch bypassed. See findings.txt.
+
+// FltLP and FltHP: N IDENTICAL ONE-POLES AT A COMMON CORNER, and the slope mode IS the pole count.
+// Fitting N and fc freely returned N = 1,2,3,4,5,6 for the six slope names with fc within 4% of the
+// dial's nominal frequency every time, at a residual of 0.4 to 0.6 dB - the measurement's own noise.
+//
+// THE DIAL IS THE PER-POLE CORNER, NOT THE COMPOSITE -3 dB POINT, which is the thing a naive drawing
+// gets wrong: the composite point falls to fc * sqrt(2^(1/N) - 1) as poles are added, so 36db is 3 dB
+// down near 366 Hz where the dial reads 1047.
+uint32_t flt_cascade_poles(uint32_t slopeMode) {
+    return (slopeMode > 5u) ? 6u : (slopeMode + 1u);
+}
+
+double flt_cascade_magnitude(double ratio, uint32_t poles, bool highPass) {
+    double   onePole = 1.0 / sqrt(1.0 + (ratio * ratio));
+    double   stage   = highPass ? (ratio * onePole) : onePole; // |jw/(1+jw)| against |1/(1+jw)|
+    double   out     = 1.0;
+    uint32_t i       = 0;
+
+    for (i = 0; i < poles; i++) {
+        out *= stage;
+    }
+
+    return out;
+}
+
+// FltStatic: A PLAIN RESONANT BIQUAD, and the only one of the seven that is. 12 dB/octave measured
+// (11.6 over three octaves), and THE PASSBAND DOES NOT MOVE WITH RESONANCE - +0.15, +0.56, +0.19 dB
+// at Res 0, 64 and 127 - which is exactly what separates it from FltClassic and FltNord, whose
+// passbands drop away as the feedback rises.
+//
+// ITS Q IS NOT THE Q THE DIAL PRINTS, and both numbers are right. flt_resonance_q() reproduces what
+// the G2 shows on its own panel and must keep doing so; what a RESPONSE CURVE needs is the resonance
+// the filter actually has, which is far higher. Measured peak gain (~= Q once Q >= 2), at levels
+// chosen per setting to keep the filter out of saturation and checked against a quieter drive:
+//     Res      0     32     64     80     96    110    120
+//     peak  +2.2   +5.4  +10.0  +14.3  +21.1  +31.0  +43.4 dB
+//     Q      ...    1.9    3.2    5.2   11.4   35.5  148
+// Damping falls linearly to zero at the top of the dial, the same shape FltClassic's feedback has,
+// so Q = 0.5/d^2 with d = 1 - v/127. That lands the top of the dial on self-oscillation and is
+// within about 25% through the middle, which is as much as a 30-pixel curve can show.
+// DO NOT read a Q off a spectrum without checking the resolution: at 2048 points the Res 127 peak
+// reads +17 dB and at 8192 it reads +36, because a Q=50 peak at 1 kHz is narrower than one bin.
+double flt_static_q(double paramValue) {
+    double value   = paramValue;
+    double damping = 0.0;
+
+    if (value < 0.0) {
+        value = 0.0;
+    } else if (value > 126.0) {
+        value = 126.0;      // one step short of zero damping, so the curve stays finite
+    }
+    damping = 1.0 - (value / 127.0);
+    return 0.5 / (damping * damping);
+}
+
+// A two-pole section at f/fc = ratio, as low-pass, band-pass or high-pass. Written in real
+// arithmetic for the same reason flt_ladder_magnitude() is - no complex.h in either caller.
+double flt_biquad_magnitude(double ratio, double q, tFilterShape shape) {
+    double r2    = ratio * ratio;
+    double real  = 1.0 - r2;
+    double imag  = ratio / q;
+    double denom = sqrt((real * real) + (imag * imag));
+    double num   = 1.0;
+
+    switch (shape) {
+        case eFilterShapeHighPass:
+        {
+            num = r2;
+            break;
+        }
+        case eFilterShapeBandPass:
+        {
+            num = ratio / q;
+            break;
+        }
+        case eFilterShapeBandReject:
+        {
+            num = fabs(1.0 - r2);
+            break;
+        }
+        default:
+        {
+            num = 1.0;      // low-pass
+            break;
+        }
+    }
+    return num / denom;
+}
+
+// FltNord: FLTCLASSIC'S TOPOLOGY, and the passband droop is what proves it. Low-frequency gain
+// against Res, LP at 24 dB/oct: -0.4, -2.6, -5.8, -11.5, -38.2 dB at 0/32/64/96/127. That is
+// feedback around a cascade, DC gain 1/(1+k); a biquad's passband would not move, and FltStatic's
+// does not. THE DROOP IS THE SAME IN BOTH SLOPE MODES (-11.61 dB at 12 dB/oct against -11.49 at 24,
+// both at Res 96), which is the FltClassic signature exactly: one four-pole loop, the dB switch
+// moving only the tap.
+//
+// It resonates a great deal harder than FltClassic - -38 dB of droop implies 1+k near 80 - but that
+// figure was captured before the clipping was found and is NOT yet trustworthy above Res 96. Until
+// it is re-measured this uses FltClassic's own feedback law, which is measured and safe, and the
+// difference will show up as FltNord drawing less resonant than it sounds at the top of its dial.
+uint32_t flt_nord_tap(uint32_t dbOctValue) {
+    return (dbOctValue == 0u) ? 2u : 4u;    // 12dB taps two poles, 24dB taps four
 }
 
 // The dB scroll button selects how many one-pole stages sit on top of the base two: 12, 18 or 24 dB
@@ -723,30 +848,57 @@ double patch_volume_db(double paramValue) {
     return -((pow(PATCH_VOLUME_BASE, (127.0 - value) / 127.0) * PATCH_VOLUME_SPAN) - PATCH_VOLUME_SPAN);
 }
 
-// LevAmp's amplification, as a multiplier. The manual (p.227) gives the range as "0.25 to 4.0 times
-// the input level"; the dial walks that range exponentially, passing through unity at 64. Shared
-// with the sound engine so what is heard and what the dial reads cannot drift apart.
+// LevAmp's amplification, as a multiplier. MEASURED ON THE HARDWARE 2026-08-30, and the manual's
+// "0.25 to 4.0 times the input level" (p.227) describes only the TOP THREE QUARTERS of the dial.
+// Shared with the sound engine so what is heard and what the dial reads cannot drift apart.
 //
-// FOUR OCTAVES OVER 128 STEPS, which is why this is exp2(v / 32) and not a fitted exponential: the
-// scale is 0.25 * 16^(v/128), and 16^(v/128) is 2^(4v/128), i.e. 2^(v/32). Thirty-two dial steps to
-// a doubling. Reading it that way says what the control is — the same "the dial is really a pitch"
-// shape the oscillators and the two fast LFO ranges have — rather than leaving a decimal constant
-// that has to be taken on trust.
+// THE BOTTOM OF THE DIAL IS LINEAR AND REACHES SILENCE. The previous reading of this control -
+// one exponential, 0.25 * 2^(v/32) across the whole range - put 0.25x at dial 0, where the module
+// is in fact SILENT, and 0.5x at dial 32 where it really gives 0.33x. Anything below 64 was wrong,
+// by as much as 6 dB, in the dial text and in the engine alike.
 //
-// This replaces exp(v * 0.0218), an exponential fitted between the endpoints. The true exponent is
-// log(16) / 128 = 0.02166085, so the fit ran 1.77% high by the top of the dial — 3.898 where the
-// scale gives 3.830 at raw 126.
+// FOUR SEGMENTS, and every corner of them is an exact round number:
+//     dial   0 -  24    gain = v / 96          linear, 0 to 0.25x
+//     dial  24 -  64    0.25 * 2^((v-24)/20)   0.25x to 1x, twenty steps to a doubling
+//     dial  64 -  96    2^((v-64)/32)          1x to 2x, thirty-two steps
+//     dial  96 - 127    2 * 2^((v-96)/31)      2x to 4x, thirty-one steps
+// The 32-then-31 split across unity is not rounding on our side: 64->96 measured exactly 2.000x and
+// 96->127 exactly 4.000x, so the instrument spends one fewer step on its top octave.
 //
-// The curve reaches 4.0 at 128, one step past the end of a 0..127 dial, so the top step is pinned
-// to 4.0 rather than the 3.966 the formula alone would give. That matches the manual's stated
-// maximum, and it is the same top-step correction the Freq dial needs (see osc_freq_semitones).
-#define LEV_AMP_STEPS_PER_OCTAVE    (32.0)
+// METHOD, and it matters because the bottom of the dial is 60 dB down: a SINE from OscA rather than
+// the noise source every other measurement here used, so the level could be read from one FFT bin
+// and stayed clear of the noise floor to the bottom of the dial. Measured at 33 dial positions,
+// every one within 0.3% of the four segments above.
+//
+// ITS Type SELECTOR DOES NOT CHANGE THE GAIN. Lin and dB were swept separately and agree to four
+// decimal places at every one of the 33 positions, so this function is right to ignore the
+// parameter. Whatever Type does, it is not this.
+#define LEV_AMP_LINEAR_TOP    (24.0)       // dial position where the linear bottom segment ends
+#define LEV_AMP_UNITY         (64.0)       // and where the multiplier passes through 1.0
 
 double lev_amp_gain(double paramValue) {
-    if (paramValue >= 127.0) {
-        return 4.0;    // Clip - the dial's top step is 4.0, which the curve only reaches at 128
+    double value = paramValue;
+
+    if (value <= 0.0) {
+        return 0.0;    // Fully closed - measured 64 dB down, which is the noise floor, not a level
     }
-    return exp2(paramValue / LEV_AMP_STEPS_PER_OCTAVE) * 0.25;
+
+    if (value >= 127.0) {
+        return 4.0;
+    }
+
+    if (value <= LEV_AMP_LINEAR_TOP) {
+        return value / 96.0;
+    }
+
+    if (value <= LEV_AMP_UNITY) {
+        return 0.25 * exp2((value - LEV_AMP_LINEAR_TOP) / 20.0);
+    }
+
+    if (value <= 96.0) {
+        return exp2((value - LEV_AMP_UNITY) / 32.0);
+    }
+    return 2.0 * exp2((value - 96.0) / 31.0);
 }
 
 #ifdef __cplusplus

@@ -2275,25 +2275,92 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
 // literal about that regardless of curve shape. The cutoff is inset into a band across the box
 // (not mapped edge-to-edge) so the resonance peak always keeps headroom either side - see the
 // cutoff calc below.
-static void render_fltclassic_response_graph(tRectangle rectangle, tModule * module) {
-    // Freq (index 0), Res (index 3), dB/octave slope (index 4) - fixed positions for
-    // moduleTypeFltClassic's entries in paramLocationList, see moduleResources.h.
-    const uint32_t         freqParamIndex  = 0;
-    const uint32_t         resParamIndex   = 3;
-    const uint32_t         slopeParamIndex = 4;
-    uint32_t               slot            = module->key.slot;
-    uint32_t               variation       = gPatchDescr[slot].activeVariation;
-    double                 cutoffKnob      = (double)module->param[variation][freqParamIndex].value / 127.0;
+// WHERE EACH FILTER KEEPS THE THREE THINGS A CURVE NEEDS. They are not laid out alike, and two of
+// them keep the slope in a MODE rather than a parameter, so this cannot be positional. -1 means the
+// module does not have that control at all.
+typedef struct {
+    int             freq;
+    int             res;
+    int             slope;         // parameter index
+    int             slopeMode;     // mode index, for the two that keep it there
+    int             shape;         // FilterType parameter, where the module is multi-mode
+    tFilterTopology topology;
+} tFilterGraph;
+
+static bool filter_graph_map(uint32_t moduleType, tFilterGraph * out) {
+    // Five of the seven filters draw a response curve. The original editor draws one on six -
+    // FltClassic, FltNord, FltLP, FltHP, FltComb and FltPhase, but NOT FltStatic - and we differ
+    // from it twice, deliberately: FltStatic gains one because its face has the room and its
+    // response is worth seeing, while FltComb and FltPhase have none yet because a comb and a
+    // phaser want their own renderer rather than this response curve. See todo.txt.
+    switch (moduleType) {
+        case moduleTypeFltClassic:
+            *out = (tFilterGraph){
+                .freq     = 0, .res = 3, .slope = 4, .slopeMode = -1, .shape = -1,
+                .topology = eFilterTopologyLadder
+            };
+            return true;
+
+        case moduleTypeFltNord:
+            // dB/Oct is param 5 and FilterType param 8 - see param-validation.txt.
+            *out = (tFilterGraph){
+                .freq     = 0, .res = 4, .slope = 5, .slopeMode = -1, .shape = 8,
+                .topology = eFilterTopologyLadder
+            };
+            return true;
+
+        case moduleTypeFltLP:
+            *out = (tFilterGraph){
+                .freq     = 0, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1,
+                .topology = eFilterTopologyCascadeLP
+            };
+            return true;
+
+        case moduleTypeFltHP:
+            *out = (tFilterGraph){
+                .freq     = 0, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1,
+                .topology = eFilterTopologyCascadeHP
+            };
+            return true;
+
+        case moduleTypeFltStatic:
+            // Freq 0, Res 1, FilterType 2 (LP/BP/HP) - see param-validation.txt.
+            *out = (tFilterGraph){
+                .freq     = 0, .res = 1, .slope = -1, .slopeMode = -1, .shape = 2,
+                .topology = eFilterTopologyBiquad
+            };
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+static void render_filter_response_graph(tRectangle rectangle, tModule * module) {
+    tFilterGraph           map            = {0};
+
+    if (filter_graph_map(module->type, &map) == false) {
+        return;
+    }
+    const uint32_t         freqParamIndex = (uint32_t)map.freq;
+    uint32_t               slot           = module->key.slot;
+    uint32_t               variation      = gPatchDescr[slot].activeVariation;
+    double                 cutoffKnob     = (double)module->param[variation][freqParamIndex].value / 127.0;
 
     // Inset the cutoff's on-screen position into a band rather than mapping the knob edge-to-edge, so
     // the resonance peak (and the passband/left flank below it) always keeps horizontal headroom. At
     // min Freq the peak used to sit hard against the left edge with its lower half off-screen. This is
     // a small horizontal zoom-out: the box now shows a slightly wider window than the knob's own
     // ~14Hz..21kHz range so the curve never runs off either edge.
-    const double           kCutoffMinX     = 0.15;                                            // min-Freq cutoff sits 15% in from the left edge
-    const double           kCutoffMaxX     = 0.90;                                            // max-Freq cutoff sits 10% in from the right edge
-    double                 cutoffX         = kCutoffMinX + (cutoffKnob * (kCutoffMaxX - kCutoffMinX));
-    uint32_t               slopeIndex      = module->param[variation][slopeParamIndex].value; // 0=12dB, 1=18dB, 2=24dB
+    const double           kCutoffMinX    = 0.15;                                             // min-Freq cutoff sits 15% in from the left edge
+    const double           kCutoffMaxX    = 0.90;                                             // max-Freq cutoff sits 10% in from the right edge
+    double                 cutoffX        = kCutoffMinX + (cutoffKnob * (kCutoffMaxX - kCutoffMinX));
+    uint32_t               slopeIndex     = (map.slope >= 0)
+                                             ? module->param[variation][map.slope].value
+                                             : ((map.slopeMode >= 0) ? module->mode[map.slopeMode].value : 0);
+    tFilterShape           shape          = (map.shape >= 0)
+                                             ? (tFilterShape)module->param[variation][map.shape].value
+                                             : eFilterShapeLowPass;
 
     // Shared with the dial text and the sound engine — see renderParams.h. What the curve draws and
     // what the engine plays come from one definition.
@@ -2305,16 +2372,26 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
     // rather than a Q inside a biquad. See flt_ladder_feedback() in paramCurves.c for the capture and
     // for the part that took the longest to see — the loop is always four poles long and the dB
     // switch only moves the output tap.
-    double                 feedback        = flt_ladder_feedback((double)module->param[variation][resParamIndex].value);
-    uint32_t               tap             = flt_ladder_tap(slopeIndex);                       // 2/3/4 poles: 12/18/24 dB
+    double                 resKnob        = (map.res >= 0) ? (double)module->param[variation][map.res].value : 0.0;
+    double                 feedback       = flt_ladder_feedback(resKnob);
+    uint32_t               tap            = (module->type == moduleTypeFltNord)
+                                             ? flt_nord_tap(slopeIndex) : flt_ladder_tap(slopeIndex);
+    uint32_t               poles          = flt_cascade_poles(slopeIndex);
+    double                 staticQ        = flt_static_q(resKnob);
 
-    const tGraphLocation * graphLoc        = find_graph_location(module->type);
-    tRectangle             graphRect       = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
-    double                 baseY           = graphRect.coord.y + (graphRect.size.h * 0.6); // 0dB reference, leaving
+    const tGraphLocation * graphLoc       = find_graph_location(module->type);
+
+    if (graphLoc == NULL) {
+        return;   // mapped for its maths, but the original draws no box here
+    }
+    tRectangle             graphRect      = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+    double                 baseY          = graphRect.coord.y + (graphRect.size.h * 0.6);  // 0dB reference, leaving
                                                                                            // headroom above for the
                                                                                            // resonance peak to rise into
-    const int              numSamples      = 100;
-    tCoord                 prev            = {0};
+    const int              numSamples     = 100;
+    tCoord                 prev           = {0};
+    bool                   started        = false;   // has the curve been inside the box yet?
+    bool                   wasOnPage      = false;
 
     set_rgb_colour((tRgb)RGB_GREY_2);
     render_rectangle(moduleArea, graphRect);
@@ -2328,7 +2405,22 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
         double x         = (double)i / (double)numSamples;
         double octaves   = (x - cutoffX) * 10.0;   // ~10 octaves span the box, matching Freq's own real range
         double ratio     = pow(2.0, octaves);      // f/fc
-        double magnitude = flt_ladder_magnitude(ratio, feedback, tap);
+        double magnitude = 0.0;
+
+        switch (map.topology) {
+            case eFilterTopologyCascadeLP:
+            case eFilterTopologyCascadeHP:
+                magnitude = flt_cascade_magnitude(ratio, poles, map.topology == eFilterTopologyCascadeHP);
+                break;
+
+            case eFilterTopologyBiquad:
+                magnitude = flt_biquad_magnitude(ratio, staticQ, shape);
+                break;
+
+            default:
+                magnitude = flt_ladder_magnitude(ratio, feedback, tap);
+                break;
+        }
         double levelDb   = 20.0 * log10(fmax(magnitude, 1e-4));
         double level     = fmax(-1.0, fmin(1.0, levelDb / 24.0)); // +-24dB fills the box vertically
 
@@ -2338,14 +2430,27 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
         // leaves either side of it.
         tCoord point     = {graphRect.coord.x + (x * graphRect.size.w), baseY - (level * graphRect.size.h * 0.38)};
 
-        if (i > 0) {
+        // NEVER TRACE ALONG THE FLOOR, at either end. A low-pass that has fully rolled off used to
+        // stop early so it did not trail a flat line to the right edge; a high-pass STARTS fully
+        // rolled off, so the same box grew a flat line along the bottom from the left edge up to
+        // where the curve lifts off (CT). One rule covers both, and it needs no test for which
+        // topology is being drawn: draw only once the curve has been on the page, and stop once it
+        // has left it again.
+        bool   onPage    = (level > -1.0);
+
+        if (onPage) {
+            started = true;
+        }
+
+        if ((i > 0) && started && (onPage || wasOnPage)) {
             render_line(moduleArea, prev, point, 1.5);
         }
 
-        if (level <= -1.0) {
-            break; // fully rolled off - stop rather than trailing a flat line along the bottom edge
+        if (started && !onPage) {
+            break;   // came down and left the box - nothing further is worth drawing
         }
-        prev = point;
+        wasOnPage = onPage;
+        prev      = point;
     }
 }
 
@@ -2402,10 +2507,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     if (module->type == moduleTypeEnvADSR) {
         render_envadsr_graph(rectangle, module);
     }
-
-    if (module->type == moduleTypeFltClassic) {
-        render_fltclassic_response_graph(rectangle, module);
-    }
+    render_filter_response_graph(rectangle, module);
 
     for (uint32_t i = module->volumeIndexCache; i < array_size_volume_location_list(); i++) {
         if (volumeLocationList[i].moduleType == module->type) {
