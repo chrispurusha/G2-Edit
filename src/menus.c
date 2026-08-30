@@ -2540,9 +2540,11 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
              excluded ? "x" : " ");
     menuItems[kItemExclude].label         = gExcludeMutationMenuLabel;
 
-    snprintf(gModuleInfoMenuLabel, sizeof(gModuleInfoMenuLabel), "%s  -  type %u, index %u",
+    unsigned         rows           = (module != NULL) ? (unsigned)gModuleProperties[module->type].height : 0u;
+
+    snprintf(gModuleInfoMenuLabel, sizeof(gModuleInfoMenuLabel), "%s  -  index %u, %u row%s",
              (module != NULL) ? gModuleProperties[module->type].name : "?",
-             (module != NULL) ? (unsigned)module->type : 0u, (unsigned)moduleKey.index);
+             (unsigned)moduleKey.index, rows, (rows == 1) ? "" : "s");
     menuItems[kItemInfo].label            = gModuleInfoMenuLabel;
 
     gMenuContext.moduleKey                = moduleKey;

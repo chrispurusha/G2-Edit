@@ -2322,7 +2322,7 @@ const tConnectorLocation connectorLocationList[] = {
     // 150 Compress
     {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{  -10,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },      // 150
     {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{   -3,     3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },
-    {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{   3,     7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,           labelLocUp   },
+    {moduleTypeCompress,    connectorDirIn,  connectorTypeAudio,   {{    3,     7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,           labelLocUp   },
     {moduleTypeCompress,    connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     {moduleTypeCompress,    connectorDirOut, connectorTypeAudio,   {{  -10,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
 
@@ -2438,12 +2438,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDelayDual,   connectorDirOut, connectorTypeAudio,   {{ 54.1,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },      // 174 Out1
     {moduleTypeDelayDual,   connectorDirOut, connectorTypeAudio,   {{ 83.5,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },      // 174 Out2
     // 175 DelayQuad
-    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ -0.9, -51.8}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "In",           labelLocLeft },      // 174 In
-    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ 21.6,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},      // 175 Time1
-    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ 39.6,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},      // 175 Time2
-    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ 58.4,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},      // 175 Time3
-    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ 76.9,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},      // 175 Time4
-    {moduleTypeDelayQuad,   connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Main",         labelLocUp   },      // 175 Out Main
+    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ -3, 3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL /* In */,           labelLocLeft },      // 174 In
+    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ 21,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",           labelLocUp},      // 175 Time1
+    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ 39,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",           labelLocUp},      // 175 Time2
+    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ 58,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",           labelLocUp},      // 175 Time3
+    {moduleTypeDelayQuad,   connectorDirIn,  connectorTypeAudio,   {{ 76,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",           labelLocUp},      // 175 Time4
+    {moduleTypeDelayQuad,   connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL /* Main */,         labelLocUp   },      // 175 Out Main
     {moduleTypeDelayQuad,   connectorDirOut, connectorTypeAudio,   {{   29, -26.2}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },      // 175 Out1
     {moduleTypeDelayQuad,   connectorDirOut, connectorTypeAudio,   {{ 47.8, -26.2}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },      // 175 Out2
     {moduleTypeDelayQuad,   connectorDirOut, connectorTypeAudio,   {{ 66.3, -26.2}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },      // 175 Out3
@@ -2656,30 +2656,30 @@ const tModeLocation      modeLocationList[] = {
 
 
 const tVolumeLocation    volumeLocationList[] = {
-    {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight},
+    {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight   },
     {moduleTypeCompress,  volumeTypeCompress,  {{-11,  0}, { 3, 30}}, anchorMiddleRight},
-    {moduleType2toOut,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
-    {moduleType4toOut,    volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight},
-    {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
-    {moduleTypeMix4to1S,  volumeTypeStereo,    {{ -9, 13}, { 3, 24}}, anchorTopRight},
-    {moduleTypeMix4to1B,  volumeTypeMono,      {{-11,  7}, { 3, 14}}, anchorTopRight}, // XPos:231 YPos:10 H:2  (moved left + extended down, symmetric top/bottom gap)
-    {moduleTypeMix8to1A,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
-    {moduleTypeMix8to1B,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight}, // XPos:242 YPos:27 H:4  (far-right column, below Chain / above Out)
-    {moduleTypeMixStereo, volumeTypeStereo,    {{-17, 22}, { 3, 15}}, anchorTopRight}, // XPos:207+231 YPos:55 H:5
-    {moduleTypeMixFader,  volumeTypeMono,      {{ -4, 16}, { 3, 80}}, anchorTopRight}, // XPos:242 YPos:102 H:9
-    {moduleTypeEq2Band,   volumeTypeMono,      {{-11,  6}, { 3, 28}}, anchorTopRight}, // XPos:227 YPos:25 H:3
-    {moduleTypeEq3band,   volumeTypeMono,      {{-11,  6}, { 3, 40}}, anchorTopRight}, // XPos:227 YPos:40 H:4
-    {moduleTypeEqPeak,    volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
-    {moduleTypeFltVoice,  volumeTypeMono,      {{-10, 20}, { 3, 22}}, anchorTopRight}, // XPos:230 YPos:40 H:4
-    {moduleTypeFltPhase,  volumeTypeMono,      {{-11, 22}, { 3, 18}}, anchorTopRight}, // XPos:227 YPos:55 H:5
-    {moduleTypeFltComb,   volumeTypeMono,      {{-11,  6}, { 3, 20}}, anchorTopRight}, // XPos:227 YPos:40 H:4  (raised to top-right so it clears the bottom-row Level dial)
-    {moduleType2toIn,     volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight}, // XPos:205+231 YPos:10 H:2
-    {moduleType4toIn,     volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight}, // XPos:153..231 YPos:10 H:2
-    {moduleTypeSeqEvent,  volumeTypeSequencer, {{ 20, 24}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqVal,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqLev,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqCtr,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft }, };
+    {moduleType2toOut,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight   },
+    {moduleType4toOut,    volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight   },
+    {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight   },
+    {moduleTypeMix4to1S,  volumeTypeStereo,    {{ -9, 13}, { 3, 24}}, anchorTopRight   },
+    {moduleTypeMix4to1B,  volumeTypeMono,      {{-11,  7}, { 3, 14}}, anchorTopRight   }, // XPos:231 YPos:10 H:2  (moved left + extended down, symmetric top/bottom gap)
+    {moduleTypeMix8to1A,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight   }, // XPos:231 YPos:10 H:2
+    {moduleTypeMix8to1B,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight   }, // XPos:242 YPos:27 H:4  (far-right column, below Chain / above Out)
+    {moduleTypeMixStereo, volumeTypeStereo,    {{-17, 22}, { 3, 15}}, anchorTopRight   }, // XPos:207+231 YPos:55 H:5
+    {moduleTypeMixFader,  volumeTypeMono,      {{ -4, 16}, { 3, 80}}, anchorTopRight   }, // XPos:242 YPos:102 H:9
+    {moduleTypeEq2Band,   volumeTypeMono,      {{-11,  6}, { 3, 28}}, anchorTopRight   }, // XPos:227 YPos:25 H:3
+    {moduleTypeEq3band,   volumeTypeMono,      {{-11,  6}, { 3, 40}}, anchorTopRight   }, // XPos:227 YPos:40 H:4
+    {moduleTypeEqPeak,    volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight   }, // XPos:227 YPos:40 H:4
+    {moduleTypeFltVoice,  volumeTypeMono,      {{-10, 20}, { 3, 22}}, anchorTopRight   }, // XPos:230 YPos:40 H:4
+    {moduleTypeFltPhase,  volumeTypeMono,      {{-11, 22}, { 3, 18}}, anchorTopRight   }, // XPos:227 YPos:55 H:5
+    {moduleTypeFltComb,   volumeTypeMono,      {{-11,  6}, { 3, 20}}, anchorTopRight   }, // XPos:227 YPos:40 H:4  (raised to top-right so it clears the bottom-row Level dial)
+    {moduleType2toIn,     volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight   }, // XPos:205+231 YPos:10 H:2
+    {moduleType4toIn,     volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight   }, // XPos:153..231 YPos:10 H:2
+    {moduleTypeSeqEvent,  volumeTypeSequencer, {{ 20, 24}, {64,  5}}, anchorTopLeft    },
+    {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft    },
+    {moduleTypeSeqVal,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft    },
+    {moduleTypeSeqLev,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft    },
+    {moduleTypeSeqCtr,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft    }, };
 
 // volumeType, style, segments (LEDs or level-bar steps), space (LED gap, or gap between repeated
 // per-channel meters), on colour, off colour
