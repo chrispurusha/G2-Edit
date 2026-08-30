@@ -44,13 +44,36 @@
 // remainder becomes a long linear sweep from w = 0.25 to w = 0.75 - a slow fall from peak to
 // trough, which is the sawtooth the manual describes.
 double wave_sine1(double phase, double shape) {
-    // b measured 0.248 down to 0.055; the quadratic fits all nine points to +/-0.0016, and its
-    // constant term came out 0.2491, i.e. the 0.25 the identity warp requires.
-    double b = 0.25 - (0.255 * shape) + (0.060 * shape * shape);
+    // RE-MEASURED 2026-08-30. The LINEAR term was already right; the QUADRATIC one was about five
+    // times too large, which lifted b at the top of the dial and made our Sine1 duller than the
+    // instrument - reported by ear as "hardware definitely sounds brighter than our version".
+    //
+    //     raw        0      16      32      64      96     127
+    //     b     0.2500  0.2185  0.1870  0.1250  0.0630  0.0080     <- measured
+    //     b     0.2500  0.2188  0.1896  0.1367  0.0915  0.0550     <- previous law
+    //
+    // Fitted per point against the harmonic series and anchored at the identity warp, residuals
+    // +/-0.0013. The model FORM is confirmed by the same fit: it reproduces the measured harmonics
+    // to 0.21 dB or better at every setting, and to 0.02 dB at raw 127 (-8.0/-11.9/-14.5/-16.5/
+    // -18.2/-19.6 against a measured -8.1/-11.9/-14.6/-16.6/-18.2/-19.5). At full Shape the wave is
+    // about 2 dB under an ideal sawtooth across the series, which is the manual's "similar to a
+    // sawtooth wave" and is what it sounds like.
+    //
+    // HOW TO MEASURE THIS, because getting it wrong is easy and cost several wrong answers here.
+    // Do NOT read harmonics off a period-synchronously averaged cycle: the period comes from an
+    // INTEGER sample lag, so it is quantised, and over hundreds of averaged cycles the accumulated
+    // phase error smears the upper harmonics away. That looks exactly like a capture-chain lowpass
+    // - it produced an apparent 25 dB roll-off by the sixth harmonic and a whole set of plausible,
+    // wrong constants. Refine f0 on the harmonic sum and read each harmonic with a windowed DFT
+    // instead (tools has the working version). Validate the method on OscB's own sawtooth and
+    // square first: the saw must come back at -6.0/-9.5/-12.0 and the square must show no even
+    // harmonics at all. Ours now do, to 0.2 dB.
+    double b = 0.25 - (0.2551 * shape) + (0.0125 * shape * shape);
     double w = 0.0;
 
-    if (b < 0.02) {
-        b = 0.02;
+    // b reaches 0.0074 at full Shape, so this guard is only against a divide by zero.
+    if (b < 0.004) {
+        b = 0.004;
     }
 
     if (phase < b) {
