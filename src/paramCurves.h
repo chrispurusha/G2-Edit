@@ -92,6 +92,11 @@ double flt_biquad_magnitude(double ratio, double q, tFilterShape shape);
 
 // FltNord: FltClassic's four-pole loop; the dB/Oct selector moves the tap, it does not shorten it.
 uint32_t flt_nord_tap(uint32_t dbOctValue);
+
+// FltNord's GC toggle, as a linear broadband gain. MEASURED: GC does not reshape the filter at all
+// - the peak above the passband is the same with it on or off - it attenuates everything as
+// resonance rises, which is what stops the peak running away.
+double flt_nord_gc_gain(double resParam);
 double flt_kbt_amount(uint32_t kbtValue);                                 // Kbt scroll: 0, 0.25, 0.5, 0.75, 1.0
 double lev_amp_gain(double paramValue);                                   // LevAmp multiplier: 0 (silent) .. 4.0x, unity at 64; measured, piecewise
 double lfo_rate_hz(uint32_t rangeMode, double paramValue);                // LFO speed in Hz for a Range setting

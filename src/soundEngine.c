@@ -68,6 +68,7 @@ typedef struct {
     int slope;               // parameter index, or -1 when the module has none
     int slopeMode;           // MODE index, or -1; FltLP keeps its Slope here, not in a parameter
     int shape;               // FilterType parameter for the multi-mode filters, or -1
+    int gc;                  // FltNord's Gain Control toggle, or -1 for a module without one
     int active;
 } tFilterParams;
 
@@ -107,7 +108,7 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
         case moduleTypeFltClassic:
         {
             *map = (tFilterParams){
-                .freq = 0, .env = 1, .kbt = 2, .res = 3, .slope = 4, .slopeMode = -1, .shape = -1, .active = 5
+                .freq = 0, .env = 1, .kbt = 2, .res = 3, .slope = 4, .slopeMode = -1, .gc = -1, .shape = -1, .active = 5
             };
             return true;
         }
@@ -122,12 +123,12 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
             // 2026-08-15; this map was not moved with it.
             if (engine_filter_legacy()) {
                 *map = (tFilterParams){
-                    .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = 3, .slopeMode = -1, .shape = -1, .active = 4
+                    .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = 3, .slopeMode = -1, .gc = -1, .shape = -1, .active = 4
                 };
                 return true;
             }
             *map = (tFilterParams){
-                .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1, .active = 3
+                .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = -1, .slopeMode = 0, .gc = -1, .shape = -1, .active = 3
             };
             return true;
         }
@@ -135,7 +136,7 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
         {
             // Laid out exactly like FltLP, and its Slope is a mode for the same reason.
             *map = (tFilterParams){
-                .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1, .active = 3
+                .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = -1, .slopeMode = 0, .gc = -1, .shape = -1, .active = 3
             };
             return true;
         }
@@ -151,7 +152,7 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
         {
             // Freq, Pitch, Kbt, GC, Res, dB/Oct, Bypass, FmLin, FilterType, ResM.
             *map = (tFilterParams){
-                .freq = 0, .env = 1, .kbt = 2, .res = 4, .slope = 5, .slopeMode = -1, .shape = 8, .active = 6
+                .freq = 0, .env = 1, .kbt = 2, .res = 4, .slope = 5, .slopeMode = -1, .gc = 3, .shape = 8, .active = 6
             };
             return true;
         }
@@ -541,6 +542,7 @@ typedef struct {
     uint32_t        tapStage;  // which pole is tapped: 0-based, so N poles is tapStage N-1
     tFilterTopology topology;
     tFilterShape    fltShape;  // multi-mode filters only; low-pass for the rest
+    double          fltGain;   // FltNord's GC attenuation; 1.0 for every other filter
     double          fltKbt;
     double          modAmount; // how far the Env input moves the cutoff, 0..2 (the dial's 0..200%)
 
@@ -2768,7 +2770,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         {
             node->cutoffParam = param_value(module, variation, FLT_PARAM_FREQ);
             tFilterParams map = {
-                .freq = 0, .env = 1, .kbt = 2, .res = 3, .slope = 4, .slopeMode = -1, .shape = -1, .active = 5
+                .freq = 0, .env = 1, .kbt = 2, .res = 3, .slope = 4, .slopeMode = -1, .gc = -1, .shape = -1, .active = 5
             };
 
             (void)filter_param_map(module->type, &map);
@@ -2808,7 +2810,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 default:                  node->topology = eFilterTopologyLadder;
                     break;
             }
-            node->fltShape  = (map.shape >= 0)
+            node->fltShape = (map.shape >= 0)
                              ? (tFilterShape)param_value(module, variation, (uint32_t)map.shape)
                              : eFilterShapeLowPass;
 
@@ -2818,11 +2820,37 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             if (module->type == moduleTypeFltNord) {
                 node->tapStage = flt_nord_tap((uint32_t)param_value(module, variation, (uint32_t)map.slope)) - 1u;
             }
+
             // GUARD THESE TWO. They were read unguarded because every filter mapped until now had
             // both; FltStatic has NEITHER an Env input nor a Kbt selector, and -1 cast to uint32_t
             // indexes far off the end of the parameter array. It CRASHED the application rather
             // than misbehaving, which is at least a loud failure - but the -1 convention is only
             // safe where every reader checks it, and two of them did not.
+            // FLTNORD IS NOT FLTCLASSIC'S LADDER, and this is where that shows. MEASURED
+            // 2026-08-30, both modules through the same rig at an input verified linear:
+            //
+            //     passband level    Res 0    Res 110
+            //     FltClassic        -1.3 dB   -12.7 dB    droops - real ladder feedback
+            //     FltNord, GC off   +0.5 dB    +1.6 dB    FLAT; only the peak grows, to +29.7
+            //     FltNord, GC on    -1.3 dB   -15.5 dB    GC pulls it down
+            //
+            // We borrow FltClassic's ladder for FltNord, so our passband droops where the
+            // instrument's does not. A four-pole ladder's DC gain is 1/(1 + k), so multiplying by
+            // (1 + k) cancels exactly that droop and leaves the flat passband the hardware has;
+            // GC's measured attenuation then goes on top. Applying GC WITHOUT the (1 + k) would
+            // have counted the droop twice and left FltNord about 29 dB quiet at high resonance.
+            //
+            // This corrects the LEVEL behaviour. Whether FltNord's peak has the same shape as
+            // FltClassic's is a separate question and still open - see Docs/todo.txt.
+            if (map.gc >= 0) {
+                double res = param_value(module, variation, (uint32_t)map.res);
+                double gc  = (param_value(module, variation, (uint32_t)map.gc) != 0.0)
+                             ? flt_nord_gc_gain(res) : 1.0;
+
+                node->fltGain = (1.0 + flt_ladder_feedback(res)) * gc;
+            } else {
+                node->fltGain = 1.0;
+            }
             node->fltKbt    = (map.kbt >= 0)
                               ? flt_kbt_amount((uint32_t)param_value(module, variation, (uint32_t)map.kbt)) : 0.0;
             node->modAmount = (map.env >= 0)
@@ -4301,7 +4329,12 @@ static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * sp
         }
         case eOscWaveTriangle:
         {
-            return osc_triangle(phase, shape);
+            // SHAPE DOES NOT REACH THE TRIANGLE. Measured on the instrument 2026-08-30: OscB set to
+            // Tri returns exactly -19.2 / -28.1 / -34.0 dB with no even harmonics at raw 0, 64 AND
+            // 127 - the same symmetric triangle at every point on the dial. Shape is the PULSE WIDTH
+            // and only the square uses it; we were skewing the triangle with it, which turned Tri
+            // into a sawtooth at the top of the dial. The sine and saw already ignore it.
+            return osc_triangle(phase, 0.5);
         }
         case eOscWaveSaw:
         {
@@ -4736,8 +4769,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeFilter:
         {
+            // spec->fltGain is FltNord's GC and is 1.0 for every other filter, so this costs a
+            // multiply and changes nothing where the module has no such control.
             value[n][0] = filter_step(voice, n, spec, a, signal_in(spec, value, 1), voicePitch,
-                                      gSmoothedCutoff[n], gSmoothedRes[n]);
+                                      gSmoothedCutoff[n], gSmoothedRes[n]) * spec->fltGain;
             break;
         }
         case eNodeEnv:
@@ -5120,7 +5155,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             // NOT in here: it is one shared instance fed by the sum of the voices, which is what
             // lets a chord share one reverb instead of running 8 of them.
             for (uint32_t v = 0; v < params.voiceCount; v++) {
-                tVoice * voice   = &gVoice[v];
+                tVoice * voice     = &gVoice[v];
 
                 // FREE-RUNNING. The instrument's Voice Area runs whether or not a key is down: an
                 // oscillator patched to an output sounds on its own, an LFO keeps its phase, and a
@@ -5134,14 +5169,25 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 // would cost 32 voices of idle CPU for a difference of level. One instance is the
                 // deliberate approximation; the post-mix section below already runs unconditionally
                 // for the same reason, so a reverb tail outlives the last note.
-                bool     freeRun = (voice->sounding == false) && (engine_no_free_run() == false);
+                bool     freeVoice = (v == 0) && (engine_no_free_run() == false);
+                bool     freeRun   = (voice->sounding == false) && (freeVoice == true);
 
-                if ((voice->sounding == false) && ((freeRun == false) || (v != 0))) {
+                if ((voice->sounding == false) && (freeRun == false)) {
                     continue;               // costs nothing when it is not playing
                 }
 
-                if (v != 0) {
-                    freeRun = false;
+                // A KEY COMING UP MUST NOT INTERRUPT THE OSCILLATOR. The anti-click ramp exists for
+                // patches with no envelope, and in exactly those the instrument carries on sounding
+                // when the note is released - a key gates the envelope, and there isn't one. So the
+                // free-running voice hands straight back to free running instead of ramping to
+                // silence and then waiting out the release tail before resuming, which put an
+                // audible dip in a drone that the hardware does not have. Phase and every other
+                // per-voice state carry across untouched, so the level is continuous and there is
+                // nothing to click. With an envelope in the chain the normal path still runs,
+                // because there the envelope owns the release and cutting it would truncate it.
+                if ((freeVoice == true) && (voice->gate == false) && (chainHasEnvelope == false)) {
+                    voice->sounding = false;
+                    freeRun         = true;
                 }
 
                 // Portamento. The sounding pitch chases the played note; how fast, and whether at
