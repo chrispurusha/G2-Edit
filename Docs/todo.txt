@@ -6,24 +6,22 @@ Built-but-unchecked work goes in to-test.txt.
 
 FROM CT
 - Show the ASSIGNED voice count beside the requested one, "15 (16)", topbarRender.c:124
-- Draw OscShpA's wave graph; then PulseOsc, OscNoise, LfoD, Operator, DrumSynth
-- Press V to toggle between the split position and Voice-Area-only (manual p64)
-- Zoom to fit from a right click, fitting the area under the cursor
+- Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
+- Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE V is already Paste
+- Zoom to Fit from a right click, fitting the area under the cursor
 
 BUGS
-- clear_slot_data(): two functions disagree about what a cleared slot contains, and still do
+- dataBase.c: the morph-defaults block and clear_slot_data() disagree - only one sets the name to "Init"
 - Gate module: modes are not saving, and the 2nd mode string is wrong (mode count is 2)
 - Second of the Gate/mode selectors shows the wrong menu - right string, wrong list (Sine1, Sine2...)
 - Compress(150) module height may be one row too many
 - Sw8-1(15) and ValSw1-2(17) need more layout resources
 - SW1-2 and similar need a new param type: per-box names, and an offset that reads 0, 4, ...
-- Stale comment at soundEngine.c:2779 still describes the old LADDER_M constant
-- synthlibWindow.c:259 uses GLFW_COCOA_RETINA_FRAMEBUFFER, deprecated in the bundled GLFW 3.5.1
+- synthlibWindow.c:272 uses GLFW_COCOA_RETINA_FRAMEBUFFER, deprecated in the bundled GLFW 3.5.1
 
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
-- No edit menu (Undo, Redo, Cut, Copy, Paste, Delete, Paste params, Select all)
-- Adjust values with the keyboard arrow keys, as the original editor does
+- Add a top-level Edit menu (Undo, Redo, Cut, Copy, Paste, Delete, Paste Params, Select All)
 - Nudge arrows on knobs and sliders, for step-by-step mouse/touchpad adjustment
 - Modules can be dropped on top of existing ones at the bottom of the canvas
 - Red and orange cable colours are too close together (accessibility)
@@ -33,9 +31,8 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Yellow module-selection border is not obvious enough; try twice the line width
 - Reconnection dialogue does not always appear
 - Remove the module number from the top right of each module for release builds
-- Add the saved file's path to the top of the recents list on save
 - Open Recent for patches loaded from a bank
-- Delete Unused Modules, and move Delete Unused Cables to a top-level menu column
+- Move Delete Unused Cables out of the cable popup to a top-level menu
 - Local mode button: draw a wave across sequencer columns, ultimately as a wave-representation mode
 - Add performance keyboard split/layer/zone UI (manual: "Layering Patches")
 - Add a dedicated master-clock/tempo panel
@@ -46,13 +43,13 @@ MODULES AND GRAPHICS
 - Gate's type selector should be a SYMBOL picker, not two text dropdowns (six 90x26 line drawings)
 - Verify the remaining 117 unverified module types against the hardware
 - Delay Time dial range in Time mode: owner reports highest raw = 1 s, lowest = 0.01 ms
-- Fill the 22 Unknown slots in gModuleProperties by sweeping the factory banks for their type numbers
+- Fill the 39 Unknown slots in gModuleProperties (of 209) by sweeping factory banks for type numbers
 
-FILTER RESPONSE GRAPHS (all six measured 2026-08-30; nothing drawn yet)
-- FltStatic/FltNord drawing needs its own measured Q; the printed dial Q is a different quantity
+FILTERS
+- Confirm FltNord's drawn resonance: it borrows FltClassic's k law, which is not its own
 - Pin FltComb's tuning constant: teeth land at nominal/1.67, is it 5/3 or an integer delay length?
 - Measure FltPhase against the Freq dial - notch positions are not yet tied to it
-- FltComb and FltPhase need comb/phaser renderers, not the response-curve one; the original draws both
+- Write comb and phaser renderers for FltComb and FltPhase; the original draws a graph on both
 - Audit for the other half of the FltStatic crash: a -1 "not present" index that some reader does not check
 - Fold the engine's node-kind switch into filter_param_map so one list, not two, decides coverage
 - Re-check FltNord's Res 110/120/127 points: taken 2026-08-29 before the clipping was found
@@ -60,8 +57,7 @@ FILTER RESPONSE GRAPHS (all six measured 2026-08-30; nothing drawn yet)
 
 SOUND ENGINE
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.txt)
-- Add FltHP, FltStatic and FltNord to the engine; all three are measured and none is implemented
-- Extend module coverage beyond the current 23 of the G2's modules
+- Extend engine module coverage; recount the supported types, 23 predates the filter work
 - Run the engine-vs-hardware diff: both sides can produce the file, the comparison has not been run
 - Notes are not sent to the G2 while the local engine is sounding (owner's request)
 - Sound engine across cores - investigated and deprioritised, kept for later
