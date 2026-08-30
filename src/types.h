@@ -583,7 +583,6 @@ typedef struct {
     tModuleType type;                          // Review this. Is it used!?
     uint32_t    row;
     uint32_t    column;
-    tRectangle  dragArea;                     // For mouse-click recognition for dragging and menu
     tRectangle  rectangle;                    // Full size of module rectangle, in case we need it
     uint32_t    colour;
     uint32_t    upRate;
