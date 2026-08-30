@@ -24,6 +24,7 @@ extern "C" {
 #include "defs.h"
 #include "synthlibDefs.h"
 #include "globalVars.h"
+#include "splitView.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 
@@ -70,6 +71,20 @@ void delete_module(tModuleKey key) {
     }
 }
 
+// THE GENERATION BUMP LIVES HERE, not in the callers. Anything keyed to this slot's modules -
+// a selection above all - is stale the moment they are wiped, and selection_validate() spots that
+// by watching gPatchGeneration. Three callers bumped it by hand and two did not:
+//
+//   - init_patch() deletes every module and cable for a New Patch and did NOT bump it, so a
+//     selection SURVIVED New Patch. Reproduced: select a module, New Patch, add a fresh one, and
+//     the new module comes up already wearing the yellow selection border - it has inherited the
+//     slot/location/index key of the module that used to be there.
+//   - the backdoor's NEWPATCH calls the two delete functions directly, with the same result.
+//
+// Bumping here makes it impossible to wipe a slot without invalidating what points into it. The
+// callers that already bump are left alone: the counter is only ever compared for INEQUALITY, so
+// counting twice for one clear costs nothing and removing their bumps would be a wider change than
+// this fix needs.
 void database_delete_modules_by_slot(uint32_t slot) {
     if (slot < MAX_SLOTS) {
         for (uint32_t location = 0; location < (uint32_t)locationMax; location++) {
@@ -77,6 +92,8 @@ void database_delete_modules_by_slot(uint32_t slot) {
                 memset(&gModule[slot][location][index], 0, sizeof(tModule));
             }
         }
+
+        gPatchGeneration[slot]++;
     }
 }
 
@@ -295,12 +312,21 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
 void init_patch(uint32_t slot) {
     memset(&gPatchDescr[slot], 0, sizeof(gPatchDescr[0]));
     gPatchDescr[slot].voiceCount      = 1;
-    // Voice Area pane height in pixels — see splitView.h. The reference's own default is 4000, which
-    // is larger than any window and so clamps to "Voice Area takes everything"; G2-Edit shows BOTH
-    // areas on a new patch instead (owner's call), because the divider is the point of the window
-    // and a new patch is exactly when you want to see it. Patches loaded from file or from the G2
-    // carry their own value and are untouched by this.
-    gPatchDescr[slot].barPosition     = 300;
+    // Voice Area pane height in pixels — see splitView.h. A NEW PATCH OPENS WITH THE FX AREA
+    // MINIMISED, because that is where the work starts (CT, 2026-08-30: "initialising patch for new
+    // patch, should minimise the FX area. We're initially working in the VA area for new patches").
+    //
+    // This REVERSES an earlier call recorded here — G2-Edit used to open a new patch at 300, showing
+    // both areas, on the reasoning that the divider is the point of the window. Noting the reversal
+    // rather than quietly overwriting it, since the comment stated it as deliberate.
+    //
+    // It also lands back on what the original editor does: its own default is 4000, larger than any
+    // window, so it clamps to "Voice Area takes everything" exactly as SPLIT_POS_MAX does here. The
+    // divider stays on screen at the bottom either way — see splitView.h, there is no separate
+    // one-area mode — so nothing is hidden, and dragging it back up costs one gesture.
+    //
+    // Patches loaded from file or from the G2 carry their own value and are untouched by this.
+    gPatchDescr[slot].barPosition     = SPLIT_POS_MAX;
     gPatchDescr[slot].unknown3        = 2;    // unknown9 in Delphi
     gPatchDescr[slot].visible[0]      = 1;
     gPatchDescr[slot].visible[1]      = 1;

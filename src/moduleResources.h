@@ -285,7 +285,11 @@ const tModuleProperties  gModuleProperties[]  = {
     {"Unknown",      0, volumeTypeNone,      ledTypeNo },
     {"Mix8-1B",      4, volumeTypeMono,      ledTypeNo },
     {"EnvH",         2, volumeTypeNone,      ledTypeNo },
-    {"Delay",        2, volumeTypeNone,      ledTypeYes},
+    // THREE ROWS, NOT TWO. Checked against the original editor's own <#Module Height for all 103
+    // modules the two tables share, 2026-08-30: Delay was the ONLY height that disagreed, and it has
+    // nine parameters to fit. Compress, which todo.txt had suspected of being a row too tall, agrees
+    // with the original at 5.
+    {"Delay",        3, volumeTypeNone,      ledTypeYes},
     {"Constant",     2, volumeTypeNone,      ledTypeNo },
     {"LevMult",      2, volumeTypeNone,      ledTypeNo },
     {"FltVoice",     4, volumeTypeMono,      ledTypeNo },

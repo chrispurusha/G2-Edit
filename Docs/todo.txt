@@ -11,10 +11,7 @@ FROM CT
 - Zoom to Fit from a right click, fitting the area under the cursor
 
 BUGS
-- dataBase.c: the morph-defaults block and clear_slot_data() disagree - only one sets the name to "Init"
-- Gate module: modes are not saving, and the 2nd mode string is wrong (mode count is 2)
-- Second of the Gate/mode selectors shows the wrong menu - right string, wrong list (Sine1, Sine2...)
-- Compress(150) module height may be one row too many
+- Re-lay Delay's face from the .rsrc: it is 3 rows now but its controls are all bottom-anchored
 - Sw8-1(15) and ValSw1-2(17) need more layout resources
 - SW1-2 and similar need a new param type: per-box names, and an offset that reads 0, 4, ...
 - synthlibWindow.c:272 uses GLFW_COCOA_RETINA_FRAMEBUFFER, deprecated in the bundled GLFW 3.5.1
