@@ -502,6 +502,30 @@ double flt_biquad_magnitude(double ratio, double q, tFilterShape shape) {
     return num / denom;
 }
 
+// FltNord's GC (Gain Control), parameter 3, DEFAULT ON. MEASURED 2026-08-30 against the instrument,
+// eight Res settings with GC on and off through the same path (Noise -> LevAmp -> FltNord -> 2-Out,
+// LP at 24 dB, input backed off 12 dB so every point is verified linear).
+//
+// WHAT GC IS: a broadband attenuation that grows with resonance. It does NOT change the filter's
+// shape - the peak measured above the passband is the same either way (27.9 dB with GC on against
+// 28.2 dB with it off, at Res 110). What it does is pull the whole signal down as the resonance
+// rises, so the peak grows about 12 dB across the dial instead of 29 dB. With GC off the module
+// audibly distorts at high Res and self-oscillates at the top; with it on it stays linear.
+//
+//     Res      0     16     32     48     64     80     96    110
+//     dB    0.00  -0.88  -2.28  -3.81  -5.84  -8.33 -11.61 -17.09
+//
+// The cubic below fits those to +/-0.6 dB. Measured on the 24 dB low-pass; whether GC follows the
+// same law on the other slopes and types is not yet established - see Docs/findings.txt, where the
+// 12 dB band-pass is recorded as self-oscillating at Res 127 even with GC on, which this does not
+// model.
+double flt_nord_gc_gain(double resParam) {
+    double v  = resParam / 127.0;
+    double dB = (-10.897 * v) + (13.140 * v * v) - (26.503 * v * v * v);
+
+    return pow(10.0, dB / 20.0);
+}
+
 // FltNord: FLTCLASSIC'S TOPOLOGY, and the passband droop is what proves it. Low-frequency gain
 // against Res, LP at 24 dB/oct: -0.4, -2.6, -5.8, -11.5, -38.2 dB at 0/32/64/96/127. That is
 // feedback around a cascade, DC gain 1/(1+k); a biquad's passband would not move, and FltStatic's

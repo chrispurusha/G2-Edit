@@ -6842,3 +6842,130 @@ FREE-RUNNING OSCILLATORS - WHY NOTHING SOUNDS BETWEEN NOTES (2026-08-30, owner-r
 
   Owner asked for it to be CONFIGURABLE rather than simply switched on, so the idle cost stays a
   choice. Not started; the todo.txt line under SOUND ENGINE is the reminder.
+
+
+OSCILLATOR WAVE LAWS RE-MEASURED (2026-08-30)
+
+  Prompted by "hardware definitely sounds brighter than our version" on OscShpB Sine1 at Shape 99%.
+  Method and its traps are in tools/harmonics.py - read that BEFORE measuring anything here again.
+  Rig: OscShpB -> 2-Out built over the backdoor, 329.628 Hz (E4), QU-24 input 5 = channel 4. The
+  instrument free-runs, so no note is needed. Validated on OscB's own saw and square first: the saw
+  returns -6.1/-9.6/-12.2 against an ideal -6.0/-9.5/-12.0 and the square shows no even harmonics.
+
+  WHAT WAS WRONG
+  - Sine1's quadratic term was ~5x too large (0.060 against a measured 0.0125), which lifted the
+    breakpoint at the top of the dial and made our Sine1 duller than the instrument. The LINEAR term
+    was already right to 0.0001. Now matches to 0.02 dB rms at raw 127.
+  - Sine2's floor of 0.03 was the error, not its law: d wants 0.016 and the instrument measures
+    0.013, so the clamp cost 4.5 dB of harmonics at full Shape while every other setting matched to
+    0.15 dB. Lowered to 0.005.
+  - OscB's triangle was being skewed by Shape. The instrument returns the SAME symmetric triangle
+    (-19.2/-28.1/-34.0, no even harmonics) at raw 0, 64 and 127 - Shape is the pulse width and only
+    the square uses it. moduleGraphics.c already had this right ("Tri - Shape does nothing"), so it
+    was another engine-vs-drawing divergence, like the Shape domain one.
+
+  WHAT WAS ALREADY RIGHT - checked, do not re-open without new evidence
+    Sine3      0.1 dB at Shape 64, 0.2 dB at 127
+    Sine4      0.2 dB at 64, 0.1 dB at 127, odd harmonics only as the manual says
+    TriSaw     0.2 dB at 0, 0.4 dB at 127 (mid-dial ~2 dB, the largest thing left)
+    Pulse      0.2 / 0.3 / 0.1 dB
+    SymPulse   silent at full Shape on both sides, which is correct
+    DblSaw     detune = 0.5 * Shape, confirmed from the harmonic NULLS (k*d = 0.5): none / k=4 /
+               k=2,6 / k=4 / k=1,3,5,7,9 across raw 0,32,64,96,127. THE MANUAL IS WRONG here - it
+               says 90 degrees at 99%, but the instrument reaches 90 degrees at raw 64. Changing
+               the law to match the manual was tried and reverted.
+
+  STILL OPEN: OscB's DualSaw renders as eOscWaveSuper. Hardware confirms it is DblSaw - at Shape 127
+  it comes back an octave up (659.257 Hz) because antiphase saws cancel every odd harmonic. Blocked
+  on tOscWave having no DualSaw member and value 4 meaning Sqr25 on OscA/C/D.
+
+
+FILTER RESONANCE AT THE TOP OF THE DIAL - HOW TO TELL A RESONANCE FROM AN OSCILLATION (2026-08-30)
+
+  The open "re-check the high-Res points, they were taken before the clipping was found" items were
+  chased with a test that is simpler and more reliable than looking at the response: CUT THE INPUT
+  12 dB AND SEE WHETHER THE OUTPUT FOLLOWS. A linear filter must drop by the same 12 dB. It needs no
+  spectrum at all, just two RMS levels, so it cannot be fooled by binning or by a poor Q estimator.
+  Rig: Noise -> LevAmp -> filter -> 2-Out, LevAmp Gain 64 = 1.00x and 24 = 0.25x on the measured
+  law. The bypassed path is the control and returns -12.1 dB, confirming the attenuator.
+
+  FltClassic (no gain control):
+      Res  64  -12.1 dB   linear
+      Res  96  -11.8 dB   linear
+      Res 110  -11.5 dB   linear
+      Res 120   -8.2 dB   PARTLY OSCILLATING - contaminated
+      Res 127   +1.2 dB   SELF-OSCILLATING - the output ignores the input entirely
+
+  So at Res 127 there is NO finite Q to measure. What a response plot shows there is the module's
+  own oscillation divided by the reference noise, which grows 1:1 as the input is attenuated -
+  measured +40.5 / +56.4 / +62.3 / +68.0 dB at 0 / -12 / -18 / -24 dB in, i.e. 5.9 and 5.65 dB for
+  each 6 dB cut. Any constant fitted to that point is fitted to an oscillation. THIS IS WHY THE
+  MEASUREMENT NEVER CONVERGED; it is not a clipping artefact and no amount of backing off fixes it.
+
+  FltNord, and what GC actually does. FltNord has a Gain Control toggle (parameter 3, gcStrMap,
+  DEFAULT ON) and it changes the answer completely:
+      GC off   output climbs 25 dB across the Res range, Res 120 marginal at -10.1, Res 127
+               SELF-OSCILLATING at -0.5 - and audibly distorting, which the owner heard
+      GC on    output growth held to 14 dB and EVERY point stays linear, -11.4 to -12.1, including
+               Res 127
+  So FltNord can be characterised across its whole Res range, but only with GC on. Measuring it
+  with GC off is measuring an oscillator. Peak gains with GC on, input backed off 12 dB:
+  Res 96 +18.5 dB, 110 +28.1, 120 +38.9 - all at about 1040 Hz. Res 127 reads +70.1 dB, which is a
+  31 dB jump over seven dial steps and is NOT credible; the Q estimator is also at its resolution
+  ceiling there. Left open rather than used.
+
+  ALL FOUR FltNord TYPES, not just LP (nordFilterTypeStrMap is LP/BP/HP/BR, parameter 8). With GC
+  on, every type stays linear at Res 110 AND Res 127: LP -12.3/-12.3, BP -11.7/-11.2, HP -11.9/-12.2,
+  BR -12.0/-12.1 dB for a -12 dB input cut. So GC holds the whole module measurable whatever the
+  mode, and the earlier LP reading of -11.4 at Res 127 was scatter, not partial nonlinearity - which
+  narrows the implausible +70 dB peak at Res 127 to the Q ESTIMATOR rather than the instrument.
+
+  AND THE SLOPE MATTERS TOO - all of the above is the 24 dB setting, which is the module's DEFAULT
+  (parameter 5, fltNordDbStrMap, 0 = 12 dB and 1 = 24 dB). Repeating the test at 12 dB with GC still
+  on, for a -12 dB input cut at Res 127:
+      LP  -10.9  linear        BP  -2.2  SELF-OSCILLATING
+      BR  -12.0  linear        HP  -6.0  PARTLY OSCILLATING
+  So the conclusion "GC on keeps it measurable" holds at 24 dB and NOT at 12 dB, where BP runs away
+  and HP is contaminated - GC's compensation evidently is not holding the 12 dB path. With GC off at
+  12 dB even LP is partly oscillating (-4.3) where 24 dB was fully oscillating (-0.5). At Res 110
+  every combination of slope and type is linear, so 110 is the highest resonance that can be
+  characterised across the whole module.
+
+  THE LESSON, which cost the wrong conclusion twice in this session: a mode is not a detail. Sweeping
+  one type at one slope and generalising is what produced both "the high-Res captures just need
+  re-taking" and "GC on makes it measurable". Test the corners.
+
+  NOT YET DONE: the same test on FltComb FB 127 and FltPhase FB 127, and a Q estimator that can
+  resolve a peak narrower than the log binning (36 bins/decade is ~65 Hz at 1 kHz, so it cannot see
+  a Q much above 20 - that is why the coarse and fine paths disagreed so wildly on the same capture).
+
+
+FLTNORD IS NOT FLTCLASSIC'S LADDER, AND GC IS WHY IT LOOKED LIKE ONE (2026-08-30)
+
+  Measured through one rig - Noise -> LevAmp -> filter -> 2-Out, input backed off 12 dB and every
+  point verified linear by the level-tracking test above. Passband level against the bypassed path:
+
+      Res                 0        110
+      FltClassic       -1.3 dB   -12.7 dB    droops. Real ladder feedback, no GC on this module
+      FltNord GC off   +0.5 dB    +1.6 dB    FLAT. Only the peak grows, and it reaches +29.7 dB
+      FltNord GC on    -1.3 dB   -15.5 dB    GC pulls the whole thing down
+
+  The peak measured ABOVE the passband is the same with GC on or off (27.9 against 28.2 dB at Res
+  110), so GC does not reshape anything - it is a resonance-dependent broadband attenuation, fitted
+  to +/-0.6 dB as flt_nord_gc_gain() in paramCurves.c.
+
+  So the ~14 dB passband droop this project already models is FltClassic's and is correct there, but
+  it is NOT FltNord's - the instrument's FltNord keeps a flat passband and lets the peak run, which
+  is exactly why it needs a gain control and FltClassic does not. We borrow the ladder for FltNord,
+  so we drew and played a droop the hardware does not have. A four-pole ladder's DC gain is 1/(1+k),
+  so (1+k) cancels it and GC then goes on top: fltGain = (1 + flt_ladder_feedback(res)) * gc.
+  Applying GC WITHOUT the (1+k) would have counted the droop twice, about 29 dB out at high Res -
+  which is what the first version of this change did before the FltClassic control was run.
+
+  Checks: at Res 64 the model lands at -5.6 dB against a measured -5.0; at Res 110, -16.8 against
+  -15.5. Applied identically in soundEngine.c and moduleGraphics.c so the drawn curve and the played
+  filter cannot drift - the divergence that has come up three times this session.
+
+  STILL OPEN: the PEAK's shape for FltNord is still FltClassic's k law, only the level is measured.
+  And the GC law was fitted on the 24 dB low-pass alone; the 12 dB band-pass self-oscillates at Res
+  127 even with GC on, which this does not model.

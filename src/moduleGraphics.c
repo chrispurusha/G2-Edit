@@ -2326,6 +2326,7 @@ typedef struct {
     int             slope;         // parameter index
     int             slopeMode;     // mode index, for the two that keep it there
     int             shape;         // FilterType parameter, where the module is multi-mode
+    int             gc;            // FltNord's Gain Control toggle, or -1 where there is none
     tFilterTopology topology;
 } tFilterGraph;
 
@@ -2338,7 +2339,7 @@ static bool filter_graph_map(uint32_t moduleType, tFilterGraph * out) {
     switch (moduleType) {
         case moduleTypeFltClassic:
             *out = (tFilterGraph){
-                .freq     = 0, .res = 3, .slope = 4, .slopeMode = -1, .shape = -1,
+                .freq     = 0, .res = 3, .slope = 4, .slopeMode = -1, .shape = -1, .gc = -1,
                 .topology = eFilterTopologyLadder
             };
             return true;
@@ -2346,21 +2347,21 @@ static bool filter_graph_map(uint32_t moduleType, tFilterGraph * out) {
         case moduleTypeFltNord:
             // dB/Oct is param 5 and FilterType param 8 - see param-validation.txt.
             *out = (tFilterGraph){
-                .freq     = 0, .res = 4, .slope = 5, .slopeMode = -1, .shape = 8,
+                .freq     = 0, .res = 4, .slope = 5, .slopeMode = -1, .shape = 8, .gc = 3,
                 .topology = eFilterTopologyLadder
             };
             return true;
 
         case moduleTypeFltLP:
             *out = (tFilterGraph){
-                .freq     = 0, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1,
+                .freq     = 0, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1, .gc = -1,
                 .topology = eFilterTopologyCascadeLP
             };
             return true;
 
         case moduleTypeFltHP:
             *out = (tFilterGraph){
-                .freq     = 0, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1,
+                .freq     = 0, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1, .gc = -1,
                 .topology = eFilterTopologyCascadeHP
             };
             return true;
@@ -2368,7 +2369,7 @@ static bool filter_graph_map(uint32_t moduleType, tFilterGraph * out) {
         case moduleTypeFltStatic:
             // Freq 0, Res 1, FilterType 2 (LP/BP/HP) - see param-validation.txt.
             *out = (tFilterGraph){
-                .freq     = 0, .res = 1, .slope = -1, .slopeMode = -1, .shape = 2,
+                .freq     = 0, .res = 1, .slope = -1, .slopeMode = -1, .shape = 2, .gc = -1,
                 .topology = eFilterTopologyBiquad
             };
             return true;
@@ -2421,6 +2422,21 @@ static void render_filter_response_graph(tRectangle rectangle, tModule * module)
     uint32_t               poles          = flt_cascade_poles(slopeIndex);
     double                 staticQ        = flt_static_q(resKnob);
 
+    // FLTNORD IS NOT FLTCLASSIC'S LADDER. Measured 2026-08-30: FltClassic's passband droops with
+    // resonance, from -1.3 dB to -12.7 dB, which is the feedback the comment above describes and
+    // which this curve draws correctly. FltNord's does NOT - with its GC off the passband stays flat
+    // at about +1 dB across the whole Res range and only the peak grows. So borrowing the ladder
+    // draws a droop the instrument does not have. A four-pole ladder's DC gain is 1/(1 + k), so
+    // (1 + k) cancels it; FltNord's GC, which IS a measured broadband attenuation, then goes on top.
+    // Same expression as the sound engine uses, for the same reason - see the note beside fltGain
+    // there. Every other filter gets 1.0 and is unchanged.
+    double                 nordGain       = 1.0;
+
+    if (module->type == moduleTypeFltNord) {
+        bool gcOn = (map.gc >= 0) && (module->param[variation][map.gc].value != 0);
+
+        nordGain = (1.0 + feedback) * (gcOn ? flt_nord_gc_gain(resKnob) : 1.0);
+    }
     const tGraphLocation * graphLoc       = find_graph_location(module->type);
 
     if (graphLoc == NULL) {
@@ -2460,7 +2476,7 @@ static void render_filter_response_graph(tRectangle rectangle, tModule * module)
                 break;
 
             default:
-                magnitude = flt_ladder_magnitude(ratio, feedback, tap);
+                magnitude = flt_ladder_magnitude(ratio, feedback, tap) * nordGain;
                 break;
         }
         double levelDb   = 20.0 * log10(fmax(magnitude, 1e-4));

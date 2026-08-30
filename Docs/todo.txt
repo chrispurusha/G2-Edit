@@ -37,20 +37,26 @@ MODULES AND GRAPHICS
 - Fill the 39 Unknown slots in gModuleProperties (of 209) by sweeping factory banks for type numbers
 
 FILTERS
-- Confirm FltNord's drawn resonance: it borrows FltClassic's k law, which is not its own
+- FltNord's PEAK shape still borrows FltClassic's k law; its LEVEL behaviour is now measured and fixed
+- Whether FltNord's GC follows the same law on the 12dB slope and on BP/HP/BR is not established
 - Pin FltComb's tuning constant: teeth land at nominal/1.67, is it 5/3 or an integer delay length?
 - Measure FltPhase against the Freq dial - notch positions are not yet tied to it
 - Write comb and phaser renderers for FltComb and FltPhase; the original draws a graph on both
 - Audit for the other half of the FltStatic crash: a -1 "not present" index that some reader does not check
 - Fold the engine's node-kind switch into filter_param_map so one list, not two, decides coverage
-- Re-check FltNord's Res 110/120/127 points: taken 2026-08-29 before the clipping was found
-- Re-check FltComb FB 127 and FltPhase FB 127 for the same reason
+- FltClassic Res 120 and 127 cannot be fitted as a filter response - it self-oscillates (see findings)
+- FltNord at 12dB: BP self-oscillates and HP is contaminated at Res 127 even with GC on - engine model?
+- FltNord Res 127 peak reads +70 dB with GC on: not credible, needs a better Q estimator before use
+- Q estimator cannot resolve above ~20: log binning is 36/decade, ~65 Hz at 1 kHz (see findings)
+- Re-check FltComb FB 127 and FltPhase FB 127 with the level-tracking test, as FltClassic/FltNord were
 
 SOUND ENGINE
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.txt)
 - Extend engine module coverage; recount the supported types, 23 predates the filter work
 - Run the engine-vs-hardware diff: both sides can produce the file, the comparison has not been run
 - Notes are not sent to the G2 while the local engine is sounding (owner's request)
+- OscB's DualSaw renders as eOscWaveSuper in the engine; hardware says it is DblSaw (detune 0.5*Shape)
+- tOscWave has no DualSaw and value 4 means Sqr25 on OscA/C/D - the waveform enum needs a per-module map
 - Let oscillators free-run rather than only while a note sounds - some patches depend on it; make it configurable
 - Sound engine across cores - investigated and deprioritised, kept for later
 

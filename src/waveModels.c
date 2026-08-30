@@ -99,8 +99,14 @@ double wave_sine1(double phase, double shape) {
 double wave_sine2(double phase, double shape) {
     double d    = 0.5 - (0.51 * shape) + (0.026 * shape * shape);
 
-    if (d < 0.03) {
-        d = 0.03;
+    // MEASURED 2026-08-30: this clamp was the error, not the law. d wants 0.016 at full Shape and
+    // the instrument measures 0.013, but the floor of 0.03 held it well short - worth 4.5 dB of
+    // missing harmonics at Shape 127, where every other setting on the dial matches to 0.15 dB.
+    // Unclamped the law lands within 1.0 dB, which is inside its own scatter; a refit over seven
+    // captured points suggests 0.5 - 0.5054*s + 0.0146*s^2 if it is ever worth the last 0.8 dB.
+    // The floor now only guards the divide.
+    if (d < 0.005) {
+        d = 0.005;
     }
     double w    = (phase < d) ? (0.5 * (phase / d))
                : (0.5 + (0.5 * ((phase - d) / (1.0 - d))));
