@@ -6669,3 +6669,42 @@ removing the title bar altogether - is deliberately NOT done here.
   rather than the module's, so the offset a module is picked up by is the offset it keeps.
   Worth noting the shape of it: the bug was always there, and only a change of hit area made it
   reachable. A fix that "works" because of where the user is forced to click is not a fix.
+
+
+2026-08-30 — THE TITLE BAR IS GONE AND Y COVERS THE WHOLE MODULE AGAIN (CT). This reverses the body
+inset of 2026-08-29 (commit 5c3c7c8), now that nothing needs reserving at the top of a face.
+
+  THREE CHANGES, ONE OF THEM 1852 ROWS:
+    - The lighter-coloured strip across the top is not drawn. It was the drag handle; the whole face
+      drags now, so it marked nothing. tModule::dragArea went with it - nothing referenced it.
+    - module_body_rectangle() and MODULE_BODY_TOP_PERCENT are gone. y = 0 is the module's outer top
+      edge again, so "100% of the module" means what it says. A two-row module's usable body goes
+      from 63.5 px to 81 px - a quarter more.
+    - moduleResources.h: 346 top-anchored rows +5, 23 middle-anchored +2.5, 1483 bottom-anchored
+      untouched (they measure up from an edge that did not move).
+
+  VERIFIED THREE WAYS, because a batch this size is exactly where the 2026-08-29 note says to be
+  careful, and its own trap was a regex that silently skipped 759 rows:
+    1. RECONCILED THE COUNT: the substitution matched 1852 rows against 1852 anchor tokens in the
+       file. The connector rows, whose size is the CONNECTOR_SIZE macro rather than a number, are
+       included this time - those were the 759 the earlier batch missed.
+    2. CHECKED AGAINST HISTORY (CT's idea: "You might have the old y coordinates in git"). The commit
+       BEFORE the inset holds the pre-inset values, which is precisely what this restores. Of 330
+       top/middle-anchored rows there, 329 come out EXACTLY equal to what the transform produced.
+       The 40 that differ are the rows edited since - Operator, re-laid from the original's resource
+       file, and the filter response graphs added earlier the same day.
+    3. PIXEL-DIFFED THE RENDER: five modules captured before and after, same patch both times.
+       ONE contiguous 31-row band differs, y=245..275, in a 2800x1574 frame - exactly where the
+       colour strip was. Every control, label, connector, graph and meter is byte-identical.
+
+  A TRAP IN THE VERIFICATION ITSELF, worth remembering: the first after-capture silently contained
+  ONE module where the before had five, because DEVADDMODULE calls were failing without the script
+  checking. The diff then reported 710,403 differing pixels and would have looked like catastrophe.
+  Count what is on the canvas before trusting any before/after comparison.
+
+  MODULE NAME: centred on the Name module ONLY - it is a caption dropped on the canvas to label a
+  section of a patch, so its text belongs in the middle of it. Every other module keeps its name in
+  the top-left corner (CT: "all other modules need the name where it was"). Editing stays
+  left-aligned in both cases so the caret starts at the same x wherever you rename.
+  The rename box is now measured on SIXTEEN 'W's rather than sixteen 'X's - a name of all Ws
+  overflowed the old box, and the box has to hold whatever CLAVIA_NAME_SIZE allows.
