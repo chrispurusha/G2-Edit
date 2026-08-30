@@ -29,6 +29,8 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Add a dedicated master-clock/tempo panel
 
 MODULES AND GRAPHICS
+- Build the layout comparison: per module, how far each control sits from its transformed .rsrc position
+- Delay draws a bypass button in the original at CodeRef 3 but stores only 3 params - decide if we want it
 - Port the remaining custom graph displays from the original editor (see findings.txt for the full 43)
 - Draw the waveform graphics from captured samples rather than by hand
 - Gate's type selector should be a SYMBOL picker, not two text dropdowns (six 90x26 line drawings)
