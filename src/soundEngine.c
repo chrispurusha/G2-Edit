@@ -75,6 +75,19 @@ typedef struct {
 // its Slope from the Bypass parameter, and a maximum of four poles. It exists so the corrected
 // filters can be A/B'd by ear against the old ones without a rebuild, and so a regression can be
 // backed out in one environment variable rather than a revert.
+// THE VOICE AREA RUNS CONTINUOUSLY ON THE INSTRUMENT, and this makes the engine do the same.
+// Set G2_ENGINE_NO_FREERUN=1 to get the old note-gated behaviour back without a rebuild, the same
+// way G2_FILTER_LEGACY works.
+static bool engine_no_free_run(void) {
+    static int cached = -1;
+
+    if (cached < 0) {
+        const char * v = getenv("G2_ENGINE_NO_FREERUN");
+        cached = ((v != NULL) && (v[0] != '\0')) ? 1 : 0;
+    }
+    return cached == 1;
+}
+
 bool engine_filter_legacy(void) {
     static int cached = -1;
 
@@ -2441,7 +2454,14 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->oscKbt    = (param_value(module, variation, SHPB_PARAM_KBT) != 0.0);
             node->basePitch = param_value(module, variation, SHPB_PARAM_TUNE)
                               + (osc_fine_cents(param_value(module, variation, SHPB_PARAM_CENT)) / 100.0);
-            node->shape     = osc_shape_percent(param_value(module, variation, SHPB_PARAM_SHAPE)) / 100.0;
+            // RAW, normalised to 0..1 - not the displayed percentage. waveModels.h states the
+            // contract ("Shape is the raw 0-127 parameter normalised to 0..1. It is NOT a
+            // percentage"), and module_shape_value() in moduleGraphics.c passes param/127 to draw
+            // the same wave. Feeding osc_shape_percent()/100 here handed the models 0.5..0.99, so
+            // the dial acted over the model's upper half only and raw 0 - the capture's pure sine -
+            // came out already half-shaped. Drawn wave and heard wave disagreed, which is the drift
+            // waveModels.c exists to make impossible.
+            node->shape     = param_value(module, variation, SHPB_PARAM_SHAPE) / 127.0;
             node->modAmount = type_ii_attenuator(param_value(module, variation, SHPB_PARAM_PITCH_MOD) / 127.0);
             node->active    = (param_value(module, variation, SHPB_PARAM_ACTIVE) != 0.0);
             break;
@@ -5100,10 +5120,28 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             // NOT in here: it is one shared instance fed by the sum of the voices, which is what
             // lets a chord share one reverb instead of running 8 of them.
             for (uint32_t v = 0; v < params.voiceCount; v++) {
-                tVoice * voice      = &gVoice[v];
+                tVoice * voice   = &gVoice[v];
 
-                if (voice->sounding == false) {
+                // FREE-RUNNING. The instrument's Voice Area runs whether or not a key is down: an
+                // oscillator patched to an output sounds on its own, an LFO keeps its phase, and a
+                // note gates the ENVELOPE rather than the area. This engine used to skip the whole
+                // voice when nothing was sounding, so any patch that depends on that produced
+                // silence. Voice 0 is therefore always rendered, and while it holds no note it is
+                // rendered UNGATED - no anti-click ramp to zero, no release tail, no retirement.
+                //
+                // ONLY voice 0. The hardware runs every allocated voice continuously, so a poly
+                // patch really does stack that many free-running oscillators, but matching that
+                // would cost 32 voices of idle CPU for a difference of level. One instance is the
+                // deliberate approximation; the post-mix section below already runs unconditionally
+                // for the same reason, so a reverb tail outlives the last note.
+                bool     freeRun = (voice->sounding == false) && (engine_no_free_run() == false);
+
+                if ((voice->sounding == false) && ((freeRun == false) || (v != 0))) {
                     continue;               // costs nothing when it is not playing
+                }
+
+                if (v != 0) {
+                    freeRun = false;
                 }
 
                 // Portamento. The sounding pitch chases the played note; how fast, and whether at
@@ -5120,11 +5158,11 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                         voice->glidePitch = (double)voice->note;
                     }
                 }
-                double   voicePitch = voice->glidePitch + bend + vibrato;
+                double voicePitch = voice->glidePitch + bend + vibrato;
 
                 // The anti-click ramp, per voice. Only used when the patch has no EnvADSR to shape
                 // the note itself — with one, this would just double up on it.
-                double   rampTarget = (voice->gate == true) ? 1.0 : 0.0;
+                double rampTarget = ((voice->gate == true) || (freeRun == true)) ? 1.0 : 0.0;
 
                 if (voice->envelope < rampTarget) {
                     voice->envelope += envelopeStep;
@@ -5139,11 +5177,12 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                         voice->envelope = rampTarget;
                     }
                 }
-                voice->released = (voice->gate == true) ? 0 : (voice->released + 1);
+                voice->released = ((voice->gate == true) || (freeRun == true)) ? 0 : (voice->released + 1);
 
                 // Past the limit, wind the voice down rather than cutting it. voice->fade reaching
                 // zero is what retires it below.
                 if (  (voice->gate == false)
+                   && (freeRun == false)
                    && (voice->released > (uint32_t)(VOICE_MAX_TAIL_SECONDS * gSampleRate))) {
                     voice->fade -= 1.0 / (VOICE_FADE_SECONDS * gSampleRate);
 
@@ -5191,9 +5230,10 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 // it from the render at that moment cuts it off mid-note with a click. A patch that
                 // genuinely drones simply never frees the voice, so new notes take the others and
                 // eventually steal — which is what the instrument does with a droning patch too.
-                if (  (  (voice_is_finished(&params, v, chainHasEnvelope) == true)
-                      && (voice->quiet > (uint32_t)(VOICE_SILENCE_SECONDS * gSampleRate)))
-                   || (voice->fade <= 0.0)) {
+                if (  (freeRun == false)
+                   && (  (  (voice_is_finished(&params, v, chainHasEnvelope) == true)
+                         && (voice->quiet > (uint32_t)(VOICE_SILENCE_SECONDS * gSampleRate)))
+                      || (voice->fade <= 0.0))) {
                     voice->sounding = false;
                     voice->quiet    = 0;
                     voice->released = 0;

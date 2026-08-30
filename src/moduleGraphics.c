@@ -1292,6 +1292,55 @@ tRectangle adjust_rectangle(tRectangle moduleBase, tRectangle relative, tAnchor 
     return relative;
 }
 
+// A Middle anchor has to centre what is actually DRAWN, and for several control types that is not
+// the height its table row carries. render_paramType1StandardToggle() and render_paramType1Enable()
+// draw one text row tall, and a mode's button is drawn at HALF its row's height, while both rows
+// carry a square 7% box - so centring on the row's own height left the button sitting high by half
+// the difference. A dial needs no correction: it is drawn w x w from the rectangle's top and every
+// dial row in the table is square, so its centre already lands on the module's. Nor does a bypass -
+// draw_power_button() uses the rectangle exactly as given.
+//
+// The correction is applied to the OFFSET, never to size.h. render_mode_common() derives its text
+// height from the rectangle it is handed (size.h / 2), so shrinking the rectangle to the drawn
+// height would halve the button it was meant to centre - which is exactly what a first attempt did
+// to Gate's G1/G2.
+//
+// ONLY the Middle anchors are corrected. A Top anchor never reads the height at all, and the Bottom
+// anchors' offsets were laid out by hand against the row's own height, so changing what they mean
+// would move every bottom-anchored button in the app.
+static tRectangle centre_on_drawn_height(tRectangle relative, tAnchor anchor, double drawnHeight) {
+    if ((anchor == anchorMiddle) || (anchor == anchorMiddleLeft) || (anchor == anchorMiddleRight)) {
+        relative.coord.y += (relative.size.h - drawnHeight) / 2.0;
+    }
+    return relative;
+}
+
+// Both heights are percentages of MODULE_WIDTH, the units every row in these tables is written in.
+static double param_drawn_height(tRectangle relative, tParamType type) {
+    switch (type) {
+        case paramTypeCustomData:
+        case paramTypeToggle:
+        case paramTypeMenu:
+        case paramTypeEnable:
+        case paramTypePush:
+            return (STANDARD_BUTTON_TEXT_HEIGHT * 100.0) / MODULE_WIDTH;
+
+        default:
+            return relative.size.h;
+    }
+}
+
+static double mode_drawn_height(tRectangle relative, tParamType type) {
+    switch (type) {
+        case paramTypeToggle:
+        case paramTypeMenu:
+            return relative.size.h / 2.0;
+
+        default:
+            return relative.size.h;
+    }
+}
+
 // Registers module->connector[i].coord (logical, moduleArea-local — the same space cables
 // read it back in, applying scale/scroll themselves at draw time) and draws the small
 // connector glyphs. Split out of render_module_common() so it can run on its own for a
@@ -2462,7 +2511,9 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->paramIndexCache    = i;
                 module->gotParamIndexCache = true;
             }
-            tRectangle adjusted = adjust_rectangle(rectangle, paramLocationList[i].rectangle, paramLocationList[i].anchor, module);
+            tRectangle relative = centre_on_drawn_height(paramLocationList[i].rectangle, paramLocationList[i].anchor,
+                                                         param_drawn_height(paramLocationList[i].rectangle, paramLocationList[i].type));
+            tRectangle adjusted = adjust_rectangle(rectangle, relative, paramLocationList[i].anchor, module);
             render_param_common(adjusted, module, i, param++);
 
             if (param >= module_param_count(module->type)) {
@@ -2480,7 +2531,9 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             //render_mode_common(
             //    {rectangle.coord.x + x_param_pos_from_percent(modeLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, modeLocationList[i].offsetY)}, //module, i,
             //    mode++);
-            tRectangle adjusted = adjust_rectangle(rectangle, modeLocationList[i].rectangle, modeLocationList[i].anchor, module);
+            tRectangle relative = centre_on_drawn_height(modeLocationList[i].rectangle, modeLocationList[i].anchor,
+                                                         mode_drawn_height(modeLocationList[i].rectangle, modeLocationList[i].type));
+            tRectangle adjusted = adjust_rectangle(rectangle, relative, modeLocationList[i].anchor, module);
             render_mode_common(adjusted, module, i, mode++);
 
             if (mode >= module_mode_count(module->type)) {
