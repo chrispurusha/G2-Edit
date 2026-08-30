@@ -58,6 +58,7 @@ extern "C" {
 #include "contextMenu.h"
 #include "utilsGraphics.h"
 #include "graphics.h"
+#include "splitView.h"
 #include "backdoor.h"
 
 // ── Backdoor test-control channel ───────────────────────────────────────────
@@ -119,6 +120,10 @@ extern "C" {
 //   SCREENSHOT <path> — synchronous render_frame() then glReadPixels + PNG
 //   SCROLL <x> <y>    — scroll the canvas, each 0.0-1.0 of that axis's full travel
 //   ZOOM <factor>     — canvas zoom, same 0.25-2.0 range Cmd +/- walks through
+//   SPLIT <VA|FX|BALANCE|pixels> — where the Voice/FX divider sits. VA gives the Voice Area the
+//                       whole window (the FX area minimised), FX the reverse, BALANCE the
+//                       double-arrow's restore; a number is a Voice Area height in pixels. Framing
+//                       for a render check: with the divider halfway, a tall module does not fit
 //
 // SCROLL and ZOOM exist because a synthetic drag doesn't reach the app at all — neither the
 // scrollbar thumb nor a dial responds to one — so without them a scripted check can only ever see
@@ -1238,6 +1243,46 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             return;
         }
         set_zoom_factor(zoom, (tCoord){0.0, 0.0});
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "SPLIT") == 0) {
+        // SPLIT VA | FX | BALANCE | <pixels>
+        //
+        // Where the Voice/FX divider sits. VA and FX slam it to an end, which is exactly what the
+        // topbar's VA/FX buttons and the bar's own up/down arrows do; BALANCE is the double-arrow.
+        // A number is the drag, as a Voice Area height in pixels, clamped the same way.
+        //
+        // This exists for RENDER CHECKS. A screenshot of a module face is framed by whatever the
+        // divider leaves, and with the FX area taking half the window a four-row module does not
+        // fit — so checking a face meant scrolling around it a screenshot at a time (CT: "You may
+        // want to minimise the FX area via the dividing line when attempting to check the
+        // renders"). A synthetic drag does not reach the app, which is the same reason SCROLL and
+        // ZOOM are here.
+        //
+        // IT IS PATCH DATA, NOT A VIEW SETTING, and that matters for a measurement run. The divider
+        // lives in gPatchDescr[slot].barPosition, so moving it marks the patch dirty and it travels
+        // to the G2 and to file like any other edit - unlike SCROLL and ZOOM, which are purely
+        // local. Frame with SPLIT before building the patch under test, not in the middle of one.
+        char   what[16] = {0};
+        double pixels   = 0.0;
+
+        if (sscanf(arg, "%15s", what) != 1) {
+            backdoor_write_result("ERROR: expected 'SPLIT <VA|FX|BALANCE|pixels>'\n");
+            return;
+        }
+
+        if (strcasecmp(what, "VA") == 0) {
+            split_view_show_full((uint32_t)locationVa);      // FX collapsed, Voice Area full height
+        } else if (strcasecmp(what, "FX") == 0) {
+            split_view_show_full((uint32_t)locationFx);
+        } else if ((strcasecmp(what, "BALANCE") == 0) || (strcasecmp(what, "RESTORE") == 0)) {
+            split_view_restore_balance();
+        } else if (sscanf(arg, "%lf", &pixels) == 1) {
+            split_view_set_position(pixels);
+        } else {
+            backdoor_write_result("ERROR: expected 'SPLIT <VA|FX|BALANCE|pixels>'\n");
+            return;
+        }
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "SCREENSHOT") == 0) {

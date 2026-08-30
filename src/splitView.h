@@ -109,6 +109,9 @@ bool split_view_is_full(uint32_t location);
 // the patch arrived with one collapsed.
 void split_view_restore_balance(void);
 
+// Put the divider at an explicit Voice Area height in pixels, clamped as a drag would be.
+void split_view_set_position(double pixels);
+
 // Sends the divider to the G2 if it has moved. barPosition is patch data, so a move is a patch
 // edit; this is called once at the END of a gesture, never per frame of a drag.
 void split_view_flush_position(void);

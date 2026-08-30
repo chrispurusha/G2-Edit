@@ -65,24 +65,80 @@ typedef struct {
     int env;
     int kbt;
     int res;
-    int slope;
+    int slope;               // parameter index, or -1 when the module has none
+    int slopeMode;           // MODE index, or -1; FltLP keeps its Slope here, not in a parameter
+    int shape;               // FilterType parameter for the multi-mode filters, or -1
     int active;
 } tFilterParams;
 
+// G2_FILTER_LEGACY=1 restores the filter behaviour as it stood before 2026-08-30 — FltLP reading
+// its Slope from the Bypass parameter, and a maximum of four poles. It exists so the corrected
+// filters can be A/B'd by ear against the old ones without a rebuild, and so a regression can be
+// backed out in one environment variable rather than a revert.
+bool engine_filter_legacy(void) {
+    static int cached = -1;
+
+    if (cached < 0) {
+        const char * v = getenv("G2_FILTER_LEGACY");
+        cached = ((v != NULL) && (v[0] != '\0')) ? 1 : 0;
+    }
+    return cached == 1;
+}
+
 static bool filter_param_map(tModuleType type, tFilterParams * map) {
+    // DESIGNATED INITIALISERS DELIBERATELY. These were positional, and adding slopeMode in the
+    // middle of the struct silently shifted every one of them - slopeMode took what active meant
+    // and active became 0, which switched the filter off rather than failing to build. Naming the
+    // fields makes the next insertion harmless.
     switch (type) {
         case moduleTypeFltClassic:
         {
             *map = (tFilterParams){
-                0, 1, 2, 3, 4, 5
+                .freq = 0, .env = 1, .kbt = 2, .res = 3, .slope = 4, .slopeMode = -1, .shape = -1, .active = 5
             };
             return true;
         }
         case moduleTypeFltLP:
         {
-            // Freq, FreqMod, Kbt, Slope, Bypass — no Res.
+            // Freq, FreqMod, Kbt, Bypass - no Res, and SLOPE IS A MODE, not a parameter.
+            //
+            // This read .slope = 3 and .active = 4 until 2026-08-30. FltLP has FOUR parameters, so
+            // that took Slope from param 3 - which is BYPASS - and the active flag from a param that
+            // does not exist. The slope therefore followed the bypass switch, and only two of the
+            // six slopes were ever reachable. modeLocationList had already moved Slope to a mode on
+            // 2026-08-15; this map was not moved with it.
+            if (engine_filter_legacy()) {
+                *map = (tFilterParams){
+                    .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = 3, .slopeMode = -1, .shape = -1, .active = 4
+                };
+                return true;
+            }
             *map = (tFilterParams){
-                0, 1, 2, -1, 3, 4
+                .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1, .active = 3
+            };
+            return true;
+        }
+        case moduleTypeFltHP:
+        {
+            // Laid out exactly like FltLP, and its Slope is a mode for the same reason.
+            *map = (tFilterParams){
+                .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = -1, .slopeMode = 0, .shape = -1, .active = 3
+            };
+            return true;
+        }
+        case moduleTypeFltStatic:
+        {
+            // Freq, Res, FilterType, Bypass, GC. No slope: it is two poles, always.
+            *map = (tFilterParams){
+                .freq = 0, .env = -1, .kbt = -1, .res = 1, .slope = -1, .slopeMode = -1, .active = 3
+            };
+            return true;
+        }
+        case moduleTypeFltNord:
+        {
+            // Freq, Pitch, Kbt, GC, Res, dB/Oct, Bypass, FmLin, FilterType, ResM.
+            *map = (tFilterParams){
+                .freq = 0, .env = 1, .kbt = 2, .res = 4, .slope = 5, .slopeMode = -1, .shape = 8, .active = 6
             };
             return true;
         }
@@ -379,14 +435,15 @@ typedef enum {
 // oscillator's level, and that is the G2's own arrangement rather than anything wrong. So the trim
 // has to leave room for it: 0.15 puts a hot patch just under full scale instead of 3 dB into the
 // clipper, at the cost of a single-oscillator sketch being quieter.
-#define VOICE_GAIN          (0.15)
+#define VOICE_GAIN           (0.15)
 
 // Where the output starts bending rather than shearing.
-#define OUTPUT_KNEE         (0.80)
-#define ENVELOPE_SECONDS    (0.005)        // the anti-click ramp used when no EnvADSR is in the chain
+#define OUTPUT_KNEE          (0.80)
+#define ENVELOPE_SECONDS     (0.005)       // the anti-click ramp used when no EnvADSR is in the chain
 
 // Every ladder runs its full four poles whatever slope is selected — see ladder_filter().
-#define LADDER_POLES        (4)
+#define LADDER_POLES         (6)    // state available: FltLP's 36 dB setting is six poles
+#define LADDER_LOOP_POLES    (4)    // the RESONANCE loop is four long whatever is tapped - measured
 
 // The chain the engine renders. Small and fixed: these are hand-built sketches, not whole patches,
 // and a bound is what keeps the walk safe against a patch that feeds back into itself.
@@ -465,35 +522,38 @@ typedef struct {
     // The filter's Freq DIAL VALUE (0..127, fractional), not a frequency. Kept in dial units because
     // that is the domain modulation and keyboard tracking act in, and because the dial is itself
     // logarithmic in frequency — see filter_step().
-    double   cutoffParam;    // filter
-    double   resonance;
-    uint32_t extraPoles;
-    double   fltKbt;
-    double   modAmount;      // how far the Env input moves the cutoff, 0..2 (the dial's 0..200%)
+    double          cutoffParam; // filter
+    double          resonance;
+    uint32_t        extraPoles;
+    uint32_t        tapStage;  // which pole is tapped: 0-based, so N poles is tapStage N-1
+    tFilterTopology topology;
+    tFilterShape    fltShape;  // multi-mode filters only; low-pass for the rest
+    double          fltKbt;
+    double          modAmount; // how far the Env input moves the cutoff, 0..2 (the dial's 0..200%)
 
-    double   attack;         // envelope, in seconds
-    double   decay;
-    double   sustain;        // 0..1
-    double   release;
+    double          attack;    // envelope, in seconds
+    double          decay;
+    double          sustain;   // 0..1
+    double          release;
 
-    double   gain;           // LevAmp
-    double   pulseSeconds;   // Pulse gate width
-    uint32_t outDest;        // Out module: 0 = outputs 1/2, 1 = outputs 3/4
+    double          gain;         // LevAmp
+    double          pulseSeconds; // Pulse gate width
+    uint32_t        outDest;      // Out module: 0 = outputs 1/2, 1 = outputs 3/4
 
-    double   depth;          // chorus detune depth, and the delay's feedback
-    double   amount;         // chorus wet amount, delay/reverb dry-wet
-    double   timeSeconds;    // delay time
-    double   damping;        // delay LP / reverb brightness, 0..1
-    double   hpCoeff;        // delay HP in the feedback loop; 0 = filter off
-    double   threshold;      // compressor
-    double   ratio;
-    double   attackCoeff;
-    double   releaseCoeff;
-    double   constant;       // Constant module's value
-    uint32_t line;           // which shared delay line this node owns, if it needs one
-    double   brightness;     // reverb, 0..1 as the dial reads it — HIGH IS BRIGHT
-    double   timeNorm;       // reverb Time as the dial reads it, 0..1 — drives the diffusion
-    uint32_t reverbType;     // reverb room size: Small/Medium/Large/Hall
+    double          depth;        // chorus detune depth, and the delay's feedback
+    double          amount;       // chorus wet amount, delay/reverb dry-wet
+    double          timeSeconds;  // delay time
+    double          damping;      // delay LP / reverb brightness, 0..1
+    double          hpCoeff;      // delay HP in the feedback loop; 0 = filter off
+    double          threshold;    // compressor
+    double          ratio;
+    double          attackCoeff;
+    double          releaseCoeff;
+    double          constant;   // Constant module's value
+    uint32_t        line;       // which shared delay line this node owns, if it needs one
+    double          brightness; // reverb, 0..1 as the dial reads it — HIGH IS BRIGHT
+    double          timeNorm;   // reverb Time as the dial reads it, 0..1 — drives the diffusion
+    uint32_t        reverbType; // reverb room size: Small/Medium/Large/Hall
 
     // Evaluated ONCE per sample, after the voices are summed, rather than once per voice. True for
     // everything in the FX Area, for the three module kinds that own a shared delay buffer wherever
@@ -1943,7 +2003,12 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
         }
         case moduleTypeFltClassic:
         case moduleTypeFltLP:
+        case moduleTypeFltHP:
+        case moduleTypeFltStatic:
+        case moduleTypeFltNord:
         {
+            // All five measured filters. FltComb and FltPhase are deliberately absent: a comb and a
+            // phaser are delay structures, not response curves, and neither has been modelled yet.
             *kind = eNodeFilter;
             return true;
         }
@@ -2682,18 +2747,67 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeFilter:
         {
             node->cutoffParam = param_value(module, variation, FLT_PARAM_FREQ);
-            tFilterParams map = {0, 1, 2, 3, 4, 5};
+            tFilterParams map = {
+                .freq = 0, .env = 1, .kbt = 2, .res = 3, .slope = 4, .slopeMode = -1, .shape = -1, .active = 5
+            };
 
             (void)filter_param_map(module->type, &map);
 
             // A filter with no resonance control sits at the bottom of its range, not the middle.
             node->resonance   = (map.res >= 0)
                                ? (param_value(module, variation, (uint32_t)map.res) / 127.0) : 0.0;
-            node->extraPoles  = (map.slope >= 0)
-                               ? flt_slope_extra_poles((uint32_t)param_value(module, variation, (uint32_t)map.slope)) : 0;
-            node->fltKbt      = flt_kbt_amount((uint32_t)param_value(module, variation, (uint32_t)map.kbt));
-            node->modAmount   = param_value(module, variation, (uint32_t)map.env) * 2.0 / 128.0;
-            node->active      = (param_value(module, variation, (uint32_t)map.active) != 0.0);
+
+            // FltClassic taps 2/3/4 poles out of a 4-pole loop; FltLP has no loop at all and its
+            // six slope settings are simply ONE TO SIX cascaded poles at the same corner, measured
+            // 2026-08-30. Both arrive here as a 0-based tap, so filter_step() needs no special case.
+            if (map.slopeMode >= 0) {
+                uint32_t slope  = (uint32_t)module->mode[map.slopeMode].value;
+
+                uint32_t maxTap = engine_filter_legacy() ? (LADDER_LOOP_POLES - 1) : (LADDER_POLES - 1);
+
+                if (slope > maxTap) {
+                    slope = maxTap;
+                }
+                node->extraPoles = slope;
+                node->tapStage   = slope;               // 6db..36db -> 1..6 poles
+            } else if (map.slope >= 0) {
+                node->extraPoles = flt_slope_extra_poles((uint32_t)param_value(module, variation, (uint32_t)map.slope));
+                node->tapStage   = 1 + node->extraPoles;   // 12db..24db -> 2..4 poles
+            } else {
+                node->extraPoles = 0;
+                node->tapStage   = 1;
+            }
+
+            switch (module->type) {
+                case moduleTypeFltHP:     node->topology = eFilterTopologyCascadeHP;
+                    break;
+                case moduleTypeFltLP:     node->topology = eFilterTopologyCascadeLP;
+                    break;
+                case moduleTypeFltStatic: node->topology = eFilterTopologyBiquad;
+                    break;
+                default:                  node->topology = eFilterTopologyLadder;
+                    break;
+            }
+            node->fltShape  = (map.shape >= 0)
+                             ? (tFilterShape)param_value(module, variation, (uint32_t)map.shape)
+                             : eFilterShapeLowPass;
+
+            // FltNord's dB/Oct picks 12 or 24, i.e. a two- or four-pole tap on the SAME four-pole
+            // loop - the loop does not shorten. flt_nord_tap() returns the pole count; tapStage is
+            // zero-based.
+            if (module->type == moduleTypeFltNord) {
+                node->tapStage = flt_nord_tap((uint32_t)param_value(module, variation, (uint32_t)map.slope)) - 1u;
+            }
+            // GUARD THESE TWO. They were read unguarded because every filter mapped until now had
+            // both; FltStatic has NEITHER an Env input nor a Kbt selector, and -1 cast to uint32_t
+            // indexes far off the end of the parameter array. It CRASHED the application rather
+            // than misbehaving, which is at least a loud failure - but the -1 convention is only
+            // safe where every reader checks it, and two of them did not.
+            node->fltKbt    = (map.kbt >= 0)
+                              ? flt_kbt_amount((uint32_t)param_value(module, variation, (uint32_t)map.kbt)) : 0.0;
+            node->modAmount = (map.env >= 0)
+                              ? (param_value(module, variation, (uint32_t)map.env) * 2.0 / 128.0) : 0.0;
+            node->active    = (param_value(module, variation, (uint32_t)map.active) != 0.0);
             break;
         }
         case eNodeEnv:
@@ -3938,8 +4052,64 @@ static double ladder_saturate(double x) {
     return (x < 0.0) ? -magnitude : magnitude;
 }
 
+// FltHP: N ONE-POLE HIGH-PASSES IN SERIES, measured 2026-08-30 - the slope mode is literally the
+// pole count, 1 to 6, and every pole sits at the dial's own corner. Each stage is the complement of
+// the one-pole low-pass the ladder uses, so the same state array serves both and a node is only ever
+// one topology.
+static double cascade_hp_filter(double * state, double input, double g, uint32_t poles) {
+    double   x = input;
+    uint32_t i = 0;
+
+    for (i = 0; i < poles; i++) {
+        state[i] += g * (x - state[i]);   // the low-pass part of this stage
+        x         = x - state[i];         // and the high-pass is what is left
+    }
+
+    return x;
+}
+
+// FltStatic: A PLAIN RESONANT BIQUAD, and the only filter of the seven that is - its passband does
+// not move with resonance, where FltClassic's and FltNord's drop away. A Chamberlin state-variable
+// section gives low, band and high from one pair of states, which is what the FilterType selector
+// needs; band-reject is low + high.
+//
+// state[0] is the low output, state[1] the band. TWO STATES ONLY, so it shares gLadder harmlessly.
+static double svf_filter(double * state, double input, double f, double q, tFilterShape shape) {
+    double low  = state[0];
+    double band = state[1];
+    double high = input - low - (q * band);
+
+    band    += f * high;
+    low     += f * band;
+
+    state[0] = low;
+    state[1] = band;
+
+    switch (shape) {
+        case eFilterShapeBandPass:
+        {
+            return band;
+        }
+        case eFilterShapeHighPass:
+        {
+            return high;
+        }
+        case eFilterShapeBandReject:
+        {
+            return low + high;
+        }
+        default:
+        {
+            return low;
+        }
+    }
+}
+
 static double ladder_filter(double * state, double input, double g, double k, uint32_t tapStage) {
-    double   feedback = state[LADDER_POLES - 1];
+    // The feedback tap is pinned to the FOURTH pole and must stay there. LADDER_POLES grew to six
+    // for FltLP's 36 dB setting, which has no resonance at all; taking the loop from the new last
+    // pole instead would have quietly retuned every FltClassic in every patch.
+    double   feedback = state[LADDER_LOOP_POLES - 1];
     double   x        = 0.0;
     uint32_t i        = 0;
 
@@ -3957,7 +4127,11 @@ static double ladder_filter(double * state, double input, double g, double k, ui
     // curve: unity slope through zero, flattening to +/-2/3 at the limits, and constant beyond.
     x = ladder_saturate(x);
 
-    for (i = 0; i < LADDER_POLES; i++) {
+    // Run the loop's four, plus any further poles this tap needs. FltClassic therefore costs
+    // exactly what it did before LADDER_POLES grew.
+    uint32_t poles    = (tapStage + 1u > (uint32_t)LADDER_LOOP_POLES) ? (tapStage + 1u) : (uint32_t)LADDER_LOOP_POLES;
+
+    for (i = 0; i < poles; i++) {
         state[i] += g * (x - state[i]);
         x         = state[i];
     }
@@ -4472,13 +4646,40 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     //     the manual quotes and ladder_filter()'s note cites. Deliberately NOT compensating for it
     //     therefore remains right, and the real figure is a shade deeper than the manual's.
     // The continuous-time model used for the DRAWN response (flt_ladder_feedback(), paramCurves.c)
-    // puts the top of the dial at k = 3.914, just under the ideal ladder's threshold of 4. That is
+    // puts the top of the dial at k = 4.0 — measured 2026-08-30, when the hardware was found to sustain
+    // an oscillation at Res 127; it read 3.914 before that, from a peak that was really a limited
+    // oscillation. That is
     // NOT this number and must not replace it: that model has no delay in its loop and no saturation
     // in its stages, both of which move where oscillation actually starts. Same topology, different
     // constant, each measured for what it describes.
 #define LADDER_K_MAX    (4.3)
 
-    return ladder_filter(gLadder[voice][node], input, g, LADDER_K_MAX * resonance, 1 + spec->extraPoles);
+    switch (spec->topology) {
+        case eFilterTopologyCascadeHP:
+        {
+            return cascade_hp_filter(gLadder[voice][node], input, g, spec->tapStage + 1u);
+        }
+        case eFilterTopologyBiquad:
+        {
+            // g is the one-pole coefficient; the SVF wants 2.sin(pi.fc/sr), and for the corners a
+            // patch actually uses the two agree closely enough that deriving one from the other
+            // keeps a single cutoff path. Damping is 1/Q from the MEASURED resonance law, not from
+            // the Q the dial prints - see flt_static_q() in paramCurves.c.
+            double f    = 2.0 * sin(M_PI * 0.5 * g);
+            double damp = 1.0 / flt_static_q(resonance * 127.0);
+
+            if (f > 1.0) {
+                f = 1.0;            // keep the section stable at the top of its range
+            }
+            return svf_filter(gLadder[voice][node], input, f, damp, spec->fltShape);
+        }
+        default:
+        {
+            // Ladder for FltClassic and FltNord; FltLP arrives here too with resonance 0, which
+            // makes the loop a plain cascade and the tap its pole count.
+            return ladder_filter(gLadder[voice][node], input, g, LADDER_K_MAX * resonance, spec->tapStage);
+        }
+    }
 }
 
 // One node's output for one voice, written into value[n]. Extracted so the Voice Area pass and the

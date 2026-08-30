@@ -1,0 +1,44 @@
+G2-Edit - TO TEST
+
+Built, not yet checked against real hardware or a real user session.
+Confirmed -> delete the line. Check failed -> move it to todo.txt.
+Full detail for each is in findings.txt, searchable by the wording below.
+
+HARDWARE CHECKS
+- FltHP, FltStatic and FltNord now play in the sound engine - all three need an ear, none is tuned
+- FltStatic's engine damping uses the measured Q, which is far sharper than the dial's printed Q
+- FltLP slope now reaches the engine (was stuck on 1 pole, read from Bypass) - 6 settings, 1-6 poles
+- FltLP can now be bypassed at all - its active flag read a parameter that does not exist
+- A/B both with G2_FILTER_LEGACY=1, which restores the old behaviour without a rebuild
+- FltClassic drawn response now reaches the top of the box at max Res (K_MAX 3.914 -> 4.0) - eyeball it
+- soundEngine.c LADDER_K_MAX (4.3) was chosen while the drawn constant was wrongly 3.914 - needs an ear
+- LevAmp gain law rewritten from measurement 2026-08-30: silent at dial 0, four segments, 0-4x
+- Super-saw ("sup") phase fix - needs an ear
+- Stereo reverb and stereo chorus - all three steps done, needs an ear
+- Chorus LFO shape and depth - needs an ear
+- Filter resonance, raspiness and whole-graph oversampling changes - need an ear
+- Sound engine parameter smoothing (zipper noise on Shape sweeps) - needs an ear
+- EnvADSR + mixer Channel Mute in the engine
+- Load Perf from Bank - fixed from an owner log, needs a confirming run
+- Store/Delete/Load at a bank location - implemented, never run on hardware
+- Bank backup/restore - restore path confirmed, full-bank restore of a second bank not repeated
+- Cable undo/redo across all five popup commands and drag-connect
+- Reconnection sync dialogue: confirm it appears every time
+
+UI / VISUAL CHECKS
+- Response graphs on FltNord, FltLP, FltHP and FltStatic - check against the real modules on hardware
+- Escape no longer quits the application
+- File > Save vs Save As, and the Save crash fix - confirm it stops recurring
+- Backdoor SCROLL and ZOOM commands
+- Text rendering: not re-verified on a Retina display since the glyph rewrite
+- SynthLib HiDPI scale fix - committed, all three projects pinned
+- Module layout cleanup: all 12 mix modules need a (CT) verify
+- FltClassic response graph inset
+- PartQuant(22) dial range and its changed creation default
+- Parameter Overview panel: drag-to-move and Escape still unverified
+- Close button moved top-left and drawn as a cross - needs an owner eyeball
+- Patch Window Split Bar - step 1 of 4, in SynthLib
+- Device busy overlay (gDeviceOpInProgress) - built 2026-07-26, never hardware tested
+
+CROSS-PROJECT
+- EmuUtility gLcd.pixels data race fix - needs an owner eyeball that the LCD still updates cleanly

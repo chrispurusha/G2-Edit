@@ -229,6 +229,14 @@ static void set_bar_position(double pixels) {
     synthlib_request_redraw();
 }
 
+// Put the divider at an explicit Voice Area height, in pixels. Clamped and remembered exactly as a
+// drag is, because it goes through the same set_bar_position(). Added for the backdoor's SPLIT
+// command: a synthetic drag does not reach the app, so without this there is no scripted way to
+// frame the canvas for a render check.
+void split_view_set_position(double pixels) {
+    set_bar_position(pixels);
+}
+
 // Back to the last position that had both areas visible. With nothing remembered — a patch that
 // arrived collapsed — an even split is the sensible landing place.
 void split_view_restore_balance(void) {
