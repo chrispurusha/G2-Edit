@@ -311,34 +311,12 @@ static void connector_click_handler(tCoord coord, eClickPhase phase, void * user
     gCableDrag.active             = true;
 }
 
-// Mirrors the final "clicking anywhere else on the module body selects
-// without starting a drag" fallback previously in mouseHandle.c's
-// handle_module_press_for_module() — see git history for that code.
-static void module_body_click_handler(tCoord coord, eClickPhase phase, void * userData) {
-    (void)coord;
-
-    if (phase != eClickPress) {
-        return;
-    }
-    tModuleClickCtx * ctx             = (tModuleClickCtx *)userData;
-    tModule *         module          = get_module(ctx->key);
-    bool              multiSelectHeld = multi_select_modifier_held();
-
-    if (multiSelectHeld) {
-        selection_toggle(module->key);
-    } else {
-        selection_set_single(module->key);
-    }
-}
-
 // Mirrors the "module->dragArea" branch previously in mouseHandle.c's
 // handle_module_press_for_module() — see git history for that code. Registered
 // on module->dragArea *after* module_body_click_handler is registered on the
 // (larger, overlapping) module->rectangle, so this wins for clicks landing in
 // the drag-handle strip, exactly like the old first-match-wins loop order.
 static void drag_area_click_handler(tCoord coord, eClickPhase phase, void * userData) {
-    (void)coord;
-
     if (phase != eClickPress) {
         return;
     }
@@ -353,8 +331,17 @@ static void drag_area_click_handler(tCoord coord, eClickPhase phase, void * user
     }
     gModuleDrag.moduleKey     = module->key;
     gModuleDrag.isMulti       = is_selected(module->key) && gSelection.count > 1;
-    gModuleDrag.prevColumn    = module->column;
-    gModuleDrag.prevRow       = module->row;
+
+    // THE CURSOR'S CELL AT THE MOMENT OF THE GRAB, not the module's own. The drag moves everything
+    // by the DELTA between this and where the cursor is now, so a module keeps the offset it was
+    // picked up by instead of jumping to put its top-left corner under the pointer.
+    //
+    // It used to record module->column/row, which was survivable only while a drag could start
+    // nowhere but the title strip - the pointer was within a few pixels of the top-left anyway. Now
+    // that the whole face drags (2026-08-30) that assumption is gone: grab a four-row module by its
+    // bottom edge and it leapt up under the cursor. CT: "handle seems to snap/anchor mouse hold to
+    // top." The multi-module path already moved by a delta for the same reason, and says so.
+    convert_mouse_coord_to_module_column_row(&gModuleDrag.prevColumn, &gModuleDrag.prevRow, coord);
     gModuleDrag.active        = true;
     gModuleDrag.snapshotCount = 0;
 
@@ -2584,7 +2571,13 @@ void render_module(tModule * module) {
     sModuleClickCtx[module->key.slot][module->key.location][module->key.index] = (tModuleClickCtx){
         eCanvasWidgetModule, module->key
     };
-    register_click_region(module->rectangle, eClickLayerCanvas, module_body_click_handler,
+    // THE WHOLE FACE DRAGS, not just the title strip (CT, 2026-08-30). Every parameter, mode,
+    // connector and graph registers its own region on this same layer AFTER this one, so each of
+    // them still wins over it - this is the fall-through for the parts of a module that carry no
+    // control, which is exactly the "click anywhere there is nothing adjustable" behaviour the
+    // original editor has. It needed no new hit-testing: the registry already resolved overlaps
+    // this way, and the title strip was only ever a smaller rectangle registered later.
+    register_click_region(module->rectangle, eClickLayerCanvas, drag_area_click_handler,
                           &sModuleClickCtx[module->key.slot][module->key.location][module->key.index]);
 
     if (is_selected(module->key)) {
@@ -2620,9 +2613,10 @@ void render_module(tModule * module) {
         rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05
     };
     set_rgb_colour(rgb);
+    // Still DRAWN - it is the title bar, and the name is edited in it - but it no longer registers a
+    // region of its own: the whole face carries the drag now, so a second one here would be the same
+    // handler twice over the same pixels.
     module->dragArea = render_rectangle(moduleArea, (tRectangle){{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
-    register_click_region(module->dragArea, eClickLayerCanvas, drag_area_click_handler,
-                          &sModuleClickCtx[module->key.slot][module->key.location][module->key.index]);
 
     render_module_common(module_body_rectangle(moduleRectangle), module);
 
@@ -2656,18 +2650,12 @@ void render_module(tModule * module) {
                                              {BLANK_SIZE, STANDARD_TEXT_HEIGHT}
                     }, buff);
     }
-    // Temporary items purely for development debug
-    snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
-
-    render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 180.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-
-    // THE MODULE'S INDEX, top right — a development aid, not something a user has any use for, so it
-    // is compiled out of a Release build. The type name above it stays: that one names the module,
-    // which is worth having on a face whose title the user may have renamed.
-#ifdef DEBUG
-    snprintf(buff, sizeof(buff), "%u", module->key.index);
-    render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + moduleRectangle.size.w - 20.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-#endif
+    // THE TYPE NAME AND THE INDEX ARE NOT DRAWN ON THE FACE. They used to be - the type in brackets
+    // across the middle of the title bar, the index in its top-right corner (that one Debug-only) -
+    // and both are gone as of 2026-08-30 (CT). Neither is patch data, the original editor shows
+    // neither, and the title row is the scarcest space on a module. open_module_context_menu()
+    // heads the module's own right-click menu with both, which is a gesture away when they matter.
+    // This is the first step towards dropping the title bar altogether, as the original has none.
 
     // Mode count — debug only, and the one of these three that says nothing a user would want:
     // the type name and the index both identify the module, this just counts its mode entries.
