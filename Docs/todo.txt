@@ -11,7 +11,6 @@ FROM CT
 - Zoom to Fit from a right click, fitting the area under the cursor
 - Port module faces to the original's positions, using the top-of-face space the title bar freed
 - Then consider shrinking MODULE_HEIGHT (38px/row against the original's 15) - separate step
-- Then the layout drift sweep, against the settled geometry
 
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
