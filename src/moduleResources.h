@@ -599,14 +599,14 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSaturate,   paramTypeBypass,         {{  -10,    -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },           // 28 Bypass
     {moduleTypeSaturate,   paramTypeMenu,           {{   70,    -3}, { 7,  7}}, anchorBottomLeft,  "Curve",          4,   0, saturateCurveStrMap,                   NULL          },           // 28 Curve
     // 29 MetNoise
-    {moduleTypeMetNoise,   paramTypeCommonDial,     {{   80,    -3}, { 7,  7}}, anchorBottomLeft,  "Color",        128,  64, NULL,                                  NULL          },           // 29 Color
+    {moduleTypeMetNoise,   paramTypeCommonDial,     {{   80,    -3}, { 7,  7}}, anchorBottomLeft,  "Colour",        128,  64, NULL,                                  NULL          },           // 29 Colour
     {moduleTypeMetNoise,   paramTypeCommonDial,     {{   50,    -3}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          },           // 29 Freq
     {moduleTypeMetNoise,   paramTypeBypass,         {{   -3,   -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },           // 28 Bypass
     {moduleTypeMetNoise,   paramTypeCommonDial,     {{   40,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },           // 29 Freq M
-    {moduleTypeMetNoise,   paramTypeCommonDial,     {{   70,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },           // 29 Color M
+    {moduleTypeMetNoise,   paramTypeCommonDial,     {{   70,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },           // 29 Colour M
     // 30 Device - No controls
     // 31 Noise
-    {moduleTypeNoise,      paramTypeCommonDial,     {{   70,    -3}, { 7,  7}}, anchorBottomLeft,  "Color",        128,   0, NULL,                                  NULL          },            // 31 Color  *** Or special dial
+    {moduleTypeNoise,      paramTypeCommonDial,     {{   70,    -3}, { 7,  7}}, anchorBottomLeft,  "Colour",        128,   0, NULL,                                  NULL          },            // 31 Colour  *** Or special dial
     {moduleTypeNoise,      paramTypeBypass,         {{   -3,   -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },            // 31 Bypass
     // 32 Eq2Band
     {moduleTypeEq2Band,    paramTypedB,             {{   25,    -3}, { 7,  7}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                                  NULL          },            // 32 Lo Gain
@@ -660,8 +660,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeDelay,      paramTypeMenu,           {{   52,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   1, pulseRangeStrMap,                      NULL          },                  // 42 Range
 
     // 43 Constant
-    {moduleTypeConstant,   paramTypeBipLevel,       {{   80,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                  // 43 Value
-    {moduleTypeConstant,   paramTypeMenu,           {{   40,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,                          NULL          },                  // 43 Bip/Uni
+    {moduleTypeConstant,   paramTypeBipLevel,       {{   70,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                  // 43 Value
+    {moduleTypeConstant,   paramTypeMenu,           {{   0,    0}, { 7,  7}}, anchorMiddle,  NULL,             2,   0, bipUniStrMap,                          NULL          },                  // 43 Bip/Uni
     // 44 LevMult  - No Controls
     // 45 FltVoice
     {moduleTypeFltVoice,   paramTypeMenu,           {{   40,   -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   0, vowelStrMap,                           NULL          },                  // 45 Vowel1
@@ -1776,7 +1776,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSaturate,    connectorDirOut, connectorTypeControl, {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 28 Out
     // 29 MetNoise
     {moduleTypeMetNoise,    connectorDirIn,  connectorTypeControl, {{   32,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 29 FreqMod
-    {moduleTypeMetNoise,    connectorDirIn,  connectorTypeControl, {{   62,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 29 ColorMod
+    {moduleTypeMetNoise,    connectorDirIn,  connectorTypeControl, {{   62,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 29 ColourMod
     {moduleTypeMetNoise,    connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 29 Out
     // 30 Device
     {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{    3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Wheel",        labelLocUp   }, // 30 Wheel
