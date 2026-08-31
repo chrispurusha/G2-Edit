@@ -6,7 +6,7 @@ Built-but-unchecked work goes in to-test.txt.
 
 BUGS
 - I moved compressor on top of chorus, but chorus didn't move down.
-- When modules get moved down to make way for a copy, undo isn't working
+- When modules get moved down to make way for a move move, undo isn't working
 
 FROM CT
 - Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
