@@ -59,6 +59,9 @@ SOUND ENGINE
 - Notes are not sent to the G2 while the local engine is sounding (owner's request)
 - OscB's DualSaw renders as eOscWaveSuper in the engine; hardware says it is DblSaw (detune 0.5*Shape)
 - tOscWave has no DualSaw and value 4 means Sqr25 on OscA/C/D - the waveform enum needs a per-module map
+- Free-run RENDER is gated on the patch having no per-voice envelope; the exact test is "does a node
+  reach an Out without passing a gated envelope" - phase already advances for every patch
+- Option to reset oscillator phase on note-on, for predictable bass; hardware free-runs, so not default
 - Let oscillators free-run rather than only while a note sounds - some patches depend on it; make it configurable
 - Sound engine across cores - investigated and deprioritised, kept for later
 
