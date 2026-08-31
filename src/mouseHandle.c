@@ -534,9 +534,11 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
                 // intact for exactly this comparison.
                 if (canvas_gesture_release(&releaseEvent, canvasGestureModule) != canvasGestureNone) {
                     // Push move undo: compare snapshot (before) with current (after)
+                    // The snapshot is the whole location, so most of it did not move — keep only
+                    // what did. Recording the rest would have undo re-issue a move message per
+                    // untouched module, telling the G2 to put each one back where it already is.
                     tUndoMoveEntry entries[MAX_NUM_MODULES];
                     uint32_t       entryCount = 0;
-                    bool           anyMoved   = false;
 
                     for (uint32_t si = 0; si < gModuleDrag.snapshotCount; si++) {
                         tModule * mod = get_module(gModuleDrag.snapshotKeys[si]);
@@ -544,20 +546,20 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
                         if (!mod) {
                             continue;
                         }
+
+                        if (  (mod->column == gModuleDrag.snapshotColumn[si])
+                           && (mod->row == gModuleDrag.snapshotRow[si])) {
+                            continue;
+                        }
                         entries[entryCount].key       = gModuleDrag.snapshotKeys[si];
                         entries[entryCount].oldColumn = gModuleDrag.snapshotColumn[si];
                         entries[entryCount].oldRow    = gModuleDrag.snapshotRow[si];
                         entries[entryCount].newColumn = mod->column;
                         entries[entryCount].newRow    = mod->row;
-
-                        if (  entries[entryCount].oldColumn != entries[entryCount].newColumn
-                           || entries[entryCount].oldRow != entries[entryCount].newRow) {
-                            anyMoved = true;
-                        }
                         entryCount++;
                     }
 
-                    if (anyMoved && entryCount > 0) {
+                    if (entryCount > 0) {
                         undo_push_move((uint32_t)gSlot, (uint32_t)gLocation,
                                        entries, entryCount);
                     }

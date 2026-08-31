@@ -7036,3 +7036,43 @@ FREE-RUNNING: ADVANCE THE STATE, NOT THE AUDIO (2026-08-31)
 
   The prologue's skip test must MIRROR THE RENDER'S OWN TEST exactly: sounding, or the free-running
   voice. Too broad and the phase stops advancing again; too narrow and the wah comes back.
+
+====================================================================================================
+
+MODULE DROP SHIFT — BOTH TODO "BUGS" LINES, FIXED 2026-08-31
+
+"I moved compressor on top of chorus, but chorus didn't move down" (reported as OCCASIONAL, not
+every time) and "when modules get moved down to make way for a move, undo isn't working". Two
+separate faults on the same gesture, one in the shift, one in the undo record of it.
+
+THE SHIFT TOOK THE FIRST OVERLAP BY INDEX, NOT THE TOPMOST BY ROW. shift_modules_down() (and its
+twin shift_selection_down_in()) works in three passes over selection.c: pass 1 slides the DRAGGED
+module below anything whose span already contains its top row; pass 2 finds a module the drop now
+covers; pass 3 pushes that module and everything below it down the column by dropAmount.
+
+Pass 2 walked module INDEX order and broke on its first hit. gModuleProperties[] heights run to
+five rows — Compress is exactly that, StChorus is three — so a tall module dropped into a packed
+column covers the tops of two or three neighbours at once. Pass 3 moves only what sits at
+rowAndBelowToDrop or lower, so whenever the LOWER neighbour happened to hold the lower index, the
+upper one was never touched and stayed underneath the module just dropped on it. dropAmount was
+measured from that same wrong row, so it was too small as well.
+
+Index order is CREATION order, which is the whole explanation for "occasional": the identical
+gesture, on the identical layout, works or fails depending on the order the two modules were added
+to the patch. Pass 2 now scans all of them for the minimum row and computes dropAmount afterwards.
+
+THE DRAG SNAPSHOT ONLY EVER HELD THE DRAGGED MODULES. The undo push in mouseHandle.c compares
+gModuleDrag.snapshot* against the live positions after the release, and moduleGraphics.c filled
+that snapshot from the selection alone. But the release calls the shift above, whose entire job is
+to move modules the user never touched. They were absent from the comparison, so nothing recorded
+that they had moved: undo returned the dragged module to where it came from and left the displaced
+ones sitting where the shift had shoved them — arguably worse than the drop itself, since the
+column was then wrong in a way no single undo could repair.
+
+The snapshot is now the WHOLE LOCATION at drag start, and the release keeps only the entries that
+actually changed. That is the same before/after pairing module_positions_snapshot() and
+module_positions_changed() already give paste and module creation, which is why those two paths
+never had the bug. The filter matters: without it every drag would push an undo entry per module in
+the location, and undo would re-issue a move message to the G2 for each untouched one.
+
+apply_move() needed nothing — it already walks whatever entries the payload carries.

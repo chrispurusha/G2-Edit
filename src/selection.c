@@ -344,6 +344,13 @@ void shift_modules_down(tModuleKey key) {
         send_module_move_msg(module);
     }
 
+    // THE TOPMOST OVERLAP, not the first one the index walk happens to reach. Modules run to five
+    // rows tall (Compress is one), so a big one dropped into a packed column lands across two or
+    // three neighbours at once. The drop below moves only what sits at rowAndBelowToDrop or lower,
+    // so taking the first match and breaking left the upper neighbour exactly where it was —
+    // underneath the module just dropped on it — whenever the lower neighbour happened to hold the
+    // lower index. Index order is creation order, which is why the same gesture worked on one patch
+    // and failed on the next. dropAmount is computed after the scan, from the row finally chosen.
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * walk = get_module_slot(key.slot, key.location, i);
 
@@ -352,14 +359,16 @@ void shift_modules_down(tModuleKey key) {
         }
 
         if ((walk->column == module->column) && (walk->row >= module->row) && (walk->row < module->row + gModuleProperties[module->type].height)) {
-            rowAndBelowToDrop = walk->row;
-            dropAmount        = (module->row + gModuleProperties[module->type].height) - walk->row;
-            doDrop            = true;
-            break;
+            if ((doDrop == false) || (walk->row < rowAndBelowToDrop)) {
+                rowAndBelowToDrop = walk->row;
+            }
+            doDrop = true;
         }
     }
 
     if (doDrop == true) {
+        dropAmount = (module->row + gModuleProperties[module->type].height) - rowAndBelowToDrop;
+
         for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
             tModule * walk = get_module_slot(key.slot, key.location, i);
 
@@ -417,6 +426,8 @@ void shift_selection_down_in(uint32_t slot, uint32_t location) {
             send_module_move_msg(module);
         }
 
+        // Topmost overlap, not the first by index — see shift_modules_down() above for what taking
+        // the first one costs.
         for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
             tModule * walk = get_module_slot(slot, location, i);
 
@@ -425,14 +436,16 @@ void shift_selection_down_in(uint32_t slot, uint32_t location) {
             }
 
             if ((walk->column == module->column) && (walk->row >= module->row) && (walk->row < module->row + gModuleProperties[module->type].height)) {
-                rowAndBelowToDrop = walk->row;
-                dropAmount        = (module->row + gModuleProperties[module->type].height) - walk->row;
-                doDrop            = true;
-                break;
+                if (!doDrop || (walk->row < rowAndBelowToDrop)) {
+                    rowAndBelowToDrop = walk->row;
+                }
+                doDrop = true;
             }
         }
 
         if (doDrop) {
+            dropAmount = (module->row + gModuleProperties[module->type].height) - rowAndBelowToDrop;
+
             for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
                 tModule * walk = get_module_slot(slot, location, i);
 
