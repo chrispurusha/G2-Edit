@@ -5,8 +5,15 @@ creates and owns its window, and a VST3 host instead hands the plug-in an `NSVie
 would it take for the application's renderer to draw there?
 
 Mechanisms below were read out of [JUCE](https://github.com/juce-framework/JUCE) — as a reference
-only; nothing is copied and no dependency is taken. JUCE is GPLv3-or-commercial and this project is
-GPLv3, so borrowing code *would* be compatible, but none of this needs it.
+only; nothing is copied and no dependency is taken. **Nothing may be**, which is a correction to what
+this note said until 2026-08-31: JUCE 8 is dual licensed under **AGPLv3** and a commercial licence,
+not GPLv3. It was GPLv3 up to JUCE 6 and changed at 7. AGPLv3 code cannot be taken into a GPLv3
+project and left GPLv3 — the combined work would have to become AGPLv3 — so copying from JUCE would
+relicense this one, and the same applies to SynthLib and every project that shares it.
+
+Reading it and reimplementing is untouched by that: an idea, a technique or an API is not
+copyrightable, only its expression. That is what these notes do throughout, and it is why none of
+this needed the permission the old wording claimed.
 
 ---
 
