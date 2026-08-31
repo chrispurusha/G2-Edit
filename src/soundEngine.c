@@ -5080,6 +5080,68 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         }
     }
 
+    // FREE-RUNNING PHASE - THE CHEAP HALF, AND THE HALF THAT MATTERS FOR EVERY PATCH.
+    //
+    // The instrument's oscillators and LFOs never stop, so a note started later finds them
+    // somewhere else. Ours did not: gPhase is seeded once (a golden-ratio scatter, so voices start
+    // decorrelated) and then FROZEN whenever a voice is idle, which meant two notes seconds apart
+    // could begin on identical phase. Not a reset to zero - a freeze - but just as wrong.
+    //
+    // Advancing the STATE and computing the AUDIO are separable: the phase an oscillator would
+    // have reached is arithmetic, so it does not need the graph. MEASURED at 12.8% CPU against
+    // 12.3% with free-running off, i.e. half a point, where rendering the graph instead costs
+    // over a point on a THREE-node patch and scales with the patch.
+    // So do that once per block for the idle voices and skip the DSP entirely. Voices that ARE
+    // sounding advance through the render as before, and the full free-run render still happens
+    // for the patches that can actually be heard while idle.
+    //
+    // MEASURE INSTANTANEOUS CPU, NOT `ps -o %cpu`, which reports an average over the process's
+    // whole lifetime and made an early version of this look fifteen times worse than it was.
+    // Take the delta of `ps -o time=` over a fixed window instead.
+    //
+    // A "reset phase on note-on" option, for predictable bass, would zero gPhase for the allocated
+    // voice instead. It is deliberately not the default and not written yet - the hardware
+    // free-runs. See Docs/todo.txt.
+    if (engine_no_free_run() == false) {
+        double idleSamples = (double)frameCount * (double)ENGINE_OVERSAMPLE;
+
+        for (uint32_t v = 0; v < params.voiceCount; v++) {
+            // ONLY the voices the render will NOT touch. A free-running voice is rendered even
+            // though it is not sounding, and oscillator_step() advances its phase as it goes - so
+            // advancing it here as well moved it twice, jumping a whole block's worth at every
+            // block boundary. The beat between the block rate and the oscillator's frequency put a
+            // wah of a few Hz on every note. Get this condition wrong in the other direction and
+            // the phase simply stops; it has to mirror the render's own test exactly.
+            bool rendered = (gVoice[v].sounding == true)
+                            || ((v == 0) && (chainHasEnvelope == false) && (engine_no_free_run() == false));
+
+            if (rendered == true) {
+                continue;
+            }
+
+            for (n = 0; n < params.nodeCount; n++) {
+                const tEngineNode * idle = &params.node[n];
+                double              step = 0.0;
+
+                if ((idle->kind == eNodeOsc) || (idle->kind == eNodeOscShp)) {
+                    // No note is held, so the oscillator sits at the pitch Tune names - the same
+                    // branch oscillator_step() takes when voicePitch is negative.
+                    double freq = 440.0 * exp2((idle->basePitch - MIDI_NOTE_A440) / 12.0);
+
+                    if ((freq > 0.0) && (freq <= (gSampleRate * 0.5))) {
+                        step = freq / gSampleRate;
+                    }
+                } else if (idle->kind == eNodeLfo) {
+                    step = idle->rateHz / gSampleRate;
+                }
+
+                if (step > 0.0) {
+                    gPhase[v][n] = fmod(gPhase[v][n] + (step * idleSamples), 1.0);
+                }
+            }
+        }
+    }
+
     for (frame = 0; frame < frameCount; frame++) {
         uint32_t sub = 0;
 
@@ -5155,7 +5217,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             // NOT in here: it is one shared instance fed by the sum of the voices, which is what
             // lets a chord share one reverb instead of running 8 of them.
             for (uint32_t v = 0; v < params.voiceCount; v++) {
-                tVoice * voice     = &gVoice[v];
+                tVoice * voice = &gVoice[v];
 
                 // FREE-RUNNING. The instrument's Voice Area runs whether or not a key is down: an
                 // oscillator patched to an output sounds on its own, an LFO keeps its phase, and a
@@ -5169,8 +5231,22 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 // would cost 32 voices of idle CPU for a difference of level. One instance is the
                 // deliberate approximation; the post-mix section below already runs unconditionally
                 // for the same reason, so a reverb tail outlives the last note.
-                bool     freeVoice = (v == 0) && (engine_no_free_run() == false);
-                bool     freeRun   = (voice->sounding == false) && (freeVoice == true);
+                // FREE-RUN ONLY WHERE IT CAN BE HEARD. A patch whose amp is a per-voice envelope
+                // puts out nothing until a key is pressed, so rendering its whole graph while idle
+                // computes silence. MEASURED on a drone patch, which takes this path: 3.3% CPU
+                // against 2.0% with free-running off - so the render is worth about 1.3 points on
+                // three nodes and more on a large patch. Not ruinous, but it buys nothing at all
+                // for the enveloped case, and the phase advance before the frame loop already
+                // covers the part that IS audible there (where the oscillators are when the next
+                // note starts).
+                //
+                // The cost is that an LFO in an ENVELOPED patch still does not advance between
+                // notes, which is what the instrument does. Fixing that properly means asking
+                // whether a node reaches an Out without passing through a gated envelope, rather
+                // than whether an envelope exists at all - see Docs/todo.txt.
+                bool freeVoice = (v == 0) && (chainHasEnvelope == false)
+                                 && (engine_no_free_run() == false);
+                bool freeRun   = (voice->sounding == false) && (freeVoice == true);
 
                 if ((voice->sounding == false) && (freeRun == false)) {
                     continue;               // costs nothing when it is not playing
