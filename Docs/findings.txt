@@ -6992,3 +6992,47 @@ FLTNORD IS NOT FLTCLASSIC'S LADDER, AND GC IS WHY IT LOOKED LIKE ONE (2026-08-30
   DO NOT FIT THE MODES FROM THE CAPTURES ABOVE. The HP row falls away above 2 kHz where a high-pass
   should stay flat, which is either the measurement floor or something not yet understood. A capture
   aimed at the STOPBANDS, with the floor characterised first, is needed before any shape is fitted.
+
+
+FREE-RUNNING: ADVANCE THE STATE, NOT THE AUDIO (2026-08-31)
+
+  gPhase is seeded once at startup with a golden-ratio scatter per voice and node and then FROZEN
+  whenever a voice is idle. So the engine never restarted an oscillator at phase 0 - it resumed
+  wherever that voice was left, which meant two notes seconds apart could begin on IDENTICAL phase.
+  The instrument free-runs, so they should not.
+
+  The fix is that advancing the state and computing the audio are separable. The phase an oscillator
+  or LFO would have reached over a block is arithmetic - frames * freq / gSampleRate, mod 1 - so it
+  is done once per block for every idle voice, before the frame loop, with no graph evaluation at
+  all. Rendering the whole graph is kept only for patches that can actually be HEARD while idle
+  (no per-voice envelope), where it is the point of the feature.
+
+  MEASURED, and this is where the trap is:
+      idle phase advance, 14-node enveloped patch    12.8% against 12.3%    ~0.5 points
+      full free-run render, 3-node drone patch        3.3% against  2.0%    ~1.3 points
+
+  DO NOT USE `ps -o %cpu` FOR THIS. It reports an average over the process's entire lifetime, not
+  instantaneous use, and with a 15-second startup in the sample it made an early version of this
+  look like 7.5% against 0.5% - fifteen times worse than the truth, and a decision was taken on that
+  number before it was rechecked. Take the delta of `ps -o time=` over a fixed window instead.
+
+  Confirmed working: the same note played twice, 2.5 s apart, now starts at different points in the
+  cycle (rawpeak 0.524 then 0.729 on SimpleLead).
+
+  STILL APPROXIMATE: the render gate asks "does the patch contain a per-voice envelope", where the
+  exact question is "does a node reach an Out without passing through a gated envelope". A patch
+  with an oscillator straight to Out AND an envelope on its filter is audible while idle but will
+  not free-run its graph. Its phase still advances, so what is lost is filter and delay settling,
+  which is inaudible until a note starts.
+
+  THE TRAP THIS SET, caught by ear within the hour and worth knowing before touching gPhase again:
+  a FREE-RUNNING voice is rendered even though it is not sounding, and oscillator_step() advances
+  its phase as it goes. The first version of the block prologue skipped only voices where
+  `sounding` was true, so a free-running voice got advanced TWICE - once arithmetically and once by
+  the render - which jumped it a whole block's worth at every block boundary. That is not heard as
+  a pitch error but as a WAH of a few Hz, because what you hear is the beat between the audio block
+  rate and the oscillator's frequency. Reported as "a wah roughly 3 times per second on OscShpB and
+  OscB, with the filter removed too, so it's not the filter" - which located it precisely.
+
+  The prologue's skip test must MIRROR THE RENDER'S OWN TEST exactly: sounding, or the free-running
+  voice. Too broad and the phase stops advancing again; too narrow and the wah comes back.

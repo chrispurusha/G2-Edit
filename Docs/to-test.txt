@@ -5,6 +5,21 @@ Confirmed -> delete the line. Check failed -> move it to todo.txt.
 Full detail for each is in findings.txt, searchable by the wording below.
 
 HARDWARE CHECKS
+
+FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard yet
+- OscB's Tri is no longer skewed by Shape. BEHAVIOUR CHANGE: any patch using OscB on Tri with
+  Shape off zero will sound different, and at the top of the dial it used to be a sawtooth
+- Sine2's clamp lowered 0.03 -> 0.005, so it opens fully at Shape 99% (was 4.5 dB short)
+- FltNord: GC now modelled, and the borrowed ladder's passband droop cancelled - the module was
+  both too loud and drooping where the instrument is flat. Biggest audible change of the set
+- OscShpB Shape now reaches the models as 0..1 rather than 0.5..0.99; matters at the BOTTOM of
+  the dial, where raw 0 used to render half-shaped instead of a pure sine
+- Free-running oscillators, on by default. G2_ENGINE_NO_FREERUN=1 restores note-gated behaviour.
+  Confirm a note-off does not interrupt a drone, and that an enveloped patch is unchanged
+- Oscillator/LFO phase now ADVANCES while a voice is idle, so the same note played twice no longer
+  starts identically - listen for whether repeated bass notes now sound less machine-like
+  (a double-advance bug here put a ~3 Hz wah on every oscillator; fixed and owner-confirmed
+  2026-08-31, but it is the thing to listen for if anything sounds unsteady)
 - ValSw1-2/ValSw2-1 Ctrl Value: now a 0-64 dial (top step reads 64). Confirm the range really is 64,
   not 128, against the G2's own panel - the device ACCEPTED a raw 127 when written directly
 - FltHP, FltStatic and FltNord now play in the sound engine - all three need an ear, none is tuned
@@ -28,8 +43,13 @@ HARDWARE CHECKS
 - Reconnection sync dialogue: confirm it appears every time
 
 UI / VISUAL CHECKS
+
+FROM THE 2026-08-30/31 SESSION
+- The 19 ported module faces - owner was hand-adjusting; confirm none regressed
+- Middle-anchored buttons now centre on what is DRAWN, not on the table rectangle. Six rows move
+  down about 6 px: LfoA and Constant menus, OscC/OscD Wave, Gate G1/G2
+- Module right-click info line now reads "name - index N, R rows" (owner confirmed 2026-08-30)
 - New Patch now opens with the FX area minimised (was both areas) - confirm it feels right in use
-- Delay is 3 rows now, matching the original; its face still needs re-laying, so it looks top-empty
 - Response graphs on FltNord, FltLP, FltHP and FltStatic - check against the real modules on hardware
 - Escape no longer quits the application
 - File > Save vs Save As, and the Save crash fix - confirm it stops recurring
