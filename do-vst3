@@ -274,7 +274,7 @@ lipo -archs "$BIN" | read -r archs
 print "Architectures: $archs"
 print ""
 print "To install for testing:"
-print "  cp -R \"$OUT\" ~/Library/Audio/Plug-Ins/VST3/"
+print "  cp -R \"$OUT\" /Library/Audio/Plug-Ins/VST3/"
 print ""
 print "Patch source, in order: host-saved path, then \$G2_VST3_PATCH,"
 print "then ~/Documents/G2-Edit/plugin.pch2"

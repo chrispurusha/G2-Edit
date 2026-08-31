@@ -343,19 +343,27 @@ types, so many patches will load without complaint and make no sound.
 The editor does not need it and it does not need the editor. Skip this section
 entirely if you only want the editor.
 
-To install it, copy it into your own VST3 folder. In Terminal:
+To install it, copy it into your VST3 folder. In Terminal:
 
-    mkdir -p ~/Library/Audio/Plug-Ins/VST3
-    cp -R "/Volumes/${${VOL_NAME}[1,15]} $VERSION_CLEAN/G2 Alike.vst3" ~/Library/Audio/Plug-Ins/VST3/
-    xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
+    cp -R "/Volumes/${${VOL_NAME}[1,15]} $VERSION_CLEAN/G2 Alike.vst3" /Library/Audio/Plug-Ins/VST3/
+    xattr -dr com.apple.quarantine /Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
 
 Or in Finder: choose Go > Go to Folder, enter
 
-    ~/Library/Audio/Plug-Ins/VST3
+    /Library/Audio/Plug-Ins/VST3
 
 and drag "G2 Alike.vst3" from this window into it. It is unsigned in the same way
 the app is, so still run the xattr line above afterwards, or your host will
 refuse to load it with no useful explanation.
+
+That is the system-wide plug-in folder, which is where installers put things and
+where hosts look first. On an administrator account it is writable without any
+special step. If Terminal says "Permission denied", or the folder does not exist
+at all, put sudo in front of both lines and it will ask for your password.
+
+There is a second, per-user folder at ~/Library/Audio/Plug-Ins/VST3 which also
+works. Use one or the other - a copy in both means your host may list the plug-in
+twice and load whichever it finds first.
 
 Then rescan plug-ins in your host - most do it at startup. It appears as
 "G2 Alike" by Chris Purusha, as an instrument.

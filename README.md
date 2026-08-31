@@ -55,13 +55,18 @@ the editor.
 Copy it into your own VST3 folder and clear its quarantine flag too:
 
 ```
-mkdir -p ~/Library/Audio/Plug-Ins/VST3
-cp -R "/Volumes/G2-Edit <version>/G2 Alike.vst3" ~/Library/Audio/Plug-Ins/VST3/
-xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
+cp -R "/Volumes/G2-Edit <version>/G2 Alike.vst3" /Library/Audio/Plug-Ins/VST3/
+xattr -dr com.apple.quarantine /Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
 ```
 
-In Finder instead: choose **Go > Go to Folder**, enter `~/Library/Audio/Plug-Ins/VST3`, and drag the
+In Finder instead: choose **Go > Go to Folder**, enter `/Library/Audio/Plug-Ins/VST3`, and drag the
 plug-in in — then still run the `xattr` line, or the host will refuse to load it without saying why.
+
+That is the system-wide folder, where installers put plug-ins and where hosts look first. An
+administrator account writes to it without `sudo`; if it says "Permission denied", or the folder is
+not there at all, prefix both lines with `sudo`. The per-user `~/Library/Audio/Plug-Ins/VST3` works
+too — use one or the other, since a copy in both means your host may list the plug-in twice and load
+whichever it reaches first.
 
 Rescan plug-ins in your host (most do it at startup). It appears as **G2 Alike** by Chris Purusha,
 as an instrument. It needs a VST3 host; it does not run on its own.
@@ -192,8 +197,8 @@ SDK does **not** need building first.
 Writes `build/G2 Alike.vst3` — universal (arm64 + x86_64), ad-hoc signed. To install it:
 
 ```
-cp -R "build/G2 Alike.vst3" ~/Library/Audio/Plug-Ins/VST3/
-xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
+cp -R "build/G2 Alike.vst3" /Library/Audio/Plug-Ins/VST3/
+xattr -dr com.apple.quarantine /Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
 ```
 
 As with the application, there is no paid Apple Developer membership behind this, so a host may
