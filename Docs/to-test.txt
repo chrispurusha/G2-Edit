@@ -44,6 +44,11 @@ FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard
 
 UI / VISUAL CHECKS
 
+FROM THE 2026-08-31 DROP-SHIFT FIXES
+- Drop a 5-row module (Compress) onto a packed column so it covers two or three neighbours at once,
+  and confirm EVERY one of them moves down - the "chorus didn't move down" report
+- Undo after any drop that pushed other modules down, and confirm the displaced ones go back too
+
 FROM THE 2026-08-30/31 SESSION
 - The 19 ported module faces - owner was hand-adjusting; confirm none regressed
 - Middle-anchored buttons now centre on what is DRAWN, not on the table rectangle. Six rows move

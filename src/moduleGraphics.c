@@ -345,23 +345,24 @@ static void drag_area_click_handler(tCoord coord, eClickPhase phase, void * user
     gModuleDrag.active        = true;
     gModuleDrag.snapshotCount = 0;
 
-    if (gModuleDrag.isMulti) {
-        for (uint32_t si = 0; si < gSelection.count && si < MAX_NUM_MODULES; si++) {
-            tModule * sel = get_module(gSelection.keys[si]);
+    // THE WHOLE LOCATION, not just what is being dragged. The release calls shift_modules_down() /
+    // shift_selection_down(), which move modules the user never touched — everything below whatever
+    // the drop landed on gets pushed down its column. Undo has to put those back too, and it can
+    // only reverse what the snapshot recorded: with just the dragged keys in here, undo returned the
+    // dragged module to where it came from and left the displaced ones sitting where the shift had
+    // shoved them. Cheap — the walk is bounded by MAX_NUM_MODULES and runs once per drag start —
+    // and the release side keeps only the entries that actually moved. Same before/after pairing
+    // that module_positions_snapshot()/module_positions_changed() give paste and module creation.
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * walk = get_module_slot(module->key.slot, module->key.location, i);
 
-            if (!sel) {
-                continue;
-            }
-            gModuleDrag.snapshotKeys[gModuleDrag.snapshotCount]   = gSelection.keys[si];
-            gModuleDrag.snapshotColumn[gModuleDrag.snapshotCount] = sel->column;
-            gModuleDrag.snapshotRow[gModuleDrag.snapshotCount]    = sel->row;
-            gModuleDrag.snapshotCount++;
+        if ((walk == NULL) || !walk->active) {
+            continue;
         }
-    } else {
-        gModuleDrag.snapshotKeys[0]   = module->key;
-        gModuleDrag.snapshotColumn[0] = module->column;
-        gModuleDrag.snapshotRow[0]    = module->row;
-        gModuleDrag.snapshotCount     = 1;
+        gModuleDrag.snapshotKeys[gModuleDrag.snapshotCount]   = walk->key;
+        gModuleDrag.snapshotColumn[gModuleDrag.snapshotCount] = walk->column;
+        gModuleDrag.snapshotRow[gModuleDrag.snapshotCount]    = walk->row;
+        gModuleDrag.snapshotCount++;
     }
 }
 
