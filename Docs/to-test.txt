@@ -68,7 +68,8 @@ FROM THE 2026-08-30/31 SESSION
 - Close button moved top-left and drawn as a cross - needs an owner eyeball
 - Patch Window Split Bar - step 1 of 4, in SynthLib
 - Device busy overlay (gDeviceOpInProgress) - built 2026-07-26, never hardware tested
-- Module drop at the BOTTOM of a column no longer piles modules onto row MAX_ROWS - the incoming one comes up by the shortfall instead, and a column full to the bottom refuses the gesture. Verified by backdoor for Add; the DRAG-DROP rollback path (restore from the drag snapshot, incl. a multi-selection failing on its Nth member) has not been exercised
+- Module drop at the BOTTOM of a column no longer piles modules onto row MAX_ROWS - the incoming one comes up by the shortfall instead, a SELECTION is lifted rigidly so the group keeps its shape, and a column with no room refuses the gesture. Single and group paths both backdoor-verified (new SELECTADD + MOVESEL); what is NOT exercised is the real DRAG-DROP rollback, which restores from the drag snapshot rather than MOVESEL's own
+- New backdoor commands SELECTADD and MOVESEL - needs an owner eyeball that they belong there
 - +/- keys (bare param nudge and Cmd zoom) now follow the KEYBOARD LAYOUT via glfwGetKeyName() instead of the US physical slots - needs a FI/SWE tester: '+' zooms in, '-' (bottom row, beside '.') zooms out, '´' does nothing
 
 CROSS-PROJECT
