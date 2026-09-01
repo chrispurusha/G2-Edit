@@ -308,22 +308,109 @@ void delete_selection(void) {
     selection_clear();
 }
 
+// The row an incoming module must actually land on for the push below it to fit on the grid, and
+// whether it fits at all. THE BOTTOM OF THE CANVAS IS A HARD WALL: a module's row runs 0..MAX_ROWS
+// and no further, so when the block below a drop cannot travel the full dropAmount, the incoming
+// module comes UP by the shortfall instead of shoving its neighbours off the end.
+//
+// Before this, both shifts below simply clamped a pushed module to MAX_ROWS. That is not a shift, it
+// is a pile-up: every module that could not fit landed on the same row, on top of each other and of
+// whatever was dropped on them. Reported by a user - "on the bottom of canvas, you can place new
+// modules on top of the existing ones as the editor cannot move the already existing modules
+// downwards" - and confirmed.
+//
+// Raising the incoming module is the answer rather than refusing the gesture, because it is what the
+// two edge clamps in module_drag_motion() already do for the left and top edges: the drop lands as
+// close to where it was aimed as the grid allows. *fits comes back false only when the column is so
+// full that even row 0 leaves an overlap, which needs upwards of thirty modules stacked in one
+// column; the callers refuse the gesture outright in that case, since there is nowhere to put it.
+//
+// selectionTransparent matches the caller's own walk filter: a multiple selection is transparent to
+// itself, so its members neither block the drop nor get pushed by it.
+static uint32_t shift_fit_row(uint32_t slot, uint32_t location, uint32_t index,
+                              uint32_t column, uint32_t row, uint32_t height,
+                              bool selectionTransparent, bool * fits) {
+    *fits = true;
+
+    // Bounded rather than while(true): each pass strictly lowers `row`, so MAX_ROWS + 1 passes is
+    // more than it can ever need, and a table that somehow reports a zero height cannot spin here.
+    for (uint32_t pass = 0; pass <= MAX_ROWS; pass++) {
+        uint32_t topOfBlock = 0;
+        uint32_t lowestRow  = 0;
+        bool     hit        = false;
+
+        for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+            tModule * walk = get_module_slot(slot, location, i);
+
+            if (  !walk->active || (walk->key.index == index)
+               || (selectionTransparent && is_selected(walk->key))
+               || (walk->column != column)) {
+                continue;
+            }
+
+            if ((walk->row >= row) && (walk->row < row + height)) {
+                if (!hit || (walk->row < topOfBlock)) {
+                    topOfBlock = walk->row;
+                }
+                hit = true;
+            }
+        }
+
+        if (!hit) {
+            return row;    // Nothing in the way at all.
+        }
+
+        // Everything at or below the block's top travels together - the drop loops move exactly that
+        // set - so the deepest of them is what decides whether the push fits.
+        for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+            tModule * walk = get_module_slot(slot, location, i);
+
+            if (  !walk->active || (walk->key.index == index)
+               || (selectionTransparent && is_selected(walk->key))
+               || (walk->column != column)) {
+                continue;
+            }
+
+            if ((walk->row >= topOfBlock) && (walk->row > lowestRow)) {
+                lowestRow = walk->row;
+            }
+        }
+
+        uint32_t dropAmount = (row + height) - topOfBlock;
+
+        if ((lowestRow + dropAmount) <= MAX_ROWS) {
+            return row;
+        }
+        uint32_t excess     = (lowestRow + dropAmount) - MAX_ROWS;
+
+        if (excess >= row) {
+            *fits = false;
+            return 0;
+        }
+        row -= excess;
+    }
+
+    return row;
+}
+
 // Moved here from menus.c so the VST3 plug-in can share it: a module dropped on top of another
 // must push it out of the way, and menus.c is not linked into the plug-in. Its sibling below has
 // always lived here, and the two belong together — see canvasDrag.h for the drag that calls them.
 //
 // send_module_move_msg() tells the G2 where the module went. In the plug-in that reaches a stubbed
 // msg_send() and does nothing, which is correct: there is no synth attached.
-void shift_modules_down(tModuleKey key) {
+bool shift_modules_down(tModuleKey key) {
     tModule * module            = get_module(key);
 
     if (module == NULL) {
-        return;
+        return false;
     }
-    bool      moduleRePosition  = false;
     bool      doDrop            = false;
+    bool      fits              = true;
     uint32_t  rowAndBelowToDrop = 0;
     uint32_t  dropAmount        = 0;
+    uint32_t  height            = gModuleProperties[module->type].height;
+    uint32_t  landingRow        = module->row;
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * walk = get_module_slot(key.slot, key.location, i);
@@ -332,17 +419,25 @@ void shift_modules_down(tModuleKey key) {
             continue;
         }
 
-        if ((walk->column == module->column) && (module->row > walk->row) && (module->row < walk->row + gModuleProperties[walk->type].height)) {
-            module->row      = walk->row + gModuleProperties[walk->type].height;
-            send_module_move_msg(module);
-            moduleRePosition = true;
+        if ((walk->column == module->column) && (landingRow > walk->row) && (landingRow < walk->row + gModuleProperties[walk->type].height)) {
+            landingRow = walk->row + gModuleProperties[walk->type].height;
             break;
         }
     }
 
-    if (moduleRePosition == false) {
-        send_module_move_msg(module);
+    if (landingRow > MAX_ROWS) {
+        landingRow = MAX_ROWS;
     }
+    // NOTHING IS COMMITTED UNTIL THE LANDING ROW IS FINAL. The bump above used to write straight into
+    // module->row and send the move message from inside the loop, which left no point at which the
+    // row could still be corrected for the room actually available below it.
+    landingRow  = shift_fit_row(key.slot, key.location, key.index, module->column, landingRow, height, false, &fits);
+
+    if (fits == false) {
+        return false;    // Column full to the bottom - the caller puts the gesture back.
+    }
+    module->row = landingRow;
+    send_module_move_msg(module);
 
     // THE TOPMOST OVERLAP, not the first one the index walk happens to reach. Modules run to five
     // rows tall (Compress is one), so a big one dropped into a packed column lands across two or
@@ -358,7 +453,7 @@ void shift_modules_down(tModuleKey key) {
             continue;
         }
 
-        if ((walk->column == module->column) && (walk->row >= module->row) && (walk->row < module->row + gModuleProperties[module->type].height)) {
+        if ((walk->column == module->column) && (walk->row >= module->row) && (walk->row < module->row + height)) {
             if ((doDrop == false) || (walk->row < rowAndBelowToDrop)) {
                 rowAndBelowToDrop = walk->row;
             }
@@ -367,7 +462,7 @@ void shift_modules_down(tModuleKey key) {
     }
 
     if (doDrop == true) {
-        dropAmount = (module->row + gModuleProperties[module->type].height) - rowAndBelowToDrop;
+        dropAmount = (module->row + height) - rowAndBelowToDrop;
 
         for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
             tModule * walk = get_module_slot(key.slot, key.location, i);
@@ -376,25 +471,25 @@ void shift_modules_down(tModuleKey key) {
                 continue;
             }
 
+            // NO CLAMP TO MAX_ROWS HERE, and there must not be one again: it was what piled modules
+            // onto the last row instead of shifting them. shift_fit_row() has already guaranteed
+            // this arithmetic stays on the grid.
             if ((walk->column == module->column) && (walk->row >= rowAndBelowToDrop)) {
                 walk->row += dropAmount;
-
-                if (walk->row > MAX_ROWS) {
-                    walk->row = MAX_ROWS;
-                }
                 send_module_move_msg(walk);
             }
         }
     }
+    return true;
 }
 
 // Like shift_modules_down but applied to every selected module. Selected modules
 // are transparent to each other — only conflicts with non-selected modules are resolved.
-void shift_selection_down(void) {
-    shift_selection_down_in((uint32_t)gSlot, (uint32_t)gLocation);
+bool shift_selection_down(void) {
+    return shift_selection_down_in((uint32_t)gSlot, (uint32_t)gLocation);
 }
 
-void shift_selection_down_in(uint32_t slot, uint32_t location) {
+bool shift_selection_down_in(uint32_t slot, uint32_t location) {
     for (uint32_t si = 0; si < gSelection.count; si++) {
         tModuleKey key               = gSelection.keys[si];
         tModule *  module            = get_module(key);
@@ -402,10 +497,12 @@ void shift_selection_down_in(uint32_t slot, uint32_t location) {
         if (module == NULL) {
             continue;
         }
-        bool       moduleRePosition  = false;
         bool       doDrop            = false;
+        bool       fits              = true;
         uint32_t   rowAndBelowToDrop = 0;
         uint32_t   dropAmount        = 0;
+        uint32_t   height            = gModuleProperties[module->type].height;
+        uint32_t   landingRow        = module->row;
 
         for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
             tModule * walk = get_module_slot(slot, location, i);
@@ -414,17 +511,26 @@ void shift_selection_down_in(uint32_t slot, uint32_t location) {
                 continue;
             }
 
-            if ((walk->column == module->column) && (module->row > walk->row) && (module->row < walk->row + gModuleProperties[walk->type].height)) {
-                module->row      = walk->row + gModuleProperties[walk->type].height;
-                send_module_move_msg(module);
-                moduleRePosition = true;
+            if ((walk->column == module->column) && (landingRow > walk->row) && (landingRow < walk->row + gModuleProperties[walk->type].height)) {
+                landingRow = walk->row + gModuleProperties[walk->type].height;
                 break;
             }
         }
 
-        if (!moduleRePosition) {
-            send_module_move_msg(module);
+        if (landingRow > MAX_ROWS) {
+            landingRow = MAX_ROWS;
         }
+        // As in shift_modules_down(): the row is settled against the room below before anything is
+        // written or sent. A member that cannot fit fails the WHOLE gesture rather than half of it -
+        // the selection would otherwise be left deformed, which is the same complaint the group clamp
+        // in module_drag_motion() was fixed for.
+        landingRow  = shift_fit_row(slot, location, key.index, module->column, landingRow, height, true, &fits);
+
+        if (fits == false) {
+            return false;
+        }
+        module->row = landingRow;
+        send_module_move_msg(module);
 
         // Topmost overlap, not the first by index — see shift_modules_down() above for what taking
         // the first one costs.
@@ -435,7 +541,7 @@ void shift_selection_down_in(uint32_t slot, uint32_t location) {
                 continue;
             }
 
-            if ((walk->column == module->column) && (walk->row >= module->row) && (walk->row < module->row + gModuleProperties[module->type].height)) {
+            if ((walk->column == module->column) && (walk->row >= module->row) && (walk->row < module->row + height)) {
                 if (!doDrop || (walk->row < rowAndBelowToDrop)) {
                     rowAndBelowToDrop = walk->row;
                 }
@@ -444,7 +550,7 @@ void shift_selection_down_in(uint32_t slot, uint32_t location) {
         }
 
         if (doDrop) {
-            dropAmount = (module->row + gModuleProperties[module->type].height) - rowAndBelowToDrop;
+            dropAmount = (module->row + height) - rowAndBelowToDrop;
 
             for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
                 tModule * walk = get_module_slot(slot, location, i);
@@ -453,17 +559,16 @@ void shift_selection_down_in(uint32_t slot, uint32_t location) {
                     continue;
                 }
 
+                // No MAX_ROWS clamp - see shift_modules_down().
                 if ((walk->column == module->column) && (walk->row >= rowAndBelowToDrop)) {
                     walk->row += dropAmount;
-
-                    if (walk->row > MAX_ROWS) {
-                        walk->row = MAX_ROWS;
-                    }
                     send_module_move_msg(walk);
                 }
             }
         }
     }
+
+    return true;
 }
 
 // Both shifts above move modules the user never touched, and undo has to put those back as well as
@@ -723,7 +828,11 @@ void paste_snapshot(uint32_t slot, uint32_t location,
     // column exactly as a drop does: the pasted modules push whatever they overlap further down, and
     // are transparent to each other so the pasted block keeps its own shape. Every pasted module is
     // in gSelection by now, so this is the same call canvas_module_drag_release() makes.
-    shift_selection_down_in(slot, location);
+    // Return value deliberately ignored: a paste into a column already full to MAX_ROWS is the one
+    // case this cannot place, and unwinding a whole paste - modules, cables and the index remap
+    // above - is a bigger job than the case is worth. It leaves the paste where it landed rather
+    // than corrupting the columns around it, which is what the old MAX_ROWS clamp did.
+    (void)shift_selection_down_in(slot, location);
 
     // Reconnect internal cables using remapped indices
     for (uint32_t ci = 0; ci < cableCount; ci++) {

@@ -33,11 +33,13 @@ void selection_add_rect(tRectangle rect, uint32_t slot, uint32_t location);
 void delete_module_and_cables(tModuleKey key);
 void delete_selection(void);
 // Pushes anything a moved module now overlaps further down its column. Moved from menus.c.
-void shift_modules_down(tModuleKey key);
-void shift_selection_down(void);
+// Return false when the column is full to the bottom and the gesture must be put back - see the
+// comment on shift_fit_row() in selection.c.
+bool shift_modules_down(tModuleKey key);
+bool shift_selection_down(void);
 // As shift_selection_down(), but for a location that is not necessarily the one on screen — a paste
 // being redone can name a slot/location the user has since navigated away from.
-void shift_selection_down_in(uint32_t slot, uint32_t location);
+bool shift_selection_down_in(uint32_t slot, uint32_t location);
 // Before/after halves of the module-position record the shifts above make necessary for undo.
 uint32_t module_positions_snapshot(uint32_t slot, uint32_t location, tUndoMoveEntry * out);
 uint32_t module_positions_changed(tUndoMoveEntry * entries, uint32_t count);

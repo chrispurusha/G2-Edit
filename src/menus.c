@@ -796,8 +796,14 @@ int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool s
 
     init_params_on_module_all_variations(get_module(module.key), location);
 
-    shift_modules_down(module.key);
-
+    // A column with no room left refuses the new module rather than dropping it on top of what is
+    // already there. The write above has to be undone by hand: unlike a drag, there is no earlier
+    // position to restore, and delete_module_and_cables() is what tells the G2 the module it was just
+    // given is going away again.
+    if (shift_modules_down(module.key) == false) {
+        delete_module_and_cables(module.key);
+        return -1;
+    }
     return uniqueIndex;
 }
 

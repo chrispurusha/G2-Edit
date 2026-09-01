@@ -301,15 +301,35 @@ bool canvas_module_drag_release(void) {
     if (gModuleDrag.active == false) {
         return false;
     }
-
     // RE-ORDER FIRST. A module dropped on top of another must push it down its column, exactly as
     // the application does on release — without this a drag leaves two modules occupying the same
     // grid squares, drawn over each other. Selected modules are transparent to one another, so a
     // multiple selection shuffles only what it lands on.
-    if (gModuleDrag.isMulti) {
-        shift_selection_down();
-    } else {
-        shift_modules_down(gModuleDrag.moduleKey);
+    //
+    // A column packed to MAX_ROWS has nowhere to put the drop, and the shift says so rather than
+    // piling modules onto the last row. The whole location goes back to where it was at drag start -
+    // the snapshot canvas_module_drag_begin() already takes for undo serves as the rollback, which is
+    // why it covers the location and not just the dragged keys.
+    bool placed = gModuleDrag.isMulti ? shift_selection_down() : shift_modules_down(gModuleDrag.moduleKey);
+
+    if (placed == false) {
+        for (uint32_t i = 0; i < gModuleDrag.snapshotCount; i++) {
+            tModule * walk = get_module(gModuleDrag.snapshotKeys[i]);
+
+            if (walk == NULL) {
+                continue;
+            }
+
+            if ((walk->column != gModuleDrag.snapshotColumn[i]) || (walk->row != gModuleDrag.snapshotRow[i])) {
+                walk->column = gModuleDrag.snapshotColumn[i];
+                walk->row    = gModuleDrag.snapshotRow[i];
+
+                // Told to the G2 as well. A multiple selection can fail on its third member with the
+                // first two already moved and their moves already sent, so the restore cannot assume
+                // the device is still holding the pre-drag layout.
+                send_module_move_msg(walk);
+            }
+        }
     }
     gModuleDrag.active = false;
     return true;
