@@ -116,6 +116,10 @@ extern "C" {
 //                       freshly-loaded patch, and that is the one state where the LED stream is known
 //                       to behave. An edit the DEVICE sees is what is needed to chase the LED
 //                       ordering fault, and without these it could only be done by hand in the GUI.
+//   SELECTADD <VA|FX> <index> — add to the selection rather than replace it
+//   MOVESEL <dColumn> <dRow>  — move the whole selection by a grid delta and re-order the column as a
+//                       drop does. The only scripted route to a GROUP drop, synthetic drags being
+//                       invisible to the app; refuses with "no room" and puts the group back
 //   SAVEFILE <path>   — write the current slot to a path (no save panel)
 //   SCREENSHOT <path> — synchronous render_frame() then glReadPixels + PNG
 //   SCROLL <x> <y>    — scroll the canvas, each 0.0-1.0 of that axis's full travel
@@ -1128,6 +1132,79 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             close_context_menu();
             backdoor_write_result(list);
         }
+    } else if (strcmp(cmd, "SELECTADD") == 0) {
+        // SELECTADD <VA|FX> <index> — adds to the selection instead of replacing it, so a script can
+        // build the multiple selection that MOVESEL below needs.
+        char      locName[8] = {0};
+        uint32_t  index      = 0;
+
+        if (sscanf(arg, "%7s %u", locName, &index) != 2) {
+            backdoor_write_result("ERROR: expected 'SELECTADD <VA|FX> <index>'\n");
+            return;
+        }
+        uint32_t  location   = (strncasecmp(locName, "FX", 2) == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        tModule * module     = get_module_slot(gSlot, location, index);
+
+        if ((module == NULL) || (module->type == 0)) {
+            backdoor_write_result("ERROR: no module at that index\n");
+            return;
+        }
+
+        if (!is_selected(module->key)) {
+            selection_toggle(module->key);
+        }
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "MOVESEL") == 0) {
+        // MOVESEL <dColumn> <dRow> — moves the whole selection by a grid delta and then re-orders the
+        // column exactly as dropping it would, through the same shift_selection_down() the release
+        // calls. THE ONLY SCRIPTED ROUTE TO A GROUP DROP: a synthetic drag does not reach the app, so
+        // without this the multi-module half of the shift can only be exercised by hand.
+        //
+        // Refuses with "no room" when the shift cannot place the group, and puts it back where it
+        // was — the same answer canvas_module_drag_release() gives a drag it cannot land.
+        int32_t        dCol        = 0;
+        int32_t        dRow        = 0;
+
+        if (sscanf(arg, "%d %d", &dCol, &dRow) != 2) {
+            backdoor_write_result("ERROR: expected 'MOVESEL <dColumn> <dRow>'\n");
+            return;
+        }
+
+        if (gSelection.count == 0) {
+            backdoor_write_result("ERROR: nothing selected\n");
+            return;
+        }
+        tUndoMoveEntry before[MAX_NUM_MODULES];
+        uint32_t       beforeCount = module_positions_snapshot((uint32_t)gSlot, (uint32_t)gLocation, before);
+
+        for (uint32_t si = 0; si < gSelection.count; si++) {
+            tModule * member = get_module(gSelection.keys[si]);
+
+            if (member == NULL) {
+                continue;
+            }
+            int32_t   nc     = (int32_t)member->column + dCol;
+            int32_t   nr     = (int32_t)member->row + dRow;
+
+            member->column = (uint32_t)((nc < 0) ? 0 : ((nc > (int32_t)MAX_COLUMNS) ? (int32_t)MAX_COLUMNS : nc));
+            member->row    = (uint32_t)((nr < 0) ? 0 : ((nr > (int32_t)MAX_ROWS) ? (int32_t)MAX_ROWS : nr));
+        }
+
+        bool           placed      = shift_selection_down();
+
+        if (placed == false) {
+            for (uint32_t i = 0; i < beforeCount; i++) {
+                tModule * mod = get_module(before[i].key);
+
+                if (mod != NULL) {
+                    mod->column = before[i].oldColumn;
+                    mod->row    = before[i].oldRow;
+                }
+            }
+        }
+        synthlib_request_redraw();
+        backdoor_write_result(placed ? "OK\n" : "ERROR: no room\n");
     } else if (strcmp(cmd, "SELECT") == 0) {
         // SELECT <VA|FX> <index>, or SELECT NONE — the engine keys off the selection, and clicking a
         // module's header strip by coordinate was the single most error-prone step in driving it.
