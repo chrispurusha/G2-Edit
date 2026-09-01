@@ -68,6 +68,7 @@ FROM THE 2026-08-30/31 SESSION
 - Close button moved top-left and drawn as a cross - needs an owner eyeball
 - Patch Window Split Bar - step 1 of 4, in SynthLib
 - Device busy overlay (gDeviceOpInProgress) - built 2026-07-26, never hardware tested
+- +/- keys (bare param nudge and Cmd zoom) now follow the KEYBOARD LAYOUT via glfwGetKeyName() instead of the US physical slots - needs a FI/SWE tester: '+' zooms in, '-' (bottom row, beside '.') zooms out, '´' does nothing
 
 CROSS-PROJECT
 - EmuUtility gLcd.pixels data race fix - needs an owner eyeball that the LCD still updates cleanly
