@@ -393,63 +393,131 @@ static uint32_t shift_fit_row(uint32_t slot, uint32_t location, uint32_t index,
     return row;
 }
 
-// Moved here from menus.c so the VST3 plug-in can share it: a module dropped on top of another
-// must push it out of the way, and menus.c is not linked into the plug-in. Its sibling below has
-// always lived here, and the two belong together — see canvasDrag.h for the drag that calls them.
+// Every module in the location back to a recorded set of positions, for a trial placement that has
+// to be taken back. Nothing is sent while a trial is running, so a restore is purely local.
+static void restore_positions(const tUndoMoveEntry * entries, uint32_t count) {
+    for (uint32_t i = 0; i < count; i++) {
+        tModule * mod = get_module(entries[i].key);
+
+        if ((mod == NULL) || !mod->active) {
+            continue;
+        }
+        mod->column = entries[i].oldColumn;
+        mod->row    = entries[i].oldRow;
+    }
+}
+
+// Pairs of modules sharing grid squares. Counted rather than merely detected because a patch can
+// arrive ALREADY overlapping - one saved by a build that still had the MAX_ROWS clamp, or read off a
+// G2 that was edited by one - and a placement must not be refused for a mess it did not make. Only an
+// INCREASE over the count taken before the gesture means this gesture broke something.
+static uint32_t count_overlapping_pairs(uint32_t slot, uint32_t location) {
+    uint32_t pairs = 0;
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * a = get_module_slot(slot, location, i);
+
+        if ((a == NULL) || !a->active) {
+            continue;
+        }
+
+        for (uint32_t j = i + 1; j < MAX_NUM_MODULES; j++) {
+            tModule * b = get_module_slot(slot, location, j);
+
+            if ((b == NULL) || !b->active || (b->column != a->column)) {
+                continue;
+            }
+
+            if (  (a->row < (b->row + gModuleProperties[b->type].height))
+               && (b->row < (a->row + gModuleProperties[a->type].height))) {
+                pairs++;
+            }
+        }
+    }
+
+    return pairs;
+}
+
+// One module placed in its column: cleared below anything it landed inside, then settled against the
+// room left at the bottom, then the block below it pushed down. Extracted from the two shifts so the
+// selection can run it per member and take the result back - NOTHING IS SENT HERE. The caller sends
+// once the placement it is trying has actually been kept, because a trial that gets restored must not
+// leave the G2 holding rows this side has since abandoned.
 //
-// send_module_move_msg() tells the G2 where the module went. In the plug-in that reaches a stubbed
-// msg_send() and does nothing, which is correct: there is no synth attached.
-bool shift_modules_down(tModuleKey key) {
+// *shortfall comes back as the distance the module had to be raised to fit. A single module just
+// keeps that row; a selection must lift EVERY member by the same amount instead, so it throws the
+// trial away and comes back with the number applied to the whole group.
+static void shift_member_place(uint32_t slot, uint32_t location, tModuleKey key,
+                               bool selectionTransparent, uint32_t * shortfall, bool * fits) {
     tModule * module            = get_module(key);
 
+    *shortfall = 0;
+    *fits      = true;
+
     if (module == NULL) {
-        return false;
+        return;
     }
     bool      doDrop            = false;
-    bool      fits              = true;
     uint32_t  rowAndBelowToDrop = 0;
     uint32_t  dropAmount        = 0;
     uint32_t  height            = gModuleProperties[module->type].height;
-    uint32_t  landingRow        = module->row;
+    uint32_t  wantRow           = module->row;
+    uint32_t  landingRow        = wantRow;
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * walk = get_module_slot(key.slot, key.location, i);
+        tModule * walk = get_module_slot(slot, location, i);
 
-        if (!walk->active || walk->key.index == key.index) {
+        if (  !walk->active || (walk->key.index == key.index)
+           || (selectionTransparent && is_selected(walk->key))) {
             continue;
         }
 
         if ((walk->column == module->column) && (landingRow > walk->row) && (landingRow < walk->row + gModuleProperties[walk->type].height)) {
-            landingRow = walk->row + gModuleProperties[walk->type].height;
+            uint32_t below = walk->row + gModuleProperties[walk->type].height;
+
+            // Dropped INSIDE a taller module, so it clears to just below it — unless just below it is
+            // off the bottom of the grid, in which case it goes ABOVE instead. Clamping `below` to
+            // MAX_ROWS was the trap here: the clamp put the module straight back inside the one it was
+            // supposed to be clearing, which is an overlap the wall makes unavoidable in that
+            // direction and trivial to avoid in the other.
+            if (below > MAX_ROWS) {
+                if (walk->row < height) {
+                    *fits = false;    // Neither above nor below it fits on the grid.
+                    return;
+                }
+                landingRow = walk->row - height;
+            } else {
+                landingRow = below;
+            }
             break;
         }
     }
 
-    if (landingRow > MAX_ROWS) {
-        landingRow = MAX_ROWS;
-    }
-    // NOTHING IS COMMITTED UNTIL THE LANDING ROW IS FINAL. The bump above used to write straight into
-    // module->row and send the move message from inside the loop, which left no point at which the
-    // row could still be corrected for the room actually available below it.
-    landingRow  = shift_fit_row(key.slot, key.location, key.index, module->column, landingRow, height, false, &fits);
+    uint32_t fittedRow = shift_fit_row(slot, location, key.index, module->column, landingRow, height, selectionTransparent, fits);
 
-    if (fits == false) {
-        return false;    // Column full to the bottom - the caller puts the gesture back.
+    if (*fits == false) {
+        return;
     }
-    module->row = landingRow;
-    send_module_move_msg(module);
+    // MEASURED FROM THE ROW THE CALLER ASKED FOR, not from the post-bump row: a bump moves the module
+    // DOWN and costs the group nothing, while going above a blocker or clearing the bottom of the
+    // canvas moves it UP and every other member has to follow by the same amount.
+    //
+    // The raise is APPLIED here and the push below still runs, so a single module simply lands on the
+    // fitted row. *shortfall is reported alongside it for the selection, which cannot accept a lift
+    // that only one member got and restores this trial instead.
+    *shortfall  = (fittedRow < wantRow) ? (wantRow - fittedRow) : 0;
+    module->row = fittedRow;
 
-    // THE TOPMOST OVERLAP, not the first one the index walk happens to reach. Modules run to five
-    // rows tall (Compress is one), so a big one dropped into a packed column lands across two or
-    // three neighbours at once. The drop below moves only what sits at rowAndBelowToDrop or lower,
-    // so taking the first match and breaking left the upper neighbour exactly where it was —
-    // underneath the module just dropped on it — whenever the lower neighbour happened to hold the
-    // lower index. Index order is creation order, which is why the same gesture worked on one patch
-    // and failed on the next. dropAmount is computed after the scan, from the row finally chosen.
+    // Topmost overlap, not the first by index. Modules run to twelve rows tall, so a big one dropped
+    // into a packed column lands across two or three neighbours at once and the drop below moves only
+    // what sits at rowAndBelowToDrop or lower - taking the first match by index left the upper
+    // neighbour underneath the module just dropped on it. Index order is creation order, which is why
+    // the same gesture worked on one patch and failed on the next.
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * walk = get_module_slot(key.slot, key.location, i);
+        tModule * walk = get_module_slot(slot, location, i);
 
-        if (!walk->active || walk->key.index == key.index) {
+        if (  !walk->active || (walk->key.index == key.index)
+           || (selectionTransparent && is_selected(walk->key))) {
             continue;
         }
 
@@ -465,110 +533,177 @@ bool shift_modules_down(tModuleKey key) {
         dropAmount = (module->row + height) - rowAndBelowToDrop;
 
         for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-            tModule * walk = get_module_slot(key.slot, key.location, i);
+            tModule * walk = get_module_slot(slot, location, i);
 
-            if (!walk->active || walk->key.index == key.index) {
+            if (  !walk->active || (walk->key.index == key.index)
+               || (selectionTransparent && is_selected(walk->key))) {
                 continue;
             }
 
             // NO CLAMP TO MAX_ROWS HERE, and there must not be one again: it was what piled modules
-            // onto the last row instead of shifting them. shift_fit_row() has already guaranteed
-            // this arithmetic stays on the grid.
+            // onto the last row instead of shifting them. shift_fit_row() has already guaranteed this
+            // arithmetic stays on the grid.
             if ((walk->column == module->column) && (walk->row >= rowAndBelowToDrop)) {
                 walk->row += dropAmount;
-                send_module_move_msg(walk);
             }
         }
     }
+}
+
+// Moved here from menus.c so the VST3 plug-in can share it: a module dropped on top of another
+// must push it out of the way, and menus.c is not linked into the plug-in. Its sibling below has
+// always lived here, and the two belong together — see canvasDrag.h for the drag that calls them.
+//
+// send_module_move_msg() tells the G2 where the module went. In the plug-in that reaches a stubbed
+// msg_send() and does nothing, which is correct: there is no synth attached.
+bool shift_modules_down(tModuleKey key) {
+    tModule *      module     = get_module(key);
+
+    if (module == NULL) {
+        return false;
+    }
+    tUndoMoveEntry start[MAX_NUM_MODULES];
+    uint32_t       startCount = module_positions_snapshot(key.slot, key.location, start);
+    uint32_t       shortfall  = 0;
+    bool           fits       = true;
+
+    shift_member_place(key.slot, key.location, key, false, &shortfall, &fits);
+    (void)shortfall;    // One module has no group shape to keep, so the raised row is simply taken.
+
+    if (fits == false) {
+        restore_positions(start, startCount);
+        return false;    // Column full to the bottom - the caller puts the gesture back.
+    }
+    // Sent only now, and never from inside a trial. The module itself goes unconditionally: whatever
+    // moved it here - a drag, a paste, a fresh create - has not told the G2 yet.
+    send_module_move_msg(module);
+
+    for (uint32_t i = 0; i < startCount; i++) {
+        tModule * mod = get_module(start[i].key);
+
+        if ((mod == NULL) || !mod->active || (mod->key.index == key.index)) {
+            continue;
+        }
+
+        if ((mod->column != start[i].oldColumn) || (mod->row != start[i].oldRow)) {
+            send_module_move_msg(mod);
+        }
+    }
+
     return true;
 }
 
-// Like shift_modules_down but applied to every selected module. Selected modules
-// are transparent to each other — only conflicts with non-selected modules are resolved.
+// Like shift_modules_down but applied to every selected module. Selected modules are transparent to
+// each other — only conflicts with non-selected modules are resolved.
 bool shift_selection_down(void) {
     return shift_selection_down_in((uint32_t)gSlot, (uint32_t)gLocation);
 }
 
+// THE SELECTION IS LIFTED AS ONE BODY, which is the whole difference between this and running
+// shift_modules_down() over each member in turn. Members are transparent to each other, so a member
+// raised on its own to clear the bottom of the canvas is raised THROUGH the members above it and
+// lands on top of one — the group both deformed and overlapping. Raising every member by the same
+// amount cannot do that: the shape the user dragged is rigid, so if it did not overlap itself before
+// the drop it does not overlap itself after.
+//
+// The same complaint the group clamp in module_drag_motion() was fixed for (CT, 2026-08-30:
+// "relative position of the group to each other should remain the same. currently, individuals can
+// reposition vs the rest") — the clamp belongs on the movement, not on the destination.
+//
+// Trial-and-restore rather than arithmetic: how far a member must rise depends on how far the members
+// placed before it have already pushed the column, so the only honest way to ask is to place them and
+// look. Each attempt starts from the recorded positions, so a failed one costs nothing.
 bool shift_selection_down_in(uint32_t slot, uint32_t location) {
-    for (uint32_t si = 0; si < gSelection.count; si++) {
-        tModuleKey key               = gSelection.keys[si];
-        tModule *  module            = get_module(key);
+    tUndoMoveEntry start[MAX_NUM_MODULES];
+    uint32_t       startCount  = module_positions_snapshot(slot, location, start);
+    uint32_t       wasOverlaps = count_overlapping_pairs(slot, location);
+    uint32_t       rigidRaise  = 0;
 
-        if (module == NULL) {
-            continue;
-        }
-        bool       doDrop            = false;
-        bool       fits              = true;
-        uint32_t   rowAndBelowToDrop = 0;
-        uint32_t   dropAmount        = 0;
-        uint32_t   height            = gModuleProperties[module->type].height;
-        uint32_t   landingRow        = module->row;
+    // Bounded rather than while(true): rigidRaise only ever grows, and a raise past MAX_ROWS is
+    // refused below, so this cannot spin.
+    for (uint32_t attempt = 0; attempt <= MAX_ROWS; attempt++) {
+        restore_positions(start, startCount);
 
-        for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-            tModule * walk = get_module_slot(slot, location, i);
+        for (uint32_t si = 0; si < gSelection.count; si++) {
+            tModule * member = get_module(gSelection.keys[si]);
 
-            if (!walk->active || walk->key.index == key.index || is_selected(walk->key)) {
+            if (member == NULL) {
                 continue;
             }
 
-            if ((walk->column == module->column) && (landingRow > walk->row) && (landingRow < walk->row + gModuleProperties[walk->type].height)) {
-                landingRow = walk->row + gModuleProperties[walk->type].height;
+            if (member->row < rigidRaise) {
+                restore_positions(start, startCount);
+                return false;    // The group would leave the top of the grid - nowhere to put it.
+            }
+            member->row -= rigidRaise;
+        }
+
+        bool     retry = false;
+        uint32_t worst = 0;
+
+        for (uint32_t si = 0; si < gSelection.count; si++) {
+            uint32_t shortfall = 0;
+            bool     fits      = true;
+
+            shift_member_place(slot, location, gSelection.keys[si], true, &shortfall, &fits);
+
+            if (fits == false) {
+                restore_positions(start, startCount);
+                return false;
+            }
+
+            // FAIL FAST on the first member that will not fit. Carrying on would measure the
+            // remaining members against a column this one has not pushed yet, and the raise would
+            // come out too large - the group would jump further up than it needed to.
+            if (shortfall > 0) {
+                worst = shortfall;
+                retry = true;
                 break;
             }
         }
 
-        if (landingRow > MAX_ROWS) {
-            landingRow = MAX_ROWS;
+        if (retry) {
+            rigidRaise += worst;
+            continue;
         }
-        // As in shift_modules_down(): the row is settled against the room below before anything is
-        // written or sent. A member that cannot fit fails the WHOLE gesture rather than half of it -
-        // the selection would otherwise be left deformed, which is the same complaint the group clamp
-        // in module_drag_motion() was fixed for.
-        landingRow  = shift_fit_row(slot, location, key.index, module->column, landingRow, height, true, &fits);
 
-        if (fits == false) {
+        // The per-member clearance above can still, in principle, drop one member onto another that
+        // the group is transparent to. Cheap to check for certain rather than to argue about, and a
+        // refusal the caller can put back beats a layout the user has to untangle by hand. Only an
+        // increase counts - see count_overlapping_pairs().
+        if (count_overlapping_pairs(slot, location) > wasOverlaps) {
+            restore_positions(start, startCount);
             return false;
         }
-        module->row = landingRow;
-        send_module_move_msg(module);
 
-        // Topmost overlap, not the first by index — see shift_modules_down() above for what taking
-        // the first one costs.
-        for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-            tModule * walk = get_module_slot(slot, location, i);
+        // Kept, so the G2 can be told. Every selected module is sent whether or not this function
+        // moved it — the drag did, and that has not been sent yet — and every other module that
+        // ended up somewhere new.
+        for (uint32_t si = 0; si < gSelection.count; si++) {
+            tModule * member = get_module(gSelection.keys[si]);
 
-            if (!walk->active || walk->key.index == key.index || is_selected(walk->key)) {
+            if (member != NULL) {
+                send_module_move_msg(member);
+            }
+        }
+
+        for (uint32_t i = 0; i < startCount; i++) {
+            tModule * mod = get_module(start[i].key);
+
+            if ((mod == NULL) || !mod->active || is_selected(mod->key)) {
                 continue;
             }
 
-            if ((walk->column == module->column) && (walk->row >= module->row) && (walk->row < module->row + height)) {
-                if (!doDrop || (walk->row < rowAndBelowToDrop)) {
-                    rowAndBelowToDrop = walk->row;
-                }
-                doDrop = true;
+            if ((mod->column != start[i].oldColumn) || (mod->row != start[i].oldRow)) {
+                send_module_move_msg(mod);
             }
         }
 
-        if (doDrop) {
-            dropAmount = (module->row + height) - rowAndBelowToDrop;
-
-            for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-                tModule * walk = get_module_slot(slot, location, i);
-
-                if (!walk->active || walk->key.index == key.index || is_selected(walk->key)) {
-                    continue;
-                }
-
-                // No MAX_ROWS clamp - see shift_modules_down().
-                if ((walk->column == module->column) && (walk->row >= rowAndBelowToDrop)) {
-                    walk->row += dropAmount;
-                    send_module_move_msg(walk);
-                }
-            }
-        }
+        return true;
     }
 
-    return true;
+    restore_positions(start, startCount);
+    return false;
 }
 
 // Both shifts above move modules the user never touched, and undo has to put those back as well as
