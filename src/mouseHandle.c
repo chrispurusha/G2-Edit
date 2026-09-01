@@ -1042,6 +1042,46 @@ void char_event(unsigned int value) {
     synthlib_request_redraw();
 }
 
+// Which way a '+'/'-' key press steps, resolved against the USER'S KEYBOARD LAYOUT rather than the
+// physical slot. GLFW's Cocoa backend fills its keycode table from hardcoded Apple virtual keycodes
+// (cocoa_init.m: 0x18 -> GLFW_KEY_EQUAL, 0x1B -> GLFW_KEY_MINUS), which are POSITIONS on the board
+// and take no notice of the active input source. Matching those tokens therefore means "the two keys
+// left of Backspace on a US board", and on a Finnish/Swedish layout those two slots carry '+/?' and
+// the '´/`' dead key - so '+' zoomed out, '´' zoomed in, and the real '-' (bottom row, beside '.')
+// did nothing at all. Reported by a user, fixed here.
+//
+// glfwGetKeyName() runs the scancode through UCKeyTranslate against the live input source and GLFW
+// refreshes that cache when the layout changes, so this follows a layout switched mid-session. It
+// reports the UNSHIFTED character, which is why '=' counts as increment: on a US board '+' is
+// Shift-'='. The keypad pair stays positional - those caps are printed '+' and '-' everywhere - and
+// the old tokens remain as the fallback for a layout whose name comes back NULL or non-Latin.
+static int key_step_direction(int key, int scancode) {
+    if ((key == GLFW_KEY_KP_ADD) || (key == GLFW_KEY_KP_SUBTRACT)) {
+        return (key == GLFW_KEY_KP_ADD) ? 1 : -1;
+    }
+    const char * name = glfwGetKeyName(key, scancode);
+
+    if ((name != NULL) && (name[0] != '\0') && (name[1] == '\0')) {
+        if ((name[0] == '+') || (name[0] == '=')) {
+            return 1;
+        }
+
+        if (name[0] == '-') {
+            return -1;
+        }
+        return 0;    // A named key that is neither: on FI/SWE this is how '´' stops zooming in.
+    }
+
+    if (key == GLFW_KEY_EQUAL) {
+        return 1;
+    }
+
+    if (key == GLFW_KEY_MINUS) {
+        return -1;
+    }
+    return 0;
+}
+
 void key_callback(int key, int scancode, int action, int mods) {
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
 
@@ -1471,34 +1511,29 @@ void key_callback(int key, int scancode, int action, int mods) {
         if (acted) {
             synthlib_request_redraw();
         }
-    } else if (  (  (key == GLFW_KEY_EQUAL) || (key == GLFW_KEY_KP_ADD)
-                 || (key == GLFW_KEY_MINUS) || (key == GLFW_KEY_KP_SUBTRACT))
+    } else if (  (key_step_direction(key, scancode) != 0)
               && ((action == GLFW_PRESS) || (action == GLFW_REPEAT))
               && (gCommandKeyPressed == false)
               && ((mods & (GLFW_MOD_SUPER | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0)) {
-        // Bare +/- step the hovered parameter up/down by one raw unit. GLFW reports the physical
-        // key, so '+' arrives as GLFW_KEY_EQUAL with Shift held - which is why Shift is deliberately
-        // NOT in the modifier guard below, and why the keypad's own pair is accepted too.
+        // Bare +/- step the hovered parameter up/down by one raw unit, on whichever keys the user's
+        // layout prints them on - see key_step_direction(). Shift is deliberately NOT in the modifier
+        // guard: on a US board '+' is Shift-'=', and holding Shift must not stop the step.
         //
         // The other two guards are both needed: mods covers the real keyboard, gCommandKeyPressed is
         // the flag the Cmd branch below runs on, and Cmd -/+ (canvas zoom) must keep reaching it.
         // GLFW_REPEAT is honoured so holding a key walks the range instead of one press per unit.
-        bool increment = (key == GLFW_KEY_EQUAL) || (key == GLFW_KEY_KP_ADD);
-
-        if (canvas_nudge_param_under_cursor(increment ? 1 : -1)) {
+        if (canvas_nudge_param_under_cursor(key_step_direction(key, scancode))) {
             synthlib_request_redraw();
         }
     } else if (action == GLFW_PRESS && gCommandKeyPressed == true) {
         // Cmd +/- is the canvas zoom, through canvas_zoom_step() so this shell and the plug-in cannot
-        // drift on the step size, the anchor or whether the choice is remembered.
-        if (key == GLFW_KEY_MINUS) {
-            LOG_DEBUG("ZOOM OUT\n");
-            canvas_zoom_step(-ZOOM_DELTA);
-        }
+        // drift on the step size, the anchor or whether the choice is remembered. Layout-aware for
+        // the same reason the bare pair above is.
+        int zoomDir = key_step_direction(key, scancode);
 
-        if (key == GLFW_KEY_EQUAL) {
-            LOG_DEBUG("ZOOM IN\n");
-            canvas_zoom_step(ZOOM_DELTA);
+        if (zoomDir != 0) {
+            LOG_DEBUG("ZOOM %s\n", (zoomDir > 0) ? "IN" : "OUT");
+            canvas_zoom_step(zoomDir * ZOOM_DELTA);
         }
 
         if (key == GLFW_KEY_C) {
