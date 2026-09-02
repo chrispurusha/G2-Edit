@@ -3191,6 +3191,18 @@ static tSoundEngineParams read_params(void) {
         }
         copy = gParams;
 
+        // FENCE BETWEEN THE COPY AND THE RE-READ. Without it the second load only guarantees that
+        // what follows it is not hoisted above it - it says nothing about the copy above being
+        // allowed to sink below it. That is the classic seqlock hole: the validation can be
+        // performed against a sequence read before the data was actually fetched, and the reader
+        // then accepts a torn snapshot as whole.
+        //
+        // In practice both loads are seq_cst and compile to ldar on arm64, which makes this very
+        // unlikely to bite - but "unlikely on today's compiler and architecture" is not the same as
+        // correct, and an audio thread reading a half-written node table is not a failure anyone
+        // would enjoy diagnosing.
+        atomic_thread_fence(memory_order_acquire);
+
         if (atomic_load(&gParamsSeq) == before) {
             gLastGoodParams = copy;
             break;
