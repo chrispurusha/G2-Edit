@@ -1126,10 +1126,45 @@ THE ONE THAT MATTERS, AND IT IS ARCHITECTURAL: THE PATCH DATABASE HAS NO LOCKING
   viable here at all.
 
   Per-call locking would be both heavy and useless - a torn read of one aligned uint32 is not the
-  problem; walking a module list while a patch load rewrites it is. The fix has to be coarse: one
-  rwlock, write-held for the duration of a patch parse, read-held for the duration of a render pass
-  and of a snapshot build. That is a handful of places rather than 47 files, but it is a real design
-  change and wants deciding rather than slipping in.
+  problem; walking a module list while a patch load rewrites it is. So the fix is coarse, and it is
+  now IN (CT's call): one pthread_rwlock in dataBase.c, taken at four places and nowhere else.
+
+    - render_frame() read-locks for the WHOLE frame, released just before render_present(). The whole
+      frame rather than each walk: two walks either side of an unlocked gap would each be internally
+      consistent and disagree with each other, which is a subtler version of the same bug. The
+      present is outside it because it can block on the display, and the USB thread should not have
+      to queue behind that.
+    - parse_patch() write-locks for the whole parse, taken inside the function because all three
+      callers - both USB paths and the file load - want exactly that scope.
+    - sound_engine_update_from_patch() does NOT lock, deliberately. render_frame() already holds the
+      read lock when it calls it, and taking a non-recursive rwlock twice on one thread can deadlock
+      outright. Its other two callers - midiInput.c on the CoreMIDI thread, appMenuBar.c on the
+      render thread but outside a frame - take the read lock themselves.
+
+  THE TRAP THIS ALMOST WALKED INTO: parse_patch() had THREE early returns in the middle of the parse
+  for malformed input. With a lock held those stop being early returns and become a deadlock the next
+  time anything asks to draw. They now set a result and goto a single exit that unlocks.
+
+  Exercised against the LIVE G2 (2026-09-02, CT brought it online for this): the editor connected,
+  streamed patches from the device - so the USB thread was write-locking parse_patch() throughout -
+  while 12 alternating LOADFILE (UI-thread write) and SCREENSHOT (render read) operations went
+  through the backdoor and a 72-message mod wheel sweep was pushed at its MIDI input. Every command
+  consumed, USB still streaming afterwards, no hang, and the canvas rendering a real patch.
+
+  ALL FOUR PATHS COVERED, including the CoreMIDI read lock, which took three checks to establish
+  rather than assume:
+    - the editor's MIDI input was on "All sources" / "All (Omni)" (Experimental menu), so the sweep
+      down IAC Driver Bus 1 was being received rather than filtered out;
+    - CC 1 reaches morph_moved() at midiInput.c:231 with no channel test in the way;
+    - sound_engine_set_morph() has NO engine-on gate - it is an atomic_exchange that returns true on
+      any changed value - so with the engine Off the sweep still fired morph_moved(true) and still
+      took database_read_lock() on the CoreMIDI thread, 72 times, while the USB thread was parsing
+      patches and the render thread was drawing them.
+  The engine being Off was what made this look unverifiable; it turned out to be irrelevant.
+
+  WHAT IT DOES NOT COVER: individual parameter writes from the USB thread outside a parse are still
+  unlocked. Those are single aligned scalars - the benign case. The structural rewrite is what the
+  lock exists for.
 
 
   LFOA AND LFOC NOW SHOW WAVE ICONS (2026-08-24). Both use lfoWaveStrMap, the same map LfoB uses, but
