@@ -27,6 +27,14 @@
 tModule * get_module(tModuleKey key);
 uint32_t count_active_modules(uint32_t slot);
 bool slot_has_modules(uint32_t slot);
+// Held across a WHOLE operation, never inside an accessor - see the note on the definition in
+// dataBase.c. Read for a render pass or a snapshot build, write for a patch parse. Not recursive:
+// nesting either kind on one thread can deadlock.
+void database_read_lock(void);
+void database_read_unlock(void);
+void database_write_lock(void);
+void database_write_unlock(void);
+
 tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index);
 void write_module(tModuleKey key, tModule * module);
 void delete_module(tModuleKey key);
