@@ -36,6 +36,7 @@ extern "C" {
 #include "prefs.h"
 #include "midiInput.h"
 #include "synthlibGlobals.h"
+#include "dataBase.h"
 #include "soundEngine.h"
 #include "noteStack.h"
 
@@ -162,7 +163,16 @@ static void morph_moved(bool changed) {
         // Safe from this thread since the snapshot's writers were given a mutex of their own
         // (gParamsWriteMutex in soundEngine.c); the audio thread is a lock-free reader and is not
         // held up by it.
+        // READ-LOCKED HERE, not inside sound_engine_update_from_patch(). That function is also
+        // called from inside render_frame(), which already holds the read lock - and taking a
+        // non-recursive rwlock twice on one thread can deadlock outright. So each of its callers
+        // that is NOT already holding the lock takes it, and the function itself never does.
+        //
+        // This is the call that made the database a three-thread structure: it runs on the CoreMIDI
+        // thread so a morph reaches the engine immediately rather than waiting to be drawn.
+        database_read_lock();
         sound_engine_update_from_patch();
+        database_read_unlock();
 
         // Still wanted in its own right: morphed dials move on screen as the wheel turns. It is now
         // only cosmetic, though, so a late frame no longer means a late sound.

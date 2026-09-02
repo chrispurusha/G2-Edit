@@ -25,12 +25,52 @@ extern "C" {
 #include "synthlibDefs.h"
 #include "globalVars.h"
 #include "splitView.h"
+#include <pthread.h>
+
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 
-tModule gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES] = {0};
+// ── THE DATABASE LOCK ────────────────────────────────────────────────────────────────────────────
+//
+// gModule and gCable are read and written by THREE threads, and until now by none of them safely:
+//   - the USB thread WRITES on every patch load and parameter change
+//   - the render thread READS throughout a frame
+//   - the CoreMIDI thread READS all of it to rebuild the sound engine's snapshot, which
+//     midiInput.c does on a morph change so mod wheel response is not capped at the frame rate
+// The audio thread is deliberately NOT among them - it only ever reads the engine's own seqlock
+// snapshot - and that is what makes a blocking lock viable here at all.
+//
+// COARSE, AND THAT IS THE POINT. Locking inside get_module()/get_cable() would be both expensive and
+// useless: a torn read of one aligned uint32 was never the problem, and walking a module list while
+// a patch load rewrites it is. So the lock is held across whole OPERATIONS - a patch parse, a render
+// pass, a snapshot build - and the accessors below stay exactly as they were.
+//
+// NON-RECURSIVE, AND THE DISCIPLINE MATTERS. pthread_rwlock_t is not recursive, and taking a read
+// lock twice on one thread can deadlock outright on an implementation that lets a waiting writer
+// jump the queue. So it is taken at the OUTERMOST operation and nowhere inside:
+// sound_engine_update_from_patch() does NOT lock, because render_frame() already holds the read lock
+// when it calls it - its other two callers take the lock themselves instead.
+static pthread_rwlock_t gDatabaseLock                                    = PTHREAD_RWLOCK_INITIALIZER;
 
-tCable  gCable[MAX_SLOTS][locationMax][MAX_NUM_CABLES]   = {0};
+void database_read_lock(void) {
+    pthread_rwlock_rdlock(&gDatabaseLock);
+}
+
+void database_read_unlock(void) {
+    pthread_rwlock_unlock(&gDatabaseLock);
+}
+
+void database_write_lock(void) {
+    pthread_rwlock_wrlock(&gDatabaseLock);
+}
+
+void database_write_unlock(void) {
+    pthread_rwlock_unlock(&gDatabaseLock);
+}
+
+tModule                 gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES] = {0};
+
+tCable                  gCable[MAX_SLOTS][locationMax][MAX_NUM_CABLES]   = {0};
 
 // Called from both threads — no internal locking.
 tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index) {

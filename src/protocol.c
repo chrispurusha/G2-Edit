@@ -1534,10 +1534,19 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
     uint8_t  type      = 0;
     int16_t  count     = 0;
     uint32_t subOffset = 0;
+    int      result    = EXIT_SUCCESS;
 
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
+    // WRITE-LOCKED FOR THE WHOLE PARSE. This is the operation the lock exists for: it replaces
+    // modules, cables and parameters wholesale, and a render pass or a snapshot build walking the
+    // tables while it runs sees a patch that never existed. Taken here rather than at the call sites
+    // because all three of them - both USB paths and the file load - want exactly this scope.
+    //
+    // Safe against the read lock because no caller holds one: the file load runs from a menu action
+    // or the backdoor, both outside render_frame(), and the USB paths are on their own thread.
+    database_write_lock();
 
     // NOT ALL PATCH LOADS CLEAR THE SLOT FIRST — a patch arriving because the device's own patch
     // changed is parsed straight over what was there. Bumping here as well as in the two slot-clear
@@ -1558,19 +1567,22 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
             // guard and body that made parse_midi_cc() silently wrong.
             if ((BIT_TO_BYTE(bitOffset) + 2) > (uint32_t)length) {
                 LOG_ERROR("parse_patch: truncated header for type 0x%02x, aborting\n", type);
-                return EXIT_FAILURE;
+                result = EXIT_FAILURE;
+                goto done;
             }
             count = (int16_t)read_bit_stream(buff, &bitOffset, 16);
 
             if (count < 0) {
                 LOG_ERROR("parse_patch: negative count %d for type 0x%02x, aborting\n", count, type);
-                return EXIT_FAILURE;
+                result = EXIT_FAILURE;
+                goto done;
             }
 
             if (BIT_TO_BYTE(bitOffset) + count > length) {
                 LOG_ERROR("parse_patch: count %d for type 0x%02x would exceed buffer length %d, aborting\n",
                           count, type, length);
-                return EXIT_FAILURE;
+                result = EXIT_FAILURE;
+                goto done;
             }
         }
         subOffset = bitOffset;
@@ -1637,7 +1649,13 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
         }
         bitOffset += SIGNED_BYTE_TO_BIT(count);
     }
-    return EXIT_SUCCESS;
+done:
+    // ONE EXIT, so the unlock cannot be skipped. The three aborts above used to return straight out
+    // of the middle of the parse; with a lock held that is not an early return, it is a deadlock the
+    // next time anything asks to draw.
+    database_write_unlock();
+
+    return result;
 }
 
 int parse_perf(uint8_t * buff, int length) {
