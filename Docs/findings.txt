@@ -1084,6 +1084,54 @@ negative offsets to anchorTopLeft against the new y=0-at-body-top convention.
   restore the backup — never git checkout a file you have edited.
 
 
+2026-09-02  RACE CONDITION MAP - G2-EDIT
+------------------------------------------------------------
+Same method as the GenBridge review: enumerate the shared state, then for each item list the
+functions that touch it and which thread each runs on.
+
+THE DOCS SAY TWO THREADS. THERE ARE FOUR:
+  1. GLFW/OpenGL render thread (also the Cocoa main thread)
+  2. USB comms thread (pthread, usbComms.c:4835)
+  3. CoreAudio render thread (AURenderCallback, audioOutput.c:426)
+  4. CoreMIDI input thread (MIDIInputPortCreateWithProtocol, midiInput.c:485)
+CLAUDE.md's "Threading model: two threads" predates the sound engine and is now wrong.
+
+FIXED
+  - THE SEQLOCK READER HAD NO FENCE between copying the snapshot and re-reading the sequence
+    (soundEngine.c read_params). The second load only guarantees that what FOLLOWS it is not hoisted
+    above it; it says nothing about the copy above being allowed to sink below it - so the validation
+    could be performed against a sequence read before the data was actually fetched, and a torn
+    snapshot accepted as whole. Both loads are seq_cst and compile to ldar on arm64, so it was
+    unlikely to bite, but that is not the same as correct.
+
+WHAT IS SOUND, and worth recording so it is not "fixed" later:
+  - The engine's parameter snapshot is a proper seqlock plus a writers' mutex, with the audio thread
+    as a never-blocking reader. The design is right; only the fence above was missing.
+  - The note queue is a single-consumer multi-producer ring with a fetch_add claim and a per-slot
+    published sequence. Correct.
+  - gDeviceOpLabel looked like GenBridge's raced midiName buffer and is not: both its writer and its
+    reader are in graphics.c, on the render thread.
+
+THE ONE THAT MATTERS, AND IT IS ARCHITECTURAL: THE PATCH DATABASE HAS NO LOCKING AT ALL.
+  gModule[][][]  and gCable[][][] (dataBase.c) carry the comment "Called from both threads - no
+  internal locking". That understates it in two ways. It is THREE threads, and there is no
+  synchronisation of any kind - not a mutex, not an atomic, not a seqlock:
+    - USB thread WRITES on every patch load and parameter change (31 call sites across protocol.c
+      and usbComms.c)
+    - render thread READS it throughout a frame (13 sites in moduleGraphics.c alone)
+    - CoreMIDI thread READS all of it to rebuild the engine snapshot - sound_engine_update_from_patch()
+      is called from midiInput.c:165 on a morph change, which was deliberate (it removed the frame-rate
+      cap on mod wheel response) and quietly made a two-thread structure a three-thread one
+  The audio thread is NOT among them: it only ever reads the snapshot, which is what makes a lock
+  viable here at all.
+
+  Per-call locking would be both heavy and useless - a torn read of one aligned uint32 is not the
+  problem; walking a module list while a patch load rewrites it is. The fix has to be coarse: one
+  rwlock, write-held for the duration of a patch parse, read-held for the duration of a render pass
+  and of a snapshot build. That is a handful of places rather than 47 files, but it is a real design
+  change and wants deciding rather than slipping in.
+
+
   LFOA AND LFOC NOW SHOW WAVE ICONS (2026-08-24). Both use lfoWaveStrMap, the same map LfoB uses, but
   all SIX entries rather than the four LfoB clamps to — LfoA keeps the waveform in a parameter
   (index 4), LfoC in a mode (index 0). The first four delegate straight to LfoB's measured cycle, so
