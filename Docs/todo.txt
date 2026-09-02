@@ -85,6 +85,7 @@ VST3
 - ./do-uncrustify does not cover vst3/, so the plug-in sources are unformatted
 
 ARCHITECTURE AND SHARED CODE
+- Adopt GenBridge's audio/MIDI selector in place of the Audio Device and MIDI Input flyouts (appMenuBar.c:902/1035) - per-device remembered settings, real channel limits, a None entry; see GenBridge findings 2026-09-02
 - ***PRIORITY*** Migrate gParamRectangle[slot][location][index][param] onto the click-region registry
 - Popup lifecycle coordinator: two deliberate exclusions remain
 - Generalize mousePanels.c / mouseTopbar.c / selection.c into shared SynthLib components
