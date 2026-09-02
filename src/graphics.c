@@ -2220,6 +2220,15 @@ static void register_app_popups(void) {
 // so the backdoor SCREENSHOT command can force a synchronous frame (see backdoor_screenshot() in
 // backdoor.c) — which is the only reason it is not static.
 void render_frame(void) {
+    // READ-LOCKED FOR THE WHOLE FRAME. A frame walks the module and cable tables from end to end,
+    // and until now the USB thread could rewrite them halfway through - a patch arriving mid-render
+    // is exactly the case, and it rewrites structure rather than a value. See dataBase.c.
+    //
+    // The whole frame rather than each walk: two walks either side of an unlocked gap would each be
+    // internally consistent and disagree with each other, which is a subtler version of the same
+    // bug. It also means sound_engine_update_from_patch() below must NOT take the lock itself.
+    database_read_lock();
+
     render_backend_clear((tRgb){0.8, 0.8, 0.8});
 
     // The sound engine reads the selected module's parameters from here. A redraw is exactly the
@@ -2318,6 +2327,11 @@ void render_frame(void) {
 #ifdef ENABLE_MOUSE_CROSSHAIR
     render_mouse_crosshair();     // TEMPORARY debug aid (F9) — above even the modal, so it is never hidden
 #endif
+
+    // Released BEFORE the present. Everything that reads the database has been done by now - what is
+    // left is handing a finished vertex array to the GPU - and a present can block on the display,
+    // which is not a thing to keep the USB thread waiting behind.
+    database_read_unlock();
 
     // Submits the frame's one vertex array and puts it on screen. This was a render_backend_flush()
     // followed by glfwSwapBuffers() — the last GLFW call in this loop, and one that cannot exist

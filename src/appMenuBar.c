@@ -40,6 +40,7 @@ extern "C" {
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
 #include "paramOverlay.h"
+#include "dataBase.h"
 #include "soundEngine.h"
 #include "audioOutput.h"
 #include "midiInput.h"
@@ -677,7 +678,11 @@ static void action_toggle_sound_engine(int index) {
         // rather than leaving a menu that claims the engine is on while it is silent.
         show_alert("Sound Engine", "Could not open the audio output device.");
     } else {
+        // Read-locked by the caller, never inside the function - see midiInput.c's note. This one is
+        // on the render thread but OUTSIDE render_frame(), so it holds no lock of its own yet.
+        database_read_lock();
         sound_engine_update_from_patch();    // don't wait for the next redraw to pick up the selection
+        database_read_unlock();
     }
 }
 
