@@ -47,7 +47,28 @@ PROJECT="G2 Editor.xcodeproj"
 SCHEME="G2 Editor"
 APP_NAME="G2 Editor.app"
 VOL_NAME="G2-Edit"
-DERIVED="build/release-tmp"
+
+# OUTSIDE THE PROJECT, AND REMOVED ON THE WAY OUT. Both halves matter, and the
+# reason is an afternoon lost on the sibling project MidiSyncTool.
+#
+# This used to be build/release-tmp and was left behind after every release. The
+# result was a SECOND "G2 Alike.vst3", correctly formed and identically named,
+# sitting inside a directory a host may well be scanning - and VST3 SCANNING
+# RECURSES. The host found both, loaded the stale one, and presented an old build
+# with nothing whatever to say so. It reads exactly like a regression in the
+# plug-in and it is not: it is two bundles with one name.
+#
+# A temporary directory cannot be on any host's search path, and it keeps both of
+# the properties this path already had: away from Xcode's own build directory, so
+# a release does not force a full IDE rebuild afterwards, and away from anything
+# an IDE build or a Clean Build Folder might delete underneath it mid-build.
+#
+# The trap removes it whether the release succeeds, fails a check, or is
+# interrupted. STAGE joins the same trap further down rather than installing a
+# second one on EXIT, which would silently replace this one.
+DERIVED=$(mktemp -d)
+STAGE=""
+trap 'rm -rf "$DERIVED" "$STAGE"' EXIT
 
 # --- version -------------------------------------------------------------
 
@@ -165,12 +186,12 @@ VERSION_CLEAN="${VERSION#[Vv]}"
 
 echo "==> clean build, universal Release"
 
-# Always build from scratch. Deleting the derived data is stronger than
-# "xcodebuild clean": it also discards the module cache and any stale headers, so
-# a release can never pick up something left behind by an earlier Debug build.
-# Using a private -derivedDataPath keeps this away from Xcode's own build dir, so
-# running this does not force a full rebuild next time you open the IDE.
-rm -rf $DERIVED
+# Always build from scratch. A fresh temporary derived-data path per run (see the
+# note at the top) is stronger than "xcodebuild clean": it also discards the
+# module cache and any stale headers, so a release can never pick up something
+# left behind by an earlier Debug build - and it keeps this away from Xcode's own
+# build dir, so running this does not force a full rebuild next time you open the
+# IDE.
 
 xcodebuild \
     -project $PROJECT \
@@ -243,15 +264,16 @@ if [[ -n ${G2_RELEASE_SKIP_VST3:-} ]]; then
 else
     echo "==> building the VST3"
 
-    # BUILT INSIDE THE RELEASE'S OWN TREE, not the shared build/ directory. build/ is where Xcode puts
-    # its IDE products too, so an IDE build or a Clean Build Folder running alongside a release can
-    # delete the bundle between do-vst3 creating it and linking into it — which is how a release failed
-    # with "lipo: can't create temporary output file ... (No such file or directory)". Keeping it in
-    # $DERIVED also means a release never overwrites the developer's own build/G2 Alike.vst3, which is
-    # the copy normally installed for testing.
+    # BUILT IN THE RELEASE'S OWN TEMPORARY TREE, not the shared build/ directory. build/ is where
+    # Xcode puts its IDE products too, so an IDE build or a Clean Build Folder running alongside a
+    # release can delete the bundle between do-vst3 creating it and linking into it — which is how a
+    # release failed with "lipo: can't create temporary output file ... (No such file or directory)".
+    # Keeping it in $DERIVED also means a release never overwrites the developer's own
+    # build/G2 Alike.vst3, which is the copy normally installed for testing - and, since $DERIVED is
+    # now a temporary directory, never leaves a second bundle of that name where a host will find it.
     # G2_VERSION_STRING, because do-vst3's own `git describe` would name the PREVIOUS release: the
     # tag for this one is not created until after the .dmg has been checked. See do-vst3.
-    if ! G2_VERSION_STRING="$VERSION" G2_VST3_OUT="$PWD/$DERIVED/vst3/G2 Alike.vst3" ./do-vst3 >/dev/null; then
+    if ! G2_VERSION_STRING="$VERSION" G2_VST3_OUT="$DERIVED/vst3/G2 Alike.vst3" ./do-vst3 >/dev/null; then
         echo "error: the VST3 build failed - see ./do-vst3 for the reason" >&2
         echo "       (needs the VST3 SDK; set VST3_SDK if it is not in ~/Documents/vst3sdk)" >&2
         echo "       set G2_RELEASE_SKIP_VST3=1 to release the app without the plug-in" >&2
@@ -279,8 +301,10 @@ fi
 
 echo "==> staging disk image contents"
 
+# NO NEW TRAP HERE. The one set beside DERIVED covers both, and a second trap on
+# EXIT would silently replace the first - leaving the build tree behind again,
+# which is the whole thing this is guarding against.
 STAGE=$(mktemp -d)
-trap "rm -rf $STAGE" EXIT
 
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
