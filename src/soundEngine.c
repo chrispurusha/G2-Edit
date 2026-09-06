@@ -1069,7 +1069,7 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 // THE LENGTHS ARE EXACT, in samples at the base rate for the Small room, scaled by kReverbTypeScale
 // for the others. What is inferred rather than measured is how the mixing stages are wired to each
 // other — the tap set, the stage pairings and the coefficients are all recovered.
-#define RV_OUTTAPS    (16)
+#define RV_OUTTAPS    (7)
 // THE ALLPASS COEFFICIENTS ARE THE INSTRUMENT'S, read straight out of its mixing gains: the two it
 // pairs 0.4820 with 0.7676 and 0.3102 with 0.9038, and 1 - g*g for those g values is exactly those
 // two numbers. The input diffuser's own gains come out heavier, at 0.75/0.5.
@@ -1080,7 +1080,7 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 // Sixteen taps summed with alternating signs add up like a random walk, so the sum grows as the
 // square root of the count and this is 1/sqrt(16). REVERB_WET_GAIN sets the level; this only keeps
 // the tap count from changing it.
-#define RV_TAP_SCALE    (0.35355339059327373)
+#define RV_TAP_SCALE    (0.37796447300922720)
 
 // 1/sqrt(8) -- what makes the 8-point Hadamard butterfly orthogonal rather than a gain of 8.
 #define RV_HADAMARD     (0.35355339059327373)
@@ -1195,15 +1195,109 @@ static const uint32_t kRvLineDl[RV_LINES]       = {
     eRvLn0, eRvLn1, eRvLn2, eRvLn3, eRvLn4, eRvLn5, eRvLn6, eRvLn7
 };
 
-// Which line each output tap reads, and how far along it.
-static const uint32_t kRvTapLine[RV_OUTTAPS]    = {
-    eRvLn0, eRvLn1, eRvLn2, eRvLn3, eRvLn4, eRvLn5, eRvLn6, eRvLn7
+// WHICH LINE EACH OUTPUT TAP READS, AND HOW FAR ALONG IT — ONE SET PER CHANNEL.
+//
+// THIS IS WHERE THE STEREO COMES FROM, and it is the whole of it. There is ONE tank; the two
+// channels are two different sets of taps into it, which is what the instrument does — its own
+// reverb holds a single 32768-word memory and reads it twice. Two tanks fed the same mono input
+// hold the same state by construction, so anything derived from one is derivable from the other,
+// and no amount of offsetting the read positions changes that.
+//
+// WHAT THE PREVIOUS ARRANGEMENT ACTUALLY DID, measured rather than argued: it ran two identical
+// tanks and read the right one's taps REVERB_SPREAD samples earlier. With the line modulation
+// switched off the right channel was then a BIT-EXACT COPY of the left delayed by 110 samples —
+// cross-correlation +1.0000 at lag 110, in all four rooms. Every bit of the decorrelation came
+// from the modulation LFOs running a quarter cycle apart, none from the structure, so turning the
+// modulation down would have collapsed the image without touching anything named "stereo".
+//
+// AND THE METRIC THAT PASSED IT WAS BLIND TO EXACTLY THAT. Correlation read at lag zero scores a
+// signal against a delayed copy of itself as uncorrelated: the old arrangement read +0.03 at lag 0
+// against the instrument's +0.012..+0.045 and looked like a match. Score the PEAK over lag
+// instead, which is what tells a decorrelated pair from a delayed one:
+//
+//                          peak r      at lag (96 kHz samples)
+//     the instrument      +0.124..+0.159    676..1185, and it SCALES with the room
+//     two tanks + spread  +0.126..+0.137    74..111, pinned to REVERB_SPREAD
+//     two tanks, no mod   +1.0000           110, exactly
+//
+// The instrument's peak lag scaling with the room (1.00, 1.26, 1.59, 1.75 against kReverbTypeScale's
+// 1.00, 1.27, 1.53, 1.68) is the tell that its two channels are tap sets on one tank: the residual
+// similarity sits at the DISTANCE BETWEEN AN L TAP AND AN R TAP on the same line, and every length
+// in the tank scales with the room. A fixed offset cannot do that, and the old one did not.
+//
+// TWO TAPS PER LINE, SIXTEEN PER CHANNEL, AND NO FRACTION SHARED BETWEEN THE SETS. A tap the two
+// channels read at the same point on the same line is common-mode and contributes nothing but
+// correlation.
+//
+// EVERY TAP MUST SIT AT LEAST AS FAR ALONG AS ITS CHANNEL'S EARLIEST ONE. The first arrival at a
+// tap is frac * length after the tank's input, so the SMALLEST frac * length in a set is that
+// channel's onset, and kRvTankLead is that number for the left set. A tap placed nearer the head of
+// a short line silently becomes the new onset and moves the whole room forward — which is why the
+// short lines carry the large fractions here and only the long ones carry small ones.
+//
+// THE RIGHT CHANNEL ARRIVES FIRST, by the 110 samples measured on the hardware and previously spent
+// on REVERB_SPREAD. Here it is a tap position rather than a subtraction: left's earliest is
+// 0.13 * 2297 = 299 samples, right's is 0.0823 * 2297 = 189, and the difference is the 1.14 ms gap.
+// Being a position, it scales with the room the way the instrument's does, and it cannot clamp —
+// the old subtraction hit zero on the short lines of the Small room and handed those taps to both
+// channels identically.
+static const uint32_t kRvTapLine[REVERB_CHANNELS][RV_OUTTAPS] = {
+    {eRvLn4, eRvLn4, eRvLn5, eRvLn6, eRvLn6, eRvLn7, eRvLn7},     // left
+    {eRvLn4, eRvLn4, eRvLn5, eRvLn6, eRvLn6, eRvLn7, eRvLn7}      // right
 };
-static const double   kRvTapFrac[RV_OUTTAPS]    = {
-    0.83, 0.59, 0.89, 0.67, 0.13, 0.37, 0.11, 0.41
+static const double   kRvTapFrac[REVERB_CHANNELS][RV_OUTTAPS] = {
+    {   // left  — earliest is 0.1301 on Ln4 = 299 samples, which is what kRvTankLead measures
+        0.1301, 0.6935, 0.6339, 0.5312, 0.8379, 0.4515, 0.8550
+    },
+    {   // right — earliest is 0.0823 on Ln4 = 189 samples, 110 ahead of the left set
+        0.0823, 0.3000, 0.2000, 0.1200, 0.4200, 0.1000, 0.4963
+    }
 };
+static const double   kRvTapSign[RV_OUTTAPS]                  = {1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0};
 
-static uint32_t       gRvAddr[eRvSpanCount + 1];
+// ─── THE OUTPUT TAP SETS ARE THE INSTRUMENT'S OWN ────────────────────────────────────────────────
+//
+// Its output stage sums SEVEN taps into each wet slot, and the two sets are DISJOINT: seven PAIRS,
+// with the left channel reading the later member. Separations in samples at roomSize 1.0:
+//
+//     the instrument   1909   904  1645  1919  1067  1672  1871      mean 1569
+//     measured L/R correlation peak, hardware, 2026-09-06:           1504 (Small)
+//
+// THOSE TWO NUMBERS ARE THE SAME MEASUREMENT FROM DIFFERENT DIRECTIONS, which is the reason to trust
+// both: the recovered pair separations average 1569 and the hardware's cross-correlation peaks at
+// 1504. Six of the seven separations are used here; the seventh slot carries the measured 110-sample
+// ONSET gap instead, which the instrument gets from propagation through its network rather than from
+// any pair, and which this tank has to place explicitly because its pre-delay is a span.
+//
+// BOTH CHANNELS COMBINE THEIR SEVEN AS + - + + - - +, the SAME pattern, so the stereo is carried
+// entirely by tap POSITION and never by sign. That is the instrument's pattern, read off its two
+// output accumulators, not an alternation chosen for convenience.
+//
+// WATCH THE CROSS PAIRS, NOT JUST THE INTENDED ONES. Every L tap correlates with every R tap on the
+// SAME line, so a set of seven pairs really carries thirteen distances. Two taps that land near each
+// other by accident dominate the result: L at 2403 against R at 2342 on the long line put the
+// correlation peak at lag 61 and hid everything else. Shifting BOTH taps of that pair together fixes
+// it while preserving the separation the instrument specifies.
+//
+// WHAT THIS MATCHES, AND WHAT IT CANNOT. Peak L/R cross-correlation, against hardware measured the
+// same way:
+//
+//     room             Small   Medium   Large    Hall
+//     the instrument   0.161   0.168    0.171    0.173
+//     this engine      0.186   0.166    0.141    0.157
+//
+// Close, and flat across the rooms the way the instrument's is — which the sixteen-tap fit that
+// preceded this was not, declining 0.159 -> 0.124 as the room grew.
+//
+// THE LAG IS NOT MATCHED AND CANNOT BE, in this tank. The instrument reads ONE shared 32768-word
+// memory, so all forty-nine tap-pair distances contribute and they cluster; here the eight lines are
+// separate, only same-line pairs correlate at all, and thirteen distances are too few for any one to
+// dominate — so the peak wanders between rooms and windows rather than sitting at 1504 * roomScale.
+// That is a property of the architecture, not of these numbers, and no tap placement fixes it. It is
+// what a single shared buffer would fix. Do not tune this further: see the reverb entry in
+// Docs/findings.txt for the full specification of the instrument's tank, which is what closes it.
+
+static uint32_t gRvAddr[eRvSpanCount + 1];
 
 // THE RECOVERED LENGTHS ARE ALREADY IN 96 kHz SAMPLES — that is the rate the instrument's tank runs
 // at and the rate every recovered figure is quoted in. They must NOT be multiplied by
@@ -1219,29 +1313,29 @@ static uint32_t       gRvAddr[eRvSpanCount + 1];
 // carried over is the count and the spread — sixteen taps scattered across every long line.
 
 
-// ONE SHARED MEMORY PER CHANNEL, big enough for the largest room's highest address
+// ONE SHARED MEMORY FOR THE WHOLE TANK, big enough for the largest room's highest address
 // (21432 * 1.6795 + 1200, about 37200) with room to spare. The instrument uses 32768 words and
 // wraps; the next power of two above what the addresses need costs 256 kB a channel and removes
 // any question of a site aliasing onto another.
 #define RV_MEM_SHIFT    (17)
 #define RV_MEM          (1u << RV_MEM_SHIFT)
 
-static float          gRvMem[REVERB_CHANNELS][RV_MEM];
-static uint32_t       gRvCur[REVERB_CHANNELS];
-static double         gRvDamp[REVERB_CHANNELS][RV_LINES];
+static float          gRvMem[RV_MEM];
+static uint32_t       gRvCur;
+static double         gRvDamp[RV_LINES];
 
 // The low band the upper half of the dial subtracts, and the pole that defines it. Roughly 400 Hz
 // at 96 kHz — low enough that taking some of it out reads as "brighter" rather than "thinner".
 #define RV_LOW_A    (0.9744)
-static double         gRvLow[REVERB_CHANNELS][RV_LINES];
+static double         gRvLow[RV_LINES];
 
 // The two input poles. MEASURED, not chosen: the instrument's reverb is far darker than what goes
 // into it, and this is the filter that makes it so -- see the fit by REVERB_INPUT_LP_HZ.
-static double         gRevInLp[REVERB_CHANNELS];
-static double         gRevInLp2[REVERB_CHANNELS];
-static double         gRevInLp3[REVERB_CHANNELS];
-static double         gRevInLp4[REVERB_CHANNELS];
-static double         gRvLoop[REVERB_CHANNELS][RV_LINES];
+static double         gRevInLp;
+static double         gRevInLp2;
+static double         gRevInLp3;
+static double         gRevInLp4;
+static double         gRvLoop[RV_LINES];
 
 // [room type][channel], in samples at the base rate. NOT scaled by kReverbTypeScale — see above.
 static const uint32_t kReverbPreDelay[REVERB_TYPE_COUNT][REVERB_CHANNELS] = {
@@ -1502,7 +1596,7 @@ static void reset_node_state(void) {
     memset(gDelayHp, 0, sizeof(gDelayHp));
     memset(gPreDelay, 0, sizeof(gPreDelay));
     memset(gRvMem, 0, sizeof(gRvMem));
-    memset(gRvCur, 0, sizeof(gRvCur));
+    gRvCur = 0;
     memset(gRvDamp, 0, sizeof(gRvDamp));
     memset(gRvLow, 0, sizeof(gRvLow));
     memset(gRvLoop, 0, sizeof(gRvLoop));
@@ -2416,10 +2510,19 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         if (kind == eNodeFxIn) {
             uint32_t  wantedBus = module->param[variation][FXIN_PARAM_SOURCE].value;
             tModule * feeder    = voice_area_output_for_fx(module->key.slot, wantedBus);
+            int32_t   source    = (feeder != NULL) ? add_node(params, feeder, variation, depth + 1) : -1;
 
-            resolvedIn[0]     = (feeder != NULL) ? add_node(params, feeder, variation, depth + 1) : -1;
+            // BOTH LEGS, because the FX bus is a STEREO pair and this used to take only the left.
+            // The module has two audio outputs and a stereo meter; the Voice-area Out it listens to
+            // fills leg 0 and leg 1 with a genuine left and right and keeps them apart. Resolving
+            // only leg 0 threw the right channel away entirely — not summed into the left, discarded
+            // — so anything panned right vanished and a stereo source arrived as its own left
+            // channel doubled. A Reverb fed from it then summed two copies of the same signal.
+            resolvedIn[0]     = source;
             resolvedSrcOut[0] = 0;
-            inCount           = 1;
+            resolvedIn[1]     = source;
+            resolvedSrcOut[1] = 1;
+            inCount           = 2;
         }
     }
 
@@ -3627,8 +3730,11 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     // the instrument takes eleven. A damping control has to pass its neutral position through
     // untouched or it is a loss dressed up as a tone control.
     //
-    // WHAT THE TWO HALVES DO IS NOT MEASURED. Both captures in hand hold Brightness fixed, so there
-    // is no sweep to fit and the shape below is a symmetric guess about a measured centre: the
+    // WHAT THE TWO HALVES DO IS NOT FITTED — and note that is no longer the same as not measured.
+    // A nine-point sweep of the dial (0 to 127 in sixteens, Hall, Time 127) exists among the stored
+    // captures and has never been fitted against; its wet energy rises monotonically across the
+    // dial, so it is good data. Until someone does that, the shape below is a symmetric guess about
+    // a measured centre: the
     // lower half damps the top with a one-pole, the upper half damps the bottom by the same law.
     // The centre is right; the ends need a Brightness sweep off the hardware before either
     // REVERB_DAMP_MAX or REVERB_BRIGHT_CURVE means anything.
@@ -3651,14 +3757,14 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     if (type != sLastType) {
         memset(gPreDelay, 0, sizeof(gPreDelay));
         memset(gRvMem, 0, sizeof(gRvMem));
-        memset(gRvCur, 0, sizeof(gRvCur));
+        gRvCur     = 0;
         memset(gRvDamp, 0, sizeof(gRvDamp));
         memset(gRvLow, 0, sizeof(gRvLow));
         memset(gRvLfo, 0, sizeof(gRvLfo));
-        memset(gRevInLp, 0, sizeof(gRevInLp));
-        memset(gRevInLp2, 0, sizeof(gRevInLp2));
-        memset(gRevInLp3, 0, sizeof(gRevInLp3));
-        memset(gRevInLp4, 0, sizeof(gRevInLp4));
+        gRevInLp   = 0.0;
+        gRevInLp2  = 0.0;
+        gRevInLp3  = 0.0;
+        gRevInLp4  = 0.0;
         memset(gRvLoop, 0, sizeof(gRvLoop));
         memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
         sLastType  = type;
@@ -3745,9 +3851,10 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         }
     }
 
-    for (ch = 0; ch < REVERB_CHANNELS; ch++) {
-        uint32_t spread   = (ch == 0) ? 0 : REVERB_SPREAD;
-        double   diffused = input;
+    // ONE TANK, RUN ONCE. It used to run twice, once per channel, over two buffers holding the same
+    // state — see kRvTapFrac for the measurement that showed the second copy was earning nothing.
+    {
+        double diffused = input;
 
         // THE PRE-DELAY IS A SPAN OF THE TANK'S OWN MEMORY, the first one, and it does not
         // scale quite like the rest: the instrument's addresses are roomSize * k + 1200 and that
@@ -3758,7 +3865,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
 
         // ── THE TANK ──────────────────────────────────────────────────────────────────────────
         //
-        // ONE BUFFER PER CHANNEL, A CURSOR THAT WALKS BACKWARDS, AND A LAYOUT OF NON-OVERLAPPING
+        // ONE BUFFER, A CURSOR THAT WALKS BACKWARDS, AND A LAYOUT OF NON-OVERLAPPING
         // SPANS. Nothing here computes a delay: a value written at address W reappears at address
         // W + L exactly L samples later, so each span IS its line and the two cannot drift apart.
         // Sections are visited in increasing address order and each reads before it writes, so the
@@ -3781,13 +3888,11 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         {
             double   v      = diffused;
             uint32_t modMax = (uint32_t)(RV_MOD_DEPTH * RV_RATE);
-            double   phOff  = (ch == 0) ? 0.0 : 0.25;
             uint32_t i      = 0;
-            double   tapSum = 0.0;
             double   line[RV_LINES];
 
-#define RVR(a)       ((double)gRvMem[ch][(gRvCur[ch] + (a)) & (RV_MEM - 1)])
-#define RVW(a, x)    (gRvMem[ch][(gRvCur[ch] + (a)) & (RV_MEM - 1)] = (float)(x))
+#define RVR(a)       ((double)gRvMem[(gRvCur + (a)) & (RV_MEM - 1)])
+#define RVW(a, x)    (gRvMem[(gRvCur + (a)) & (RV_MEM - 1)] = (float)(x))
 
             // A plain line: hand `v` in, get it back L samples later.
 #define RVDLY(n)                         \
@@ -3838,15 +3943,15 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
                 double a1 = exp(-2.0 * M_PI * REVERB_INPUT_LP_HZ / gSampleRate);
                 double a2 = exp(-2.0 * M_PI * REVERB_INPUT_LP2_HZ / gSampleRate);
 
-                gRevInLp[ch]  = ((1.0 - a1) * v) + (a1 * gRevInLp[ch]);
+                gRevInLp  = ((1.0 - a1) * v) + (a1 * gRevInLp);
                 double a3 = REVERB_INPUT_LP_TIME * timeNorm;
 
-                gRevInLp2[ch] = ((1.0 - a2) * gRevInLp[ch]) + (a2 * gRevInLp2[ch]);
+                gRevInLp2 = ((1.0 - a2) * gRevInLp) + (a2 * gRevInLp2);
                 double a4 = exp(-2.0 * M_PI * REVERB_INPUT_LP4_HZ / gSampleRate);
 
-                gRevInLp3[ch] = ((1.0 - a3) * gRevInLp2[ch]) + (a3 * gRevInLp3[ch]);
-                gRevInLp4[ch] = ((1.0 - a4) * gRevInLp3[ch]) + (a4 * gRevInLp4[ch]);
-                v             = gRevInLp4[ch];
+                gRevInLp3 = ((1.0 - a3) * gRevInLp2) + (a3 * gRevInLp3);
+                gRevInLp4 = ((1.0 - a4) * gRevInLp3) + (a4 * gRevInLp4);
+                v         = gRevInLp4;
             }
 
             // The input stage: pre-delay, then four short allpasses that smear the attack before
@@ -3864,15 +3969,15 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
             // mode -- the one where all four hold the same thing -- and that mode has a period of
             // its own, so it beats. In phase it put a 12.2 dB lobe at 6.8 Hz into the tail.
             for (i = 0; i < RV_LINES; i++) {
-                v              = ((i & 1) ? -diffused : diffused) + gRvLoop[ch][i];
+                v          = ((i & 1) ? -diffused : diffused) + gRvLoop[i];
 
-                RVDLYM(kRvLineDl[i], (0.5 - (0.5 * cos(2.0 * M_PI * (lfo[i] + phOff)))) * (double)modMax);
+                RVDLYM(kRvLineDl[i], (0.5 - (0.5 * cos(2.0 * M_PI * lfo[i]))) * (double)modMax);
 
                 // Brightness, one filter per line and inside the loop, so it accumulates with every
                 // pass rather than colouring the output once on the way out.
-                gRvDamp[ch][i] = ((1.0 - dampLo) * v) + (dampLo * gRvDamp[ch][i]);
-                gRvLow[ch][i]  = ((1.0 - RV_LOW_A) * gRvDamp[ch][i]) + (RV_LOW_A * gRvLow[ch][i]);
-                line[i]        = gRvDamp[ch][i] - (dampHi * gRvLow[ch][i]);
+                gRvDamp[i] = ((1.0 - dampLo) * v) + (dampLo * gRvDamp[i]);
+                gRvLow[i]  = ((1.0 - RV_LOW_A) * gRvDamp[i]) + (RV_LOW_A * gRvLow[i]);
+                line[i]    = gRvDamp[i] - (dampHi * gRvLow[i]);
             }
 
             // THE MIXING MATRIX, a 4-point Hadamard as two butterfly stages. Orthogonal, so it moves
@@ -3896,14 +4001,14 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
                 // PER-LINE DECAY GAIN, each line losing 60 dB in the requested time over ITS OWN
                 // length. One gain shared by all eight would decay the short lines faster than the
                 // long ones and leave the tail's colour drifting as it faded.
-                gRvLoop[ch][0] = (b0 + b1) * RV_HADAMARD * gRvGain[0];
-                gRvLoop[ch][1] = (b0 - b1) * RV_HADAMARD * gRvGain[1];
-                gRvLoop[ch][2] = (b2 + b3) * RV_HADAMARD * gRvGain[2];
-                gRvLoop[ch][3] = (b2 - b3) * RV_HADAMARD * gRvGain[3];
-                gRvLoop[ch][4] = (b4 + b5) * RV_HADAMARD * gRvGain[4];
-                gRvLoop[ch][5] = (b4 - b5) * RV_HADAMARD * gRvGain[5];
-                gRvLoop[ch][6] = (b6 + b7) * RV_HADAMARD * gRvGain[6];
-                gRvLoop[ch][7] = (b6 - b7) * RV_HADAMARD * gRvGain[7];
+                gRvLoop[0] = (b0 + b1) * RV_HADAMARD * gRvGain[0];
+                gRvLoop[1] = (b0 - b1) * RV_HADAMARD * gRvGain[1];
+                gRvLoop[2] = (b2 + b3) * RV_HADAMARD * gRvGain[2];
+                gRvLoop[3] = (b2 - b3) * RV_HADAMARD * gRvGain[3];
+                gRvLoop[4] = (b4 + b5) * RV_HADAMARD * gRvGain[4];
+                gRvLoop[5] = (b4 - b5) * RV_HADAMARD * gRvGain[5];
+                gRvLoop[6] = (b6 + b7) * RV_HADAMARD * gRvGain[6];
+                gRvLoop[7] = (b6 - b7) * RV_HADAMARD * gRvGain[7];
             }
 
             // THE OUTPUT TAPS read INSIDE the four lines, never at a section's own write address.
@@ -3913,19 +4018,24 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
             // along a line is the circulating signal at that point of its trip, which is what a
             // reverb output is made of.
             //
-            // ALTERNATING SIGNS, and the right channel reads the same fractions of the same lines
-            // a little earlier -- see REVERB_SPREAD for why earlier and not later.
-            for (i = 0; i < RV_OUTTAPS; i++) {
-                uint32_t n   = kRvTapLine[i];
-                uint32_t len = gRvAddr[n + 1] - gRvAddr[n];
-                uint32_t off = (uint32_t)(kRvTapFrac[i] * (double)len);
-                uint32_t at  = gRvAddr[n] + ((off > spread) ? (off - spread) : 0u);
+            // ALTERNATING SIGNS, and EACH CHANNEL READS ITS OWN SET -- different lines at different
+            // fractions, never the same positions offset by a constant. That is the whole of the
+            // stereo; see kRvTapFrac.
+            for (ch = 0; ch < REVERB_CHANNELS; ch++) {
+                double tapSum = 0.0;
 
-                tapSum += (i & 1) ? -RVR(at) : RVR(at);
+                for (i = 0; i < RV_OUTTAPS; i++) {
+                    uint32_t n   = kRvTapLine[ch][i];
+                    uint32_t len = gRvAddr[n + 1] - gRvAddr[n];
+                    uint32_t at  = gRvAddr[n] + (uint32_t)(kRvTapFrac[ch][i] * (double)len);
+
+                    tapSum += kRvTapSign[i] * RVR(at);
+                }
+
+                sum[ch] = tapSum * RV_TAP_SCALE;
             }
 
-            sum[ch]    = tapSum * RV_TAP_SCALE;
-            gRvCur[ch] = (gRvCur[ch] - 1u) & (RV_MEM - 1);
+            gRvCur = (gRvCur - 1u) & (RV_MEM - 1);
 
 #undef RVAP
 #undef RVDLYM
@@ -3967,7 +4077,17 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
 // impulse response's energy against the impulse that produced it, sqrt(sum h*h) from tools/render
 // -- and the tank summed its taps 14.05 dB hotter than the comb bank it replaced, so this is the
 // old 1.0695 scaled to put full wet back on the instrument's -11.3 dB.
-#define REVERB_WET_GAIN    (0.3956)
+//
+// RE-DERIVED ONCE MORE 2026-09-06, 0.3016 -> 0.5002, when the tap set went from sixteen fitted taps
+// to the instrument's own SEVEN. Same method, same target.
+//
+// RE-DERIVED EARLIER THE SAME DAY, 0.3956 -> 0.3016, and for the reason the warning above predicts: the
+// tap tables declared RV_OUTTAPS entries and filled only eight, so the other eight zero-initialised
+// to line eRvPre at fraction 0.0 -- all reading one cell, in +/- pairs that cancelled exactly. Half
+// the taps contributed nothing, proven by rendering with RV_OUTTAPS at 8 and 16 and differencing:
+// bit-identical, 0.000e+00. Filling both sets put sixteen live taps in where there had been eight,
+// which is the 2.36 dB this takes back out. Measured the same way as every figure above it.
+#define REVERB_WET_GAIN    (0.5002)
 
     sum[0] *= REVERB_WET_GAIN;
     sum[1] *= REVERB_WET_GAIN;
@@ -4012,10 +4132,14 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
 // deviceRate * ENGINE_OVERSAMPLE — pass 48000 to get the 96 kHz the hardware measurements are
 // expressed in, so a lag is the same integer in both.
 //
-// THE TWO CHANNELS ARE NOW A REAL PAIR, and this is where REVERB_SPREAD gets tuned: render, then read
-// the L/R correlation off the result and compare it with the instrument's measured +0.012..+0.045.
-// It used to be the standing example of what the harness could see and the engine could not do —
-// both channels came back identical and the correlation read 1.000.
+// THE TWO CHANNELS ARE A REAL PAIR, and this is where the tap sets get scored: render, then take the
+// PEAK OF THE L/R CROSS-CORRELATION OVER LAG and compare it with the instrument's 0.124..0.159.
+//
+// TAKE THE PEAK, NEVER THE VALUE AT LAG ZERO. Correlation at lag zero scores a signal against a
+// delayed copy of itself as uncorrelated, so it cannot tell a decorrelated pair from a delayed one —
+// and that is not hypothetical: the arrangement this replaced read +0.03 at lag zero, looking like a
+// match to the instrument, while being a bit-exact copy of the left channel delayed by 110 samples
+// (peak +1.0000 at lag 110 with the line modulation switched off, in all four rooms).
 void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t timeValue,
                                    uint32_t brightValue, float * out, uint32_t frames) {
     if ((out == NULL) || (frames == 0) || (deviceRate <= 0.0)) {
@@ -4033,7 +4157,7 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
     // when settings were grouped by counting.
     memset(gPreDelay, 0, sizeof(gPreDelay));
     memset(gRvMem, 0, sizeof(gRvMem));
-    memset(gRvCur, 0, sizeof(gRvCur));
+    gRvCur      = 0;
     memset(gRvDamp, 0, sizeof(gRvDamp));
     memset(gRvLow, 0, sizeof(gRvLow));
     memset(gRvLoop, 0, sizeof(gRvLoop));
@@ -4885,8 +5009,11 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeFxIn:
         {
+            // The two legs stay apart — see the bridge in add_node() for why leg 1 is resolved at
+            // all. `a` is the feeder's left, input 1 its right.
             value[n][0] = (spec->active == true) ? (a * gSmoothedGain[n]) : 0.0;
-            value[n][1] = value[n][0];
+            value[n][1] = (spec->active == true)
+                          ? (signal_in(spec, value, 1) * gSmoothedGain[n]) : 0.0;
             break;
         }
         case eNodePassThru:

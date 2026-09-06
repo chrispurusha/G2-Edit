@@ -279,7 +279,37 @@ static __weak G2GlView * gCurrentView = nil;
 - (void)removeFromSuperview {
     cursor_release();        // an editor closed mid-drag must not leave the host without a pointer
     [self stopDragTimer];    // the timer retains self through its block; leaving it running leaks the view
+
+    // Hand back the layer and render targets. Without this a host that opens and closes editors
+    // would exhaust the backend's window slots, since every new view is a different pointer — and
+    // worse, see -dealloc.
+    gfx_detach_window((__bridge void *)self);
+
     [super removeFromSuperview];
+}
+
+// THE BACKSTOP, for a host that releases the view without ever taking it out of its superview.
+//
+// THIS IS THE ONE THAT CRASHED LIVE. gfx_attach_window() is called from -initWithFrame: above and
+// there was no matching detach anywhere in this plug-in — GenBridge and MidiSyncTool have had one
+// since their per-window slots were written; only this one went without. Every editor the host
+// closed left its slot occupied, holding that dead view's address and its CAMetalLayer.
+//
+// THAT CRASHED LIVE. The backend finds a window's slot by comparing the raw view POINTER, and the
+// allocator hands the same address back for a new NSView all the time — so reopening the editor
+// matched the dead view's slot, took the "already known, just select it" path, and drew and
+// presented into a layer belonging to a view that no longer existed. The crash is inside
+// -nextDrawable, on a layer that is no longer in any live layer tree.
+//
+// It is also a slow leak of the eight available slots, which is the same fault arriving by a
+// different route: past the eighth open the backend has no slot to give and leaves the previous
+// window selected, so a new editor draws into an old one's layer.
+//
+// BOTH HERE AND IN -removeFromSuperview. That one is the deterministic path and is where the two
+// sibling plug-ins do it; this catches the host that skips it. mtl_detach_window() clears the
+// slot's `native`, so whichever runs second finds nothing and does nothing.
+- (void)dealloc {
+    gfx_detach_window((__bridge void *)self);
 }
 
 - (void)updateTrackingAreas {
@@ -573,6 +603,14 @@ static __weak G2GlView * gCurrentView = nil;
     [context flushBuffer];
     CGLUnlockContext(cgl);
 #else
+    // SELECT THIS VIEW'S CONTEXT FIRST. The backend keeps one CURRENT window, so with two editors
+    // open whichever drew last left it pointing at its own layer, and drawing without claiming ours
+    // would paint into the other one's window. Attaching an already-known view is a pointer
+    // assignment, so doing it every frame is cheap and removes any need to track whose turn it is.
+    // Both sibling plug-ins have always done this; this one did not, which is a second way for one
+    // editor to end up drawing into another's layer.
+    gfx_attach_window((__bridge void *)self);
+
     // No lock and no current-context dance: a Metal command buffer is built and committed here and
     // nowhere else, and the backend owns its own state. The frame is drawn into the backend's
     // offscreen target and gfx_present() blits it to this view's layer — the same two calls the

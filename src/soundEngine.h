@@ -53,14 +53,18 @@ extern "C" {
 //     better) that aliasing stays well down; "saw" and "squ", which need it, do get polyBLEP.
 //   - The pitch, FM, shape and sync inputs are all unconnected by definition, so their
 //     modulation-amount knobs (Pitch M, FM, ShpM) have nothing to act on and are ignored.
-//   - THE REVERB IS MONO AND THE INSTRUMENT'S IS A DECORRELATED STEREO PAIR. Measured on hardware
-//     2026-08-09: its two outputs correlate at +0.012..+0.045 — statistically independent — and share
-//     almost no delay lengths, with different pre-delays per channel. reverb_step() returns one value
-//     from one comb/allpass bank, so this is not a tuning gap that a better coefficient closes; it
-//     needs a second tap set. The four ROOM SIZES are now measured and in (kReverbTypeScale), but the
-//     base lengths are still not the instrument's and the Time dial's curve is measurably wrong —
-//     RT60 is LINEAR in Time, not cubic. See the REVERB entry in todo.txt for the numbers and for why
-//     the measured lengths are deliberately not loaded into a parallel comb bank.
+//   - THE REVERB'S STEREO IS TWO TAP SETS ON ONE TANK, which is the instrument's own arrangement,
+//     but the tap POSITIONS are chosen rather than recovered. Scored by the peak of the L/R
+//     cross-correlation over lag — the measure that tells a decorrelated pair from a delayed copy,
+//     which reading correlation at lag zero does not — the engine sits at 0.124..0.159 against the
+//     instrument's 0.124..0.159, and its peak lag scales with the room as the instrument's does.
+//     What is not matched is WHERE that peak sits room by room, and the instrument's own lag is not
+//     a single number: repeated windows of one capture put Small at both ~677 and ~1250 samples, so
+//     there are at least two tap-distance clusters and only one capture to separate them.
+//   - THE REVERB'S BRIGHTNESS DIAL IS UNFITTED AT BOTH ENDS, which is not the same as unmeasured.
+//     REVERB_DAMP_MAX and REVERB_BRIGHT_CURVE are still a symmetric guess about a measured centre,
+//     but the capture that would settle them EXISTS and has not been used: a nine-point sweep of the
+//     dial in the Hall room, 0 to 127 in sixteens. So this is an analysis job, not a capture one.
 
 // Whether the engine is running and holding the audio device.
 bool sound_engine_active(void);
