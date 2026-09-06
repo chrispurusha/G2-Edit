@@ -2733,6 +2733,157 @@ OPEN WORK
   The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
   right — within 0.05 ms of the instrument in every room.
 
+- THE ENVELOPE'S ATTACK IS THE WRONG KIND OF CURVE, NOT THE WRONG CURVATURE (2026-09-06, owner's ear
+  then read off the instrument's own DSP). Owner: "G2's envelope is softer than our sound engine for
+  attack". It is, and the reason is structural.
+
+  OURS SHAPES A LINEAR PROGRESS OVER A FIXED SEGMENT TIME. paramCurves.c accumulates progress at
+  1/(attack*rate) and bends it with (1 - exp(-k*p)) / (1 - exp(-k)), so the attack lands on exactly
+  1.0 at exactly the dialled time.
+
+  THE INSTRUMENT USES A ONE-POLE APPROACH TO A TARGET. Its update is a Q23 multiply of a rate by a
+  DIFFERENCE, accumulated into the level - level += rate * (target - level) - which eases into the
+  peak asymptotically instead of arriving on a deadline. Same curve family, different behaviour near
+  the top, and that difference is what "softer" means.
+
+  THE FOUR SHAPES AND THEIR INDICES ARE RIGHT and are not the problem: envShapeStrMap is
+  {LogExp, LinExp, ExpExp, LinLin}, the first word naming the attack, and the engine's enum maps 1:1
+  with no off-by-one. ENV_ATTACK_SHARPNESS 2.83 and ENV_FALL_SHARPNESS 4.32 were hardware-fitted on
+  2026-08-24 and are the best fit OF THE WRONG FORM.
+
+  THE 2026-08-24 FIT SAID SO AT THE TIME, unrecognised. Its own trap note records that fitting the
+  segment length freely "trades against k - an asymptotic tail sitting in the noise". An asymptotic
+  tail is the signature of a one-pole; the fit had to pin the length to get a stable k, which is
+  exactly what forcing a fixed-duration model onto data with no fixed duration looks like. A fit that
+  only works when a parameter is pinned is evidence about the MODEL, not just about the parameter.
+
+  STILL A READING, NOT A MEASUREMENT. The harness that establishes it lives outside the repo and
+  compiles and runs clean, but outputs zero until its state block and dial-to-rate table are worked
+  out. What is missing is which state word is level, target and rate, and the table contents. The
+  curve question does not depend on the table - that sets the RATE a segment moves at, not the shape.
+
+- THE ENGINE IS NOT AS FULL AS THE INSTRUMENT, AND IT IS TWO SEPARATE FAULTS (2026-09-06, owner's
+  ear, then measured). Both found by comparing wet-to-dry energy per octave band, which divides the
+  excitation out so a hardware pulse and a unit-sample render compare directly. MATCH THE WINDOW IN
+  TIME, NOT SAMPLES: the engine renders at 96 kHz and the captures are 48 kHz, so equal sample counts
+  compare 0.68 s against 1.37 s and bias exactly the long rooms.
+
+  FAULT 1 - FX IN THREW AWAY THE RIGHT CHANNEL. FIXED. The FX bus is a stereo pair; moduleTypeFxtoIn
+  has two audio outputs and a stereo meter, and the Voice-area Out feeding it keeps its two legs
+  apart. The bridge in add_node() resolved leg 0 ONLY and the evaluator copied it into leg 1, so a
+  stereo source arrived as its own left channel doubled and anything panned right vanished. A Reverb
+  fed from it then summed two copies of the same signal. Now both legs are resolved.
+
+  FAULT 2 - THE REVERB'S LOW END DECAYS ABOUT TWICE TOO FAST, and this is the one that makes it sound
+  thin. Per-band decay rate at Brightness 64, dB/s:
+
+      Hall        125    250    500     1k     2k     4k     8k
+      instrument  -5.0   -4.6   -5.1   -5.3   -6.2   -8.8  -13.7
+      engine     -10.2   -9.7   -8.3   -6.9   -6.8   -7.4  -10.0
+
+  The instrument is FLAT from 125 Hz to 1 kHz and then rolls off; the engine is tilted the wrong way,
+  losing bass fastest. Small shows the same shape (-29.6 against -20.5 at 125 Hz). The engine's decay
+  gain is frequency-independent by construction, so something in the loop is taking low end out.
+  NOT THE MODULATION: with RV_MOD_DEPTH at 0 the 125 Hz rate is unchanged (-10.3 against -10.2).
+  What the modulation DOES explain is the treble - 8 kHz goes -10.0 to -6.1 with it off, which is the
+  interpolator's own lowpass and is already documented at RV_MOD_LOSS. The low-frequency cause is not
+  yet found.
+
+- REVERB L/R CORRELATION RE-MEASURED ON HARDWARE 2026-09-06, AND TWO EARLIER NUMBERS FROM THE SAME
+  DAY WERE WRONG. New captures in ~/Documents/G2-Measurements/reverb/g_{small,medium,large,hall}_stereo
+  (QU-24 at 48 kHz, patch in PatchTestFiles/ReverbMeasure.pch2).
+
+  THE RESULT, and it is now confirmed by two independent captures on different interfaces at
+  different rates:
+
+      room     peak |r|  lag (96 kHz samples)   old capture, re-analysed
+      Small     0.161     1504                   0.159 @  677
+      Medium    0.168     1872                   0.154 @ 1919
+      Large     0.171     2270                   0.157 @ 5249
+      Hall      0.173     2500                   0.166 @ 2501
+
+  The MAGNITUDE is flat at about 0.165 in every room, +/-0.004 across five impulses. Hall and Medium
+  reproduce their lag exactly across the two captures (2500/2501 and 1872/1919); Small and Large do
+  not, so there are several comparable clusters and which one wins depends on the window.
+
+  MISTAKE 1 - THE LAG SEARCH WAS CLIPPED, in the analysis written earlier the same day. It ran to
+  +/-1500 samples at 96 kHz while the real peaks sit at 1504..2500, so it returned the best sub-peak
+  inside its own window and called it the answer. That is where "the peak lag is bimodal, Small gives
+  both 677 and 1250" came from - an artefact of the search range, not a property of the instrument.
+  It also produced the declining magnitudes 0.158/0.143/0.124/0.124 that the engine's tap positions
+  were then fitted to. ALWAYS CHECK A SEARCH RANGE CONTAINS ITS ANSWER; the same trap is already
+  recorded against the chorus rate scan, which capped at 1.2 Hz and made the rate look 4x too fast.
+
+  MISTAKE 2 - A LONGER EXCITATION INVALIDATES THIS MEASUREMENT, and the argument that it does not is
+  wrong. The reasoning was that an L/R correlation compares the two outputs to EACH OTHER, so it is
+  self-referential and the excitation divides out. It does not: the correlation is frequency-weighted,
+  and a long pulse is low-frequency dominated where the two outputs correlate strongly. Measured on
+  the same rig, same room, same session, changing ONLY the Pulse Time:
+
+      Pulse Time   0  (0.135 ms click)   |r| = 0.160 at lag -1504
+      Pulse Time  64 (+13 dB of SNR)     |r| = 0.776 at lag +40
+
+  A whole set of four captures was taken at Time 64 and thrown away. KEEP THE CLICK. The gain that IS
+  legitimate is anything that does not touch the spectrum - the 2.5x output LevAmps (+8.2 dB) and
+  choosing the louder of two input pairs (+2.6 dB).
+
+  WHERE THE ENGINE SITS against the corrected target: 0.159 / 0.128 / 0.134 / 0.124 at lags
+  132 / 858 / 1033 / 1136. So it is about right in the Small room and roughly 25% too DECORRELATED in
+  the other three, and every one of its dominant L/R tap distances is far too short - 1136 against
+  2500 in the Hall. The tap table in soundEngine.c was fitted to the clipped numbers and now has a
+  better target to aim at.
+
+  RE-FITTED THE SAME DAY, AND THE ANSWER WAS THE INSTRUMENT'S OWN TAP SETS ALL ALONG. Against the
+  corrected target the seven-pair structure gives 0.186 / 0.166 / 0.141 / 0.157 against the
+  instrument's 0.161 / 0.168 / 0.171 / 0.173 - close, and FLAT across the rooms the way the
+  instrument's is, where the sixteen-tap fit declined 0.159 -> 0.124 as the room grew. It was
+  rejected earlier the same day for measuring "worse", which was an artefact of the clipped search it
+  was being judged against. Two independent routes agree: the recovered pair separations average 1569
+  and the hardware's correlation peaks at 1504.
+  WATCH THE CROSS PAIRS. Seven pairs carry THIRTEEN distances, because every L tap correlates with
+  every R tap on the same line. Two taps landing near each other by accident (L 2403 against R 2342)
+  put the peak at lag 61 and hid everything else; shifting both taps of that pair together fixes it
+  while preserving the separation the instrument specifies.
+  THE LAG CANNOT BE MATCHED IN THIS TANK and that is architectural. The instrument reads ONE shared
+  32768-word memory, so all forty-nine tap-pair distances contribute and cluster; here the eight lines
+  are separate, only same-line pairs correlate, and thirteen distances are too few for one to
+  dominate - the peak wanders rather than sitting at 1504 * roomScale. No tap placement fixes that.
+  REVERB_WET_GAIN re-derived 0.3016 -> 0.5002 for the seven-tap sum; renders -11.30 dB against the
+  measured -11.3, and RT60 lands 2.21/4.01/6.13/8.40 s against the dial's 2.19/4.22/6.23/8.20.
+
+  ALSO OPEN: DEVNOTE fires only about 3 gates in 10. Reproducible, and not explained by same-note
+  retriggering (alternating notes 4/7), envelope sustain holding the gate high (Sustain 0 gave 3/8),
+  hold length (1.0 s gave 4/8), app focus, or a second instance holding the USB claim. The wire format
+  is decoded but was never confirmed. Until it is, over-request the repeats and use what fires, or
+  drive the Pulse from a free-running LFO so the patch needs no notes at all.
+
+- THE INSTRUMENT'S REVERB OUTPUT TAP SETS, RECOVERED 2026-09-06. This closes the last question the
+  2026-08-18 dive left open about the output stage: which taps make the LEFT channel and which make
+  the RIGHT.
+
+  SEVEN TAPS PER CHANNEL, AND THE TWO SETS ARE DISJOINT — seven PAIRS, the left channel always
+  reading the later member. In samples at roomSize 1.0:
+
+      right   1680   5403   7347  10589  14470  17021  19561
+      left    3589   6307   8992  12508  15537  18693  21432
+      apart   1909    904   1645   1919   1067   1672   1871
+
+  Both channels combine their seven as + - + + - - +, the SAME pattern for both, so the stereo is
+  carried entirely by tap POSITION and never by sign. None of the fourteen is on a diffuser line.
+
+  LEFT READING LATER IS THE MECHANISM FOR THE MEASURED ONSET GAP — the right channel arrives first,
+  11.75 ms against 12.89 in the Small room, measured on hardware 2026-08-18 before any of this was
+  known.
+
+  IT WAS TRIED IN soundEngine.c AND MEASURED WORSE, which is the part worth keeping. Seven pairs on
+  our tank's four long lines gave an L/R peak correlation of 0.167..0.186 against the instrument's
+  0.124..0.159, where the fitted sixteen-tap set sits at 0.124..0.159. The reason is structural: a
+  PAIR reads one line twice, so its two taps see the same circulating content, and the instrument can
+  afford that because its energy is spread over about 31 lines — over EIGHT it couples the channels
+  far harder. TAP GEOMETRY IS INSEPARABLE FROM THE TANK IT READS, and importing half a design is how
+  a plausible wrong arrangement gets built. The seven-pair set becomes right when the tank underneath
+  it is the instrument's, which is specified in the entry below and not yet built.
+
 - THE INSTRUMENT'S REVERB LINE LENGTHS, RECOVERED 2026-08-18. The harness lives OUTSIDE the repo at
   ~/Documents/G2ReverbTrace (see its README for why and for the memory model); only these numbers
   cross back. The lengths did not even need the harness run to obtain them: the instrument's own

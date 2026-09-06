@@ -31,7 +31,27 @@ FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard
 - soundEngine.c LADDER_K_MAX (4.3) was chosen while the drawn constant was wrongly 3.914 - needs an ear
 - LevAmp gain law rewritten from measurement 2026-08-30: silent at dial 0, four segments, 0-4x
 - Super-saw ("sup") phase fix - needs an ear
-- Stereo reverb and stereo chorus - all three steps done, needs an ear
+- Stereo chorus - needs an ear
+- The envelope attack is the wrong FORM (fixed-duration shaped ramp against the instrument's one-pole
+  approach to a target) - not yet changed. Owner reports the G2's attack as softer; confirm by ear
+  against a short-attack patch before and after any fix
+- FX In now carries BOTH legs of the FX bus. It resolved only leg 0 and copied it to leg 1, so a
+  stereo Voice-area output feeding the FX area arrived as its LEFT channel doubled and anything
+  panned right was discarded outright. Play a patch with a stereo source into an FX-area Reverb and
+  confirm it is fuller and genuinely stereo; owner reported the engine "not as full as the hardware"
+- VST3 editor open/close: the plug-in never called gfx_detach_window, so a reopened editor could
+  inherit a dead view's Metal layer and crash the host in -nextDrawable (Ableton Live 12.4.5,
+  2026-09-06). Open and close the editor a dozen times in one session, on the same instance and on
+  several, and confirm it neither crashes nor draws into the wrong window
+- The same pass added the per-frame gfx_attach_window() to the plug-in's drawRect that both sibling
+  plug-ins already had. Load TWO G2 Alike instances, open both editors, and confirm each draws its
+  own canvas rather than one painting into the other
+- The app was checked against the SynthLib hardening and renders normally (NSWindow path); the
+  plug-in's view path has not been exercised in a host from here
+- Reverb stereo rebuilt 2026-09-06: ONE tank read by two tap sets, replacing two tanks and a fixed
+  read offset. Needs an ear for image width and for any flutter the new tap positions introduce
+- Reverb wet level re-derived (0.3956 -> 0.3016) after the dead-tap fix doubled the live tap count -
+  renders at -11.30 dB against the hardware's -11.3, but confirm it sits right in a patch by ear
 - Chorus LFO shape and depth - needs an ear
 - Filter resonance, raspiness and whole-graph oversampling changes - need an ear
 - Sound engine parameter smoothing (zipper noise on Shape sweeps) - needs an ear
