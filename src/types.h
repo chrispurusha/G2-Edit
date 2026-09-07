@@ -769,6 +769,42 @@ typedef struct {
 // `index` counts within its OWN direction - the third input is 2 whatever outputs the module has -
 // which is the same numbering tCableKey's connectorFromIoCount/connectorToIoCount use, so a cable
 // end can be remapped without converting anything.
+// The PALETTE groups - the sixteen the instrument's own Toolbar uses, which are NOT the nineteen
+// replacement groups above. The manual is explicit that they differ ("the replacement module
+// pop-ups doesn't always feature exactly the same modules as the module groups in the Toolbar"),
+// and the difference is not cosmetic: the nineteen leave eleven modules in no group at all, which
+// is right for replacement (there is nothing to swap a Blue2Red with) and wrong for a palette,
+// where every module has to be reachable. These sixteen cover all 170.
+//
+// A module may appear in MORE THAN ONE palette group - NoteDet is in both In/Out and MIDI - so this
+// is a list of (group, module) pairs rather than a field on the module. gPaletteList is the single
+// source for both the drag-on palette and the right-click "Create module" menu; there must never be
+// a second copy of it.
+typedef enum {
+    palGroupIo,
+    palGroupOsc,
+    palGroupRnd,
+    palGroupFilter,
+    palGroupDelay,
+    palGroupLevel,
+    palGroupSwitch,
+    palGroupSeq,
+    palGroupNote,
+    palGroupLfo,
+    palGroupEnv,
+    palGroupFx,
+    palGroupShaper,
+    palGroupMixer,
+    palGroupLogic,
+    palGroupMidi,
+    palGroupCount,
+} tPaletteGroup;
+
+typedef struct {
+    const tPaletteGroup group;
+    const tModuleType   moduleType;
+} tPaletteEntry;
+
 #define MODULE_ROLE_NONE    (0xFFu)
 
 typedef enum {

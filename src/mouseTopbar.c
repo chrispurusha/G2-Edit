@@ -49,6 +49,7 @@ extern "C" {
 #include "protocol.h"
 #include "menus.h"
 #include "mouseTopbar.h"
+#include "palette.h"
 #include "undo.h"
 #include "canvasDrag.h"
 
@@ -108,6 +109,11 @@ static void handle_button(tTopbarControlId controlId) {
             set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId, controlId);
             set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
                                            (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[slot].activeVariation));
+            break;
+        }
+        case topbarPaletteId:
+        {
+            palette_toggle();
             break;
         }
         case topbarUndoId:
