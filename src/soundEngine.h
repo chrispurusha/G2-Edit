@@ -61,10 +61,11 @@ extern "C" {
 //     What is not matched is WHERE that peak sits room by room, and the instrument's own lag is not
 //     a single number: repeated windows of one capture put Small at both ~677 and ~1250 samples, so
 //     there are at least two tap-distance clusters and only one capture to separate them.
-//   - THE REVERB'S BRIGHTNESS DIAL IS UNFITTED AT BOTH ENDS, which is not the same as unmeasured.
-//     REVERB_DAMP_MAX and REVERB_BRIGHT_CURVE are still a symmetric guess about a measured centre,
-//     but the capture that would settle them EXISTS and has not been used: a nine-point sweep of the
-//     dial in the Hall room, 0 to 127 in sixteens. So this is an analysis job, not a capture one.
+//   - THE REVERB'S BRIGHTNESS IS FITTED FROM 48 UPWARD AND EXTRAPOLATED BELOW IT. Sweeps in Small,
+//     Medium and Hall settle the dial over 48..112 to about 1.5 dB/s; below 48 the instrument's high
+//     band is in the noise and the engine's own decay fit returns nothing usable, so both sides stop
+//     measuring in the same place and the dark end over-damps. It wants a quieter capture of the
+//     dial's lower third, not another constant.
 
 // Whether the engine is running and holding the audio device.
 bool sound_engine_active(void);
