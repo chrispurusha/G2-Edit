@@ -4374,6 +4374,12 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
         }
 
+        case eMsgCmdGetCurrentNote:
+        {
+            retVal = send_get_current_note(messageContent->slot);
+            break;
+        }
+
         case eMsgCmdSendCtrlSnapshot:
         {
             retVal = send_ctrl_snapshot(messageContent->slot);
