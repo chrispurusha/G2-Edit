@@ -8039,3 +8039,85 @@ AND ONE FALSE ALARM: the reverb render appeared completely dead - impulse then e
 tools/render writes a capture-shaped file with DRY on channels 1-2 and WET on 3-4 (render.c:28), and
 the analysis was reading channel 0. A single unit sample in a 0.05 s window at 96 kHz is -36.8 dBFS,
 which is exactly what it measured. Read channel 2.
+
+DELAYS DO NOT HAVE THE CHORUS'S INTERPOLATION FAULT (checked 2026-09-07, negative result). delay_step()
+reads its line at whole samples exactly as the chorus did, but it does not matter: the engine supports
+DelayA and DelayB only, DelayA has a single audio input, and DelayB's two control inputs drive FB and
+Dry/Wet - neither module exposes TIME to modulation. So the delay length is constant between snapshot
+rebuilds and a whole-sample read is a fixed sub-sample offset, which at 96 kHz is 10.4 us on a delay of
+hundreds of milliseconds. The chorus was different because its delay is swept continuously by design.
+Only a live knob sweep or a morph could expose it, and nothing has been heard.
+
+OUTPUT PAD MEASURED, AND ITS SENSE IS INVERTED IN THE ENGINE (2026-09-07). Steady saw through the
+QU-24 rig, dry path Fx-In -> 2-Out -> Out 1/2 read on input 5 (idx 4).
+
+  Fx-In Pad (db12PadStrMap, four values) is EXACTLY its label:
+    pad   0        1        2        3
+    dBFS  -36.390  -42.410  -48.433  -54.453      steps 6.020, 6.023, 6.020 dB
+  So +6 / 0 / -6 / -12 dB, confirmed to 0.06 dB, and soundEngine.c's {2.0, 1.0, 0.5, 0.25} is right.
+
+  2-Out Pad (padStrMap, two values) is NOT:
+    pad 0  -42.411 dBFS      pad 1  -36.391 dBFS
+  Setting it makes the output 6.02 dB LOUDER - a factor of 2.0016 - where the engine had it as 0.5,
+  so the engine was 12 dB out whenever the pad was engaged. Verified on two independent 2-Out modules
+  (the VA one feeding the FX bus, and an FX one feeding Out 1/2), with the parameter read back from
+  the instrument after each write and the OTHER output pair confirmed unchanged at -40.96 / -41.03,
+  so nothing else moved.
+
+WHICH OF THE PAIR IS UNITY IS NOT SETTLED, and cannot be from these captures: every path runs through
+several pads and none is a known 0 dB reference, so all of this is ratios. 1.0/2.0 and 0.5/1.0 fit
+equally. The engine now puts unity on the DEFAULT setting, which leaves existing patches alone and
+moves only the engaged state.
+
+AND THE LABEL IS SUSPECT TOO: padStrMap reads {"0dB", "-6dB"} while index 1 measures +6 dB. Either the
+strings are in the wrong order, or the wire value is inverted relative to the menu index - the same
+shape of fault as the DelayB LP dial. Settle it by assigning the parameter to a patch knob with
+DEVKNOB and reading what the instrument's own display says. 4-Out and Mix4to1C share padStrMap and
+have NOT been measured; they very likely share whatever this is.
+
+...AND THE MANUAL SETTLES IT, on CT's suggestion to look. "The Pad scroll button on the Input and
+Output modules can be used to attenuate or amplify the signals. On the Input modules you can select
+between 0dB, -6dB, -12dB and +6dB and on the Output modules between 0dB and +6dB." So the Output
+module's pad is a MAKE-UP GAIN with exactly two positions, and the manual's own worked example uses it
+as one: pad the FX-In by -6 dB for headroom, then take it back with +6 dB on the FX-area Output
+module. Measurement and manual agree. padStrMap's second entry corrected from "-6dB" to "+6dB";
+soundEngine.c's eNodeOut gain corrected from 0.5 to 2.0. Existing patches are unaffected because they
+sit at the default.
+
+A REASONING ERROR ON THE WAY, worth recording because it was nearly acted on: I argued the absolute
+reference was settled by the chorus comparison matching in ABSOLUTE level with all pads at index 0.
+It was not. That comparison measured wet RELATIVE TO DRY, and both paths ran through 2-Outs at the
+same pad setting, so a common pad error cancels exactly. It could not discriminate, and I claimed it
+could. A clipping test could not discriminate either - the desk gain leaves the peaks at -31.9 dBFS,
+nowhere near the converter's ceiling, and both settings gave a clean 3.02 dB crest. The manual was the
+instrument that could.
+
+AND IT EXPOSED A SECOND FAULT: the MIXERS' Pad is a different control that shared the same string map.
+"Click the Pad scroll button to attenuate the levels on all mixer inputs by -6 dB (or -12dB)" - it
+ATTENUATES where the Output module's boosts, so soundEngine.c's 0.5-when-engaged is right for the
+mixer and was only ever wrong for the Output. Mix4to1C now points at its own mixerPadStrMap. Still
+UNMEASURED, and the manual's "(or -12dB)" hints at a third position our two-entry table cannot hold,
+so the value COUNT may be wrong as well.
+
+HOW TO MEASURE ABSOLUTE INTERNAL LEVELS - CT's idea, 2026-09-07, and it is better than either thing
+tried today. The Output-pad work failed to pin absolute unity because every measurement was a RATIO:
+each path runs through several pads and none is a known 0 dB reference. A clipping test could not fix
+that either - the desk gain leaves peaks at -31.9 dBFS, nowhere near the converter's ceiling.
+
+USE THE COMPRESSOR AS AN IN-PATCH LEVEL METER. Its threshold is a dial in dB whose law is already
+hardware-measured (see the compressor entry above), and its gain-reduction LED says whether the signal
+is over that threshold. Sweep the threshold until the LED just lights and the signal's absolute
+internal level is read off the dial - a calibrated reference INSIDE the patch, unaffected by output
+pads, desk gain or converter scaling, and available at any point in the signal path rather than only
+at the top of the range the way clipping is.
+
+IT IS FULLY AUTOMATABLE: the backdoor's LEDDUMP already reports "live LED and volume-meter values per
+module, as the renderer reads them", verified working - a poll returns lines like
+  loc=FX index=4 type=4 name="2-Out" leds=- vols=7,9
+so both the compressor's LED and every module's meter can be read in a loop with no eye or ear
+involved. The meters alone give a coarse readout; the compressor gives a precise one because its
+threshold is continuous and measured.
+
+WORTH DOING BEFORE the remaining level work - the Pad value counts, the mixers' sum-versus-average and
+their -6/-12 dB pad, the FxtoIn and 2-Out absolute references - because all of those are the same
+question this answers.
