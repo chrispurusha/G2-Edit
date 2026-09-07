@@ -113,3 +113,19 @@ CROSS-PROJECT
   points when hasPreciseScrollingDeltas is YES; a traditional wheel reports LINES, so a notch was
   about two pixels of canvas. A notch should now move the canvas the same distance it does in the
   application. Trackpad behaviour should be unchanged - worth confirming it has not got faster.
+- PULSE TIME LAW REFITTED (2026-09-07) from 17 hardware widths - pulse_time_seconds() is now a cubic
+  in log rather than two endpoints and a constant ratio, and is up to 11% SHORTER than before across
+  the middle of the dial. Anything whose timing depends on a Pulse gate will have moved. Needs an ear
+  on a patch that uses one, and ideally a re-check of the two shortest dial settings.
+- Reverb Brightness constants are NOT yet refitted against the new dial 8-64 measurements in
+  findings.txt - the engine is unchanged. Nothing to test yet; listed so the data is not mistaken
+  for a fix.
+- ***STCHORUS REBUILT AS TWO TAPS (2026-09-07) - THIS ONE NEEDS AN EAR.*** It ran one delay line per
+  channel; the instrument runs two, sweeping in opposite directions about a 2.71 ms centre and MEETING
+  when the sweep is at zero. Also CHORUS_RATE_MAX_HZ 3.334 -> 2.777 (it was 20% fast) and the wet is
+  now split half to each tap. Arithmetic reproduces the hardware to 0.3% across the dial, but nothing
+  has been HEARD as a whole. Expect a fuller, more doubled chorus and a slower sweep at the same
+  Detune. ALSO in the same round: chorus_read() now interpolates (four-point Catmull-Rom) where the
+  module had always read whole samples - at Detune 127 that was a ~1.2 kHz click train instead of
+  +/-21.8 cents of detune, which is what CT heard as the instrument being "much more pronounced".
+  The maximum-Detune end is the place to listen first, since that is where it was worst.
