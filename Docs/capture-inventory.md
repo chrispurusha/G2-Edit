@@ -75,6 +75,7 @@ These play in the engine and have never been measured against the instrument.
 | **2-Out, 4-Out** | Pad MEASURED 2026-09-07 and it BOOSTS: two positions, 0 dB and +6.02 dB, confirmed by the manual ("on the Output modules between 0dB and +6dB"). The engine had it halving and was 12 dB out when engaged; fixed. Note the parameter is unclamped on the wire, so a backdoor sweep shows further +6 dB steps the dial cannot select. |
 | **Mix4to1C** | Pad MEASURED 2026-09-07: THREE positions, 0 / −6.01 / −12.04 dB (the DSP clamps at 2, so this one is real). Level taper measured as a CUBE, not the square the engine carried — 6 dB out by mid-dial. Both fixed. Lin mode was already right. |
 | **Constant** | |
+| **Shaper group** | Implemented 2026-09-07 — Clip, Overdrive, Saturate, ShpExp, WaveWrap, ShpStatic, Rect. **Rect is exact** (the manual states all four operations) and **ShpStatic's four buttons name their own curves**; the other five have the manual's SHAPE and a guessed DEPTH law. Every one is memoryless, so one slow ramp per mode captures the whole transfer function — the cheapest measurements left on this list. |
 
 ## Where to start, if the list is being worked through
 
@@ -85,6 +86,11 @@ module, and the engine can render the same patch for comparison. So the FX modul
    effect anyone will hear.
 2. **DelayA / DelayB** — a tail measurement the rig is already shaped for.
 3. **Compress** — needs a different stimulus (a level ramp, not an impulse), so it wants thought.
+4. **The shaper group** — and the ramp Compress wants is the SAME stimulus these need, so capture it
+   once and run it through all eight. A memoryless module plotted output-against-input from a single
+   full-scale ramp gives its entire transfer function with no windowing, no decay fit and no
+   spectrum: five curves (Clip, Overdrive, Saturate, ShpExp, WaveWrap) times their modes, in one
+   session.
 
 Two that are worth doing for a different reason, being upstream of everything else:
 
