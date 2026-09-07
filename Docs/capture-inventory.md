@@ -15,6 +15,30 @@ capture directories and `findings.txt`.
 A capture is only worth keeping if its `.json` sidecar is beside it. Several early ones have no
 sidecar and their settings are only recoverable from `findings.txt`.
 
+**TWO RIGS, AND THE SIDECAR DOES NOT SAY WHICH.** Verified 2026-09-07 by reading the WAV headers, not
+from any note - nothing recorded it at the time. The rate and channel count identify the rig on
+sight:
+
+| rig | header | where it appears |
+|---|---|---|
+| Fireface UC, G2 outs 3/4 into inputs 5/6 (zero-based 4/5) | 8 ch, 192000 Hz | every reverb `_decay`, `_time` and `_rooms` capture |
+| QU-24, inputs 5/6 (zero-based 4/5) | 32 ch, 48000 Hz | every reverb `_stereo` capture, `g_medium_bright7`, `g_small_bright7`, and all of the older chorus/delay/oscillator/filter sets |
+
+This split is not cosmetic. The engine runs at 96 kHz, so a 192 kHz capture carries exactly two
+samples per engine sample and a 48 kHz one carries a single sample per TWO engine samples - an odd
+engine-sample lag cannot be resolved at all at 48 kHz. Both of the reverb's open questions sit on the
+wrong side of that line: the L/R peak lag was measured only on 48 kHz captures, and the Brightness
+fit spans three rooms of which Hall is 192 kHz and Medium and Small are 48.
+
+`analyse_ir.py` reads the rate from each file and converts through `engine_rate`, so nothing is
+silently mis-scaled - but no arithmetic can recover a resolution the capture never had.
+
+Measured levels on the Fireface rig, for reproducing it: true peak -14.4 dBFS in the loudest burst,
+idle floor -74.0 dBFS on the connected pair against -85.0 dBFS on the interface's own unused inputs.
+That last pair of numbers says 11 dB of the noise arrives down the cable from the G2 and is not the
+converter's to fix, so a quieter interface would not buy much - about 60 dB of usable range on an
+impulse is what this rig gives.
+
 ---
 
 ## Covered — captured, fitted, and the constants carry their measurements
@@ -24,6 +48,7 @@ sidecar and their settings are only recoverable from `findings.txt`.
 | **Reverb** | 19 files: four rooms × Time, decay, stereo; Brightness in Hall, Small and Medium | The most complete. Room scale, decay law, pre-delay, wet level, input filtering, stereo tap sets and the Brightness law are all measured. |
 | **OscShpB** | `G2Captures/oscshpb/`, 8 files | Harmonic spectra per waveform at two Shape settings. |
 | **OscA** | `G2Captures/osca/`, 6 files | |
+| **Pulse** | `pulse192b.wav`, 17 dial values at 192 kHz | Time dial measured across the whole range in Sub. Every width is an integer count of 96 kHz samples. Our closed form is ~11% long and needs refitting - see `findings.txt`. Amplitude still uncalibrated. |
 | **FltClassic** | `G2Captures/fltclassic/`, 18 files | Bypass, resonance and spectra. Ladder topology and K range settled from it. |
 
 ## Partly covered — measured, but the captures are thin or gone
@@ -48,7 +73,6 @@ These play in the engine and have never been measured against the instrument.
 | **Mix4to1C, Mix4to1S** | Whether the mixer sums or averages, and what its level law is. |
 | **FxtoIn** | The Pad menu is read as +6 / 0 / −6 / −12 dB from its label. Never checked. |
 | **2-Out, 4-Out** | Same: the Pad is read from its label. |
-| **Pulse** | The Time dial's law. It is the rig's excitation, so its width enters every impulse response taken. |
 | **Constant** | |
 
 ## Where to start, if the list is being worked through
