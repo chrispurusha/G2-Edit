@@ -70,7 +70,7 @@ MEASUREMENT PROGRAMME
 - Rebuild the measurement rig with the module under test in the FX area, so gating no longer waits on a Voice-Area tail (see the DEVNOTE entry in findings.txt)
 - Make measure.py wait for the VOICE to free rather than a fixed --period: DEVNOTES already reports the instrument's note/attack/release state, so the gate can be paced by the tail instead of guessed
 - Finish the EnvADSR oracle at ~/Documents/G2EnvTrace: it compiles and runs but outputs zero until the state-block layout and ENV_TIME_TABLES contents are worked out
-- Fit REVERB_DAMP_MAX/REVERB_BRIGHT_CURVE against g_hall_bright9.wav - the sweep exists and has never been used
+- Reverb keeps ~4 dB/s of excess HF decay at the bright end of Brightness - the modulation's linear interpolation, so it needs a better interpolator or less depth, not a constant
 - Consider driving the measurement Pulse from a free-running LFO so a capture needs no notes at all
 - Measure the rest of the instrument the way the reverb was: EQs, shapers, the remaining envelopes
 - pch2csd (MIT) is an independent cross-check for parameter maps - worth diffing against ours

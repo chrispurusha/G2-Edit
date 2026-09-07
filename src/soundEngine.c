@@ -923,11 +923,33 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 //     1.0 beat 0.15, which is the opposite of what the decay rates say. Colour at an instant mixes the
 //     loop's damping with everything outside the loop, so it cannot isolate this coefficient.
 //
-// _MAX stays at 1.0 because the hardware's loop is very nearly transparent at the top of its dial: its
-// HF and LF then decay within 0.6 s of each other, and its tail darkens by only 1-3 dB over three
-// seconds against 14-16 dB at mid dial. Anything below 1.0 damps at full brightness, which the
-// instrument does not do — a fitted 0.5 left every setting darkening and shortened the decay with it.
-#define REVERB_DAMP_MAX    (0.62)
+// FITTED 2026-09-07 AGAINST THE NINE-POINT BRIGHTNESS SWEEP, which had been sitting in the captures
+// unused. The dial's effect is EXPONENTIAL in its position, not a power law: on the instrument the
+// amount by which the top decays faster than the bottom falls by a constant factor of about 0.57
+// every sixteen dial steps, right across the usable range. Hence exp(-dial / K) rather than the
+// pow((127 - dial)/127, curve) this replaces.
+//
+//     dial            32     48     64     80     96    112
+//     instrument   -26.6  -15.2   -8.9   -5.0   -2.9   -1.5    dB/s, 8 kHz minus 125 Hz
+//     engine       -24.0  -10.9   -7.1   -5.0   -4.4   -3.8
+//
+// RMS error 2.2 dB/s against 9.2 for the mapping it replaces, and the low bands now track the
+// instrument to about 0.5 dB/s at EVERY setting of the dial.
+//
+// THE CEILING IS NOT COSMETIC. _MAX is above 1.0 because the fit wants more damping at the dark end
+// than a one-pole coefficient can express, so the curve is clamped; the clamp bites below about dial
+// 14, which is exactly where the hardware sweep stops being usable (at Brightness 0 everything above
+// 500 Hz is far enough into the noise that nothing can be fitted to it). The constant is not a
+// coefficient — the ceiling is.
+//
+// WHAT IT CANNOT REACH, and it is structural rather than a bad fit: the engine keeps about 4 dB/s of
+// excess HF decay at the bright end of the dial where the instrument reaches 1.5. That floor does not
+// move with these two constants because it is not damping — it is the modulation's own linear
+// interpolation, a lowpass in the loop. Removing it means a better interpolator or less modulation
+// depth, not a different number here.
+#define REVERB_DAMP_MAX        (1.6000)
+#define REVERB_BRIGHT_K        (25.000)
+#define REVERB_DAMP_CEILING    (0.9000)
 // RE-FITTED 2026-08-18 FOR THE NEW STRUCTURE. The old 0.15 was fitted against a comb bank, where
 // the damping sat inside every comb's own loop and bit hard. In a feedback network the signal passes
 // the damping once per circuit instead, so the same exponent barely moved the tail at all: the
@@ -935,7 +957,6 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // instrument's 0.54 / 0.75 / 0.95, i.e. the dial did almost nothing. At 0.70 it reads
 // 0.51 / 0.83 / 0.96. The ends are close; the middle is still about 0.08 too bright, which says the
 // dial's shape is not a pure power law on this structure.
-#define REVERB_BRIGHT_CURVE    (0.70)
 
 static const double kReverbDecayBase[REVERB_TYPE_COUNT]  = {0.045, 0.29, 0.39, 0.32};
 static const double kReverbDecaySlope[REVERB_TYPE_COUNT] = {0.02238, 0.04094, 0.06082, 0.08212};
@@ -1336,10 +1357,6 @@ static float          gRvMem[RV_MEM];
 static uint32_t       gRvCur;
 static double         gRvDamp[RV_LINES];
 
-// The low band the upper half of the dial subtracts, and the pole that defines it. Roughly 400 Hz
-// at 96 kHz — low enough that taking some of it out reads as "brighter" rather than "thinner".
-#define RV_LOW_A    (0.9744)
-static double         gRvLow[RV_LINES];
 
 // The two input poles. MEASURED, not chosen: the instrument's reverb is far darker than what goes
 // into it, and this is the filter that makes it so -- see the fit by REVERB_INPUT_LP_HZ.
@@ -1610,7 +1627,6 @@ static void reset_node_state(void) {
     memset(gRvMem, 0, sizeof(gRvMem));
     gRvCur = 0;
     memset(gRvDamp, 0, sizeof(gRvDamp));
-    memset(gRvLow, 0, sizeof(gRvLow));
     memset(gRvLoop, 0, sizeof(gRvLoop));
     memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 }
@@ -3742,35 +3758,35 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     // the instrument takes eleven. A damping control has to pass its neutral position through
     // untouched or it is a loss dressed up as a tone control.
     //
-    // WHAT THE TWO HALVES DO IS NOT FITTED — and note that is no longer the same as not measured.
-    // A nine-point sweep of the dial (0 to 127 in sixteens, Hall, Time 127) exists among the stored
-    // captures and has never been fitted against; its wet energy rises monotonically across the
-    // dial, so it is good data. Until someone does that, the shape below is a symmetric guess about
-    // a measured centre: the
-    // lower half damps the top with a one-pole, the upper half damps the bottom by the same law.
-    // The centre is right; the ends need a Brightness sweep off the hardware before either
-    // REVERB_DAMP_MAX or REVERB_BRIGHT_CURVE means anything.
-    // THE DETENT HAS TO LAND EXACTLY ON ZERO, and (brightness - 0.5) * 2 does not. `brightness` is
-    // the dial over 127, so its neutral position 64 arrives as 0.50394 and the tilt as +0.0079 —
-    // not zero, and never zero at any dial position, because 0.5 sits between 63 and 64.
-    //
-    // THAT TINY OFFSET IS NOT TINY BY THE TIME IT IS DAMPING. The curve below has an exponent under
-    // one, which AMPLIFIES small values: pow(0.0079, 0.70) is 0.034, four times its input, so the
-    // detent asked for dampHi = 0.021. That is a low-frequency loss applied INSIDE the loop, on
-    // every pass, and a line of 2297 samples is traversed about 42 times a second — roughly 8 dB/s
-    // of bass the instrument does not lose.
-    //
-    // MEASURED, which is how it was found: at Brightness 64 the engine's Hall decayed at -10.2 dB/s
-    // at 125 Hz against the instrument's -5.0, and forcing the tilt to zero moved it to -5.7. The
-    // fault was audible as the tail being thin before it was ever measured.
-    //
-    // So the dial is mapped in two halves about its detent rather than scaled as a whole: 64 gives
-    // exactly 0, 127 gives +1 and 0 gives -1. The halves are 63 and 64 steps wide, which is what a
-    // 128-step control with a centre detent actually is.
+    // THE DIAL IS READ AS A WHOLE, 0 to 127, NOT AS TWO HALVES ABOUT A DETENT. There is no detent:
+    // see the mapping below for the sweep that settled it. An earlier version treated 64 as neutral
+    // and mapped (brightness - 0.5) * 2, which had a second fault of its own worth remembering —
+    // `brightness` is the dial over 127, so 64 arrived as 0.50394 and the tilt as +0.0079 rather
+    // than zero, and NO dial position gave zero because 0.5 falls between 63 and 64. An exponent
+    // under one amplifies that: pow(0.0079, 0.70) is 0.034, so a supposedly neutral detent asked for
+    // 0.021 of damping on every pass. Both faults are gone with the dial read whole.
     double          dial      = brightness * 127.0;
-    double          tilt      = (dial >= 64.0) ? ((dial - 64.0) / 63.0) : ((dial - 64.0) / 64.0);
-    double          dampLo    = (tilt < 0.0) ? (REVERB_DAMP_MAX * pow(-tilt, REVERB_BRIGHT_CURVE)) : 0.0;
-    double          dampHi    = (tilt > 0.0) ? (REVERB_DAMP_MAX * pow(tilt, REVERB_BRIGHT_CURVE)) : 0.0;
+
+    // BRIGHTNESS IS HIGH-FREQUENCY DAMPING ACROSS THE WHOLE DIAL, AND NOTHING ELSE. It never damps
+    // the low end at any setting. MEASURED on a nine-point sweep of the dial (Hall, Time 127): the
+    // 125-500 Hz bands sit flat at about -5.0 dB/s from Brightness 16 to 112 while 8 kHz sweeps
+    // -31.5 to -6.9. The dial moves the top and leaves the bottom alone.
+    //
+    // WHAT THIS REPLACES WAS A SYMMETRIC GUESS, and the comment here used to say so: the lower half
+    // damped the top, the upper half damped the BOTTOM by the same law about a neutral detent. The
+    // instrument has no such detent and no low-end damping. Above 64 the engine was subtracting a
+    // low-passed copy inside the loop and destroying the bass -- 125 Hz decayed at -53.8, -71.1 and
+    // -79.8 dB/s at Brightness 80, 96 and 112 against the instrument's flat -5.0. Sixteen times too
+    // fast, at settings anyone reaching for a bright reverb would use.
+    //
+    // The two endpoints of the sweep are NOT usable and were not fitted: at Brightness 0 everything
+    // above 500 Hz is far enough down that the fit is on noise, and 127 goes the same way at the
+    // bottom. The dial was fitted over 16..112, where every band is above the floor.
+    double          damp      = REVERB_DAMP_MAX * exp(-dial / REVERB_BRIGHT_K);
+
+    if (damp > REVERB_DAMP_CEILING) {
+        damp = REVERB_DAMP_CEILING;
+    }
     double          scale     = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
 
     // ONE TRIP ROUND THE LOOP, and the gain that costs. The sections either side of it are
@@ -3778,7 +3794,6 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     // decades over however many trips fit into it.
     double          gRvGain[RV_LINES];
     static uint32_t sLastType = REVERB_TYPE_COUNT;   // forces the reset below on the first call
-
 
     // Changing type resizes every delay line, so the positions into them are meaningless and the
     // contents are a room that no longer exists. Cleared rather than carried over — which is also
@@ -3789,7 +3804,6 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         memset(gRvMem, 0, sizeof(gRvMem));
         gRvCur     = 0;
         memset(gRvDamp, 0, sizeof(gRvDamp));
-        memset(gRvLow, 0, sizeof(gRvLow));
         memset(gRvLfo, 0, sizeof(gRvLfo));
         gRevInLp   = 0.0;
         gRevInLp2  = 0.0;
@@ -4005,9 +4019,11 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
 
                 // Brightness, one filter per line and inside the loop, so it accumulates with every
                 // pass rather than colouring the output once on the way out.
-                gRvDamp[i] = ((1.0 - dampLo) * v) + (dampLo * gRvDamp[i]);
-                gRvLow[i]  = ((1.0 - RV_LOW_A) * gRvDamp[i]) + (RV_LOW_A * gRvLow[i]);
-                line[i]    = gRvDamp[i] - (dampHi * gRvLow[i]);
+                // One damping path, in the loop, so it accumulates with every pass rather than
+                // colouring the output once on the way out. There is no second path taking the low
+                // end out: the instrument does not do that at any dial setting.
+                gRvDamp[i] = ((1.0 - damp) * v) + (damp * gRvDamp[i]);
+                line[i]    = gRvDamp[i];
             }
 
             // THE MIXING MATRIX, a 4-point Hadamard as two butterfly stages. Orthogonal, so it moves
@@ -4189,7 +4205,6 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
     memset(gRvMem, 0, sizeof(gRvMem));
     gRvCur      = 0;
     memset(gRvDamp, 0, sizeof(gRvDamp));
-    memset(gRvLow, 0, sizeof(gRvLow));
     memset(gRvLoop, 0, sizeof(gRvLoop));
     memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 
