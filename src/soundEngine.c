@@ -982,13 +982,20 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // dial 32 are 0.780 / 0.783 / 0.718 / 0.702 across Small / Medium / Large / Hall, where the raw
 // dB/s figures differ by a factor of two between those rooms.
 //
-//     dial              16      24      32      40      48      64
-//     implied         0.6299  0.5408  0.4735  0.4130  0.3527  0.2898
-//     this law        0.6174  0.5416  0.4751  0.4167  0.3656  0.2813
+//     dial                      24      32      40      48      64
+//     implied                 0.5475  0.4866  0.4137  0.3718  0.2742
+//     this law                0.5526  0.4811  0.4189  0.3648  0.2766
 //
-// THE FOUR ROOMS AGREE, which is what says the model is right rather than merely fitted: at dial 16
-// they imply 0.6398 / 0.6217 / 0.6366 / 0.6214 for Small / Medium / Large / Hall, within 3% of each
-// other, from raw dB/s figures that differ by 60% between those rooms. A per-pass coefficient is what
+// THE FOUR ROOMS AGREE, which is what says the model is right rather than merely fitted: at dial 32
+// they imply 0.4566 / 0.5263 / 0.4921 / 0.4715 for Small / Medium / Large / Hall, within 8% of each
+// other, from raw dB/s figures that differ by 60% between those rooms.
+//
+// MEASURE THE BANDS WITH A SHARP FILTER OR THE ANSWER IS THE FILTER'S. A single Q=4 bandpass at 8 kHz
+// leaks enough of the much louder, slowly-decaying low band that the measured HF decay FLOORS OUT:
+// scored that way the engine's excess ran 11.4 dB/s at dial 16 and 7.1 at 64, a range of 1.6x, where
+// two cascaded Q=8 sections on the same renders give 59.9 and 17.4, a range of 3.4x. Both sides of
+// the comparison have to use the same filter, and it has to be sharp enough that the number belongs
+// to the band it names. A per-pass coefficient is what
 // makes that collapse.
 //
 // THE CEILING NO LONGER BITES. The old curve was far too steep - 0.90 at dial 16 against an implied
@@ -1003,8 +1010,8 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // coefficient is large: at 0.99 the one-pole corner is 154 Hz and the BASELINE decay went from 26 to
 // 134 dB/s. Calibrate passes-per-second from a dial position where the coefficient is small, then
 // invert each measurement against the filter absolutely.
-#define REVERB_DAMP_MAX        (0.8024)
-#define REVERB_BRIGHT_K        (61.055)
+#define REVERB_DAMP_MAX        (0.8370)
+#define REVERB_BRIGHT_K        (57.799)
 #define REVERB_DAMP_CEILING    (0.9000)
 // RE-FITTED 2026-08-18 FOR THE NEW STRUCTURE. The old 0.15 was fitted against a comb bank, where
 // the damping sat inside every comb's own loop and bit hard. In a feedback network the signal passes
