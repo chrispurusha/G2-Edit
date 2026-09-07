@@ -2733,6 +2733,35 @@ OPEN WORK
   The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
   right — within 0.05 ms of the instrument in every room.
 
+- THE RIG'S EXCITATION FREE-RUNS (2026-09-07) — no notes, and the period does not drift. An LfoShpA
+  in "Rate Sub" fires the Pulse directly, so a capture needs no --gate and no DEVNOTE at all.
+
+      rate Hz = (value + 1) / 699.0507        value = round(699.0507 / period) - 1
+
+  Value 57 asks for 12.052 s and the capture measures gaps of 12.052 s with a spread of 0.000 s. The
+  note-driven loop asked for 3.2 s and delivered 3.7, accumulating — which is what broke the gate
+  counting. Picking the period from the tail is unchanged; what goes away is the drift.
+
+  LfoShpA AND NOT LfoB, though both have a Sync output and both free-run: THE SOUND ENGINE MODELS
+  ONLY LfoShpA, and a rig the engine cannot render is worth nothing for comparing the two. The LFO's
+  main Out triggers the Pulse perfectly well and the engine fills that leg; its Sync output is a
+  second leg the engine does not fill.
+
+  AND THE ENGINE WOULD NOT PLAY THE RIG AT ALL UNTIL A PULSE COUNTED AS A SOURCE. chain_has_source()
+  and chain_is_bypassed() both tested only for eNodeOsc and eNodeOscShp, so a patch whose only
+  generator is a Pulse resolved correctly — all nine nodes, right topology — and was then reported as
+  "Nothing is patched into it", or once that was fixed, "That module is switched off". Both now count
+  eNodePulse. The one patch built for comparing engine against instrument could previously be
+  rendered by neither.
+
+  TWO TRAPS IN DRIVING THIS BY BACKDOOR, both of which cost a wrong reading here:
+   * DELETING A MODULE TAKES ITS CABLES, including one into a module that survives. Removing the old
+     LFO silently removed the feed into the Pulse, and the rig went quiet with every module still
+     present and correct in the dump. Check the cable list, not the module list.
+   * MENU MATCHES ON THE LABEL, AND THE LABEL CHANGES. "Enable Sound Engine" becomes "Disable Sound
+     Engine" once it is on, so a second "Enable" call matches nothing — and still returns OK. Read
+     the menu back rather than assuming a toggle toggled.
+
 - THE MEASUREMENT RIG NOW LIVES IN THE FX AREA (2026-09-07), PatchTestFiles/FxMeasure.pch2. The
   excitation stays in the Voice Area — EnvADSR into Pulse into a 2-Out set to FX 1/2 — and the module
   under test sits in FX behind an Fx-In, with a LevAmp pair into a wet 2-Out on Out 3/4 and the Fx-In
