@@ -61,6 +61,7 @@
  #import <OpenGL/gl.h>
 #endif
 
+#include "defs.h"        // WHEEL_SCROLL_STEP — one wheel notch, shared with the application
 #include "g2GlDraw.h"
 #include "g2GlView.h"
 #include "g2Input.h"
@@ -553,14 +554,24 @@ static __weak G2GlView * gCurrentView = nil;
 // Trackpad and wheel both arrive here. Deltas are in points and the canvas scrolls in pixels, so
 // they are handed over as-is and g2Input.c applies the scale — the same division every other
 // coordinate goes through.
+//
+// EXCEPT THAT A WHEEL DOES NOT SEND POINTS. AppKit only reports scrollingDelta in points when
+// hasPreciseScrollingDeltas is YES, which means a trackpad or a Magic Mouse; a traditional wheel
+// reports LINES, and one notch is 1.0. Passed on unconverted that became about two pixels of canvas
+// per notch — the deltas were being scaled as though they were points when they were not.
+// WHEEL_SCROLL_STEP is the application's own notch-to-pixel figure, so a notch here now moves the
+// canvas exactly as far as a notch there, and a trackpad's points still pass through untouched.
 - (void)scrollWheel:(NSEvent *)event {
     NSPoint c      = [self canvasPointFor:event];
     NSRect  bounds = [self bounds];
     NSRect  backing = [self convertRectToBacking:bounds];
     double  scale  = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
+    double  lines  = [event hasPreciseScrollingDeltas] ? 1.0 : WHEEL_SCROLL_STEP;
 
     [self pushModifiersFor:event];
-    g2_input_scroll(c.x, c.y, [event scrollingDeltaX] * scale, [event scrollingDeltaY] * scale);
+    g2_input_scroll(c.x, c.y,
+                    [event scrollingDeltaX] * lines * scale,
+                    [event scrollingDeltaY] * lines * scale);
     [self setNeedsDisplay:YES];
 }
 
