@@ -32,6 +32,9 @@ FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard
 - LevAmp gain law rewritten from measurement 2026-08-30: silent at dial 0, four segments, 0-4x
 - Super-saw ("sup") phase fix - needs an ear
 - Stereo chorus - needs an ear
+- Reverb Brightness detent fix: the dial's neutral 64 was applying a small in-loop low-frequency loss
+  that halved the bass decay time. Listen for the tail being FULLER, and sweep Brightness end to end
+  to confirm nothing at the extremes changed - the fix only moves the region around the detent
 - The envelope attack is the wrong FORM (fixed-duration shaped ramp against the instrument's one-pole
   approach to a target) - not yet changed. Owner reports the G2's attack as softer; confirm by ear
   against a short-attack patch before and after any fix

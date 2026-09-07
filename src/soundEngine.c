@@ -3738,7 +3738,25 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     // lower half damps the top with a one-pole, the upper half damps the bottom by the same law.
     // The centre is right; the ends need a Brightness sweep off the hardware before either
     // REVERB_DAMP_MAX or REVERB_BRIGHT_CURVE means anything.
-    double          tilt      = (brightness - 0.5) * 2.0;
+    // THE DETENT HAS TO LAND EXACTLY ON ZERO, and (brightness - 0.5) * 2 does not. `brightness` is
+    // the dial over 127, so its neutral position 64 arrives as 0.50394 and the tilt as +0.0079 —
+    // not zero, and never zero at any dial position, because 0.5 sits between 63 and 64.
+    //
+    // THAT TINY OFFSET IS NOT TINY BY THE TIME IT IS DAMPING. The curve below has an exponent under
+    // one, which AMPLIFIES small values: pow(0.0079, 0.70) is 0.034, four times its input, so the
+    // detent asked for dampHi = 0.021. That is a low-frequency loss applied INSIDE the loop, on
+    // every pass, and a line of 2297 samples is traversed about 42 times a second — roughly 8 dB/s
+    // of bass the instrument does not lose.
+    //
+    // MEASURED, which is how it was found: at Brightness 64 the engine's Hall decayed at -10.2 dB/s
+    // at 125 Hz against the instrument's -5.0, and forcing the tilt to zero moved it to -5.7. The
+    // fault was audible as the tail being thin before it was ever measured.
+    //
+    // So the dial is mapped in two halves about its detent rather than scaled as a whole: 64 gives
+    // exactly 0, 127 gives +1 and 0 gives -1. The halves are 63 and 64 steps wide, which is what a
+    // 128-step control with a centre detent actually is.
+    double          dial      = brightness * 127.0;
+    double          tilt      = (dial >= 64.0) ? ((dial - 64.0) / 63.0) : ((dial - 64.0) / 64.0);
     double          dampLo    = (tilt < 0.0) ? (REVERB_DAMP_MAX * pow(-tilt, REVERB_BRIGHT_CURVE)) : 0.0;
     double          dampHi    = (tilt > 0.0) ? (REVERB_DAMP_MAX * pow(tilt, REVERB_BRIGHT_CURVE)) : 0.0;
     double          scale     = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
