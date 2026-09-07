@@ -52,6 +52,7 @@ extern "C" {
 #include "mouseHandle.h"
 #include "menus.h"
 #include "moduleReplace.h"
+#include "palette.h"
 #include "selection.h"
 #include "soundEngine.h"
 #include "cableChain.h"
@@ -93,6 +94,11 @@ extern "C" {
 //                       '/' separated); omit the last level to LIST what that level contains
 //   SELECT <VA|FX> <n> — select one module by index; SELECT NONE clears
 //   REPLACE [VA|FX] <index> <name> — swap a module for another of the same group, as the module
+//                       right-click menu does. Local only; check the result with DUMP
+//   PALETTE ON|OFF|TOGGLE|STATUS | GROUP <name> | ADD <module> — drive the module palette. The
+//                       band changes the topbar height and so the canvas origin, so TOGGLE is here
+//                       to be hammered; ADD is the double-click path, since a synthetic drag never
+//                       reaches the canvas
 //                       right-click menu does. Local only; check the result with DUMP
 //   SNDSTATUS         — what the sound engine's status line currently reads
 //   SNDDUMP           — the resolved chain, the parameters read, and the peak level since last read
@@ -587,6 +593,115 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "PALETTE") == 0) {
+        // PALETTE ON|OFF|TOGGLE|STATUS | GROUP <name> | ADD <module>
+        // The band changes the topbar's height and so the canvas origin, which is the part of this
+        // feature most likely to break something else; TOGGLE exists so that can be hammered from a
+        // script. ADD is the double-click path - a synthetic DRAG never reaches the canvas at all.
+        char sub[32]  = {0};
+        char rest[64] = {0};
+        int  given    = sscanf(arg, "%31s %63s", sub, rest);
+
+        if (given < 1) {
+            backdoor_write_result("ERROR: expected 'PALETTE ON|OFF|TOGGLE|STATUS|GROUP <name>|ADD <module>'\n");
+            return;
+        }
+
+        if (strcasecmp(sub, "ON") == 0) {
+            palette_set_open(true);
+        } else if (strcasecmp(sub, "OFF") == 0) {
+            palette_set_open(false);
+        } else if (strcasecmp(sub, "TOGGLE") == 0) {
+            palette_toggle();
+        } else if (strcasecmp(sub, "GROUP") == 0) {
+            uint32_t g     = 0;
+            bool     found = false;
+
+            for (g = 0; g < (uint32_t)palGroupCount; g++) {
+                if (strcasecmp(palette_group_name((tPaletteGroup)g), rest) == 0) {
+                    palette_select_group((tPaletteGroup)g);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                backdoor_write_result("ERROR: no such palette group\n");
+                return;
+            }
+        } else if (strcasecmp(sub, "ADD") == 0) {
+            tModuleType found = (tModuleType)0;
+
+            for (uint32_t t = 1; t < (uint32_t)moduleTypeMax; t++) {
+                if (strcmp(gModuleProperties[t].name, rest) == 0) {
+                    found = (tModuleType)t;
+                    break;
+                }
+            }
+
+            if (found == (tModuleType)0) {
+                backdoor_write_result("ERROR: no module of that name\n");
+                return;
+            }
+
+            if (palette_add_module(found) == false) {
+                backdoor_write_result("ERROR: could not add (location full?)\n");
+                return;
+            }
+        } else if (strcasecmp(sub, "DRAG") == 0) {
+            // PALETTE DRAG <module> <x> <y> — put the palette into a drag at that point, so the
+            // ghost can be screenshotted. A synthetic mouse drag never reaches the canvas, so this
+            // is the only way to see the drag rendering without a person at the machine.
+            char        name[64] = {0};
+            double      x        = 0.0;
+            double      y        = 0.0;
+            tModuleType found    = (tModuleType)0;
+
+            if (sscanf(arg, "%*s %63s %lf %lf", name, &x, &y) != 3) {
+                backdoor_write_result("ERROR: expected 'PALETTE DRAG <module> <x> <y>'\n");
+                return;
+            }
+
+            for (uint32_t t = 1; t < (uint32_t)moduleTypeMax; t++) {
+                if (strcmp(gModuleProperties[t].name, name) == 0) {
+                    found = (tModuleType)t;
+                    break;
+                }
+            }
+
+            if (found == (tModuleType)0) {
+                backdoor_write_result("ERROR: no module of that name\n");
+                return;
+            }
+            palette_begin_drag(found, (tCoord){x, y});
+        } else if (strcasecmp(sub, "DROP") == 0) {
+            // PALETTE DROP <x> <y> — release the drag started by PALETTE DRAG.
+            double x = 0.0;
+            double y = 0.0;
+
+            if (sscanf(arg, "%*s %lf %lf", &x, &y) != 2) {
+                backdoor_write_result("ERROR: expected 'PALETTE DROP <x> <y>'\n");
+                return;
+            }
+            palette_cursor_moved((tCoord){x, y});
+            (void)palette_left_up((tCoord){x, y});
+        } else if (strcasecmp(sub, "STATUS") != 0) {
+            backdoor_write_result("ERROR: expected ON|OFF|TOGGLE|STATUS|GROUP|ADD\n");
+            return;
+        }
+        {
+            char     msg[256] = {0};
+            uint32_t count    = 0;
+
+            {
+                tModuleType tiles[32];
+                count = palette_group_modules(palette_selected_group(), tiles, 32);
+            }
+            snprintf(msg, sizeof(msg), "OK open=%s group=%s tiles=%u bandHeight=%.0f\n",
+                     palette_is_open() ? "yes" : "no",
+                     palette_group_name(palette_selected_group()), count, palette_band_height());
+            backdoor_write_result(msg);
+        }
     } else if (strcmp(cmd, "REPLACE") == 0) {
         // REPLACE [VA|FX] <index> <name> - swap a module for another of the same group, the way the
         // module right-click menu's "Replace with" does. Local only: module_replace() posts one

@@ -27,6 +27,13 @@
 extern "C" {
 #endif
 
+// Re-derives the canvas origin from the topbar plus whatever the module palette is currently
+// taking. Called when the palette opens or closes; nothing else needs to know the bar changed.
+// Re-reads the whole patch into the UI's own derived state after the database has been replaced
+// wholesale. Normally driven from the USB thread's callback; menuActions.c calls it directly for
+// the offline New Patch, which the USB thread never sees.
+void notify_full_patch_change(void);
+void apply_top_bar_height(void);
 void init_graphics(void);
 void do_graphics_loop(void);
 void clean_up_graphics(void);

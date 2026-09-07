@@ -433,6 +433,40 @@ bool default_mutation_lock(tModuleType moduleType) {
     }
 }
 
+// ── Palette groups ──────────────────────────────────────────────────────────
+
+uint32_t array_size_palette_list(void) {
+    return (uint32_t)(sizeof(gPaletteList) / sizeof(gPaletteList[0]));
+}
+
+// The modules in one palette group, in the order the group offers them. Returns how many were
+// written. A module may appear in two groups (NoteDet is in In/Out and in MIDI), which is why the
+// table is a list of pairs and this is a filter over it rather than a lookup.
+uint32_t palette_group_modules(tPaletteGroup group, tModuleType * out, uint32_t max) {
+    uint32_t count = 0;
+    uint32_t i     = 0;
+
+    if (out == NULL) {
+        return 0;
+    }
+
+    for (i = 0; (i < array_size_palette_list()) && (count < max); i++) {
+        if (gPaletteList[i].group == group) {
+            out[count] = gPaletteList[i].moduleType;
+            count++;
+        }
+    }
+
+    return count;
+}
+
+const char * palette_group_name(tPaletteGroup group) {
+    if (group >= palGroupCount) {
+        return "";
+    }
+    return gPaletteGroupName[group];
+}
+
 // ── Module groups and replacement roles ─────────────────────────────────────
 
 tModuleGroup module_group(tModuleType moduleType) {

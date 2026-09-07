@@ -747,6 +747,36 @@ int32_t find_unique_module_id(uint32_t location) {
 // of the right-click "add module" menu (menu_action_create) and the backdoor
 // ADDMODULE test command. Returns the new module's index, or -1 if the location
 // is full.
+// A module of `type` populated the way a freshly created one is - the right parameter count, the
+// right mode count, each mode at its OWN default rather than zero, and the type's name. No key, no
+// position, and nothing written to the database.
+//
+// Factored out of create_module_at() when the palette needed a module to DRAW that is never
+// inserted: the drag ghost renders a real face, with its dials and connectors, so what follows the
+// cursor is the thing being placed rather than a rectangle standing in for it. Both callers share
+// this so the ghost cannot show defaults the created module will not have.
+void module_prototype(tModuleType type, tModule * module) {
+    if (module == NULL) {
+        return;
+    }
+    memset(module, 0, sizeof(*module));
+    module->type                = type;
+    module->active              = true;
+    module->excludeFromMutation = default_mutation_lock(type) ? 1 : 0;
+    module->actualParamCount    = module_param_count(type);
+    module->modeCount           = module_mode_count(type);
+
+    for (uint32_t i = 0, seen = 0; (i < (uint32_t)array_size_mode_location_list()) && (seen < MAX_NUM_MODES); i++) {
+        if (modeLocationList[i].moduleType == type) {
+            module->mode[seen].value = modeLocationList[i].defaultValue;
+            seen++;
+        }
+    }
+
+    COPY_STRING(module->name, gModuleProperties[type].name);
+    init_params_on_module_all_variations(module, gLocation);
+}
+
 int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool syncToDevice) {
     uint32_t        slot           = gSlot;
     uint32_t        location       = gLocation;

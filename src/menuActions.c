@@ -27,6 +27,7 @@
 #include "defs.h"
 #include "types.h"
 #include "globalVars.h"
+#include "dataBase.h"
 #include "graphics.h"
 #include "mouseHandle.h"
 #include "alertDialog.h"
@@ -374,6 +375,20 @@ void file_menu_new_patch(void) {
     // playing its old patch, diverging from what the editor shows.)
     tMessageContent messageContent = {0};
 
+    // OFFLINE IT IS DONE HERE, NOT QUEUED. state_handler() (usbComms.c) returns early for the whole
+    // of eCommsNeverConnected and eCommsReconnecting - it tries to open the device, sleeps 500 ms
+    // and returns - so it never reaches its own msg_receive(). A command queued while there is no
+    // G2 is therefore never dequeued at all: the local reset did not happen AND device_op_begin()'s
+    // busy overlay had nothing to end it, so the editor sat on "New Patch..." until it was force
+    // quit (CT, 2026-09-07). init_patch() is dataBase.c's and touches only the slot's own state, so
+    // the UI thread can do it directly, the same way the backdoor's NEWPATCH already does.
+    if (!device_ready()) {
+        init_patch(gSlot);
+        notify_full_patch_change();
+        synthlib_request_redraw();
+        wake_glfw();
+        return;
+    }
     messageContent.cmd                = eMsgCmdNewPatch;
     messageContent.patchFileData.slot = gSlot;
     msg_send(&gToUsbThread, &messageContent);

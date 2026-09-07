@@ -41,6 +41,7 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "topbarResourcesAccess.h"
+#include "palette.h"
 #include "utilsGraphics.h"
 #include "synthlibPopups.h"
 #include "synthlibWindow.h"
@@ -445,6 +446,13 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
                 found = handle_topbar_left_down(coord, slot);
             }
 
+            // The palette band sits directly under the topbar, above everything on the canvas, so
+            // it is tested here rather than with the panels: a press on a tile must not also reach
+            // the canvas underneath and start a rubber-band selection.
+            if (!found) {
+                found = palette_left_down(coord);
+            }
+
             if (!found) {
                 found = handle_scrollbar_click(coord);
             }
@@ -520,6 +528,14 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
                         gContextMenu.active = false;  // Close if clicked outside - TODO: think if this is the right thing to do here
                     }
                 }
+            }
+
+            // BEFORE the topbar, and before the canvas: a palette drag RELEASES over the canvas,
+            // which is the whole point of it, so the release cannot be claimed by whatever is under
+            // the cursor at the time. palette_left_up() returns false unless a tile was actually
+            // pressed, so it costs nothing when the palette is idle or closed.
+            if (!found) {
+                found = palette_left_up(coord);
             }
 
             if (!found) {
@@ -791,6 +807,14 @@ void cursor_pos(tCoord coord) {
 
     gHoverConnector.active = false;
 
+    // Ahead of every other gesture: while a palette tile is being dragged the pointer belongs to
+    // the palette, and the tile hover highlight has to keep up when it is not.
+    palette_cursor_moved(coord);
+
+    if (palette_drag_active()) {
+        return;
+    }
+
     if (gSplitView.dragging) {
         handle_split_bar_cursor_pos(coord);
         return;
@@ -909,6 +933,12 @@ void scroll_event(double x, double y) {
     // The wheel acts on the pane UNDER THE CURSOR, not the focused one — hovering the FX half and
     // scrolling should move the FX half, without first having to click into it.
     get_global_gui_scaled_mouse_coord(&coord);
+
+    // Over the palette band the wheel scrolls the TILES sideways - a group wider than the window is
+    // otherwise unreachable, and the band is above both panes so no pane wants this event anyway.
+    if (palette_scroll(y, coord)) {
+        return;
+    }
     int32_t hovered = split_view_pane_at(coord);
 
     if (hovered < 0) {

@@ -47,6 +47,7 @@
 #include "utils.h"
 #include "graphics.h"
 #include "topbarRender.h"
+#include "palette.h"
 
 void render_top_bar(void) {
     tRectangle  rectangle                           = {0};
@@ -167,12 +168,20 @@ void render_top_bar(void) {
         } else {
             buttonBackgroundColour = gTopbarControls[i].colour;
         }
+
         // A variation button carries two states that vary independently — SELECTED (exactly one, and
         // already in gTopbarControls[].colour via set_exclusive_button_highlight) and LINKED (any
         // number of them, see variation_is_linked() in globalVars.h). One fill colour cannot say
         // both, so a button that is both is split across the middle: green above for where you are,
         // orange below for what the edit will also reach. Linked-but-not-selected is plain orange,
         // and the press highlight still wins over either, being momentary feedback for this click.
+        // The palette toggle shows its own state rather than only reacting to the click, the way
+        // the slot and variation buttons do - it is the only way to tell from the topbar whether
+        // the band below is open, and the band itself disappears when it is not.
+        if (i == (int)topbarPaletteId) {
+            buttonBackgroundColour = gTopbarControls[i].isPressed ? (tRgb)RGB_GREY_7
+                                     : (palette_is_open() ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
+        }
         bool isVariation = (i >= (int)topbarVariation1Id) && (i <= (int)topbarVariationInitId);
         bool isLinked    = isVariation && variation_is_linked(slot, (uint32_t)i - (uint32_t)topbarVariation1Id);
 
