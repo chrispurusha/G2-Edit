@@ -105,6 +105,31 @@ enough to the instrument's output ceiling to leave alone. Gain on the module's O
 same pulse to both output pairs and compare. On this desk inputs 5/6 read 2.6 dB below 19/20 — small,
 but free to exploit by putting the quieter WET pair on the louder inputs.
 
+## THE RIG LIVES IN THE FX AREA NOW — PatchTestFiles/FxMeasure.pch2
+
+```
+VOICE AREA   EnvADSR --> Pulse --> 2-Out ("Out to" = FX 1/2)      the excitation, and nothing else
+FX AREA      Fx-In --+--> [MODULE UNDER TEST] --> LevAmp x2 --> 2-Out (Out 3/4)   wet
+                     \------------------------------------> 2-Out (Out 1/2)   dry reference
+```
+
+**The module under test belongs in the FX area, not the Voice Area.** A Voice-Area effect is
+per-voice, so the voice cannot be reallocated until that voice's tail has decayed and a gate arriving
+before then makes no sound. With the reverb in FX the gate is independent of it — 8 of 8 gates fire
+at 3 s spacing with the Reverb at Time 0 AND at Time 127, where the same test in the Voice Area
+depended on the tail.
+
+It also generalises: the chorus, the delays and the compressor all live in the FX area, so the same
+rig measures them by swapping one module.
+
+Module indices as the file has them: VA EnvADSR 1, Pulse 2, 2-Out 3; FX Reverb 1, LevAmp 2 and 3,
+2-Out (wet) 4, 2-Out (dry) 5, Fx-In 6. `measure.py --loc FX --index 1` for the module under test.
+
+**COUNT GATES BY SCANNING FOR BURSTS, NEVER AT EXPECTED TIMES.** Every backdoor command costs
+latency, so a loop asking for 3.2 s spacing actually delivers 3.7 s and the error accumulates — by
+the eighth gate a fixed window is 4 s out and reports silence that is not there. That artefact
+produced a stable-looking "fires, three silent, fires" pattern that cost a long detour.
+
 ## The patch
 
 ```

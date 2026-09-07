@@ -2733,6 +2733,23 @@ OPEN WORK
   The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
   right — within 0.05 ms of the instrument in every room.
 
+- THE MEASUREMENT RIG NOW LIVES IN THE FX AREA (2026-09-07), PatchTestFiles/FxMeasure.pch2. The
+  excitation stays in the Voice Area — EnvADSR into Pulse into a 2-Out set to FX 1/2 — and the module
+  under test sits in FX behind an Fx-In, with a LevAmp pair into a wet 2-Out on Out 3/4 and the Fx-In
+  taken straight to a dry 2-Out on Out 1/2.
+
+  IT DOES WHAT IT WAS FOR: 8 of 8 gates fire at 3 s spacing with the Reverb at Time 0 AND at Time
+  127. In the Voice-Area rig the gate depended on the tail. It also generalises — chorus, delays and
+  compressor all live in FX, so the same rig measures them by swapping one module.
+
+  AND IT CORRECTS A MEASUREMENT ERROR IN THE ENTRY BELOW. Counting gates at their EXPECTED times is
+  unreliable: every backdoor command costs latency, so a loop asking for 3.2 s spacing delivers 3.7,
+  and by the eighth gate a fixed window is seconds out and reports silence that is not there. Scanning
+  for bursts instead, the same FX rig that "scored 4/8" reads 7/8 at 1.8 s spacing and 8/8 at 3.0 s.
+  THE HISTORICAL GATE SCORES IN THE ENTRY BELOW ARE THEREFORE TOO LOW, and the nine remedies scored
+  against them were scored on a drifting ruler. The Time 0 versus Time 127 DIFFERENCE was real — both
+  were counted the same way — but the absolute numbers were not.
+
 - DEVNOTE WAS NEVER BROKEN. THE VOICE WAS STILL BUSY WITH ITS REVERB TAIL (solved 2026-09-07).
   Two sessions treated "DEVNOTE fires only 3 gates in 10" as a comms fault and scored nine remedies
   against it. It is not a fault at all: it is the instrument behaving correctly, and the rig was

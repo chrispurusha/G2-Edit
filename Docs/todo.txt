@@ -67,7 +67,6 @@ SOUND ENGINE
 - Sound engine across cores - investigated and deprioritised, kept for later
 
 MEASUREMENT PROGRAMME
-- Rebuild the measurement rig with the module under test in the FX area, so gating no longer waits on a Voice-Area tail (see the DEVNOTE entry in findings.txt)
 - Make measure.py wait for the VOICE to free rather than a fixed --period: DEVNOTES already reports the instrument's note/attack/release state, so the gate can be paced by the tail instead of guessed
 - Finish the EnvADSR oracle at ~/Documents/G2EnvTrace: it compiles and runs but outputs zero until the state-block layout and ENV_TIME_TABLES contents are worked out
 - Reverb Brightness below dial 48 over-damps the top and is extrapolated, not fitted - both sides stop measuring there, so it needs a quieter capture of the dial's lower third
