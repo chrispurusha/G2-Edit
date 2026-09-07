@@ -124,8 +124,14 @@ CROSS-PROJECT
   channel; the instrument runs two, sweeping in opposite directions about a 2.71 ms centre and MEETING
   when the sweep is at zero. Also CHORUS_RATE_MAX_HZ 3.334 -> 2.777 (it was 20% fast) and the wet is
   now split half to each tap. Arithmetic reproduces the hardware to 0.3% across the dial, but nothing
-  has been HEARD as a whole. Expect a fuller, more doubled chorus and a slower sweep at the same
+  has been heard in part - CT reported it "very close" after the interpolation fix, then that the G2
+  was still more pronounced, which led to the wet-level corrections below. Expect a fuller, more doubled chorus and a slower sweep at the same
   Detune. ALSO in the same round: chorus_read() now interpolates (four-point Catmull-Rom) where the
   module had always read whole samples - at Detune 127 that was a ~1.2 kHz click train instead of
   +/-21.8 cents of detune, which is what CT heard as the instrument being "much more pronounced".
   The maximum-Detune end is the place to listen first, since that is where it was worst.
+- Chorus wet level, second round (2026-09-07): the wet is now split by POWER not amplitude (1/sqrt2
+  per tap, +3 dB) and the wet/dry ratio reaches 1.19 at Amount 127 rather than 1.0. Stereo width now
+  measures 0.1473 against the instrument's 0.1495. Needs an ear: it should now sound as wide and as
+  pronounced as the G2 at high Detune. KNOWN REMAINING: our output is still about 1 dB below the
+  instrument's, more at low frequency than high - see findings.txt, it needs an Amount sweep to fix.

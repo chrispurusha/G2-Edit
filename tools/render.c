@@ -139,6 +139,65 @@ static bool write_sidecar(const char * wavPath, const char * sweep, const int * 
     return true;
 }
 
+// A MINIMAL READER for the files ./tools/capture writes: 32-bit PCM, any channel count. Only one
+// channel is wanted (the dry reference), so it is de-interleaved on the way in and converted to the
+// float the engine expects. Deliberately not a general wav reader - it accepts exactly what the
+// capture tool produces and refuses anything else rather than guessing.
+static float * read_wav32_channel(const char * path, uint32_t wantCh, uint32_t * frames, uint32_t * rate) {
+    FILE * f = fopen(path, "rb");
+
+    if (f == NULL) {
+        fprintf(stderr, "cannot open %s\n", path);
+        return NULL;
+    }
+    unsigned char hdr[44];
+
+    if (fread(hdr, 1, 44, f) != 44) {
+        fclose(f);
+        return NULL;
+    }
+    uint32_t ch   = (uint32_t)hdr[22] | ((uint32_t)hdr[23] << 8);
+    uint32_t sr   = (uint32_t)hdr[24] | ((uint32_t)hdr[25] << 8)
+                    | ((uint32_t)hdr[26] << 16) | ((uint32_t)hdr[27] << 24);
+    uint32_t bits = (uint32_t)hdr[34] | ((uint32_t)hdr[35] << 8);
+
+    if ((bits != 32) || (ch == 0) || (wantCh >= ch)) {
+        fprintf(stderr, "%s: %u-bit, %u channels - need 32-bit and channel %u\n", path, bits, ch, wantCh);
+        fclose(f);
+        return NULL;
+    }
+    long here = ftell(f);
+
+    fseek(f, 0, SEEK_END);
+    long bytes = ftell(f) - here;
+
+    fseek(f, here, SEEK_SET);
+
+    uint32_t n   = (uint32_t)(bytes / (long)(4 * ch));
+    float *  out = (float *)malloc((size_t)n * sizeof(float));
+    int32_t * row = (int32_t *)malloc((size_t)ch * sizeof(int32_t));
+
+    if ((out == NULL) || (row == NULL)) {
+        free(out);
+        free(row);
+        fclose(f);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < n; i++) {
+        if (fread(row, sizeof(int32_t), ch, f) != ch) {
+            n = i;
+            break;
+        }
+        out[i] = (float)((double)row[wantCh] / 2147483648.0);
+    }
+    free(row);
+    fclose(f);
+    *frames = n;
+    *rate   = sr;
+    return out;
+}
+
 int main(int argc, char ** argv) {
     const char * outPath  = "engine.wav";
     const char * sweep    = "type";
@@ -147,6 +206,10 @@ int main(int argc, char ** argv) {
     int          timeValue = 127;
     int          bright    = 64;
     double       period    = 20.0;      // seconds per impulse; must exceed the decay being measured
+    const char * chorusIn  = NULL;      // --chorus <dry.wav>: render the CHORUS from that file instead
+    int          inChannel = 0;
+    int          detune    = 127;
+    int          amount    = 127;
 
     for (int i = 1; i < argc; i++) {
         if ((strcmp(argv[i], "--out") == 0) && ((i + 1) < argc)) {
@@ -163,6 +226,14 @@ int main(int argc, char ** argv) {
             bright = atoi(argv[++i]);
         } else if ((strcmp(argv[i], "--period") == 0) && ((i + 1) < argc)) {
             period = atof(argv[++i]);
+        } else if ((strcmp(argv[i], "--chorus") == 0) && ((i + 1) < argc)) {
+            chorusIn = argv[++i];
+        } else if ((strcmp(argv[i], "--in-channel") == 0) && ((i + 1) < argc)) {
+            inChannel = atoi(argv[++i]);
+        } else if ((strcmp(argv[i], "--detune") == 0) && ((i + 1) < argc)) {
+            detune = atoi(argv[++i]);
+        } else if ((strcmp(argv[i], "--amount") == 0) && ((i + 1) < argc)) {
+            amount = atoi(argv[++i]);
         } else {
             fprintf(stderr,
                     "usage: %s [--out f.wav] [--sweep type|time|bright] [--settings 0,1,2,3]\n"
@@ -174,6 +245,39 @@ int main(int argc, char ** argv) {
                     argv[0]);
             return 2;
         }
+    }
+
+    // THE CHORUS TAKES A DIFFERENT PATH ENTIRELY and returns early: it is driven by a real recording
+    // rather than an impulse, so none of the sweep machinery below applies to it. Feed it the DRY
+    // channel of a hardware capture and the wet it returns can be put straight beside that capture's
+    // own wet - same source, same fundamental, same band-limiting, so any difference is the module.
+    if (chorusIn != NULL) {
+        uint32_t inFrames = 0;
+        uint32_t inRate   = 0;
+        float *  dry      = read_wav32_channel(chorusIn, (uint32_t)inChannel, &inFrames, &inRate);
+
+        if (dry == NULL) {
+            return 1;
+        }
+        float * wet = (float *)calloc((size_t)inFrames * 2, sizeof(float));
+
+        if (wet == NULL) {
+            free(dry);
+            return 1;
+        }
+        // The capture's OWN rate is the device rate here, not RENDER_DEVICE_RATE: the input decides
+        // it, and the engine still runs ENGINE_OVERSAMPLE times faster internally. The output is
+        // written at the input's rate because that is the grid the samples sit on.
+        sound_engine_render_chorus((double)inRate, (uint32_t)detune, (uint32_t)amount,
+                                   dry, wet, inFrames);
+
+        bool ok = write_wav32(outPath, wet, inFrames, 2, (double)inRate);
+
+        fprintf(stderr, "chorus: %u frames at %u Hz from %s ch%d, Detune %d Amount %d -> %s\n",
+                inFrames, inRate, chorusIn, inChannel, detune, amount, outPath);
+        free(dry);
+        free(wet);
+        return ok ? 0 : 1;
     }
 
     if ((strcmp(sweep, "type") != 0) && (strcmp(sweep, "time") != 0) && (strcmp(sweep, "bright") != 0)) {
