@@ -70,6 +70,7 @@ MEASUREMENT PROGRAMME
 - Finish the EnvADSR oracle at ~/Documents/G2EnvTrace: it compiles and runs but outputs zero until the state-block layout and ENV_TIME_TABLES contents are worked out
 - Reverb Brightness below dial 48 over-damps the top and is extrapolated, not fitted - both sides stop measuring there, so it needs a quieter capture of the dial's lower third
 - Measure the rest of the instrument the way the reverb was: EQs, shapers, the remaining envelopes
+- Absolute internal levels: use the Compressor's threshold + its LED via backdoor LEDDUMP as a calibrated in-patch level probe, rather than clipping (CT's idea 2026-09-07 - see findings.txt)
 - pch2csd (MIT) is an independent cross-check for parameter maps - worth diffing against ours
 
 PROTOCOL AND SECOND OPINIONS (each is a code comment needing hardware or a manual, not a code guess)
@@ -169,4 +170,3 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
   contextMenu.c) is already fully shared via SynthLib. G2-Edit's menus.c is still 2125 lines
   (EmuUtility/SynthEdit's are 26/95), but what remains is legitimately G2-specific domain action logic
   operating on tModule/tParam/tCable, which do not exist in the other two apps.
-- Check DelayA/DelayB for the same whole-sample read the chorus had: a modulated Time dial needs a fractional read or it clicks instead of bending

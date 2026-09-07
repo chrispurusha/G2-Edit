@@ -71,8 +71,9 @@ These play in the engine and have never been measured against the instrument.
 | **LfoShpA, LfoC** | `lfo_rate_hz()` cites the manual for the Sub range and one hardware divider reading; the other three ranges are unverified. NOW ALSO THE RIG'S OWN CLOCK, so an error here shifts every capture's timebase. |
 | **LevMult** | |
 | **Mix4to1C, Mix4to1S** | Whether the mixer sums or averages, and what its level law is. |
-| **FxtoIn** | The Pad menu is read as +6 / 0 / −6 / −12 dB from its label. Never checked. |
-| **2-Out, 4-Out** | Same: the Pad is read from its label. |
+| **FxtoIn** | The Pad menu is read as +6 / 0 / −6 / −12 dB from its label (`db12PadStrMap`, four values). Never checked. |
+| **2-Out, 4-Out** | Their Pad is NOT the same menu — it is `padStrMap`, TWO values, 0 dB or −6 dB, and the engine implements it as a straight halving. Also read from the label, also never checked. |
+| **Mix4to1C** | Carries the same two-value 0/−6 dB Pad, applied to every input at once, plus a linear/square curve on the four level dials. Unmeasured. |
 | **Constant** | |
 
 ## Where to start, if the list is being worked through

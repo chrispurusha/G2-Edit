@@ -3108,7 +3108,21 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeOut:
         {
             node->active  = (param_value(module, variation, OUT_PARAM_ACTIVE) != 0.0);
-            node->gain    = (param_value(module, variation, OUT_PARAM_PAD) != 0.0) ? 0.5 : 1.0;
+            // THE PAD'S SENSE IS THE OTHER WAY ROUND, measured on the instrument 2026-09-07. Setting
+            // it makes the output 6.02 dB LOUDER, not quieter - checked on two independent 2-Out
+            // modules (the VA one feeding the FX bus and an FX one feeding Out 1/2), with the write
+            // read back from the instrument each time and the OTHER output pair confirmed unchanged.
+            // The ratio is 2.0016, i.e. exactly a factor of two. This code had it as 0.5, so it was
+            // 12 dB out whenever the setting was engaged.
+            //
+            // WHICH OF THE PAIR IS UNITY IS NOT SETTLED. All these measurements give RATIOS: every
+            // path runs through several pads and none of them is a known 0 dB reference, so 1.0/2.0
+            // and 0.5/1.0 fit the data equally. Unity is put on the DEFAULT setting here, so existing
+            // patches are unaffected and only the engaged state moves - but see the note in
+            // capture-inventory.md, because the label says "-6dB" for the setting that measures +6,
+            // and whether the strings, the wire values or both are inverted needs the instrument's
+            // own display read back through DEVKNOB.
+            node->gain    = (param_value(module, variation, OUT_PARAM_PAD) != 0.0) ? 2.0 : 1.0;
             // WHICH PHYSICAL PAIR IT FEEDS. A 2-Out's "Out to" selects Out 1/2 or Out 3/4, and a
             // measurement patch depends on the difference: the rig puts its dry reference on one
             // pair and the processed signal on the other, so summing them would destroy the very

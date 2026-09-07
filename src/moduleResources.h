@@ -47,7 +47,30 @@ const char *             offOnStrMap[]                           = {"Off", "On",
 const char *             levAmpTypeStrMap[]                      = {"Lin", "dB", NULL};
 const char *             expStrMap[]                             = {"Exp", "Lin", "dB", NULL};
 const char *             logStrMap[]                             = {"Log", "Lin", NULL};
-const char *             padStrMap[]                             = {"0dB", "-6dB", NULL};
+// MEASURED 2026-09-07, and the second entry is a BOOST not a cut: engaging it makes a 2-Out 6.02 dB
+// LOUDER (a factor of 2.0016), on two independent modules with the write read back from the
+// instrument each time. CT saw the same thing from the panel - "it's louder at -6dB".
+//
+// WHICH ENTRY IS UNITY is settled by the chorus comparison rather than by these captures, which only
+// give ratios: hardware and engine matched in ABSOLUTE level to 0.07 dB with every pad at index 0 and
+// the engine treating index 0 as 1.0, so index 0 is unity and index 1 is the one that moves.
+//
+// CONFIRMED BY THE MANUAL, which is explicit for the Output modules: "The Pad scroll button on the
+// Input and Output modules can be used to attenuate or amplify the signals. On the Input modules you
+// can select between 0dB, -6dB, -12dB and +6dB and on the Output modules between 0dB and +6dB."
+// It is a make-up gain, and the manual's worked example uses it as one - pad the FX-In by -6 dB for
+// headroom, then take it back with +6 dB on the FX-area Output module.
+//
+// 4-Out shares this map and is unmeasured, but shares the manual's sentence. THE MIXERS DO NOT: see
+// mixerPadStrMap.
+const char *             padStrMap[]                             = {"0dB", "+6dB", NULL};
+
+// THE MIXER'S PAD IS A DIFFERENT CONTROL and used to share the map above, which had it boosting. The
+// manual: "Click the Pad scroll button to attenuate the levels on all mixer inputs by -6 dB (or
+// -12dB)." So it attenuates, and soundEngine.c's 0.5 when engaged is right where the Output module's
+// was not. UNMEASURED, and the manual's "(or -12dB)" hints at a THIRD position this two-entry table
+// cannot hold - so the value count may be wrong as well as the strings were.
+const char *             mixerPadStrMap[]                        = {"0dB", "-6dB", NULL};
 const char *             db12PadStrMap[]                         = {"+6dB", "0dB", "-6dB", "-12dB", NULL};
 const char *             db12BPadStrMap[]                        = {"0dB", "-6dB", "-12dB", NULL};
 const char *             gcStrMap[]                              = {"GC", "GC", NULL};
@@ -1094,7 +1117,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMix4to1C,   paramTypeEnable,         {{   25,    -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                // 123 Enable2
     {moduleTypeMix4to1C,   paramTypeEnable,         {{   45,    -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                // 123 Enable3
     {moduleTypeMix4to1C,   paramTypeEnable,         {{   65,    -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                // 123 Enable4
-    {moduleTypeMix4to1C,   paramTypeMenu,           {{   16,     9}, { 7,  7}}, anchorTopLeft,     "Pad",            2,   0, padStrMap,                             NULL          },                // 123 Pad
+    {moduleTypeMix4to1C,   paramTypeMenu,           {{   16,     9}, { 7,  7}}, anchorTopLeft,     "Pad",            2,   0, mixerPadStrMap,                        NULL          },                // 123 Pad
     {moduleTypeMix4to1C,   paramTypeMenu,           {{    3,     9}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },                // 123 Exp
     // 124 Mux8-1 -- No params
     // 125 WahWah
