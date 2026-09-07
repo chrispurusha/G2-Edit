@@ -11,13 +11,35 @@ THE PATCH IT EXPECTS
     A free-running impulse train through the module under test, with the raw impulse sent out a SECOND
     output pair — the G2 has four outputs, so both fit in one take:
 
-        EnvADSR "Env" out --> Pulse (Sub range, Time 0) --+--> [module] --> out 3-4   (wet)
-                                                          \-------------> out 1-2   (dry reference)
+        VOICE AREA   LfoShpA --> Pulse (Sub range, Time 0) --> 2-Out ("Out to" = FX 1/2)
+        FX AREA      Fx-In --+--> [module] --> LevAmp x2 --> 2-Out   out 3-4   (wet)
+                              \------------------------------> 2-Out   out 1-2   (dry reference)
 
-    The Pulse gives a click a few samples long, a Dirac as near as the engine has one, and the
-    envelope's rising edge triggers it — so ONE note per impulse and the excitation is repeatable to
-    +0.99 on the dry channel. Nothing else in the patch may sound: the oscillator feeding the
-    envelope's audio input is left disconnected from the outputs deliberately.
+    It is saved as PatchTestFiles/FxMeasure.pch2; load that rather than rebuilding it.
+
+    THE EXCITATION FREE-RUNS AND NEEDS NO NOTES. The LFO fires the Pulse, so --gate is not used and
+    the driver simply dwells while the recorder runs. Its period is exact and does not drift:
+
+        rate Hz = (value + 1) / 699.0507      value = round(699.0507 / period) - 1
+
+    Value 127 is the fastest Sub period, 5.461 s, and a capture measures 5.461 s between impulses
+    with a spread of 0.000 s. A note-driven loop cannot do this: every backdoor command costs
+    latency, so asking for 3.2 s delivers 3.7 and the error accumulates until fixed analysis windows
+    fall off the impulses entirely. Set --period to the LFO's period so the sidecar describes what
+    the capture actually contains.
+
+    PICK THE PERIOD FROM THE TAIL, which the LFO does not change: a Hall at Time 127 wants 12 s or
+    more, a Small room 5.5 s is enough.
+
+    THE MODULE UNDER TEST GOES IN THE FX AREA. A Voice-Area effect is per-voice and its voice cannot
+    be reallocated until that voice's tail has decayed, so an impulse arriving before then makes no
+    sound at all. In FX the excitation is independent of it. It also generalises — chorus, delays and
+    compressor all live there, so the same rig measures them by swapping one module.
+
+    USE LfoShpA, NOT LfoB. Both free-run and both have a Sync output, but the sound engine models
+    only LfoShpA, and a rig the engine cannot render is worth nothing for comparing the two.
+
+    The Pulse gives a click a few samples long, a Dirac as near as the instrument has one.
 
     THE PULSE MUST BE UP-RATED (its cables turn orange rather than yellow). At control rate the
     module cannot produce a pulse shorter than a control period, so the shortest Time setting simply
