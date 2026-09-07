@@ -202,3 +202,22 @@ CROSS-PROJECT
   A taller replacement pushes its column down, and if the column is full the whole swap is refused
   with nothing changed. Undo should put the module AND its cables back in one step. The mapping itself
   is unit-tested; what needs an eye is the menu, the undo, and whether the G2 agrees with the result.
+- ***MODULE PALETTE (2026-09-07), new feature - needs a real mouse.*** A "Modules" button in the
+  topbar (between Online and Undo) and View > Module Palette both open a band under the topbar: the
+  sixteen module groups as a 2x8 grid, and the selected group's modules as tiles carrying their name
+  and their connectors as coloured dots. DRAG a tile onto either area to add the module. What needs
+  your hands: that the drag feels right; that the ghost - a real module face at the size and place it
+  will land - tracks correctly across the split bar and at each zoom; that dropping on the split bar
+  or the scrollbars cancels rather than dropping somewhere odd; that the hover preview names the
+  module; and that the wheel and the < > arrows scroll the Osc row when the window is narrow enough
+  to need it. Toggling the band was hammered from a script across zoom, scroll and split combinations
+  without a failure, and a module scrolled under the band is correctly clipped and unclickable.
+- ***OFFLINE NEW PATCH NO LONGER HANGS (2026-09-07).*** File > New Patch with no G2 connected used to
+  sit on its "New Patch..." overlay until the editor was force quit, and the reset never happened
+  either. It now does the reset locally. Check it clears the patch offline, and that ONLINE it still
+  pushes to the G2 as before - that path is unchanged but untested since.
+- ***DEVICE-OP SAFETY TIMEOUT NOW ACTUALLY FIRES (2026-09-07).*** It was comparing two different
+  clocks and had never fired once. Any device operation whose completion never arrives - the G2
+  unplugged mid-op is the obvious one - should now clear its busy overlay after five seconds with a
+  line in the log, rather than locking the editor. Worth provoking once by pulling the cable during a
+  bank operation.

@@ -43,6 +43,7 @@ extern "C" {
 #include "protocol.h"
 #include "usbComms.h"
 #include "graphics.h"
+#include "palette.h"
 #include "topbarRender.h"
 #include "splitView.h"
 #include "utilsGraphics.h"
@@ -276,6 +277,21 @@ void notify_full_patch_change(void) {
     set_y_scroll_bar(gScrollState.yBar);
 }
 
+// The canvas origin is derived from ONE value - the theme's topBarHeight, which utilsGraphics.c
+// turns into the module band's top and height. So growing the topbar for the module palette is a
+// single re-application of the theme rather than a change anywhere the canvas is drawn.
+//
+// The theme is kept here rather than read back out of SynthLib because configure_synthlib_theme()
+// takes a whole struct by value and there is nothing to read it back with; keeping our own copy is
+// simpler than adding an accessor to the submodule for one field.
+static tSynthLibTheme gAppTheme = {0};
+
+void apply_top_bar_height(void) {
+    gAppTheme.topBarHeight = TOP_BAR_HEIGHT + MENU_BAR_HEIGHT + palette_band_height();
+    configure_synthlib_theme(gAppTheme);
+    synthlib_request_redraw();
+}
+
 void init_graphics(void) {
     char              title[128]           = {0};
 
@@ -316,18 +332,22 @@ void init_graphics(void) {
     // defined further down this file.
     register_app_popups();
 
+    // Built before the window is created so the palette's band - closed at startup - is already
+    // accounted for, and so apply_top_bar_height() has something to re-send when it opens.
+    gAppTheme = (tSynthLibTheme){
+        .topBarHeight   = TOP_BAR_HEIGHT + MENU_BAR_HEIGHT + palette_band_height(),
+        .orange1        = (tRgb)RGB_ORANGE_1,
+        .orange2        = (tRgb)RGB_ORANGE_2,
+        .greenOn        = (tRgb)RGB_GREEN_ON,
+        .backgroundGrey = (tRgb)RGB_BACKGROUND_GREY,
+    };
+
     synthlib_window_create(&(tSynthLibWindowConfig){
         .title           = title,
         .targetWidth     = TARGET_FRAME_BUFF_WIDTH,
         .targetHeight    = TARGET_FRAME_BUFF_HEIGHT,
         .dialMode        = eDialModeRotary,
-        .theme           = (tSynthLibTheme){
-            .topBarHeight   = TOP_BAR_HEIGHT + MENU_BAR_HEIGHT,
-            .orange1        = (tRgb)RGB_ORANGE_1,
-            .orange2        = (tRgb)RGB_ORANGE_2,
-            .greenOn        = (tRgb)RGB_GREEN_ON,
-            .backgroundGrey = (tRgb)RGB_BACKGROUND_GREY,
-        },
+        .theme           = gAppTheme,
         .mouseCoord      = get_global_gui_scaled_mouse_coord,
         // While a dial drag hides the pointer, its reported position is a relative-delta
         // accumulator - it drifts, and anything that highlights "what is under the mouse" lights
@@ -881,11 +901,20 @@ static void on_synth_restore_confirmed(bool confirmed) {
 
 // Busy state for in-flight whole-slot device ops (load/save/new patch). Set when the op is enqueued,
 // cleared when its completion response is drained off gToGuiThread. See reverse-queue-design.md.
-static double sDeviceOpStartTime = 0.0; // glfwGetTime() of the oldest in-flight op — for the safety timeout
+// get_time_ms() of the oldest in-flight op, for the safety timeout below. IN MILLISECONDS AND ON
+// get_time_ms()'s CLOCK, both of which matter: this was set from get_time_ms() / 1000.0 and compared
+// against glfwGetTime(), which are two different origins - CLOCK_MONOTONIC counts from boot and
+// glfwGetTime() from library init. On a machine up for a day the difference is about 86400, so the
+// subtraction was hugely negative and the timeout could never fire. The busy overlay then had no way
+// out at all if its completion response never came, which is what left "New Patch..." on screen
+// until the editor was force quit (CT, 2026-09-07).
+#define DEVICE_OP_TIMEOUT_MS    (5000.0)
+
+static double sDeviceOpStartTime = 0.0;
 
 void device_op_begin(const char * label) {
     if (gDeviceOpInProgress == 0) {
-        sDeviceOpStartTime = get_time_ms() / 1000.0;
+        sDeviceOpStartTime = get_time_ms();
     }
     gDeviceOpInProgress++;
 
@@ -1119,10 +1148,12 @@ static void check_action_flags(void) {
         }
     }
 
-    // Safety net: if a device op's completion response never arrives (e.g. the G2 disconnected in the
-    // gap between enqueue and processing), don't leave the GUI locked forever — force-clear after a
-    // generous timeout. Whole-slot ops complete in well under 1s in practice.
-    if ((gDeviceOpInProgress > 0) && ((glfwGetTime() - sDeviceOpStartTime) > 5.0)) {
+    // Safety net: if a device op's completion response never arrives - the G2 disconnected between
+    // the enqueue and the processing, or the USB thread never dequeued it at all because it was busy
+    // trying to reconnect - don't leave the GUI locked forever. Whole-slot ops complete in well under
+    // a second in practice. Both sides of this comparison must be on get_time_ms()'s clock; see the
+    // note on sDeviceOpStartTime for what happened when they were not.
+    if ((gDeviceOpInProgress > 0) && ((get_time_ms() - sDeviceOpStartTime) > DEVICE_OP_TIMEOUT_MS)) {
         LOG_ERROR("Device op busy-state timed out — force-clearing\n");
         gDeviceOpInProgress = 0;
         synthlib_request_redraw();
@@ -2308,6 +2339,7 @@ void render_frame(void) {
         }
     }
     render_top_bar();
+    palette_render();
 
     // The BAR itself stays here, ahead of the floating panels, because it is chrome they float above
     // — a panel is allowed to overlap it, and drawing the bar afterwards would put it over the panel

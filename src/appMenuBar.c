@@ -32,6 +32,7 @@ extern "C" {
 #include "globalVars.h"
 #include "misc.h"
 #include "graphics.h"
+#include "palette.h"
 #include "splitView.h"
 #include "mutatorUI.h"
 #include "paramPages.h"
@@ -510,11 +511,20 @@ void open_help_menu(tCoord anchor) {
     open_context_menu(anchor, items, 0, 0.0);
 }
 
+static void action_toggle_palette(int index) {
+    (void)index;
+    palette_toggle();
+}
+
 void open_view_menu(tCoord anchor) {
     // 3 zoom entries + Zoom to Fit + one per overlay view + the NULL terminator. It was exactly full
     // at 9 before Zoom to Fit was added; overflowing one of these arrays does not fail visibly, it
     // quietly writes over whatever static follows it (see the Experimental menu's note in todo.txt).
-    static tMenuItem items[10]                        = {0};
+    // 3 zoom + Zoom to Fit + the palette toggle + one per overlay view + the NULL terminator.
+    // GROWN FROM 10 when the palette toggle was added: it was exactly full, and overflowing one of
+    // these arrays does not fail visibly - it quietly writes over whatever static follows it.
+    static tMenuItem items[11]                        = {0};
+    static char      paletteLabel[40]                 = {0};
     static char      overlayLabel[overlayModeMax][40] = {0};
     int              i                                = 0;
 
@@ -529,6 +539,13 @@ void open_view_menu(tCoord anchor) {
     };
     items[i++] = (tMenuItem){
         "Zoom to Fit", (tRgb)RGB_GREY_3, action_zoom_to_fit, 0, NULL, 0, 0.0
+    };
+
+    snprintf(paletteLabel, sizeof(paletteLabel), "%s Module Palette",
+             palette_is_open() ? "*" : " ");
+    items[i++] = (tMenuItem){
+        paletteLabel, palette_is_open() ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3,
+        action_toggle_palette, 0, NULL, 0, 0.0
     };
 
     // The five overlay views, the active one ticked. overlayModeNone isn't offered as an entry of
