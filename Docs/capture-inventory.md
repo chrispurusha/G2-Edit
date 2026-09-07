@@ -68,9 +68,9 @@ These play in the engine and have never been measured against the instrument.
 | module | what is assumed |
 |---|---|
 | **FltLP, FltHP, FltStatic, FltNord** | All four are on `to-test.txt` as needing an ear and none is tuned. FltClassic is the only filter with captures. |
-| **LfoShpA, LfoC** | `lfo_rate_hz()` cites the manual for the Sub range and one hardware divider reading; the other three ranges are unverified. NOW ALSO THE RIG'S OWN CLOCK, so an error here shifts every capture's timebase. |
+| **LfoShpA** | Rate Sub, Rate Lo and Rate Hi all MEASURED 2026-09-07 and now agree within 0.013% - Rate Lo's base was 0.43% low and is now derived as Rate Hi over 16. BPM and Clk still unverified (they need a master clock). LfoC untested. |
 | **LevMult** | |
-| **Mix4to1C, Mix4to1S** | Whether the mixer sums or averages, and what its level law is. |
+| **Mix4to1C, Mix4to1S** | SUMS - measured 2026-09-07, +6.02 dB per doubling of identical inputs, and the engine already matches. Its level-dial law and its -6/-12 dB Pad are still unmeasured. |
 | **FxtoIn** | The Pad menu is read as +6 / 0 / −6 / −12 dB from its label (`db12PadStrMap`, four values). Never checked. |
 | **2-Out, 4-Out** | Their Pad is NOT the same menu — it is `padStrMap`, TWO values, 0 dB or −6 dB, and the engine implements it as a straight halving. Also read from the label, also never checked. |
 | **Mix4to1C** | Carries the same two-value 0/−6 dB Pad, applied to every input at once, plus a linear/square curve on the four level dials. Unmeasured. |
