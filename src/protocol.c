@@ -1279,6 +1279,7 @@ void store_note2(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t coun
     }
 
     gNote2Size[slot] = safeCount;
+    atomic_fetch_add(&gNote2Updates, 1);
 }
 
 void store_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t count) {

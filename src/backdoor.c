@@ -105,7 +105,17 @@ extern "C" {
 //                       well as locally. Needed before the synth's own display can be asked what a
 //                       dial reads: an unassigned parameter has nowhere to show itself on the panel.
 //   DEVNOTE <note> <vel> on|off — a Virtual Keyboard note to the G2, for a patch that needs a gate
-//                       rather than a free-running clock (envelope times, for instance)
+//                       rather than a free-running clock (envelope times, for instance). NOT A
+//                       PLAYING PATH: it will not start a note while one is releasing, identically
+//                       at one voice mono and eight voices poly. Use tools/g2_note over MIDI when
+//                       the NOTE BEHAVIOUR itself is what is being measured
+//   DEVNOTES [slot]   — which notes the INSTRUMENT believes are held, decoded from its reply as a
+//                       7-bit note, attack and release. Waits for a FRESH reply rather than
+//                       reporting a stale buffer, so a disconnected G2 cannot look like a working
+//                       query. This is how a note fault is observed instead of inferred
+//   VOICES <1-32> [poly|mono|legato] — the patch's voice allocation, locally; PUSH sends it. A
+//                       gated measurement cannot be read without knowing this: an envelope that
+//                       seemed not to retrigger was a one-voice mono patch whose voice was busy
 //   DEVADDMODULE [VA|FX] <name> [col] [row]  — as ADDMODULE, but created ON THE G2 too. The area
 //                       is optional and defaults to VA; FX is the only scripted route into the
 //                       effects area, and without it no test patch can have LEDs in both.
@@ -219,7 +229,13 @@ static void backdoor_dump_state(char * out, size_t outMax) {
     const uint32_t locs[]     = {(uint32_t)locationVa, (uint32_t)locationFx};
     const char *   locNames[] = {"VA", "FX"};
 
-    used += (size_t)snprintf(out + used, outMax - used, "OK\nslot=%u\n", (unsigned)gSlot);
+    // VOICE COUNT AND MONO/POLY BELONG IN THE DUMP. How a patch allocates voices decides whether a
+    // fast second note sounds at all, so a measurement that gates notes cannot be read without it —
+    // an observation that looked like an envelope-retrigger difference turned out to need this to
+    // be interpreted. monoPoly is 0 Poly, 1 Mono, 2 Legato.
+    used += (size_t)snprintf(out + used, outMax - used, "OK\nslot=%u voices=%u monoPoly=%u\n",
+                             (unsigned)gSlot, (unsigned)gPatchDescr[gSlot].voiceCount,
+                             (unsigned)gPatchDescr[gSlot].monoPoly);
 
     for (uint32_t l = 0; (l < 2) && (used < outMax); l++) {
         for (uint32_t index = 0; (index < MAX_NUM_MODULES) && (used < outMax); index++) {
@@ -969,6 +985,86 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         msg.playNoteData.on       = (state[0] == 'o') && (state[1] == 'n');
         msg_send(&gToUsbThread, &msg);
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "VOICES") == 0) {
+        // VOICES <1-32> [poly|mono|legato] — set the patch's voice allocation, locally. PUSH sends it.
+        //
+        // Exists because a gated measurement cannot be interpreted without it. An envelope that
+        // appeared not to retrigger during its release turned out to be a ONE-VOICE MONO patch whose
+        // single voice was still busy — allocation, not envelope behaviour. Being able to set this
+        // is what separates the two.
+        char     mode[16] = {0};
+        uint32_t voices   = 0;
+        int      got      = sscanf(arg, "%u %15s", &voices, mode);
+
+        if ((got < 1) || (voices < 1) || (voices > 32)) {
+            backdoor_write_result("ERROR: expected 'VOICES <1-32> [poly|mono|legato]'\n");
+            return;
+        }
+        gPatchDescr[gSlot].voiceCount = (uint8_t)voices;
+
+        if (got == 2) {
+            if (strcasecmp(mode, "poly") == 0) {
+                gPatchDescr[gSlot].monoPoly = (uint8_t)monoPolyPoly;
+            } else if (strcasecmp(mode, "mono") == 0) {
+                gPatchDescr[gSlot].monoPoly = (uint8_t)monoPolyMono;
+            } else if (strcasecmp(mode, "legato") == 0) {
+                gPatchDescr[gSlot].monoPoly = (uint8_t)monoPolyLegato;
+            } else {
+                backdoor_write_result("ERROR: mode must be poly, mono or legato\n");
+                return;
+            }
+        }
+        char     text[96];
+
+        snprintf(text, sizeof(text), "OK\nvoices=%u monoPoly=%u (PUSH to send)\n",
+                 (unsigned)gPatchDescr[gSlot].voiceCount, (unsigned)gPatchDescr[gSlot].monoPoly);
+        backdoor_write_result(text);
+    } else if (strcmp(cmd, "DEVNOTES") == 0) {
+        // DEVNOTES [slot] — ASK THE INSTRUMENT WHICH NOTES IT THINKS ARE HELD.
+        //
+        // Exists because DEVNOTE's failure could not be diagnosed by inference. Every send succeeds
+        // and the G2's envelope LED lights, yet most gates produce no sound — so the question "does
+        // the instrument still believe an earlier note is down?" had no way of being asked. This
+        // asks it, which turns that fault from a score out of eight into an observation.
+        //
+        // WAITS FOR A FRESH REPLY, never reporting whatever is already in the buffer: gNote2Updates
+        // is bumped by store_note2() when one lands, so this samples it first and waits for it to
+        // move. Without that a disconnected instrument would return the last good answer and look
+        // like a working query.
+        uint32_t        slot   = gSlot;
+        uint32_t        before = atomic_load(&gNote2Updates);
+        uint32_t        waited = 0;
+        tMessageContent msg    = {0};
+        char            text[1024];
+        int             used   = 0;
+
+        (void)sscanf(arg, "%u", &slot);
+
+        if (slot >= MAX_SLOTS) {
+            backdoor_write_result("ERROR: slot must be 0-3\n");
+            return;
+        }
+        msg.cmd  = eMsgCmdGetCurrentNote;
+        msg.slot = slot;
+        msg_send(&gToUsbThread, &msg);
+
+        while ((atomic_load(&gNote2Updates) == before) && (waited < 1000)) {
+            usleep(10000);
+            waited += 10;
+        }
+
+        if (atomic_load(&gNote2Updates) == before) {
+            backdoor_write_result("ERROR: no current-note reply within 1s (is the G2 online?)\n");
+            return;
+        }
+        used     = snprintf(text, sizeof(text), "OK\nslot=%u bytes=%u\nraw=", slot, gNote2Size[slot]);
+
+        for (uint32_t i = 0; (i < gNote2Size[slot]) && (used < (int)sizeof(text) - 4); i++) {
+            used += snprintf(&text[used], sizeof(text) - (size_t)used, "%02x", gNote2[slot][i]);
+        }
+
+        snprintf(&text[used], sizeof(text) - (size_t)used, "\n");
+        backdoor_write_result(text);
     } else if (strcmp(cmd, "COMMS") == 0) {
         // ONLINE OR OFFLINE, ASKED DIRECTLY — and it exists because nothing else here can tell you.
         // Every DEV command reports OK whether or not the instrument is listening: they update the

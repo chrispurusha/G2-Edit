@@ -53,7 +53,6 @@ FILTERS
 - Re-check FltComb FB 127 and FltPhase FB 127 with the level-tracking test, as FltClassic/FltNord were
 
 SOUND ENGINE
-- ***PRIORITY*** Envelope attack is the wrong FORM: ours is a fixed-duration shaped ramp, the instrument's is a one-pole approach to a target - confirm with the retrigger test below, then fix paramCurves.c
 - ***PRIORITY*** Reverb low-frequency decay is about twice too fast (Hall 125 Hz -10.2 dB/s against -5.0); cause unknown, ruled out modulation - this is the "not as full" fault
 - Reverb L/R peak-correlation LAG cannot be matched in an 8-line tank and no tap placement fixes it; only a single shared buffer would - do not tune the taps further
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.txt)
@@ -69,8 +68,8 @@ SOUND ENGINE
 - Sound engine across cores - investigated and deprioritised, kept for later
 
 MEASUREMENT PROGRAMME
-- ***PRIORITY*** DEVNOTE fires only ~3 gates in 10 and taxes every hardware measurement; ruled out same-note retrigger, envelope sustain, hold length, app focus, second instance - the unconfirmed wire format is the remaining suspect
-- Envelope retrigger test: gate from a NON-ZERO level and time the attack - a fixed-duration ramp always takes the dialled time, a one-pole arrives sooner; settles the form without the harness
+- Rebuild the measurement rig with the module under test in the FX area, so gating no longer waits on a Voice-Area tail (see the DEVNOTE entry in findings.txt)
+- Make measure.py wait for the VOICE to free rather than a fixed --period: DEVNOTES already reports the instrument's note/attack/release state, so the gate can be paced by the tail instead of guessed
 - Finish the EnvADSR oracle at ~/Documents/G2EnvTrace: it compiles and runs but outputs zero until the state-block layout and ENV_TIME_TABLES contents are worked out
 - Fit REVERB_DAMP_MAX/REVERB_BRIGHT_CURVE against g_hall_bright9.wav - the sweep exists and has never been used
 - Consider driving the measurement Pulse from a free-running LFO so a capture needs no notes at all

@@ -2733,6 +2733,97 @@ OPEN WORK
   The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
   right — within 0.05 ms of the instrument in every room.
 
+- DEVNOTE WAS NEVER BROKEN. THE VOICE WAS STILL BUSY WITH ITS REVERB TAIL (solved 2026-09-07).
+  Two sessions treated "DEVNOTE fires only 3 gates in 10" as a comms fault and scored nine remedies
+  against it. It is not a fault at all: it is the instrument behaving correctly, and the rig was
+  fighting it.
+
+  THE MECHANISM: the Reverb sits in the VOICE AREA, so every voice carries its own reverb and cannot
+  be reallocated until that voice's tail has decayed. A note-on arriving before then gets no voice
+  and makes no sound. Nothing is stuck, nothing is dropped.
+
+  THE PROOF, one variable changed and nothing else - at the EXACT gate timing that had been giving
+  3/8 for two sessions:
+      Reverb Time 127 (a tail of seconds)   3/8
+      Reverb Time 0   (a very short tail)   8/8
+  And independently, at Time 127, lengthening the rest after the note-off from 1.8 s to 2.55 s took
+  it from 3/8 to 6/6.
+
+  WHAT THE DIAGNOSIS COST, and why it went wrong: every measurement was of the wrong thing. The app
+  was instrumented (all 16 sends returned result=0, perfVersion constant, no competing USB traffic),
+  the device was polled (its EnvADSR LED reads 1 for gates that make no sound), and nine remedies
+  were scored - framing, retrigger mode, sustain, alternating notes, hold length, focus, PUSH, slot
+  reselect, an all-notes-off sweep. All of it confirmed the note ARRIVES, which was true and never
+  the question. THE ONE VARIABLE NOBODY VARIED WAS THE PATCH.
+
+  TWO THINGS SURVIVE THE FALSE ALARM AND ARE WORTH KEEPING:
+   * THE WIRE FORMAT IS NOW CONFIRMED, not merely decoded. CMPlayNote::WriteStream initialises with
+     id 0x56 and writes TWO bytes, an action and the note - no velocity, which is why
+     send_play_note() takes none and the backdoor correctly discards the velocity it accepts.
+   * DEVNOTES, a new backdoor command, asks the instrument which notes it believes are held
+     (SUB_COMMAND 0x68, already implemented as send_get_current_note but never reachable). It waits
+     for a FRESH reply - gNote2Updates is bumped by store_note2 - rather than reporting a stale
+     buffer, so a disconnected instrument cannot look like a working query. Decoded, the reply is a
+     7-bit note, 7-bit attack and 7-bit release: at rest 64/0/0, after a note-on 60/127/0, after its
+     note-off 60/127/127.
+
+  THE RULE FOR THE RIG: space impulses beyond the TAIL, not merely beyond the note, whenever the
+  module under test lives in the Voice Area - or put it in the FX area, where it is not per-voice
+  and the gating is independent of it. The FX area is the better rig and is what a real patch does.
+
+- THE ENVELOPE ATTACK FORM: MEASURED 2026-09-07, AND THE ONE-POLE READING DOES NOT SURVIVE IT.
+  Fitting both laws to an averaged hardware attack (five attacks, 5 ms RMS envelope, normalised to
+  each one's own plateau, fitted over the rise with a free onset):
+
+      ours, (1 - exp(-k*p))/(1 - exp(-k)) with k pinned at 2.83   residual 0.0338, T = 0.99 s
+      ours, same law with k free                                  residual 0.0334, T = 0.95, k = 2.60
+      a pure one-pole, 1 - exp(-t/tau)                            residual 0.0423, tau = 0.285 s
+
+  The one-pole is 25% worse, and the freely fitted k of 2.60 sits near the 2.78-2.90 the 2026-08-24
+  hardware fit produced. SO THE FORM WE IMPLEMENT IS PROBABLY RIGHT and the previous entry's
+  conclusion was wrong.
+
+  WHY THE READING MISLED, and it is the useful part: our law IS a one-pole in disguise - a one-pole
+  aimed at a target ABOVE 1.0 and stopped when it reaches 1.0 gives exactly
+  (1 - exp(-k*p))/(1 - exp(-k)). So seeing "rate times a difference, accumulated" in the decompiled
+  arithmetic does not distinguish the two at all; both are that. What separates them is whether the
+  segment ARRIVES at a fixed time or approaches asymptotically, and the arithmetic alone cannot say,
+  because which state word holds the target was inferred from position and never established.
+  READING STRUCTURE IS RELIABLE; READING THE ROLE OF A STATE WORD IS NOT.
+
+  THE RETRIGGER QUESTION IS SETTLED, AND OUR BEHAVIOUR IS ALREADY RIGHT (2026-09-07). Measured on
+  BOTH note paths, same patch, same timing - note-off at 4.00 s, a DIFFERENT note at 4.35 s:
+
+      over MIDI (Elektron TM-1, ch 3)   the envelope turns around AT the note-on and rises from
+                                        about 15% of peak - an immediate retrigger
+      over DEVNOTE (USB 0x56)           no effect at all; the release runs to its end and the
+                                        attack starts from near zero half a second later
+
+  envelope_step() retriggers from Release and rises "from wherever a fast retrigger caught it",
+  which is what MIDI does. NO CHANGE NEEDED.
+
+  THE DEVNOTE PATH IS NOT A PLAYING PATH, and that is the thing to remember. It behaves identically
+  at voices=1 mono and voices=8 poly with a different pitch, so it is not voice allocation - the
+  editor's virtual keyboard simply will not start a note while one is releasing. Fine for exciting a
+  patch in a measurement rig; useless for measuring anything about note behaviour.
+
+  HOW THIS WAS NEARLY GOT WRONG, twice in one item: the first observation was made on a ONE-VOICE
+  MONO patch, where "waits for the release" is explained by allocation alone; DUMP now reports
+  voices= and monoPoly= so that confound is visible rather than invisible. Fixing that showed poly
+  behaves the same, which looked like an instrument property - and it was still wrong, because the
+  whole measurement was on the wrong PATH. MEASURE ON THE PATH THE BEHAVIOUR WILL BE USED THROUGH.
+
+  WHAT WAS PREVIOUSLY WRITTEN HERE - "the G2 does not retrigger a releasing voice from its current
+  level" - is withdrawn. It was true of DEVNOTE and false of the instrument.
+
+  THE TOOL: tools/g2_note sends MIDI note-on/off to a named destination (velocity 0 = off), built
+  for this and reusable. It lists the available destinations when the name does not match.
+
+  THE RIG, reusable: OscB -> LevMod In, EnvADSR Env -> LevMod Mod, LevMod -> 2-Out, ModDepth and
+  ModType both 127. The EnvADSR's own AM input and second output were tried first and produce
+  SILENCE - the documented LevMod rig is the one that works. Fit the amplitude of a tone the
+  envelope opens; do not capture the envelope output directly, the audio path is AC coupled.
+
 - THE ENVELOPE'S ATTACK IS THE WRONG KIND OF CURVE, NOT THE WRONG CURVATURE (2026-09-06, owner's ear
   then read off the instrument's own DSP). Owner: "G2's envelope is softer than our sound engine for
   attack". It is, and the reason is structural.

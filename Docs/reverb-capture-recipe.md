@@ -128,6 +128,22 @@ EnvADSR "Env" out --> Pulse (Sub range, Time 0) --+--> Reverb --> out 3-4   (wet
   captured in the same take, and comparing dry repeats to each other says whether the excitation
   repeated at all — independently of the module.
 
+## SPACE THE IMPULSES BEYOND THE TAIL, NOT MERELY BEYOND THE NOTE
+
+The Reverb sits in the VOICE AREA, so every voice carries its own reverb and cannot be reallocated
+until that voice's tail has decayed. A gate arriving before then gets no voice and makes no sound —
+correct behaviour, and it looks exactly like a dropped note. At one fixed gate timing:
+
+| Reverb Time 127 (tail of seconds) | 3 gates in 8 |
+| Reverb Time 0 (very short tail)   | 8 gates in 8 |
+
+Two sessions spent chasing this as a `DEVNOTE` comms fault. It is not one. `--period` must exceed
+the TAIL, which at Time 127 means about 3 s for Small and 12 s or more for Hall.
+
+**Better still, put the module under test in the FX AREA**, where it is not per-voice and gating is
+independent of its tail. That is also what a real patch does. `DEVNOTES` reports which notes the
+instrument believes are held, if you need to see the state rather than infer it.
+
 ## Before believing anything
 
 - **Check every backdoor command returns OK.** A whole DryWet sweep was once reported as "flat within
