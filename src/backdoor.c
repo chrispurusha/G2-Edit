@@ -51,6 +51,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "mouseHandle.h"
 #include "menus.h"
+#include "moduleReplace.h"
 #include "selection.h"
 #include "soundEngine.h"
 #include "cableChain.h"
@@ -91,6 +92,8 @@ extern "C" {
 //   MENU <bar>[/<item>[/<sub>]] — run a menu item by label (leading substring, case-insensitive,
 //                       '/' separated); omit the last level to LIST what that level contains
 //   SELECT <VA|FX> <n> — select one module by index; SELECT NONE clears
+//   REPLACE [VA|FX] <index> <name> — swap a module for another of the same group, as the module
+//                       right-click menu does. Local only; check the result with DUMP
 //   SNDSTATUS         — what the sound engine's status line currently reads
 //   SNDDUMP           — the resolved chain, the parameters read, and the peak level since last read
 //   NOTE <n>|OFF      — play/release a note on the sound engine (LOCAL engine, not the G2)
@@ -584,6 +587,55 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "REPLACE") == 0) {
+        // REPLACE [VA|FX] <index> <name> - swap a module for another of the same group, the way the
+        // module right-click menu's "Replace with" does. Local only: module_replace() posts one
+        // whole-patch write, which goes nowhere when there is no instrument attached, so this drives
+        // exactly the code path the menu drives and can be checked with DUMP afterwards.
+        char         name[64] = {0};
+        uint32_t     index    = 0;
+        uint32_t     area     = (uint32_t)locationVa;
+        const char * rest     = arg;
+        char         first[8] = {0};
+
+        if (sscanf(rest, "%7s", first) == 1) {
+            if ((strcasecmp(first, "VA") == 0) || (strcasecmp(first, "FX") == 0)) {
+                area  = (strcasecmp(first, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+                rest += strlen(first);
+
+                while ((*rest == ' ') || (*rest == '\t')) {
+                    rest++;
+                }
+            }
+        }
+
+        if (sscanf(rest, "%u %63s", &index, name) != 2) {
+            backdoor_write_result("ERROR: expected 'REPLACE [VA|FX] <index> <name>'\n");
+            return;
+        }
+        tModuleType  found    = (tModuleType)0;
+
+        for (uint32_t t = 1; t < (uint32_t)moduleTypeMax; t++) {
+            if (strcmp(gModuleProperties[t].name, name) == 0) {
+                found = (tModuleType)t;
+                break;
+            }
+        }
+
+        if (found == (tModuleType)0) {
+            char msg[128];
+
+            snprintf(msg, sizeof(msg), "ERROR: no module named '%s'\n", name);
+            backdoor_write_result(msg);
+            return;
+        }
+        gLocation = area;
+        tModuleKey   key      = {gSlot, area, index};
+
+        bool         ok       = module_replace(key, found);
+
+        synthlib_request_redraw();
+        backdoor_write_result(ok ? "OK\n" : "ERROR: not replaceable (no group, no role table, or column full)\n");
     } else if ((strcmp(cmd, "ADDMODULE") == 0) || (strcmp(cmd, "DEVADDMODULE") == 0)) {
         // BOTH SPELLINGS REACH THE INSTRUMENT. ADDMODULE was local-only, which meant a scripted patch
         // and the G2's edit buffer could drift apart without anything saying so — and every LED, knob

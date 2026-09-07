@@ -41,6 +41,7 @@ extern "C" {
 #include "menus.h"
 #include "selection.h"
 #include "undo.h"
+#include "moduleReplace.h"
 #include "cableChain.h"
 
 // ── Synth settings action targets ──────────────────────────────────────────
@@ -562,6 +563,26 @@ static void menu_action_paste(int index) {
     paste_clipboard();
 }
 
+// The right-clicked module's group, rebuilt on every open. MAX_REPLACE_CANDIDATES is one more than
+// the largest group (Switch, at 18) so the biggest one still fits with its own member removed.
+#define MAX_REPLACE_CANDIDATES    (24)
+static tModuleType gReplaceCandidates[MAX_REPLACE_CANDIDATES];
+static uint32_t    gReplaceCandidateCount;
+static tMenuItem   gReplaceMenuItems[MAX_REPLACE_CANDIDATES + 1];
+
+// "Replace with" — swap this module for another of the same group, keeping the cables that have a
+// counterpart. gReplaceCandidates is filled by open_module_context_menu() just before the menu is
+// shown, and the item's param is an index into it rather than a module type, so the submenu can be
+// rebuilt for whatever module was right-clicked.
+static void menu_action_replace_module(int index) {
+    uint32_t which = (uint32_t)gContextMenu.items[index].param;
+
+    if (which < gReplaceCandidateCount) {
+        module_replace(gMenuContext.moduleKey, gReplaceCandidates[which]);
+    }
+    gContextMenu.active = false;
+}
+
 static void menu_action_delete_module(int index) {
     uint32_t slot     = gSlot;
     uint32_t location = gLocation;
@@ -696,7 +717,7 @@ static void init_params_on_module(tModule * module, uint32_t location, uint32_t 
     }
 }
 
-static void init_params_on_module_all_variations(tModule * module, uint32_t location) {
+void init_params_on_module_all_variations(tModule * module, uint32_t location) {
     if (location != gLocation) {
         return;
     }
@@ -2485,6 +2506,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     enum {
         kItemInfo,
         kItemRename,
+        kItemReplace,
         kItemColour,
         kItemCopy,
         kItemCut,
@@ -2496,11 +2518,13 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         kItemTerminator
     };
 
-    static tMenuItem menuItems[]    = {
+    static tMenuItem menuItems[] = {
         // A HEADING, NOT A COMMAND: no action and the disabled colour, the same way Paste Params
         // greys itself out below. It names the module you right-clicked and gives its index.
         {NULL,           RGB_GREY_5, NULL,                                0, NULL,            0,                      0.0},
         {"Rename",       RGB_GREY_3, action_rename_module,                0, NULL,            0,                      0.0},
+        // Filled in below: the submenu and whether it is offered at all depend on the module.
+        {"Replace with", RGB_GREY_3, NULL,                                0, NULL,            0,                      0.0},
         {"Set colour",   RGB_GREY_3, NULL,                                0, colourMenuItems, 6, STANDARD_TEXT_HEIGHT * 2},
         {"Copy",         RGB_GREY_3, menu_action_copy_module,             0, NULL,            0,                      0.0},
         {"Cut",          RGB_GREY_3, menu_action_cut_module,              0, NULL},
@@ -2515,22 +2539,46 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         {NULL,           RGB_BLACK,  NULL,                                0, NULL}
     };
 
-    tModule *        module         = get_module(moduleKey);
-    bool             excluded       = (module != NULL) && module->excludeFromMutation;
+    tModule *        module   = get_module(moduleKey);
+    bool             excluded = (module != NULL) && module->excludeFromMutation;
+
+    // "Replace with" lists the rest of this module's group. Greyed rather than hidden when there is
+    // nothing to offer — the same treatment Paste Params gets below — so the entry keeps its place
+    // and its being unavailable is visible rather than mysterious. It is unavailable for the eleven
+    // modules that are in no group, and for every group whose role table is not written yet: with
+    // no roles a replace could only move cables by raw connector number, which is the mechanical
+    // behaviour the feature exists to avoid.
+    gReplaceCandidateCount                    = (module != NULL)
+                             ? module_replace_candidates(module->type, gReplaceCandidates,
+                                                         MAX_REPLACE_CANDIDATES) : 0;
+
+    for (uint32_t i = 0; i < gReplaceCandidateCount; i++) {
+        gReplaceMenuItems[i] = (tMenuItem){
+            gModuleProperties[gReplaceCandidates[i]].name, RGB_GREY_3,
+            menu_action_replace_module, i, NULL, 0, 0.0
+        };
+    }
+
+    gReplaceMenuItems[gReplaceCandidateCount] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL, 0, 0.0
+    };
+
+    menuItems[kItemReplace].colour            = (gReplaceCandidateCount > 0) ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
+    menuItems[kItemReplace].subMenu           = (gReplaceCandidateCount > 0) ? gReplaceMenuItems : NULL;
 
     // Paste Params only means anything with a module of the SAME TYPE on the clipboard — a Decay
     // from an EnvADSR has no counterpart on an OscB. Greyed rather than hidden, so the entry stays
     // in the same place and its absence is explained by looking at it.
-    bool             canPasteParams = gClipboard.active && (gClipboard.moduleCount > 0)
-                                      && (module != NULL) && (gClipboard.modules[0].type == module->type);
+    bool     canPasteParams = gClipboard.active && (gClipboard.moduleCount > 0)
+                              && (module != NULL) && (gClipboard.modules[0].type == module->type);
 
-    menuItems[kItemPasteParams].colour    = canPasteParams ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
-    menuItems[kItemPasteParams].action    = canPasteParams ? menu_action_paste_params : NULL;
+    menuItems[kItemPasteParams].colour        = canPasteParams ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
+    menuItems[kItemPasteParams].action        = canPasteParams ? menu_action_paste_params : NULL;
 
     // Nothing to copy INTO unless a variation other than the one on screen is marked. Greyed rather
     // than hidden for the same reason as Paste Params above: the entry keeps its place, and its
     // being unavailable is explained by the empty variation strip in the topbar.
-    bool             haveMarked     = false;
+    bool     haveMarked     = false;
 
     for (uint32_t v = 0; v < VARIATION_INIT; v++) {
         if ((v != gPatchDescr[gSlot].activeVariation) && variation_is_linked((uint32_t)gSlot, v)) {
@@ -2539,21 +2587,21 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         }
     }
 
-    menuItems[kItemParamsToMarked].colour = haveMarked ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
-    menuItems[kItemParamsToMarked].action = haveMarked ? menu_action_copy_params_to_marked : NULL;
+    menuItems[kItemParamsToMarked].colour     = haveMarked ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
+    menuItems[kItemParamsToMarked].action     = haveMarked ? menu_action_copy_params_to_marked : NULL;
 
     snprintf(gExcludeMutationMenuLabel, sizeof(gExcludeMutationMenuLabel), "[%s] Exclude From Mutation",
              excluded ? "x" : " ");
-    menuItems[kItemExclude].label         = gExcludeMutationMenuLabel;
+    menuItems[kItemExclude].label             = gExcludeMutationMenuLabel;
 
-    unsigned         rows           = (module != NULL) ? (unsigned)gModuleProperties[module->type].height : 0u;
+    unsigned rows           = (module != NULL) ? (unsigned)gModuleProperties[module->type].height : 0u;
 
     snprintf(gModuleInfoMenuLabel, sizeof(gModuleInfoMenuLabel), "%s  -  index %u, %u row%s",
              (module != NULL) ? gModuleProperties[module->type].name : "?",
              (unsigned)moduleKey.index, rows, (rows == 1) ? "" : "s");
-    menuItems[kItemInfo].label            = gModuleInfoMenuLabel;
+    menuItems[kItemInfo].label                = gModuleInfoMenuLabel;
 
-    gMenuContext.moduleKey                = moduleKey;
+    gMenuContext.moduleKey                    = moduleKey;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 

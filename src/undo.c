@@ -74,6 +74,16 @@ typedef struct {
     tController          controllers[MAX_NUM_CONTROLLERS];
 } tUndoDeletePayload;
 
+// A module swapped for another of the same group. Both images are complete tClipboardModules, so
+// undo and redo are the same operation with a different one — there is no need to work out what
+// changed. The CABLES are not in here: module_replace() brackets itself with undo_begin_cable_edit,
+// so the cable half arrives as its own adjacent entry.
+typedef struct {
+    tModuleKey       key;
+    tClipboardModule before;
+    tClipboardModule after;
+} tUndoModuleReplacePayload;
+
 // Before/after images of every cable in one location — see undo_begin_cable_edit().
 typedef struct {
     uint32_t          slot;
@@ -221,6 +231,7 @@ typedef enum {
     eUndoCmdModuleColour,
     eUndoCmdMidiCc,
     eUndoCmdGlobalKnob,
+    eUndoCmdModuleReplace,
 } tUndoCmdType;
 
 typedef struct {
@@ -286,6 +297,7 @@ static void free_command(tUndoCommand * cmd) {
         case eUndoCmdModuleColour:
         case eUndoCmdMidiCc:
         case eUndoCmdGlobalKnob:
+        case eUndoCmdModuleReplace:
             free(cmd->payload);
             break;
     }
@@ -1241,6 +1253,71 @@ static void apply_cable_edit(tUndoCableEditPayload * p, bool isUndo) {
     synthlib_request_redraw();
 }
 
+// Puts the module back to one of its two images. The whole record is written rather than a diff:
+// a replace changes the type, the parameter count, the mode count, every parameter value and
+// possibly the name, and picking those apart afterwards would be a second chance to get the role
+// mapping wrong. update_module_up_rates() is not called here - the cable entry that always
+// accompanies this one calls it, and the two are applied together.
+static void apply_module_replace(tUndoModuleReplacePayload * p, bool isUndo) {
+    const tClipboardModule * image  = isUndo ? &p->before : &p->after;
+    tModule *                module = get_module(p->key);
+    uint32_t                 v      = 0;
+    uint32_t                 i      = 0;
+    uint32_t                 l      = 0;
+
+    if (module == NULL) {
+        return;
+    }
+    module->type                = image->type;
+    module->colour              = image->colour;
+    module->upRate              = image->upRate;
+    module->excludeFromMutation = image->excludeFromMutation;
+    module->actualParamCount    = module_param_count(image->type);
+    module->modeCount           = module_mode_count(image->type);
+    COPY_STRING(module->name, image->name);
+
+    for (v = 0; v < NUM_VARIATIONS_USB; v++) {
+        for (i = 0; i < MAX_NUM_PARAMETERS; i++) {
+            module->param[v][i] = image->param[v][i];
+        }
+    }
+
+    for (i = 0; i < MAX_NUM_MODES; i++) {
+        module->mode[i].value = image->mode[i];
+    }
+
+    for (i = 0; i < MAX_NUM_PARAMETERS; i++) {
+        module->paramNumLabels[i] = image->paramNumLabels[i];
+
+        for (l = 0; l < MAX_NUM_LABELS; l++) {
+            module->paramNameSet[i][l] = image->paramNameSet[i][l];
+            COPY_STRING(module->paramName[i][l], image->paramName[i][l]);
+        }
+    }
+
+    // One whole-patch write, for the same reason module_replace() sends one: the device treats a
+    // module write as an add, and a row of per-field commands would race the patch version.
+    tMessageContent msg = {0};
+    msg.cmd  = eMsgCmdWritePatch;
+    msg.slot = p->key.slot;
+    msg_send(&gToUsbThread, &msg);
+
+    synthlib_request_redraw();
+}
+
+void undo_push_module_replace(tModuleKey key, const tClipboardModule * before,
+                              const tClipboardModule * after) {
+    tUndoModuleReplacePayload * p = malloc(sizeof(tUndoModuleReplacePayload));
+
+    if (p == NULL) {
+        return;
+    }
+    p->key    = key;
+    p->before = *before;
+    p->after  = *after;
+    stack_push(eUndoCmdModuleReplace, p);
+}
+
 void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variation,
                             uint32_t oldValue, uint32_t newValue) {
     if (oldValue == newValue) {
@@ -1683,6 +1760,10 @@ void undo_undo(void) {
         case eUndoCmdGlobalKnob:
             apply_global_knob(cmd->payload, true);
             break;
+
+        case eUndoCmdModuleReplace:
+            apply_module_replace(cmd->payload, true);
+            break;
     }
 }
 
@@ -1760,6 +1841,10 @@ void undo_redo(void) {
 
         case eUndoCmdGlobalKnob:
             apply_global_knob(cmd->payload, false);
+            break;
+
+        case eUndoCmdModuleReplace:
+            apply_module_replace(cmd->payload, false);
             break;
     }
 }

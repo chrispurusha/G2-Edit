@@ -189,3 +189,16 @@ CROSS-PROJECT
   the layout tables and not the instrument: WaveWrap in particular is the one module whose Mod jack
   and mod dial come BEFORE its signal input and its Amount, and if that is wrong its dial will do
   nothing and its Mod jack will be shaping the audio.
+- ***REPLACE A MODULE, FILTER GROUP (2026-09-07), new feature.*** Right-click any filter and there is
+  now a "Replace with" submenu listing the other thirteen. Picking one swaps the module in place,
+  keeping its index, its position, its colour, any name you gave it, and every cable and knob setting
+  that has a counterpart on the new module. Check: cables move to the RIGHT sockets rather than to the
+  same-numbered ones - FltClassic's fixed pitch input is connector 2 and FltPhase's is connector 4, and
+  Vocoder's audio input is connector 1 where every other filter's is 0; a cable with nowhere to go is
+  dropped, so replacing an FltClassic with an FltStatic should lose both its pitch modulation cables
+  and keep the audio one. Knobs carry by meaning: Freq stays Freq even though it is parameter 0 on an
+  FltClassic and parameter 1 on an FltPhase. The drop-down selectors deliberately do NOT carry - an
+  FltLP's Slope does not become an FltHP's - because the instrument's own table has no entry for them.
+  A taller replacement pushes its column down, and if the column is full the whole swap is refused
+  with nothing changed. Undo should put the module AND its cables back in one step. The mapping itself
+  is unit-tested; what needs an eye is the menu, the undo, and whether the G2 agrees with the result.

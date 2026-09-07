@@ -90,6 +90,11 @@ void undo_push_module_name(tModuleKey key, const char * oldName, const char * ne
 // sends the change live via send_mutation_lock_value() - see its comment in protocol.h/defs.h.
 void undo_push_module_exclude(tModuleKey key, uint8_t oldValue, uint8_t newValue);
 
+// Record a module swapped for another of the same group. Both images are complete, so undo and
+// redo are the same operation with a different one. module_replace() brackets itself with
+// undo_begin_cable_edit as well, and that entry carries the cables.
+void undo_push_module_replace(tModuleKey key, const tClipboardModule * before, const tClipboardModule * after);
+
 // Record a param label change (old → new). oldSet/newSet indicate whether
 // a custom label existed before/after.
 void undo_push_param_name(tModuleKey key, uint32_t paramIndex, uint32_t labelIndex, const char * oldName, bool oldSet, const char * newName, bool newSet);

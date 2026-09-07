@@ -717,12 +717,74 @@ typedef struct {
 // generic over any app. See tMenuContext further down for the G2-Edit-only
 // state (moduleKey/paramIndex/etc) that this app's action callbacks need.
 
+// The module GROUPS the instrument itself uses. Chapter 13 of the manual, "Module reference",
+// is organised by them - SHAPER GROUP, FILTER GROUP, LEVEL GROUP and so on - and between them
+// they name every module the G2 has. A group is what makes one module replaceable by another
+// (manual p.82) and what orders an add-module menu; gModuleProperties carries each module's.
+//
+// ELEVEN MODULES ARE IN NO GROUP and take moduleGroupNone: the four that never appear on the
+// canvas (Device, Driver, Name, Status) and seven that are genuinely one of a kind - Blue2Red,
+// Red2Blue, DXRouter, Resonator, NoteDet, NoteZone and LevScaler. There is nothing to replace
+// them WITH. LevScaler is the one to know about: the manual documents it inside the Note
+// chapter, but the instrument does not offer it as a replacement for anything there, so
+// chapter membership alone is not the same thing as group membership.
+typedef enum {
+    moduleGroupNone = 0,
+    moduleGroupShaper,
+    moduleGroupLevel,
+    moduleGroupMidiSend,
+    moduleGroupMidiRecv,
+    moduleGroupNote,
+    moduleGroupOsc,
+    moduleGroupKeyboard,
+    moduleGroupIn,
+    moduleGroupOut,
+    moduleGroupEnv,
+    moduleGroupDelay,
+    moduleGroupSwitch,
+    moduleGroupMix,
+    moduleGroupFilter,
+    moduleGroupEffect,
+    moduleGroupLfo,
+    moduleGroupRandom,
+    moduleGroupSequencer,
+    moduleGroupLogic,
+} tModuleGroup;
+
 typedef struct {
-    const char *      name;
-    const uint32_t    height;
-    const tVolumeType volumeType;
-    const tLedType    ledType;
+    const char *       name;
+    const uint32_t     height;
+    const tVolumeType  volumeType;
+    const tLedType     ledType;
+    const tModuleGroup group;
 } tModuleProperties;
+
+// A ROLE is what one module's connector or knob MEANS, named so that the same meaning can be found
+// on a different module in the same group. It is what makes replacing a module intelligent rather
+// than mechanical: a cable on an FltClassic's pitch modulation input moves to an FltPhase's pitch
+// modulation input because both fill the group's "Pitch Mod" role - NOT because both happen to be
+// input 1, which they are not. A role with no counterpart on the new module has nowhere to go, and
+// that is exactly the case the manual covers when it promises the cables are kept "(if possible)".
+//
+// `index` counts within its OWN direction - the third input is 2 whatever outputs the module has -
+// which is the same numbering tCableKey's connectorFromIoCount/connectorToIoCount use, so a cable
+// end can be remapped without converting anything.
+#define MODULE_ROLE_NONE    (0xFFu)
+
+typedef enum {
+    roleKindInput,
+    roleKindOutput,
+    roleKindParam,
+} tRoleKind;
+
+typedef struct {
+    const tModuleGroup group;
+    const tRoleKind    kind;
+    const char *       role;       // unique within (group, kind); compared with strcmp
+    const tModuleType  moduleType;
+    const uint8_t      index;      // input or output index within its direction, or param index
+    const uint8_t      attenuator; // the param attenuating this input, MODULE_ROLE_NONE if none
+} tModuleRole;
 
 typedef enum {
     cableLinkTypeFromInput,
