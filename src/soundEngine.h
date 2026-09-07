@@ -102,6 +102,11 @@ void sound_engine_stop_hosted(void);
 // instrument's +0.03 — the harness reporting the gap, not a fault in it.
 void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t timeValue, uint32_t brightValue, float * out, uint32_t frames);
 
+// The chorus, driven by a caller-supplied input so an engine render can be compared against a
+// hardware capture made from the same signal. Output is stereo interleaved at deviceRate *
+// ENGINE_OVERSAMPLE, as for the reverb IR above.
+void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_t amountValue, const float * in, float * out, uint32_t frames);
+
 // A morph group's position, 0..1. The G2 has eight, each hard-wired to a source — group 0 is the
 // modulation wheel, and morphStrMap in moduleResources.h names the rest. Setting one sweeps every
 // parameter that has a morph range recorded for that group between its dialled value and its morph

@@ -7915,3 +7915,39 @@ asymmetric by only 0.3 cents at this velocity - nothing like 6. Either the two t
 equal and opposite speeds, or the 0.12 s analysis window is smearing across the triangle's turns
 (the LFO period here is 0.36 s, so a half-cycle is 0.18 s and the window is a third of it). The
 second is the more likely and is an analysis fix, not a finding. Capture kept.
+
+CHORUS COMPARED AGAINST HARDWARE THROUGH THE SAME DRY SIGNAL (2026-09-07). tools/render gained a
+--chorus mode and soundEngine.c a sound_engine_render_chorus() to make this possible: it renders the
+engine's chorus FROM a hardware capture's own dry channel, so the source is identical on both sides
+and any difference is the module. QU-24 rig, dry on inputs 5/6 (idx 4/5), wet on 19/20 (idx 18/19),
+patch state read back from the instrument rather than assumed (PatchTestFiles/ChorusSaw.pch2).
+
+IT WAS NOT A FILTERING PROBLEM, which was the first hypothesis. The wet/dry difference was UNIFORM -
+-1.71 dB at 200 Hz against -1.49 dB at 14 kHz, under 0.9 dB of variation over six octaves, and
+trending the opposite way to a lowpass. A filter shows a slope; this showed a level.
+
+TWO ERRORS FOUND, BOTH MINE, BOTH FROM THE SAME MORNING'S TWO-TAP REBUILD:
+
+1. THE WET WAS SPLIT BY AMPLITUDE, NOT POWER. Half to each tap preserves the total only for
+   CORRELATED signals; the two taps sit at different delays and are largely decorrelated, so they add
+   in power and each needs 1/sqrt(2). That is exactly the 3 dB the comparison showed.
+
+2. THE WET/DRY RATIO REACHES 1.19 AT AMOUNT 127, NOT 1.0. The old figure came from notch depth, and a
+   notch CANNOT DISTINGUISH r FROM 1/r - it is deepest at equal parts and shallows symmetrically
+   either side. The old table's own top is non-monotonic (0.94 at Amount 96, 0.91 at 127), which is
+   that ambiguity folding back through 1.0 and should have been the tell. Re-measured by STEREO WIDTH
+   instead, which has no such ambiguity: the L/R correlation of the wet falls as the wet leg grows,
+   because what the channels share is the direct. Hardware 0.1495; engine 0.2723 at ratio 1.0 and
+   0.1479 at 1.189. Scaled down the dial that gives 0.30 and 0.60 at Amount 32 and 64 against the
+   notch table's 0.28 and 0.64 - agreeing where the notch is unambiguous, so the law is linear in the
+   dial and only its endpoint was wrong.
+
+AFTER BOTH: stereo width hardware 0.1495, engine 0.1473.
+
+STILL OPEN - ABOUT 1 dB OF LEVEL, WITH A TILT. The instrument's wet output is +1.55 dB on the dry at
+200 Hz falling to +0.39 dB at 14 kHz; ours is flat at 0.00 dB, because the constant-power blend holds
+the total constant by construction. The instrument does NOT hold it constant - the older notch work
+saw this too and recorded the total rising to +1.1 dB at Amount 127. So the blend needs a gain term
+that rises with Amount, and the tilt says it is not a plain scalar either. Fixing it properly needs an
+AMOUNT sweep on this rig; one operating point is not enough to fit two terms, and fitting at one point
+is what produced the reverb's "less full/round".

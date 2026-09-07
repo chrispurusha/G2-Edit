@@ -3615,9 +3615,11 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 // itself, and it shows TWO taps where this assumed one. See chorus_tap(). The old sweep of 2.38 ms
 // about a 3.00 ms centre is very close to the two real taps' combined envelope of 0.425..4.995 ms,
 // which is how one tap came to stand in for two.
-#define CHORUS_RATE_MAX_HZ    (2.777)     // 0.02186 Hz per dial step, constant to 0.5% over the dial
-#define CHORUS_CENTRE_S       (0.00271)   // where both taps meet when the sweep is at zero
-#define CHORUS_SPREAD_S       (0.002285)  // peak deviation of EACH tap either side of that centre
+#define CHORUS_RATE_MAX_HZ    (2.777)               // 0.02186 Hz per dial step, constant to 0.5% over the dial
+#define CHORUS_CENTRE_S       (0.00271)             // where both taps meet when the sweep is at zero
+#define CHORUS_SPREAD_S       (0.002285)
+#define MS_SQRT1_2            (0.70710678118654752)
+#define CHORUS_WET_MAX        (1.19)      // wet/dry ratio at Amount 127 - see the note in chorus_tap() // peak deviation of EACH tap either side of that centre
 
 // A one-shot gate: a rising edge at the input starts it, and it stays high for the width above.
 //
@@ -3723,11 +3725,15 @@ static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase,
     double tri01 = 0.5 * (1.0 + chorus_triangle(phase));   // [0, 1]
     double dev   = CHORUS_SPREAD_S * tri01;
 
-    // HALF EACH, so the pair carries the wet level the blend below was fitted for. That fit came from
-    // notch depth on a static delay, which measures the SUM of the two taps without being able to see
-    // that there are two - and this used to hand the whole of it to a single tap.
-    wet                                           = 0.5 * (chorus_read(node, ch, CHORUS_CENTRE_S - dev)
-                                                           + chorus_read(node, ch, CHORUS_CENTRE_S + dev));
+    // 1/sqrt(2) EACH, NOT A HALF. The blend below was fitted from notch depth on a static delay, which
+    // measures the SUM of the two taps without being able to see that there are two, so the pair has
+    // to carry that same total - but the taps are at DIFFERENT delays and are therefore largely
+    // decorrelated, and decorrelated signals add in POWER. Splitting by amplitude threw away 3 dB:
+    // measured against the hardware through the same dry saw, the engine's wet sat 2.1 to 2.9 dB low
+    // UNIFORMLY from 200 Hz to 14 kHz - flat, so a level error and not the filtering it was mistaken
+    // for. The residual after this correction is the taps not being perfectly decorrelated.
+    wet                                           = MS_SQRT1_2 * (chorus_read(node, ch, CHORUS_CENTRE_S - dev)
+                                                                  + chorus_read(node, ch, CHORUS_CENTRE_S + dev));
 
     gChorusLine[node][ch][gChorusWrite[node][ch]] = (float)input;
     gChorusWrite[node][ch]                        = (gChorusWrite[node][ch] + 1) % CHORUS_SAMPLES;
@@ -3749,8 +3755,20 @@ static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase,
     //
     // Dividing by sqrt(1 + m^2) is what keeps the sum constant: at full Amount both legs sit at
     // 0.707 rather than both at 0.5.
+    //
+    // THE RATIO REACHES 1.19 AT THE TOP OF THE DIAL, NOT 1.0 (measured 2026-09-07). The table above
+    // came from NOTCH DEPTH, and a notch cannot tell a ratio r from 1/r - it is deepest at exactly
+    // equal parts and shallows symmetrically either side. That is why the table's own top is
+    // non-monotonic, 0.94 at Amount 96 then 0.91 at 127: the reading had folded back through 1.0.
+    //
+    // Measured instead by STEREO WIDTH, which has no such ambiguity. The L/R correlation of the wet
+    // output falls as the wet leg grows, because what the two channels share is the direct. Against a
+    // hardware capture of the same dry saw the instrument sits at 0.1495; the engine reaches 0.1479 at
+    // a ratio of 1.189 and 0.2723 at 1.0. Scaled back down the dial that lands on 0.30 and 0.60 at
+    // Amount 32 and 64, against the notch table's 0.28 and 0.64 - which agree, because below 1.0 the
+    // notch is unambiguous. So the law is linear in the dial and only its endpoint was wrong.
     {
-        double m     = amount;
+        double m     = amount * CHORUS_WET_MAX;
         double scale = 1.0 / sqrt(1.0 + (m * m));
 
         return (input * scale) + (wet * m * scale);
@@ -4351,6 +4369,41 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
 
         out[(i * 2) + 0] = (float)wetL;
         out[(i * 2) + 1] = (float)wetR;
+    }
+}
+
+// THE CHORUS, RENDERED THROUGH ITS OWN INPUT, so an engine wet can be put beside a hardware wet that
+// was made from the same signal. That matters more here than it did for the reverb: the reverb takes
+// an impulse, which is the same everywhere, but a chorus is judged on a sustained tone and any
+// difference in the SOURCE - band-limiting, level, the exact fundamental - would land in the
+// comparison as if it were the module's doing. Feeding it the hardware's own dry capture removes that
+// entirely, and what is left is only what the module did.
+//
+// Rendered at the engine's rate like the reverb IR, so the caller supplies the DEVICE rate and gets
+// back ENGINE_OVERSAMPLE times as many samples per second.
+void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_t amountValue,
+                                const float * in, float * out, uint32_t frames) {
+    if ((in == NULL) || (out == NULL) || (frames == 0) || (deviceRate <= 0.0)) {
+        return;
+    }
+    gSampleRate = deviceRate * (double)ENGINE_OVERSAMPLE;
+
+    // A second render in one process would otherwise start with the previous one's line and LFO
+    // phase - the same trap the reverb IR clears for.
+    memset(gChorusLine, 0, sizeof(gChorusLine));
+    memset(gChorusWrite, 0, sizeof(gChorusWrite));
+    memset(gChorusLfo, 0, sizeof(gChorusLfo));
+
+    double depth  = (double)detuneValue / 127.0;
+    double amount = (double)amountValue / 127.0;
+
+    for (uint32_t i = 0; i < frames; i++) {
+        double l = 0.0;
+        double r = 0.0;
+
+        chorus_step(0, (double)in[i], depth, amount, &l, &r);
+        out[(i * 2) + 0] = (float)l;
+        out[(i * 2) + 1] = (float)r;
     }
 }
 
