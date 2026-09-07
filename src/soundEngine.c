@@ -54,6 +54,16 @@ extern "C" {
 #define OSCB_PARAM_WAVEFORM      (8)
 #define OSCB_PARAM_ACTIVE        (9)   // A power button: non-zero is on, 0 is bypassed
 
+// OscA is OscB with the Shape dial and the FM section taken away, so its parameters sit at different
+// indices and its waveform list is its own. It shares the oscillator DSP entirely - see eNodeOsc.
+#define OSCA_PARAM_TUNE          (0)
+#define OSCA_PARAM_CENT          (1)
+#define OSCA_PARAM_KBT           (2)
+#define OSCA_PARAM_PITCH_MOD     (3)
+#define OSCA_PARAM_WAVEFORM      (4)
+#define OSCA_PARAM_ACTIVE        (5)
+#define OSCA_PARAM_PITCH_TYPE    (6)
+
 // Where each filter module keeps its parameters. They are NOT all laid out like FltClassic: FltLP
 // has no resonance at all, and its Slope sits one index earlier because of it. Reading a missing
 // parameter would take whatever the next one happens to be — for FltLP that would be Slope read as
@@ -212,6 +222,23 @@ typedef enum {
 // modeLocationList, so it is read from module->mode[] and reading param[10] found nothing.
 #define SHPB_MODE_WAVEFORM    (0)
 
+// OscShpA is OscShpB's sibling and shares its DSP, but two things differ and both were read off the
+// instrument rather than assumed. Its Waveform is a PLAIN PARAMETER, not a mode - a PARAMDUMP of a
+// freshly added one reports "modes count=0" where OscShpB has one - and its parameters run in a
+// different order, which the same dump pins exactly: 64 64 1 0 0 0 0 0 0 0 1 puts Kbt at 2 and the
+// power button at 10.
+//
+// Its Wave menu is OscShpB's with DblSaw and Pulse removed: {Sine1, Sine2, Sine3, Sine4, TriSaw,
+// SymPulse} against {Sine1, Sine2, Sine3, Sine4, TriSaw, DblSaw, Pulse, SymPulse}. So 0..4 are the
+// same waveform in both and A's fifth is B's seventh - see kShpAWave.
+#define SHPA_PARAM_TUNE         (0)
+#define SHPA_PARAM_CENT         (1)
+#define SHPA_PARAM_KBT          (2)
+#define SHPA_PARAM_PITCH_MOD    (3)
+#define SHPA_PARAM_SHAPE        (7)
+#define SHPA_PARAM_WAVEFORM     (9)
+#define SHPA_PARAM_ACTIVE       (10)
+
 // Pulse: a one-shot gate fired by a RISING EDGE at its input. Time and Range set how long it stays
 // high; there is no power button, so it is always live.
 #define PULSE_PARAM_TIME       (0)
@@ -246,6 +273,7 @@ typedef enum {
 #define COMP_PARAM_RATIO            (1)
 #define COMP_PARAM_ATTACK           (2)
 #define COMP_PARAM_RELEASE          (3)
+#define COMP_PARAM_REFLVL           (4)
 #define COMP_PARAM_ACTIVE           (6)
 
 // Read off the instrument's own dial displays, not guessed. See where they are used.
@@ -562,6 +590,7 @@ typedef struct {
     double          hpCoeff;      // delay HP in the feedback loop; 0 = filter off
     double          threshold;    // compressor
     double          ratio;
+    double          refLevel;     // the level the compressor drives TOWARDS - see compress_step()
     double          attackCoeff;
     double          releaseCoeff;
     double          constant;   // Constant module's value
@@ -642,36 +671,79 @@ typedef struct {
     _Atomic uint32_t sequence;   // claim index + 1 once written; 0 means never used
 } tNoteEvent;
 
-static tNoteEvent         gNoteQueue[NOTE_QUEUE_SIZE];
-static _Atomic uint32_t   gNoteWrite                  = 0;
-static uint32_t           gNoteRead                   = 0; // audio thread only
+static tNoteEvent       gNoteQueue[NOTE_QUEUE_SIZE];
+static _Atomic uint32_t gNoteWrite                  = 0;
+static uint32_t         gNoteRead                   = 0;   // audio thread only
 
-static _Atomic bool       gActive                     = false;
+static _Atomic bool     gActive                     = false;
 
 // Morph positions, 0..1, one per group. Written by the MIDI thread as controllers move, read by the
 // UI thread when it builds a snapshot. Plain atomics: each is independent and a torn read is not
 // possible on a value this size.
-static _Atomic uint32_t   gMorphMilli[NUM_MORPHS]     = {0};
+static _Atomic uint32_t gMorphMilli[NUM_MORPHS]     = {0};
 // The highest each morph has reached. The live value is useless as a diagnostic — by the time you
 // have let go of the key and opened a menu to look at it, it has fallen back to zero.
-static _Atomic uint32_t   gMorphPeakMilli[NUM_MORPHS] = {0};
+static _Atomic uint32_t gMorphPeakMilli[NUM_MORPHS] = {0};
 
 // Pitch bend as it arrives, -1..+1. Scaled to semitones by the patch's own Bend range at render
 // time, so changing the range takes effect without the wheel having to move.
 // Output attenuation, as a gain x1000 so the audio thread reads one atomic rather than calling pow.
 // Applied BEFORE the output knee, which is the point of it: pulling a hot patch down so the limiter
 // stops being the thing that controls the level.
-static _Atomic int32_t    gOutputGainMilli            = 1000;
+// METERS THE ENGINE PRODUCES, for the module faces to show while it is playing. Indexed by location
+// and module index rather than by node, so a reader needs neither the snapshot nor a lock: the audio
+// thread stores, the UI thread loads, and the worst a race can do is a meter one frame old.
+//
+// THE SAME 8-BIT VALUE THE USB STREAM CARRIES, deliberately - usbComms.c reads volumes as an 8-bit
+// field and the renderer already knows how to draw one, so the engine's meter needs no new path and
+// no new drawing code. For the compressor that value is a BAR, (1 << lit) - 1, which is exactly what
+// the instrument sends: 1, 7, 31, 63, 127, 255 were read off it.
+//
+// A WRITTEN FLAG PACKED WITH THE VALUE, in one word, and both parts matter.
+//
+// The FLAG rather than a sentinel value, because the value has to stay byte-identical to what the USB
+// stream carries: the whole point of metering from the engine is to be able to put the two side by
+// side, and a value shifted by one to make room for a sentinel could not be compared without
+// remembering to undo it. METER_VALUE_MASK is the 8 bits usbComms.c reads; METER_WRITTEN sits above
+// them.
+//
+// ONE WORD rather than two, because the flag and the value must be read from the SAME store. Split
+// across two atomics a reader could take the flag from one update and the value from another, and
+// find a meter that says "valid" carrying a number from a different moment.
+//
+// ONLY THE COMPRESSOR SO FAR: its meter is the one whose meaning has been measured.
+#define METER_VALUE_MASK    (0xFFu)
+#define METER_WRITTEN       (1u << 8)
+#define METER_LEG_SHIFT     (16u)   // leg 1 above the flag; leg 0 occupies METER_VALUE_MASK
 
-static _Atomic int32_t    gBendMilli                  = 0;
+static _Atomic uint32_t   gModuleMeter[locationMax][MAX_NUM_MODULES];
+
+// AND THE LEDS, same packing and same reasoning. A module's LED value is a two-bit field - bit 0
+// green, bit 1 red - so the mask below covers it with room to spare and the value stays exactly what
+// parse_led_data() would have put there.
+//
+// ONLY THE LFOs SO FAR. Their LED was MEASURED rather than assumed (2026-09-07): polled against
+// LEDDUMP's own timestamps at Rate Lo 60, it ran at 0.5226 Hz against a predicted LFO rate of
+// 0.5110 Hz with a 53% duty cycle - so it simply follows the SIGN of the LFO output, on for half the
+// cycle, and it is green rather than red.
+static _Atomic uint32_t   gModuleLed[locationMax][MAX_NUM_MODULES];
+
+// The follower behind the level meters. Per NODE, not per voice: the face has one meter however many
+// voices are sounding, and only voice 0 writes it. About 200 ms of release at 96 kHz.
+#define METER_DECAY    (0.00005)
+static double             gMeterEnv[MAX_ENGINE_NODES][2];
+
+static _Atomic int32_t    gOutputGainMilli = 1000;
+
+static _Atomic int32_t    gBendMilli       = 0;
 
 // Highest absolute sample the audio thread has produced since this was last read. Purely a
 // diagnostic — it is what lets a test say "sound is coming out" without a pair of ears.
-static _Atomic uint32_t   gPeakMilli                  = 0;
+static _Atomic uint32_t   gPeakMilli       = 0;
 
 // The peak BEFORE the output gain, so the real headroom a patch needs is visible rather than being
 // hidden by whatever the guard clamped it to.
-static _Atomic uint32_t   gRawPeakMilli               = 0;
+static _Atomic uint32_t   gRawPeakMilli    = 0;
 
 // Why the engine is or is not making a sound. UI thread only — written while building the snapshot,
 // read by the menu.
@@ -686,8 +758,8 @@ typedef enum {
     eStatusPlaying,
 } tSoundEngineStatus;
 
-static tSoundEngineStatus gStatus                     = eStatusOff;
-static uint32_t           gPlayingCount               = 0; // how many modules are in the rendered chain
+static tSoundEngineStatus gStatus          = eStatusOff;
+static uint32_t           gPlayingCount    = 0;            // how many modules are in the rendered chain
 
 // Audio-thread-only state. Nothing else may touch these.
 // THE WHOLE GRAPH RUNS OVERSAMPLED, which is what the G2 does: its audio rate is 96 kHz against a
@@ -706,8 +778,8 @@ static uint32_t           gPlayingCount               = 0; // how many modules a
 // second. See the delay's Clk branch — this is a stand-in, not the hardware's tempo.
 #define ENGINE_REFERENCE_BPM    (120.0)
 
-static double             gDeviceRate                 = 48000.0;
-static double             gSampleRate                 = 96000.0;
+static double             gDeviceRate      = 48000.0;
+static double             gSampleRate      = 96000.0;
 
 // ── VOICES ──────────────────────────────────────────────────────────────────────────────────────
 //
@@ -1689,6 +1761,9 @@ static void reset_node_state(void) {
     memset(gPreDelay, 0, sizeof(gPreDelay));
     memset(gRvMem, 0, sizeof(gRvMem));
     gRvCur = 0;
+    memset((void *)gModuleMeter, 0, sizeof(gModuleMeter));   // no stale meters after a stop or reload
+    memset((void *)gModuleLed, 0, sizeof(gModuleLed));
+    memset(gMeterEnv, 0, sizeof(gMeterEnv));
     memset(gRvDamp, 0, sizeof(gRvDamp));
     memset(gRvLoop, 0, sizeof(gRvLoop));
     memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
@@ -2226,6 +2301,7 @@ static const tLfoParams * lfo_params(tModuleType type) {
 static bool module_kind(tModule * module, tNodeKind * kind) {
     switch (module->type) {
         case moduleTypeOscB:
+        case moduleTypeOscA:
         {
             *kind = eNodeOsc;
             return true;
@@ -2270,6 +2346,7 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             return true;
         }
         case moduleTypeOscShpB:
+        case moduleTypeOscShpA:
         {
             *kind = eNodeOscShp;
             return true;
@@ -2675,10 +2752,26 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // width. osc_shp_wave() does the work — mapping these onto the plain oscillator's
             // waveforms lost the entire point of the module, since at 50% Shape all four Sine
             // variants ARE a plain sine and everything interesting happens as Shape opens.
-            node->wave      = (tOscWave)module->mode[SHPB_MODE_WAVEFORM].value;
-            node->oscKbt    = (param_value(module, variation, SHPB_PARAM_KBT) != 0.0);
-            node->basePitch = param_value(module, variation, SHPB_PARAM_TUNE)
-                              + (osc_fine_cents(param_value(module, variation, SHPB_PARAM_CENT)) / 100.0);
+            bool isShpA = (module->type == moduleTypeOscShpA);
+
+            if (isShpA == true) {
+                // A's six waveforms onto B's eight: the first five coincide and A's SymPulse is B's
+                // eighth entry. Its Waveform is a parameter, not a mode.
+                static const uint32_t kShpAWave[] = {0u, 1u, 2u, 3u, 4u, 7u};
+                uint32_t              w           = (uint32_t)param_value(module, variation,
+                                                                          SHPA_PARAM_WAVEFORM);
+
+                node->wave = (tOscWave)kShpAWave[(w < 6u) ? w : 0u];
+            } else {
+                node->wave = (tOscWave)module->mode[SHPB_MODE_WAVEFORM].value;
+            }
+            node->oscKbt    = (param_value(module, variation,
+                                           isShpA ? SHPA_PARAM_KBT : SHPB_PARAM_KBT) != 0.0);
+            node->basePitch = param_value(module, variation,
+                                          isShpA ? SHPA_PARAM_TUNE : SHPB_PARAM_TUNE)
+                              + (osc_fine_cents(param_value(module, variation,
+                                                            isShpA ? SHPA_PARAM_CENT
+                                                            : SHPB_PARAM_CENT)) / 100.0);
             // RAW, normalised to 0..1 - not the displayed percentage. waveModels.h states the
             // contract ("Shape is the raw 0-127 parameter normalised to 0..1. It is NOT a
             // percentage"), and module_shape_value() in moduleGraphics.c passes param/127 to draw
@@ -2686,9 +2779,13 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // the dial acted over the model's upper half only and raw 0 - the capture's pure sine -
             // came out already half-shaped. Drawn wave and heard wave disagreed, which is the drift
             // waveModels.c exists to make impossible.
-            node->shape     = param_value(module, variation, SHPB_PARAM_SHAPE) / 127.0;
-            node->modAmount = type_ii_attenuator(param_value(module, variation, SHPB_PARAM_PITCH_MOD) / 127.0);
-            node->active    = (param_value(module, variation, SHPB_PARAM_ACTIVE) != 0.0);
+            node->shape     = param_value(module, variation,
+                                          isShpA ? SHPA_PARAM_SHAPE : SHPB_PARAM_SHAPE) / 127.0;
+            node->modAmount = type_ii_attenuator(param_value(module, variation,
+                                                             isShpA ? SHPA_PARAM_PITCH_MOD
+                                                             : SHPB_PARAM_PITCH_MOD) / 127.0);
+            node->active    = (param_value(module, variation,
+                                           isShpA ? SHPA_PARAM_ACTIVE : SHPB_PARAM_ACTIVE) != 0.0);
             break;
         }
         case eNodeChorus:
@@ -2727,6 +2824,12 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 node->threshold = pow(10.0, (thrRaw - COMP_THRESHOLD_OFFSET_DB) / 20.0);
             }
             node->ratio        = compressor_ratio(param_value(module, variation, COMP_PARAM_RATIO));
+
+            // REF LEVEL, which this module ignored entirely until 2026-09-07 - see compress_step().
+            // Same dB offset as the threshold, and no "Off" position: the manual gives its range as
+            // -30 to +12 dB, and the dial is 43 steps, so raw 0..42 maps straight onto that.
+            node->refLevel     = pow(10.0, (param_value(module, variation, COMP_PARAM_REFLVL)
+                                            - COMP_THRESHOLD_OFFSET_DB) / 20.0);
 
             // Raw 0 is "Fast" — a coefficient of 1 follows the input with no lag at all.
             node->attackCoeff  = (att <= 0.0) ? 1.0
@@ -2939,7 +3042,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeMix:
         {
-            uint32_t c      = 0;
+            uint32_t            c         = 0;
             // Read raw, not through param_value(): Curve is a drop-down, and drop-downs cannot be
             // assigned to a morph group (manual p.20), so there is never a morph range on one.
             //
@@ -2948,12 +3051,17 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // "there is no functional difference between the Exp and the dB curves, it is just a
             // matter of whether you want the knobs to display an exact dB value or the basically
             // meaningless Exp value". So both non-Lin settings take the same branch.
-            bool     linear = (module->param[variation][(module->type == moduleTypeMix4to1S)
+            bool                linear    = (module->param[variation][(module->type == moduleTypeMix4to1S)
                                                         ? MIXS_PARAM_CURVE : MIX_PARAM_CURVE].value == MIX_CURVE_LIN);
 
-            // The -6 dB Pad attenuates every input together. Mix4to1S has no Pad; only Mix4to1C.
-            double   pad    = (  (module->type != moduleTypeMix4to1S)
-                              && (module->param[variation][MIX_PARAM_PAD].value != 0)) ? 0.5 : 1.0;
+            // THE PAD HAS THREE POSITIONS, not two - measured 2026-09-07 as 0.00, -6.01 and
+            // -12.04 dB, the parameter clamping at 2. This treated anything non-zero as -6 dB, so the
+            // third position was 6 dB out. It attenuates every input together; Mix4to1S has no Pad.
+            static const double kMixPad[] = {1.0, 0.5, 0.25};
+            uint32_t            padValue  = (uint32_t)param_value(module, variation, MIX_PARAM_PAD);
+            double              pad       = (module->type == moduleTypeMix4to1S)
+                                            ? 1.0
+                                            : kMixPad[(padValue < 3u) ? padValue : 2u];
 
             // Only four channels: the parameters after the level dials are the Channel Mute
             // buttons, not four more levels. Reading all eight as levels was harmless only because
@@ -2963,30 +3071,69 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 double knob    = param_value(module, variation, MIX_PARAM_LEVEL_BASE + c) / 127.0;
                 bool   enabled = (module->param[variation][MIX_PARAM_ENABLE_BASE + c].value != 0);
 
-                // Approximation: the exponential taper is squared rather than the hardware's exact
-                // "-infinity to 0 dB" attenuator law, which the manual does not state numerically.
-                node->level[c] = enabled ? ((linear ? knob : (knob * knob)) * pad) : 0.0;
+                // THE EXPONENTIAL TAPER IS A CUBE, measured 2026-09-07. This used to be a square,
+                // flagged in the comment here as an approximation because "the manual does not state
+                // numerically" - so it was measured instead, by sweeping the dial and reading the
+                // level at the converter, which resolves far finer than the compressor probe because
+                // a taper is a RATIO and needs no absolute reference:
+                //
+                //     dial        110     96     80     64     48
+                //     measured  -3.72  -7.23 -11.91 -17.61 -24.86 dB
+                //     cube      -3.74  -7.29 -12.04 -17.86 -25.35
+                //     square    -2.50  -4.86  -8.03 -11.90 -16.90
+                //
+                // The square was nearly 6 dB out by mid-dial and 8 dB by 48. Dial 16 measured -49.5
+                // against a cube's -54.0 and was discarded: at -91.9 dBFS it is under the converter's
+                // own floor, which ADDS energy and always flatters the low end of a taper.
+                //
+                // LIN WAS ALREADY RIGHT and was checked at the same time: -2.50 and -6.03 dB at dials
+                // 96 and 64, against a plain ratio's -2.43 and -5.95.
+                node->level[c] = enabled ? ((linear ? knob : (knob * knob * knob)) * pad) : 0.0;
             }
 
             break;
         }
         case eNodeOsc:
         {
-            double tune      = param_value(module, variation, OSCB_PARAM_TUNE);
-            double cent      = param_value(module, variation, OSCB_PARAM_CENT);
-            int    pitchType = (int)param_value(module, variation, OSCB_PARAM_PITCH_TYPE);
+            // OSCA SHARES THIS ENTIRELY and differs only in where its dials sit and what its Wave
+            // menu offers. It has no Shape and no FM, so its parameters are packed four indices
+            // tighter, and its waveform list is {Sine, Tri, Saw, Sqr50, Sqr25, Sqr10} against OscB's
+            // {Sine, Tri, Saw, Sqr, DualSaw} - three FIXED pulse widths in place of one square whose
+            // width a dial varies.
+            bool   isA       = (module->type == moduleTypeOscA);
+            double tune      = param_value(module, variation, isA ? OSCA_PARAM_TUNE : OSCB_PARAM_TUNE);
+            double cent      = param_value(module, variation, isA ? OSCA_PARAM_CENT : OSCB_PARAM_CENT);
+            int    pitchType = (int)param_value(module, variation,
+                                                isA ? OSCA_PARAM_PITCH_TYPE : OSCB_PARAM_PITCH_TYPE);
 
             // Factor and Partial set the pitch as a ratio against a master oscillator, which the
             // engine has no notion of; reading the dial as Semi at least tracks the knob.
             if (pitchType > 1) {
-                LOG_DEBUG("Sound engine: OscB PitchType %d not supported, reading Tune as Semi\n", pitchType);
+                LOG_DEBUG("Sound engine: Osc PitchType %d not supported, reading Tune as Semi\n", pitchType);
             }
-            node->wave      = (tOscWave)param_value(module, variation, OSCB_PARAM_WAVEFORM);
-            node->oscKbt    = (param_value(module, variation, OSCB_PARAM_KBT) != 0.0);
+            node->oscKbt    = (param_value(module, variation,
+                                           isA ? OSCA_PARAM_KBT : OSCB_PARAM_KBT) != 0.0);
             node->basePitch = tune + (osc_fine_cents(cent) / 100.0);
-            node->modAmount = type_ii_attenuator(param_value(module, variation, OSCB_PARAM_PITCH_MOD) / 127.0);
-            node->shape     = osc_shape_percent(param_value(module, variation, OSCB_PARAM_SHAPE)) / 100.0;
-            node->active    = (param_value(module, variation, OSCB_PARAM_ACTIVE) != 0.0);
+            node->modAmount = type_ii_attenuator(param_value(module, variation,
+                                                             isA ? OSCA_PARAM_PITCH_MOD
+                                                             : OSCB_PARAM_PITCH_MOD) / 127.0);
+            node->active    = (param_value(module, variation,
+                                           isA ? OSCA_PARAM_ACTIVE : OSCB_PARAM_ACTIVE) != 0.0);
+
+            if (isA == true) {
+                // THE THREE SQUARES ARE FIXED DUTIES, reached through the same Shape the DSP already
+                // uses: wave_pulse_duty() is 0.5 - shape * 0.49, so 0, 0.5102 and 0.8163 land exactly
+                // on 50%, 25% and 10%. Nothing in the oscillator itself needed changing.
+                static const double kSqrShape[] = {0.0, 0.510204081632653, 0.816326530612245};
+                uint32_t            wave        = (uint32_t)param_value(module, variation,
+                                                                        OSCA_PARAM_WAVEFORM);
+
+                node->wave  = (wave >= 3u) ? eOscWaveSquare : (tOscWave)wave;
+                node->shape = (wave >= 3u) ? kSqrShape[(wave - 3u) < 3u ? (wave - 3u) : 2u] : 0.0;
+            } else {
+                node->wave  = (tOscWave)param_value(module, variation, OSCB_PARAM_WAVEFORM);
+                node->shape = osc_shape_percent(param_value(module, variation, OSCB_PARAM_SHAPE)) / 100.0;
+            }
             break;
         }
         case eNodeFilter:
@@ -3926,8 +4073,36 @@ static void chorus_step(uint32_t node, double input, double depth, double amount
     }
 }
 
-// Peak-following compressor. Above the threshold the excess is divided by the ratio; the follower
-// has separate attack and release so it grabs quickly and lets go slowly.
+// A LEVELLER, NOT A DOWNWARD COMPRESSOR - and that is a difference in kind, not in tuning. This used
+// to divide the excess over the threshold by the ratio, the textbook arrangement, and it ignored Ref
+// Level completely. The manual says what the module actually does: "With the Ref Level knob you set
+// the level to compress the stereo signals TOWARDS."
+//
+// MEASURED 2026-09-07. With the signal at -1 dB, threshold -15 dB and ratio 80:1, the output tracks
+// Ref Level one for one:
+//
+//     RefLvl    +12    +6      0     -6    -12    -18    -24    -30 dB
+//     output  -30.24 -36.16 -42.08 -48.10 -54.02 -57.03 -57.03 -57.03 dBFS
+//
+// Six dB in, six dB out - and note it BOOSTS when Ref Level is above the signal, which a downward
+// compressor can never do. Below -18 it floors at -57.03, which is the threshold (-15 dB internal is
+// -56.4 dBFS on that rig), so the threshold bounds how far down it will drive the signal.
+//
+// RATIO SETS HOW FAR TOWARDS REF LEVEL IT GETS. With Ref Level 11 dB under the signal, the fraction of
+// that gap actually closed came out 0.00, 0.36, 0.54, 0.75, 0.86, 0.96 at ratios 1.0, 1.5, 2.0, 3.4,
+// 5.0 and 9.5 to 1 - against (1 - 1/ratio) of 0.00, 0.33, 0.50, 0.71, 0.80, 0.90. That also CONFIRMS
+// compressor_ratio(), which had been transcribed from the instrument's formatter and never checked.
+//
+// So the whole law is one line in decibels,
+//
+//     out = env - (env - target) * (1 - 1/ratio),   target = max(RefLvl, threshold)
+//
+// which is the pow() below once it is written as a gain. It behaves correctly at both ends without
+// special-casing: at ratio 1 the exponent is 0 and the gain is exactly 1, and as the ratio grows the
+// gain tends to target/env, putting the output exactly on Ref Level.
+//
+// THE THRESHOLD STILL GATES. Below it nothing happens at all, which is what stops a leveller lifting
+// silence into noise between phrases.
 static double compress_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
     double level = fabs(input);
     double gain  = 1.0;
@@ -3938,10 +4113,46 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
         gCompEnv[voice][node] += spec->releaseCoeff * (level - gCompEnv[voice][node]);
     }
 
-    if ((gCompEnv[voice][node] > spec->threshold) && (spec->threshold > 0.0)) {
-        double over = gCompEnv[voice][node] / spec->threshold;
+    if (  (gCompEnv[voice][node] > spec->threshold) && (spec->threshold > 0.0)
+       && (gCompEnv[voice][node] > 0.0)) {
+        double target = (spec->refLevel > spec->threshold) ? spec->refLevel : spec->threshold;
 
-        gain = pow(over, (1.0 / spec->ratio) - 1.0);
+        gain = pow(target / gCompEnv[voice][node], 1.0 - (1.0 / spec->ratio));
+    }
+
+    // THE PANEL METER SHOWS SOMETHING DIFFERENT FROM THE GAIN ABOVE - measured 2026-09-07. Holding Ref
+    // Level over the signal so the gain is constant, the instrument's meter still climbs as the
+    // threshold falls, so it displays HOW FAR OVER THRESHOLD the signal is, not what was done about
+    // it. Lit LEDs against excess were 1, 3, 5, 6, 7, 8 at 0, 3, 6, 9, 12 and 15 dB over.
+    //
+    // Interpolated between those points rather than fitted: the spacing is uneven - about 1.5 dB per
+    // LED at the bottom and 3 dB at the top - and six points will not settle what curve that is.
+    // Below the threshold it reads zero, which is what makes first movement a clean threshold
+    // crossing and is the basis of the level probe in findings.txt.
+    if (spec->threshold > 0.0) {
+        static const double   kExcessDb[] = {0.0, 3.0, 6.0, 9.0, 12.0, 15.0};
+        static const uint32_t kLit[]      = {1u, 3u, 5u, 6u, 7u, 8u};
+        uint32_t              lit         = 0u;
+
+        if (gCompEnv[voice][node] > spec->threshold) {
+            double over = 20.0 * log10(gCompEnv[voice][node] / spec->threshold);
+
+            lit = kLit[0];
+
+            for (uint32_t k = 1u; k < (uint32_t)(sizeof(kLit) / sizeof(kLit[0])); k++) {
+                if (over >= kExcessDb[k]) {
+                    lit = kLit[k];
+                } else {
+                    double f = (over - kExcessDb[k - 1u]) / (kExcessDb[k] - kExcessDb[k - 1u]);
+
+                    lit = kLit[k - 1u] + (uint32_t)((f * (double)(kLit[k] - kLit[k - 1u])) + 0.5);
+                    break;
+                }
+            }
+        }
+        atomic_store_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
+                              METER_WRITTEN | (((lit == 0u) ? 0u : ((1u << lit) - 1u))
+                                               & METER_VALUE_MASK), memory_order_relaxed);
     }
     return input * gain;
 }
@@ -4492,6 +4703,48 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
 //
 // Rendered at the engine's rate like the reverb IR, so the caller supplies the DEVICE rate and gets
 // back ENGINE_OVERSAMPLE times as many samples per second.
+// WHAT THE ENGINE WOULD PUT ON A MODULE'S METER, for the renderer to show in place of the value the
+// instrument last sent over USB. False when the engine is idle or has nothing for that module, and the
+// caller then falls back to the database - so a patch shown with the engine off, or a module the
+// engine does not meter, looks exactly as it always did.
+// The LED the engine would light, alongside sound_engine_module_meter() and false in the same cases.
+// ledIndex is accepted for the modules that will eventually have more than one; only 0 is published
+// today, and anything else falls back to the database.
+bool sound_engine_module_led(uint32_t location, uint32_t moduleIndex, uint32_t ledIndex, uint32_t * value) {
+    if (  (value == NULL) || (ledIndex != 0u) || (location >= (uint32_t)locationMax)
+       || (moduleIndex >= MAX_NUM_MODULES)) {
+        return false;
+    }
+
+    if (atomic_load_explicit(&gActive, memory_order_relaxed) == false) {
+        return false;
+    }
+    uint32_t stored = atomic_load_explicit(&gModuleLed[location][moduleIndex], memory_order_relaxed);
+
+    if ((stored & METER_WRITTEN) == 0u) {
+        return false;
+    }
+    *value = stored & METER_VALUE_MASK;
+    return true;
+}
+
+bool sound_engine_module_meter(uint32_t location, uint32_t moduleIndex, uint32_t leg, uint32_t * value) {
+    if ((leg > 1u) || (value == NULL) || (location >= (uint32_t)locationMax) || (moduleIndex >= MAX_NUM_MODULES)) {
+        return false;
+    }
+
+    if (atomic_load_explicit(&gActive, memory_order_relaxed) == false) {
+        return false;
+    }
+    uint32_t stored = atomic_load_explicit(&gModuleMeter[location][moduleIndex], memory_order_relaxed);
+
+    if ((stored & METER_WRITTEN) == 0u) {
+        return false;       // nothing has ever metered this module
+    }
+    *value = (stored >> (leg * METER_LEG_SHIFT)) & METER_VALUE_MASK;
+    return true;
+}
+
 void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_t amountValue,
                                 const float * in, float * out, uint32_t frames) {
     if ((in == NULL) || (out == NULL) || (frames == 0) || (deviceRate <= 0.0)) {
@@ -5231,6 +5484,15 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             value[n][0] = lfo_step(voice, n, spec);
             value[n][1] = value[n][0];
+
+            // The panel LED, lit on the positive half of the cycle - see gModuleLed. Only voice 0
+            // publishes: a polyphonic patch runs one LFO per voice and the face has one LED, and the
+            // instrument shows a single blink rather than however many voices happen to be sounding.
+            if (voice == 0u) {
+                atomic_store_explicit(&gModuleLed[spec->location][spec->moduleIndex],
+                                      METER_WRITTEN | ((value[n][0] > 0.0) ? 1u : 0u),
+                                      memory_order_relaxed);
+            }
             break;
         }
         case eNodeOsc:
@@ -5424,6 +5686,65 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         default:
         {
             value[n][1] = value[n][0];
+            break;
+        }
+    }
+
+    // THE LEVEL METER ON THE MODULE'S FACE, for the kinds that have one. Done here rather than inside
+    // each case so there is one copy of it and one decay constant, and so a kind that gains a meter
+    // later only has to join the list.
+    //
+    // A PEAK FOLLOWER WITH A SLOW RELEASE, because a meter that tracked the waveform would sit at
+    // whatever the instantaneous sample happened to be and flicker at audio rate. 200 ms of decay is
+    // roughly what a panel meter does and is slow enough for the UI's own frame rate to sample it
+    // without aliasing.
+    //
+    // THE SCALE IS MEASURED BUT COARSE - see findings.txt. The renderer takes the low nibble as a
+    // level 0..15 with green up to 7, and on the instrument a signal at 0 dB internal reads about 7
+    // with roughly one step per 7 dB below that. Eight points is not enough to separate that from a
+    // slightly different slope, and it is confounded with whether the instrument's meter reads peak
+    // or RMS - a saw's 8 dB crest would shift the whole scale. Treated as an approximation for
+    // display, not as a measurement anything depends on.
+    switch (spec->kind) {
+        case eNodeMix:
+        case eNodeFxIn:
+        case eNodeOut:
+        {
+            if (voice == 0u) {
+                // BOTH LEGS, because a stereo module draws two meters and feeding only the left would
+                // leave the right showing whatever the instrument last sent - which is worse than
+                // showing nothing, because it looks live and is not.
+                uint32_t packed = METER_WRITTEN;
+
+                for (uint32_t leg = 0u; leg < 2u; leg++) {
+                    double peak  = fabs(value[n][leg]);
+                    int    level = 0;
+
+                    if (peak > gMeterEnv[n][leg]) {
+                        gMeterEnv[n][leg] = peak;
+                    } else {
+                        gMeterEnv[n][leg] += METER_DECAY * (peak - gMeterEnv[n][leg]);
+                    }
+
+                    if (gMeterEnv[n][leg] > 1.0e-6) {
+                        level = (int)((7.0 + ((20.0 * log10(gMeterEnv[n][leg])) / 7.0)) + 0.5);
+                    }
+
+                    if (level < 0) {
+                        level = 0;
+                    } else if (level > 15) {
+                        level = 15;
+                    }
+                    packed |= ((uint32_t)level << (leg * METER_LEG_SHIFT));
+                }
+
+                atomic_store_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
+                                      packed, memory_order_relaxed);
+            }
+            break;
+        }
+        default:
+        {
             break;
         }
     }
