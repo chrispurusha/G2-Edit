@@ -566,6 +566,7 @@ double flt_kbt_amount(uint32_t kbtValue) {
 // ClkSync needs the patch's master clock, which the engine has no notion of, so it falls back to the
 // slow end of Rate Lo rather than pretending to be in time with something.
 #define LFO_SEMITONE_RATIO    (1.0 / 12.0)
+#define LFO_HI_BASE_HZ        (0.2555)      // Rate Hi at dial 0; Rate Lo is this over 16
 
 double lfo_rate_hz(uint32_t rangeMode, double paramValue) {
     switch (rangeMode) {
@@ -578,13 +579,21 @@ double lfo_rate_hz(uint32_t rangeMode, double paramValue) {
             // middle: at raw 25 it gave a 269 s period where the hardware's divider gives 26.9 s.
             return (paramValue + 1.0) / 699.0506666667;
         }
-        case 1:   // Rate Lo: 0.0159 Hz (62.9 s/cycle) to 24.4 Hz
+        case 1:   // Rate Lo: 0.01597 Hz (62.6 s/cycle) to 24.5 Hz
         {
-            return 0.0159 * exp2(paramValue * LFO_SEMITONE_RATIO);
+            // RATE LO IS RATE HI FOUR OCTAVES DOWN, measured 2026-09-07, not an independent constant.
+            // The base was 0.0159, which is the manual's rounded figure and 0.43% low; three settings
+            // imply 0.0159666, 0.0159668 and 0.0159685 against LFO_HI_BASE_HZ / 16 = 0.01596875.
+            // The clincher is that Lo 96 and Hi 48 measure the IDENTICAL period, 0.24462 s - exactly
+            // what a 48-semitone offset predicts, so the two ranges are one scale with an octave
+            // offset rather than two constants that happen to be near a factor of sixteen.
+            return (LFO_HI_BASE_HZ / 16.0) * exp2(paramValue * LFO_SEMITONE_RATIO);
         }
         case 2:   // Rate Hi: 0.2555 Hz to 392 Hz
         {
-            return 0.2555 * exp2(paramValue * LFO_SEMITONE_RATIO);
+            // MEASURED EXACT: 0.25553 Hz at dial 0 and 4.08794 Hz at 48, against 0.2555 and 4.0880
+            // predicted - 0.01% and 0.001%. This constant needed no correction.
+            return LFO_HI_BASE_HZ * exp2(paramValue * LFO_SEMITONE_RATIO);
         }
         case 3:   // BPM: three straight runs, 24..214, always a whole number of beats
         {

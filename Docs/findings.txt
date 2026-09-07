@@ -8121,3 +8121,60 @@ threshold is continuous and measured.
 WORTH DOING BEFORE the remaining level work - the Pad value counts, the mixers' sum-versus-average and
 their -6/-12 dB pad, the FxtoIn and 2-Out absolute references - because all of those are the same
 question this answers.
+
+MIX4TO1C SUMS, IT DOES NOT AVERAGE (measured 2026-09-07). The same source cabled into one, two and
+four of its inputs, all levels at the default 100, read on the physical output:
+
+  1 input  -48.563 dBFS      2 inputs  -42.542      4 inputs  -36.521
+
++6.021 dB per doubling, twice over - a straight sum with no normalisation. soundEngine.c accumulates
+with += and uses legScale 1.0 for a mono mixer, so 4 identical inputs give 4x = +12.04 dB against a
+measured +12.04. THE ENGINE IS ALREADY RIGHT; this closes the "does the mixer sum or average" question
+in capture-inventory.md without a code change.
+
+STILL OPEN on this module: the LEVEL DIAL's law. One input at the default 100 sits about 6.15 dB below
+the same signal taken straight to the output, where linear would predict -2.08 dB and squared -4.15.
+Neither fits, but that comparison crosses two different output channels and is exactly the kind of
+absolute-reference question the compressor-LED method above exists to settle - so it waits for that
+rather than being guessed at here. The Pad (-6/-12 dB per the manual) is also unmeasured.
+
+AND AN ODDITY WORTH A SECOND LOOK: with only input 0 of an FX 2-Out connected, the signal came out on
+the SECOND physical output of the pair, not the first - the mixer's output reached QU input 6 (idx 5)
+and QU input 5 (idx 4) was silent. Both channels carry equal level when both inputs are fed, so this
+never shows in normal use. It is either our connector ordering for the 2-Out being L/R swapped or the
+rig's own patching, and it was not chased. Anything that depends on WHICH leg of an output pair a
+signal lands on should check this first.
+
+LFOSHPA RATE LAW MEASURED ON HARDWARE (2026-09-07). This one matters out of proportion to its size:
+the LFO is the measurement rig's own clock, so an error here shifts the timebase of every capture.
+Previously only the Sub range cited the manual and one divider reading; the other two were unverified.
+Measured by firing a Pulse from the LFO's Snc output and timing the gate onsets - the intervals come
+out to the millisecond, standard deviation 0.0000 over five intervals.
+
+  range      dial   predicted    measured     err
+  Rate Sub   127     5.4613 s     5.4612 s   -0.002%
+  Rate Sub    64    10.7546 s    10.7544 s   -0.002%
+  Rate Lo     40     6.21292 s    6.21370 s  +0.013%     (after the correction below)
+  Rate Lo     64     1.55323 s    1.55342 s  +0.012%
+  Rate Lo     96     0.24462 s    0.24462 s  +0.001%
+  Rate Hi      0     3.91389 s    3.91344 s  -0.012%
+  Rate Hi     48     0.24462 s    0.24462 s  +0.001%
+
+RATE SUB WAS ALREADY EXACT, mid-dial as well as at the endpoint - 0.002% at both 64 and 127, so the
+linear-in-frequency 699.0507/(value+1) form is confirmed and not just fitted to its ends.
+
+RATE HI WAS ALREADY EXACT: 0.25553 Hz measured at dial 0 against 0.2555 predicted, and 4.08794 against
+4.0880 at dial 48.
+
+RATE LO'S BASE WAS 0.43% LOW and is now derived rather than quoted. It was 0.0159, the manual's
+rounded figure; three settings imply 0.0159666, 0.0159668 and 0.0159685, against 0.2555/16 =
+0.01596875. What settles it is that Rate Lo 96 and Rate Hi 48 measure the IDENTICAL period, 0.24462 s
+- exactly what a 48-semitone offset predicts. So the two ranges are ONE semitone scale four octaves
+apart, not two constants that happen to sit near a factor of sixteen, and paramCurves.c now says so.
+
+A MEASUREMENT NOTE: the first attempt read 5.2467 s with a standard deviation of 0.48 - the Pulse was
+at Time 127, a gate about a second long, and the detector was firing several times inside each gate.
+Shortening the gate to Time 0 and using a refractory of 40% of the expected period gave intervals
+identical to the millisecond. Also, the "Rate Sub 80 -> 1.776 s" reading taken earlier in the day was
+an artefact of the broken polling helper - that write never landed, and the LFO was still wherever it
+had been. Discard it.
