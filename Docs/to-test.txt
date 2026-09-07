@@ -32,6 +32,9 @@ FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard
 - LevAmp gain law rewritten from measurement 2026-08-30: silent at dial 0, four segments, 0-4x
 - Super-saw ("sup") phase fix - needs an ear
 - Stereo chorus - needs an ear
+- Reverb modulation now interpolates with a Hermite cubic instead of linearly, which took a lowpass
+  out of the feedback loop. The tail should be BRIGHTER and the difference should be clearest at high
+  Brightness and long Time; listen for any new roughness on the modulation too
 - Reverb Brightness rebuilt as high-frequency damping across the whole dial (it used to damp the BASS
   above 64, by 16x). Sweep the dial end to end and listen: the low end should stay put throughout and
   only the top should move

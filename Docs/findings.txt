@@ -2853,6 +2853,40 @@ OPEN WORK
   out. What is missing is which state word is level, target and rate, and the table contents. The
   curve question does not depend on the table - that sets the RATE a segment moves at, not the shape.
 
+- THE MODULATION'S INTERPOLATOR WAS A LOWPASS IN THE LOOP (2026-09-07). The ~4 dB/s of excess
+  high-frequency decay left over after the Brightness fit was not damping and no constant could
+  remove it: linear interpolation between two samples has the response |1 - fr + fr*e^-jw|, a
+  complete null at Nyquist for a half-sample offset, applied on every pass round the tank.
+
+  REPLACED WITH A FOUR-POINT CATMULL-ROM. At the bright end of the dial the excess fell from
+  -3.8 dB/s to -0.7, against the instrument's -1.5 - i.e. the floor is gone entirely and the
+  remaining error changes sign.
+
+  THE READ WINDOW IS BIASED DOWN BY THREE SAMPLES so all four taps stay inside the line's own span.
+  Without it ri+2 reaches the next span's first cell and mixes two lines together; three samples of
+  delay against a line of thousands is nothing.
+
+  IT INVALIDATED THE DAMPING FIT, which is the lesson worth carrying: REVERB_DAMP_MAX and
+  REVERB_BRIGHT_K absorb whatever else in the loop costs high frequency, so changing the interpolator
+  changed what they had to be. Refitted 1.6/25.0 -> 2.5/28.0. Over Brightness 48..112, where both
+  sides measure stably, RMS error went 2.41 -> 1.18 dB/s. From Brightness 64 upward every one of the
+  seven bands now matches within about 0.5 dB/s:
+
+      Bright 64    125    250    500     1k     2k     4k     8k
+      engine      -5.3   -5.5   -5.6   -5.9   -6.5   -8.3  -14.2
+      instrument  -5.0   -5.0   -5.3   -5.5   -6.2   -8.6  -14.0
+
+  THE DARK END IS NOW EXTRAPOLATED RATHER THAN FITTED and over-damps - Brightness 48 reads -28.6 dB/s
+  at 8 kHz against -20.3, widening below that. The exponential cannot express it without _MAX going
+  above 1.0, which is not a valid one-pole coefficient, so it clamps; and the hardware sweep cannot
+  settle it either, since below Brightness 32 the instrument's HF is in the noise and the engine's own
+  fit swings non-monotonically with the ceiling. BOTH SIDES STOP MEASURING IN THE SAME PLACE. What
+  would settle it is a quieter capture of the dial's lower third, not another constant.
+
+  SIDE EFFECTS: decay tracks its dial at 0.98/0.98/0.95/0.94 across Time 40..127, wet level -11.48 dB
+  against -11.3, L/R peak correlation 0.164/0.185/0.156/0.149 against the instrument's
+  0.161/0.168/0.171/0.173.
+
 - THE BRIGHTNESS DIAL FITTED AT LAST (2026-09-07), against the nine-point sweep that had been sitting
   in the captures unused since August. It settles what the code had flagged for weeks as a guess, and
   the guess was wrong in kind, not merely in degree.
