@@ -135,3 +135,11 @@ CROSS-PROJECT
   measures 0.1473 against the instrument's 0.1495. Needs an ear: it should now sound as wide and as
   pronounced as the G2 at high Detune. KNOWN REMAINING: our output is still about 1 dB below the
   instrument's, more at low frequency than high - see findings.txt, it needs an Amount sweep to fix.
+- ***CHORUS, THIRD ROUND (2026-09-07) - NEEDS AN EAR.*** The taps are now ASYMMETRIC (2.628 and
+  1.943 ms about a 2.677 ms centre), so the pair's centre moves and the comb slides - that is the
+  "wah at around 1 second intervals" CT heard on the instrument against our "metallic". The LFO rate
+  halved to 1.3905 Hz at Detune 127 (the old figure was an analysis fold, not a reading), and the
+  constant-power blend is gone: dry and wet are now fixed gains whose ratio is x/(1.4742-0.7744x).
+  Stereo width and level both match the hardware across the whole Amount dial. Listen for the wah at
+  max Detune and Amount, and check nothing has gone thin at LOW Amount, which is the end that moved
+  most (+2.46 dB on the dry at Amount 16).

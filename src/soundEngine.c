@@ -3615,11 +3615,28 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 // itself, and it shows TWO taps where this assumed one. See chorus_tap(). The old sweep of 2.38 ms
 // about a 3.00 ms centre is very close to the two real taps' combined envelope of 0.425..4.995 ms,
 // which is how one tap came to stand in for two.
-#define CHORUS_RATE_MAX_HZ    (2.777)               // 0.02186 Hz per dial step, constant to 0.5% over the dial
-#define CHORUS_CENTRE_S       (0.00271)             // where both taps meet when the sweep is at zero
-#define CHORUS_SPREAD_S       (0.002285)
+// THE TWO TAPS ARE NOT SYMMETRIC, found 2026-09-07 from CT hearing "a wah at around 1 second
+// intervals" on the instrument where ours sounded "a little bit metallic". Both are driven by ONE
+// triangle but with DIFFERENT depths, so the pair's CENTRE moves as well as its separation - and a
+// moving centre is a comb whose whole structure slides, which is the wah. A symmetric pair holds its
+// centre still and pins the comb in place, which is the metallic part.
+//
+// THE RATE HERE IS HALF WHAT IT WAS, and the old figure was an artefact of the analysis rather than a
+// reading of the instrument: the tap extractor SORTED the two taps, so once they cross it reports
+// |separation| and doubles the apparent frequency. The centre does not fold, so it gave the rate
+// directly - and came out at exactly half the separation's at every Detune (0.2620 against 0.5236 Hz
+// at dial 24, 1.3905 against 2.7809 at 127), which is what a fold looks like.
+//
+// A + B is the widest separation (4.571 ms) and A - B is the centre's swing (0.685 ms); both were
+// measured, and the pair reproduces the centre range 2.334..3.020 against a measured 2.341..3.026.
+#define CHORUS_RATE_MAX_HZ    (1.3905)             // 0.010949 Hz per dial step
+#define CHORUS_CENTRE_S       (0.002677)           // the fixed point both taps pass through
+#define CHORUS_TAP_A_S        (0.002628)           // one tap swings this far...
+#define CHORUS_TAP_B_S        (0.001943)           // ...the other the opposite way by THIS much
 #define MS_SQRT1_2            (0.70710678118654752)
-#define CHORUS_WET_MAX        (1.19)      // wet/dry ratio at Amount 127 - see the note in chorus_tap() // peak deviation of EACH tap either side of that centre
+#define CHORUS_WET_A          (1.4742)             // wet/dry ratio law - see chorus_tap()
+#define CHORUS_WET_B          (0.7744)
+#define CHORUS_BLEND_K        (0.9542)             // overall trim on the pair of blend gains
 
 // A one-shot gate: a rising edge at the input starts it, and it stays high for the width above.
 //
@@ -3706,7 +3723,7 @@ static double chorus_read(uint32_t node, uint32_t ch, double delaySeconds) {
 }
 
 static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase, double amount) {
-    double wet   = 0.0;
+    double wet = 0.0;
 
     // TWO TAPS PER CHANNEL, MOVING IN OPPOSITE DIRECTIONS about a common centre. This is the shape of
     // the module and it is what a single sweeping tap cannot reproduce: two taps crossing put a pair
@@ -3722,8 +3739,7 @@ static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase,
     // The shape is a TRIANGLE, confirmed rather than assumed for the first time: folded over 888
     // impulses at Detune 24 it fits a triangle with a mean error of 0.025 against a sine's 0.045,
     // and the flanks are straight to a few parts in a hundred. See chorus_triangle().
-    double tri01 = 0.5 * (1.0 + chorus_triangle(phase));   // [0, 1]
-    double dev   = CHORUS_SPREAD_S * tri01;
+    double tri = chorus_triangle(phase);                   // [-1, 1]
 
     // 1/sqrt(2) EACH, NOT A HALF. The blend below was fitted from notch depth on a static delay, which
     // measures the SUM of the two taps without being able to see that there are two, so the pair has
@@ -3732,8 +3748,9 @@ static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase,
     // measured against the hardware through the same dry saw, the engine's wet sat 2.1 to 2.9 dB low
     // UNIFORMLY from 200 Hz to 14 kHz - flat, so a level error and not the filtering it was mistaken
     // for. The residual after this correction is the taps not being perfectly decorrelated.
-    wet                                           = MS_SQRT1_2 * (chorus_read(node, ch, CHORUS_CENTRE_S - dev)
-                                                                  + chorus_read(node, ch, CHORUS_CENTRE_S + dev));
+    wet                                           = MS_SQRT1_2
+                                                    * (chorus_read(node, ch, CHORUS_CENTRE_S + (CHORUS_TAP_A_S * tri))
+                                                       + chorus_read(node, ch, CHORUS_CENTRE_S - (CHORUS_TAP_B_S * tri)));
 
     gChorusLine[node][ch][gChorusWrite[node][ch]] = (float)input;
     gChorusWrite[node][ch]                        = (gChorusWrite[node][ch] + 1) % CHORUS_SAMPLES;
@@ -3768,10 +3785,36 @@ static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase,
     // Amount 32 and 64, against the notch table's 0.28 and 0.64 - which agree, because below 1.0 the
     // notch is unambiguous. So the law is linear in the dial and only its endpoint was wrong.
     {
-        double m     = amount * CHORUS_WET_MAX;
-        double scale = 1.0 / sqrt(1.0 + (m * m));
+        // THE WET/DRY RATIO IS NOT LINEAR IN THE DIAL. Measured 2026-09-07 across the whole Amount
+        // dial by STEREO WIDTH - the L/R correlation of the wet output falls as the wet leg grows,
+        // because what the two channels share is the direct, and unlike a notch depth it cannot
+        // confuse a ratio r with 1/r. Inverting the engine's own correlation-versus-ratio curve
+        // against the instrument at eight settings gives
+        //
+        //     Amount   32     48     64     80     96    112    127
+        //     ratio   0.194  0.316  0.465  0.643  0.856  1.110  1.429
+        //
+        // which the form below reproduces to about 1%: 0.197, 0.320, 0.464, 0.639, 0.851, 1.115,
+        // 1.429. It reaches 1.429 at the top, not the 1.0 a linear law would give.
+        //
+        // THE FORM IS A DIVIDING DRY LEG, not an added wet one: m = x / (A - B*x) is what a ratio
+        // looks like when the DENOMINATOR falls with the dial, here from 1.474 down to 0.700. That is
+        // a crossfade attenuating the dry, which is a thing an instrument would plausibly do, rather
+        // than a curve fitted for its own sake.
+        // NOT A CONSTANT-POWER BLEND. That was the wrong SHAPE, not the wrong constant: it holds the
+        // total flat by construction, and the instrument's total is not flat - it FALLS from +2.46 dB
+        // on the dry at Amount 16 to +0.91 dB around 80..96 and then rises again to +1.35 dB at 127.
+        // A normalised blend can never produce a dip.
+        //
+        // Two fixed gains do, and with the SAME two constants the ratio law already needed: the dry
+        // leg falls as the dial rises while the wet leg follows it, so their ratio is
+        // x / (A - B*x) - the law measured across the whole Amount dial - and the total is whatever
+        // those two gains happen to sum to. One overall trim then puts it on the instrument: the
+        // model reproduces all eight measured levels to +/-0.05 dB, dip included.
+        double dryGain = CHORUS_BLEND_K * (CHORUS_WET_A - (CHORUS_WET_B * amount));
+        double wetGain = CHORUS_BLEND_K * amount;
 
-        return (input * scale) + (wet * m * scale);
+        return (input * dryGain) + (wet * wetGain);
     }
 }
 
@@ -3806,7 +3849,10 @@ static void chorus_step(uint32_t node, double input, double depth, double amount
     // BOTH TAPS READ THE PHASE BEFORE IT ADVANCES, so the two channels are sampled at the same
     // instant rather than one being a sample ahead of the other.
     *outLeft          = chorus_tap(node, 0, input, phase, amount);
-    *outRight         = chorus_tap(node, 1, input, phase + 0.5, amount);
+    // A QUARTER CYCLE, not a half - of the TRUE LFO. The measured antiphase was in the FOLDED
+    // separation, which runs at twice the LFO, so half a cycle there is a quarter of one here. What
+    // reaches the wire is unchanged; only its description is.
+    *outRight         = chorus_tap(node, 1, input, phase + 0.25, amount);
 
     gChorusLfo[node] += (CHORUS_RATE_MAX_HZ * depth) / gSampleRate;
 

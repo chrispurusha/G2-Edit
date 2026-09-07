@@ -7951,3 +7951,44 @@ saw this too and recorded the total rising to +1.1 dB at Amount 127. So the blen
 that rises with Amount, and the tilt says it is not a plain scalar either. Fixing it properly needs an
 AMOUNT sweep on this rig; one operating point is not enough to fit two terms, and fitting at one point
 is what produced the reverb's "less full/round".
+
+STCHORUS: THE "WAH" IS A MOVING TAP CENTRE (2026-09-07, from CT hearing the instrument make "a wah at
+around 1 second intervals" where ours sounded "a little bit metallic"). The two taps are driven by one
+triangle but with DIFFERENT depths, so the pair's centre moves as well as its separation - and a
+moving centre slides the whole comb, which is the wah. A symmetric pair holds its centre still and
+pins the comb, which is the metallic part.
+
+  tap1 = 2.677 + 2.628 * T     tap2 = 2.677 - 1.943 * T     T a triangle in [-1, 1]
+
+A + B is the widest separation (4.571 ms) and A - B is the centre's swing (0.685 ms); both measured.
+The model reproduces the centre range 2.334..3.020 against a measured 2.341..3.026, and tap1's
+maximum 5.305 ms against a measured 5.30.
+
+THE LFO RATE WAS TWICE WHAT IT SHOULD HAVE BEEN, and that was an artefact of the ANALYSIS: the tap
+extractor sorted the two taps, so once they cross it reports |separation| and doubles the apparent
+frequency. The centre does not fold and gave the rate directly - exactly half the separation's at
+every Detune (0.2620 against 0.5236 Hz at dial 24, 1.3905 against 2.7809 at 127). CHORUS_RATE_MAX_HZ
+2.777 -> 1.3905. L/R is a QUARTER cycle of the true LFO, measured directly: centre trajectories
+correlate +0.029 (a quarter apart) while the folded separations correlate -0.953 (antiphase).
+
+THE AMOUNT LAW, MEASURED ACROSS THE WHOLE DIAL. Stereo width is the instrument for this: the L/R
+correlation of the wet falls as the wet leg grows, because what the channels share is the direct, and
+unlike a notch depth it cannot confuse a ratio r with 1/r. Inverting the engine's own
+correlation-versus-ratio curve against the instrument at eight Amounts:
+
+  Amount   16     32     48     64     80     96    112    127
+  ratio    --   0.194  0.316  0.465  0.643  0.856  1.110  1.429
+  level  +2.46  +1.92  +1.46  +1.10  +0.91  +0.91  +1.08  +1.35 dB   (wet output on the dry)
+
+The ratio is NOT linear in the dial and reaches 1.429 at the top, not 1.0. Both columns come from one
+form: two FIXED gains, dry = A - B*x and wet = x with x the dial and one overall trim, so the ratio is
+x / (A - B*x) and the total is whatever they sum to. A = 1.4742, B = 0.7744, k = 0.9542.
+
+THAT ALSO EXPLAINS WHY THE OLD CONSTANT-POWER BLEND COULD NEVER FIT: it holds the total flat by
+construction, and the instrument's total is NOT flat - it falls from +2.46 dB to +0.91 dB around
+Amount 80..96 and rises again to +1.35. A normalised blend cannot produce a dip. It was the wrong
+SHAPE, not the wrong constant.
+
+VERIFIED END TO END against hardware captures through the same dry saw, at Amount 32/64/96/127:
+stereo width 0.9529/0.7714/0.4631/0.1456 against 0.9521/0.7726/0.4643/0.1443, and level
++1.92/+1.10/+0.91/+1.35 dB against +1.91/+1.17/+0.98/+1.37.
