@@ -76,6 +76,9 @@ extern tGlobalKnob             gGlobalKnobArray[MAX_NUM_KNOBS];
 extern tSelectedParam          gSelectedParam[MAX_SLOTS];
 extern uint32_t                gMorphCount[MAX_SLOTS];
 extern uint32_t                gNote2Size[MAX_SLOTS];
+// Bumped every time a current-note reply lands, so a caller can wait for a FRESH one rather than
+// reading whatever happens to be in the buffer — see the DEVNOTES backdoor command.
+extern _Atomic uint32_t        gNote2Updates;
 extern uint8_t                 gNote2[MAX_SLOTS][1024];
 extern uint32_t                gAssignedVoices[MAX_SLOTS];
 extern tControllerArray        gControllerArray[MAX_SLOTS];

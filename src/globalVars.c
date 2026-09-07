@@ -61,6 +61,7 @@ tGlobalKnob             gGlobalKnobArray[MAX_NUM_KNOBS]                         
 tSelectedParam          gSelectedParam[MAX_SLOTS]                                = {0};
 uint32_t                gMorphCount[MAX_SLOTS]                                   = {0};
 uint32_t                gNote2Size[MAX_SLOTS]                                    = {0};
+_Atomic uint32_t        gNote2Updates                                            = 0;
 uint8_t                 gNote2[MAX_SLOTS][1024]                                  = {0};
 uint32_t                gAssignedVoices[MAX_SLOTS]                               = {0};
 tControllerArray        gControllerArray[MAX_SLOTS]                              = {0};
