@@ -7992,3 +7992,50 @@ SHAPE, not the wrong constant.
 VERIFIED END TO END against hardware captures through the same dry saw, at Amount 32/64/96/127:
 stereo width 0.9529/0.7714/0.4631/0.1456 against 0.9521/0.7726/0.4643/0.1443, and level
 +1.92/+1.10/+0.91/+1.35 dB against +1.91/+1.17/+0.98/+1.37.
+
+STCHORUS AT DETUNE 0 - THE LFO'S REST POSITION (2026-09-07). Detune 0 does not sweep; the instrument
+holds the two taps 2.4425 ms apart with their centre at 2.856 ms. That separation puts the triangle at
+|T| = 0.5343, and the CENTRE picks the sign uniquely: +0.5343 predicts a centre of 2.860 against the
+measured 2.856, where -0.5343 would give 2.494. Our LFO started at phase 0, i.e. T = -1, leaving the
+static comb 4.571 ms wide instead of 2.44 - notches every 219 Hz rather than 410, which is a different
+sound rather than a slightly wrong one. Now starts at CHORUS_PHASE0 = 0.3836. At every other Detune
+the LFO free-runs so the starting phase is irrelevant, and both channels take it together so the
+quarter-cycle L/R relationship is untouched; re-checked at Amount 32/96/127 with no change.
+
+REVERB BRIGHTNESS REFITTED AGAINST FOUR ROOMS (2026-09-07). REVERB_DAMP_MAX 1.6000 -> 0.8370,
+REVERB_BRIGHT_K 32.000 -> 57.799. The ceiling stays at 0.9000 but no longer bites: the curve peaks at
+0.8370 at dial 0, where the old one hit the clamp below dial 19 and made the engine's HF excess go
+NON-MONOTONIC at the bottom of the dial, which the instrument's does not.
+
+  dial              24      32      40      48      64
+  implied         0.5475  0.4866  0.4137  0.3718  0.2742
+  this law        0.5526  0.4811  0.4189  0.3648  0.2766
+
+Predicted excess against the measurements, RMS error 28.16 dB/s on the old law and 3.77 on this one -
+7.5x better. The old curve was far too steep: over-damped at the bottom (Large dial 24 would give
+147 dB/s of excess against a measured 53.9) and under-damped at the top (9.0 against 12.0 at dial 64).
+Rendered end to end and re-measured, the residual is 6.42 dB/s RMS over 17 points, still worst at the
+low-dial end where the engine remains a little under-damped.
+
+TWO METHOD ERRORS ON THE WAY, both worth keeping:
+
+1. THE BANDPASS WAS THE MEASUREMENT. A single Q=4 section at 8 kHz leaks enough of the much louder,
+   slowly-decaying low band that the HF decay FLOORS OUT. Scored that way the engine's excess ran
+   11.4 dB/s at dial 16 and 7.1 at 64 - a range of 1.6x - where two cascaded Q=8 sections on the same
+   renders give 59.9 and 17.4, a range of 3.4x. The four-room table recorded earlier today was taken
+   with the leaky filter and is understated; the numbers above supersede it. Both sides of a
+   comparison must use the same filter and it must be sharp enough that the figure belongs to the
+   band it names.
+
+2. INVERTING FROM A RATIO AGAINST A SATURATED REFERENCE. Solving for the coefficient from
+   measured-excess / rendered-excess gave 0.99 at dial 16, because the rendered excess it divided by
+   was itself clamped by the old ceiling. It also assumed 500 Hz is untouched by the filter, which
+   fails once the coefficient is large - at 0.99 the one-pole corner is 154 Hz and the BASELINE decay
+   went from 26 to 134 dB/s when that was implemented. Calibrate passes-per-second from a dial
+   position where the coefficient is small, then invert each measurement against the filter
+   absolutely.
+
+AND ONE FALSE ALARM: the reverb render appeared completely dead - impulse then exact zero. It was not.
+tools/render writes a capture-shaped file with DRY on channels 1-2 and WET on 3-4 (render.c:28), and
+the analysis was reading channel 0. A single unit sample in a 0.05 s window at 96 kHz is -36.8 dBFS,
+which is exactly what it measured. Read channel 2.

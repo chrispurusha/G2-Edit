@@ -143,3 +143,11 @@ CROSS-PROJECT
   Stereo width and level both match the hardware across the whole Amount dial. Listen for the wah at
   max Detune and Amount, and check nothing has gone thin at LOW Amount, which is the end that moved
   most (+2.46 dB on the dry at Amount 16).
+- Chorus at DETUNE 0 specifically (2026-09-07): the LFO now rests at a measured phase rather than at
+  zero, so the static comb is 2.44 ms wide instead of 4.57. Worth an A/B at Detune 0 with Amount up -
+  it is the one setting where the change is a different sound rather than a refinement.
+- ***REVERB BRIGHTNESS REFITTED (2026-09-07) - NEEDS AN EAR.*** DAMP_MAX 1.6 -> 0.837, BRIGHT_K
+  32 -> 57.8, fitted against all four rooms. Predicted error is 7.5x lower. The dial should now be
+  much less savage in its lower half - the old curve hit its ceiling below dial 19 - and slightly
+  darker at the top. Listen at Brightness 24-48 especially, which is where the old law was worst,
+  and check a Small room does not now sound under-damped.
