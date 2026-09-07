@@ -53,7 +53,6 @@ FILTERS
 - Re-check FltComb FB 127 and FltPhase FB 127 with the level-tracking test, as FltClassic/FltNord were
 
 SOUND ENGINE
-- Reverb decay is still about 15% fast in every band after the Brightness detent fix - a smaller, separate question
 - Reverb L/R peak-correlation LAG cannot be matched in an 8-line tank and no tap placement fixes it; only a single shared buffer would - do not tune the taps further
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.txt)
 - Extend engine module coverage; recount the supported types, 23 predates the filter work

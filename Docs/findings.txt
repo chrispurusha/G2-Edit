@@ -2865,6 +2865,30 @@ OPEN WORK
   stereo source arrived as its own left channel doubled and anything panned right vanished. A Reverb
   fed from it then summed two copies of the same signal. Now both legs are resolved.
 
+  AND THE RESIDUAL WENT WITH IT: RV_MOD_LOSS WAS COMPENSATING FOR THE SAME BUG. With the detent
+  fixed the engine still overshot its OWN requested RT60, and the overshoot GREW with the requested
+  time - 1.04 at Time 40 to 1.22 at Time 127 - which is the signature of a fixed per-pass gain
+  error, not of anything an interpolator does. The instrument meanwhile matches its own law to
+  0.1-0.8% by the same measurement, so kReverbDecayBase/Slope and the method were both sound.
+
+  RV_MOD_LOSS was measured at 0.9955 to give back what linear interpolation was thought to cost. It
+  was measured WHILE the detent was applying 0.021 of in-loop damping, so the short tail it corrected
+  was mostly that. The right value is 1.0000 - no compensation at all:
+
+      dial Time            40     64     90    127
+      rendered / asked   0.975  1.010  0.990  0.978    at 1.0000
+                         1.037  1.125  1.150  1.221    at 0.9955
+
+  Against the instrument at matched Time 127, decay in dB/s at 125/250/500/1k:
+      Small   engine -19.6 -19.6 -20.0 -20.6   instrument -20.5 -19.9 -20.2 -20.5
+      Hall    engine  -5.4  -5.7  -5.7  -5.3   instrument  -5.0  -4.6  -5.1  -5.3
+  A few percent, from 13-15%. The wet level returned to -11.32 dB against the -11.3 target on its
+  own, without touching REVERB_WET_GAIN - removing a spurious gain put it back.
+
+  AND A COMPARISON ERROR WORTH RECORDING: the "15% fast" this started from was an artefact of
+  rendering the engine at Time 96 against captures taken at Time 127. At matched settings it was
+  13% SLOW. Check the sidecar for what the capture actually held before comparing anything to it.
+
   FAULT 2 SOLVED 2026-09-07, AND IT WAS THE BRIGHTNESS DETENT (owner's hypothesis). The dial was
   mapped as value/127, so its neutral position 64 arrived as 0.50394 and the tilt as +0.0079 rather
   than zero - and no dial position gave zero at all, because 0.5 falls between 63 and 64.
