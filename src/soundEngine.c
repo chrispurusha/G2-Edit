@@ -1136,19 +1136,31 @@ typedef enum {
 // realign every cycle would put their own period into the tail, which is the fault being fixed.
 #define RV_MOD_DEPTH    (28)
 
-// WHAT THE SWEEP COSTS THE DECAY. Reading a delay line at a fractional position means interpolating
-// between two samples, and linear interpolation is a mild lowpass -- so every pass round the tank
-// loses a little that a whole-sample read would not. Measured, it shortened a Hall from RT60 9.67 s
-// to 8.87 s where the dial had asked for 10.34. It DIVIDES the gain rather than scaling the
-// exponent: the interpolator takes a fixed amount out of every pass whatever the decay setting, so
-// scaling the exponent over-corrects exactly where the requested loss is largest -- it put a short
-// room 8% long while fixing the long one. Not a fudge factor for something unexplained: it is the
-// interpolator's own attenuation, and it would change if the interpolator did.
+// WHAT THE SWEEP COSTS THE DECAY -- WHICH TURNS OUT TO BE NOTHING MEASURABLE.
 //
-// THIS RESTORES THE DIAL AS THE ONLY PLACE DECAY IS SET. What the dial asks for is
-// kReverbDecayBase/Slope, and those are a separate question -- see the note there for how they now
-// stand against the hardware.
-#define RV_MOD_LOSS    (0.9955)
+// Reading a delay line at a fractional position interpolates between two samples, and linear
+// interpolation is a mild lowpass, so every pass round the tank might lose a little that a
+// whole-sample read would not. This constant existed to give that back, at 0.9955.
+//
+// IT WAS COMPENSATING FOR A DIFFERENT BUG. The measurement that produced 0.9955 was made while the
+// Brightness detent was applying 0.021 of low-frequency damping inside the loop at every normal
+// setting -- see the tilt mapping in reverb_step(). The tail really was short; the interpolator was
+// not why. With the detent landing on zero as it should, the engine delivers the RT60 its dial asks
+// for with NO compensation at all:
+//
+//     dial Time            40     64     90    127
+//     rendered / asked   0.975  1.010  0.990  0.978    at 1.0000, this value
+//                        1.037  1.125  1.150  1.221    at 0.9955, the old one
+//                        0.943  0.954  0.916  0.869    at 1.0027, overshooting the other way
+//
+// Within 2.5% across the whole range, against 4% to 22% before, and the instrument matches its own
+// law to 0.1-0.8% by the same measurement. A residual that GREW with the requested time was the tell:
+// that is a fixed per-pass gain error, not anything the interpolator does.
+//
+// KEPT AT 1.0 RATHER THAN DELETED so the question stays asked. If a future change to the modulation
+// depth or the interpolator makes the loss real, this is where it goes and this is how to measure it
+// -- render a Time sweep and look at rendered/asked, which should be flat at 1.0.
+#define RV_MOD_LOSS    (1.0000)
 
 static const double kRvModHz[RV_LINES] = {
     0.61, 0.73, 0.89, 1.03, 1.19, 1.31, 1.47, 1.61
