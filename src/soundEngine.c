@@ -239,6 +239,49 @@ typedef enum {
 #define SHPA_PARAM_WAVEFORM     (9)
 #define SHPA_PARAM_ACTIVE       (10)
 
+// SHAPER GROUP - Clip, Overdrive, Saturate, ShpExp, WaveWrap, ShpStatic and Rect (manual p.204-207).
+//
+// Every one of these is MEMORYLESS: the output depends only on the present input sample, through
+// what the manual calls a transfer function and draws as a graph. That is why they arrive as one
+// node kind carrying a mode rather than as seven, and why they cost nothing to run at audio rate -
+// which is exactly what the G2 means by a control module promoted to audio.
+//
+// THE ORDERS ARE NOT UNIFORM AND ARE NOT GUESSES WORTH REPEATING FROM MEMORY. WaveWrap lists its
+// modulation depth BEFORE its amount and its Mod jack BEFORE its In jack; Overdrive and Clip list
+// the mod dial first but the In jack first; Saturate and ShpExp list the amount first. Every one of
+// these came from the layout tables in moduleResources.h, and none is confirmed against the
+// instrument yet.
+#define CLIP_PARAM_LEVEL_MOD       (0)
+#define CLIP_PARAM_LEVEL           (1)
+#define CLIP_PARAM_SHAPE           (2)
+#define CLIP_PARAM_ACTIVE          (3)
+
+#define OD_PARAM_AMOUNT_MOD        (0)
+#define OD_PARAM_AMOUNT            (1)
+#define OD_PARAM_ACTIVE            (2)
+#define OD_PARAM_TYPE              (3)
+#define OD_PARAM_SHAPE             (4)
+
+#define SAT_PARAM_AMOUNT           (0)
+#define SAT_PARAM_AMOUNT_MOD       (1)
+#define SAT_PARAM_ACTIVE           (2)
+#define SAT_PARAM_CURVE            (3)
+
+#define SHPEXP_PARAM_AMOUNT        (0)
+#define SHPEXP_PARAM_AMOUNT_MOD    (1)
+#define SHPEXP_PARAM_ACTIVE        (2)
+#define SHPEXP_PARAM_CURVE         (3)
+
+#define WRAP_PARAM_AMOUNT_MOD      (0)
+#define WRAP_PARAM_AMOUNT          (1)
+#define WRAP_PARAM_ACTIVE          (2)
+
+#define SHPSTATIC_PARAM_MODE       (0)
+#define SHPSTATIC_PARAM_ACTIVE     (1)
+
+#define RECT_PARAM_MODE            (0)
+#define RECT_PARAM_ACTIVE          (1)
+
 // Pulse: a one-shot gate fired by a RISING EDGE at its input. Time and Range set how long it stays
 // high; there is no power button, so it is always live.
 #define PULSE_PARAM_TIME       (0)
@@ -517,6 +560,18 @@ typedef enum {
 #define VOICE_MAX_TAIL_SECONDS    (2.0)
 #define VOICE_FADE_SECONDS        (0.03)
 
+// Which of the seven transfer functions a shaper node carries. Stored rather than re-derived from
+// the module type so the render loop never reaches back into the patch database.
+typedef enum {
+    eShaperClip = 0,
+    eShaperOverdrive,
+    eShaperSaturate,
+    eShaperShpExp,
+    eShaperWaveWrap,
+    eShaperShpStatic,
+    eShaperRect,
+} tShaperKind;
+
 typedef enum {
     eNodeOsc = 0,        // OscB
     eNodeOscShp,         // OscShpB — a different parameter layout and waveform set
@@ -534,6 +589,7 @@ typedef enum {
     eNodeFxIn,           // the FX area's feed from the Voice area — no cable, an implicit link
     eNodePassThru,       // an effect that is not modelled yet: passes its input along unchanged
     eNodePulse,          // a one-shot gate, fired by a rising edge at its input
+    eNodeShaper,         // the whole Shaper group - a memoryless transfer function
     eNodeOut,
 } tNodeKind;
 
@@ -593,11 +649,20 @@ typedef struct {
     double          refLevel;     // the level the compressor drives TOWARDS - see compress_step()
     double          attackCoeff;
     double          releaseCoeff;
-    double          constant;   // Constant module's value
-    uint32_t        line;       // which shared delay line this node owns, if it needs one
-    double          brightness; // reverb, 0..1 as the dial reads it — HIGH IS BRIGHT
-    double          timeNorm;   // reverb Time as the dial reads it, 0..1 — drives the diffusion
-    uint32_t        reverbType; // reverb room size: Small/Medium/Large/Hall
+    // Shaper group. `shaperIn` is which input leg carries the signal rather than the modulation,
+    // because WaveWrap puts its Mod jack FIRST and every other shaper puts it second.
+    uint32_t        shaperKind;   // tShaperKind
+    uint32_t        shaperCurve;  // the Type/Curve/Mode drop-down, raw - a mode carries no morph
+    bool            shaperSym;    // Clip and Overdrive: Sym shapes both halves, Asym the positive one
+    double          shaperAmount; // the dial, 0..1
+    double          shaperMod;    // the modulation attenuator, 0..1
+    uint32_t        shaperIn;     // input leg carrying the signal; the other one is the modulation
+
+    double          constant;     // Constant module's value
+    uint32_t        line;         // which shared delay line this node owns, if it needs one
+    double          brightness;   // reverb, 0..1 as the dial reads it — HIGH IS BRIGHT
+    double          timeNorm;     // reverb Time as the dial reads it, 0..1 — drives the diffusion
+    uint32_t        reverbType;   // reverb room size: Small/Medium/Large/Hall
 
     // Evaluated ONCE per sample, after the voices are summed, rather than once per voice. True for
     // everything in the FX Area, for the three module kinds that own a shared delay buffer wherever
@@ -2378,6 +2443,17 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeReverb;
             return true;
         }
+        case moduleTypeClip:
+        case moduleTypeOverdrive:
+        case moduleTypeSaturate:
+        case moduleTypeShpExp:
+        case moduleTypeWaveWrap:
+        case moduleTypeShpStatic:
+        case moduleTypeRect:
+        {
+            *kind = eNodeShaper;
+            return true;
+        }
         case moduleTypeConstant:
         {
             *kind = eNodeConstant;
@@ -2488,6 +2564,27 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         {
             *connectors = none;   // filled in by the Voice-area bridge, not by a cable
             return 0;
+        }
+        case eNodeShaper:
+        {
+            // One jack or two, in the module's OWN order: WaveWrap's Mod comes first and every
+            // other shaper's comes second, and ShpStatic and Rect have no Mod jack at all. Asking
+            // the resources for the nth input keeps all three cases out of a table here.
+            uint32_t leg   = 0;
+            uint32_t count = 0;
+
+            for (leg = 0; leg < 2; leg++) {
+                int found = connector_index_for_input(moduleType, leg, anyConnectorType);
+
+                if (found < 0) {
+                    break;
+                }
+                derived[leg] = (uint32_t)found;
+                count++;
+            }
+
+            *connectors = derived;
+            return count;
         }
         case eNodeLevAmp:
         case eNodePassThru:
@@ -3019,6 +3116,84 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                              ? (param_value(module, variation, (uint32_t)p->shape) / 127.0) : 0.5;
             node->active   = (param_value(module, variation, (uint32_t)p->active) != 0.0);
             node->shpWave  = (module->type == moduleTypeLfoShpA);
+            break;
+        }
+        case eNodeShaper:
+        {
+            // Each module names its own dials; the drop-downs are read raw because a drop-down
+            // cannot carry a morph (manual p.20). Where a module has no dial at all - ShpStatic and
+            // Rect are pure mode selectors - the amount stays at full and nothing reads it.
+            node->shaperAmount = 1.0;
+            node->shaperMod    = 0.0;
+            node->shaperCurve  = 0;
+            node->shaperSym    = true;
+            node->shaperIn     = 0;
+            node->active       = true;
+
+            switch (module->type) {
+                case moduleTypeClip:
+                {
+                    node->shaperKind   = eShaperClip;
+                    node->shaperAmount = param_value(module, variation, CLIP_PARAM_LEVEL) / 127.0;
+                    node->shaperMod    = param_value(module, variation, CLIP_PARAM_LEVEL_MOD) / 127.0;
+                    node->shaperSym    = (module->param[variation][CLIP_PARAM_SHAPE].value != 0);
+                    node->active       = (param_value(module, variation, CLIP_PARAM_ACTIVE) != 0.0);
+                    break;
+                }
+                case moduleTypeOverdrive:
+                {
+                    node->shaperKind   = eShaperOverdrive;
+                    node->shaperAmount = param_value(module, variation, OD_PARAM_AMOUNT) / 127.0;
+                    node->shaperMod    = param_value(module, variation, OD_PARAM_AMOUNT_MOD) / 127.0;
+                    node->shaperCurve  = module->param[variation][OD_PARAM_TYPE].value;
+                    node->shaperSym    = (module->param[variation][OD_PARAM_SHAPE].value != 0);
+                    node->active       = (param_value(module, variation, OD_PARAM_ACTIVE) != 0.0);
+                    break;
+                }
+                case moduleTypeSaturate:
+                {
+                    node->shaperKind   = eShaperSaturate;
+                    node->shaperAmount = param_value(module, variation, SAT_PARAM_AMOUNT) / 127.0;
+                    node->shaperMod    = param_value(module, variation, SAT_PARAM_AMOUNT_MOD) / 127.0;
+                    node->shaperCurve  = module->param[variation][SAT_PARAM_CURVE].value;
+                    node->active       = (param_value(module, variation, SAT_PARAM_ACTIVE) != 0.0);
+                    break;
+                }
+                case moduleTypeShpExp:
+                {
+                    node->shaperKind   = eShaperShpExp;
+                    node->shaperAmount = param_value(module, variation, SHPEXP_PARAM_AMOUNT) / 127.0;
+                    node->shaperMod    = param_value(module, variation, SHPEXP_PARAM_AMOUNT_MOD) / 127.0;
+                    node->shaperCurve  = module->param[variation][SHPEXP_PARAM_CURVE].value;
+                    node->active       = (param_value(module, variation, SHPEXP_PARAM_ACTIVE) != 0.0);
+                    break;
+                }
+                case moduleTypeWaveWrap:
+                {
+                    // THE ONLY SHAPER WHOSE MOD JACK COMES FIRST, so its signal is on leg 1.
+                    node->shaperKind   = eShaperWaveWrap;
+                    node->shaperAmount = param_value(module, variation, WRAP_PARAM_AMOUNT) / 127.0;
+                    node->shaperMod    = param_value(module, variation, WRAP_PARAM_AMOUNT_MOD) / 127.0;
+                    node->shaperIn     = 1;
+                    node->active       = (param_value(module, variation, WRAP_PARAM_ACTIVE) != 0.0);
+                    break;
+                }
+                case moduleTypeShpStatic:
+                {
+                    node->shaperKind  = eShaperShpStatic;
+                    node->shaperCurve = module->param[variation][SHPSTATIC_PARAM_MODE].value;
+                    node->active      = (param_value(module, variation, SHPSTATIC_PARAM_ACTIVE) != 0.0);
+                    break;
+                }
+                case moduleTypeRect:
+                default:
+                {
+                    node->shaperKind  = eShaperRect;
+                    node->shaperCurve = module->param[variation][RECT_PARAM_MODE].value;
+                    node->active      = (param_value(module, variation, RECT_PARAM_ACTIVE) != 0.0);
+                    break;
+                }
+            }
             break;
         }
         case eNodeConstant:
@@ -3856,6 +4031,187 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 // instrument does, and it matters only for an input faster than the width — the measurement patch
 // fires one edge per note, so nothing there depends on it.
 //
+// ------------------------------------------------------------------------------------------------
+// SHAPER GROUP
+//
+// Seven memoryless transfer functions, sharing one entry point. Full scale is +-1.0 here, which is
+// the +-64 units the manual quotes for the instrument's headroom.
+//
+// HOW MUCH OF THIS IS KNOWN. Rect is EXACT: the manual states all four operations in words, and
+// there is no dial to get wrong. ShpStatic's four labels - Inv x3, Inv x2, x2, x3 - name their own
+// curves, so its SHAPE is known and only whether the instrument normalises them is not. Everything
+// else here is structurally right and numerically a guess: the manual describes the family (a
+// logarithmic curve for Saturate, an exponential one for ShpExp, four named overdrive characters,
+// a fold rather than a clip for WaveWrap) but names no constant anywhere.
+//
+// THESE ARE THE CHEAPEST MEASUREMENTS LEFT. A memoryless module gives up its ENTIRE transfer
+// function to one capture: send a slow full-scale ramp - or simply a low sine, which sweeps every
+// input level twice per cycle - through it and plot output against input. One capture per mode,
+// no impulse, no windowing, no decay fitting. See to-test.txt.
+static double shaper_odd_power(double x, double p) {
+    // |x|^p with the sign carried through: an odd-symmetric power curve, which is what a shaper
+    // graph that passes through the origin unchanged has to be.
+    if (x < 0.0) {
+        return -pow(-x, p);
+    }
+    return pow(x, p);
+}
+
+// Fold rather than clip: a triangle of period 4 that runs straight through [-1, 1] and turns back
+// on itself outside it, so 1.5 comes back as 0.5 and 3.0 as -1.0. This is what makes WaveWrap
+// generate its own overtones instead of the clipped ones a limiter would.
+static double shaper_fold(double x) {
+    double y = fmod(x + 1.0, 4.0);
+
+    if (y < 0.0) {
+        y += 4.0;
+    }
+    return (y <= 2.0) ? (y - 1.0) : (3.0 - y);
+}
+
+static double shaper_clamp(double x) {
+    if (x > 1.0) {
+        return 1.0;
+    }
+
+    if (x < -1.0) {
+        return -1.0;
+    }
+    return x;
+}
+
+static double shaper_step(double input, double modulation, const tEngineNode * spec) {
+    // The mod jack adds to the dial through its own attenuator, and the sum is clamped to the
+    // dial's range - the same treatment the filter's cutoff modulation gets.
+    double amount = spec->shaperAmount + (spec->shaperMod * modulation);
+    double x      = shaper_clamp(input);
+
+    if (spec->active == false) {
+        return input;                 // Bypass passes the signal through untouched
+    }
+
+    if (amount < 0.0) {
+        amount = 0.0;
+    } else if (amount > 1.0) {
+        amount = 1.0;
+    }
+
+    switch ((tShaperKind)spec->shaperKind) {
+        case eShaperRect:
+        {
+            // Exact, from the manual: discard negatives, discard positives, mirror negatives up,
+            // mirror positives down. rectStrMap is {HalfPos, HalfNeg, FullPos, FullNeg}.
+            switch (spec->shaperCurve) {
+                case 0:  return (x > 0.0) ? x : 0.0;
+
+                case 1:  return (x < 0.0) ? x : 0.0;
+
+                case 2:  return fabs(x);
+
+                default: return -fabs(x);
+            }
+        }
+        case eShaperShpStatic:
+        {
+            // shpStaticStrMap is {"Inv x3", "Inv x2", "x2", "x3"}: the inverses are the roots, so
+            // the four exponents are 1/3, 1/2, 2 and 3. Every one of them leaves full scale at
+            // full scale and moves only what is between, which is what "amplification/attenuation
+            // characteristic" means on the module's own buttons.
+            static const double kExp[] = {1.0 / 3.0, 0.5, 2.0, 3.0};
+            uint32_t            curve  = (spec->shaperCurve < 4) ? spec->shaperCurve : 2;
+
+            return shaper_odd_power(x, kExp[curve]);
+        }
+        case eShaperShpExp:
+        {
+            // shpExpCurveStrMap is {"x2", "x3", "x4", "x5"}, and Amount morphs the EXPONENT from
+            // linear towards the named curve rather than crossfading between two signals. That
+            // keeps full scale at full scale at every setting, which is the property the manual
+            // describes when it warns the module wants a fixed-amplitude input: the output falls
+            // exponentially only as the INPUT falls.
+            static const double kExp[] = {2.0, 3.0, 4.0, 5.0};
+            uint32_t            curve  = (spec->shaperCurve < 4) ? spec->shaperCurve : 0;
+
+            return shaper_odd_power(x, 1.0 + (amount * (kExp[curve] - 1.0)));
+        }
+        case eShaperSaturate:
+        {
+            // "Shapes an input signal in a logarithmic fashion", Curve 1 smooth and Curve 4 hard.
+            // A log curve normalised to unity at full scale: y = log(1 + k|x|) / log(1 + k), with
+            // k rising with both the Curve selector and the Amount dial, and k -> 0 giving back a
+            // straight line. Structure from the manual, k range UNMEASURED.
+            static const double kCurve[] = {4.0, 16.0, 64.0, 256.0};
+            uint32_t            curve    = (spec->shaperCurve < 4) ? spec->shaperCurve : 0;
+            double              k        = amount * kCurve[curve];
+
+            if (k < 1e-6) {
+                return x;
+            }
+            double              shaped   = log(1.0 + (k * fabs(x))) / log(1.0 + k);
+
+            return (x < 0.0) ? -shaped : shaped;
+        }
+        case eShaperWaveWrap:
+        {
+            // Amplify, then fold. Up to 19 dB of drive, which is four folds on a full-scale input -
+            // the "deep distortion and FM-like characteristics" of the manual.
+            //
+            // THE MAXIMUM DRIVE IS ODD ON PURPOSE. shaper_fold() returns exactly zero at every EVEN
+            // integer, so an even maximum - 16 was the first thing written here - sends full scale
+            // to silence at the top of the dial, and a full-scale input then vanishes exactly where
+            // the module should be at its most extreme. Nine folds full scale back to full scale.
+            return shaper_fold(x * (1.0 + (amount * 8.0)));
+        }
+        case eShaperOverdrive:
+        {
+            // Drive into a soft limiter whose KNEE is what the four type names select:
+            // y = x / (1 + |x|^n)^(1/n) reaches +-1 asymptotically, gently for a small n and
+            // almost squarely for a large one. odTypeStrMap is {Soft, Hard, Fat, Heavy}, so Fat
+            // takes the most drive and Hard the sharpest knee.
+            //
+            // AMOUNT BOTH DRIVES AND MIXES, and the mix is what makes zero mean zero. The limiter
+            // bends the curve at every drive setting, unity included - x/(1+x^2)^(1/2) is already
+            // 3 dB down at full scale with no drive at all - so a dial that only fed the drive
+            // would leave the module audibly distorting with its depth control shut. Crossfading
+            // the shaped signal against the dry one by the same dial is the only construction here
+            // that reaches genuine transparency at 0 and full character at 127. Which of the two
+            // the instrument actually does is UNMEASURED; that it is transparent at 0 is not in
+            // doubt, since the module has no separate bypass reading of its own dial.
+            static const double kKnee[]  = {2.0, 16.0, 3.0, 6.0};
+            static const double kDrive[] = {8.0, 8.0, 24.0, 32.0};
+            uint32_t            type     = (spec->shaperCurve < 4) ? spec->shaperCurve : 0;
+            double              driven   = x * (1.0 + (amount * kDrive[type]));
+            double              shaped   = driven / pow(1.0 + pow(fabs(driven), kKnee[type]),
+                                                        1.0 / kKnee[type]);
+
+            // Asym shapes only the positive peaks (manual), so the negative half stays linear -
+            // and then meets the headroom, which is where its own harmonics come from.
+            if ((spec->shaperSym == false) && (driven < 0.0)) {
+                shaped = shaper_clamp(driven);
+            }
+            return ((1.0 - amount) * x) + (amount * shaped);
+        }
+        case eShaperClip:
+        default:
+        {
+            // "Decreasing the clip level limit below the normal headroom": the dial LOWERS the
+            // threshold rather than raising a gain, which is why the manual warns the level drops
+            // as it opens and suggests a feedback loop to get it back. 36 dB of travel is a guess;
+            // only the direction is from the manual.
+            double t = pow(2.0, -6.0 * amount);
+
+            if (x > t) {
+                return t;
+            }
+
+            if ((spec->shaperSym == true) && (x < -t)) {
+                return -t;
+            }
+            return x;
+        }
+    }
+}
+
 // TimeMod is NOT implemented: the module has a modulation input for its width and this ignores it,
 // which is honest rather than inventing a law for it. Nothing measured so far uses it.
 static double pulse_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
@@ -5538,6 +5894,16 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodePulse:
         {
             value[n][0] = pulse_step(voice, n, a, spec);
+            break;
+        }
+        case eNodeShaper:
+        {
+            // `a` is input leg 0. WaveWrap is the one shaper whose Mod jack comes first, so for it
+            // the signal is on leg 1 and the modulation on leg 0 - spec->shaperIn says which.
+            double sig = (spec->shaperIn == 0) ? a : signal_in(spec, value, 1);
+            double mod = (spec->shaperIn == 0) ? signal_in(spec, value, 1) : a;
+
+            value[n][0] = shaper_step(sig, mod, spec);
             break;
         }
         case eNodeMix:

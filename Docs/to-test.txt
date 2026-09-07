@@ -177,3 +177,15 @@ CROSS-PROJECT
   the instrument. No captures exist for it, so this is unverified: check the six waveforms sound like
   OscShpB's corresponding ones (Sine1-4, TriSaw, and A's sixth should match B's SymPulse), and that
   Shape sweeps them the same way.
+- ***THE WHOLE SHAPER GROUP NOW PLAYS (2026-09-07)*** - Clip, Overdrive, Saturate, ShpExp, WaveWrap,
+  ShpStatic and Rect all rendered silence before. Only TWO of the seven are known rather than assumed:
+  Rect is exact (the manual states all four operations) and ShpStatic's four buttons name their own
+  curves. For the rest the SHAPE follows the manual and the DEPTH LAW is a guess, so this wants ears
+  first and a capture second. Listen for: Rect's four modes doing what their names say on a sine;
+  ShpStatic's Inv x3/Inv x2 brightening and x2/x3 thinning; Overdrive transparent with Amount at 0 and
+  the four types getting progressively harder; Saturate lifting quiet material; ShpExp doing the
+  opposite; WaveWrap breaking into extra folds as it opens; Clip getting QUIETER as its dial opens
+  (that is the module, not a bug - manual p.205). Also check the parameter ORDER, which was read off
+  the layout tables and not the instrument: WaveWrap in particular is the one module whose Mod jack
+  and mod dial come BEFORE its signal input and its Amount, and if that is wrong its dial will do
+  nothing and its Mod jack will be shaping the audio.
