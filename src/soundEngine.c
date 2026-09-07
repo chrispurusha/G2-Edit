@@ -929,12 +929,18 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // every sixteen dial steps, right across the usable range. Hence exp(-dial / K) rather than the
 // pow((127 - dial)/127, curve) this replaces.
 //
-//     dial            32     48     64     80     96    112
-//     instrument   -26.6  -15.2   -8.9   -5.0   -2.9   -1.5    dB/s, 8 kHz minus 125 Hz
-//     engine       -24.0  -10.9   -7.1   -5.0   -4.4   -3.8
+//     dial            48     64     80     96    112
+//     instrument   -15.2   -8.9   -5.0   -2.9   -1.5    dB/s, 8 kHz minus 125 Hz
+//     engine       -17.7   -8.6   -4.5   -2.5   -1.4
 //
-// RMS error 2.2 dB/s against 9.2 for the mapping it replaces, and the low bands now track the
-// instrument to about 0.5 dB/s at EVERY setting of the dial.
+// RMS error 1.2 dB/s over that range, against 9.2 for the mapping this replaces, and the low bands
+// track the instrument to about 0.5 dB/s at EVERY setting of the dial. From Brightness 64 upward
+// every one of the seven bands matches within about 0.5 dB/s.
+//
+// REFITTED AFTER THE INTERPOLATOR CHANGED, and that order matters: these constants absorb whatever
+// else in the loop costs high frequency, so replacing the linear interpolation with a Hermite one
+// (see RVDLYM) invalidated the previous pair and they had to be measured again. Any future change
+// to the modulation or the interpolator invalidates them the same way.
 //
 // THE CEILING IS NOT COSMETIC. _MAX is above 1.0 because the fit wants more damping at the dark end
 // than a one-pole coefficient can express, so the curve is clamped; the clamp bites below about dial
@@ -942,13 +948,17 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // 500 Hz is far enough into the noise that nothing can be fitted to it). The constant is not a
 // coefficient — the ceiling is.
 //
-// WHAT IT CANNOT REACH, and it is structural rather than a bad fit: the engine keeps about 4 dB/s of
-// excess HF decay at the bright end of the dial where the instrument reaches 1.5. That floor does not
-// move with these two constants because it is not damping — it is the modulation's own linear
-// interpolation, a lowpass in the loop. Removing it means a better interpolator or less modulation
-// depth, not a different number here.
-#define REVERB_DAMP_MAX        (1.6000)
-#define REVERB_BRIGHT_K        (25.000)
+// THE DARK END IS EXTRAPOLATED, NOT FITTED, and it over-damps: at Brightness 48 the engine reads
+// -28.6 dB/s at 8 kHz against the instrument's -20.3, and below that the gap widens. Two reasons,
+// both worth knowing before anyone "fixes" it. The exponential cannot express the dark end without
+// _MAX exceeding 1.0, which is not a valid one-pole coefficient, so it is clamped — and the clamp is
+// what governs everything below about dial 29. And the hardware sweep cannot settle it either: at
+// Brightness 0 everything above 500 Hz is in the noise, at 16 it is close to it, and the engine's own
+// decay fit goes unstable there too, swinging non-monotonically with the ceiling. Both sides stop
+// measuring in the same place. A better answer needs a quieter capture of the dial's lower third,
+// not a different constant here.
+#define REVERB_DAMP_MAX        (2.5000)
+#define REVERB_BRIGHT_K        (28.000)
 #define REVERB_DAMP_CEILING    (0.9000)
 // RE-FITTED 2026-08-18 FOR THE NEW STRUCTURE. The old 0.15 was fitted against a comb bank, where
 // the damping sat inside every comb's own loop and bit hard. In a feedback network the signal passes
@@ -3951,14 +3961,33 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
             // A MODULATED LINE. The read position sweeps across the slack at the end of the span,
             // interpolating between the two samples it falls between -- without that the delay would
             // step a whole sample at a time and the steps would be heard as clicks.
-#define RVDLYM(n, off)                                            \
-   do {                                                           \
-       double   rd = (double)(gRvAddr[(n) + 1] - modMax) + (off); \
-       uint32_t ri = (uint32_t)rd;                                \
-       double   fr = rd - (double)ri;                             \
-       double   d  = (RVR(ri) * (1.0 - fr)) + (RVR(ri + 1) * fr); \
-       RVW(gRvAddr[n], v);                                        \
-       v = d;                                                     \
+// FOUR-POINT HERMITE, NOT LINEAR, and the reason is measurable rather than tasteful. Linear
+// interpolation between two samples has the response |1 - fr + fr*e^-jw|, which at a half-sample
+// offset is a complete null at Nyquist — a lowpass sitting inside the feedback loop, applied on
+// every pass. Measured, it left the engine with about 4 dB/s of excess high-frequency decay at the
+// bright end of the Brightness dial that no damping constant could remove, because it is not
+// damping. A Catmull-Rom cubic is flat to far higher frequency for four multiplies more.
+//
+// THE WINDOW IS BIASED DOWN BY THREE SAMPLES so all four taps stay inside this line's own span. The
+// read sweeps [addr[n+1] - modMax - 3, addr[n+1] - 3], so ri+2 cannot reach addr[n+1] and read the
+// NEXT line's first cell, and ri-1 stays clear of addr[n]. Three samples of delay is nothing beside
+// a line of thousands, and reading a neighbour's span would mix two lines together.
+#define RVDLYM(n, off)                                                   \
+   do {                                                                  \
+       double   rd = (double)(gRvAddr[(n) + 1] - modMax - 3) + (off);    \
+       uint32_t ri = (uint32_t)rd;                                       \
+       double   fr = rd - (double)ri;                                    \
+       double   y0 = RVR(ri - 1);                                        \
+       double   y1 = RVR(ri);                                            \
+       double   y2 = RVR(ri + 1);                                        \
+       double   y3 = RVR(ri + 2);                                        \
+       double   d  = y1 + (0.5 * fr * ((y2 - y0)                         \
+                                       + fr * ((2.0 * y0) - (5.0 * y1)   \
+                                               + (4.0 * y2) - y3         \
+                                               + fr * ((3.0 * (y1 - y2)) \
+                                                       + y3 - y0))));    \
+       RVW(gRvAddr[n], v);                                               \
+       v = d;                                                            \
    } while (0)
 
 #define RVAP(n, g)                       \
