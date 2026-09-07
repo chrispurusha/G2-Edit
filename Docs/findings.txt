@@ -8178,3 +8178,320 @@ Shortening the gate to Time 0 and using a refractory of 40% of the expected peri
 identical to the millisecond. Also, the "Rate Sub 80 -> 1.776 s" reading taken earlier in the day was
 an artefact of the broken polling helper - that write never landed, and the LFO was still wherever it
 had been. Discard it.
+
+THE COMPRESSOR WORKS AS AN ABSOLUTE LEVEL PROBE (2026-09-07) - CT's idea, built and validated. This is
+the instrument the pad work needed and did not have: everything measurable at the output is a RATIO,
+because every path runs through several pads and none is a known 0 dB reference. The compressor's
+threshold IS one, and it is inside the patch.
+
+  THE METHOD: feed the signal to a Compress module, set Ratio to maximum and Attack to Fast, then
+  step the Threshold down and poll the backdoor's LEDDUMP until the gain-reduction meter first leaves
+  zero. The threshold at that point is the signal's level in the instrument's own dB scale. The meter
+  is a bitmask that fills progressively - 0, 1, 7, 31, 63, 127, 255 - so "first movement" is
+  unambiguous, and CT confirmed by eye that the LEDs light when LEDDUMP says they do.
+
+  THE MANUAL CONFIRMS THE SCALE: "Thresh ... Range: -30 to 11 dB and Off", which is exactly
+  soundEngine.c's COMP_THRESHOLD_OFFSET_DB of 30 with Off at raw 42. And "This LED indicator shows the
+  gain reduction of the SUM of the left and right channels in dB", so the probe reads the L+R sum -
+  feed one channel only, or halve, if a single leg's level is what is wanted.
+
+  VALIDATED AGAINST A KNOWN STEP, which is what makes it trustworthy: sweeping the Fx-In pad through
+  its four settings moved the trigger point by exactly 6 dB each time.
+
+    Fx-In pad     +6dB    0dB    -6dB   -12dB
+    triggers at   +5 dB   -1 dB  -7 dB  -13 dB
+
+  Three consecutive 6 dB steps. That is a third independent confirmation of the Fx-In pad law, after
+  the direct level capture and the manual.
+
+  THE ANCHOR FROM THIS SESSION: with the Fx-In pad at 0 dB, the rig's saw triggers at -1 dB, and the
+  same signal reads -42.4 dBFS RMS at the QU-24. So on this rig, and at these desk settings,
+  G2 internal -1 dB corresponds to -42.4 dBFS at the converter.
+
+AN ODDITY LEFT OPEN: sine, saw and square all trigger at the SAME threshold (raw 29) despite differing
+4.5 dB in peak and 4.4 dB in RMS as measured at the converter. So the detector is responding to
+neither peak nor RMS of what reaches the output. It may be reading a pre-band-limited amplitude, or
+the summed sidechain, or something smoothed. It does not affect the probe's USE - the 6 dB validation
+above is waveform-agnostic and that is what matters - but anything that needs the detector's actual
+law should settle it first. G2Demo's compressor Compute() is the obvious place to look, remembering
+that it is a hypothesis generator and that constants are usually not in it.
+
+FOUR LEVEL MEASUREMENTS WITH THE COMPRESSOR PROBE AND THE CONVERTER (2026-09-07).
+
+1. MIX4TO1C'S LEVEL TAPER IS A CUBE, NOT A SQUARE. soundEngine.c carried a square with a comment
+   admitting it was an approximation "which the manual does not state numerically", so it was measured
+   instead - by sweeping the dial and reading the converter, which resolves far finer than the
+   compressor probe because a taper is a RATIO and needs no absolute reference.
+
+     dial        110     96     80     64     48
+     measured  -3.72  -7.23 -11.91 -17.61 -24.86 dB
+     cube      -3.74  -7.29 -12.04 -17.86 -25.35
+     square    -2.50  -4.86  -8.03 -11.90 -16.90
+
+   The square was nearly 6 dB out by mid-dial. Dial 16 read -49.5 against a cube's -54.0 and was
+   discarded: at -91.9 dBFS it is under the converter's floor, which ADDS energy and always flatters
+   the bottom of a taper. FIXED. Lin mode was checked at the same time and was already right (-2.50
+   and -6.03 dB at dials 96 and 64 against a plain ratio's -2.43 and -5.95).
+
+2. MIX4TO1C'S PAD HAS THREE POSITIONS: 0.00, -6.01, -12.04 dB. The table declared two. This one is
+   REAL rather than an artefact of driving the parameter out of range, because the DSP CLAMPS - writing
+   3 reads back as 3 and sounds identical to 2. Matches the manual's "-6 dB (or -12dB)". FIXED in both
+   the string map and the engine, which previously gave 0.5 for anything non-zero and so was 6 dB out
+   at the third position.
+
+3. THE OUTPUT PAD IS 6 dB PER STEP AND IS NOT CLAMPED ON THE WIRE. A 2-Out steps 0 / +6.02 / +12.04 /
+   +18.06 dB and keeps going; a 4-Out does the same. So the earlier "three positions" reading was ME
+   WRITING VALUES THE DIAL CANNOT SELECT, not a discovery - the manual says "on the Output modules
+   between 0dB and +6dB" and the two-entry map is right. NO CHANGE. The caveat is general and worth
+   remembering: DEVSET reaches the DSP directly, so a backdoor sweep can drive a parameter past its
+   own menu and invent positions that no user can reach. Check for a clamp before believing an extra
+   one.
+
+4. ABSOLUTE REFERENCES: the anchor from the compressor probe stands (Fx-In pad 0 dB puts the rig's saw
+   at -1 dB internal, reading -42.4 dBFS at the converter), but the individual absolute gains of the
+   Fx-In and 2-Out are still not separated - the probe reads a point in the chain, not one module's
+   contribution, and every path still runs through several.
+
+RETRACTED, AND THEN SETTLED: I read an off-by-one in the output modules' connector order - our index 0
+appearing to feed G2 Out 2 and index 1 to feed Out 1, on both a 2-Out and a 4-Out. CT identified it as
+the patchbay: the 1/2 cables were swapped. With them corrected and a single 2-Out input fed in
+isolation, connector index 0 lands on G2 Out 1 at -42.39 dBFS with Out 2 silent at -102. OUR CONNECTOR
+TABLE IS RIGHT and there is no bug to fix.
+
+NOTHING EARLIER IS INVALIDATED BY THE SWAP, which is worth stating rather than assuming: the pad and
+taper measurements are RATIOS taken on one channel at a time, so exchanging two channels cannot move
+them; the chorus stereo work read outputs 3/4, which were not swapped; and the dry reference is mono -
+its two channels correlated at 1.0000 - so a swap between them is invisible by construction.
+
+THE LESSON IS ABOUT ATTRIBUTION, not cabling. Two modules agreeing on a wrong-looking mapping felt
+like corroboration and was actually one common cause upstream of both. A second module on the same
+rig is not an independent check of anything the rig itself could be doing.
+
+THE COMPRESSOR IS A LEVELLER, NOT A THRESHOLD-AND-RATIO COMPRESSOR (2026-09-07). The engine models it
+the conventional way and IGNORES RefLvl entirely - COMP_PARAM_* has no entry for it - and that is
+structurally wrong rather than mis-tuned.
+
+WHAT IT ACTUALLY DOES. The manual says it plainly and I had skimmed past it: "With the Ref Level knob
+you set the level to compress the stereo signals TOWARDS." Measured with the signal at -1 dB, threshold
+-15 dB and ratio 80:1, the output tracks RefLvl one for one:
+
+  RefLvl     +12    +6     0     -6    -12    -18    -24    -30 dB
+  output   -30.24 -36.16 -42.08 -48.10 -54.02 -57.03 -57.03 -57.03 dBFS
+
+Six-dB steps in give 5.92, 5.92, 6.02, 5.92 out, and then it FLOORS at -57.03. That floor is the
+threshold: -15 dB internal works out at -56.4 dBFS on this rig, within 0.6 dB of it. So the
+compressor drives the output towards RefLvl and will not push it below the threshold.
+
+WHAT RATIO DOES is set how far towards RefLvl it gets. With RefLvl 11 dB under the signal:
+
+  raw            0     5    10    17    25    34    45    66
+  ratio        1.0   1.5   2.0   3.4   5.0   9.5  20.0  80.0 :1
+  fraction    0.00  0.36  0.54  0.75  0.86  0.96  1.02  1.06
+
+against (1 - 1/ratio) of 0.00, 0.33, 0.50, 0.71, 0.80, 0.90, 0.95, 0.99. The small excess is the
+normalising gap being 11 dB by a probe quantised to 1 dB; at 11.6 dB the two series coincide. So
+
+    gain reduction = (signal - RefLvl) * (1 - 1/ratio),  bounded below by the threshold
+
+and compressor_ratio()'s values are CONFIRMED - they were transcribed from the instrument's formatter
+rather than measured, and the measurement now backs them, including the decade jump above raw 34 and
+the 80:1 top that matches the manual.
+
+WHY THE FIRST RATIO SWEEP READ ZERO, which is worth keeping: RefLvl sat at 0 dB and the signal was at
+-1 dB, so the target was already the signal and no ratio could move it. A sweep that produces a flat
+line is not always a dead control - check what it is being asked to move TOWARDS.
+
+NOT FIXED HERE. Rewriting the compressor is a structural change - a new parameter, a different gain
+computation and an attack/release envelope that now chases a target rather than a threshold overshoot -
+and it wants doing deliberately rather than at the end of a long session. The measurements above are
+what to build against.
+
+COMPRESSOR REWRITTEN AS A LEVELLER (2026-09-07). compress_step() divided the excess over the threshold
+by the ratio - the textbook downward compressor - and ignored Ref Level completely. It now implements
+what the measurements say:
+
+    out_dB = env_dB - (env_dB - target_dB) * (1 - 1/ratio),   target = max(RefLvl, threshold)
+
+written as a gain, pow(target / env, 1 - 1/ratio). It needs no special cases: at ratio 1 the exponent
+is zero and the gain is exactly 1, and as the ratio grows the gain tends to target/env, putting the
+output exactly on Ref Level. The threshold still gates - below it nothing happens, which is what stops
+a leveller lifting silence into noise between phrases - and it also bounds the target from below.
+
+VERIFIED AGAINST EVERY MEASURED POINT. The ratio law fits to 0.10 dB worst case across eight settings
+from 1.0:1 to 80:1 with one consistent signal level. The Ref Level sweep's SHAPE is exact - six dB in,
+six dB out, over seven settings, including the floor where Ref Level drops below the threshold - with a
+uniform 0.7 dB offset that is the compressor probe's own 1 dB quantisation on the signal estimate, not
+a shape error.
+
+A NEW FIELD AND A NEW PARAMETER INDEX: tEngineNode gained refLevel and COMP_PARAM_REFLVL is 4. Ref
+Level shares the threshold's dB offset and has no "Off" position - the manual gives -30 to +12 dB and
+the dial is 43 steps, so raw 0..42 maps straight onto it.
+
+WHAT THIS CHANGES AUDIBLY: a compressor set with Ref Level ABOVE the signal now boosts, which the old
+code could never do in any setting. Patches whose compressor was doing nothing may now be doing a
+great deal, and the useful range of the Ratio dial has moved with it.
+
+THE GAIN-REDUCTION METER DOES NOT SHOW APPLIED GAIN - and this makes the level probe BETTER, not worse
+(2026-09-07, prompted by CT asking whether the compressor rewrite invalidated the level work).
+
+With Ref Level at 0 dB, ABOVE the -1 dB signal, and ratio 80:1, the leveller law says the gain is a
+constant +1 dB boost whatever the threshold. Measured, the OUTPUT is indeed constant:
+
+  threshold  +2    -1    -4    -7   -10   -13   -16   -22 dB
+  meter       0     1     7    31    63   127   255   255
+  output  -42.39 -42.15 -42.11 -42.07 -42.13 -42.10 -42.16 -42.09 dBFS
+
+The output moves by 0.04 dB across the whole sweep - noise - while the meter climbs through six steps.
+So the two measure different things. Against the signal's excess over the threshold (0, 3, 6, 9, 12,
+15 dB) the meter lights 1, 3, 5, 6, 7 and 8 LEDs - the values are 2^n-1, i.e. a bar - so it is
+displaying HOW FAR OVER THRESHOLD the signal is, at roughly one LED per 2 to 3 dB. The manual's "shows
+the gain reduction" is loose.
+
+WHY THAT HELPS: the probe uses only the FIRST movement of the meter, which marks the signal crossing
+the threshold - and that crossing is now known to be independent of Ref Level and of Ratio. A meter
+showing true applied gain would have been contaminated by both. Nothing measured with the probe needs
+revisiting.
+
+AND NOTHING ELSE DOES EITHER. Every level LAW was read at the converter, not through the compressor:
+the Fx-In pad (three independent ways, one of them the manual), the output pad, the mixer's cube taper,
+its three-position pad and its summing were all measured with the compressor absent or its threshold
+Off. The probe contributed one thing only - the absolute anchor, that the rig's saw sits at -1 dB
+internal - and that rests on the threshold-crossing behaviour just confirmed.
+
+THE ENGINE NOW DRIVES MODULE METERS (2026-09-07, CT's suggestion). Until now the LED and volume values
+on a module face came only from the instrument over USB, so with the sound engine playing the faces
+showed either nothing or a stale reading from the hardware. The compressor is the first module wired
+up, and it is the right first one: its meter's meaning has been measured, and watching it move is how
+you tell a leveller is doing anything.
+
+THE SAME REPRESENTATION AS THE USB PROTOCOL, on CT's steer, and it costs nothing to do so: usbComms.c
+reads a volume as an 8-bit field and the renderer already knows how to draw one, so the engine's meter
+needs no new path and no new drawing code. For the compressor that value is a bar, (1 << lit) - 1,
+which is literally what the instrument sends - 1, 7, 31, 63, 127 and 255 were read off it.
+
+HOW IT IS PLUMBED: the audio thread stores into gModuleMeter[location][moduleIndex], a flat atomic
+array, and the UI thread loads from it through sound_engine_module_meter(). Indexed by module rather
+than by node so a reader needs neither the engine's snapshot nor the database lock - the worst a race
+can do is show a meter one frame old. render_volume_common() prefers the engine's value and falls back
+to the database whenever the engine is off or has nothing for that module, so a patch viewed with the
+engine stopped looks exactly as it always did.
+
+A WRITTEN FLAG PACKED WITH THE VALUE, in ONE word (CT's call, and the better design). The first
+version stored value + 1 so that zero could mean "no meter here" - which works, but shifts the value
+and so breaks the thing the feature exists for: the engine's number has to stay byte-identical to the
+USB stream's so the two can be put side by side without remembering to undo an offset. METER_WRITTEN
+sits above METER_VALUE_MASK, the same 8 bits usbComms.c reads.
+
+ONE word rather than two atomics, also CT's call: the flag and the value must come from the SAME
+store. Split across two, a reader could take the flag from one update and the value from another and
+find a meter that claims to be valid while carrying a number from a different moment. The array is
+cleared on reset, so stopping the engine or loading another patch leaves nothing stale behind.
+
+WHAT THAT BUYS: because the engine's value is now directly comparable with module->volume.value[], the
+same face can be used to check the engine AGAINST the instrument rather than merely to show it -
+which is the natural next step for the A/B review.
+
+THE LFO LED, MEASURED THEN IMPLEMENTED (2026-09-07, CT's suggestion). Rather than assume what it does,
+it was polled through LEDDUMP against that command's OWN timestamps - which is what makes the timing
+trustworthy, since the polling interval is uneven and counting samples would have given the wrong
+period. At Rate Lo 60, 90 samples over 6.65 s:
+
+  LED period    1.914 s = 0.5226 Hz     (rising edges 1.927, 1.834, 1.980 s apart)
+  LFO rate      0.5110 Hz predicted by the measured Rate Lo law
+  duty cycle    53.3%, within the 4% granularity 0.075 s samples give on a 1.9 s period
+
+So the LED runs at the LFO rate with a half-cycle duty - it follows the SIGN of the output - and its
+value is 1, which is GREEN in the two-bit field the renderer parses (bit 0 green, bit 1 red).
+
+The engine now publishes that, alongside the compressor's meter and through the same packed
+flag-and-value word. Only voice 0 publishes: a polyphonic patch runs one LFO per voice while the face
+has one LED, and the instrument shows a single blink rather than one per sounding voice.
+
+LEVEL METERS FROM THE ENGINE TOO (2026-09-07, CT's suggestion, following the compressor's). Mix4to1C,
+Fx-In and the Out modules now drive their own faces while the engine plays.
+
+THE SCALE, MEASURED: the renderer takes the low nibble as a level 0..15, green up to 7 and yellow
+above. Sweeping the mixer through the cube taper and reading the 2-Out's meter against the converter:
+
+  level dBFS  -42.4 -46.1 -49.6 -54.3 -60.0 -67.2 -77.1 -91.9
+  meter           7     7     6     6     5     3     2     0
+
+Converted to internal dB with the compressor probe's anchor, a signal at 0 dB reads about 7 and the
+meter loses roughly one step per 7 dB below it. AN APPROXIMATION, and flagged as one in the code:
+eight coarse points cannot separate that slope from a nearby one, and it is confounded with whether
+the instrument's meter reads peak or RMS - this saw's 8 dB crest would shift the whole scale. Good
+enough to display, not something to depend on.
+
+A PEAK FOLLOWER WITH A 200 ms RELEASE sits behind it, so the meter behaves like a panel meter instead
+of flickering at audio rate, and the UI's frame rate can sample it without aliasing.
+
+BOTH LEGS ARE CARRIED, packed either side of the written flag in the one atomic word - leg 0 in the
+low byte, leg 1 above METER_LEG_SHIFT. A stereo module draws two meters, and publishing only the left
+would leave the right showing whatever the instrument last sent, which is worse than showing nothing
+because it looks live and is not. The compressor deliberately leaves leg 1 at zero: its face has one
+meter, and its value is a BAR rather than a level.
+
+OSCA IMPLEMENTED (2026-09-07). The engine covered two of the instrument's twelve oscillators - OscB
+and OscShpB - and OscA was the obvious third because its CAPTURES WERE ALREADY ON DISK
+(~/Documents/GitHub/G2Captures/osca/) from an earlier session and had never been used.
+
+It shares the oscillator DSP completely. What differs is only where its dials sit and what its Wave
+menu offers: no Shape and no FM section, so its parameters pack four indices tighter, and its
+waveforms are {Sine, Tri, Saw, Sqr50, Sqr25, Sqr10} against OscB's {Sine, Tri, Saw, Sqr, DualSaw} -
+three FIXED pulse widths where OscB has one square whose width a dial varies. Those three are reached
+through the Shape the DSP already takes: wave_pulse_duty() is 0.5 - shape * 0.49, so shapes of 0,
+0.5102 and 0.8163 land exactly on 50%, 25% and 10% and the oscillator itself needed no change.
+
+NOT YET VERIFIED AGAINST THE CAPTURES. This is implemented from the module definition and the shared
+DSP, not fitted to measurement - the osca/ captures (wave, low, cycles) are sitting there and running
+tools/harmonics.py over them against a render is the obvious next step. Until that is done OscA is
+"plays, and plausibly right" rather than "measured".
+
+OSCA VERIFIED AGAINST ITS CAPTURES (2026-09-07). The osca/ set sweeps param 4, the Waveform menu, over
+all six settings, so the waveforms could be checked without touching the instrument. Harmonics
+relative to the fundamental at 328.77 Hz:
+
+  wave      h2   h3   h4   h5   h6   h7   h8   h9  h10  h11  h12
+  Sine     -99  -97 -104 -106 -102 -110 -106  -98  -99 -103 -109
+  Tri     -101  -56  -96  -67 -108  -87  -93 -108  -96  -98  -97
+  Saw      -16  -46  -48  -53  -67  -72  -70  -78  -88  -81  -88
+  Sqr50   -102  -46 -108  -53  -98  -71 -119  -78 -110  -82  -98
+  Sqr25    -13  -46 -102  -53  -64  -71 -102  -78  -84  -82 -119
+  Sqr10    -10  -36  -37  -40  -55  -51  -50  -56  -70  -68  -65
+
+THE PULSE WIDTHS ARE CONFIRMED, which is what the implementation actually rested on. A pulse of duty d
+nulls harmonic n whenever n is a multiple of 1/d, and that is a structural signature nothing
+downstream can move:
+
+  Sqr50  nulls at 2, 4, 6, 8, 10 and 12, every one below -98 dB   -> 50%
+  Sqr25  nulls at 4, 8 and 12 (-102, -102, -119)                  -> 25%
+  Sqr10  a null at 10 (-70, against -56 and -68 either side)      -> 10%
+
+Sine is pure to -97 dB, Tri carries odd harmonics only, Saw carries all of them. So the six waveforms
+are the six the menu names and the three fixed duties are the ones the engine now produces.
+
+WHAT IS NOT CONFIRMED IS THE HARMONIC ROLL-OFF. The saw reads -16 dB at h2 where an ideal one gives
+-6, and this project's own reference figure for a correctly analysed saw is -6.0/-9.5/-12.0/-14.0, so
+something in the capture patch - a filter after the oscillator is the obvious candidate - is shaping
+these. The NULL POSITIONS survive that and the levels do not, so the waveform identities and duties
+stand while the roll-off needs a capture whose patch is known. tools/harmonics.py could not be used
+for any of this: it fails at import, "No module named 'wav'".
+
+OSCSHPA IMPLEMENTED (2026-09-07). The engine now covers four of the instrument's twelve oscillators -
+OscB, OscShpB, OscA and OscShpA. This one shares OscShpB's DSP entirely; what differs was read OFF THE
+INSTRUMENT rather than inferred from the resource tables, which is what made it quick and safe:
+
+  ITS WAVEFORM IS A PARAMETER, NOT A MODE. A PARAMDUMP of a freshly added OscShpA reports
+  "modes count=0" where OscShpB has one. Guessing a mode index from the order of menu-type rows in
+  moduleResources.h would have been wrong, and silently - a mode that does not exist reads zero.
+
+  ITS PARAMETERS RUN IN A DIFFERENT ORDER, and the same dump pins them exactly: 64 64 1 0 0 0 0 0 0 0 1
+  puts Kbt at index 2 and the power button at 10, so Tune/Cent/Kbt/PitchMod are 0..3, Shape is 7,
+  Waveform 9 and Active 10.
+
+  ITS WAVE MENU IS OSCSHPB'S WITH TWO REMOVED: {Sine1, Sine2, Sine3, Sine4, TriSaw, SymPulse} against
+  {Sine1, Sine2, Sine3, Sine4, TriSaw, DblSaw, Pulse, SymPulse}. The first five coincide and A's sixth
+  is B's eighth, which is the whole of kShpAWave.
+
+NOT VERIFIED AGAINST CAPTURES - there are none for OscShpA. It plays and its waveform mapping follows
+from OscShpB's, which IS measured, but nothing has been compared against the instrument.

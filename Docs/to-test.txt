@@ -151,3 +151,29 @@ CROSS-PROJECT
   much less savage in its lower half - the old curve hit its ceiling below dial 19 - and slightly
   darker at the top. Listen at Brightness 24-48 especially, which is where the old law was worst,
   and check a Small room does not now sound under-damped.
+- ***COMPRESSOR REWRITTEN AS A LEVELLER (2026-09-07) - THE BIGGEST BEHAVIOUR CHANGE OF THE DAY.*** It
+  was a downward compressor that ignored Ref Level; the instrument drives the signal TOWARDS Ref Level
+  and will BOOST when Ref Level is above it, which the old code could never do. Verified against
+  hardware to 0.10 dB on the ratio law and exactly on the Ref Level shape. Expect patches whose
+  compressor previously did nothing to now do a lot. Listen with Ref Level both above and below the
+  signal, and check the threshold still gates cleanly so quiet passages are not lifted into noise.
+- ***ENGINE-DRIVEN MODULE METERS (2026-09-07), new feature - needs an eye rather than an ear.*** With
+  the sound engine playing, a Compress module's meter should now move by itself, driven by the engine
+  instead of the instrument. Check: it moves with the signal; it reads zero below the threshold; it
+  does NOT blank other modules' meters when the engine starts; and with the engine STOPPED every meter
+  behaves exactly as before. LFO LEDs are wired up too: an LfoShpA's LED should blink at the LFO rate,
+  half on and half off, green - and at high rates it should blink rather than sit at a steady half
+  brightness. Mix4to1C, Fx-In and the Out modules now drive their own LEVEL meters too - check both
+  halves of a stereo pair move, that they fall smoothly rather than flicker, and that they go green
+  to yellow around the top of the scale. Every other module still shows the USB value.
+- ***OSCA NOW PLAYS (2026-09-07)*** - patches using it rendered silence before. Implemented from the
+  module definition and the shared oscillator DSP, NOT yet checked against the osca/ captures that
+  have been on disk since an earlier session. Listen for: the three fixed squares (Sqr50/25/10)
+  sounding progressively thinner, Tune and Fine tracking as OscB's do, and Kbt behaving. The WAVEFORMS
+  are now verified against the captures - all six identified and the three duties confirmed at 50/25/10
+  from their harmonic nulls - so what remains for the ear is pitch, Kbt and level.
+- ***OSCSHPA NOW PLAYS (2026-09-07)*** - patches using it rendered silence before. Shares OscShpB's
+  measured DSP; its parameter indices and the fact its Waveform is a param not a mode were read off
+  the instrument. No captures exist for it, so this is unverified: check the six waveforms sound like
+  OscShpB's corresponding ones (Sine1-4, TriSaw, and A's sixth should match B's SymPulse), and that
+  Shape sweeps them the same way.

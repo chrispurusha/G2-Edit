@@ -70,7 +70,11 @@ const char *             padStrMap[]                             = {"0dB", "+6dB
 // -12dB)." So it attenuates, and soundEngine.c's 0.5 when engaged is right where the Output module's
 // was not. UNMEASURED, and the manual's "(or -12dB)" hints at a THIRD position this two-entry table
 // cannot hold - so the value count may be wrong as well as the strings were.
-const char *             mixerPadStrMap[]                        = {"0dB", "-6dB", NULL};
+// THREE positions, measured 2026-09-07: 0.00, -6.01 and -12.04 dB, with the parameter clamping at 2
+// (writing 3 reads back 3 but sounds identical to 2). The table used to declare TWO, which matches
+// the manual's phrasing - "attenuate the levels on all mixer inputs by -6 dB (or -12dB)" - only if
+// you read the parenthesis as a second position rather than an aside. It is a second position.
+const char *             mixerPadStrMap[]                        = {"0dB", "-6dB", "-12dB", NULL};
 const char *             db12PadStrMap[]                         = {"+6dB", "0dB", "-6dB", "-12dB", NULL};
 const char *             db12BPadStrMap[]                        = {"0dB", "-6dB", "-12dB", NULL};
 const char *             gcStrMap[]                              = {"GC", "GC", NULL};
@@ -1117,7 +1121,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMix4to1C,   paramTypeEnable,         {{   25,    -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                // 123 Enable2
     {moduleTypeMix4to1C,   paramTypeEnable,         {{   45,    -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                // 123 Enable3
     {moduleTypeMix4to1C,   paramTypeEnable,         {{   65,    -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                // 123 Enable4
-    {moduleTypeMix4to1C,   paramTypeMenu,           {{   16,     9}, { 7,  7}}, anchorTopLeft,     "Pad",            2,   0, mixerPadStrMap,                        NULL          },                // 123 Pad
+    {moduleTypeMix4to1C,   paramTypeMenu,           {{   16,     9}, { 7,  7}}, anchorTopLeft,     "Pad",            3,   0, mixerPadStrMap,                        NULL          },                // 123 Pad
     {moduleTypeMix4to1C,   paramTypeMenu,           {{    3,     9}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },                // 123 Exp
     // 124 Mux8-1 -- No params
     // 125 WahWah

@@ -32,6 +32,7 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "waveModels.h"
 #include "moduleGraphics.h"
+#include "soundEngine.h"    // sound_engine_module_meter() - see volume_source()
 #include "splitView.h"
 #include "globalVars.h"
 #include "renderParams.h"
@@ -982,36 +983,53 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
     }
 }
 
+// WHICH SOURCE A METER READS. While the sound engine is playing it knows what a module is actually
+// doing, and that is more useful than the last value the instrument sent over USB - especially for the
+// compressor, where watching the meter is how you tell a leveller is working. The engine publishes the
+// SAME 8-bit value the USB stream carries, so nothing below needed changing to draw it.
+//
+// Falls back to the database whenever the engine is off or has nothing for this module, so a patch
+// viewed without the engine looks exactly as it always did.
+static uint32_t volume_source(tModule * module, uint32_t i) {
+    uint32_t fromEngine = 0;
+
+    if (sound_engine_module_meter((uint32_t)module->key.location, (uint32_t)module->key.index,
+                                  i, &fromEngine) == true) {
+        return fromEngine;
+    }
+    return module->volume.value[i];
+}
+
 void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volumeRef, uint32_t volumeIndex) {
     module->volume.volumeRef = volumeRef;
 
     switch (volumeLocationList[volumeRef].volumeType) {
         case volumeTypeMono:
         {
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 0));
         }
         break;
         case volumeTypeStereo:
         {
             double space = find_volume_meter_config(volumeTypeStereo)->space;
 
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 0)); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
             rectangle.coord.x += (rectangle.size.w + space);
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[1]);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 1));
         }
         break;
         case volumeTypeSequencer:
         {
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 0)); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
         }
         break;
         case volumeTypeQuad:
         {
             double space = find_volume_meter_config(volumeTypeQuad)->space;
 
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 0)); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
             rectangle.coord.x += (rectangle.size.w + space);
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[1]);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 1));
             rectangle.coord.x += (rectangle.size.w + space);
             render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[2]);
             rectangle.coord.x += (rectangle.size.w + space);
@@ -1020,7 +1038,7 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
         break;
         case volumeTypeCompress:
         {
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 0));
         }
         break;
         default:
@@ -1109,7 +1127,15 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
             // symmetric), so this draws the same colours it always did. Which of the two bits is
             // really green is still an assumption — but it is now ONE assumption, in one place,
             // instead of two that only worked together.
+            // Prefer the engine's LED while it is playing - see volume_source() for the reasoning
+            // and sound_engine_module_led() for which modules publish one.
             uint32_t ledVal = module->led.value[ledIndex];
+            uint32_t fromEngine;
+
+            if (sound_engine_module_led((uint32_t)module->key.location, (uint32_t)module->key.index,
+                                        ledIndex, &fromEngine) == true) {
+                ledVal = fromEngine;
+            }
             bool     green  = ledVal & 1;
             bool     red    = (ledVal >> 1) & 1;
 

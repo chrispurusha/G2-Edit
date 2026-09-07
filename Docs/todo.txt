@@ -70,7 +70,13 @@ MEASUREMENT PROGRAMME
 - Finish the EnvADSR oracle at ~/Documents/G2EnvTrace: it compiles and runs but outputs zero until the state-block layout and ENV_TIME_TABLES contents are worked out
 - Reverb Brightness below dial 48 over-damps the top and is extrapolated, not fitted - both sides stop measuring there, so it needs a quieter capture of the dial's lower third
 - Measure the rest of the instrument the way the reverb was: EQs, shapers, the remaining envelopes
-- Absolute internal levels: use the Compressor's threshold + its LED via backdoor LEDDUMP as a calibrated in-patch level probe, rather than clipping (CT's idea 2026-09-07 - see findings.txt)
+- Oscillators: the engine covers OscB, OscShpB, OscA and OscShpA. Eight more exist (OscC, OscD, OscDual, OscMaster, OscNoise, OscPerc, OscPM, OscString) and a patch using any of them renders silence. OscNoise is the next cheap one - no pitch tracking - but needs a noise source the engine does not have
+- tools/harmonics.py is BROKEN: fails at import with "No module named 'wav'", so every harmonic analysis is being written from scratch each time
+- OscA's harmonic ROLL-OFF is unverified - the osca/ captures look filtered (saw reads -16 dB at h2 against an ideal -6), so a capture with a known patch is needed; waveform identities and pulse duties ARE confirmed
+- Compressor UI: draw the settings graphically (threshold, ratio, RefLvl as a transfer curve) - CT's idea 2026-09-07. The live half is DONE: the engine now drives the meter, see findings.txt
+- Extend engine-driven meters/LEDs beyond the compressor and the LFOs: every other module with a volumeType or LEDs still shows only what the instrument last sent
+- Compressor level probe BUILT and validated (see findings.txt); now use it for the unmeasured absolute levels: mixer level-dial law, mixer -6/-12 Pad, 4-Out Pad, FxtoIn/2-Out absolute references
+- Compressor DETECTOR responds to neither peak nor RMS - sine, saw and square all trigger at the same threshold; settle what it reads (the METER is separately understood: it shows excess over threshold, not applied gain)
 - pch2csd (MIT) is an independent cross-check for parameter maps - worth diffing against ours
 
 PROTOCOL AND SECOND OPINIONS (each is a code comment needing hardware or a manual, not a code guess)
