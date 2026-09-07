@@ -2733,6 +2733,18 @@ OPEN WORK
   The engine now renders 12.90 / 13.04 / 13.29 / 13.35 ms left and 11.75 / 11.90 / 12.15 / 12.21 ms
   right — within 0.05 ms of the instrument in every room.
 
+- THE VOICE-PACING TODO IS OBSOLETE, NOT DONE (2026-09-07). The plan was to have measure.py poll
+  DEVNOTES and wait for the instrument's voice to free rather than dwelling a fixed --period. With
+  the excitation free-running from an LFO there is no gate to pace: measure.py already dwells when
+  --gate is absent, which is exactly right, and the LFO's period is chosen from the tail as before.
+  Polling would add backdoor traffic during a capture to solve a problem that no longer exists.
+
+  VERIFIED END TO END, and it reproduces the note-driven result. A Brightness sweep of Small taken
+  with no notes at all — measure.py with no --gate, --period 5.461 --repeats 4 — gives 13 impulses
+  with every gap 5.461 s to the millisecond, and per-setting HF excess of -43.4 / -15.5 / -6.1 dB/s
+  at Brightness 32 / 64 / 96 against the note-gated capture's -46.7 / -17.1 / -6.8. Same measurement,
+  no gate, no drift.
+
 - THE RIG'S EXCITATION FREE-RUNS (2026-09-07) — no notes, and the period does not drift. An LfoShpA
   in "Rate Sub" fires the Pulse directly, so a capture needs no --gate and no DEVNOTE at all.
 
