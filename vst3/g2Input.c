@@ -54,6 +54,7 @@
 #include "g2Menu.h"
 #include "splitView.h"
 #include "fileBrowser.h"
+#include "synthlibPopups.h"    // synthlib_popups_dispatch_scroll() — the wheel, as the app routes it
 #include "mouseTopbar.h"
 #include "topbarResourcesAccess.h"
 
@@ -337,6 +338,24 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
     int32_t pane = 0;
 
     g2_input_set_mouse(x, y);
+
+    // THE POPUPS GET THE WHEEL FIRST, which is the application's very first line in scroll_event()
+    // and was the one input this function never forwarded. The file browser could be dragged by its
+    // scrollbar thumb but not scrolled, and the notch fell through to the canvas hidden behind it.
+    //
+    // The plug-in registers no popups of its own — synthlib_popups_register() is called only from
+    // the application — but it does not need to: SynthLib's own table carries the file browser, the
+    // bank browser and the alert dialog, so dispatching here covers all three exactly as it does in
+    // the application, rather than hand-rolling a file_browser_active() check that would have to be
+    // extended for every popup added later.
+    //
+    // ROWS, NOT PIXELS. A popup's scroll handler counts LIST ROWS, and the application hands it raw
+    // GLFW notches at one notch per row. What arrives here is pixels, because the canvas panes below
+    // want pixels. Dividing by the same WHEEL_SCROLL_STEP the view multiplied by puts a notch back
+    // on one row instead of inventing a second constant that could drift from it.
+    if (synthlib_popups_dispatch_scroll(deltaY / WHEEL_SCROLL_STEP)) {
+        return;
+    }
     pane = split_view_pane_at(gMouse);
 
     if (pane < 0) {

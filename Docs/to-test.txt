@@ -103,3 +103,13 @@ FROM THE 2026-08-30/31 SESSION
 
 CROSS-PROJECT
 - EmuUtility gLcd.pixels data race fix - needs an owner eyeball that the LCD still updates cleanly
+- FILE BROWSER SCROLLING IN THE PLUG-IN (2026-09-07), reported broken under Ableton. g2_input_scroll()
+  never forwarded the wheel to the popups - the application's scroll_event() does it on its first
+  line - so the browser list could only be moved by dragging its scrollbar thumb. Now dispatched
+  through SynthLib's own popup table, which also gives the bank browser and alert dialog their wheel.
+  Check the file browser scrolls with both a trackpad and a wheel, that the canvas behind it does
+  NOT move while it is open, and that the bank browser scrolls too.
+- WHEEL DELTAS IN THE PLUG-IN were being treated as points unconditionally. AppKit only reports
+  points when hasPreciseScrollingDeltas is YES; a traditional wheel reports LINES, so a notch was
+  about two pixels of canvas. A notch should now move the canvas the same distance it does in the
+  application. Trackpad behaviour should be unchanged - worth confirming it has not got faster.
