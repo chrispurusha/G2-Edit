@@ -84,6 +84,10 @@ SOURCES=(
     "$HERE/SynthLib/src/synthlibHost.c"
     "$HERE/SynthLib/src/contextMenu.c"
     "$HERE/SynthLib/src/menuBar.c"
+    # The popup registry. Needed for the WHEEL, which routes through it exactly as the application's
+    # scroll_event() does - the plug-in registers nothing of its own but uses SynthLib's own table,
+    # so every popup listed above and below gets its scroll for free. See g2_input_scroll().
+    "$HERE/SynthLib/src/synthlibPopups.c"
     "$HERE/SynthLib/src/utils.c"
     # Modifier-key state. Platform-free by design, which is what lets the same predicates answer from
     # GLFW's mods in the application and an NSEvent's flags here — see SynthLib/src/inputState.h.
