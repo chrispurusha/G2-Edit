@@ -923,43 +923,39 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 //     1.0 beat 0.15, which is the opposite of what the decay rates say. Colour at an instant mixes the
 //     loop's damping with everything outside the loop, so it cannot isolate this coefficient.
 //
-// FITTED 2026-09-07 AGAINST THE NINE-POINT BRIGHTNESS SWEEP, which had been sitting in the captures
-// unused. The dial's effect is EXPONENTIAL in its position, not a power law: on the instrument the
-// amount by which the top decays faster than the bottom falls by a constant factor of about 0.57
-// every sixteen dial steps, right across the usable range. Hence exp(-dial / K) rather than the
-// pow((127 - dial)/127, curve) this replaces.
+// BRIGHTNESS IN dB PER SECOND, FITTED AGAINST THE NINE-POINT SWEEP. The dial is quoted in the units
+// the measurement is in — how much faster the top decays than the bottom — and the per-line filter
+// coefficient is SOLVED for that, rather than the dial setting a coefficient directly.
+//
+// WHY IT CANNOT BE A COEFFICIENT. The filter runs once per pass, and a line of L samples is
+// traversed gSampleRate/L times a second, so one shared coefficient means a different loss per
+// second on every line and in every room. Fitted at Hall alone it left the same Brightness reading
+// -9.3 dB/s of excess HF decay in a Hall and -18.0 in a Small room, whose lines are 1.68x shorter.
+// One dial has to mean one thing.
+//
+// TWO WRONG TURNS ON THE WAY, both recorded so they are not retaken. Scaling the coefficient by line
+// length looks right and is not — loss per pass is only proportional to the coefficient while the
+// coefficient is small, so the long lines saturate and the room dependence returns reversed, Small
+// -29.9 against Hall -48.3. And solving the inversion at NYQUIST, where a one-pole's gain is the
+// tidy (1-a)/(1+a), gives a fourteenth of the damping wanted, because a gentle one-pole barely
+// touches 8 kHz while losing a great deal at 48. Solve in the band the fit is quoted in.
 //
 //     dial            48     64     80     96    112
 //     instrument   -15.2   -8.9   -5.0   -2.9   -1.5    dB/s, 8 kHz minus 125 Hz
-//     engine       -17.7   -8.6   -4.5   -2.5   -1.4
+//     engine       -15.5   -9.0   -5.7   -3.3   -2.1
 //
-// RMS error 1.2 dB/s over that range, against 9.2 for the mapping this replaces, and the low bands
-// track the instrument to about 0.5 dB/s at EVERY setting of the dial. From Brightness 64 upward
-// every one of the seven bands matches within about 0.5 dB/s.
+// RMS error 0.48 dB/s, and at Hall/Time 127 every one of the seven bands is within 0.7 dB/s from
+// Brightness 48 to 112. The room dependence is not gone but is much reduced — -12.7 / -11.5 / -10.4
+// / -9.3 across Small to Hall at the same dial, against -18.0 / -14.2 / -11.2 / -9.3 before. What
+// remains is per-pass loss the damping does not account for, chiefly the interpolator's.
 //
-// REFITTED AFTER THE INTERPOLATOR CHANGED, and that order matters: these constants absorb whatever
-// else in the loop costs high frequency, so replacing the linear interpolation with a Hermite one
-// (see RVDLYM) invalidated the previous pair and they had to be measured again. Any future change
-// to the modulation or the interpolator invalidates them the same way.
-//
-// THE CEILING IS NOT COSMETIC. _MAX is above 1.0 because the fit wants more damping at the dark end
-// than a one-pole coefficient can express, so the curve is clamped; the clamp bites below about dial
-// 14, which is exactly where the hardware sweep stops being usable (at Brightness 0 everything above
-// 500 Hz is far enough into the noise that nothing can be fitted to it). The constant is not a
-// coefficient — the ceiling is.
-//
-// THE DARK END IS EXTRAPOLATED, NOT FITTED, and it over-damps: at Brightness 48 the engine reads
-// -28.6 dB/s at 8 kHz against the instrument's -20.3, and below that the gap widens. Two reasons,
-// both worth knowing before anyone "fixes" it. The exponential cannot express the dark end without
-// _MAX exceeding 1.0, which is not a valid one-pole coefficient, so it is clamped — and the clamp is
-// what governs everything below about dial 29. And the hardware sweep cannot settle it either: at
-// Brightness 0 everything above 500 Hz is in the noise, at 16 it is close to it, and the engine's own
-// decay fit goes unstable there too, swinging non-monotonically with the ceiling. Both sides stop
-// measuring in the same place. A better answer needs a quieter capture of the dial's lower third,
-// not a different constant here.
-#define REVERB_DAMP_MAX        (2.5000)
-#define REVERB_BRIGHT_K        (28.000)
-#define REVERB_DAMP_CEILING    (0.9000)
+// REFIT WHENEVER THE LOOP'S HIGH-FREQUENCY BEHAVIOUR CHANGES: this constant absorbs whatever else
+// costs high frequency per pass, which is how replacing the linear interpolator invalidated the
+// previous pair. Render a Brightness sweep and read 8 kHz minus 125 Hz.
+#define REVERB_DAMP_REF_HZ      (8000.0)
+#define REVERB_DAMP_DB_PER_S    (130.00)
+#define REVERB_BRIGHT_K         (28.000)
+
 // RE-FITTED 2026-08-18 FOR THE NEW STRUCTURE. The old 0.15 was fitted against a comb bank, where
 // the damping sat inside every comb's own loop and bit hard. In a feedback network the signal passes
 // the damping once per circuit instead, so the same exponent barely moved the tail at all: the
@@ -3775,7 +3771,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     // than zero, and NO dial position gave zero because 0.5 falls between 63 and 64. An exponent
     // under one amplifies that: pow(0.0079, 0.70) is 0.034, so a supposedly neutral detent asked for
     // 0.021 of damping on every pass. Both faults are gone with the dial read whole.
-    double          dial      = brightness * 127.0;
+    double dial = brightness * 127.0;
 
     // BRIGHTNESS IS HIGH-FREQUENCY DAMPING ACROSS THE WHOLE DIAL, AND NOTHING ELSE. It never damps
     // the low end at any setting. MEASURED on a nine-point sweep of the dial (Hall, Time 127): the
@@ -3792,18 +3788,20 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     // The two endpoints of the sweep are NOT usable and were not fitted: at Brightness 0 everything
     // above 500 Hz is far enough down that the fit is on noise, and 127 goes the same way at the
     // bottom. The dial was fitted over 16..112, where every band is above the floor.
-    double          damp      = REVERB_DAMP_MAX * exp(-dial / REVERB_BRIGHT_K);
-
-    if (damp > REVERB_DAMP_CEILING) {
-        damp = REVERB_DAMP_CEILING;
-    }
-    double          scale     = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
+    // Brightness in the units the measurement is actually in: dB per second by which the top decays
+    // faster than the bottom. The hardware sweep reads that off directly — 15.2 at dial 48, 8.9 at
+    // 64, 5.0 at 80, 2.9 at 96, 1.5 at 112 — falling by a constant factor every sixteen steps, which
+    // is the exponential below. The dial now means the same thing in every room.
+    double          dampDbPerSec = REVERB_DAMP_DB_PER_S * exp(-dial / REVERB_BRIGHT_K);
+    double          dampCosW     = cos(2.0 * M_PI * REVERB_DAMP_REF_HZ / gSampleRate);
+    double          scale        = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
 
     // ONE TRIP ROUND THE LOOP, and the gain that costs. The sections either side of it are
     // lossless, so this single number is the whole decay: 60 dB in the requested time, three
     // decades over however many trips fit into it.
     double          gRvGain[RV_LINES];
-    static uint32_t sLastType = REVERB_TYPE_COUNT;   // forces the reset below on the first call
+    double          gRvDampCoef[RV_LINES];
+    static uint32_t sLastType    = REVERB_TYPE_COUNT; // forces the reset below on the first call
 
     // Changing type resizes every delay line, so the positions into them are meaningless and the
     // contents are a room that no longer exists. Cleared rather than carried over — which is also
@@ -3889,6 +3887,41 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         gRvGain[i] = (timeSeconds > 0.01)
                      ? (pow(10.0, (-3.0 * len) / (gSampleRate * timeSeconds)) / RV_MOD_LOSS)
                      : 0.0;
+
+        // THE DIAL SETS dB PER SECOND OF HIGH-FREQUENCY LOSS, AND THE COEFFICIENT IS SOLVED FOR.
+        //
+        // The filter runs once per pass and a line of L samples is traversed gSampleRate/L times a
+        // second, so a shared coefficient means a completely different loss per second on every line
+        // and in every room — fitted at Hall it left the same Brightness reading -9.3 dB/s of excess
+        // HF decay in a Hall and -18.0 in a Small room, whose lines are 1.68x shorter.
+        //
+        // SCALING THE COEFFICIENT BY LENGTH DOES NOT FIX IT EITHER, which is worth recording because
+        // it is the obvious move: loss per pass is only proportional to the coefficient while the
+        // coefficient is SMALL. On the long lines it saturates and clamps, and the room dependence
+        // comes back reversed — Small -29.9 against Hall -48.3.
+        //
+        // So invert it exactly instead. For a target loss D dB per second, this line must lose
+        // D * L / gSampleRate dB on each pass, i.e. reach a high-frequency gain of
+        // 10^(-D*L / (20*gSampleRate)). A one-pole's gain at Nyquist is (1-a)/(1+a), so
+        // a = (1-g)/(1+g) — bounded below 1 for any positive g, needing no clamp, and correct at
+        // every line length, room size and sample rate without a constant to retune.
+        // SOLVED AT THE FREQUENCY THE MEASUREMENT USES, not at Nyquist. A one-pole's gain at Nyquist
+        // is (1-a)/(1+a), which inverts in one line — but a gentle one-pole barely attenuates 8 kHz
+        // while losing a great deal at 48, so solving there gave a fourteenth of the damping wanted
+        // and the dial did almost nothing. The band the fit is quoted in is the band to solve in.
+        //
+        // For |H(w)| = (1-a)/sqrt(1 - 2a*cos w + a^2) = g, squaring gives a quadratic in a whose
+        // root below one is the coefficient. qTerm vanishes as the damping does, which is the
+        // no-damping case and is taken directly rather than divided by.
+        double hfGain = pow(10.0, -(dampDbPerSec * len) / (20.0 * gSampleRate));
+        double g2     = hfGain * hfGain;
+        double pTerm  = 1.0 - (g2 * dampCosW);
+        double qTerm  = 1.0 - g2;
+        double disc   = (pTerm * pTerm) - (qTerm * qTerm);
+
+        gRvDampCoef[i] = ((qTerm > 1.0e-9) && (disc > 0.0))
+                         ? ((pTerm - sqrt(disc)) / qTerm)
+                         : 0.0;
     }
 
     // ONE BANK PER CHANNEL. The two run the same structure and decorrelate through their tap
@@ -4051,7 +4084,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
                 // One damping path, in the loop, so it accumulates with every pass rather than
                 // colouring the output once on the way out. There is no second path taking the low
                 // end out: the instrument does not do that at any dial setting.
-                gRvDamp[i] = ((1.0 - damp) * v) + (damp * gRvDamp[i]);
+                gRvDamp[i] = ((1.0 - gRvDampCoef[i]) * v) + (gRvDampCoef[i] * gRvDamp[i]);
                 line[i]    = gRvDamp[i];
             }
 
