@@ -2865,8 +2865,43 @@ OPEN WORK
   stereo source arrived as its own left channel doubled and anything panned right vanished. A Reverb
   fed from it then summed two copies of the same signal. Now both legs are resolved.
 
-  FAULT 2 - THE REVERB'S LOW END DECAYS ABOUT TWICE TOO FAST, and this is the one that makes it sound
-  thin. Per-band decay rate at Brightness 64, dB/s:
+  FAULT 2 SOLVED 2026-09-07, AND IT WAS THE BRIGHTNESS DETENT (owner's hypothesis). The dial was
+  mapped as value/127, so its neutral position 64 arrived as 0.50394 and the tilt as +0.0079 rather
+  than zero - and no dial position gave zero at all, because 0.5 falls between 63 and 64.
+
+  A TINY OFFSET, NOT TINY BY THE TIME IT IS DAMPING. REVERB_BRIGHT_CURVE is an exponent of 0.70, and
+  an exponent under one AMPLIFIES small values: pow(0.0079, 0.70) is 0.034, four times its input, so
+  the neutral detent quietly asked for dampHi = 0.021. That is a low-frequency loss applied INSIDE
+  the loop on every pass, and a 2297-sample line is traversed about 42 times a second - roughly 8
+  dB/s of bass the instrument does not lose.
+
+  MEASURED BEFORE AND AFTER, Hall at Brightness 64, decay in dB/s:
+
+      band            125    250    500     1k
+      as shipped    -10.2   -9.7   -8.3   -6.9
+      fixed          -5.7   -6.1   -6.3   -6.1
+      instrument     -5.0   -4.6   -5.1   -5.3
+
+  Small moves the same way, -29.6 to -24.0 at 125 Hz against the instrument's -20.5. The engine is
+  now FLAT across 125 Hz to 1 kHz as the instrument is, where before it sloped the wrong way. What
+  remains is about 15% fast in both rooms, which is a different and much smaller question.
+
+  THE FIX: map the dial in two halves about its detent - 64 gives exactly 0, 127 gives +1, 0 gives
+  -1, the halves being 63 and 64 steps wide, which is what a 128-step control with a centre detent
+  actually is. THE ENDS ARE UNCHANGED, so nothing about the extremes of the dial moves; only the
+  region around the detent, which is where every normal setting lives.
+
+  NO OTHER CONTROL IN THE ENGINE HAS THIS. Every other value/127 mapping is unipolar, where 0 maps
+  to 0 and 127 to 1 correctly. The trap needs a control with a meaningful CENTRE.
+
+  SIDE EFFECTS CHECKED: wet level moved 0.17 dB (-11.30 to -11.13 against the measured -11.3), and
+  the L/R correlations are unchanged to within 0.003. Neither warrants re-deriving a constant.
+
+  THE OLD ENTRY, kept because its measurement stands: the low end decayed about twice too fast, and
+  it was NOT the modulation.
+
+  FAULT 2 AS ORIGINALLY DIAGNOSED - the low end decays about twice too fast, and this is the one that
+  makes it sound thin. Per-band decay rate at Brightness 64, dB/s:
 
       Hall        125    250    500     1k     2k     4k     8k
       instrument  -5.0   -4.6   -5.1   -5.3   -6.2   -8.8  -13.7
