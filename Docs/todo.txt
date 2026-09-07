@@ -15,7 +15,7 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Nudge arrows on knobs and sliders, for step-by-step mouse/touchpad adjustment
 - Modules can be dropped on top of existing ones at the bottom of the canvas
 - Red and orange cable colours are too close together (accessibility)
-- Replace-with-similar-module mechanism, as the original editor has
+- Replace-with-similar-module: FILTER GROUP DONE. Write the role table for the other 18 groups, oscillators first - see module-replace-design.md; everything but the table itself is group-agnostic
 - Module palette: topbar mode + drag/double-click to add - design settled, see module-palette-design.md
 - Second screen renders pixelated
 - Yellow module-selection border is not obvious enough; try twice the line width

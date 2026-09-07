@@ -29,6 +29,9 @@ extern "C" {
 
 // Module creation utilities
 int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool syncToDevice);
+// Lays every parameter of a module down at its type's default, in every variation. Exposed for
+// module_replace(), which needs the new type's defaults under the values it then carries across.
+void init_params_on_module_all_variations(tModule * module, uint32_t location);
 int32_t find_unique_module_id(uint32_t location);
 void open_module_area_context_menu(tCoord coord);
 
