@@ -2098,22 +2098,51 @@ static bool take_next_note_event(void) {
 // adr_time_seconds() in renderParams.c. Shared so the envelope that is heard cannot take a
 // different time from the one shown.
 // THE PULSE'S WIDTH IN SECONDS, as a closed form rather than a copy of the dial's 128 readings.
+// Written this way deliberately: a 128-entry table truncates the FRACTIONAL dial values a morph or a
+// smoothed knob produces, and would disagree with the dial's own text between steps.
 //
-// The instrument's own readout for the Lo range runs 1.04 ms at dial 0 to 10.0 s at dial 127, and it
-// is a geometric progression — a constant 7.49% per step — so the whole table is two endpoints and an
-// exponent. Written this way deliberately: a 128-entry table truncates the FRACTIONAL dial values a
-// morph or a smoothed knob produces, and would disagree with the dial's own text between steps.
+// MEASURED ON HARDWARE 2026-09-07 - 17 dial values in the Sub range, captured at 192 kHz so the
+// shortest gate is resolved (at 48 kHz it is four samples and cannot be). EVERY width came back an
+// integer count of 96 kHz samples: 8, 16, 28, 52, 92, 160, 288, 512, 912, 1628, 2916, 5244, 9460,
+// 17116, 31076, 56660, 96083 at dials 0, 8, 16 ... 120, 127. That is also independent confirmation
+// of the 96 kHz engine rate, arrived at from a different module and a different rig than the reverb.
 //
-// Range shifts it by a decade either way: Sub a tenth, Hi ten times (pulseRangeStrMap order).
+// IT IS NOT A CONSTANT-RATIO PROGRESSION, which is what this used to assume. The per-step ratio
+// drifts smoothly from about 1.0748 low on the dial to 1.0768 at the top - small, but compounded over
+// 127 steps it is the curvature the polynomial below carries, and without it a straight line in log
+// runs about 11% LONG
+// across the whole middle of the dial (+24.8% at dial 0, +11.3% at 64, converging only at 127 because
+// that endpoint was pinned). The old two-endpoint form fitted the ends and missed everything between.
+//
+// A CUBIC IN LOG, over all 17 points, because nothing simpler covers the whole dial. A quadratic
+// fitted only where the measurement is sharpest (dial >= 48, where the gate is hundreds of samples
+// and edge placement is worth a fraction of a percent) lands inside 0.12% from there to the top - but
+// extrapolates to 9.9 samples at dial 0 where BOTH measurement methods, a 50% crossing and an
+// edge-slope, independently returned 8. Something in the bottom two dial steps is not on the curve
+// the top follows. Rather than be exact over most of the range and 24% out at one end, this fits
+// everything: worst case 4.1%, and 1.8% rms.
+//
+// THAT REMAINS THE OPEN QUESTION on this module. Either the very bottom of the dial genuinely departs
+// from the curve, or an 8-sample gate defeats both measures - at 192 kHz it is 16 samples with the
+// reconstruction filter's ringing across its edges, so a two-sample bias is not impossible. Settling
+// it needs either a higher capture rate or the instrument's own readout via DEVKNOB.
+//
+// Range shifts it by a decade either way (pulseRangeStrMap order: Sub, Lo, Hi). Sub is the base here
+// because Sub is what was measured; the old code based it on Lo.
 static double pulse_time_seconds(double value, uint32_t range) {
-    const double loMin   = 0.00104;
-    const double loMax   = 10.0;
-    double       seconds = loMin * pow(loMax / loMin, value / 127.0);
+    // ln(width in 96 kHz samples) = k0 + k1*d + k2*d^2 + k3*d^3
+    const double k0      = 2.11883047;
+    const double k1      = 0.07714113828;
+    const double k2      = -0.0000864025056;
+    const double k3      = 0.0000004707716063;
+    double       samples = exp(k0 + (k1 * value) + (k2 * value * value)
+                               + (k3 * value * value * value));
+    double       seconds = samples / 96000.0;
 
-    if (range == 0) {
-        seconds /= 10.0;          // Sub
+    if (range == 1) {
+        seconds *= 10.0;          // Lo
     } else if (range == 2) {
-        seconds *= 10.0;          // Hi
+        seconds *= 100.0;         // Hi
     }
     return seconds;
 }
@@ -3579,9 +3608,16 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 //     fits are not to be believed. The old 2.1 ms was close, so the frozen-delay cross-check below
 //     stands. Both tone frequencies independently put the centre at 2.4..3.9 ms, bracketing
 //     CHORUS_CENTRE_S — a consistency check that only passes if the model is right.
-#define CHORUS_RATE_MAX_HZ    (3.334)    // at Detune 127; proportional to the dial below that
-#define CHORUS_CENTRE_S       (0.0030)   // delay at the middle of the sweep
-#define CHORUS_SWEEP_S        (0.00238)  // peak deviation either side, independent of Detune
+//
+// ALL THREE OF THOSE NUMBERS WERE REPLACED ON 2026-09-07, and so was the topology they belonged to.
+// The measurement above was made from a SUSTAINED TONE, which can only ever show the envelope of the
+// delay; an impulse response with a dry reference on a second output pair shows the delay line
+// itself, and it shows TWO taps where this assumed one. See chorus_tap(). The old sweep of 2.38 ms
+// about a 3.00 ms centre is very close to the two real taps' combined envelope of 0.425..4.995 ms,
+// which is how one tap came to stand in for two.
+#define CHORUS_RATE_MAX_HZ    (2.777)     // 0.02186 Hz per dial step, constant to 0.5% over the dial
+#define CHORUS_CENTRE_S       (0.00271)   // where both taps meet when the sweep is at zero
+#define CHORUS_SPREAD_S       (0.002285)  // peak deviation of EACH tap either side of that centre
 
 // A one-shot gate: a rising edge at the input starts it, and it stays high for the width above.
 //
@@ -3625,24 +3661,73 @@ static double chorus_triangle(double phase) {
 // ONE CHANNEL of the sweep, read at the LFO phase it is given. The two channels differ ONLY in that
 // phase, which is why this is one function called twice rather than two structures — measured, see
 // the antiphase note above chorus_step().
-static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase, double amount) {
-    double   sweep   = 0.0;
-    uint32_t samples = 0;
-    uint32_t readPos = 0;
-    double   wet     = 0.0;
+// A FRACTIONAL READ, and for a chorus this is not a refinement - it is the effect.
+//
+// The pitch shift a chorus produces IS the rate of change of its delay. Read at whole samples only,
+// the delay is a staircase: within each step the delay is CONSTANT and there is no shift at all, and
+// the whole of it collects into a discontinuity at the step edge. So an integer-delay chorus does not
+// produce a weak detune, it produces NO detune plus a click - and the faster the sweep the more
+// clicks, which is why the fault showed up first at maximum Detune (CT, by ear, 2026-09-07) where the
+// instrument is at its most obvious.
+//
+// Catmull-Rom rather than linear, the same choice and for the same measured reason as the reverb's
+// RVDLYM: linear interpolation is |1 - fr + fr*e^-jw|, a null at Nyquist at the half-sample offset,
+// i.e. a lowpass whose corner moves with the sweep. Four multiplies more buys a response flat far
+// higher.
+//
+// Clamped so all four taps stay inside the line. The delays this is called with are 0.4..5.0 ms, so
+// 41..480 samples at 96 kHz against a 4096-sample line - the clamp never bites in practice and is
+// here so it cannot read outside the buffer if a constant is ever changed.
+static double chorus_read(uint32_t node, uint32_t ch, double delaySeconds) {
+    double   want  = delaySeconds * gSampleRate;
+    uint32_t w     = gChorusWrite[node][ch];
 
-    // The DEPTH is fixed; only the rate follows the dial. The shape is a TRIANGLE — measured, and
-    // the difference between a chorus and a vibrato; see chorus_triangle().
-    sweep                                         = CHORUS_CENTRE_S + (CHORUS_SWEEP_S * chorus_triangle(phase));
-    samples                                       = (uint32_t)(sweep * gSampleRate);
-
-    if (samples < 1) {
-        samples = 1;
-    } else if (samples >= CHORUS_SAMPLES) {
-        samples = CHORUS_SAMPLES - 1;
+    if (want < 2.0) {
+        want = 2.0;
+    } else if (want > (double)(CHORUS_SAMPLES - 3)) {
+        want = (double)(CHORUS_SAMPLES - 3);
     }
-    readPos                                       = (gChorusWrite[node][ch] + CHORUS_SAMPLES - samples) % CHORUS_SAMPLES;
-    wet                                           = (double)gChorusLine[node][ch][readPos];
+    uint32_t whole = (uint32_t)want;
+    double   fr    = want - (double)whole;
+
+    // y0..y3 are whole-1, whole, whole+1 and whole+2 samples ago; the answer sits between y1 and y2.
+#define CHR(ago)    ((double)gChorusLine[node][ch][(w + CHORUS_SAMPLES - (ago)) % CHORUS_SAMPLES])
+    double   y0    = CHR(whole - 1);
+    double   y1    = CHR(whole);
+    double   y2    = CHR(whole + 1);
+    double   y3    = CHR(whole + 2);
+#undef CHR
+
+    return y1 + (0.5 * fr * ((y2 - y0)
+                             + fr * ((2.0 * y0) - (5.0 * y1) + (4.0 * y2) - y3
+                                     + fr * ((3.0 * (y1 - y2)) + y3 - y0))));
+}
+
+static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase, double amount) {
+    double wet   = 0.0;
+
+    // TWO TAPS PER CHANNEL, MOVING IN OPPOSITE DIRECTIONS about a common centre. This is the shape of
+    // the module and it is what a single sweeping tap cannot reproduce: two taps crossing put a pair
+    // of comb notches through each other, which is the sound, where one tap gives a single moving
+    // notch. Measured 2026-09-07 by impulse response against a dry reference - 46 Hz impulses, both
+    // channels, the whole Detune dial - and cross-checked unclipped after the instrument's own meter
+    // showed red.
+    //
+    // THE TAPS MEET. The measured minimum separation tracked whatever threshold the analysis used to
+    // call two peaks distinct (0.354 ms at a 0.35 ms threshold, 0.094 at 0.06), so the separation
+    // really does reach zero rather than resting on a floor - hence a spread that starts at 0.
+    //
+    // The shape is a TRIANGLE, confirmed rather than assumed for the first time: folded over 888
+    // impulses at Detune 24 it fits a triangle with a mean error of 0.025 against a sine's 0.045,
+    // and the flanks are straight to a few parts in a hundred. See chorus_triangle().
+    double tri01 = 0.5 * (1.0 + chorus_triangle(phase));   // [0, 1]
+    double dev   = CHORUS_SPREAD_S * tri01;
+
+    // HALF EACH, so the pair carries the wet level the blend below was fitted for. That fit came from
+    // notch depth on a static delay, which measures the SUM of the two taps without being able to see
+    // that there are two - and this used to hand the whole of it to a single tap.
+    wet                                           = 0.5 * (chorus_read(node, ch, CHORUS_CENTRE_S - dev)
+                                                           + chorus_read(node, ch, CHORUS_CENTRE_S + dev));
 
     gChorusLine[node][ch][gChorusWrite[node][ch]] = (float)input;
     gChorusWrite[node][ch]                        = (gChorusWrite[node][ch] + 1) % CHORUS_SAMPLES;

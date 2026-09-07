@@ -7594,3 +7594,324 @@ never had the bug. The filter matters: without it every drag would push an undo 
 the location, and undo would re-issue a move message to the G2 for each untouched one.
 
 apply_move() needed nothing — it already walks whatever entries the payload carries.
+
+PULSE TIME MEASURED AT 192 kHz, AND THE WIDTH IS AN INTEGER COUNT OF 96 kHz SAMPLES (2026-09-07).
+Fireface rig, G2 outs 3/4, Range = Sub, 17 dial values, widths taken as leading-edge to trailing-edge
+MAX SLOPE - which is immune both to level and to the AC-coupled droop that made a 50% crossing read
+the droop instead of the gate above about 5 ms.
+
+  dial    0    8   16   24    32   40   48   56   64    72    80    88    96   104   112     120     127
+  smpl    8   16   28   52  92.5  160  288  512  912  1628  2916  5244  9460 17116 31076 56659.5  96083
+
+15 of the 17 land within +/-0.003 of an integer; the two reading .5 are half-sample cases where the
+interpolation splits between adjacent samples. This is INDEPENDENT confirmation of the 96 kHz rate -
+the reverb geometry said so from recovered addresses and tap lags, this says so from a gate width
+measured on a different module through a different rig. Two unrelated routes agreeing.
+
+WHY 192 kHz WAS NEEDED: dial 0 is 8 samples at 96 kHz = 0.083 ms, which is FOUR samples at 48 kHz.
+The earlier QU-24 sweep could not resolve it and reported "no trailing edge found"; here the gate has
+a clearly visible flat top. The 48 kHz sweep's mid-range values are reproduced almost exactly
+(16 -> 0.290 vs 0.292 ms, 32 -> 0.956 vs 0.948, 48 -> 2.996 vs 2.979, 64 -> 9.50 vs 9.50), so the two
+rigs agree wherever both could measure.
+
+OUR pulse_time_seconds() IS ABOUT 11% TOO LONG over the whole dial, converging only at the top:
++24.8% at dial 0, ~+11% from dial 8 to 72, then falling to -0.1% at 127. Its top endpoint (10 s Lo,
+so 1.0 s Sub) is right - measured 96083 samples = 1000.86 ms. Its BOTTOM endpoint is wrong: the code
+uses loMin 1.04 ms, the instrument gives 8 samples = 0.833 ms in Sub, i.e. loMin 0.833 ms.
+
+NOT A PURE GEOMETRIC PROGRESSION. The ratio per 8 dial steps drifts smoothly from about 1.78 at
+dial 48 to 1.823 at 120, so replacing loMin alone will not fit it. The 17 sample counts above are the
+ground truth to fit against; a corrected closed form still beats a 128-entry table (see
+"calculate, do not tabulate"), but it needs a shape with one more degree of freedom than two endpoints.
+
+LEVEL IS NOT CALIBRATED and was not needed for any of this - the slope method is level-independent,
+and the integer-sample result is the evidence that it worked. An absolute amplitude for the Pulse
+still wants a known reference through the same path (an audio oscillator at a known setting), and
+that calibration would serve EVERY capture, not just this one.
+
+PULSE AMPLITUDE CALIBRATED AGAINST AN OSCILLATOR (2026-09-07, CT's suggestion). An OscB was added to
+the rig and cabled in place of the Pulse, so the whole path downstream - 2-Out, FX bus, Fx-In,
+bypassed Reverb, LevAmp, physical out, interface - was identical for both. Sine and Saw both peak at
+the SAME -20.04 dBFS, which is therefore the G2's full scale through this rig; the sine's 3.2 dB crest
+factor confirms it is a sine and not something else.
+
+  Pulse PEAK        1.117 x full scale  (+0.96 dB)
+  Pulse SETTLED TOP 0.960 x full scale  (-0.35 dB)
+
+The peak overshoot is Gibbs ringing on a step through the reconstruction filter, not extra level; the
+settled top is the real figure, and AC droop over the 0.96 ms gate accounts for about 1.7% of the
+shortfall. So the Pulse's logic high is 1.0 within a few percent, and the engine's 0/1 gate is right.
+
+THE USEFUL BY-PRODUCT IS THE RIG CONSTANT: G2 full scale -> -20.0 dBFS on the Fireface rig. That
+converts every capture on this rig from dBFS into G2 units, not just this one, and it removes "the
+levels might not match" as a variable. Re-measure it if any gain in the chain changes.
+
+pulse_time_seconds() REFITTED against the 17 measured widths. The old form was two endpoints and a
+constant ratio; the truth curves slightly, so it ran ~11% long across the middle of the dial. Now a
+cubic in log, worst case 4.1% and 1.8% rms. OPEN: a quadratic fitted only to dial >= 48 is inside
+0.12% from there to the top but predicts 9.9 samples at dial 0 where two independent measurement
+methods both returned 8 - so either the bottom of the dial leaves the curve, or an 8-sample gate
+defeats both measures. Worth settling with DEVKNOB against the instrument's own readout.
+
+REVERB BRIGHTNESS MEASURED BELOW DIAL 48 AT LAST (2026-09-07). This was the standing open item - the
+region was extrapolated, not fitted, because "both sides stop measuring there". Fireface rig at
+192 kHz, Medium room, Time 100, Pulse Time 0 as excitation, LevAmps at 127, 4 repeats per setting.
+Decay rate by octave band, dB/s, fitted by least squares over every 30 ms window more than 8 dB clear
+of that band's own noise:
+
+  bright   500Hz   1kHz   2kHz   4kHz   8kHz
+     8      19.0    30.2   51.3   75.0     -
+    16      14.5    18.1   26.2   36.5   70.8
+    24      13.7    15.6   23.2   34.2   52.4
+    32      13.1    14.5   19.0   27.2   43.5
+    40      13.0    13.8   17.1   23.0   32.7
+    48      12.8    13.5   16.0   20.2   28.1
+    64      12.8    13.2   14.8   17.3   23.1
+
+WHY IT MEASURES NOW WHEN IT DID NOT BEFORE: level and averaging, not sample rate. The pilot showed
+the mid bands sitting 23-32 dB clear of the noise for 0.7 s, which is ample to fit a slope; only the
+8 kHz band is thin, and averaging four repeats is what recovers it. Brightness 0 is STILL not
+measurable - nothing stays 8 dB clear long enough in any band - so the very bottom step remains
+extrapolated. Everything from 8 to 64 is now measured where none of it was.
+
+THE SHAPE, read off the excess decay over each setting's own 500 Hz baseline: the excess roughly
+DOUBLES for every 16 dial steps downward (8 kHz excess 10.3 dB/s at bright 64, 15.3 at 48, 30.4 at 32,
+56.3 at 16). That implies a dial constant near 16/ln(1.9) = 25, where soundEngine.c's
+REVERB_BRIGHT_K is 32. The constants have NOT been refitted yet - the mapping from our one-pole damp
+coefficient to an excess dB/s per band is not linear, so it needs doing properly rather than by
+scaling K. The table above is the ground truth to fit against.
+
+STILL TO CAPTURE for this: Small and Large. Hall already has a 192 kHz capture; Small and Medium had
+only 48 kHz QU-24 ones, so Medium is now replaced and Small is the remaining rig mismatch.
+
+ALL FOUR ROOMS SWEPT FOR BRIGHTNESS (2026-09-07), same rig and settings throughout: Fireface at
+192 kHz, Time 100, Pulse Time 0 excitation, LevAmps 127, 4 repeats, decay fitted by least squares over
+every 30 ms window more than 8 dB clear of that band's own local noise. Decay rate dB/s:
+
+  bright   500Hz  1kHz   2kHz   4kHz   8kHz        bright   500Hz  1kHz   2kHz   4kHz   8kHz
+  SMALL                                            LARGE
+     8      33.1  47.6   71.9  104.0     -            8      13.2  22.5   37.0   65.9     -
+    16      26.3  33.7   39.4   44.4   99.8          16      10.3  13.8   22.1   31.1   60.7
+    24      25.4  29.5   38.0   55.8   77.4          24       9.6  11.5   16.4   25.1   40.9
+    32      24.8  27.6   32.7   44.9   61.7          32       9.3  10.4   14.1   20.6   30.0
+    40      24.8  26.5   30.6   39.3   53.6          40       9.0   9.8   12.4   17.7   25.7
+    48      24.4  26.2   28.7   35.3   47.0          48       8.9   9.5   11.4   15.8   20.4
+    64      24.1  25.4   27.0   30.6   39.4          64       8.8   9.2   10.2   12.9   17.0
+  MEDIUM                                           HALL
+     8      19.0  30.2   51.3   75.0     -            8      10.6  19.2   34.3   58.0     -
+    16      14.5  18.1   26.2   36.5   70.8          16       8.1  11.6   18.9   29.4   54.1
+    24      13.7  15.6   23.2   34.2   52.4          24       7.3   9.4   13.9   21.8   34.8
+    32      13.1  14.4   19.0   27.2   43.4          32       7.0   8.3   11.3   17.3   27.2
+    40      13.0  13.8   17.0   23.0   32.7          40       6.8   7.7    9.7   14.6   21.5
+    48      12.8  13.5   16.0   20.2   28.1          48       6.7   7.4    8.5   12.1   16.6
+    64      12.8  13.2   14.8   17.3   23.1          64       6.6   7.1    7.6    9.9   14.1
+
+TWO THINGS THE TABLE SAYS. First, the 500 Hz baseline is the ROOM and Brightness barely touches it
+above dial 16 - 24.1 / 12.8 / 8.8 / 6.6 dB/s for Small / Medium / Large / Hall. Brightness is HF-only,
+as the engine already models it.
+
+Second, and this is what the fit has to deal with: the HF excess normalised by each room's OWN
+baseline is NOT room-invariant. At bright 64 the 4 kHz excess/baseline runs 0.27, 0.35, 0.47, 0.50
+from Small to Hall - it RISES with room size. Pure per-pass damping would make that constant, and
+pure per-second damping would make the unnormalised excess constant; neither holds. So the damping
+carries a room-dependent term, and REVERB_BRIGHT_K cannot simply be rescaled from 32 to 25 as the
+Medium-only reading first suggested. Fit against all four rooms at once or it will be another
+one-operating-point fit - which is exactly what produced "less full/round" before.
+
+CAVEATS. Dial 0 will not measure in any room - nothing stays 8 dB clear long enough. Small at dial 16
+(4 kHz excess 18.1) breaks the monotone run and is a marginal fit, not a feature. Dial 8 measures only
+because the tail is short and loud; treat its 4 kHz numbers as the weakest in the table.
+
+ANALYSIS TRAP WORTH KEEPING: the Large sweep first read as a DEAD CAPTURE - zero onsets - because the
+noise reference was taken from the first 0.4 s of the file, where a Large room's tail is still ringing.
+That put the estimate 14 dB high and the detection threshold with it. Take the noise floor from the
+QUIETEST window in the file, never from its start, whenever the thing being measured rings.
+
+FOUR-CHANNEL RIG, AND A LEVEL REFERENCE FOR IT (2026-09-07). Both G2 output pairs now go to the
+Fireface: outs 3/4 -> inputs 5/6 (idx 4/5) carry the module under test, outs 1/2 -> inputs 7/8
+(idx 6/7) carry the dry impulse straight off Fx-In. One interface, one clock, so a capture's
+provenance is never in doubt again - which is the thing that made the old reverb set so awkward.
+The QU-24 is out of the capture path.
+
+  G2 full scale -> -16.0 dBFS on the wet pair (through LevAmp at 127)
+  G2 full scale -> -28.0 dBFS on the dry pair (no LevAmp)
+
+Measured with an OscB sine swapped in for the Pulse, 3.1 dB crest on both pairs. The 12.0 dB between
+them is the LevAmp at 127, which INDEPENDENTLY CONFIRMS its top-of-range gain is 4.0x (+12.04 dB) -
+the 0.25x..4x law was previously asserted from a parameter audit, not measured. Re-take these two
+figures if any gain in the chain moves.
+
+STCHORUS - FIRST REAL LOOK AT ITS STEREO (2026-09-07). The module is MONO IN, STEREO OUT: one audio
+input, two outputs (moduleResources.h). So it SYNTHESISES the stereo image, which is why this was
+worth measuring rather than assuming. Detune 20, Amount 127, impulses at 5.15 Hz for 60 s.
+
+  Structure: a direct arrival, plus SECONDARY TAPS between 1.2 and 5.3 ms which are modulated.
+  L tap range 1.220 - 5.273 ms (sweep 4.054), R 1.206 - 5.251 ms (sweep 4.045) - the same range.
+  Mean L 3.328 ms, mean R 3.107 ms. R-L swings +/-2.6 ms, so the two channels are genuinely
+  decorrelated in time rather than one being a fixed offset of the other.
+
+PROVISIONAL, AND WHY: a single-peak tracker is the wrong instrument here. Adjacent impulses leap
+across the whole 1.2-5.3 ms range, which is not a noisy reading of one tap - it is the tracker
+picking whichever of SEVERAL taps is momentarily loudest. The "0.56 / 0.59 Hz modulation" it produced
+is therefore not trustworthy and is recorded only so nobody re-derives it and believes it. Doing this
+properly needs the full delay profile per impulse with persistent components followed across time,
+not an argmax. Capture kept at ~/Documents/G2-Measurements/chorus/ so the analysis can be redone
+without re-occupying the hardware.
+
+STCHORUS: THE ENGINE HAS THE WRONG NUMBER OF TAPS (2026-09-07). Measured at Detune 20, Amount 127,
+impulses at 5.15 Hz, 12 full LFO cycles, dry reference on the second output pair.
+
+  MEASURED                                   OURS (soundEngine.c chorus_step / chorus_tap)
+  two taps per channel, sweeping ANTIPHASE   ONE tap per channel
+  split between them 0.45 - 4.11 ms          n/a
+  tap-pair centre 2.411 - 2.992, mean 2.684  CHORUS_CENTRE_S 3.000 ms
+  each tap therefore 0.63 - 4.74 ms          CHORUS_SWEEP_S +/-2.380 -> 0.620 - 5.380 ms
+  LFO 0.4378 Hz at Detune 20                 3.334 * 20/127 = 0.5250 Hz
+  R antiphase to L, confirmed directly       right channel reads phase + 0.5
+
+WHAT IS RIGHT: the stereo relationship. When L's tap split is at its maximum (4.109 ms) R's is at its
+minimum (0.448) and vice versa, over 12 cycles - the right channel really is half a cycle along, which
+is what chorus_step() already does. The overall delay RANGE is close too: each measured tap covers
+0.63-4.74 ms against our single tap's 0.62-5.38.
+
+WHAT IS WRONG: we run ONE delay line per channel where the instrument runs TWO, moving in opposite
+directions. That is not a tuning error, it is a missing voice - two taps crossing produce comb notches
+sweeping through each other, which is the sound; one tap produces a single moving notch. The rate is
+also about 20% fast (0.4378 measured against 0.5250 modelled; if the law really is proportional to the
+dial that makes CHORUS_RATE_MAX_HZ 2.780, not 3.334), the centre is 3.000 where 2.684 was measured,
+and the sweep is +/-2.380 where +/-2.054 was measured.
+
+NOT YET FIXED, and DELIBERATELY: every number above comes from ONE Detune setting. CHORUS_RATE_MAX_HZ
+assumes rate is proportional to the dial and CHORUS_SWEEP_S is commented "independent of Detune" -
+neither is verified, and refitting three constants plus a topology change from a single operating
+point is exactly what produced the reverb's "less full/round". A Detune sweep comes first.
+
+CLIPPING CHECKED, at CT's prompt - the G2 showed a red light with the LevAmps at 127. It was real: the
+chorus output sat at -15.6 dBFS against a -16.0 dBFS full-scale reference, i.e. on the ceiling. The
+capture was repeated with the LevAmps at 64 and the two-tap structure is unchanged - 79% of impulses
+resolve two taps against 80% before, spans 0.458-5.276 against 0.458-5.297 ms. So clipping was NOT
+manufacturing the taps. It also gave a third confirmation of the LevAmp law: 127 -> 64 dropped the
+output by 11.6 dB, so 64 is unity and 127 is 4x.
+
+STCHORUS DETUNE SWEPT, 11 VALUES, AND THE RATE LAW IS EXACT (2026-09-07). Trigger raised to 46 Hz for
+this - at the original 5.15 Hz the fast end of the dial had under three impulses per LFO cycle and the
+readings went NON-MONOTONIC (Detune 64 appeared faster than 80). That was the sampling, not the
+instrument, and it is the same lesson as every other clipped measurement here: check the instrument
+can see what it is being asked to measure.
+
+  Detune    8     24     48     64     80     96    112    127
+  LFO Hz  0.1744 0.5236 1.0500 1.3991 1.7509 2.1000 2.4520 2.7809
+  Hz/dial 0.02180 0.02182 0.02188 0.02186 0.02189 0.02188 0.02189 0.02190
+
+Constant to 0.5% over the whole dial: RATE = 0.02186 * dial Hz, so 2.777 Hz at 127. Ours says
+CHORUS_RATE_MAX_HZ 3.334, which is 20.1% FAST. Detune 0 is not a slow sweep, it is NO sweep - the two
+taps sit still, 2.44 ms apart.
+
+DEPTH IS INDEPENDENT OF DETUNE, confirmed: the split between the taps covers the same range at every
+setting from 8 to 127. The existing comment on CHORUS_SWEEP_S saying so was right.
+
+THE TAPS CONVERGE TO ZERO. The measured split minimum read 0.354 ms at every Detune - suspicious,
+because the tap separator required peaks be more than 0.35 ms apart. Lowering that threshold to 0.15
+and then 0.06 moved the reported minimum to 0.151 and 0.094: it was the threshold reading itself back,
+not a floor in the instrument. The two taps really do meet.
+
+SO THE GEOMETRY IS: two taps, centre 2.71 ms, separating by up to 4.57 ms - each deviating up to
++/-2.285 ms from the centre in OPPOSITE directions, meeting at the centre when the sweep is at zero.
+Our single tap covers 0.620-5.380 ms, which is close to the two taps' combined envelope of
+0.425-4.995 - which is very likely how it was fitted in the first place: a single-peak tracker sees
+the outer edges of two taps and reads them as one tap sweeping the whole way. The same trap nearly
+caught this analysis.
+
+STCHORUS AMOUNT SWEPT (2026-09-07, Detune 64). Amount scales the TAP AMPLITUDE and nothing else - the
+rate stays 1.399 Hz and the split stays 0.151-4.557 ms from Amount 32 upward, so rate and delay
+geometry are entirely independent of it. Tap amplitude relative to the direct path, per tap:
+
+  Amount     0      16      32      64      96     127
+  per tap  0.008   0.052   0.122   0.292   0.530   0.888
+
+AND THIS RESOLVES A DISAGREEMENT WITH THE EXISTING CODE. chorus_tap() carries a measured table taken
+from NOTCH DEPTH with the delay static: 0.28 / 0.64 / 0.94 / 0.91 at Amount 32 / 64 / 96 / 127. Those
+are about twice the per-tap figures above, and they agree once doubled (0.244 vs 0.28, 0.584 vs 0.64,
+1.06 vs 0.94). The notch measurement was reading the SUM OF TWO TAPS, because it could not see that
+there were two. Our code then applies that whole wet/dry ratio to its SINGLE tap - so the one tap we
+do have is carrying the level the instrument spreads across two.
+
+That makes the topology error and the level error the same error, and it means the fix is coherent
+rather than three separate refits: two taps sweeping antiphase about a 2.71 ms centre, each taking
+half the wet gain, at 0.02186 * dial Hz. The constant-power blend and the half-cycle L/R offset both
+stay - they were measured correctly and are confirmed.
+
+WHAT IS STILL UNMEASURED: the LFO SHAPE. chorus_triangle() asserts a triangle, and this programme has
+only ever measured the split's period and extremes, never its trajectory between them. The 46 Hz
+trigger captures have 15+ samples per cycle at the fast end, so the shape is recoverable from
+~/Documents/G2-Measurements/chorus/fast_*.wav without re-occupying the hardware.
+
+STCHORUS LFO SHAPE CONFIRMED AS A TRIANGLE (2026-09-07) - asserted since 2026-08-15, measured only
+now. 888 impulses at Detune 24 folded into one cycle: the split's flanks are straight (successive
+increments 0.396, 0.393, 0.383, 0.378, 0.383 rising and -0.379, -0.378, -0.385, -0.380 falling), and
+against a phase-aligned model it fits a triangle with mean error 0.025 versus a sine's 0.045. The
+reasoning in chorus_triangle() about a triangle giving a constant detune was right.
+
+STCHORUS FIXED THE SAME DAY. chorus_tap() now reads TWO taps per channel at CHORUS_CENTRE_S -/+ dev,
+where dev runs 0 .. CHORUS_SPREAD_S on a triangle, and takes half the wet from each. Constants:
+CHORUS_RATE_MAX_HZ 3.334 -> 2.777, CHORUS_CENTRE_S 0.0030 -> 0.00271, CHORUS_SWEEP_S 0.00238 replaced
+by CHORUS_SPREAD_S 0.002285. Verified against the measurement: taps meet at 2.710 ms, span
+0.425..4.995, split max 4.570 - all exact - and the rate law is within 0.30% at every dial value from
+8 to 127. The half-cycle L/R offset and the constant-power blend were already right and are untouched.
+
+FOLLOW-UP: tools/render only knows the reverb, so there is no engine-side render of a chorus impulse
+response to compare against the hardware captures the way analyse_ir.py does for the reverb. The
+verification above is arithmetic on the constants, not a render of the compiled code. Extending
+render.c with a chorus mode would close that, and the hardware captures to compare against are already
+on disk in ~/Documents/G2-Measurements/chorus/.
+
+THE CHORUS READ ITS DELAY LINE AT WHOLE SAMPLES (found by CT's ear 2026-09-07, immediately after the
+two-tap rebuild: "at maximum detune the G2's effect is much more pronounced"). Not a tuning error and
+not new - the module had never interpolated, and the two-tap rebuild carried that forward unchanged.
+
+WHY IT DESTROYS THE EFFECT RATHER THAN DEGRADING IT: the pitch shift a chorus makes IS the rate of
+change of its delay. Read at whole samples the delay is a staircase - within a step it is CONSTANT,
+so there is no shift at all, and the entire shift collects into a discontinuity at the step edge. The
+module therefore produced no detune plus a click train, at a rate that rises with Detune:
+
+  dial     pitch shift per tap     whole-sample crossings per second
+   24            4.1 cents                    230
+   64           11.0 cents                    614
+   96           16.5 cents                    921
+  127           21.8 cents                   1218
+
+So at the top of the dial it was emitting a ~1.2 kHz buzz where the instrument gives +/-21.8 cents of
+detune - and at the bottom, where the sweep is slow, both the effect and the fault are small, which is
+why it was the MAXIMUM that gave it away.
+
+FIXED with a four-point Catmull-Rom in chorus_read(), the same interpolator and the same reasoning as
+the reverb's RVDLYM: linear is a null at Nyquist at the half-sample offset, i.e. a lowpass whose
+corner moves with the sweep.
+
+WORTH GENERALISING: every swept or modulated delay in the engine needs this. The reverb has it, the
+chorus now has it. The DELAYS have a Time dial that can be modulated and have never been checked for
+it - that is the next place this same fault would be hiding.
+
+CHORUS DETUNE CONFIRMED SPECTRALLY, AND IT AGREES WITH THE TWO-TAP MODEL (2026-09-07). A sustained
+saw through the module rather than impulses - CT's suggestion, and a far better signal for this. Rig
+back on the QU-24 at 48 kHz: dry on inputs 5/6 (idx 4/5, L/R correlation 1.0000 as a mono source
+should be), wet on 19/20 (idx 18/19, correlation 0.5987 - that figure is a direct measure of the
+stereo width and is worth keeping).
+
+At Detune 127, harmonic 10 of the saw (direct component at 3920 Hz) resolves into a TRIPLET: sidebands
+at about -24 and +18 cents around the direct. Mean magnitude ~21 cents. The two-tap geometry fitted
+from the impulse work predicts 21.8 cents per tap at this dial setting:
+
+    sweep velocity = CHORUS_SPREAD_S / (half an LFO period) = 0.002285 / 0.180 = 0.01269
+    pitch shift    = 1200 * log2(1 + 0.01269) = 21.8 cents
+
+So a spectral measurement on a sustained tone agrees with a geometric measurement on impulses, from
+two different rigs at two different sample rates. Two independent routes agreeing is the strongest
+evidence this programme has.
+
+OPEN, and small: the sidebands are ASYMMETRIC (-24 / +18 rather than +/-21) and the pair shifts
+between about -30/+12 and -24/+18 over time. A delay line's shift is 1/(1 + d(delay)/dt), which is
+asymmetric by only 0.3 cents at this velocity - nothing like 6. Either the two taps do not move at
+equal and opposite speeds, or the 0.12 s analysis window is smearing across the triangle's turns
+(the LFO period here is 0.36 s, so a half-cycle is 0.18 s and the window is a third of it). The
+second is the more likely and is an analysis fix, not a finding. Capture kept.
