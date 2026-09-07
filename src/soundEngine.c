@@ -3050,11 +3050,21 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 // A chain has to start somewhere. An oscillator is the only thing here that generates a signal from
 // nothing, so without one the whole thing renders silence and the menu should say why rather than
 // leaving it a mystery — the usual cause is a filter with an empty input.
+// A PULSE COUNTS AS A SOURCE, not just an oscillator. It generates a click of its own and needs
+// nothing upstream but an edge to fire on, so a patch whose only generator is a Pulse is not silent
+// and should not be reported as having nothing patched into it.
+//
+// THIS IS WHAT THE MEASUREMENT RIG IS BUILT FROM — see PatchTestFiles/FxMeasure.pch2, where a
+// free-running LfoShpA fires a Pulse into the module under test. Without this the engine resolves
+// that patch correctly, all nine nodes and the right topology, and then refuses to play it, so the
+// one patch designed for comparing engine against instrument could be rendered by neither.
 static bool chain_has_source(const tSoundEngineParams * params) {
     uint32_t i = 0;
 
     for (i = 0; i < params->nodeCount; i++) {
-        if ((params->node[i].kind == eNodeOsc) || (params->node[i].kind == eNodeOscShp)) {
+        if (  (params->node[i].kind == eNodeOsc)
+           || (params->node[i].kind == eNodeOscShp)
+           || (params->node[i].kind == eNodePulse)) {
             return true;
         }
     }
@@ -3062,13 +3072,15 @@ static bool chain_has_source(const tSoundEngineParams * params) {
     return false;
 }
 
-// True when every oscillator feeding the chain is switched off, which is silence for a reason worth
-// reporting. A bypassed filter or Out is not counted: those pass through or are the tap itself.
+// True when every generator feeding the chain is switched off, which is silence for a reason worth
+// reporting. A Pulse counts alongside the oscillators, for the reason given at chain_has_source(). A bypassed filter or Out is not counted: those pass through or are the tap itself.
 static bool chain_is_bypassed(const tSoundEngineParams * params) {
     uint32_t i = 0;
 
     for (i = 0; i < params->nodeCount; i++) {
-        if (  ((params->node[i].kind == eNodeOsc) || (params->node[i].kind == eNodeOscShp))
+        if (  (  (params->node[i].kind == eNodeOsc)
+              || (params->node[i].kind == eNodeOscShp)
+              || (params->node[i].kind == eNodePulse))
            && (params->node[i].active == true)) {
             return false;
         }

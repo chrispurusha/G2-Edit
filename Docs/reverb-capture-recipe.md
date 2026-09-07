@@ -108,7 +108,7 @@ but free to exploit by putting the quieter WET pair on the louder inputs.
 ## THE RIG LIVES IN THE FX AREA NOW — PatchTestFiles/FxMeasure.pch2
 
 ```
-VOICE AREA   EnvADSR --> Pulse --> 2-Out ("Out to" = FX 1/2)      the excitation, and nothing else
+VOICE AREA   LfoShpA --> Pulse --> 2-Out ("Out to" = FX 1/2)      the excitation, and nothing else
 FX AREA      Fx-In --+--> [MODULE UNDER TEST] --> LevAmp x2 --> 2-Out (Out 3/4)   wet
                      \------------------------------------> 2-Out (Out 1/2)   dry reference
 ```
@@ -124,6 +124,21 @@ rig measures them by swapping one module.
 
 Module indices as the file has them: VA EnvADSR 1, Pulse 2, 2-Out 3; FX Reverb 1, LevAmp 2 and 3,
 2-Out (wet) 4, 2-Out (dry) 5, Fx-In 6. `measure.py --loc FX --index 1` for the module under test.
+
+**THE EXCITATION FREE-RUNS — NO NOTES AT ALL.** An LfoShpA in "Rate Sub" fires the Pulse, so a
+capture needs no `--gate` and no `DEVNOTE`. The period is exact and does not drift:
+
+    rate Hz = (value + 1) / 699.0507        so   value = round(699.0507 / period) - 1
+
+Value 57 gives 12.052 s, and measured across a capture the gaps are 12.052 s with a spread of
+0.000 s. The note-driven loop by comparison asked for 3.2 s and delivered 3.7, accumulating.
+
+**PICK THE PERIOD FROM THE TAIL.** That much is the same as it ever was — a Hall at Time 127 needs
+12 s or more, a Small room 4 will do. What the LFO removes is the drift, not the requirement.
+
+**LfoShpA, NOT LfoB.** Both have a Sync output and both free-run, but the sound engine models only
+LfoShpA — and the rig is worth nothing for comparison if the engine cannot render it. Its main Out
+triggers the Pulse perfectly well; the Sync output is not needed and the engine does not fill it.
 
 **COUNT GATES BY SCANNING FOR BURSTS, NEVER AT EXPECTED TIMES.** Every backdoor command costs
 latency, so a loop asking for 3.2 s spacing actually delivers 3.7 s and the error accumulates — by
