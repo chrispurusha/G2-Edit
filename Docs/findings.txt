@@ -2853,6 +2853,48 @@ OPEN WORK
   out. What is missing is which state word is level, target and rate, and the table contents. The
   curve question does not depend on the table - that sets the RATE a segment moves at, not the shape.
 
+- THE BRIGHTNESS DIAL FITTED AT LAST (2026-09-07), against the nine-point sweep that had been sitting
+  in the captures unused since August. It settles what the code had flagged for weeks as a guess, and
+  the guess was wrong in kind, not merely in degree.
+
+  BRIGHTNESS IS HIGH-FREQUENCY DAMPING ACROSS THE WHOLE DIAL AND NOTHING ELSE. It never damps the low
+  end at any setting. Measured, Hall at Time 127: the 125-500 Hz bands sit flat at about -5.0 dB/s
+  from Brightness 16 to 112 while 8 kHz sweeps -31.5 to -6.9.
+
+  WHAT WE HAD WAS A SYMMETRIC TILT ABOUT A DETENT - the lower half damping the top, the upper half
+  damping the BOTTOM by the same law. There is no detent and there is no low-end damping. Above 64
+  the engine subtracted a low-passed copy inside the loop and destroyed the bass:
+
+      dial                          80      96     112
+      engine 125 Hz decay        -53.8   -71.1   -79.8   dB/s
+      instrument                  -5.0    -5.0    -5.3
+
+  Sixteen times too fast, at settings anyone reaching for a bright reverb would use. That is now gone
+  and the low bands track the instrument to about 0.5 dB/s at EVERY dial position.
+
+  THE LAW IS EXPONENTIAL IN THE DIAL, NOT A POWER LAW. The amount by which the top decays faster than
+  the bottom falls by a constant 0.57 every sixteen steps across the whole usable range, so the
+  mapping is exp(-dial / K):
+
+      dial            32     48     64     80     96    112
+      instrument   -26.6  -15.2   -8.9   -5.0   -2.9   -1.5    dB/s, 8 kHz minus 125 Hz
+      engine       -24.0  -10.9   -7.1   -5.0   -4.4   -3.8
+
+  REVERB_DAMP_MAX 1.6 and REVERB_BRIGHT_K 25.0, RMS error 2.2 dB/s against 9.2 for what it replaces.
+  _MAX above 1.0 is deliberate: the fit wants more damping at the dark end than a one-pole coefficient
+  can express, so it is clamped by REVERB_DAMP_CEILING, and the clamp bites below about dial 14 -
+  exactly where the sweep stops being usable, since at Brightness 0 everything above 500 Hz is in the
+  noise.
+
+  WHAT IT CANNOT REACH, structurally: the engine keeps about 4 dB/s of excess HF decay at the bright
+  end where the instrument reaches 1.5. That floor does not move with these constants because it is
+  not damping - it is the modulation's linear interpolation, a lowpass sitting in the loop. Removing
+  it needs a better interpolator or less modulation depth. NOTE THIS IS THE SAME MECHANISM
+  RV_MOD_LOSS was invented to compensate broadband; it is real, it is just not broadband.
+
+  SIDE EFFECTS CHECKED: the decay still tracks its dial (rendered/asked 0.961, 0.996, 0.974, 0.953 at
+  Time 40/64/90/127) and the wet level is -11.42 dB against the -11.3 target.
+
 - THE ENGINE IS NOT AS FULL AS THE INSTRUMENT, AND IT IS TWO SEPARATE FAULTS (2026-09-06, owner's
   ear, then measured). Both found by comparing wet-to-dry energy per octave band, which divides the
   excitation out so a hardware pulse and a unit-sample render compare directly. MATCH THE WINDOW IN
