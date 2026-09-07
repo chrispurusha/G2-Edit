@@ -850,6 +850,15 @@ static double   gDelayHp[MAX_DELAY_LINES];   // the HP's lowpass half; the filte
 // The chorus's own short sweep, plus its LFO phase. TWO LINES PER NODE: the instrument runs left and
 // right through the same algorithm with their LFOs in ANTIPHASE, so one phase accumulator serves
 // both — the right channel simply reads it half a cycle along. See chorus_step().
+// WHERE THE LFO RESTS, which only shows at Detune 0 - where the instrument does not sweep at all but
+// holds the two taps 2.4425 ms apart with their centre at 2.856 ms (measured). That separation puts
+// the triangle at |T| = 0.5343, and the centre picks the sign: +0.5343 predicts a centre of 2.860
+// against the measured 2.856, where -0.5343 would give 2.494. Starting at phase 0 instead - i.e.
+// T = -1 - left the static comb 4.571 ms wide rather than 2.44, notches every 219 Hz instead of 410.
+// For any other Detune the LFO free-runs and the starting phase does not matter; both channels take
+// it together, so the quarter-cycle L/R relationship is untouched.
+#define CHORUS_PHASE0      (0.3836)                // chorus_triangle(0.3836) = +0.5343
+
 #define CHORUS_SAMPLES     (2048 * ENGINE_OVERSAMPLE)
 #define CHORUS_CHANNELS    (2)
 static float    gChorusLine[MAX_ENGINE_NODES][CHORUS_CHANNELS][CHORUS_SAMPLES];
@@ -959,8 +968,43 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // REFIT WHENEVER THE LOOP'S HIGH-FREQUENCY BEHAVIOUR CHANGES: these constants absorb whatever else
 // costs high frequency per pass, which is how replacing the linear interpolator with a Hermite one
 // invalidated the previous pair. Render a Brightness sweep per room and read 8 kHz minus 125 Hz.
-#define REVERB_DAMP_MAX        (1.6000)
-#define REVERB_BRIGHT_K        (32.000)
+// REFITTED 2026-09-07 against FOUR rooms and six dial positions, replacing a fit made on three rooms
+// and five. The engine was UNDER-DAMPED everywhere - at Brightness 64 it lost roughly half the high
+// end the instrument does (Medium 6.6 dB/s of excess against 10.3), and at 16 about a third
+// (18.7 against 56.3). The old CEILING of 0.9 was also biting from dial 19 downwards, which is why
+// the engine's excess went NON-MONOTONIC at the bottom of the dial where the instrument's does not.
+//
+// FITTED THROUGH THE FILTER, not by scaling the dial constant. The measured quantity is excess decay
+// in dB/s, which is passes-per-second times the one-pole's per-pass loss; passes-per-second is fixed
+// by the room, so the RATIO of measured to rendered excess gives the ratio of per-pass losses
+// directly, and |H(w)| = (1-a)/sqrt(1 - 2a cos w + a^2) inverts that to the coefficient the
+// instrument implies. Doing it that way is what let four rooms agree: the implied coefficients at
+// dial 32 are 0.780 / 0.783 / 0.718 / 0.702 across Small / Medium / Large / Hall, where the raw
+// dB/s figures differ by a factor of two between those rooms.
+//
+//     dial              16      24      32      40      48      64
+//     implied         0.6299  0.5408  0.4735  0.4130  0.3527  0.2898
+//     this law        0.6174  0.5416  0.4751  0.4167  0.3656  0.2813
+//
+// THE FOUR ROOMS AGREE, which is what says the model is right rather than merely fitted: at dial 16
+// they imply 0.6398 / 0.6217 / 0.6366 / 0.6214 for Small / Medium / Large / Hall, within 3% of each
+// other, from raw dB/s figures that differ by 60% between those rooms. A per-pass coefficient is what
+// makes that collapse.
+//
+// THE CEILING NO LONGER BITES. The old curve was far too steep - 0.90 at dial 16 against an implied
+// 0.63, and 0.2165 at 64 against 0.2898 - so it over-damped the bottom of the dial and under-damped
+// the top, and the 0.9 clamp cut in below dial 19, which is why the engine's excess went
+// NON-MONOTONIC at the bottom where the instrument's does not. This curve peaks at 0.8024 at dial 0
+// and never reaches the ceiling, so that artefact is gone.
+//
+// A WRONG TURN WORTH RECORDING. Fitting from the RATIO of measured to rendered excess gave 0.99 at
+// dial 16 and blew the whole tail up - the rendered excess it was divided by was itself saturated by
+// the old ceiling. It also assumed the 500 Hz band is untouched by the filter, which fails once the
+// coefficient is large: at 0.99 the one-pole corner is 154 Hz and the BASELINE decay went from 26 to
+// 134 dB/s. Calibrate passes-per-second from a dial position where the coefficient is small, then
+// invert each measurement against the filter absolutely.
+#define REVERB_DAMP_MAX        (0.8024)
+#define REVERB_BRIGHT_K        (61.055)
 #define REVERB_DAMP_CEILING    (0.9000)
 // RE-FITTED 2026-08-18 FOR THE NEW STRUCTURE. The old 0.15 was fitted against a comb bank, where
 // the damping sat inside every comb's own loop and bit hard. In a feedback network the signal passes
@@ -1627,7 +1671,7 @@ static void reset_node_state(void) {
         gSmoothPrimed[i]   = false;
         gChorusWrite[i][0] = 0;
         gChorusWrite[i][1] = 0;
-        gChorusLfo[i]      = 0.0;
+        gChorusLfo[i]      = CHORUS_PHASE0;
         memset(gChorusLine[i], 0, sizeof(gChorusLine[i]));
     }
 
@@ -4439,6 +4483,10 @@ void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_
     memset(gChorusLine, 0, sizeof(gChorusLine));
     memset(gChorusWrite, 0, sizeof(gChorusWrite));
     memset(gChorusLfo, 0, sizeof(gChorusLfo));
+
+    for (uint32_t i = 0; i < MAX_ENGINE_NODES; i++) {
+        gChorusLfo[i] = CHORUS_PHASE0;
+    }
 
     double depth  = (double)detuneValue / 127.0;
     double amount = (double)amountValue / 127.0;
