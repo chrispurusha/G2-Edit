@@ -21,6 +21,7 @@
 extern "C" {
 #endif
 
+#include <string.h>
 #include "moduleResources.h"
 #include "moduleResourcesAccess.h"
 
@@ -430,6 +431,82 @@ bool default_mutation_lock(tModuleType moduleType) {
         default:
             return false;
     }
+}
+
+// ── Module groups and replacement roles ─────────────────────────────────────
+
+tModuleGroup module_group(tModuleType moduleType) {
+    if (moduleType >= moduleTypeMax) {
+        return moduleGroupNone;
+    }
+    return gModuleProperties[moduleType].group;
+}
+
+uint32_t array_size_module_role_list(void) {
+    return (uint32_t)(sizeof(gModuleRoleList) / sizeof(gModuleRoleList[0]));
+}
+
+// The role a module's connector or parameter fills, or NULL if it fills none. `index` counts within
+// the connector's own direction for the two connector kinds, matching tCableKey's io counts.
+const char * module_role_for(tModuleType moduleType, tRoleKind kind, uint32_t index) {
+    tModuleGroup group = module_group(moduleType);
+    uint32_t     i     = 0;
+
+    if (group == moduleGroupNone) {
+        return NULL;
+    }
+
+    for (i = 0; i < array_size_module_role_list(); i++) {
+        const tModuleRole * row = &gModuleRoleList[i];
+
+        if (  (row->group == group) && (row->kind == kind)
+           && (row->moduleType == moduleType) && (row->index == index)) {
+            return row->role;
+        }
+    }
+
+    return NULL;
+}
+
+// The reverse: which connector or parameter of `moduleType` fills `role`. MODULE_ROLE_NONE when the
+// module has no counterpart for it — which is the case the replace has to drop a cable for.
+uint32_t module_index_for_role(tModuleType moduleType, tRoleKind kind, const char * role) {
+    tModuleGroup group = module_group(moduleType);
+    uint32_t     i     = 0;
+
+    if ((role == NULL) || (group == moduleGroupNone)) {
+        return MODULE_ROLE_NONE;
+    }
+
+    for (i = 0; i < array_size_module_role_list(); i++) {
+        const tModuleRole * row = &gModuleRoleList[i];
+
+        if (  (row->group == group) && (row->kind == kind)
+           && (row->moduleType == moduleType) && (strcmp(row->role, role) == 0)) {
+            return row->index;
+        }
+    }
+
+    return MODULE_ROLE_NONE;
+}
+
+// Whether this module can be replaced at all: it needs a group AND that group needs a role table,
+// since without one a replace could only move cables by raw index, which is the mechanical
+// behaviour the whole feature exists to avoid.
+bool module_group_has_roles(tModuleGroup group) {
+    uint32_t i = 0;
+
+    if (group == moduleGroupNone) {
+        return false;
+    }
+
+    for (i = 0; i < array_size_module_role_list(); i++) {
+        if (gModuleRoleList[i].group == group) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void init_module_resource_cache(void) {
