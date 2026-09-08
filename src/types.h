@@ -800,9 +800,19 @@ typedef enum {
     palGroupCount,
 } tPaletteGroup;
 
+// The largest palette group is Osc at 19; this is the array bound both the create-module menu and
+// the palette itself size themselves by, so a group that grows past it is refused rather than
+// silently writing past the end.
+#define PALETTE_GROUP_MAX    (24)
+
 typedef struct {
     const tPaletteGroup group;
     const tModuleType   moduleType;
+    // The label the CREATE-MODULE MENU shows, which is not the module's own short name: the menu has
+    // room for "Monophonic Keyboard" where a palette tile has room for "MonoKey". Carried per ENTRY
+    // rather than per module because a module in two groups may be named differently in each -
+    // NoteDet is "Note Detector" under In/Out and plain "NoteDet" under MIDI.
+    const char * menuLabel;
 } tPaletteEntry;
 
 #define MODULE_ROLE_NONE    (0xFFu)

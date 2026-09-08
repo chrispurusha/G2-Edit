@@ -332,6 +332,24 @@ static uint32_t shift_fit_row(uint32_t slot, uint32_t location, uint32_t index,
                               bool selectionTransparent, bool * fits) {
     *fits = true;
 
+    // THE BOTTOM OF THE GRID IS A BLOCKER TOO, and it was not treated as one. This function only
+    // ever consulted MAX_ROWS when some OTHER module was in the way: with nothing below it, the
+    // `!hit` return below handed back the requested row untouched, so a tall module placed near the
+    // bottom simply hung off the end of the canvas. Add Module did it as readily as a replace that
+    // grew one - a Vocoder created at row 125 stayed at 125 and occupied rows that do not exist.
+    //
+    // Clamping the requested row here covers every caller at once - create, paste, drag, and the
+    // module replace that grows a module in place. The test matches shift_member_place()'s own
+    // `below > MAX_ROWS`, so both places agree on where the grid ends.
+    if (height > MAX_ROWS) {
+        *fits = false;             // taller than the whole grid; there is nowhere it could go
+        return 0;
+    }
+
+    if ((row + height) > MAX_ROWS) {
+        row = MAX_ROWS - height;
+    }
+
     // Bounded rather than while(true): each pass strictly lowers `row`, so MAX_ROWS + 1 passes is
     // more than it can ever need, and a table that somehow reports a zero height cannot spin here.
     for (uint32_t pass = 0; pass <= MAX_ROWS; pass++) {
