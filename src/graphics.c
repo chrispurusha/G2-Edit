@@ -2399,6 +2399,14 @@ void do_graphics_loop(void) {
             }
         }
 
+        // A METER THAT MOVED IS A REASON TO DRAW. The sound engine publishes its meters and LEDs
+        // from the audio thread into atomic arrays and cannot ask for a frame itself without a
+        // syscall per block, so it raises a flag and this consumes it - the same shape as the comms
+        // lamps just above. Without it the arrays were updating perfectly and nothing was looking:
+        // the meters moved only while the mouse did (CT, 2026-09-08).
+        if (sound_engine_meters_dirty()) {
+            synthlib_request_redraw();
+        }
         reDraw = synthlib_consume_redraw();
 
         if (reDraw == true) {
@@ -2434,6 +2442,11 @@ void do_graphics_loop(void) {
             // for the whole session. Lighting a lamp needs no help from here — the USB thread wakes
             // the loop when data arrives.
             glfwWaitEventsTimeout(0.1);
+        } else if (sound_engine_active()) {
+            // Awake often enough to notice a meter change. glfwWaitEvents() would block until the
+            // next input event, which is exactly the state the meters were stuck in - and the flag
+            // above means a tick that finds nothing new costs one comparison, not a frame.
+            glfwWaitEventsTimeout(0.05);
         } else if (virtual_keyboard_wants_ticks()) {
             glfwWaitEventsTimeout(0.02); // Repeat is running — glfwWaitEvents() would stall it until the next input event
         } else if (backdoor_enabled()) {
