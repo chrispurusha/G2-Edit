@@ -279,3 +279,17 @@ CROSS-PROJECT
   tools/vst3host (open, select Filter, drag FltLP out and drop it - module created) and CT confirms
   the band appears. Still to check IN A REAL HOST: the drop, the double-click add, and the wheel
   scrolling a group wider than the window.
+- ***COMPRESSOR GAIN STEP AT THE THRESHOLD (2026-09-08)*** - CT: "when the compressor lights a LED
+  the effect is quite brutal, and it has audio glitches around it". The leveller law has unity gain
+  only where env == RefLvl, so GATING it at the threshold put a step there of the full makeup: +9.0
+  dB in ONE SAMPLE at the stock settings (Thr -12, RefLvl 0, Ratio 4:1), up on every note onset and
+  -9.0 dB again on the decay, chattering at audio rate whenever the detector sat near the threshold.
+  Simulated: worst one-sample gain jump 9.000 dB and an output discontinuity of 0.1423, against a 220
+  Hz sine's own largest sample-to-sample step of 0.0102. The detector is now clamped at the threshold
+  from below instead - gain = (target / max(env, threshold))^(1-1/ratio), one expression, no branch -
+  which drops the same figures to 0.066 dB and 0.0151. Listen for: no click on note onset, no buzz
+  while the LED flickers. EXPECT IT LOUDER IN THE GAPS - the makeup now applies all the time, up to
+  +9 dB at the stock settings, which is the honest consequence of the law being continuous.
+  UNMEASURED and worth one capture: a steady tone BELOW the threshold. This law returns it with the
+  makeup on it; a true gate returns it untouched. Nothing captured so far was played quietly enough
+  to tell the two apart.
