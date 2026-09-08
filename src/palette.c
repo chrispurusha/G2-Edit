@@ -41,6 +41,7 @@
 #include "moduleGraphics.h"
 #include "clickRegion.h"
 #include "palette.h"
+#include "utils.h"
 #include "geometry.h"
 #include "utilsGraphics.h"
 #include "selection.h"
@@ -73,17 +74,42 @@
 static bool          gOpen;
 static tPaletteGroup gGroup;
 static double        gScroll;
-static double        gTileW     = PALETTE_TILE_W_MAX; // shrunk to fit the group, floored at _MIN
+static double        gTileW = PALETTE_TILE_W_MAX;     // shrunk to fit the group, floored at _MIN
 static tRectangle    gArrowLeft;
 static tRectangle    gArrowRight;
-static bool          gScrollable;              // horizontal, for a group wider than the band
+static bool          gScrollable;
+
+// The colour NEW modules are created in, and the swatches that set it. The instrument does the same
+// thing (manual p.61: "the color selector stays in its new selection, causing any new modules you
+// add to the Patch window to get the selected color"), and the band has the room for it - the group
+// grid leaves the whole right-hand half of its own row empty. 0 is the standard grey.
+// A swatch is exactly as TALL as a group button and sits on the same two rows, so the two blocks
+// read as one piece of furniture rather than as a grid with something small parked beside it. Its
+// row position is derived from PALETTE_GROUP_H rather than from its own height for that reason:
+// the two cannot drift apart when one of them is changed.
+#define PALETTE_SWATCH_W        (20.0)
+#define PALETTE_SWATCH_H        PALETTE_GROUP_H
+#define PALETTE_SWATCH_GAP      (3.0)
+#define PALETTE_SWATCH_RING     (2.0)
+#define PALETTE_SWATCH_COLS     (13)
+static uint32_t gNewModuleColour;
+#define PALETTE_MAX_SWATCHES    (32)
+static tRectangle    gSwatchRect[PALETTE_MAX_SWATCHES];              // horizontal, for a group wider than the band
 
 // Rebuilt every render so the hit test and the drawing can never disagree about where a tile is.
 static tModuleType   gTile[PALETTE_MAX_TILES];
 static tRectangle    gTileRect[PALETTE_MAX_TILES];
 static uint32_t      gTileCount;
 static tRectangle    gGroupRect[palGroupCount];
-static int32_t       gHoverTile = -1;
+static int32_t       gHoverTile       = -1;
+
+// Double-click a tile and the module is added below the focused one, without a drag. The manual
+// offers it as a first-class alternative ("you could also double-click a module icon to
+// automatically add it to the Patch window below the currently focused module", p.81), and it is
+// the only route that works when the target is off-screen or the hand is not steady.
+#define PALETTE_DOUBLE_CLICK_MS    (400.0)
+static double        gLastTileClickMs;
+static int32_t       gLastTileClicked = -1;
 
 static struct {
     bool        pressed;      // a tile is held but has not moved far enough to be a drag
@@ -156,14 +182,30 @@ static uint32_t tile_connectors(tModuleType moduleType, tConnectorDir dir, tRgb 
 }
 
 static void draw_tile(tRectangle rect, tModuleType moduleType, bool hovered) {
-    tRgb     body = (tRgb)MODULE_STANDARD_GREY;
+    // A TILE IS DRAWN IN THE COLOUR THE MODULE WOULD BE CREATED IN, so picking a swatch previews
+    // itself across the whole row rather than only on the drag ghost. Hover is then a black frame
+    // rather than a paler fill, which would have thrown that colour away exactly when the pointer
+    // is on the tile you are about to take.
+    tRgb     body = gModuleColourMap[palette_new_module_colour()];
     tRgb     dots[PALETTE_MAX_DOTS];
     uint32_t n    = 0;
     uint32_t i    = 0;
 
-    set_rgb_colour(hovered ? (tRgb)RGB_GREY_7 : body);
-    render_rectangle_with_border(mainArea, rect);
-
+    if (hovered) {
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_rectangle(mainArea, rect);
+        set_rgb_colour(body);
+        render_rectangle(mainArea, (tRectangle){
+            {
+                rect.coord.x + 1.5, rect.coord.y + 1.5
+            }, {
+                rect.size.w - 3.0, rect.size.h - 3.0
+            }
+        });
+    } else {
+        set_rgb_colour(body);
+        render_rectangle_with_border(mainArea, rect);
+    }
     // Inputs down the left edge, outputs down the right, coloured by connector type. This is the
     // information a scaled-down face could not carry at tile size: what the module takes and gives.
     n = tile_connectors(moduleType, connectorDirIn, dots, PALETTE_MAX_DOTS);
@@ -226,7 +268,8 @@ void palette_render(void) {
     render_rectangle_with_border(mainArea, (tRectangle){{0.0, top}, {width, PALETTE_BAND_HEIGHT}});
 
     // Sixteen groups as a 2 x 8 grid, the way the instrument's own toolbar lays them out - a
-    // compact block rather than a row, which leaves the whole width below for the tiles.
+    // compact block rather than a row, which leaves the whole width below for the tiles, and the
+    // right of this row for the colour swatches.
     for (g = 0; g < palGroupCount; g++) {
         uint32_t   col  = g % PALETTE_GROUP_COLS;
         uint32_t   row  = g / PALETTE_GROUP_COLS;
@@ -239,9 +282,11 @@ void palette_render(void) {
         };
 
         gGroupRect[g] = rect;
-        set_rgb_colour((g == gGroup) ? (tRgb)MODULE_BLUE_1 : (tRgb)RGB_BACKGROUND_GREY);
+        // The app's usual "this one is active" green, the same as the topbar's own selected
+        // buttons - not a blue of its own, which made the palette look like a different program.
+        set_rgb_colour((g == gGroup) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
         render_rectangle_with_border(mainArea, rect);
-        set_rgb_colour((g == gGroup) ? (tRgb)RGB_WHITE : (tRgb)RGB_BLACK);
+        set_rgb_colour((tRgb)RGB_BLACK);
         // render_text's coord.y is the TOP of the text, not its baseline - draw_button_split() is
         // the proof, offsetting its text rectangle by the button margin from the button's own top.
         // Both labels here were first written as though it were a baseline, which drew every group
@@ -250,6 +295,53 @@ void palette_render(void) {
             {rect.coord.x + 4.0, rect.coord.y + 3.5},
             {PALETTE_GROUP_W - 8.0, PALETTE_TILE_TEXT_H}
         }, palette_group_name((tPaletteGroup)g));
+    }
+
+    // The colour swatches, in the space the group grid leaves on its own two rows. The selected one
+    // carries a black border so it reads as chosen rather than merely present.
+    {
+        uint32_t colours = array_size_module_colour_map();
+        uint32_t c       = 0;
+        double   originX = PALETTE_GROUP_X + ((PALETTE_GROUP_W + 1.0) * PALETTE_GROUP_COLS) + 16.0;
+
+        if (colours > PALETTE_MAX_SWATCHES) {
+            colours = PALETTE_MAX_SWATCHES;
+        }
+
+        for (c = 0; c < colours; c++) {
+            uint32_t   col  = c % PALETTE_SWATCH_COLS;
+            uint32_t   rw   = c / PALETTE_SWATCH_COLS;
+            tRectangle rect = {
+                {
+                    originX + ((PALETTE_SWATCH_W + PALETTE_SWATCH_GAP) * (double)col),
+                    top + PALETTE_GROUP_Y + ((PALETTE_GROUP_H + 1.0) * (double)rw)
+                },{
+                    PALETTE_SWATCH_W, PALETTE_SWATCH_H
+                }
+            };
+
+            gSwatchRect[c] = rect;
+
+            // The selected one is marked by a black frame drawn INSIDE its own cell, with the
+            // colour inset within it - not by a ring around the outside, which at this row pitch
+            // would reach into the row above and the row below.
+            if (c == gNewModuleColour) {
+                set_rgb_colour((tRgb)RGB_BLACK);
+                render_rectangle(mainArea, rect);
+                set_rgb_colour(gModuleColourMap[c]);
+                render_rectangle(mainArea, (tRectangle){
+                    {
+                        rect.coord.x + PALETTE_SWATCH_RING, rect.coord.y + PALETTE_SWATCH_RING
+                    }, {
+                        PALETTE_SWATCH_W - (PALETTE_SWATCH_RING * 2.0),
+                        PALETTE_SWATCH_H - (PALETTE_SWATCH_RING * 2.0)
+                    }
+                });
+            } else {
+                set_rgb_colour(gModuleColourMap[c]);
+                render_rectangle_with_border(mainArea, rect);
+            }
+        }
     }
 
     gTileCount = palette_group_modules(gGroup, gTile, PALETTE_MAX_TILES);
@@ -401,6 +493,9 @@ void palette_render(void) {
         ghost.key.slot     = (uint32_t)gSlot;
         ghost.key.location = gLocation;
         ghost.key.index    = 0;
+        // In the colour it will actually be created in, so the swatch is previewed before the drop
+        // rather than discovered after it.
+        ghost.colour       = gNewModuleColour;
         ghost.column       = column;
         ghost.row          = row;
 
@@ -426,6 +521,10 @@ static int32_t tile_at(tCoord coord) {
     }
 
     return -1;
+}
+
+uint32_t palette_new_module_colour(void) {
+    return gNewModuleColour;
 }
 
 bool palette_add_module(tModuleType moduleType) {
@@ -480,6 +579,29 @@ bool palette_left_down(tCoord coord) {
         }
     }
 
+    {
+        uint32_t colours = array_size_module_colour_map();
+        uint32_t c       = 0;
+
+        if (colours > PALETTE_MAX_SWATCHES) {
+            colours = PALETTE_MAX_SWATCHES;
+        }
+
+        for (c = 0; c < colours; c++) {
+            if (within_rectangle(coord, gSwatchRect[c])) {
+                gNewModuleColour = c;
+
+                // A swatch does two things, as the instrument's own colour selector does: it sets
+                // the colour NEW modules get, and it recolours whatever is selected right now
+                // (manual p.61). With nothing selected only the first applies, so clicking a swatch
+                // to set up the next few modules never repaints anything by surprise.
+                modules_set_colour(c);
+                synthlib_request_redraw();
+                return true;
+            }
+        }
+    }
+
     if (gScrollable && within_rectangle(coord, gArrowLeft)) {
         gScroll -= (gTileW + PALETTE_TILE_GAP) * 3.0;
         synthlib_request_redraw();
@@ -504,6 +626,22 @@ bool palette_left_down(tCoord coord) {
         gDrag.type       = gTile[t];
         gDrag.pressCoord = coord;
         gDrag.coord      = coord;
+
+        {
+            double now = get_time_ms();
+
+            if ((gLastTileClicked == t) && ((now - gLastTileClickMs) < PALETTE_DOUBLE_CLICK_MS)) {
+                // The second click of a pair adds the module and cancels the drag the first one
+                // started, so a double-click never also drops a ghost somewhere.
+                gDrag.pressed    = false;
+                gDrag.active     = false;
+                gLastTileClicked = -1;
+                (void)palette_add_module(gTile[t]);
+                return true;
+            }
+            gLastTileClickMs = now;
+            gLastTileClicked = t;
+        }
         return true;
     }
     // Anywhere else in the band is still ours - swallow it so a click on the band's background does

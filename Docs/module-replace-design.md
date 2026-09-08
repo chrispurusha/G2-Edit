@@ -75,13 +75,24 @@ second signal-colour converter, no second DX router. `LevScaler` is the interest
 manual documents it inside the Note chapter — so chapter membership alone is not sufficient, and a
 module can be documented with a group without being offered as a replacement inside it.
 
-## What is built (2026-09-07)
+## What is built (2026-09-07, extended 2026-09-08)
+
+**All nineteen groups work.** `gModuleRoleList` holds 1202 role rows covering every group; the Filter
+group was written first because its geometry is the least forgiving, and the rest followed once that
+held.
+
+EVERY INDEX WAS CHECKED AGAINST OUR OWN TABLES - each parameter index against that module's entry
+count in `paramLocationList`, each connector index against its count in the matching direction in
+`connectorLocationList`. All 1202 are in range. Two independently derived descriptions of the same
+170 modules agreeing on every index is the check that would have caught a mis-parse.
+
+There is a `REPLACE [VA|FX] <index> LIST` backdoor command that reports what the right-click menu
+would offer, which is how a greyed-out "Replace with" gets diagnosed without a mouse.
 
 The Filter group works. `moduleReplace.c` does the swap, `gModuleRoleList` in `moduleResources.h`
 holds the Filter group's 99 role rows, and every module type now carries its group in
 `gModuleProperties`. The module right-click menu has a **Replace with** submenu listing the rest of
-the group; it is greyed out for a module in no group and for the eighteen groups whose role table is
-not written yet. There is a `REPLACE [VA|FX] <index> <name>` backdoor command for scripted testing.
+the group; it is greyed out only for the eleven modules that are in no group at all. There is a `REPLACE [VA|FX] <index> <name>` backdoor command for scripted testing.
 
 Three decisions worth knowing:
 
@@ -96,8 +107,18 @@ Three decisions worth knowing:
   waveform — have no role rows in this group, so they start at the new module's own defaults. That
   is what the instrument's own table does, not an omission.
 
-A taller replacement pushes the rest of its column down; if the column cannot take it the whole swap
-is refused and nothing changes, cables included.
+**A taller replacement rearranges its column**, and this needed nothing new: `module_replace()` sets
+the module's type BEFORE calling `shift_modules_down()`, so the height that function works from is
+the new one and the existing insert-and-push logic does the rest. Verified on a packed column -
+FltClassic (4 rows) to Vocoder (8) at row 8 of a column filled 0/4/8/12/16 pushed the two modules
+below it down by exactly four rows, with no overlap anywhere. If the column cannot take the taller
+module the whole swap is refused and nothing changes, cables included.
+
+**Confirmed against the instrument, 2026-09-08.** With a G2 connected the swap is written as one
+whole-patch command and the device keeps it: after replacing FltClassic with FltNord, switching to
+slot B and back - which pulls the instrument's own copy - the module is still FltNord. The cable
+handling survives the same round trip: replacing with an FltStatic left the two audio cables and
+removed the pitch-modulation one from the G2's copy, not merely from ours.
 
 ## What still has to be worked out before this can be built
 

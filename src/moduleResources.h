@@ -28,25 +28,25 @@
 #include "types.h"
 
 // Terminate the string maps with a NULL, so that we can work out array size
-const char *             fltClassicDbStrMap[]                    = {"12db", "18db", "24db", NULL};
-const char *             fltMultiDbStrMap[]                      = {"6db", "12db", NULL};
-const char *             emptyStrMap[]                           = {" ", NULL};
-const char *             driverTypeStrMap[]                      = {"Reed", "Bow", "-Lip-", "-Mallet-", NULL};
-const char *             octaveStrMap[]                          = {"C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", NULL};
-const char *             seqNoteMagStrMap[]                      = {"3oct", "2oct", "1oct", NULL};
+const char *        fltClassicDbStrMap[]                    = {"12db", "18db", "24db", NULL};
+const char *        fltMultiDbStrMap[]                      = {"6db", "12db", NULL};
+const char *        emptyStrMap[]                           = {" ", NULL};
+const char *        driverTypeStrMap[]                      = {"Reed", "Bow", "-Lip-", "-Mallet-", NULL};
+const char *        octaveStrMap[]                          = {"C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", NULL};
+const char *        seqNoteMagStrMap[]                      = {"3oct", "2oct", "1oct", NULL};
 // The top step is 64, not 63: a bipolar Seq slider runs ...60, 61, 62, 64, skipping 63 - read off
 // the hardware. Same pinning PShift Fine has, and the opposite of a pan knob, which stops at +63.
-const char *             bip128StrMap[]                          = {"-64", "-63", "-62", "-61", "-60", "-59", "-58", "-57", "-56", "-55", "-54", "-53", "-52", "-51", "-50", "-49", "-48", "-47", "-46", "-45", "-44", "-43", "-42", "-41", "-40", "-39", "-38", "-37", "-36", "-35", "-34", "-33", "-32", "-31", "-30", "-29", "-28", "-27", "-26", "-25", "-24", "-23", "-22", "-21", "-20", "-19", "-18", "-17", "-16", "-15", "-14", "-13", "-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "64", NULL};
-const char *             captureStrMap[]                         = {"Closest", "Evenly", NULL};
-const char *             fltNordDbStrMap[]                       = {"12dB", "24dB", NULL};
-const char *             offTo100KbStrMap[]                      = {"Off", "25%", "50%", "75%", "100%", NULL};
-const char *             offOnStrMap[]                           = {"Off", "On", NULL};
+const char *        bip128StrMap[]                          = {"-64", "-63", "-62", "-61", "-60", "-59", "-58", "-57", "-56", "-55", "-54", "-53", "-52", "-51", "-50", "-49", "-48", "-47", "-46", "-45", "-44", "-43", "-42", "-41", "-40", "-39", "-38", "-37", "-36", "-35", "-34", "-33", "-32", "-31", "-30", "-29", "-28", "-27", "-26", "-25", "-24", "-23", "-22", "-21", "-20", "-19", "-18", "-17", "-16", "-15", "-14", "-13", "-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "64", NULL};
+const char *        captureStrMap[]                         = {"Closest", "Evenly", NULL};
+const char *        fltNordDbStrMap[]                       = {"12dB", "24dB", NULL};
+const char *        offTo100KbStrMap[]                      = {"Off", "25%", "50%", "75%", "100%", NULL};
+const char *        offOnStrMap[]                           = {"Off", "On", NULL};
 // LevAmp's Type offers only these two. It carried the mixer's three-way Exp/Lin/dB list, so its two
 // settings read "Exp" and "Lin" - naming a curve this module does not have, and omitting the one it
 // does.
-const char *             levAmpTypeStrMap[]                      = {"Lin", "dB", NULL};
-const char *             expStrMap[]                             = {"Exp", "Lin", "dB", NULL};
-const char *             logStrMap[]                             = {"Log", "Lin", NULL};
+const char *        levAmpTypeStrMap[]                      = {"Lin", "dB", NULL};
+const char *        expStrMap[]                             = {"Exp", "Lin", "dB", NULL};
+const char *        logStrMap[]                             = {"Log", "Lin", NULL};
 // MEASURED 2026-09-07, and the second entry is a BOOST not a cut: engaging it makes a 2-Out 6.02 dB
 // LOUDER (a factor of 2.0016), on two independent modules with the write read back from the
 // instrument each time. CT saw the same thing from the panel - "it's louder at -6dB".
@@ -63,7 +63,7 @@ const char *             logStrMap[]                             = {"Log", "Lin"
 //
 // 4-Out shares this map and is unmeasured, but shares the manual's sentence. THE MIXERS DO NOT: see
 // mixerPadStrMap.
-const char *             padStrMap[]                             = {"0dB", "+6dB", NULL};
+const char *        padStrMap[]                             = {"0dB", "+6dB", NULL};
 
 // THE MIXER'S PAD IS A DIFFERENT CONTROL and used to share the map above, which had it boosting. The
 // manual: "Click the Pad scroll button to attenuate the levels on all mixer inputs by -6 dB (or
@@ -74,145 +74,145 @@ const char *             padStrMap[]                             = {"0dB", "+6dB
 // (writing 3 reads back 3 but sounds identical to 2). The table used to declare TWO, which matches
 // the manual's phrasing - "attenuate the levels on all mixer inputs by -6 dB (or -12dB)" - only if
 // you read the parenthesis as a second position rather than an aside. It is a second position.
-const char *             mixerPadStrMap[]                        = {"0dB", "-6dB", "-12dB", NULL};
-const char *             db12PadStrMap[]                         = {"+6dB", "0dB", "-6dB", "-12dB", NULL};
-const char *             db12BPadStrMap[]                        = {"0dB", "-6dB", "-12dB", NULL};
-const char *             gcStrMap[]                              = {"GC", "GC", NULL};
-const char *             kbStrMap[]                              = {"KB", "KB", NULL};
-const char *             sideChainStrMap[]                       = {"Side Chain", "Side Chain", NULL};
+const char *        mixerPadStrMap[]                        = {"0dB", "-6dB", "-12dB", NULL};
+const char *        db12PadStrMap[]                         = {"+6dB", "0dB", "-6dB", "-12dB", NULL};
+const char *        db12BPadStrMap[]                        = {"0dB", "-6dB", "-12dB", NULL};
+const char *        gcStrMap[]                              = {"GC", "GC", NULL};
+const char *        kbStrMap[]                              = {"KB", "KB", NULL};
+const char *        sideChainStrMap[]                       = {"Side Chain", "Side Chain", NULL};
 const char *             // The Tune dial reads in whichever of these the Pitch Type selector is set to, which is why
 // render_paramType1OscFreq switches on that parameter rather than on the module. Sub is the fifth
 // setting and no module here declares a range that reaches it yet - each oscillator offers its own
 // subset through the range field (OscMaster stops at Factor, most stop at Partial), and which of
 // them also offer Sub is not established. The name is here so the fifth setting reads correctly
 // wherever it does turn up, e.g. in a patch built on the synth itself.
-                         pitchTypeStrMap[]                       = {"Semi", "Freq", "Factor", "Partial", "Sub", NULL};
-const char *             fmTypeStrMap[]                          = {"FM Lin", "FM Trk", NULL};
-const char *             envShapeStrMap[]                        = {"LogExp", "LinExp", "ExpExp", "LinLin", NULL};
-const char *             normalResetStrMap[]                     = {"Normal", "Reset", NULL};
-const char *             posStrMap[]                             = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv", NULL};
-const char *             posNegInvStrMap[]                       = {"Pos", "PosInv", "Neg", "NegInv", NULL};
-const char *             posNegInvBipStrMap[]                    = {"Pos", "PosInv", "Neg", "NegInv", "Bip", NULL};
-const char *             bipPosNegStrMap[]                       = {"Bip", "Pos", "Neg", NULL};
-const char *             resonAlgStrMap[]                        = {"String1", "String2", "Tube1", "Tube2", "Tube3", NULL};
-const char *             outToStrMap[]                           = {"Out 1/2", "Out 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
-const char *             outTo4OutStrMap[]                       = {"Out", "Fx", "Bus", NULL};
-const char *             inFxStrMap[]                            = {"FX 1/2", "FX 3/4", NULL};
-const char *             shapeTypeStrMap[]                       = {"Sine", "Tri", "Saw", "Sqr", "DualSaw", NULL};
+                    pitchTypeStrMap[]                       = {"Semi", "Freq", "Factor", "Partial", "Sub", NULL};
+const char *        fmTypeStrMap[]                          = {"FM Lin", "FM Trk", NULL};
+const char *        envShapeStrMap[]                        = {"LogExp", "LinExp", "ExpExp", "LinLin", NULL};
+const char *        normalResetStrMap[]                     = {"Normal", "Reset", NULL};
+const char *        posStrMap[]                             = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv", NULL};
+const char *        posNegInvStrMap[]                       = {"Pos", "PosInv", "Neg", "NegInv", NULL};
+const char *        posNegInvBipStrMap[]                    = {"Pos", "PosInv", "Neg", "NegInv", "Bip", NULL};
+const char *        bipPosNegStrMap[]                       = {"Bip", "Pos", "Neg", NULL};
+const char *        resonAlgStrMap[]                        = {"String1", "String2", "Tube1", "Tube2", "Tube3", NULL};
+const char *        outToStrMap[]                           = {"Out 1/2", "Out 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
+const char *        outTo4OutStrMap[]                       = {"Out", "Fx", "Bus", NULL};
+const char *        inFxStrMap[]                            = {"FX 1/2", "FX 3/4", NULL};
+const char *        shapeTypeStrMap[]                       = {"Sine", "Tri", "Saw", "Sqr", "DualSaw", NULL};
 const char *             // Sqr50/25/10 are the three pulse widths; the synth names them that way rather than as "p25"/"p10",
 // and Sqr50 says what "squ" left implicit - a square IS the 50% pulse.
-                         shapeOscATypeStrMap[]                   = {"Sine", "Tri", "Saw", "Sqr50", "Sqr25", "Sqr10", NULL};
-const char *             reverbTypeStrMap[]                      = {"Small", "Medium", "Large", "Hall", NULL};
-const char *             polyMonoStrMap[]                        = {"Poly", "Mono", NULL};
+                    shapeOscATypeStrMap[]                   = {"Sine", "Tri", "Saw", "Sqr50", "Sqr25", "Sqr10", NULL};
+const char *        reverbTypeStrMap[]                      = {"Small", "Medium", "Large", "Hall", NULL};
+const char *        polyMonoStrMap[]                        = {"Poly", "Mono", NULL};
 // RandomA/B's Range. Sub is the FIRST setting, not the fourth: this listed Rate Sub at index 3, so
 // four of its five positions named the wrong range. The random generators use the same five-way
 // range control the LFOs do, and two independent references agree on the order.
-const char *             rangeStrMap[]                           = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", NULL};
+const char *        rangeStrMap[]                           = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", NULL};
 
 // The LFOs' own Range: 0=Sub 1=Lo 2=Hi 3=BPM 4=Clk. LfoShpA and LfoB are the ones that offer Clk.
-const char *             rangeLfoStrMap[]                        = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", NULL};
-const char *             lfoWaveStrMap[]                         = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd", NULL};
-const char *             lfoShpAWaveStrMap[]                     = {"Sine", "CosBell", "TriBell", "Saw2Tri", "Sqr2Tri", "Sqr", NULL};
-const char *             rangeLfoCStrMap[]                       = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", NULL};   // 0=Sub 1=Lo 2=Hi 3=BPM; LfoC and LfoA have no Clk. Was mis-ordered {Lo,Hi,BPM,Sub}
-const char *             saturateCurveStrMap[]                   = {"1", "2", "3", "4", NULL};
-const char *             shpExpCurveStrMap[]                     = {"x2", "x3", "x4", "x5", NULL};
-const char *             pulseRangeStrMap[]                      = {"Sub", "Lo", "Hi", NULL};
-const char *             pulseModeStrMap[]                       = {"Plus", "Minus", NULL};
-const char *             logicDelayModeStrMap[]                  = {"Pos", "Neg", "Cycle", NULL};
-const char *             oscPmWaveStrMap[]                       = {"Sin", "Tri", NULL};
-const char *             rndClkBCharStrMap[]                     = {"Rnd1", "Rnd2", NULL};
-const char *             rndPatternWaveStrMap[]                  = {"Val", "State", NULL};
-const char *             bipUniStrMap[]                          = {"Bipolar", "Unipolar", NULL};
-const char *             vowelStrMap[]                           = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE", NULL};
-const char *             nordFilterTypeStrMap[]                  = {"LP", "BP", "HP", "BR", NULL};
-const char *             staticFilterTypeStrMap[]                = {"LP", "BP", "HP", NULL};
-const char *             multiEnvSustainStrMap[]                 = {"L1", "L2", "L3", "Trg", NULL};
-const char *             drSynthPresetStrMap[]                   = {"Kick 1", "Kick 2", "Kick 3", "Kick 4", "Kick 5", "Snare 1", "Snare 2", "Snare 3", "Snare 4", "Snare 5", "Tom1 1", "Tom1 2", "Tom1 3", "Tom2 1", "Tom2 2", "Tom2 3", "Tom3 1", "Tom3 2", "Tom3 3", "Cymb 1", "Cymb 2", "Cymb 3", "Cymb 4", "Cymb 5", "Perc 1", "Perc 2", "Perc 3", "Perc 4", "Perc 5", "Perc 6", NULL}; // *** Don't have the list
-const char *             asymSymStrMap[]                         = {"Asym", "Sym", NULL};
-const char *             odTypeStrMap[]                          = {"Soft", "Hard", "Fat", "Heavy", NULL};
-const char *             delayStrMap[]                           = {"12.5ms", "25ms", "50ms", "100ms", NULL};
-const char *             gateTypeStrMap[]                        = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR", NULL};
-const char *             invStrMap[]                             = {"Pos", "Inv", NULL};
-const char *             clkSrcStrMap[]                          = {"Internal", "Master", NULL};
+const char *        rangeLfoStrMap[]                        = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", NULL};
+const char *        lfoWaveStrMap[]                         = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd", NULL};
+const char *        lfoShpAWaveStrMap[]                     = {"Sine", "CosBell", "TriBell", "Saw2Tri", "Sqr2Tri", "Sqr", NULL};
+const char *        rangeLfoCStrMap[]                       = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", NULL};        // 0=Sub 1=Lo 2=Hi 3=BPM; LfoC and LfoA have no Clk. Was mis-ordered {Lo,Hi,BPM,Sub}
+const char *        saturateCurveStrMap[]                   = {"1", "2", "3", "4", NULL};
+const char *        shpExpCurveStrMap[]                     = {"x2", "x3", "x4", "x5", NULL};
+const char *        pulseRangeStrMap[]                      = {"Sub", "Lo", "Hi", NULL};
+const char *        pulseModeStrMap[]                       = {"Plus", "Minus", NULL};
+const char *        logicDelayModeStrMap[]                  = {"Pos", "Neg", "Cycle", NULL};
+const char *        oscPmWaveStrMap[]                       = {"Sin", "Tri", NULL};
+const char *        rndClkBCharStrMap[]                     = {"Rnd1", "Rnd2", NULL};
+const char *        rndPatternWaveStrMap[]                  = {"Val", "State", NULL};
+const char *        bipUniStrMap[]                          = {"Bipolar", "Unipolar", NULL};
+const char *        vowelStrMap[]                           = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE", NULL};
+const char *        nordFilterTypeStrMap[]                  = {"LP", "BP", "HP", "BR", NULL};
+const char *        staticFilterTypeStrMap[]                = {"LP", "BP", "HP", NULL};
+const char *        multiEnvSustainStrMap[]                 = {"L1", "L2", "L3", "Trg", NULL};
+const char *        drSynthPresetStrMap[]                   = {"Kick 1", "Kick 2", "Kick 3", "Kick 4", "Kick 5", "Snare 1", "Snare 2", "Snare 3", "Snare 4", "Snare 5", "Tom1 1", "Tom1 2", "Tom1 3", "Tom2 1", "Tom2 2", "Tom2 3", "Tom3 1", "Tom3 2", "Tom3 3", "Cymb 1", "Cymb 2", "Cymb 3", "Cymb 4", "Cymb 5", "Perc 1", "Perc 2", "Perc 3", "Perc 4", "Perc 5", "Perc 6", NULL};      // *** Don't have the list
+const char *        asymSymStrMap[]                         = {"Asym", "Sym", NULL};
+const char *        odTypeStrMap[]                          = {"Soft", "Hard", "Fat", "Heavy", NULL};
+const char *        delayStrMap[]                           = {"12.5ms", "25ms", "50ms", "100ms", NULL};
+const char *        gateTypeStrMap[]                        = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR", NULL};
+const char *        invStrMap[]                             = {"Pos", "Inv", NULL};
+const char *        clkSrcStrMap[]                          = {"Internal", "Master", NULL};
 // ClkGen's Sync every. SIX settings, each twice the last - not the sixteen consecutive beats the
 // shared 1..16 list gave it. Confirmed on the hardware and in both references.
-const char *             clkGenBeatSyncStrMap[]                  = {"1", "2", "4", "8", "16", "32", NULL};
-const char *             int16StrMap[]                           = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
-const char *             divModeStrMap[]                         = {"Gated", "Toggled", NULL};
-const char *             out8StrMap[]                            = {"Out 1", "Out 2", "Out 3", "Out 4", "Out 5", "Out 6", "Out 7", "Out 8", NULL};
-const char *             in8StrMap[]                             = {"In 1", "In 2", "In 3", "In 4", "In 5", "In 6", "In 7", "In 8", NULL};
-const char *             rectStrMap[]                            = {"HalfPos", "HalfNeg", "FullPos", "FullNeg", NULL};
-const char *             shpStaticStrMap[]                       = {"Inv x3", "Inv x2", "x2", "x3", NULL};
-const char *             trigGateStrMap[]                        = {"Trig", "Gate", NULL};
-const char *             decayReleaseStrMap[]                    = {"Decay", "Release", NULL};
-const char *             fltLPSlopeStrMap[]                      = {"6db", "12db", "18db", "24db", "30db", "36db", NULL};
-const char *             flipFlopStrMap[]                        = {"D-type", "RS-type", NULL};
-const char *             freqShiftRangeStrMap[]                  = {"Sub", "Lo", "Hi", NULL};
-const char *             fltPhaseTypeStrMap[]                    = {"Notch", "Peak", "Deep", NULL};
-const char *             eq2BandLoStrMap[]                       = {"80Hz", "110Hz", "160Hz", NULL};
-const char *             eq2BandHiStrMap[]                       = {"6kHz", "8kHz", "12kHz", NULL};
-const char *             presetStrMap[]                          = {"Set", NULL};
-const char *             bitsStrMap[]                            = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off", NULL};
-const char *             sustainStrMap[]                         = {"L1", "L2", NULL};
-const char *             midiChanStrMap[]                        = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "SlotA", "SlotB", "SlotC", "SlotD", NULL};
-const char *             midiChanRcvStrMap[]                     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "Keyb", NULL};
-const char *             midiChanAutomateStrMap[]                = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", NULL};
-const char *             thruStrMap[]                            = {"Notes only", "Notes+Ctrls", NULL};
-const char *             levConvStrMap[]                         = {"Bip", "Pos", "Neg", NULL};
-const char *             oscShpAStrMap[]                         = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "SymPulse", NULL};
-const char *             oscShpBStrMap[]                         = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "DblSaw", "Pulse", "SymPulse", NULL};
-const char *             dxFeedbackStrMap[]                      = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
-const char *             dxAlgStrMap[]                           = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", NULL};
-const char *             pShiftDelayStrMod[]                     = {"12.5ms", "25ms", "50ms", "100ms", NULL};
-const char *             twoToInSourceStrMap[]                   = {"In 1/2", "In 3/4", "Bus 1/2", "Bus 3/4", NULL};
-const char *             fourToInSourceStrMap[]                  = {"In", "Bus", NULL};
-const char *             delayRangeStrMap[]                      = {"5ms", "25ms", "100ms", "500ms", "1.0s", "2.0s", "2.7s", NULL};
-const char *             delayABRangeStrMap[]                    = {"500ms", "1.0s", "2.0s", "2.7s", NULL};
-const char *             dlyStereoRangeStrMap[]                  = {"500ms", "1.0s", "1.35s", NULL};
-const char *             timeClkStrMap[]                         = {"Time", "Clk", NULL};
-const char *             ratioFixedStrMap[]                      = {"Ratio", "Fixed", NULL};
-const char *             detuneStrMap[]                          = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4", "+5", "+6", "+7", NULL};
-const char *             operator07StrMap[]                      = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
-const char *             operatorDepthStrMap[]                   = {"-Lin", "-Exp", "+Exp", "+Lin", NULL};
-const char *             phaserTypeStrMap[]                      = {"Type I", "Type II", NULL};
-const char *             invertStrMap[]                          = {"m", "1-m", NULL};
-const char *             monoKeyStrMap[]                         = {"Last", "Lo", "Hi", NULL};
+const char *        clkGenBeatSyncStrMap[]                  = {"1", "2", "4", "8", "16", "32", NULL};
+const char *        int16StrMap[]                           = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
+const char *        divModeStrMap[]                         = {"Gated", "Toggled", NULL};
+const char *        out8StrMap[]                            = {"Out 1", "Out 2", "Out 3", "Out 4", "Out 5", "Out 6", "Out 7", "Out 8", NULL};
+const char *        in8StrMap[]                             = {"In 1", "In 2", "In 3", "In 4", "In 5", "In 6", "In 7", "In 8", NULL};
+const char *        rectStrMap[]                            = {"HalfPos", "HalfNeg", "FullPos", "FullNeg", NULL};
+const char *        shpStaticStrMap[]                       = {"Inv x3", "Inv x2", "x2", "x3", NULL};
+const char *        trigGateStrMap[]                        = {"Trig", "Gate", NULL};
+const char *        decayReleaseStrMap[]                    = {"Decay", "Release", NULL};
+const char *        fltLPSlopeStrMap[]                      = {"6db", "12db", "18db", "24db", "30db", "36db", NULL};
+const char *        flipFlopStrMap[]                        = {"D-type", "RS-type", NULL};
+const char *        freqShiftRangeStrMap[]                  = {"Sub", "Lo", "Hi", NULL};
+const char *        fltPhaseTypeStrMap[]                    = {"Notch", "Peak", "Deep", NULL};
+const char *        eq2BandLoStrMap[]                       = {"80Hz", "110Hz", "160Hz", NULL};
+const char *        eq2BandHiStrMap[]                       = {"6kHz", "8kHz", "12kHz", NULL};
+const char *        presetStrMap[]                          = {"Set", NULL};
+const char *        bitsStrMap[]                            = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off", NULL};
+const char *        sustainStrMap[]                         = {"L1", "L2", NULL};
+const char *        midiChanStrMap[]                        = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "SlotA", "SlotB", "SlotC", "SlotD", NULL};
+const char *        midiChanRcvStrMap[]                     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "Keyb", NULL};
+const char *        midiChanAutomateStrMap[]                = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", NULL};
+const char *        thruStrMap[]                            = {"Notes only", "Notes+Ctrls", NULL};
+const char *        levConvStrMap[]                         = {"Bip", "Pos", "Neg", NULL};
+const char *        oscShpAStrMap[]                         = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "SymPulse", NULL};
+const char *        oscShpBStrMap[]                         = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "DblSaw", "Pulse", "SymPulse", NULL};
+const char *        dxFeedbackStrMap[]                      = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
+const char *        dxAlgStrMap[]                           = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", NULL};
+const char *        pShiftDelayStrMod[]                     = {"12.5ms", "25ms", "50ms", "100ms", NULL};
+const char *        twoToInSourceStrMap[]                   = {"In 1/2", "In 3/4", "Bus 1/2", "Bus 3/4", NULL};
+const char *        fourToInSourceStrMap[]                  = {"In", "Bus", NULL};
+const char *        delayRangeStrMap[]                      = {"5ms", "25ms", "100ms", "500ms", "1.0s", "2.0s", "2.7s", NULL};
+const char *        delayABRangeStrMap[]                    = {"500ms", "1.0s", "2.0s", "2.7s", NULL};
+const char *        dlyStereoRangeStrMap[]                  = {"500ms", "1.0s", "1.35s", NULL};
+const char *        timeClkStrMap[]                         = {"Time", "Clk", NULL};
+const char *        ratioFixedStrMap[]                      = {"Ratio", "Fixed", NULL};
+const char *        detuneStrMap[]                          = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4", "+5", "+6", "+7", NULL};
+const char *        operator07StrMap[]                      = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
+const char *        operatorDepthStrMap[]                   = {"-Lin", "-Exp", "+Exp", "+Lin", NULL};
+const char *        phaserTypeStrMap[]                      = {"Type I", "Type II", NULL};
+const char *        invertStrMap[]                          = {"m", "1-m", NULL};
+const char *        monoKeyStrMap[]                         = {"Last", "Lo", "Hi", NULL};
 // The Step probability switch: four settings, starting at 25%. Its own list, because it is NOT the
 // same control as Edge below even though both read as percentages.
-const char *             rndStepProbStrMap[]                     = {"25%", "50%", "75%", "100%", NULL};
+const char *        rndStepProbStrMap[]                     = {"25%", "50%", "75%", "100%", NULL};
 
 // Edge, ascending with 0% first: a smoothly gliding random wave at the bottom of the selector and a
 // hard stepped one at the top (manual, RANDOMA). This ran backwards, so an Edge of 0% read as 100%.
-const char *             edgeStepStrMap[]                        = {"0%", "25%", "50%", "75%", "100%", NULL};
-const char *             vocoderStrMap[]                         = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
-const char *             sw8to1SelStrMap[]                       = {"Lo", "64'", "32'", "16'", "8'", "4'", "2'", "1'", NULL};
-const char *             seqXFadeStrMap[]                        = {"Off", "25%", "50%", "100%", NULL};
-const char *             clkSyncStrMap[]                         = {"64/1", "48/1",  "32/1",  "24/1", "16/1",  "12/1",  "8/1",  "6/1",   "4/1",  "3/1", "2/1",   "1/1D",
-                                                                     "1/1",                                      "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D",  "1/4T", "1/8", "1/16D", "1/8T",
-                                                                     "1/16",                                     "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T", NULL};
-const char *             noteNameStrMap[]                        = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", NULL};
+const char *        edgeStepStrMap[]                        = {"0%", "25%", "50%", "75%", "100%", NULL};
+const char *        vocoderStrMap[]                         = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
+const char *        sw8to1SelStrMap[]                       = {"Lo", "64'", "32'", "16'", "8'", "4'", "2'", "1'", NULL};
+const char *        seqXFadeStrMap[]                        = {"Off", "25%", "50%", "100%", NULL};
+const char *        clkSyncStrMap[]                         = {"64/1", "48/1",  "32/1",  "24/1", "16/1",  "12/1",  "8/1",  "6/1",   "4/1",  "3/1", "2/1",   "1/1D",
+                                                                "1/1",                                 "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D",  "1/4T", "1/8", "1/16D", "1/8T",
+                                                                "1/16",                                "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T", NULL};
+const char *        noteNameStrMap[]                        = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", NULL};
 const char *             // The eighth group's source is the SECOND global wheel, and the synth names it so - the first one
 // is the alternative source on group five, which is the one group offering a third choice at all.
 // See morph_source_name() in moduleGraphics.c.
-                         morphStrMap[]                           = {"Wheel", "Vel", "Keyb", "Aft.Tch", "Sust.Pd", "Ctrl.Pd", "P.Stick", "G.Wh 2", NULL};
-const char *             compr_attack_timesStrMap[]              = {"Fast", "0.53m", "0.56m", "0.59m", "0.63m", "0.67m", "0.71m", "0.75m", "0.79m", "0.84m", "0.89m", "0.94m", "1.00m", "1.06m", "1.12m", "1.19m", "1.26m", "1.33m", "1.41m", "1.50m", "1.59m", "1.68m", "1.78m", "1.89m", "2.00m", "2.12m", "2.24m", "2.38m", "2.52m", "2.67m", "2.83m", "3.00m", "3.17m", "3.36m", "3.56m", "3.78m", "4.00m", "4.24m", "4.49m", "4.76m", "5.04m", "5.34m", "5.66m", "5.99m", "6.35m", "6.73m", "7.13m", "7.55m", "8.00m", "8.48m", "8.98m", "9.51m", "10.1m", "10.7m", "11.3m", "12.0m", "12.7m", "13.5m", "14.3m", "15.1m", "16.0m", "17.0m", "18.0m", "19.0m", "20.2m", "21.4m", "22.6m", "24.0m", "25.4m", "26.9m", "28.5m", "30.2m", "32.0m", "33.9m", "35.9m", "38.1m", "40.3m", "42.7m", "45.3m", "47.9m", "50.8m", "53.8m", "57.0m", "60.4m", "64.0m", "67.8m", "71.8m", "76.1m", "80.6m", "85.4m", "90.5m", "95.9m", " 102m", " 108m", " 114m", " 121m", " 128m", " 136m", " 144m", " 152m", " 161m", " 171m", " 181m", " 192m", " 203m", " 215m", " 228m", " 242m", " 256m", " 271m", " 287m", " 304m", " 323m", " 342m", " 362m", " 384m", " 406m", " 431m", " 456m", " 483m", " 512m", " 542m", " 575m", " 609m", " 645m", " 683m", " 724m", " 767m", NULL};
-const char *             compr_release_timesStrMap[]             = {" 125m", " 129m", " 134m", " 139m", " 144m", " 149m", " 154m", " 159m", " 165m", " 171m", " 177m", " 183m", " 189m", " 196m", " 203m", " 210m", " 218m", " 225m", " 233m", " 241m", " 250m", " 259m", " 268m", " 277m", " 287m", " 297m", " 308m", " 319m", " 330m", " 342m", " 354m", " 366m", " 379m", " 392m", " 406m", " 420m", " 435m", " 451m", " 467m", " 483m", " 500m", " 518m", " 536m", " 555m", " 574m", " 595m", " 616m", " 637m", " 660m", " 683m", " 707m", " 732m", " 758m", " 785m", " 812m", " 841m", " 871m", " 901m", " 933m", " 966m", "1.00s", "1.04s", "1.07s", "1.11s", "1.15s", "1.19s", "1.23s", "1.27s", "1.32s", "1.37s", "1.41s", "1.46s", "1.52s", "1.57s", "1.62s", "1.68s", "1.74s", "1.80s", "1.87s", "1.93s", "2.00s", "2.07s", "2.14s", "2.22s", "2.30s", "2.38s", "2.46s", "2.55s", "2.64s", "2.73s", "2.83s", "2.93s", "3.03s", "3.14s", "3.25s", "3.36s", "3.48s", "3.61s", "3.73s", "3.86s", "4.00s", "4.14s", "4.29s", "4.44s", "4.59s", "4.76s", "4.92s", "5.10s", "5.28s", "5.46s", "5.66s", "5.86s", "6.06s", "6.28s", "6.50s", "6.73s", "6.96s", "7.21s", "7.46s", "7.73s", "8.00s", "8.28s", "8.57s", "8.88s", "9.19s", "9.51s", "9.85s", "10.2s", NULL};
-const char *             freq_shift_subStrMap[]                  = {"0.000Hz", "0.000Hz", "0.000Hz", "0.000Hz", "0.000Hz", "0.001Hz", "0.001Hz", "0.001Hz", "0.002Hz", "0.003Hz", "0.004Hz", "0.006Hz", "0.007Hz", "0.009Hz", "0.012Hz", "0.014Hz", "0.018Hz", "0.021Hz", "0.025Hz", "0.029Hz", "0.034Hz", "0.040Hz", "0.046Hz", "0.052Hz", "0.059Hz", "0.067Hz", "0.075Hz", "0.084Hz", "0.094Hz", "0.10Hz", "0.12Hz", "0.13Hz", "0.14Hz", "0.15Hz", "0.17Hz", "0.18Hz", "0.20Hz", "0.22Hz", "0.24Hz", "0.25Hz", "0.27Hz", "0.30Hz", "0.32Hz", "0.34Hz", "0.37Hz", "0.39Hz", "0.42Hz", "0.45Hz", "0.47Hz", "0.50Hz", "0.54Hz", "0.57Hz", "0.60Hz", "0.64Hz", "0.67Hz", "0.71Hz", "0.75Hz", "0.79Hz", "0.84Hz", "0.88Hz", "0.93Hz", "0.97Hz", "1.02Hz", "1.07Hz", "1.12Hz", "1.18Hz", "1.23Hz", "1.29Hz", "1.35Hz", "1.41Hz", "1.47Hz", "1.53Hz", "1.60Hz", "1.67Hz", "1.74Hz", "1.81Hz", "1.88Hz", "1.96Hz", "2.03Hz", "2.11Hz", "2.19Hz", "2.28Hz", "2.36Hz", "2.45Hz", "2.54Hz", "2.63Hz", "2.73Hz", "2.82Hz", "2.92Hz", "3.02Hz", "3.12Hz", "3.23Hz", "3.34Hz", "3.45Hz", "3.56Hz", "3.67Hz", "3.79Hz", "3.91Hz", "4.03Hz", "4.16Hz", "4.29Hz", "4.42Hz", "4.55Hz", "4.68Hz", "4.82Hz", "4.96Hz", "5.11Hz", "5.25Hz", "5.40Hz", "5.55Hz", "5.71Hz", "5.86Hz", "6.02Hz", "6.18Hz", "6.35Hz", "6.52Hz", "6.69Hz", "6.87Hz", "7.04Hz", "7.22Hz", "7.41Hz", "7.59Hz", "7.78Hz", "7.98Hz", "8.17Hz", "8.37Hz", "8.57Hz", "8.78Hz", NULL};
-const char *             freq_shift_loStrMap[]                   = {"0.000Hz", "0.000Hz", "0.000Hz", "0.001Hz", "0.003Hz", "0.006Hz", "0.010Hz", "0.016Hz", "0.024Hz", "0.035Hz", "0.048Hz", "0.063Hz", "0.082Hz", "0.10Hz", "0.13Hz", "0.16Hz", "0.20Hz", "0.23Hz", "0.28Hz", "0.33Hz", "0.38Hz", "0.44Hz", "0.51Hz", "0.58Hz", "0.66Hz", "0.74Hz", "0.84Hz", "0.94Hz", "1.05Hz", "1.16Hz", "1.29Hz", "1.42Hz", "1.56Hz", "1.71Hz", "1.87Hz", "2.04Hz", "2.22Hz", "2.41Hz", "2.61Hz", "2.83Hz", "3.05Hz", "3.28Hz", "3.53Hz", "3.79Hz", "4.06Hz", "4.34Hz", "4.64Hz", "4.95Hz", "5.27Hz", "5.61Hz", "5.96Hz", "6.32Hz", "6.70Hz", "7.09Hz", "7.50Hz", "7.93Hz", "8.37Hz", "8.82Hz", "9.30Hz", "9.79Hz", "10.3Hz", "10.8Hz", "11.4Hz", "11.9Hz", "12.5Hz", "13.1Hz", "13.7Hz", "14.3Hz", "15.0Hz", "15.7Hz", "16.3Hz", "17.1Hz", "17.8Hz", "18.5Hz", "19.3Hz", "20.1Hz", "20.9Hz", "21.8Hz", "22.6Hz", "23.5Hz", "24.4Hz", "25.3Hz", "26.3Hz", "27.2Hz", "28.2Hz", "29.3Hz", "30.3Hz", "31.4Hz", "32.5Hz", "33.6Hz", "34.7Hz", "35.9Hz", "37.1Hz", "38.3Hz", "39.6Hz", "40.9Hz", "42.2Hz", "43.5Hz", "44.8Hz", "46.2Hz", "47.6Hz", "49.1Hz", "50.6Hz", "52.1Hz", "53.6Hz", "55.2Hz", "56.7Hz", "58.4Hz", "60.0Hz", "61.7Hz", "63.4Hz", "65.2Hz", "66.9Hz", "68.8Hz", "70.6Hz", "72.5Hz", "74.4Hz", "76.3Hz", "78.3Hz", "80.3Hz", "82.3Hz", "84.4Hz", "86.5Hz", "88.7Hz", "90.8Hz", "93.1Hz", "95.3Hz", "97.6Hz", NULL};
-const char *             freq_shift_hiStrMap[]                   = {"0.000Hz", "0.001Hz", "0.006Hz", "0.021Hz", "0.049Hz", "0.096Hz", "0.17Hz", "0.26Hz", "0.39Hz", "0.56Hz", "0.77Hz", "1.02Hz", "1.32Hz", "1.68Hz", "2.10Hz", "2.58Hz", "3.14Hz", "3.76Hz", "4.46Hz", "5.25Hz", "6.12Hz", "7.09Hz", "8.15Hz", "9.31Hz", "10.6Hz", "12.0Hz", "13.5Hz", "15.1Hz", "16.8Hz", "18.7Hz", "20.7Hz", "22.8Hz", "25.1Hz", "27.5Hz", "30.1Hz", "32.8Hz", "35.7Hz", "38.8Hz", "42.0Hz", "45.4Hz", "49.0Hz", "52.8Hz", "56.7Hz", "60.9Hz", "65.2Hz", "69.8Hz", "74.5Hz", "79.5Hz", "84.7Hz", "90.1Hz", "95.7Hz", "102Hz", "108Hz", "114Hz", "121Hz", "127Hz", "134Hz", "142Hz", "149Hz", "157Hz", "165Hz", "174Hz", "182Hz", "191Hz", "201Hz", "210Hz", "220Hz", "230Hz", "241Hz", "251Hz", "263Hz", "274Hz", "286Hz", "298Hz", "310Hz", "323Hz", "336Hz", "349Hz", "363Hz", "377Hz", "392Hz", "407Hz", "422Hz", "438Hz", "454Hz", "470Hz", "487Hz", "504Hz", "522Hz", "540Hz", "558Hz", "577Hz", "596Hz", "616Hz", "636Hz", "656Hz", "677Hz", "699Hz", "720Hz", "743Hz", "765Hz", "789Hz", "812Hz", "836Hz", "861Hz", "886Hz", "912Hz", "938Hz", "964Hz", "991Hz", "1019Hz", "1047Hz", "1075Hz", "1105Hz", "1134Hz", "1164Hz", "1195Hz", "1226Hz", "1258Hz", "1290Hz", "1323Hz", "1356Hz", "1390Hz", "1424Hz", "1459Hz", "1495Hz", "1531Hz", "1568Hz", NULL};
-const char *             env_follow_attackStrMap[]               = {"0.00ms", "0.53ms", "0.56ms", "0.60ms", "0.64ms", "0.67ms", "0.72ms", "0.76ms", "0.81ms", "0.86ms", "0.91ms", "0.97ms", "1.03ms", "1.09ms", "1.16ms", "1.23ms", "1.30ms", "1.38ms", "1.47ms", "1.56ms", "1.66ms", "1.76ms", "1.87ms", "1.98ms", "2.10ms", "2.23ms", "2.37ms", "2.52ms", "2.67ms", "2.84ms", "3.01ms", "3.20ms", "3.39ms", "3.60ms", "3.83ms", "4.06ms", "4.31ms", "4.58ms", "4.86ms", "5.16ms", "5.48ms", "5.82ms", "6.18ms", "6.56ms", "6.96ms", "7.39ms", "7.85ms", "8.33ms", "8.84ms", "9.39ms", "9.97ms", "10.6ms", "11.2ms", "11.9ms", "12.7ms", "13.4ms", "14.3ms", "15.2ms", "16.1ms", "17.1ms", "18.1ms", "19.3ms", "20.4ms", "21.7ms", "23.0ms", "24.5ms", "26.0ms", "27.6ms", "29.3ms", "31.1ms", "33.0ms", "35.0ms", "37.2ms", "39.5ms", "41.9ms", "44.5ms", "47.3ms", "50.2ms", "53.3ms", "56.5ms", "60.0ms", "63.7ms", "67.7ms", "71.8ms", "76.3ms", "81.0ms", "86.0ms", "91.3ms", "96.9ms", "103ms", "109ms", "116ms", "123ms", "131ms", "139ms", "147ms", "156ms", "166ms", "176ms", "187ms", "199ms", "211ms", "224ms", "238ms", "253ms", "268ms", "285ms", "302ms", "321ms", "341ms", "362ms", "384ms", "408ms", "433ms", "459ms", "488ms", "518ms", "550ms", "584ms", "620ms", "659ms", "699ms", "742ms", "787ms", "837ms", "888ms", "942ms", "1000ms", NULL};
-const char *             env_follow_releaseStrMap[]              = {"10.0ms", "10.5ms", "10.9ms", "11.4ms", "12.0ms", "12.5ms", "13.1ms", "13.7ms", "14.3ms", "15.0ms", "15.7ms", "16.4ms", "17.1ms", "17.9ms", "18.8ms", "19.6ms", "20.5ms", "21.5ms", "22.4ms", "23.5ms", "24.6ms", "25.7ms", "26.9ms", "28.1ms", "29.4ms", "30.7ms", "32.1ms", "33.6ms", "35.2ms", "36.8ms", "38.5ms", "40.2ms", "42.1ms", "44.0ms", "46.0ms", "48.2ms", "50.4ms", "52.7ms", "55.1ms", "57.6ms", "60.3ms", "63.1ms", "66.0ms", "69.0ms", "72.2ms", "75.5ms", "78.9ms", "82.6ms", "86.3ms", "90.3ms", "94.5ms", "98.8ms", "103ms", "108ms", "113ms", "118ms", "124ms", "129ms", "135ms", "142ms", "148ms", "155ms", "162ms", "169ms", "177ms", "185ms", "194ms", "203ms", "212ms", "222ms", "232ms", "243ms", "254ms", "265ms", "278ms", "291ms", "304ms", "318ms", "332ms", "347ms", "363ms", "380ms", "398ms", "416ms", "435ms", "455ms", "476ms", "498ms", "521ms", "545ms", "570ms", "596ms", "624ms", "652ms", "682ms", "713ms", "747ms", "780ms", "816ms", "854ms", "894ms", "934ms", "977ms", "1020ms", "1070ms", "1120ms", "1170ms", "1220ms", "1280ms", "1340ms", "1400ms", "1460ms", "1530ms", "1600ms", "1680ms", "1760ms", "1840ms", "1920ms", "2010ms", "2100ms", "2200ms", "2300ms", "2410ms", "2520ms", "2630ms", "2760ms", "2870ms", "3000ms", NULL};
-const char *             noise_gate_attackStrMap[]               = {"0.2ms", "0.3ms", "0.4ms", "0.5ms", "0.6ms", "0.8ms", "0.9ms", "1.0ms", "1.2ms", "1.4ms", "1.6ms", "1.7ms", "2.0ms", "2.2ms", "2.4ms", "2.6ms", "2.9ms", "3.1ms", "3.4ms", "3.7ms", "4.0ms", "4.3ms", "4.6ms", "4.9ms", "5.3ms", "5.6ms", "6.0ms", "6.3ms", "6.7ms", "7.1ms", "7.5ms", "7.9ms", "8.4ms", "8.8ms", "9.3ms", "9.7ms", "10.2ms", "10.7ms", "11.2ms", "11.7ms", "12.2ms", "12.7ms", "13.3ms", "13.8ms", "14.4ms", "14.9ms", "15.5ms", "16.1ms", "16.7ms", "17.4ms", "18.0ms", "18.6ms", "19.3ms", "19.9ms", "20.6ms", "21.3ms", "22.0ms", "22.7ms", "23.4ms", "24.1ms", "24.9ms", "25.6ms", "26.4ms", "27.2ms", "28.0ms", "28.8ms", "29.6ms", "30.4ms", "31.2ms", "32.1ms", "32.9ms", "33.8ms", "34.6ms", "35.5ms", "36.4ms", "37.3ms", "38.3ms", "39.2ms", "40.1ms", "41.1ms", "42.0ms", "43.0ms", "44.0ms", "45.0ms", "46.0ms", "47.0ms", "48.1ms", "49.1ms", "50.2ms", "51.2ms", "52.3ms", "53.4ms", "54.5ms", "55.6ms", "56.7ms", "57.9ms", "59.0ms", "60.2ms", "61.3ms", "62.5ms", "63.7ms", "64.9ms", "66.1ms", "67.3ms", "68.6ms", "69.8ms", "71.1ms", "72.3ms", "73.6ms", "74.9ms", "76.2ms", "77.5ms", "78.8ms", "80.2ms", "81.5ms", "82.9ms", "84.2ms", "85.6ms", "87.0ms", "88.4ms", "89.8ms", "91.2ms", "92.7ms", "94.1ms", "95.6ms", "97.0ms", "98.5ms", "100ms", NULL};
-const char *             noise_gate_releaseStrMap[]              = {"0.5ms", "0.59ms", "0.67ms", "0.76ms", "0.87ms", "0.98ms", "1.11ms", "1.25ms", "1.40ms", "1.57ms", "1.75ms", "1.95ms", "2.17ms", "2.41ms", "2.66ms", "2.94ms", "3.25ms", "3.57ms", "3.92ms", "4.30ms", "4.71ms", "5.15ms", "5.62ms", "6.12ms", "6.66ms", "7.24ms", "7.85ms", "8.51ms", "9.21ms", "9.96ms", "10.7ms", "11.6ms", "12.5ms", "13.4ms", "14.4ms", "15.5ms", "16.6ms", "17.8ms", "19.1ms", "20.4ms", "21.8ms", "23.3ms", "24.9ms", "26.5ms", "28.2ms", "30.0ms", "32.0ms", "34.0ms", "36.1ms", "38.3ms", "40.6ms", "43.0ms", "45.5ms", "48.2ms", "51.0ms", "53.9ms", "56.9ms", "60.1ms", "63.4ms", "66.8ms", "70.4ms", "74.2ms", "78.1ms", "82.2ms", "86.4ms", "90.9ms", "95.5ms", "100ms", "105ms", "110ms", "116ms", "121ms", "127ms", "133ms", "139ms", "146ms", "153ms", "160ms", "167ms", "174ms", "182ms", "190ms", "198ms", "207ms", "216ms", "225ms", "234ms", "244ms", "254ms", "265ms", "275ms", "286ms", "298ms", "310ms", "322ms", "335ms", "348ms", "361ms", "375ms", "389ms", "404ms", "419ms", "434ms", "450ms", "467ms", "484ms", "501ms", "519ms", "537ms", "556ms", "578ms", "596ms", "616ms", "638ms", "659ms", "682ms", "705ms", "728ms", "752ms", "777ms", "802ms", "828ms", "855ms", "883ms", "911ms", "940ms", "970ms", "1000ms", NULL};
-const char *             noisegate_pitchtrack_threshholdStrMap[] = {"-100.0dB", "-42.1dB", "-36.1dB", "-32.5dB", "-30.0dB", "-28.1dB", "-26.5dB", "-25.2dB", "-24.0dB", "-23.0dB", "-22.1dB", "-21.2dB", "-20.5dB", "-19.8dB", "-19.2dB", "-18.6dB", "-18.0dB", "-17.5dB", "-17.0dB", "-16.5dB", "-16.1dB", "-15.6dB", "-15.2dB", "-14.8dB", "-14.5dB", "-14.1dB", "-13.8dB", "-13.4dB", "-13.1dB", "-12.8dB", "-12.5dB", "-12.2dB", "-12.0dB", "-11.7dB", "-11.4dB", "-11.2dB", "-11.0dB", "-10.7dB", "-10.5dB", "-10.3dB", "-10.0dB", "-9.8dB", "-9.6dB", "-9.4dB", "-9.2dB", "-9.0dB", "-8.8dB", "-8.6dB", "-8.5dB", "-8.3dB", "-8.1dB", "-7.9dB", "-7.8dB", "-7.6dB", "-7.4dB", "-7.3dB", "-7.1dB", "-7.0dB", "-6.8dB", "-6.7dB", "-6.5dB", "-6.4dB", "-6.2dB", "-6.1dB", "-6.0dB", "-5.8dB", "-5.7dB", "-5.6dB", "-5.4dB", "-5.3dB", "-5.2dB", "-5.1dB", "-4.9dB", "-4.8dB", "-4.7dB", "-4.6dB", "-4.5dB", "-4.3dB", "-4.2dB", "-4.1dB", "-4.0dB", "-3.9dB", "-3.8dB", "-3.7dB", "-3.6dB", "-3.5dB", "-3.4dB", "-3.3dB", "-3.2dB", "-3.1dB", "-3.0dB", "-2.9dB", "-2.8dB", "-2.7dB", "-2.6dB", "-2.5dB", "-2.4dB", "-2.3dB", "-2.3dB", "-2.2dB", "-2.1dB", "-2.0dB", "-1.9dB", "-1.8dB", "-1.7dB", "-1.7dB", "-1.6dB", "-1.5dB", "-1.4dB", "-1.3dB", "-1.2dB", "-1.2dB", "-1.1dB", "-1.0dB", "-0.9dB", "-0.9dB", "-0.8dB", "-0.7dB", "-0.6dB", "-0.6dB", "-0.5dB", "-0.4dB", "-0.3dB", "-0.3dB", "-0.2dB", "-0.1dB", "-0.1dB", "-0.0dB", NULL};
-const char *             glide_timeStrMap[]                      = {"0.2ms", "0.2ms", "0.3ms", "0.4ms", "0.5ms", "0.6ms", "0.7ms", "0.9ms", "1.0ms", "1.2ms", "1.4ms", "1.7ms", "2.0ms", "2.3ms", "2.7ms", "3.1ms", "3.6ms", "4.2ms", "4.8ms", "5.5ms", "6.3ms", "7.2ms", "8.2ms", "9.3ms", "11ms", "12ms", "14ms", "15ms", "17ms", "19ms", "22ms", "24ms", "27ms", "30ms", "34ms", "38ms", "42ms", "46ms", "51ms", "57ms", "63ms", "69ms", "77ms", "84ms", "93ms", "102ms", "112ms", "123ms", "135ms", "147ms", "161ms", "178ms", "192ms", "209ms", "228ms", "248ms", "270ms", "293ms", "318ms", "345ms", "374ms", "405ms", "438ms", "473ms", "511ms", "552ms", "595ms", "642ms", "691ms", "744ms", "800ms", "860ms", "924ms", "992ms", "1100ms", "1100ms", "1200ms", "1300ms", "1400ms", "1500ms", "1600ms", "1700ms", "1800ms", "2000ms", "2100ms", "2200ms", "2400ms", "2500ms", "2700ms", "2900ms", "3000ms", "3200ms", "3400ms", "3600ms", "3900ms", "4100ms", "4400ms", "4600ms", "4900ms", "5200ms", "5500ms", "5800ms", "6100ms", "6500ms", "6900ms", "7300ms", "7700ms", "8000ms", "8600ms", "9000ms", "9500ms", "10100ms", "10600ms", "11100ms", "11700ms", "12400ms", "13000ms", "13700ms", "14400ms", "15200ms", "15800ms", "16800ms", "17500ms", "18300ms", "19200ms", "20200ms", "21200ms", "22400ms", NULL};
-const char *             patch_settings_glideStrMap[]            = {"19ms", "20ms", "21ms", "23ms", "24ms", "26ms", "27ms", "29ms", "31ms", "33ms", "35ms", "37ms", "40ms", "42ms", "45ms", "48ms", "51ms", "55ms", "58ms", "62ms", "66ms", "71ms", "75ms", "80ms", "86ms", "91ms", "97ms", "104ms", "110ms", "118ms", "125ms", "133ms", "142ms", "151ms", "160ms", "170ms", "181ms", "192ms", "203ms", "215ms", "227ms", "240ms", "253ms", "267ms", "281ms", "296ms", "311ms", "326ms", "342ms", "358ms", "374ms", "390ms", "406ms", "423ms", "440ms", "456ms", "473ms", "490ms", "506ms", "523ms", "540ms", "556ms", "573ms", "589ms", "605ms", "621ms", "637ms", "653ms", "669ms", "685ms", "701ms", "717ms", "733ms", "749ms", "765ms", "781ms", "798ms", "815ms", "832ms", "849ms", "867ms", "885ms", "903ms", "922ms", "942ms", "962ms", "983ms", "1000ms", "1030ms", "1050ms", "1070ms", "1100ms", "1130ms", "1150ms", "1180ms", "1210ms", "1240ms", "1280ms", "1310ms", "1350ms", "1390ms", "1430ms", "1470ms", "1520ms", "1570ms", "1620ms", "1680ms", "1740ms", "1800ms", "1870ms", "1950ms", "2030ms", "2120ms", "2220ms", "2330ms", "2450ms", "2580ms", "2720ms", "2890ms", "3070ms", "3280ms", "3520ms", "3800ms", "4120ms", "4510ms", "4980ms", "5550ms", "6270ms", NULL};
+                    morphStrMap[]                           = {"Wheel", "Vel", "Keyb", "Aft.Tch", "Sust.Pd", "Ctrl.Pd", "P.Stick", "G.Wh 2", NULL};
+const char *        compr_attack_timesStrMap[]              = {"Fast", "0.53m", "0.56m", "0.59m", "0.63m", "0.67m", "0.71m", "0.75m", "0.79m", "0.84m", "0.89m", "0.94m", "1.00m", "1.06m", "1.12m", "1.19m", "1.26m", "1.33m", "1.41m", "1.50m", "1.59m", "1.68m", "1.78m", "1.89m", "2.00m", "2.12m", "2.24m", "2.38m", "2.52m", "2.67m", "2.83m", "3.00m", "3.17m", "3.36m", "3.56m", "3.78m", "4.00m", "4.24m", "4.49m", "4.76m", "5.04m", "5.34m", "5.66m", "5.99m", "6.35m", "6.73m", "7.13m", "7.55m", "8.00m", "8.48m", "8.98m", "9.51m", "10.1m", "10.7m", "11.3m", "12.0m", "12.7m", "13.5m", "14.3m", "15.1m", "16.0m", "17.0m", "18.0m", "19.0m", "20.2m", "21.4m", "22.6m", "24.0m", "25.4m", "26.9m", "28.5m", "30.2m", "32.0m", "33.9m", "35.9m", "38.1m", "40.3m", "42.7m", "45.3m", "47.9m", "50.8m", "53.8m", "57.0m", "60.4m", "64.0m", "67.8m", "71.8m", "76.1m", "80.6m", "85.4m", "90.5m", "95.9m", " 102m", " 108m", " 114m", " 121m", " 128m", " 136m", " 144m", " 152m", " 161m", " 171m", " 181m", " 192m", " 203m", " 215m", " 228m", " 242m", " 256m", " 271m", " 287m", " 304m", " 323m", " 342m", " 362m", " 384m", " 406m", " 431m", " 456m", " 483m", " 512m", " 542m", " 575m", " 609m", " 645m", " 683m", " 724m", " 767m", NULL};
+const char *        compr_release_timesStrMap[]             = {" 125m", " 129m", " 134m", " 139m", " 144m", " 149m", " 154m", " 159m", " 165m", " 171m", " 177m", " 183m", " 189m", " 196m", " 203m", " 210m", " 218m", " 225m", " 233m", " 241m", " 250m", " 259m", " 268m", " 277m", " 287m", " 297m", " 308m", " 319m", " 330m", " 342m", " 354m", " 366m", " 379m", " 392m", " 406m", " 420m", " 435m", " 451m", " 467m", " 483m", " 500m", " 518m", " 536m", " 555m", " 574m", " 595m", " 616m", " 637m", " 660m", " 683m", " 707m", " 732m", " 758m", " 785m", " 812m", " 841m", " 871m", " 901m", " 933m", " 966m", "1.00s", "1.04s", "1.07s", "1.11s", "1.15s", "1.19s", "1.23s", "1.27s", "1.32s", "1.37s", "1.41s", "1.46s", "1.52s", "1.57s", "1.62s", "1.68s", "1.74s", "1.80s", "1.87s", "1.93s", "2.00s", "2.07s", "2.14s", "2.22s", "2.30s", "2.38s", "2.46s", "2.55s", "2.64s", "2.73s", "2.83s", "2.93s", "3.03s", "3.14s", "3.25s", "3.36s", "3.48s", "3.61s", "3.73s", "3.86s", "4.00s", "4.14s", "4.29s", "4.44s", "4.59s", "4.76s", "4.92s", "5.10s", "5.28s", "5.46s", "5.66s", "5.86s", "6.06s", "6.28s", "6.50s", "6.73s", "6.96s", "7.21s", "7.46s", "7.73s", "8.00s", "8.28s", "8.57s", "8.88s", "9.19s", "9.51s", "9.85s", "10.2s", NULL};
+const char *        freq_shift_subStrMap[]                  = {"0.000Hz", "0.000Hz", "0.000Hz", "0.000Hz", "0.000Hz", "0.001Hz", "0.001Hz", "0.001Hz", "0.002Hz", "0.003Hz", "0.004Hz", "0.006Hz", "0.007Hz", "0.009Hz", "0.012Hz", "0.014Hz", "0.018Hz", "0.021Hz", "0.025Hz", "0.029Hz", "0.034Hz", "0.040Hz", "0.046Hz", "0.052Hz", "0.059Hz", "0.067Hz", "0.075Hz", "0.084Hz", "0.094Hz", "0.10Hz", "0.12Hz", "0.13Hz", "0.14Hz", "0.15Hz", "0.17Hz", "0.18Hz", "0.20Hz", "0.22Hz", "0.24Hz", "0.25Hz", "0.27Hz", "0.30Hz", "0.32Hz", "0.34Hz", "0.37Hz", "0.39Hz", "0.42Hz", "0.45Hz", "0.47Hz", "0.50Hz", "0.54Hz", "0.57Hz", "0.60Hz", "0.64Hz", "0.67Hz", "0.71Hz", "0.75Hz", "0.79Hz", "0.84Hz", "0.88Hz", "0.93Hz", "0.97Hz", "1.02Hz", "1.07Hz", "1.12Hz", "1.18Hz", "1.23Hz", "1.29Hz", "1.35Hz", "1.41Hz", "1.47Hz", "1.53Hz", "1.60Hz", "1.67Hz", "1.74Hz", "1.81Hz", "1.88Hz", "1.96Hz", "2.03Hz", "2.11Hz", "2.19Hz", "2.28Hz", "2.36Hz", "2.45Hz", "2.54Hz", "2.63Hz", "2.73Hz", "2.82Hz", "2.92Hz", "3.02Hz", "3.12Hz", "3.23Hz", "3.34Hz", "3.45Hz", "3.56Hz", "3.67Hz", "3.79Hz", "3.91Hz", "4.03Hz", "4.16Hz", "4.29Hz", "4.42Hz", "4.55Hz", "4.68Hz", "4.82Hz", "4.96Hz", "5.11Hz", "5.25Hz", "5.40Hz", "5.55Hz", "5.71Hz", "5.86Hz", "6.02Hz", "6.18Hz", "6.35Hz", "6.52Hz", "6.69Hz", "6.87Hz", "7.04Hz", "7.22Hz", "7.41Hz", "7.59Hz", "7.78Hz", "7.98Hz", "8.17Hz", "8.37Hz", "8.57Hz", "8.78Hz", NULL};
+const char *        freq_shift_loStrMap[]                   = {"0.000Hz", "0.000Hz", "0.000Hz", "0.001Hz", "0.003Hz", "0.006Hz", "0.010Hz", "0.016Hz", "0.024Hz", "0.035Hz", "0.048Hz", "0.063Hz", "0.082Hz", "0.10Hz", "0.13Hz", "0.16Hz", "0.20Hz", "0.23Hz", "0.28Hz", "0.33Hz", "0.38Hz", "0.44Hz", "0.51Hz", "0.58Hz", "0.66Hz", "0.74Hz", "0.84Hz", "0.94Hz", "1.05Hz", "1.16Hz", "1.29Hz", "1.42Hz", "1.56Hz", "1.71Hz", "1.87Hz", "2.04Hz", "2.22Hz", "2.41Hz", "2.61Hz", "2.83Hz", "3.05Hz", "3.28Hz", "3.53Hz", "3.79Hz", "4.06Hz", "4.34Hz", "4.64Hz", "4.95Hz", "5.27Hz", "5.61Hz", "5.96Hz", "6.32Hz", "6.70Hz", "7.09Hz", "7.50Hz", "7.93Hz", "8.37Hz", "8.82Hz", "9.30Hz", "9.79Hz", "10.3Hz", "10.8Hz", "11.4Hz", "11.9Hz", "12.5Hz", "13.1Hz", "13.7Hz", "14.3Hz", "15.0Hz", "15.7Hz", "16.3Hz", "17.1Hz", "17.8Hz", "18.5Hz", "19.3Hz", "20.1Hz", "20.9Hz", "21.8Hz", "22.6Hz", "23.5Hz", "24.4Hz", "25.3Hz", "26.3Hz", "27.2Hz", "28.2Hz", "29.3Hz", "30.3Hz", "31.4Hz", "32.5Hz", "33.6Hz", "34.7Hz", "35.9Hz", "37.1Hz", "38.3Hz", "39.6Hz", "40.9Hz", "42.2Hz", "43.5Hz", "44.8Hz", "46.2Hz", "47.6Hz", "49.1Hz", "50.6Hz", "52.1Hz", "53.6Hz", "55.2Hz", "56.7Hz", "58.4Hz", "60.0Hz", "61.7Hz", "63.4Hz", "65.2Hz", "66.9Hz", "68.8Hz", "70.6Hz", "72.5Hz", "74.4Hz", "76.3Hz", "78.3Hz", "80.3Hz", "82.3Hz", "84.4Hz", "86.5Hz", "88.7Hz", "90.8Hz", "93.1Hz", "95.3Hz", "97.6Hz", NULL};
+const char *        freq_shift_hiStrMap[]                   = {"0.000Hz", "0.001Hz", "0.006Hz", "0.021Hz", "0.049Hz", "0.096Hz", "0.17Hz", "0.26Hz", "0.39Hz", "0.56Hz", "0.77Hz", "1.02Hz", "1.32Hz", "1.68Hz", "2.10Hz", "2.58Hz", "3.14Hz", "3.76Hz", "4.46Hz", "5.25Hz", "6.12Hz", "7.09Hz", "8.15Hz", "9.31Hz", "10.6Hz", "12.0Hz", "13.5Hz", "15.1Hz", "16.8Hz", "18.7Hz", "20.7Hz", "22.8Hz", "25.1Hz", "27.5Hz", "30.1Hz", "32.8Hz", "35.7Hz", "38.8Hz", "42.0Hz", "45.4Hz", "49.0Hz", "52.8Hz", "56.7Hz", "60.9Hz", "65.2Hz", "69.8Hz", "74.5Hz", "79.5Hz", "84.7Hz", "90.1Hz", "95.7Hz", "102Hz", "108Hz", "114Hz", "121Hz", "127Hz", "134Hz", "142Hz", "149Hz", "157Hz", "165Hz", "174Hz", "182Hz", "191Hz", "201Hz", "210Hz", "220Hz", "230Hz", "241Hz", "251Hz", "263Hz", "274Hz", "286Hz", "298Hz", "310Hz", "323Hz", "336Hz", "349Hz", "363Hz", "377Hz", "392Hz", "407Hz", "422Hz", "438Hz", "454Hz", "470Hz", "487Hz", "504Hz", "522Hz", "540Hz", "558Hz", "577Hz", "596Hz", "616Hz", "636Hz", "656Hz", "677Hz", "699Hz", "720Hz", "743Hz", "765Hz", "789Hz", "812Hz", "836Hz", "861Hz", "886Hz", "912Hz", "938Hz", "964Hz", "991Hz", "1019Hz", "1047Hz", "1075Hz", "1105Hz", "1134Hz", "1164Hz", "1195Hz", "1226Hz", "1258Hz", "1290Hz", "1323Hz", "1356Hz", "1390Hz", "1424Hz", "1459Hz", "1495Hz", "1531Hz", "1568Hz", NULL};
+const char *        env_follow_attackStrMap[]               = {"0.00ms", "0.53ms", "0.56ms", "0.60ms", "0.64ms", "0.67ms", "0.72ms", "0.76ms", "0.81ms", "0.86ms", "0.91ms", "0.97ms", "1.03ms", "1.09ms", "1.16ms", "1.23ms", "1.30ms", "1.38ms", "1.47ms", "1.56ms", "1.66ms", "1.76ms", "1.87ms", "1.98ms", "2.10ms", "2.23ms", "2.37ms", "2.52ms", "2.67ms", "2.84ms", "3.01ms", "3.20ms", "3.39ms", "3.60ms", "3.83ms", "4.06ms", "4.31ms", "4.58ms", "4.86ms", "5.16ms", "5.48ms", "5.82ms", "6.18ms", "6.56ms", "6.96ms", "7.39ms", "7.85ms", "8.33ms", "8.84ms", "9.39ms", "9.97ms", "10.6ms", "11.2ms", "11.9ms", "12.7ms", "13.4ms", "14.3ms", "15.2ms", "16.1ms", "17.1ms", "18.1ms", "19.3ms", "20.4ms", "21.7ms", "23.0ms", "24.5ms", "26.0ms", "27.6ms", "29.3ms", "31.1ms", "33.0ms", "35.0ms", "37.2ms", "39.5ms", "41.9ms", "44.5ms", "47.3ms", "50.2ms", "53.3ms", "56.5ms", "60.0ms", "63.7ms", "67.7ms", "71.8ms", "76.3ms", "81.0ms", "86.0ms", "91.3ms", "96.9ms", "103ms", "109ms", "116ms", "123ms", "131ms", "139ms", "147ms", "156ms", "166ms", "176ms", "187ms", "199ms", "211ms", "224ms", "238ms", "253ms", "268ms", "285ms", "302ms", "321ms", "341ms", "362ms", "384ms", "408ms", "433ms", "459ms", "488ms", "518ms", "550ms", "584ms", "620ms", "659ms", "699ms", "742ms", "787ms", "837ms", "888ms", "942ms", "1000ms", NULL};
+const char *        env_follow_releaseStrMap[]              = {"10.0ms", "10.5ms", "10.9ms", "11.4ms", "12.0ms", "12.5ms", "13.1ms", "13.7ms", "14.3ms", "15.0ms", "15.7ms", "16.4ms", "17.1ms", "17.9ms", "18.8ms", "19.6ms", "20.5ms", "21.5ms", "22.4ms", "23.5ms", "24.6ms", "25.7ms", "26.9ms", "28.1ms", "29.4ms", "30.7ms", "32.1ms", "33.6ms", "35.2ms", "36.8ms", "38.5ms", "40.2ms", "42.1ms", "44.0ms", "46.0ms", "48.2ms", "50.4ms", "52.7ms", "55.1ms", "57.6ms", "60.3ms", "63.1ms", "66.0ms", "69.0ms", "72.2ms", "75.5ms", "78.9ms", "82.6ms", "86.3ms", "90.3ms", "94.5ms", "98.8ms", "103ms", "108ms", "113ms", "118ms", "124ms", "129ms", "135ms", "142ms", "148ms", "155ms", "162ms", "169ms", "177ms", "185ms", "194ms", "203ms", "212ms", "222ms", "232ms", "243ms", "254ms", "265ms", "278ms", "291ms", "304ms", "318ms", "332ms", "347ms", "363ms", "380ms", "398ms", "416ms", "435ms", "455ms", "476ms", "498ms", "521ms", "545ms", "570ms", "596ms", "624ms", "652ms", "682ms", "713ms", "747ms", "780ms", "816ms", "854ms", "894ms", "934ms", "977ms", "1020ms", "1070ms", "1120ms", "1170ms", "1220ms", "1280ms", "1340ms", "1400ms", "1460ms", "1530ms", "1600ms", "1680ms", "1760ms", "1840ms", "1920ms", "2010ms", "2100ms", "2200ms", "2300ms", "2410ms", "2520ms", "2630ms", "2760ms", "2870ms", "3000ms", NULL};
+const char *        noise_gate_attackStrMap[]               = {"0.2ms", "0.3ms", "0.4ms", "0.5ms", "0.6ms", "0.8ms", "0.9ms", "1.0ms", "1.2ms", "1.4ms", "1.6ms", "1.7ms", "2.0ms", "2.2ms", "2.4ms", "2.6ms", "2.9ms", "3.1ms", "3.4ms", "3.7ms", "4.0ms", "4.3ms", "4.6ms", "4.9ms", "5.3ms", "5.6ms", "6.0ms", "6.3ms", "6.7ms", "7.1ms", "7.5ms", "7.9ms", "8.4ms", "8.8ms", "9.3ms", "9.7ms", "10.2ms", "10.7ms", "11.2ms", "11.7ms", "12.2ms", "12.7ms", "13.3ms", "13.8ms", "14.4ms", "14.9ms", "15.5ms", "16.1ms", "16.7ms", "17.4ms", "18.0ms", "18.6ms", "19.3ms", "19.9ms", "20.6ms", "21.3ms", "22.0ms", "22.7ms", "23.4ms", "24.1ms", "24.9ms", "25.6ms", "26.4ms", "27.2ms", "28.0ms", "28.8ms", "29.6ms", "30.4ms", "31.2ms", "32.1ms", "32.9ms", "33.8ms", "34.6ms", "35.5ms", "36.4ms", "37.3ms", "38.3ms", "39.2ms", "40.1ms", "41.1ms", "42.0ms", "43.0ms", "44.0ms", "45.0ms", "46.0ms", "47.0ms", "48.1ms", "49.1ms", "50.2ms", "51.2ms", "52.3ms", "53.4ms", "54.5ms", "55.6ms", "56.7ms", "57.9ms", "59.0ms", "60.2ms", "61.3ms", "62.5ms", "63.7ms", "64.9ms", "66.1ms", "67.3ms", "68.6ms", "69.8ms", "71.1ms", "72.3ms", "73.6ms", "74.9ms", "76.2ms", "77.5ms", "78.8ms", "80.2ms", "81.5ms", "82.9ms", "84.2ms", "85.6ms", "87.0ms", "88.4ms", "89.8ms", "91.2ms", "92.7ms", "94.1ms", "95.6ms", "97.0ms", "98.5ms", "100ms", NULL};
+const char *        noise_gate_releaseStrMap[]              = {"0.5ms", "0.59ms", "0.67ms", "0.76ms", "0.87ms", "0.98ms", "1.11ms", "1.25ms", "1.40ms", "1.57ms", "1.75ms", "1.95ms", "2.17ms", "2.41ms", "2.66ms", "2.94ms", "3.25ms", "3.57ms", "3.92ms", "4.30ms", "4.71ms", "5.15ms", "5.62ms", "6.12ms", "6.66ms", "7.24ms", "7.85ms", "8.51ms", "9.21ms", "9.96ms", "10.7ms", "11.6ms", "12.5ms", "13.4ms", "14.4ms", "15.5ms", "16.6ms", "17.8ms", "19.1ms", "20.4ms", "21.8ms", "23.3ms", "24.9ms", "26.5ms", "28.2ms", "30.0ms", "32.0ms", "34.0ms", "36.1ms", "38.3ms", "40.6ms", "43.0ms", "45.5ms", "48.2ms", "51.0ms", "53.9ms", "56.9ms", "60.1ms", "63.4ms", "66.8ms", "70.4ms", "74.2ms", "78.1ms", "82.2ms", "86.4ms", "90.9ms", "95.5ms", "100ms", "105ms", "110ms", "116ms", "121ms", "127ms", "133ms", "139ms", "146ms", "153ms", "160ms", "167ms", "174ms", "182ms", "190ms", "198ms", "207ms", "216ms", "225ms", "234ms", "244ms", "254ms", "265ms", "275ms", "286ms", "298ms", "310ms", "322ms", "335ms", "348ms", "361ms", "375ms", "389ms", "404ms", "419ms", "434ms", "450ms", "467ms", "484ms", "501ms", "519ms", "537ms", "556ms", "578ms", "596ms", "616ms", "638ms", "659ms", "682ms", "705ms", "728ms", "752ms", "777ms", "802ms", "828ms", "855ms", "883ms", "911ms", "940ms", "970ms", "1000ms", NULL};
+const char *        noisegate_pitchtrack_threshholdStrMap[] = {"-100.0dB", "-42.1dB", "-36.1dB", "-32.5dB", "-30.0dB", "-28.1dB", "-26.5dB", "-25.2dB", "-24.0dB", "-23.0dB", "-22.1dB", "-21.2dB", "-20.5dB", "-19.8dB", "-19.2dB", "-18.6dB", "-18.0dB", "-17.5dB", "-17.0dB", "-16.5dB", "-16.1dB", "-15.6dB", "-15.2dB", "-14.8dB", "-14.5dB", "-14.1dB", "-13.8dB", "-13.4dB", "-13.1dB", "-12.8dB", "-12.5dB", "-12.2dB", "-12.0dB", "-11.7dB", "-11.4dB", "-11.2dB", "-11.0dB", "-10.7dB", "-10.5dB", "-10.3dB", "-10.0dB", "-9.8dB", "-9.6dB", "-9.4dB", "-9.2dB", "-9.0dB", "-8.8dB", "-8.6dB", "-8.5dB", "-8.3dB", "-8.1dB", "-7.9dB", "-7.8dB", "-7.6dB", "-7.4dB", "-7.3dB", "-7.1dB", "-7.0dB", "-6.8dB", "-6.7dB", "-6.5dB", "-6.4dB", "-6.2dB", "-6.1dB", "-6.0dB", "-5.8dB", "-5.7dB", "-5.6dB", "-5.4dB", "-5.3dB", "-5.2dB", "-5.1dB", "-4.9dB", "-4.8dB", "-4.7dB", "-4.6dB", "-4.5dB", "-4.3dB", "-4.2dB", "-4.1dB", "-4.0dB", "-3.9dB", "-3.8dB", "-3.7dB", "-3.6dB", "-3.5dB", "-3.4dB", "-3.3dB", "-3.2dB", "-3.1dB", "-3.0dB", "-2.9dB", "-2.8dB", "-2.7dB", "-2.6dB", "-2.5dB", "-2.4dB", "-2.3dB", "-2.3dB", "-2.2dB", "-2.1dB", "-2.0dB", "-1.9dB", "-1.8dB", "-1.7dB", "-1.7dB", "-1.6dB", "-1.5dB", "-1.4dB", "-1.3dB", "-1.2dB", "-1.2dB", "-1.1dB", "-1.0dB", "-0.9dB", "-0.9dB", "-0.8dB", "-0.7dB", "-0.6dB", "-0.6dB", "-0.5dB", "-0.4dB", "-0.3dB", "-0.3dB", "-0.2dB", "-0.1dB", "-0.1dB", "-0.0dB", NULL};
+const char *        glide_timeStrMap[]                      = {"0.2ms", "0.2ms", "0.3ms", "0.4ms", "0.5ms", "0.6ms", "0.7ms", "0.9ms", "1.0ms", "1.2ms", "1.4ms", "1.7ms", "2.0ms", "2.3ms", "2.7ms", "3.1ms", "3.6ms", "4.2ms", "4.8ms", "5.5ms", "6.3ms", "7.2ms", "8.2ms", "9.3ms", "11ms", "12ms", "14ms", "15ms", "17ms", "19ms", "22ms", "24ms", "27ms", "30ms", "34ms", "38ms", "42ms", "46ms", "51ms", "57ms", "63ms", "69ms", "77ms", "84ms", "93ms", "102ms", "112ms", "123ms", "135ms", "147ms", "161ms", "178ms", "192ms", "209ms", "228ms", "248ms", "270ms", "293ms", "318ms", "345ms", "374ms", "405ms", "438ms", "473ms", "511ms", "552ms", "595ms", "642ms", "691ms", "744ms", "800ms", "860ms", "924ms", "992ms", "1100ms", "1100ms", "1200ms", "1300ms", "1400ms", "1500ms", "1600ms", "1700ms", "1800ms", "2000ms", "2100ms", "2200ms", "2400ms", "2500ms", "2700ms", "2900ms", "3000ms", "3200ms", "3400ms", "3600ms", "3900ms", "4100ms", "4400ms", "4600ms", "4900ms", "5200ms", "5500ms", "5800ms", "6100ms", "6500ms", "6900ms", "7300ms", "7700ms", "8000ms", "8600ms", "9000ms", "9500ms", "10100ms", "10600ms", "11100ms", "11700ms", "12400ms", "13000ms", "13700ms", "14400ms", "15200ms", "15800ms", "16800ms", "17500ms", "18300ms", "19200ms", "20200ms", "21200ms", "22400ms", NULL};
+const char *        patch_settings_glideStrMap[]            = {"19ms", "20ms", "21ms", "23ms", "24ms", "26ms", "27ms", "29ms", "31ms", "33ms", "35ms", "37ms", "40ms", "42ms", "45ms", "48ms", "51ms", "55ms", "58ms", "62ms", "66ms", "71ms", "75ms", "80ms", "86ms", "91ms", "97ms", "104ms", "110ms", "118ms", "125ms", "133ms", "142ms", "151ms", "160ms", "170ms", "181ms", "192ms", "203ms", "215ms", "227ms", "240ms", "253ms", "267ms", "281ms", "296ms", "311ms", "326ms", "342ms", "358ms", "374ms", "390ms", "406ms", "423ms", "440ms", "456ms", "473ms", "490ms", "506ms", "523ms", "540ms", "556ms", "573ms", "589ms", "605ms", "621ms", "637ms", "653ms", "669ms", "685ms", "701ms", "717ms", "733ms", "749ms", "765ms", "781ms", "798ms", "815ms", "832ms", "849ms", "867ms", "885ms", "903ms", "922ms", "942ms", "962ms", "983ms", "1000ms", "1030ms", "1050ms", "1070ms", "1100ms", "1130ms", "1150ms", "1180ms", "1210ms", "1240ms", "1280ms", "1310ms", "1350ms", "1390ms", "1430ms", "1470ms", "1520ms", "1570ms", "1620ms", "1680ms", "1740ms", "1800ms", "1870ms", "1950ms", "2030ms", "2120ms", "2220ms", "2330ms", "2450ms", "2580ms", "2720ms", "2890ms", "3070ms", "3280ms", "3520ms", "3800ms", "4120ms", "4510ms", "4980ms", "5550ms", "6270ms", NULL};
 
-const char *             pulseLoTimeStrMap[]                     = {"1.04ms", "1.11ms", "1.19ms", "1.28ms", "1.37ms", "1.47ms", "1.57ms", "1.69ms", "1.81ms", "1.94ms", "2.08ms", "2.23ms", "2.39ms", "2.56ms", "2.75ms", "2.94ms", "3.16ms", "3.38ms", "3.63ms", "3.89ms", "4.17ms", "4.48ms", "4.80ms", "5.15ms", "5.52ms", "5.93ms", "6.36ms", "6.82ms", "7.32ms", "7.85ms", "8.42ms", "9.04ms", "9.70ms", "10.4ms", "11.2ms", "12.0ms", "12.9ms", "13.8ms", "14.8ms", "15.9ms", "17.1ms", "18.3ms", "19.7ms", "21.1ms", "22.7ms", "24.4ms", "26.2ms", "28.1ms", "30.2ms", "32.4ms", "34.8ms", "37.4ms", "40.2ms", "43.2ms", "46.4ms", "49.8ms", "53.5ms", "57.5ms", "61.8ms", "66.4ms", "71.3ms", "76.7ms", "82.4ms", "88.6ms", "95.2ms", "102ms", "110ms", "118ms", "127ms", "137ms", "147ms", "158ms", "170ms", "183ms", "196ms", "211ms", "227ms", "244ms", "263ms", "283ms", "304ms", "327ms", "352ms", "379ms", "408ms", "439ms", "472ms", "508ms", "547ms", "588ms", "633ms", "681ms", "734ms", "790ms", "850ms", "915ms", "985ms", "1.07s", "1.15s", "1.24s", "1.33s", "1.43s", "1.54s", "1.66s", "1.79s", "1.93s", "2.07s", "2.23s", "2.41s", "2.59s", "2.79s", "3.01s", "3.24s", "3.49s", "3.76s", "4.06s", "4.37s", "4.71s", "5.08s", "5.48s", "5.90s", "6.36s", "6.86s", "7.40s", "7.98s", "8.60s", "9.28s", "10.0s", NULL};
+const char *        pulseLoTimeStrMap[]                     = {"1.04ms", "1.11ms", "1.19ms", "1.28ms", "1.37ms", "1.47ms", "1.57ms", "1.69ms", "1.81ms", "1.94ms", "2.08ms", "2.23ms", "2.39ms", "2.56ms", "2.75ms", "2.94ms", "3.16ms", "3.38ms", "3.63ms", "3.89ms", "4.17ms", "4.48ms", "4.80ms", "5.15ms", "5.52ms", "5.93ms", "6.36ms", "6.82ms", "7.32ms", "7.85ms", "8.42ms", "9.04ms", "9.70ms", "10.4ms", "11.2ms", "12.0ms", "12.9ms", "13.8ms", "14.8ms", "15.9ms", "17.1ms", "18.3ms", "19.7ms", "21.1ms", "22.7ms", "24.4ms", "26.2ms", "28.1ms", "30.2ms", "32.4ms", "34.8ms", "37.4ms", "40.2ms", "43.2ms", "46.4ms", "49.8ms", "53.5ms", "57.5ms", "61.8ms", "66.4ms", "71.3ms", "76.7ms", "82.4ms", "88.6ms", "95.2ms", "102ms", "110ms", "118ms", "127ms", "137ms", "147ms", "158ms", "170ms", "183ms", "196ms", "211ms", "227ms", "244ms", "263ms", "283ms", "304ms", "327ms", "352ms", "379ms", "408ms", "439ms", "472ms", "508ms", "547ms", "588ms", "633ms", "681ms", "734ms", "790ms", "850ms", "915ms", "985ms", "1.07s", "1.15s", "1.24s", "1.33s", "1.43s", "1.54s", "1.66s", "1.79s", "1.93s", "2.07s", "2.23s", "2.41s", "2.59s", "2.79s", "3.01s", "3.24s", "3.49s", "3.76s", "4.06s", "4.37s", "4.71s", "5.08s", "5.48s", "5.90s", "6.36s", "6.86s", "7.40s", "7.98s", "8.60s", "9.28s", "10.0s", NULL};
 
-const tRgb               offOnColourMap[]                        = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
+const tRgb          offOnColourMap[]                        = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
-const tRgb               gCableColourMap[cableColourMax]         = {
+const tRgb          gCableColourMap[cableColourMax]         = {
     {0.7,  0.1,  0.1},                                  // red a.k.a Audio
     {0.3,  0.3,  0.7},                                  // blue a.k.a Control
     {0.7,  0.7,  0.1},                                  // yellow a.k.a Logic BG
@@ -228,38 +228,38 @@ const tRgb               gCableColourMap[cableColourMax]         = {
     {0.9,  0.9,  0.9},                                  // white - apparently not user selectable
 };
 
-const tRgb               gModuleColourMap[]                      = {MODULE_STANDARD_GREY,
-                                                                     MODULE_RED_4,
-                                                                     MODULE_GREEN_4,
-                                                                     MODULE_BLUE_4,
-                                                                     MODULE_YELLOW_4,
-                                                                     MODULE_BLUE_1,
-                                                                     MODULE_RED_1,
-                                                                     MODULE_CYAN_2,
-                                                                     MODULE_GREEN_2,
-                                                                     MODULE_YELLOW_1,
-                                                                     MODULE_GREEN_1,
-                                                                     MODULE_YELLOW_2,
-                                                                     MODULE_BLUE_3,
-                                                                     MODULE_RED_2,
-                                                                     MODULE_RED_3,
-                                                                     MODULE_YELLOW_3,
-                                                                     MODULE_GREEN_3,
-                                                                     MODULE_CYAN_1,
-                                                                     MODULE_CYAN_3,
-                                                                     MODULE_CYAN_4,
-                                                                     MODULE_BLUE_2,
-                                                                     MODULE_PURPLE_1,
-                                                                     MODULE_PURPLE_2,
-                                                                     MODULE_PURPLE_3,
-                                                                     MODULE_PURPLE_4};
+const tRgb          gModuleColourMap[]                      = {MODULE_STANDARD_GREY,
+                                                                MODULE_RED_4,
+                                                                MODULE_GREEN_4,
+                                                                MODULE_BLUE_4,
+                                                                MODULE_YELLOW_4,
+                                                                MODULE_BLUE_1,
+                                                                MODULE_RED_1,
+                                                                MODULE_CYAN_2,
+                                                                MODULE_GREEN_2,
+                                                                MODULE_YELLOW_1,
+                                                                MODULE_GREEN_1,
+                                                                MODULE_YELLOW_2,
+                                                                MODULE_BLUE_3,
+                                                                MODULE_RED_2,
+                                                                MODULE_RED_3,
+                                                                MODULE_YELLOW_3,
+                                                                MODULE_GREEN_3,
+                                                                MODULE_CYAN_1,
+                                                                MODULE_CYAN_3,
+                                                                MODULE_CYAN_4,
+                                                                MODULE_BLUE_2,
+                                                                MODULE_PURPLE_1,
+                                                                MODULE_PURPLE_2,
+                                                                MODULE_PURPLE_3,
+                                                                MODULE_PURPLE_4};
 
 // Indices match tConnectorType (types.h): Audio, Control, Logic, TurboLogic. TurboLogic's RGB
 // (1.0, 0.75, 0.31) is the real value the synth uses
 // (Original Editor/G2Editor.c: kCableRGBColorTurboLogic = CRGBColor(0xff00, 0xc000, 0x5000)) —
 // the only one of the four not otherwise inferable from the manual's colour-name descriptions
 // alone (the manual just says "orange", not an exact hue).
-const tRgb               connectorColourMap[]             = {
+const tRgb          connectorColourMap[]             = {
     {0.7,  0.2,  0.2},
     {0.2,  0.2,  0.7},
     {0.9,  0.9,  0.0},
@@ -272,24 +272,24 @@ const tRgb               connectorColourMap[]             = {
 //
 // See tPaletteEntry in types.h. The order within each group is the order the palette and the
 // create-module menu both offer them in.
-const char *const        gPaletteGroupName[palGroupCount] = {"In/Out",
-                                                              "Osc",
-                                                              "Rnd",
-                                                              "Filter",
-                                                              "Delay",
-                                                              "Level",
-                                                              "Switch",
-                                                              "Seq",
-                                                              "Note",
-                                                              "LFO",
-                                                              "Env",
-                                                              "FX",
-                                                              "Shaper",
-                                                              "Mixer",
-                                                              "Logic",
-                                                              "MIDI", };
+const char *const   gPaletteGroupName[palGroupCount] = {"In/Out",
+                                                         "Osc",
+                                                         "Rnd",
+                                                         "Filter",
+                                                         "Delay",
+                                                         "Level",
+                                                         "Switch",
+                                                         "Seq",
+                                                         "Note",
+                                                         "LFO",
+                                                         "Env",
+                                                         "FX",
+                                                         "Shaper",
+                                                         "Mixer",
+                                                         "Logic",
+                                                         "MIDI", };
 
-const tPaletteEntry      gPaletteList[]                   = {
+const tPaletteEntry gPaletteList[]                   = {
     // In/Out
     {palGroupIo,     moduleType2toOut     },
     {palGroupIo,     moduleType4toOut     },
@@ -480,9 +480,15 @@ const tPaletteEntry      gPaletteList[]                   = {
 
 // ── Module replacement roles ────────────────────────────────────────────────
 //
-// See tModuleRole in types.h for what a role is. FILTER GROUP ONLY so far - the other eighteen
-// groups have their members recorded in gModuleProperties but no role table yet, so replacing
-// within them is not offered.
+// See tModuleRole in types.h for what a role is. ALL NINETEEN GROUPS, 1202 rows. The Filter group
+// was written first because its geometry is the most awkward in the instrument and so the least
+// forgiving of a mechanism that quietly relies on indices lining up; the rest followed once it held.
+//
+// EVERY INDEX HERE WAS CHECKED AGAINST OUR OWN TABLES - each parameter index against that module's
+// entry count in paramLocationList, each connector index against its count in the matching direction
+// in connectorLocationList. All 1202 are in range, which is worth more than it sounds: two
+// independently derived descriptions of the same 170 modules agreeing on every index is the check
+// that would have caught a mis-parse.
 //
 // A module that does not appear under a role simply has no counterpart for it: FltStatic has no
 // pitch modulation input, so a cable on the source module's Pitch Mod is dropped when replacing it
@@ -493,105 +499,1245 @@ const tPaletteEntry      gPaletteList[]                   = {
 // The table is small enough that the comparison costs nothing worth counting, and it means a row
 // can be added without knowing whether the compiler pooled its string literal with the others.
 const tModuleRole        gModuleRoleList[] = {
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeFltLP,       0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeFltHP,       0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeFltNord,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeFltClassic,  0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeFltMulti,    0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeFltStatic,   0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeWahWah,      0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeFltVoice,    0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeVocoder,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeFltPhase,    0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeFltComb,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeEq2Band,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeEq3band,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindOutput, "Audio Out",      moduleTypeEqPeak,      0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeFltLP,       0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeFltHP,       0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeFltNord,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeFltClassic,  0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeFltMulti,    0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeFltStatic,   0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeWahWah,      0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeFltVoice,    0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeVocoder,     1, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeFltPhase,    0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeFltComb,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeEq2Band,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeEq3band,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Audio In",       moduleTypeEqPeak,      0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod Fix",  moduleTypeFltNord,     2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod Fix",  moduleTypeFltClassic,  2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod Fix",  moduleTypeFltMulti,    2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod Fix",  moduleTypeFltPhase,    4, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod Fix",  moduleTypeFltComb,     1, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod",      moduleTypeFltLP,       1,                1},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod",      moduleTypeFltHP,       1,                1},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod",      moduleTypeFltNord,     1,                1},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod",      moduleTypeFltClassic,  1,                1},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod",      moduleTypeFltMulti,    1,                1},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod",      moduleTypeWahWah,      1,                0},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod",      moduleTypeFltVoice,    2,                7},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod",      moduleTypeFltPhase,    1,                0},
-    {moduleGroupFilter, roleKindInput,  "Pitch Mod",      moduleTypeFltComb,     2,                1},
-    {moduleGroupFilter, roleKindInput,  "Feedback Mod",   moduleTypeFltPhase,    3,                8},
-    {moduleGroupFilter, roleKindInput,  "Feedback Mod",   moduleTypeFltComb,     3,                4},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeFltLP,       0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeFltHP,       0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeFltNord,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeFltClassic,  0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeFltMulti,    0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeFltStatic,   0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeWahWah,      1, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeFltVoice,    6, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeFltPhase,    1, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeFltComb,     0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeEq3band,     2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Cutoff",         moduleTypeEqPeak,      0, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeFltLP,       3, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeFltHP,       3, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeFltNord,     6, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeFltClassic,  5, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeFltMulti,    6, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeFltStatic,   3, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeWahWah,      2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeFltVoice,    9, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeVocoder,     9, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeFltPhase,    6, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeFltComb,     7, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeEq2Band,     3, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeEq3band,     5, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Bypass",         moduleTypeEqPeak,      3, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Res",            moduleTypeFltNord,     4, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Res",            moduleTypeFltClassic,  3, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Res",            moduleTypeFltMulti,    4, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Res",            moduleTypeFltVoice,    8, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Res",            moduleTypeFltStatic,   1, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "KBT",            moduleTypeFltLP,       2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "KBT",            moduleTypeFltHP,       2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "KBT",            moduleTypeFltNord,     2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "KBT",            moduleTypeFltClassic,  2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "KBT",            moduleTypeFltMulti,    2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "KBT",            moduleTypeFltPhase,   10, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "KBT",            moduleTypeFltComb,     2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "InLvl",          moduleTypeFltPhase,    7, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "InLvl",          moduleTypeFltComb,     6, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "InLvl",          moduleTypeEq3band,     4, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "InLvl",          moduleTypeEq2Band,     2, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "InLvl",          moduleTypeEqPeak,      4, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Feedback",       moduleTypeFltPhase,    3, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Feedback",       moduleTypeFltComb,     3, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "FeedbackAmount", moduleTypeFltPhase,    8, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "FeedbackAmount", moduleTypeFltComb,     4, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Variant",        moduleTypeFltPhase,    9, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Variant",        moduleTypeFltComb,     5, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Lo Gain",        moduleTypeEq2Band,     1, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Lo Gain",        moduleTypeEq3band,     3, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Lo Freq",        moduleTypeEq2Band,     5, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Lo Freq",        moduleTypeEq3band,     7, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Hi Freq",        moduleTypeEq2Band,     4, MODULE_ROLE_NONE},
-    {moduleGroupFilter, roleKindParam,  "Hi Freq",        moduleTypeEq3band,     6, MODULE_ROLE_NONE}, };
+    // ── Shaper Group
+    {moduleGroupShaper,    roleKindInput,  "Inputs",                moduleTypeClip,         0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindInput,  "Inputs",                moduleTypeOverdrive,    0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindInput,  "Inputs",                moduleTypeSaturate,     0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindInput,  "Inputs",                moduleTypeShpExp,       0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindInput,  "Inputs",                moduleTypeWaveWrap,     0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindInput,  "Inputs",                moduleTypeShpStatic,    0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindInput,  "Inputs",                moduleTypeRect,         0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindInput,  "Inputs Mod",            moduleTypeClip,         1,                0},
+    {moduleGroupShaper,    roleKindInput,  "Inputs Mod",            moduleTypeOverdrive,    1,                0},
+    {moduleGroupShaper,    roleKindInput,  "Inputs Mod",            moduleTypeSaturate,     1,                1},
+    {moduleGroupShaper,    roleKindInput,  "Inputs Mod",            moduleTypeShpExp,       1,                1},
+    {moduleGroupShaper,    roleKindInput,  "Inputs Mod",            moduleTypeWaveWrap,     1,                0},
+    {moduleGroupShaper,    roleKindOutput, "Outputs",               moduleTypeClip,         0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindOutput, "Outputs",               moduleTypeWaveWrap,     0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindOutput, "Outputs",               moduleTypeRect,         0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindOutput, "Outputs",               moduleTypeOverdrive,    0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindOutput, "Outputs",               moduleTypeSaturate,     0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindOutput, "Outputs",               moduleTypeShpExp,       0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindOutput, "Outputs",               moduleTypeShpStatic,    0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Params",                moduleTypeClip,         1, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Params",                moduleTypeWaveWrap,     1, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Params",                moduleTypeOverdrive,    1, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Params",                moduleTypeSaturate,     0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Params",                moduleTypeShpExp,       0, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Bypass",                moduleTypeClip,         3, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Bypass",                moduleTypeWaveWrap,     2, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Bypass",                moduleTypeRect,         1, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Bypass",                moduleTypeOverdrive,    2, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Bypass",                moduleTypeSaturate,     2, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Bypass",                moduleTypeShpExp,       2, MODULE_ROLE_NONE},
+    {moduleGroupShaper,    roleKindParam,  "Bypass",                moduleTypeShpStatic,    1, MODULE_ROLE_NONE},
+
+    // ── Level Group
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeLevAdd,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeLevConv,      0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeLevAmp,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeLevMult,      0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeLevMod,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeEnvFollow,    0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeNoiseGate,    0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeCompLev,      0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeCompSig,      0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeMinMax,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs",                moduleTypeModAmt,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs B",              moduleTypeCompSig,      1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs B",              moduleTypeMinMax,       1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs Mod",            moduleTypeLevMult,      1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindInput,  "Inputs Mod",            moduleTypeLevMod,       1,                0},
+    {moduleGroupLevel,     roleKindInput,  "Inputs Mod",            moduleTypeModAmt,       1,                0},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeConstant,     0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeConstSwM,     0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeConstSwT,     0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeLevAdd,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeLevConv,      0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeLevAmp,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeLevMult,      0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeLevMod,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeEnvFollow,    0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeNoiseGate,    0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeCompLev,      0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeCompSig,      0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeMinMax,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindOutput, "Outputs",               moduleTypeModAmt,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params",                moduleTypeConstant,     0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params",                moduleTypeConstSwT,     0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params",                moduleTypeLevAdd,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params",                moduleTypeLevAmp,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params",                moduleTypeLevMod,       1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params",                moduleTypeCompLev,      0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params",                moduleTypeModAmt,       0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Range",          moduleTypeConstant,     1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Range",          moduleTypeConstSwM,     2, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Range",          moduleTypeConstSwT,     2, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Range",          moduleTypeLevAdd,       1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Range",          moduleTypeLevConv,      1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Range",          moduleTypeLevAmp,       1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Atk",            moduleTypeEnvFollow,    0, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Atk",            moduleTypeNoiseGate,    1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Dcy",            moduleTypeEnvFollow,    1, MODULE_ROLE_NONE},
+    {moduleGroupLevel,     roleKindParam,  "Params Dcy",            moduleTypeNoiseGate,    2, MODULE_ROLE_NONE},
+
+    // ── MIDI Group Send
+    {moduleGroupMidiSend,  roleKindInput,  "Inputs",                moduleTypeCtrlSend,     0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindInput,  "Inputs",                moduleTypePCSend,       0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindInput,  "Inputs",                moduleTypeNoteSend,     0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindInput,  "Inputs",                moduleTypeAutomate,     0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindInput,  "Inputs Ctrl",           moduleTypeCtrlSend,     1, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindInput,  "Inputs Ctrl",           moduleTypePCSend,       1, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindInput,  "Inputs Ctrl",           moduleTypeNoteSend,     2, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindOutput, "Outputs",               moduleTypeCtrlSend,     0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindOutput, "Outputs",               moduleTypePCSend,       0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindOutput, "Outputs",               moduleTypeAutomate,     0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Chan",           moduleTypeCtrlSend,     2, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Chan",           moduleTypePCSend,       1, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Chan",           moduleTypeNoteSend,     2, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Chan",           moduleTypeAutomate,     2, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Ctrl",           moduleTypeCtrlSend,     0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Ctrl",           moduleTypePCSend,       0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Ctrl",           moduleTypeNoteSend,     1, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Ctrl",           moduleTypeAutomate,     0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Value",          moduleTypeCtrlSend,     1, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Value",          moduleTypeNoteSend,     0, MODULE_ROLE_NONE},
+    {moduleGroupMidiSend,  roleKindParam,  "Params Value",          moduleTypeAutomate,     1, MODULE_ROLE_NONE},
+
+    // ── MIDI Group Recv
+    {moduleGroupMidiRecv,  roleKindOutput, "Outputs",               moduleTypeCtrlRcv,      0, MODULE_ROLE_NONE},
+    {moduleGroupMidiRecv,  roleKindOutput, "Outputs",               moduleTypeNoteRcv,      0, MODULE_ROLE_NONE},
+    {moduleGroupMidiRecv,  roleKindOutput, "Outputs Ctrl",          moduleTypeCtrlRcv,      1, MODULE_ROLE_NONE},
+    {moduleGroupMidiRecv,  roleKindOutput, "Outputs Ctrl",          moduleTypeNoteRcv,      1, MODULE_ROLE_NONE},
+    {moduleGroupMidiRecv,  roleKindParam,  "Params Chan",           moduleTypeCtrlRcv,      1, MODULE_ROLE_NONE},
+    {moduleGroupMidiRecv,  roleKindParam,  "Params Chan",           moduleTypeNoteRcv,      1, MODULE_ROLE_NONE},
+    {moduleGroupMidiRecv,  roleKindParam,  "Params Ctrl",           moduleTypeCtrlRcv,      0, MODULE_ROLE_NONE},
+    {moduleGroupMidiRecv,  roleKindParam,  "Params Ctrl",           moduleTypeNoteRcv,      0, MODULE_ROLE_NONE},
+
+    // ── Note Group
+    {moduleGroupNote,      roleKindInput,  "In",                    moduleTypeNoteQuant,    0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindInput,  "In",                    moduleTypeKeyQuant,     0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindInput,  "In",                    moduleTypePartQuant,    0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindInput,  "In",                    moduleTypeNoteScaler,   0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindInput,  "In",                    moduleTypeGlide,        0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindInput,  "In",                    moduleTypeZeroCnt,      0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindInput,  "In",                    moduleTypePitchTrack,   0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindOutput, "Out",                   moduleTypeNoteQuant,    0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindOutput, "Out",                   moduleTypeKeyQuant,     0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindOutput, "Out",                   moduleTypePartQuant,    0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindOutput, "Out",                   moduleTypeNoteScaler,   0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindOutput, "Out",                   moduleTypeGlide,        0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindOutput, "Out",                   moduleTypeZeroCnt,      0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindOutput, "Out",                   moduleTypePitchTrack,   1, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindParam,  "Range",                 moduleTypeNoteQuant,    0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindParam,  "Range",                 moduleTypeKeyQuant,     0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindParam,  "Range",                 moduleTypePartQuant,    0, MODULE_ROLE_NONE},
+    {moduleGroupNote,      roleKindParam,  "Range",                 moduleTypeNoteScaler,   0, MODULE_ROLE_NONE},
+
+    // ── Osc Group
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscA,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscB,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscC,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscD,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscPM,        0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscShpA,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscShpB,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscDual,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeNoise,        0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscString,    0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscPerc,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeDrumSynth,    0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeMetNoise,     0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOscNoise,     0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindOutput, "Main",                  moduleTypeOperator,     0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Sync",                  moduleTypeOscB,         2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Sync",                  moduleTypeOscC,         1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Sync",                  moduleTypeOscPM,        1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Sync",                  moduleTypeOscShpA,      2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Sync",                  moduleTypeOscShpB,      2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Sync",                  moduleTypeOscDual,      2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscA,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscB,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscC,         3, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscD,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscPM,        3, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscShpA,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscShpB,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscDual,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscString,    1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscPerc,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeDrumSynth,    2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscNoise,     0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Fixed",           moduleTypeOscMaster,    0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscA,         1,                3},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscB,         1,                3},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscC,         0,                7},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscPM,        0,                6},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscShpA,      1,                3},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscShpB,      1,                3},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscDual,      1,                3},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscString,    2,                3},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscPerc,      1,                4},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscNoise,     1,                3},
+    {moduleGroupOsc,       roleKindInput,  "Pitch Variable",        moduleTypeOscMaster,    1,                4},
+    {moduleGroupOsc,       roleKindInput,  "PW & Shape",            moduleTypeOscB,         4,                7},
+    {moduleGroupOsc,       roleKindInput,  "PW & Shape",            moduleTypeOscShpA,      4,                8},
+    {moduleGroupOsc,       roleKindInput,  "PW & Shape",            moduleTypeOscShpB,      4,                7},
+    {moduleGroupOsc,       roleKindInput,  "PW & Shape",            moduleTypeOscDual,      3,                6},
+    {moduleGroupOsc,       roleKindInput,  "FM & Phase",            moduleTypeOscB,         3,                5},
+    {moduleGroupOsc,       roleKindInput,  "FM & Phase",            moduleTypeOscC,         2,                4},
+    {moduleGroupOsc,       roleKindInput,  "FM & Phase",            moduleTypeOscPM,        2,                4},
+    {moduleGroupOsc,       roleKindInput,  "FM & Phase",            moduleTypeOscShpA,      3,                5},
+    {moduleGroupOsc,       roleKindInput,  "FM & Phase",            moduleTypeOscShpB,      3,                5},
+    {moduleGroupOsc,       roleKindInput,  "FM & Phase",            moduleTypeOscDual,      4,               12},
+    {moduleGroupOsc,       roleKindInput,  "Trig",                  moduleTypeOscPerc,      2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindInput,  "Trig",                  moduleTypeDrumSynth,    0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscA,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscB,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscC,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscD,         0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscPM,        0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscShpA,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscShpB,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscDual,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscString,    0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscPerc,      0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscNoise,     0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Coarse",                moduleTypeOscMaster,    0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscA,         6, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscB,         4, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscC,         3, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscD,         3, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscPM,        3, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscShpA,      4, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscShpB,      4, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscDual,      4, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscString,    4, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscPerc,      2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "TuneMode",              moduleTypeOscNoise,     4, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscA,         1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscB,         1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscC,         1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscD,         1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscPM,        1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscShpA,      1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscShpB,      1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscDual,      1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscString,    1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscPerc,      1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscNoise,     1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Fine",                  moduleTypeOscMaster,    1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Wave",                  moduleTypeOscA,         4, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Wave",                  moduleTypeOscB,         8, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Wave",                  moduleTypeOscShpA,      9, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "FM Type",               moduleTypeOscB,        10, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "FM Type",               moduleTypeOscShpA,      6, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "FM Type",               moduleTypeOscShpB,      9, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscA,         2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscB,         2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscC,         2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscD,         2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscPM,        2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscShpA,      2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscShpB,      2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscDual,      2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscString,    2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscPerc,      3, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscNoise,     2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "KBT",                   moduleTypeOscMaster,    2, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "PW & Shape",            moduleTypeOscB,         6, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "PW & Shape",            moduleTypeOscShpA,      7, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "PW & Shape",            moduleTypeOscShpB,      6, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "PW & Shape",            moduleTypeOscDual,     11, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "PW & Shape",            moduleTypeNoise,        0, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscA,         5, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscB,         9, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscC,         5, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscD,         4, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscPM,        5, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscShpA,     10, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscShpB,      8, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscDual,     10, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeNoise,        1, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscString,    7, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscPerc,      8, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeOscNoise,     7, MODULE_ROLE_NONE},
+    {moduleGroupOsc,       roleKindParam,  "Mute",                  moduleTypeMetNoise,     2, MODULE_ROLE_NONE},
+
+    // ── Keyboard Group
+    {moduleGroupKeyboard,  roleKindOutput, "Pitch",                 moduleTypeKeyboard,     0, MODULE_ROLE_NONE},
+    {moduleGroupKeyboard,  roleKindOutput, "Pitch",                 moduleTypeMonoKey,      0, MODULE_ROLE_NONE},
+    {moduleGroupKeyboard,  roleKindOutput, "Gate",                  moduleTypeKeyboard,     1, MODULE_ROLE_NONE},
+    {moduleGroupKeyboard,  roleKindOutput, "Gate",                  moduleTypeMonoKey,      1, MODULE_ROLE_NONE},
+    {moduleGroupKeyboard,  roleKindOutput, "Vel",                   moduleTypeKeyboard,     2, MODULE_ROLE_NONE},
+    {moduleGroupKeyboard,  roleKindOutput, "Vel",                   moduleTypeMonoKey,      2, MODULE_ROLE_NONE},
+
+    // ── Input Group
+    {moduleGroupIn,        roleKindOutput, "Main",                  moduleType2toIn,        0, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindOutput, "Main",                  moduleType2toIn,        1, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindOutput, "Main",                  moduleType4toIn,        0, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindOutput, "Main",                  moduleType4toIn,        1, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindOutput, "Main",                  moduleType4toIn,        2, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindOutput, "Main",                  moduleType4toIn,        3, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindOutput, "Main",                  moduleTypeFxtoIn,       0, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindOutput, "Main",                  moduleTypeFxtoIn,       1, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindParam,  "Mute",                  moduleType2toIn,        1, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindParam,  "Mute",                  moduleType4toIn,        1, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindParam,  "Mute",                  moduleTypeFxtoIn,       1, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindParam,  "Pad",                   moduleType2toIn,        2, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindParam,  "Pad",                   moduleType4toIn,        2, MODULE_ROLE_NONE},
+    {moduleGroupIn,        roleKindParam,  "Pad",                   moduleTypeFxtoIn,       2, MODULE_ROLE_NONE},
+
+    // ── Output Group
+    {moduleGroupOut,       roleKindInput,  "Inputs",                moduleType2toOut,       0, MODULE_ROLE_NONE},
+    {moduleGroupOut,       roleKindInput,  "Inputs",                moduleType2toOut,       1, MODULE_ROLE_NONE},
+    {moduleGroupOut,       roleKindInput,  "Inputs",                moduleType4toOut,       0, MODULE_ROLE_NONE},
+    {moduleGroupOut,       roleKindInput,  "Inputs",                moduleType4toOut,       1, MODULE_ROLE_NONE},
+    {moduleGroupOut,       roleKindInput,  "Inputs",                moduleType4toOut,       2, MODULE_ROLE_NONE},
+    {moduleGroupOut,       roleKindInput,  "Inputs",                moduleType4toOut,       3, MODULE_ROLE_NONE},
+    {moduleGroupOut,       roleKindParam,  "Mute",                  moduleType2toOut,       1, MODULE_ROLE_NONE},
+    {moduleGroupOut,       roleKindParam,  "Mute",                  moduleType4toOut,       1, MODULE_ROLE_NONE},
+    {moduleGroupOut,       roleKindParam,  "Pad",                   moduleType2toOut,       2, MODULE_ROLE_NONE},
+    {moduleGroupOut,       roleKindParam,  "Pad",                   moduleType4toOut,       2, MODULE_ROLE_NONE},
+
+    // ── Env Group
+    {moduleGroupEnv,       roleKindInput,  "Amp Inputs",            moduleTypeEnvADDSR,     1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Amp Inputs",            moduleTypeEnvMulti,     2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Amp Inputs",            moduleTypeEnvADSR,      2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Amp Inputs",            moduleTypeEnvADR,       2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Amp Inputs",            moduleTypeEnvD,         1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Amp Inputs",            moduleTypeEnvH,         1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Amp Inputs",            moduleTypeModADSR,      6, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Amp Inputs",            moduleTypeModAHD,       5, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Amp Inputs",            moduleTypeEnvAHD,       1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "VCA Inputs",            moduleTypeEnvADDSR,     2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "VCA Inputs",            moduleTypeEnvMulti,     1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "VCA Inputs",            moduleTypeEnvADSR,      0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "VCA Inputs",            moduleTypeEnvADR,       1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "VCA Inputs",            moduleTypeEnvD,         2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "VCA Inputs",            moduleTypeEnvH,         2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "VCA Inputs",            moduleTypeModADSR,      5, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "VCA Inputs",            moduleTypeModAHD,       4, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "VCA Inputs",            moduleTypeEnvAHD,       2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Trig & Gate Inputs",    moduleTypeEnvADDSR,     0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Trig & Gate Inputs",    moduleTypeEnvMulti,     0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Trig & Gate Inputs",    moduleTypeEnvADSR,      1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Trig & Gate Inputs",    moduleTypeEnvADR,       0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Trig & Gate Inputs",    moduleTypeEnvD,         0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Trig & Gate Inputs",    moduleTypeEnvH,         0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Trig & Gate Inputs",    moduleTypeModADSR,      0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Trig & Gate Inputs",    moduleTypeModAHD,       0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Trig & Gate Inputs",    moduleTypeEnvAHD,       0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Attack Mod Inputs",     moduleTypeModAHD,       1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Attack Mod Inputs",     moduleTypeModADSR,      1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Decay Mod Inputs",      moduleTypeModAHD,       3, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindInput,  "Decay Mod Inputs",      moduleTypeModADSR,      2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "EnvOut",                moduleTypeEnvADDSR,     0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "EnvOut",                moduleTypeEnvMulti,     0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "EnvOut",                moduleTypeEnvADSR,      0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "EnvOut",                moduleTypeEnvADR,       0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "EnvOut",                moduleTypeEnvD,         0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "EnvOut",                moduleTypeEnvH,         0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "EnvOut",                moduleTypeModADSR,      0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "EnvOut",                moduleTypeModAHD,       0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "EnvOut",                moduleTypeEnvAHD,       0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "VCAOut",                moduleTypeEnvADDSR,     1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "VCAOut",                moduleTypeEnvMulti,     1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "VCAOut",                moduleTypeEnvADSR,      1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "VCAOut",                moduleTypeEnvADR,       1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "VCAOut",                moduleTypeEnvD,         1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "VCAOut",                moduleTypeEnvH,         1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "VCAOut",                moduleTypeModADSR,      1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "VCAOut",                moduleTypeModAHD,       1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindOutput, "VCAOut",                moduleTypeEnvAHD,       1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Attack",                moduleTypeEnvADDSR,     2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Attack",                moduleTypeEnvMulti,     4, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Attack",                moduleTypeEnvADSR,      1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Attack",                moduleTypeEnvADR,       1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Attack",                moduleTypeModADSR,      0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Attack",                moduleTypeEnvAHD,       1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Attack",                moduleTypeModAHD,       0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Decay",                 moduleTypeEnvADDSR,     3, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Decay",                 moduleTypeEnvMulti,     5, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Decay",                 moduleTypeEnvADSR,      2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Decay",                 moduleTypeEnvADR,       3, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Decay",                 moduleTypeEnvD,         0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Decay",                 moduleTypeEnvH,         0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Decay",                 moduleTypeModADSR,      1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Decay",                 moduleTypeEnvAHD,       4, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Decay",                 moduleTypeModAHD,       2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Sustain",               moduleTypeEnvADDSR,     6, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Sustain",               moduleTypeEnvMulti,     1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Sustain",               moduleTypeEnvADSR,      3, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Sustain",               moduleTypeModADSR,      2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Release",               moduleTypeEnvADDSR,     7, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Release",               moduleTypeEnvMulti,     7, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Release",               moduleTypeEnvADSR,      4, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Release",               moduleTypeModADSR,      3, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Shape",                 moduleTypeEnvADDSR,     1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Shape",                 moduleTypeEnvMulti,    12, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Shape",                 moduleTypeEnvADSR,      0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Shape",                 moduleTypeEnvADR,       0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Shape",                 moduleTypeEnvAHD,       0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Reset",                 moduleTypeEnvADDSR,    10, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Reset",                 moduleTypeEnvMulti,     8, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Reset",                 moduleTypeEnvADSR,      7, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Reset",                 moduleTypeEnvADR,       2, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Reset",                 moduleTypeEnvAHD,       3, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Type",                  moduleTypeEnvADDSR,     9, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Type",                  moduleTypeEnvMulti,    10, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Type",                  moduleTypeEnvADSR,      5, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Type",                  moduleTypeEnvADR,       5, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Type",                  moduleTypeEnvD,         1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Type",                  moduleTypeEnvH,         1, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Type",                  moduleTypeModADSR,      8, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Type",                  moduleTypeEnvAHD,       5, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "Type",                  moduleTypeModAHD,       6, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "KBG",                   moduleTypeEnvADDSR,     0, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "KBG",                   moduleTypeEnvMulti,    11, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "KBG",                   moduleTypeEnvADSR,      6, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "KBG",                   moduleTypeEnvADR,       6, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "KBG",                   moduleTypeModADSR,      9, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "KBG",                   moduleTypeEnvAHD,       6, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "KBG",                   moduleTypeModAHD,       7, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "AttackModAmount",       moduleTypeModADSR,      4, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "AttackModAmount",       moduleTypeModAHD,       3, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "DecayModAmount",        moduleTypeModADSR,      5, MODULE_ROLE_NONE},
+    {moduleGroupEnv,       roleKindParam,  "DecayModAmount",        moduleTypeModAHD,       5, MODULE_ROLE_NONE},
+
+    // ── Delay Group
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDlySingleA,   0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDlySingleB,   0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDelayDual,    0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDelayDual,    2, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDelayQuad,    0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDelayQuad,    2, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDelayQuad,    4, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDelayQuad,    6, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDlyEight,     0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDlyClock,     0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDelayA,       0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDelayB,       0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDlyStereo,    0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Time",                  moduleTypeDlyStereo,    1, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Feedback",              moduleTypeDelayA,       1, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Feedback",              moduleTypeDelayB,       1, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Feedback",              moduleTypeDlyStereo,    2, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Feedback",              moduleTypeDlyStereo,    3, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Damp",                  moduleTypeDelayA,       2, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Damp",                  moduleTypeDelayB,       2, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Damp",                  moduleTypeDelayB,       8, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Damp",                  moduleTypeDlyStereo,    7, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Dry/Wet",               moduleTypeDelayA,       3, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Dry/Wet",               moduleTypeDelayB,       3, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindParam,  "Dry/Wet",               moduleTypeDlyStereo,    8, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDlySingleA,   0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDlySingleB,   0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDelayDual,    0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDelayQuad,    0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDlyEight,     0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDlyShiftReg,  0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDlyClock,     0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDelayA,       0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDelayB,       0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Inputs",                moduleTypeDlyStereo,    0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "Delay Time Mod Inputs", moduleTypeDlySingleB,   1,                1},
+    {moduleGroupDelay,     roleKindInput,  "Delay Time Mod Inputs", moduleTypeDelayDual,    1,                1},
+    {moduleGroupDelay,     roleKindInput,  "Delay Time Mod Inputs", moduleTypeDelayDual,    2,                3},
+    {moduleGroupDelay,     roleKindInput,  "Delay Time Mod Inputs", moduleTypeDelayQuad,    1,                1},
+    {moduleGroupDelay,     roleKindInput,  "Delay Time Mod Inputs", moduleTypeDelayQuad,    2,                3},
+    {moduleGroupDelay,     roleKindInput,  "Delay Time Mod Inputs", moduleTypeDelayQuad,    3,                5},
+    {moduleGroupDelay,     roleKindInput,  "Delay Time Mod Inputs", moduleTypeDelayQuad,    4,                7},
+    {moduleGroupDelay,     roleKindInput,  "ClockInputs",           moduleTypeDlyShiftReg,  1, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindInput,  "ClockInputs",           moduleTypeDlyClock,     1, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlySingleA,   0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlySingleB,   0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDelayDual,    0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDelayDual,    1, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDelayQuad,    1, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDelayQuad,    2, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDelayQuad,    3, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDelayQuad,    4, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyEight,     0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyEight,     1, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyEight,     2, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyEight,     3, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyEight,     4, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyEight,     5, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyEight,     6, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyEight,     7, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyShiftReg,  0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyShiftReg,  1, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyShiftReg,  2, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyShiftReg,  3, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyShiftReg,  4, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyShiftReg,  5, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyShiftReg,  6, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyShiftReg,  7, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyClock,     0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDelayA,       0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDelayB,       0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyStereo,    0, MODULE_ROLE_NONE},
+    {moduleGroupDelay,     roleKindOutput, "Outputs",               moduleTypeDlyStereo,    1, MODULE_ROLE_NONE},
+
+    // ── Switch Group
+    {moduleGroupSwitch,    roleKindInput,  "Inputs Ctrl",           moduleTypeValSw2to1,    2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs Ctrl",           moduleTypeValSw1to2,    1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs Ctrl",           moduleTypeWindSw,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs Ctrl",           moduleTypeMux8to1,      8, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs Ctrl",           moduleTypeMux1to8,      1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs Ctrl",           moduleTypeMux8to1X,     8, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs Ctrl",           moduleTypeSandH,        1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs Ctrl",           moduleTypeTandH,        1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSwOnOffM,     0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSwOnOffT,     0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw2to1M,      0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw2to1M,      1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw2to1,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw2to1,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw4to1,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw4to1,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw4to1,       2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw4to1,       3, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw8to1,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw8to1,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw8to1,       2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw8to1,       3, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw8to1,       4, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw8to1,       5, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw8to1,       6, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw8to1,       7, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw1to2M,      0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw1to2,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw1to4,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSw1to8,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeValSw2to1,    0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeValSw2to1,    1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeValSw1to2,    0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeWindSw,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1,      0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1,      1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1,      2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1,      3, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1,      4, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1,      5, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1,      6, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1,      7, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux1to8,      0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1X,     0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1X,     1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1X,     2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1X,     3, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1X,     4, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1X,     5, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1X,     6, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeMux8to1X,     7, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeSandH,        0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindInput,  "Inputs",                moduleTypeTandH,        0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSwOnOffM,     1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSwOnOffT,     1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSw2to1M,      1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSw2to1,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSw4to1,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSw8to1,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSw1to2M,      2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSw1to2,       2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSw1to4,       4, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs Ctrl",          moduleTypeSw1to8,       8, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSwOnOffM,     0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSwOnOffT,     0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw2to1M,      0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw2to1,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw4to1,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw8to1,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to2M,      1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to2M,      0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to2,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to2,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to4,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to4,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to4,       2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to4,       3, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to8,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to8,       1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to8,       2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to8,       3, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to8,       4, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to8,       5, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to8,       6, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSw1to8,       7, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeValSw2to1,    0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeValSw1to2,    0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeValSw1to2,    1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeWindSw,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux8to1,      0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux1to8,      0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux1to8,      1, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux1to8,      2, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux1to8,      3, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux1to8,      4, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux1to8,      5, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux1to8,      6, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux1to8,      7, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeMux8to1X,     0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeSandH,        0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindOutput, "Outputs",               moduleTypeTandH,        0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Select",                moduleTypeSwOnOffT,     0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Select",                moduleTypeSw2to1,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Select",                moduleTypeSw4to1,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Select",                moduleTypeSw8to1,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Select",                moduleTypeSw1to2,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Select",                moduleTypeSw1to4,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Select",                moduleTypeSw1to8,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Ctrl",                  moduleTypeValSw2to1,    0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Ctrl",                  moduleTypeValSw1to2,    0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Ctrl",                  moduleTypeWindSw,       0, MODULE_ROLE_NONE},
+    {moduleGroupSwitch,    roleKindParam,  "Ctrl",                  moduleTypeWindSw,       1, MODULE_ROLE_NONE},
+
+    // ── Mix Group
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix1to1A,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix1to1S,     2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix1to1S,     3, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix2to1B,     2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix2to1A,     2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix4to1B,     4, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix4to1C,     4, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix4to1S,     8, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix4to1S,     9, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMix8to1B,     8, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs Chain",          moduleTypeMixFader,     8, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix1to1A,     0,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix1to1S,     0,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix1to1S,     1,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix2to1B,     0,                1},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix2to1B,     1,                3},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix2to1A,     0,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix2to1A,     1,                2},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1B,     0,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1B,     1,                1},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1B,     2,                2},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1B,     3,                3},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1C,     0,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1C,     1,                1},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1C,     2,                2},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1C,     3,                3},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1A,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1A,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1A,     2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1A,     3, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1S,     0,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1S,     1,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1S,     2,                1},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1S,     3,                1},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1S,     4,                2},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1S,     5,                2},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1S,     6,                3},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix4to1S,     7,                3},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1A,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1A,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1A,     2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1A,     3, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1A,     4, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1A,     5, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1A,     6, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1A,     7, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1B,     0,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1B,     1,                1},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1B,     2,                2},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1B,     3,                3},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1B,     4,                4},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1B,     5,                5},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1B,     6,                6},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMix8to1B,     7,                7},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixFader,     0,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixFader,     1,                1},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixFader,     2,                2},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixFader,     3,                3},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixFader,     4,                4},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixFader,     5,                5},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixFader,     6,                6},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixFader,     7,                7},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixStereo,    0,                0},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixStereo,    1,                1},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixStereo,    2,                2},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixStereo,    3,                3},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixStereo,    4,                4},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeMixStereo,    5,                5},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypePan,          0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeXtoFade,      0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeXtoFade,      1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeFade1to2,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeFade2to1,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "Inputs",                moduleTypeFade2to1,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix1to1A,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix1to1S,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix1to1S,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix2to1B,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix2to1A,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix4to1B,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix4to1C,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix4to1A,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix4to1S,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix4to1S,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix8to1A,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMix8to1B,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMixFader,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMixStereo,    0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeMixStereo,    1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypePan,          0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypePan,          1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeXtoFade,      0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeFade1to2,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeFade1to2,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindOutput, "Outputs",               moduleTypeFade2to1,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypeMix1to1A,     2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypeMix1to1S,     2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypeMix2to1A,     4, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypeMix2to1B,     4, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypeMix4to1B,     4, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypeMix4to1C,     9, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypeMix8to1B,     8, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypeMixFader,    16, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypePan,          2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Linear",                moduleTypeXtoFade,      2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Padding",               moduleTypeMix8to1A,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Padding",               moduleTypeMix8to1B,     9, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Padding",               moduleTypeMixFader,    17, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "ModInput",              moduleTypePan,          1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "ModInput",              moduleTypeFade1to2,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "ModInput",              moduleTypeFade2to1,     2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindInput,  "ModInput",              moduleTypeXtoFade,      2, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "ModAmount",             moduleTypePan,          0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "ModAmount",             moduleTypeFade1to2,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "ModAmount",             moduleTypeFade2to1,     1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "ModAmount",             moduleTypeXtoFade,      0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Fade",                  moduleTypePan,          1, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Fade",                  moduleTypeFade1to2,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Fade",                  moduleTypeFade2to1,     0, MODULE_ROLE_NONE},
+    {moduleGroupMix,       roleKindParam,  "Fade",                  moduleTypeXtoFade,      1, MODULE_ROLE_NONE},
+
+    // ── Filter Group
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeFltLP,        0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeFltHP,        0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeFltNord,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeFltClassic,   0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeFltMulti,     0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeFltStatic,    0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeWahWah,       0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeFltVoice,     0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeVocoder,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeFltPhase,     0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeFltComb,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeEq2Band,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeEq3band,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindOutput, "Audio Out",             moduleTypeEqPeak,       0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeFltLP,        0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeFltHP,        0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeFltNord,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeFltClassic,   0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeFltMulti,     0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeFltStatic,    0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeWahWah,       0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeFltVoice,     0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeVocoder,      1, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeFltPhase,     0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeFltComb,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeEq2Band,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeEq3band,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Audio In",              moduleTypeEqPeak,       0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod Fix",         moduleTypeFltNord,      2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod Fix",         moduleTypeFltClassic,   2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod Fix",         moduleTypeFltMulti,     2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod Fix",         moduleTypeFltPhase,     4, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod Fix",         moduleTypeFltComb,      1, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod",             moduleTypeFltLP,        1,                1},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod",             moduleTypeFltHP,        1,                1},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod",             moduleTypeFltNord,      1,                1},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod",             moduleTypeFltClassic,   1,                1},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod",             moduleTypeFltMulti,     1,                1},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod",             moduleTypeWahWah,       1,                0},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod",             moduleTypeFltVoice,     2,                7},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod",             moduleTypeFltPhase,     1,                0},
+    {moduleGroupFilter,    roleKindInput,  "Pitch Mod",             moduleTypeFltComb,      2,                1},
+    {moduleGroupFilter,    roleKindInput,  "Feedback Mod",          moduleTypeFltPhase,     3,                8},
+    {moduleGroupFilter,    roleKindInput,  "Feedback Mod",          moduleTypeFltComb,      3,                4},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeFltLP,        0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeFltHP,        0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeFltNord,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeFltClassic,   0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeFltMulti,     0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeFltStatic,    0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeWahWah,       1, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeFltVoice,     6, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeFltPhase,     1, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeFltComb,      0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeEq3band,      2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Cutoff",                moduleTypeEqPeak,       0, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeFltLP,        3, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeFltHP,        3, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeFltNord,      6, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeFltClassic,   5, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeFltMulti,     6, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeFltStatic,    3, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeWahWah,       2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeFltVoice,     9, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeVocoder,      9, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeFltPhase,     6, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeFltComb,      7, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeEq2Band,      3, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeEq3band,      5, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Bypass",                moduleTypeEqPeak,       3, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Res",                   moduleTypeFltNord,      4, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Res",                   moduleTypeFltClassic,   3, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Res",                   moduleTypeFltMulti,     4, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Res",                   moduleTypeFltVoice,     8, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Res",                   moduleTypeFltStatic,    1, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "KBT",                   moduleTypeFltLP,        2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "KBT",                   moduleTypeFltHP,        2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "KBT",                   moduleTypeFltNord,      2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "KBT",                   moduleTypeFltClassic,   2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "KBT",                   moduleTypeFltMulti,     2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "KBT",                   moduleTypeFltPhase,    10, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "KBT",                   moduleTypeFltComb,      2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "InLvl",                 moduleTypeFltPhase,     7, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "InLvl",                 moduleTypeFltComb,      6, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "InLvl",                 moduleTypeEq3band,      4, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "InLvl",                 moduleTypeEq2Band,      2, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "InLvl",                 moduleTypeEqPeak,       4, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Feedback",              moduleTypeFltPhase,     3, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Feedback",              moduleTypeFltComb,      3, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "FeedbackAmount",        moduleTypeFltPhase,     8, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "FeedbackAmount",        moduleTypeFltComb,      4, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Variant",               moduleTypeFltPhase,     9, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Variant",               moduleTypeFltComb,      5, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Lo Gain",               moduleTypeEq2Band,      1, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Lo Gain",               moduleTypeEq3band,      3, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Lo Freq",               moduleTypeEq2Band,      5, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Lo Freq",               moduleTypeEq3band,      7, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Hi Freq",               moduleTypeEq2Band,      4, MODULE_ROLE_NONE},
+    {moduleGroupFilter,    roleKindParam,  "Hi Freq",               moduleTypeEq3band,      6, MODULE_ROLE_NONE},
+
+    // ── Effect Group
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypeStChorus,     0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypeDigitizer,    0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypeFlanger,      0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypeFreqShift,    0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypeReverb,       0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypeReverb,       1, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypeCompress,     0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypeCompress,     1, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypePhaser,       0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypePShift,       0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Inputs",                moduleTypeScratch,      0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindInput,  "Modulation",            moduleTypeScratch,      1,                1},
+    {moduleGroupEffect,    roleKindInput,  "Modulation",            moduleTypePShift,       1,                2},
+    {moduleGroupEffect,    roleKindInput,  "Modulation",            moduleTypeFreqShift,    1,                1},
+    {moduleGroupEffect,    roleKindInput,  "Modulation",            moduleTypeDigitizer,    1,                2},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeStChorus,     0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeStChorus,     1, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeDigitizer,    0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeFlanger,      0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeFreqShift,    0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeFreqShift,    1, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeReverb,       0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeReverb,       1, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeCompress,     1, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeCompress,     0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypePhaser,       0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypePShift,       0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindOutput, "Outputs",               moduleTypeScratch,      0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Bypass",                moduleTypeStChorus,     2, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Bypass",                moduleTypeDigitizer,    3, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Bypass",                moduleTypeFlanger,      3, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Bypass",                moduleTypeReverb,       3, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Bypass",                moduleTypeCompress,     6, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Bypass",                moduleTypePhaser,       3, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Bypass",                moduleTypePShift,       4, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Bypass",                moduleTypeScratch,      3, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Bypass",                moduleTypeFreqShift,    3, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Rate",                  moduleTypeFlanger,      0, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Rate",                  moduleTypePhaser,       1, MODULE_ROLE_NONE},
+    {moduleGroupEffect,    roleKindParam,  "Depth",                 moduleTypeFlanger,      1, MODULE_ROLE_NONE},
+
+    // ── LFO Group
+    {moduleGroupLfo,       roleKindInput,  "Pitch Fixed",           moduleTypeLfoA,         0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindInput,  "Pitch Fixed",           moduleTypeLfoB,         0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindInput,  "Pitch Fixed",           moduleTypeLfoShpA,      0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindInput,  "Pitch Fixed",           moduleTypeLfoC,         0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindInput,  "Reset",                 moduleTypeLfoB,         2, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindInput,  "Reset",                 moduleTypeLfoShpA,      2, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindInput,  "Pitch",                 moduleTypeLfoA,         1,                3},
+    {moduleGroupLfo,       roleKindInput,  "Pitch",                 moduleTypeLfoB,         1,                1},
+    {moduleGroupLfo,       roleKindInput,  "Pitch",                 moduleTypeLfoShpA,      1,                3},
+    {moduleGroupLfo,       roleKindOutput, "Outputs",               moduleTypeLfoA,         0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindOutput, "Outputs",               moduleTypeLfoB,         0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindOutput, "Outputs",               moduleTypeLfoShpA,      0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindOutput, "Outputs",               moduleTypeLfoC,         0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindOutput, "SyncOut",               moduleTypeLfoB,         1, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindOutput, "SyncOut",               moduleTypeLfoShpA,      1, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Freq",           moduleTypeLfoA,         0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Freq",           moduleTypeLfoB,         0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Freq",           moduleTypeLfoShpA,      0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Freq",           moduleTypeLfoC,         0, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Range",          moduleTypeLfoA,         7, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Range",          moduleTypeLfoB,         2, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Range",          moduleTypeLfoShpA,      1, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Range",          moduleTypeLfoC,         3, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Mono",           moduleTypeLfoA,         1, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Mono",           moduleTypeLfoB,         5, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Mono",           moduleTypeLfoShpA,      9, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Mono",           moduleTypeLfoC,         1, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params KBT",            moduleTypeLfoA,         2, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params KBT",            moduleTypeLfoB,         3, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params KBT",            moduleTypeLfoShpA,      2, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Mute",           moduleTypeLfoA,         5, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Mute",           moduleTypeLfoB,         7, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Mute",           moduleTypeLfoShpA,      4, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "Params Mute",           moduleTypeLfoC,         4, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "LevelShift",            moduleTypeLfoA,         6, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "LevelShift",            moduleTypeLfoB,         8, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "LevelShift",            moduleTypeLfoShpA,     10, MODULE_ROLE_NONE},
+    {moduleGroupLfo,       roleKindParam,  "LevelShift",            moduleTypeLfoC,         2, MODULE_ROLE_NONE},
+
+    // ── RND Group
+    {moduleGroupRandom,    roleKindInput,  "Pitch Fixed",           moduleTypeRandomA,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Pitch Fixed",           moduleTypeRandomB,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Pitch",                 moduleTypeRandomB,      1,                3},
+    {moduleGroupRandom,    roleKindInput,  "Clk",                   moduleTypeRndClkA,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Clk",                   moduleTypeRndTrig,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Clk",                   moduleTypeRndClkB,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Clk",                   moduleTypeRndPattern,   0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Reset",                 moduleTypeRndClkA,      1, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Reset",                 moduleTypeRndTrig,      1, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Reset",                 moduleTypeRndClkB,      1, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Reset",                 moduleTypeRndPattern,   1, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "SeedInput",             moduleTypeRndClkA,      2, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "SeedInput",             moduleTypeRndTrig,      2, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "SeedInput",             moduleTypeRndClkB,      2, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "SeedInput",             moduleTypeRndPattern,   2, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "SeedInput",             moduleTypeRndPattern,   3, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindInput,  "Step",                  moduleTypeRndClkB,      3,                4},
+    {moduleGroupRandom,    roleKindInput,  "Step",                  moduleTypeRndPattern,   4,                4},
+    {moduleGroupRandom,    roleKindOutput, "MainOut",               moduleTypeRandomA,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindOutput, "MainOut",               moduleTypeRandomB,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindOutput, "MainOut",               moduleTypeRndClkA,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindOutput, "MainOut",               moduleTypeRndTrig,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindOutput, "MainOut",               moduleTypeRndClkB,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindOutput, "MainOut",               moduleTypeRndPattern,   0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Smooth",                moduleTypeRandomA,      5, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Smooth",                moduleTypeRandomB,      8, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Step",                  moduleTypeRandomA,      6, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Step",                  moduleTypeRandomB,      4, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Step",                  moduleTypeRndClkA,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Step",                  moduleTypeRndClkB,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Step",                  moduleTypeRndPattern,   2, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Prob",                  moduleTypeRndTrig,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "LevShift",              moduleTypeRandomA,      2, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "LevShift",              moduleTypeRandomB,      6, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "LevShift",              moduleTypeRndClkA,      3, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "LevShift",              moduleTypeRndClkB,      1, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "LevShift",              moduleTypeRndPattern,   5, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Mono",                  moduleTypeRandomA,      1, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Mono",                  moduleTypeRandomB,      1, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Mono",                  moduleTypeRndClkA,      1, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Mono",                  moduleTypeRndTrig,      3, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Mono",                  moduleTypeRndClkB,      3, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Active",                moduleTypeRandomA,      4, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Active",                moduleTypeRandomB,      5, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Active",                moduleTypeRndClkA,      4, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Active",                moduleTypeRndTrig,      2, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Active",                moduleTypeRndClkB,      2, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Active",                moduleTypeRndPattern,   6, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Rate",                  moduleTypeRandomA,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Rate",                  moduleTypeRandomB,      0, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Range",                 moduleTypeRandomA,      3, MODULE_ROLE_NONE},
+    {moduleGroupRandom,    roleKindParam,  "Range",                 moduleTypeRandomB,      7, MODULE_ROLE_NONE},
+
+    // ── Sequencer Group
+    {moduleGroupSequencer, roleKindInput,  "Clock Inputs",          moduleTypeSeqEvent,     0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Clock Inputs",          moduleTypeSeqVal,       0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Clock Inputs",          moduleTypeSeqLev,       0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Clock Inputs",          moduleTypeSeqNote,      0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Rst Inputs",            moduleTypeSeqEvent,     1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Rst Inputs",            moduleTypeSeqVal,       1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Rst Inputs",            moduleTypeSeqLev,       1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Rst Inputs",            moduleTypeSeqNote,      1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Loop Inputs",           moduleTypeSeqEvent,     2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Loop Inputs",           moduleTypeSeqVal,       2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Loop Inputs",           moduleTypeSeqLev,       2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Loop Inputs",           moduleTypeSeqNote,      2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Park Inputs",           moduleTypeSeqEvent,     3, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Park Inputs",           moduleTypeSeqVal,       3, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Park Inputs",           moduleTypeSeqLev,       3, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Park Inputs",           moduleTypeSeqNote,      3, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain1 Inputs",         moduleTypeSeqEvent,     4, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain1 Inputs",         moduleTypeSeqVal,       4, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain1 Inputs",         moduleTypeSeqLev,       4, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain1 Inputs",         moduleTypeSeqNote,      4, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain1 Inputs",         moduleTypeSeqCtr,       1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain2 Inputs",         moduleTypeSeqEvent,     5, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain2 Inputs",         moduleTypeSeqVal,       5, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain2 Inputs",         moduleTypeSeqLev,       5, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain2 Inputs",         moduleTypeSeqNote,      5, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindInput,  "Chain2 Inputs",         moduleTypeSeqCtr,       2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Link Outputs",          moduleTypeSeqEvent,     0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Link Outputs",          moduleTypeSeqVal,       0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Link Outputs",          moduleTypeSeqLev,       0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Link Outputs",          moduleTypeSeqNote,      0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain1 Outputs",        moduleTypeSeqEvent,     1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain1 Outputs",        moduleTypeSeqVal,       1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain1 Outputs",        moduleTypeSeqLev,       1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain1 Outputs",        moduleTypeSeqNote,      1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain1 Outputs",        moduleTypeSeqCtr,       0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain2 Outputs",        moduleTypeSeqEvent,     2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain2 Outputs",        moduleTypeSeqVal,       2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain2 Outputs",        moduleTypeSeqLev,       2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain2 Outputs",        moduleTypeSeqNote,      2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindOutput, "Chain2 Outputs",        moduleTypeSeqCtr,       1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Loop",                  moduleTypeSeqEvent,    32, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Loop",                  moduleTypeSeqVal,      32, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Loop",                  moduleTypeSeqLev,      32, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Loop",                  moduleTypeSeqNote,     32, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Length",                moduleTypeSeqEvent,    33, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Length",                moduleTypeSeqVal,      33, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Length",                moduleTypeSeqLev,      33, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Length",                moduleTypeSeqNote,     33, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Polarity",              moduleTypeSeqVal,      34, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Polarity",              moduleTypeSeqLev,      34, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Polarity",              moduleTypeSeqCtr,      33, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 1",               moduleTypeSeqEvent,     0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 1",               moduleTypeSeqVal,       0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 1",               moduleTypeSeqLev,       0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 1",               moduleTypeSeqNote,      0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 1",               moduleTypeSeqCtr,       0, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 2",               moduleTypeSeqEvent,     1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 2",               moduleTypeSeqVal,       1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 2",               moduleTypeSeqLev,       1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 2",               moduleTypeSeqNote,      1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 2",               moduleTypeSeqCtr,       1, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 3",               moduleTypeSeqEvent,     2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 3",               moduleTypeSeqVal,       2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 3",               moduleTypeSeqLev,       2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 3",               moduleTypeSeqNote,      2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 3",               moduleTypeSeqCtr,       2, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 4",               moduleTypeSeqEvent,     3, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 4",               moduleTypeSeqVal,       3, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 4",               moduleTypeSeqLev,       3, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 4",               moduleTypeSeqNote,      3, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 4",               moduleTypeSeqCtr,       3, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 5",               moduleTypeSeqEvent,     4, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 5",               moduleTypeSeqVal,       4, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 5",               moduleTypeSeqLev,       4, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 5",               moduleTypeSeqNote,      4, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 5",               moduleTypeSeqCtr,       4, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 6",               moduleTypeSeqEvent,     5, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 6",               moduleTypeSeqVal,       5, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 6",               moduleTypeSeqLev,       5, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 6",               moduleTypeSeqNote,      5, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 6",               moduleTypeSeqCtr,       5, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 7",               moduleTypeSeqEvent,     6, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 7",               moduleTypeSeqVal,       6, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 7",               moduleTypeSeqLev,       6, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 7",               moduleTypeSeqNote,      6, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 7",               moduleTypeSeqCtr,       6, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 8",               moduleTypeSeqEvent,     7, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 8",               moduleTypeSeqVal,       7, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 8",               moduleTypeSeqLev,       7, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 8",               moduleTypeSeqNote,      7, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 8",               moduleTypeSeqCtr,       7, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 9",               moduleTypeSeqEvent,     8, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 9",               moduleTypeSeqVal,       8, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 9",               moduleTypeSeqLev,       8, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 9",               moduleTypeSeqNote,      8, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 9",               moduleTypeSeqCtr,       8, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 10",              moduleTypeSeqEvent,     9, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 10",              moduleTypeSeqVal,       9, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 10",              moduleTypeSeqLev,       9, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 10",              moduleTypeSeqNote,      9, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 10",              moduleTypeSeqCtr,       9, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 11",              moduleTypeSeqEvent,    10, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 11",              moduleTypeSeqVal,      10, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 11",              moduleTypeSeqLev,      10, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 11",              moduleTypeSeqNote,     10, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 11",              moduleTypeSeqCtr,      10, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 12",              moduleTypeSeqEvent,    11, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 12",              moduleTypeSeqVal,      11, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 12",              moduleTypeSeqLev,      11, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 12",              moduleTypeSeqNote,     11, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 12",              moduleTypeSeqCtr,      11, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 13",              moduleTypeSeqEvent,    12, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 13",              moduleTypeSeqVal,      12, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 13",              moduleTypeSeqLev,      12, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 13",              moduleTypeSeqNote,     12, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 13",              moduleTypeSeqCtr,      12, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 14",              moduleTypeSeqEvent,    13, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 14",              moduleTypeSeqVal,      13, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 14",              moduleTypeSeqLev,      13, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 14",              moduleTypeSeqNote,     13, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 14",              moduleTypeSeqCtr,      13, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 15",              moduleTypeSeqEvent,    14, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 15",              moduleTypeSeqVal,      14, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 15",              moduleTypeSeqLev,      14, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 15",              moduleTypeSeqNote,     14, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 15",              moduleTypeSeqCtr,      14, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 16",              moduleTypeSeqEvent,    15, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 16",              moduleTypeSeqVal,      15, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 16",              moduleTypeSeqLev,      15, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 16",              moduleTypeSeqNote,     15, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Value 16",              moduleTypeSeqCtr,      15, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 1",               moduleTypeSeqEvent,    16, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 1",               moduleTypeSeqVal,      16, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 1",               moduleTypeSeqLev,      16, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 1",               moduleTypeSeqNote,     16, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 1",               moduleTypeSeqCtr,      16, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 2",               moduleTypeSeqEvent,    17, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 2",               moduleTypeSeqVal,      17, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 2",               moduleTypeSeqLev,      17, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 2",               moduleTypeSeqNote,     17, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 2",               moduleTypeSeqCtr,      17, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 3",               moduleTypeSeqEvent,    18, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 3",               moduleTypeSeqVal,      18, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 3",               moduleTypeSeqLev,      18, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 3",               moduleTypeSeqNote,     18, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 3",               moduleTypeSeqCtr,      18, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 4",               moduleTypeSeqEvent,    19, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 4",               moduleTypeSeqVal,      19, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 4",               moduleTypeSeqLev,      19, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 4",               moduleTypeSeqNote,     19, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 4",               moduleTypeSeqCtr,      19, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 5",               moduleTypeSeqEvent,    20, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 5",               moduleTypeSeqVal,      20, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 5",               moduleTypeSeqLev,      20, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 5",               moduleTypeSeqNote,     20, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 5",               moduleTypeSeqCtr,      20, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 6",               moduleTypeSeqEvent,    21, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 6",               moduleTypeSeqVal,      21, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 6",               moduleTypeSeqLev,      21, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 6",               moduleTypeSeqNote,     21, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 6",               moduleTypeSeqCtr,      21, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 7",               moduleTypeSeqEvent,    22, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 7",               moduleTypeSeqVal,      22, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 7",               moduleTypeSeqLev,      22, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 7",               moduleTypeSeqNote,     22, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 7",               moduleTypeSeqCtr,      22, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 8",               moduleTypeSeqEvent,    23, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 8",               moduleTypeSeqVal,      23, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 8",               moduleTypeSeqLev,      23, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 8",               moduleTypeSeqNote,     23, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 8",               moduleTypeSeqCtr,      23, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 9",               moduleTypeSeqEvent,    24, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 9",               moduleTypeSeqVal,      24, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 9",               moduleTypeSeqLev,      24, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 9",               moduleTypeSeqNote,     24, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 9",               moduleTypeSeqCtr,      24, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 10",              moduleTypeSeqEvent,    25, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 10",              moduleTypeSeqVal,      25, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 10",              moduleTypeSeqLev,      25, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 10",              moduleTypeSeqNote,     25, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 10",              moduleTypeSeqCtr,      25, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 11",              moduleTypeSeqEvent,    26, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 11",              moduleTypeSeqVal,      26, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 11",              moduleTypeSeqLev,      26, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 11",              moduleTypeSeqNote,     26, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 11",              moduleTypeSeqCtr,      26, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 12",              moduleTypeSeqEvent,    27, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 12",              moduleTypeSeqVal,      27, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 12",              moduleTypeSeqLev,      27, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 12",              moduleTypeSeqNote,     27, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 12",              moduleTypeSeqCtr,      27, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 13",              moduleTypeSeqEvent,    28, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 13",              moduleTypeSeqVal,      28, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 13",              moduleTypeSeqLev,      28, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 13",              moduleTypeSeqNote,     28, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 13",              moduleTypeSeqCtr,      28, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 14",              moduleTypeSeqEvent,    29, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 14",              moduleTypeSeqVal,      29, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 14",              moduleTypeSeqLev,      29, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 14",              moduleTypeSeqNote,     29, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 14",              moduleTypeSeqCtr,      29, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 15",              moduleTypeSeqEvent,    30, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 15",              moduleTypeSeqVal,      30, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 15",              moduleTypeSeqLev,      30, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 15",              moduleTypeSeqNote,     30, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 15",              moduleTypeSeqCtr,      30, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 16",              moduleTypeSeqEvent,    31, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 16",              moduleTypeSeqVal,      31, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 16",              moduleTypeSeqLev,      31, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 16",              moduleTypeSeqNote,     31, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Event 16",              moduleTypeSeqCtr,      31, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Gate",                  moduleTypeSeqEvent,    35, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Gate",                  moduleTypeSeqVal,      35, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Gate",                  moduleTypeSeqLev,      35, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Gate",                  moduleTypeSeqNote,     34, MODULE_ROLE_NONE},
+    {moduleGroupSequencer, roleKindParam,  "Gate",                  moduleTypeSeqCtr,      32, MODULE_ROLE_NONE},
+
+    // ── Logic Group
+    {moduleGroupLogic,     roleKindInput,  "Inputs Clock",          moduleTypeFlipFlop,     0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs Clock",          moduleTypeClkDiv,       0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs Clock",          moduleType8Counter,     0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs Clock",          moduleTypeBinCounter,   0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs Reset",          moduleTypeFlipFlop,     2, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs Reset",          moduleTypeClkDiv,       1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs Reset",          moduleType8Counter,     1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs Reset",          moduleTypeBinCounter,   1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs Mod",            moduleTypePulse,        1,                1},
+    {moduleGroupLogic,     roleKindInput,  "Inputs Mod",            moduleTypeDelay,        1,                1},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeGate,         1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeGate,         0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeGate,         3, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeGate,         2, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeInvert,       1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeInvert,       0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeFlipFlop,     1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypePulse,        0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeDelay,        0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeDAConv,       0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeDAConv,       1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeDAConv,       2, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeDAConv,       3, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeDAConv,       4, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeDAConv,       5, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeDAConv,       6, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindInput,  "Inputs",                moduleTypeDAConv,       7, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeGate,         0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeGate,         1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeInvert,       0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeInvert,       1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeFlipFlop,     1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeFlipFlop,     0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeClkDiv,       0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypePulse,        0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeDelay,        0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleType8Counter,     0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleType8Counter,     1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleType8Counter,     2, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleType8Counter,     3, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleType8Counter,     4, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleType8Counter,     5, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleType8Counter,     6, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleType8Counter,     7, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeBinCounter,   0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeBinCounter,   1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeBinCounter,   2, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeBinCounter,   3, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeBinCounter,   4, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeBinCounter,   5, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeBinCounter,   6, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeBinCounter,   7, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeADConv,       0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeADConv,       1, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeADConv,       2, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeADConv,       3, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeADConv,       4, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeADConv,       5, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeADConv,       6, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeADConv,       7, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindOutput, "OutPuts",               moduleTypeDAConv,       0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindParam,  "Params Time",           moduleTypePulse,        0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindParam,  "Params Time",           moduleTypeDelay,        0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindParam,  "Params Time",           moduleTypeClkDiv,       0, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindParam,  "Params Range",          moduleTypePulse,        2, MODULE_ROLE_NONE},
+    {moduleGroupLogic,     roleKindParam,  "Params Range",          moduleTypeDelay,        2, MODULE_ROLE_NONE}, };
 
 const tModuleProperties  gModuleProperties[] = {
     {"Unknown",      0, volumeTypeNone,      ledTypeNo,  moduleGroupNone     },

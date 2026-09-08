@@ -180,3 +180,4 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
   contextMenu.c) is already fully shared via SynthLib. G2-Edit's menus.c is still 2125 lines
   (EmuUtility/SynthEdit's are 26/95), but what remains is legitimately G2-specific domain action logic
   operating on tModule/tParam/tCable, which do not exist in the other two apps.
+- Bottom of the module grid is not a hard wall: a module created (or grown by a replace) near row 127 extends past MAX_ROWS instead of being raised or refused - shift_fit_row() guards collisions with other modules but not the grid edge. Pre-existing, affects plain Add Module identically, and needs a decision on whether the last row should be a wall at all

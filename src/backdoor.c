@@ -93,7 +93,7 @@ extern "C" {
 //   MENU <bar>[/<item>[/<sub>]] — run a menu item by label (leading substring, case-insensitive,
 //                       '/' separated); omit the last level to LIST what that level contains
 //   SELECT <VA|FX> <n> — select one module by index; SELECT NONE clears
-//   REPLACE [VA|FX] <index> <name> — swap a module for another of the same group, as the module
+//   REPLACE [VA|FX] <index> <name>|LIST — swap a module for another of the same group, as the
 //                       right-click menu does. Local only; check the result with DUMP
 //   PALETTE ON|OFF|TOGGLE|STATUS | GROUP <name> | ADD <module> — drive the module palette. The
 //                       band changes the topbar height and so the canvas origin, so TOGGLE is here
@@ -697,9 +697,10 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
                 tModuleType tiles[32];
                 count = palette_group_modules(palette_selected_group(), tiles, 32);
             }
-            snprintf(msg, sizeof(msg), "OK open=%s group=%s tiles=%u bandHeight=%.0f\n",
+            snprintf(msg, sizeof(msg), "OK open=%s group=%s tiles=%u bandHeight=%.0f newColour=%u\n",
                      palette_is_open() ? "yes" : "no",
-                     palette_group_name(palette_selected_group()), count, palette_band_height());
+                     palette_group_name(palette_selected_group()), count, palette_band_height(),
+                     palette_new_module_colour());
             backdoor_write_result(msg);
         }
     } else if (strcmp(cmd, "REPLACE") == 0) {
@@ -737,7 +738,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             }
         }
 
-        if (found == (tModuleType)0) {
+        if ((found == (tModuleType)0) && (strcasecmp(name, "LIST") != 0)) {
             char msg[128];
 
             snprintf(msg, sizeof(msg), "ERROR: no module named '%s'\n", name);
@@ -747,7 +748,35 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         gLocation = area;
         tModuleKey   key      = {gSlot, area, index};
 
-        bool         ok       = module_replace(key, found);
+        // REPLACE ... LIST reports what the module right-click menu WOULD offer rather than doing
+        // anything - the same module_replace_candidates() call the menu makes - so a greyed-out
+        // "Replace with" can be diagnosed without a mouse.
+        if (strcasecmp(name, "LIST") == 0) {
+            tModule *   module   = get_module(key);
+            tModuleType cand[32] = {0};
+            uint32_t    count    = 0;
+            char        msg[512] = {0};
+            size_t      used     = 0;
+
+            if (module == NULL) {
+                backdoor_write_result("ERROR: no module at that loc/index\n");
+                return;
+            }
+            count = module_replace_candidates(module->type, cand, 32);
+            used  = (size_t)snprintf(msg, sizeof(msg), "OK %s group=%d candidates=%u:",
+                                     gModuleProperties[module->type].name,
+                                     (int)module_group(module->type), count);
+
+            for (uint32_t c = 0; (c < count) && (used < (sizeof(msg) - 32)); c++) {
+                used += (size_t)snprintf(&msg[used], sizeof(msg) - used, " %s",
+                                         gModuleProperties[cand[c]].name);
+            }
+
+            snprintf(&msg[used], sizeof(msg) - used, "\n");
+            backdoor_write_result(msg);
+            return;
+        }
+        bool ok = module_replace(key, found);
 
         synthlib_request_redraw();
         backdoor_write_result(ok ? "OK\n" : "ERROR: not replaceable (no group, no role table, or column full)\n");

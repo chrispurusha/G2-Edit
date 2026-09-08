@@ -433,6 +433,10 @@ bool default_mutation_lock(tModuleType moduleType) {
     }
 }
 
+uint32_t array_size_module_colour_map(void) {
+    return (uint32_t)(sizeof(gModuleColourMap) / sizeof(gModuleColourMap[0]));
+}
+
 // ── Palette groups ──────────────────────────────────────────────────────────
 
 uint32_t array_size_palette_list(void) {
