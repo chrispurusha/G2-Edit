@@ -588,6 +588,32 @@ WORTH GENERALISING: "is it a click region, or does its own file hit-test it?" is
 of any chrome that draws but does not respond. Click regions come for free; everything else needs its
 handler called explicitly.
 
+**The module palette band**, 2026-09-08. The band the "Module Bar" button opens under the topbar was
+built in the application and `palette.c` was added to `do-vst3`'s source list the same day — so it
+compiled, linked, and did nothing. Pressing the button in the plug-in made the canvas jump DOWN by
+the band's height and left grey where the band should be: `apply_top_bar_height()` was reserving the
+space, because the theme is the one thing both shells share, but `palette_render()` was never called.
+
+THE SOURCE LIST IS ONLY THE FIRST OF THREE PLACES, and this is the general shape of it. A new piece
+of shared chrome needs:
+
+1. its file in `do-vst3`'s `SOURCES` — `src/` is synchronized into the app target and MANUAL here;
+2. its render call in `g2GlDraw.c` — the plug-in's frame is a hand-written sequence, not
+   `render_frame()`, so nothing appears merely because the file links;
+3. its input calls in `g2Input.c` — `mouseHandle.c` is deliberately not in this build, so every
+   `palette_left_down/left_up/cursor_moved/scroll/drag_active` call had to be placed by hand, in the
+   application's own order (band above the canvas on press, band BEFORE the topbar on release so a
+   drag that lands on the canvas is not stolen by whatever is under it).
+
+Only (1) had been done, which is exactly the failure that looks like "the plug-in doesn't show the
+extended top bar". The band's own drag ghost, group selection and drop-to-create all worked the
+moment those calls existed — verified in `tools/vst3host`: Filter group selected, `FltLP` dragged out
+of the band and dropped, module created at the snapped column.
+
+`palette_cursor_moved()` is called from BOTH `g2_input_hover()` and `dispatch_drag()`. The
+application has one `cursor_pos()` covering moved-with-and-without-a-button; the plug-in splits those
+into two entry points, and the hover highlight needs the first while the drag ghost needs the second.
+
 **Submenu dwell**, 2026-08-08. A flyout opens on a HOVER TIMER, and that timer only advances when
 `update_context_menu_hover()` is called. The plug-in was calling it on pointer MOVEMENT only, so a
 submenu would not appear unless the mouse was kept jiggling on its parent item. The application polls

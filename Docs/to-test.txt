@@ -272,3 +272,10 @@ CROSS-PROJECT
   interleaves the hues, so walking it directly showed the shades shuffled next to the right-click
   menu's tidy grid. Both now read gModuleColourFamily; the menu keeps six columns so a COLUMN is a
   hue, the band uses two long rows so a hue's four shades sit together. Grey leads.
+- ***THE PALETTE BAND NOW DRAWS IN THE VST3 PLUG-IN (2026-09-08)*** - palette.c was in do-vst3's
+  source list but nothing called it, so "Module Bar" pushed the canvas down by the band's height and
+  left the band itself empty. g2GlDraw.c now calls palette_render() straight after render_top_bar(),
+  and g2Input.c routes the band's press/release/motion/wheel in the application's order. Verified in
+  tools/vst3host (open, select Filter, drag FltLP out and drop it - module created) and CT confirms
+  the band appears. Still to check IN A REAL HOST: the drop, the double-click add, and the wheel
+  scrolling a group wider than the window.

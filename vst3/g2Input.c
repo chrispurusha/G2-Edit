@@ -57,6 +57,7 @@
 #include "synthlibPopups.h"    // synthlib_popups_dispatch_scroll() — the wheel, as the app routes it
 #include "mouseTopbar.h"
 #include "topbarResourcesAccess.h"
+#include "palette.h"          // the module palette band, which the topbar opens under itself
 
 #include "g2GlView.h"      // cursor_is_captured() — the hidden-pointer safety net
 #include "g2Input.h"
@@ -91,6 +92,15 @@ void g2_input_set_mouse(double x, double y) {
 // absolute position to pass — gMouse is advanced by the event's deltas instead (g2_input_drag_by()).
 static bool dispatch_drag(void) {
     {
+        // AHEAD OF EVERY OTHER GESTURE, as cursor_pos() orders it in the application: while a
+        // palette tile is being dragged the pointer belongs to the palette, and the tile it is over
+        // has to keep highlighting when it is not.
+        palette_cursor_moved(gMouse);
+
+        if (palette_drag_active() == true) {
+            return true;
+        }
+
         // Scrollbar and split-bar drags come first: both are chrome drawn over the canvas, and a
         // drag that began on one must not be handed to whatever module lies underneath.
         if (pane_scrollbar_dragging() == true) {
@@ -203,6 +213,13 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
             return true;
         }
 
+        // The palette band sits directly under the topbar and above the whole canvas, so it is
+        // tested here rather than with the canvas: a press on a tile must not also reach the modules
+        // underneath and start a rubber band. Returns false whenever the band is closed.
+        if (palette_left_down(gMouse) == true) {
+            return true;
+        }
+
         // Then the canvas chrome, above the modules for the same reason as during a drag.
         if (handle_split_bar_mouse(gMouse, mouseButtonLeftDown) == true) {
             return true;
@@ -247,7 +264,13 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         gTopbarControls[i].isPressed = false;
     }
 
-    if (handle_topbar_left_up(gMouse, gSlot) == true) {
+    // BEFORE the topbar and before the canvas: a palette drag RELEASES over the canvas, which is
+    // the whole point of it, so the release cannot be claimed by whatever happens to be under the
+    // cursor. palette_left_up() returns false unless a tile was actually pressed, so it costs
+    // nothing while the palette is idle or closed.
+    if (palette_left_up(gMouse) == true) {
+        handled = true;
+    } else if (handle_topbar_left_up(gMouse, gSlot) == true) {
         handled = true;
     }
 
@@ -289,6 +312,10 @@ void g2_input_hover(double x, double y) {
     if (handle_file_browser_mouse_move(gMouse) == true) {
         return;
     }
+
+    // The tile hover highlight. The application drives this from cursor_pos(), which covers both a
+    // bare move and a drag; here the two are separate entry points, so both call it.
+    palette_cursor_moved(gMouse);
 
     // Which connector the pointer is over. The canvas dims every cable not touching it, so without
     // this the plug-in never dimmed anything.
@@ -354,6 +381,14 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
     // want pixels. Dividing by the same WHEEL_SCROLL_STEP the view multiplied by puts a notch back
     // on one row instead of inventing a second constant that could drift from it.
     if (synthlib_popups_dispatch_scroll(deltaY / WHEEL_SCROLL_STEP)) {
+        return;
+    }
+
+    // Over the palette band the wheel scrolls the TILES sideways — a group wider than the window is
+    // otherwise unreachable, and the band is above both panes so no pane wants this event anyway.
+    // NOTCHES, not pixels: palette_scroll() advances by one tile per unit, so the same
+    // WHEEL_SCROLL_STEP division the popups get applies here for the same reason.
+    if (palette_scroll(deltaY / WHEEL_SCROLL_STEP, gMouse) == true) {
         return;
     }
     pane = split_view_pane_at(gMouse);
