@@ -79,6 +79,12 @@ SOURCES=(
     "$HERE/src/splitView.c"
     "$HERE/src/topbarRender.c"
     "$HERE/src/mouseTopbar.c"
+    # THE TOPBAR'S TWO PANELS. src/ is a synchronized folder for the application, so a new file
+    # there compiles into the app the moment it exists and into the plug-in never - this list is
+    # MANUAL, and both of these arrived after it was last touched. The plug-in draws the same
+    # topbar, so the moment topbarRender.c or mouseTopbar.c reference them, they have to be here.
+    "$HERE/src/palette.c"
+    "$HERE/src/moduleReplace.c"
     "$HERE/src/topbarResourcesAccess.c"
     "$HERE/SynthLib/src/clickRegion.c"
     "$HERE/SynthLib/src/synthlibHost.c"

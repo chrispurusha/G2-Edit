@@ -281,6 +281,29 @@ void wake_glfw(void) {
     synthlib_request_redraw();
 }
 
+// A NEW PATCH HAS REPLACED EVERYTHING ON THE CANVAS. The application's version (graphics.c) also
+// puts both scrollbars back to top-left, and those live in that file's own gScrollState with
+// set_x_scroll_bar()/set_y_scroll_bar() beside them - none of which is in this build, because the
+// plug-in scrolls through the host's view rather than through a pair of drawn bars.
+//
+// What DOES carry over is the location: a patch loaded while the editor was showing the FX area
+// would otherwise open showing a variation of it that no longer exists.
+void notify_full_patch_change(void) {
+    gLocation = locationVa;
+    synthlib_request_redraw();
+}
+
+// THE PLUG-IN HAS NO UNDO STACK - not for module replace and not for anything else. undo.c is not
+// in this build, and nothing in the plug-in's menus offers Undo, so this is a genuine no-op rather
+// than a piece of the application quietly missing: a replace here is as final as every other edit.
+// The moment the plug-in grows an Edit menu, undo.c joins the source list and this goes.
+void undo_push_module_replace(tModuleKey key, const tClipboardModule * before,
+                              const tClipboardModule * after) {
+    (void)key;
+    (void)before;
+    (void)after;
+}
+
 // Settable from the View menu, and REMEMBERED between sessions the way the application remembers
 // it — through the same SynthLib prefs store, though under the plug-in's own name. See
 // g2_plugin_prefs_init() for why the file is not shared with the application's.
