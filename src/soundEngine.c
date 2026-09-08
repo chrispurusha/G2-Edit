@@ -4471,8 +4471,39 @@ static void chorus_step(uint32_t node, double input, double depth, double amount
 // special-casing: at ratio 1 the exponent is 0 and the gain is exactly 1, and as the ratio grows the
 // gain tends to target/env, putting the output exactly on Ref Level.
 //
-// THE THRESHOLD STILL GATES. Below it nothing happens at all, which is what stops a leveller lifting
-// silence into noise between phrases.
+// THE THRESHOLD IS A MAXIMUM-GAIN LIMIT, NOT A GATE - corrected 2026-09-08, and this was audible
+// rather than theoretical (CT: "when the compressor lights a LED the effect is quite brutal, and it
+// has audio glitches around it").
+//
+// The law above has a gain of 1 only where env == target. Gating it - returning unity below the
+// threshold and the law above it - therefore puts a STEP at the threshold of exactly the makeup the
+// law asks for there, and the threshold crossing is the very moment the LED lights. At the stock
+// settings (Thr -12 dB, RefLvl 0 dB, Ratio 4:1) that step is
+//
+//     (target/threshold)^(1 - 1/ratio) = (1.0 / 0.2512)^0.75 = 2.82  ->  +9.0 dB IN ONE SAMPLE
+//
+// up on the way in and -9.0 dB on the way out, on every note onset and again on every decay - and
+// with the detector sitting near the threshold it chatters between the two at audio rate. A step is
+// a click; a chattering step is a buzz. Both are what was reported.
+//
+// The fix is to CLAMP THE DETECTOR AT THE THRESHOLD FROM BELOW rather than to branch on it. Below
+// the threshold the compressor then holds the gain it had AT the threshold, so the function is
+// continuous through the crossing and the law above the threshold is untouched:
+//
+//     gain = (target / max(env, threshold))^(1 - 1/ratio)
+//
+// which is one expression with no branch and no step. Every measurement above still holds: they were
+// all taken with the signal 14 dB OVER the threshold, where max(env, threshold) is env and nothing
+// has changed. What HAS changed is silence: the module now applies its makeup all the time instead of
+// only while working, so a patch with a compressor in it is up to (target/threshold)^(1-1/ratio)
+// louder in the gaps - +9 dB at the stock settings. That is what a compressor with makeup gain does,
+// and it is the only reading of "the level to compress towards" that does not step.
+//
+// STILL UNMEASURED, and the one test that would settle it: feed a steady tone BELOW the threshold and
+// read the output. This law says it comes back with the makeup on it; a true gate says it comes back
+// untouched. Nothing captured so far distinguishes the two, because nothing was ever played quietly
+// enough. What is NOT in doubt is that the instrument does not step 9 dB at the threshold - a module
+// that did would be notorious.
 static double compress_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
     double level = fabs(input);
     double gain  = 1.0;
@@ -4483,11 +4514,15 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
         gCompEnv[voice][node] += spec->releaseCoeff * (level - gCompEnv[voice][node]);
     }
 
-    if (  (gCompEnv[voice][node] > spec->threshold) && (spec->threshold > 0.0)
-       && (gCompEnv[voice][node] > 0.0)) {
+    // COMP_THRESHOLD_NONE is the dial's "Off", an amplitude nothing reaches. The clamp below would
+    // give a gain of exactly 1 for it anyway - env and target both pin to the same huge number - but
+    // only after a pow() per sample to arrive at what the branch already knows.
+    if ((spec->threshold > 0.0) && (spec->threshold < COMP_THRESHOLD_NONE)) {
         double target = (spec->refLevel > spec->threshold) ? spec->refLevel : spec->threshold;
+        double env    = (gCompEnv[voice][node] > spec->threshold) ? gCompEnv[voice][node]
+                        : spec->threshold;
 
-        gain = pow(target / gCompEnv[voice][node], 1.0 - (1.0 / spec->ratio));
+        gain = pow(target / env, 1.0 - (1.0 / spec->ratio));
     }
 
     // THE PANEL METER SHOWS SOMETHING DIFFERENT FROM THE GAIN ABOVE - measured 2026-09-07. Holding Ref
