@@ -561,7 +561,14 @@ void open_view_menu(tCoord anchor) {
         };
     }
 
-    items[i]   = (tMenuItem){
+    // If this ever trips, the count in the array's size and the entries built above have drifted
+    // apart. Clamping keeps the menu short rather than letting it write past the array.
+    if (i >= (int)(sizeof(items) / sizeof(items[0]))) {
+        LOG_ERROR("View menu built %d entries for an array of %d\n",
+                  i + 1, (int)(sizeof(items) / sizeof(items[0])));
+        i = (int)(sizeof(items) / sizeof(items[0])) - 1;
+    }
+    items[i] = (tMenuItem){
         NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
     };
 

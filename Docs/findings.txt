@@ -8495,3 +8495,36 @@ INSTRUMENT rather than inferred from the resource tables, which is what made it 
 
 NOT VERIFIED AGAINST CAPTURES - there are none for OscShpA. It plays and its waveform mapping follows
 from OscShpB's, which IS measured, but nothing has been compared against the instrument.
+
+
+2026-09-08  COMPRESSOR DETECTOR: A HYPOTHESIS WORTH TESTING, AND WHY THE FIRST RESULT LOOKED IMPOSSIBLE
+------------------------------------------------------------------------------------------------------
+The open oddity was that sine, saw and square all trigger at the SAME raw threshold (29) despite
+differing 4.5 dB in peak and 4.4 dB in RMS at the converter - so the detector appeared to read
+neither.
+
+THE FREE PARAMETER WAS IN THE MEASUREMENT, not in the instrument. Both figures were taken AT THE
+CONVERTER, at the far end of the whole output path, and they differ by the SAME 4.5 dB in peak as in
+RMS. A difference that is equal in both is a difference in GAIN, not in waveform shape - which is
+what you get when the three waveforms leave the oscillator at different amplitudes in the first
+place. Nothing in the earlier work establishes that a G2 oscillator's sine, saw and square have equal
+internal amplitude, and it was assumed rather than measured. If they do not, then "they all trigger
+at the same dial" is consistent with a perfectly ordinary detector reading equal internal peaks.
+
+THE HYPOTHESIS: the sidechain is max(|L|, |R|) - full-wave rectified, one channel or the other
+chosen by the larger magnitude, then a one-pole follower. That is a PEAK detector, not an RMS one.
+
+TWO TESTS, NEITHER NEEDING ABSOLUTE CALIBRATION, which is what makes them worth doing first:
+
+  1. ONE CHANNEL VERSUS BOTH. Feed the same signal to one input, note the trigger threshold, then
+     feed it to both. A max() sidechain does not move at all. A SUM moves the trigger by exactly
+     6 dB. This also settles a live inconsistency: the manual describes the METER as showing the
+     gain reduction of the SUM of left and right, and the meter and the detector need not agree.
+
+  2. PEAK AGAINST RMS, with the shape as the only variable. Drive the sidechain from Constant
+     through LevAmp - whose gain law is measured across 33 positions - rather than from an
+     oscillator whose waveform amplitudes are exactly the unknown that spoiled the first attempt.
+     A narrow pulse and a sine set to the same internal amplitude differ hugely in RMS and not at
+     all in peak; if the trigger point does not move, it is a peak detector.
+
+Test 1 is a few minutes with the existing probe. Do it before anything that depends on the law.
