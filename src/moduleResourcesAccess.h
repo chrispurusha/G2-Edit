@@ -28,6 +28,7 @@ extern const char *             noteNameStrMap[];
 extern const char *             morphStrMap[];
 extern const tRgb               gCableColourMap[];
 extern const tRgb               gModuleColourMap[];
+extern const uint32_t           gModuleColourFamily[MODULE_COLOUR_HUES][MODULE_COLOUR_SHADES];
 extern const tRgb               connectorColourMap[];
 extern const tModuleProperties  gModuleProperties[];
 extern const tModuleRole        gModuleRoleList[];

@@ -228,31 +228,49 @@ const tRgb          gCableColourMap[cableColourMax]         = {
     {0.9,  0.9,  0.9},                                  // white - apparently not user selectable
 };
 
-const tRgb          gModuleColourMap[]                      = {MODULE_STANDARD_GREY,
-                                                                MODULE_RED_4,
-                                                                MODULE_GREEN_4,
-                                                                MODULE_BLUE_4,
-                                                                MODULE_YELLOW_4,
-                                                                MODULE_BLUE_1,
-                                                                MODULE_RED_1,
-                                                                MODULE_CYAN_2,
-                                                                MODULE_GREEN_2,
-                                                                MODULE_YELLOW_1,
-                                                                MODULE_GREEN_1,
-                                                                MODULE_YELLOW_2,
-                                                                MODULE_BLUE_3,
-                                                                MODULE_RED_2,
-                                                                MODULE_RED_3,
-                                                                MODULE_YELLOW_3,
-                                                                MODULE_GREEN_3,
-                                                                MODULE_CYAN_1,
-                                                                MODULE_CYAN_3,
-                                                                MODULE_CYAN_4,
-                                                                MODULE_BLUE_2,
-                                                                MODULE_PURPLE_1,
-                                                                MODULE_PURPLE_2,
-                                                                MODULE_PURPLE_3,
-                                                                MODULE_PURPLE_4};
+// THE COLOUR INDICES GROUPED BY HUE, four shades each, brightest first. gModuleColourMap above is in
+// the order the WIRE uses, which interleaves the hues - index 5 is a blue, 6 a red, 7 a cyan - so
+// anything that walks it in index order shows the shades shuffled. The module right-click menu had
+// this order written out by hand in its own array; the palette band walked the map directly and came
+// out mixed up as a result (CT, 2026-09-08). Both now read this.
+//
+// The two lay it out differently and that is deliberate, not a divergence: the menu is six columns
+// so a COLUMN is a hue and a row is a shade, while the band is two long rows so a hue's four shades
+// sit next to each other. Same grouping, different axis.
+const uint32_t      gModuleColourFamily[MODULE_COLOUR_HUES][MODULE_COLOUR_SHADES] = {
+    { 6, 13, 14,  1},    // red
+    {10,  8, 16,  2},    // green
+    { 5, 20, 12,  3},    // blue
+    { 9, 11, 15,  4},    // yellow
+    {21, 22, 23, 24},    // purple
+    {17,  7, 18, 19},    // cyan
+};
+
+const tRgb          gModuleColourMap[]                                            = {MODULE_STANDARD_GREY,
+                                                                                      MODULE_RED_4,
+                                                                                      MODULE_GREEN_4,
+                                                                                      MODULE_BLUE_4,
+                                                                                      MODULE_YELLOW_4,
+                                                                                      MODULE_BLUE_1,
+                                                                                      MODULE_RED_1,
+                                                                                      MODULE_CYAN_2,
+                                                                                      MODULE_GREEN_2,
+                                                                                      MODULE_YELLOW_1,
+                                                                                      MODULE_GREEN_1,
+                                                                                      MODULE_YELLOW_2,
+                                                                                      MODULE_BLUE_3,
+                                                                                      MODULE_RED_2,
+                                                                                      MODULE_RED_3,
+                                                                                      MODULE_YELLOW_3,
+                                                                                      MODULE_GREEN_3,
+                                                                                      MODULE_CYAN_1,
+                                                                                      MODULE_CYAN_3,
+                                                                                      MODULE_CYAN_4,
+                                                                                      MODULE_BLUE_2,
+                                                                                      MODULE_PURPLE_1,
+                                                                                      MODULE_PURPLE_2,
+                                                                                      MODULE_PURPLE_3,
+                                                                                      MODULE_PURPLE_4};
 
 // Indices match tConnectorType (types.h): Audio, Control, Logic, TurboLogic. TurboLogic's RGB
 // (1.0, 0.75, 0.31) is the real value the synth uses

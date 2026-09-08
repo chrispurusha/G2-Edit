@@ -306,22 +306,27 @@
 // How long a Tx/Rx activity lamp stays lit after the packet that lit it. Shared by the renderer
 // that draws the lamps, the render loop that decides how long to sleep, and the USB thread that
 // decides whether an arriving packet is a dark->lit transition worth waking the UI for.
-#define COMMS_LAMP_MS                  (100)
+#define COMMS_LAMP_MS                (100)
 
-#define CLAVIA_NAME_SIZE               (16)          // Don't forget to add null terminator where necessary
+#define CLAVIA_NAME_SIZE             (16)            // Don't forget to add null terminator where necessary
 //#define MODULE_NAME_SIZE               (16)
 //#define PARAM_NAME_SIZE                (16)
-#define PROTOCOL_PARAM_NAME_SIZE       (7)
-#define PATCH_NOTES_SIZE               (1024)       // OG editor gets to about 1084 before crashing
-#define FILE_PATH_SIZE                 (1024)       // Matches tPatchFileData.filePath (msgQueue.h)
+#define PROTOCOL_PARAM_NAME_SIZE     (7)
+#define PATCH_NOTES_SIZE             (1024)         // OG editor gets to about 1084 before crashing
+#define FILE_PATH_SIZE               (1024)         // Matches tPatchFileData.filePath (msgQueue.h)
 
-#define MAX_GLYPH_CHAR                 (127)
+#define MAX_GLYPH_CHAR               (127)
 
-#define MAX_PARAM_RANGE                (128)
+#define MAX_PARAM_RANGE              (128)
 
-#define MAX_COMPONENTS_PER_MODULE      (32)
+#define MAX_COMPONENTS_PER_MODULE    (32)
 
-#define BORDER_LINE_WIDTH              (2.0)
+#define BORDER_LINE_WIDTH            (2.0)
+
+// The module colour palette is six hues of four shades plus the standard grey; gModuleColourFamily
+// in moduleResources.h groups the wire indices by hue, since the wire order interleaves them.
+#define MODULE_COLOUR_HUES             (6)
+#define MODULE_COLOUR_SHADES           (4)
 
 #define MODULE_STANDARD_GREY           {0.7, 0.7, 0.7}
 #define MODULE_RED_4                   {0.8, 0.6, 0.6}

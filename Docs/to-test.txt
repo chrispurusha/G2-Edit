@@ -262,3 +262,13 @@ CROSS-PROJECT
   each landed. A release on the split bar or the scrollbar gutter between them creates nothing and
   disturbs nothing, which is intended. Worth confirming by hand that the ghost tracks smoothly ACROSS
   the split bar rather than jumping.
+- ***ENGINE METERS AND LEDs NOW REDRAW ON THEIR OWN (2026-09-08)*** - they moved only while the mouse
+  did, because the audio thread was updating the atomic arrays perfectly and nothing was telling the
+  render loop to look. It now raises a flag when a published value actually CHANGES (not every block,
+  or the GUI would run flat out in silence) and the loop consumes it, ticking at 50 ms while the
+  engine is active. CT confirms volumes now move with no mouse movement. Still worth checking: an
+  LfoShpA LED blinking at a high rate, and that a stopped engine goes back to full idle sleep.
+- ***PALETTE SWATCHES REGROUPED BY HUE (2026-09-08)*** - the wire order gModuleColourMap is stored in
+  interleaves the hues, so walking it directly showed the shades shuffled next to the right-click
+  menu's tidy grid. Both now read gModuleColourFamily; the menu keeps six columns so a COLUMN is a
+  hue, the band uses two long rows so a hue's four shades sit together. Grey leads.

@@ -108,6 +108,10 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
 // The meter the engine would show on a module's face, so the renderer can display what the engine is
 // actually doing rather than the last value the instrument sent. False when the engine is idle or has
 // nothing for that module; the caller falls back to the database.
+// Whether any engine-driven meter or LED has CHANGED since this was last called; consuming. The
+// render loop draws only when asked, so without this the meters moved only when the mouse did.
+bool sound_engine_meters_dirty(void);
+
 bool sound_engine_module_meter(uint32_t location, uint32_t moduleIndex, uint32_t leg, uint32_t * value);
 
 // The same for a module's LED. Only LFOs publish one today and only index 0; everything else falls

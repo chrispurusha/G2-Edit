@@ -781,6 +781,20 @@ static _Atomic uint32_t gMorphPeakMilli[NUM_MORPHS] = {0};
 #define METER_WRITTEN       (1u << 8)
 #define METER_LEG_SHIFT     (16u)   // leg 1 above the flag; leg 0 occupies METER_VALUE_MASK
 
+// SET WHEN A PUBLISHED METER OR LED VALUE ACTUALLY CHANGES, and read by the render loop, which
+// only draws when something asks it to (see synthlib_request_redraw). Without this the meters moved
+// only while the mouse did: the audio thread was updating the arrays perfectly well and nothing was
+// telling the GUI to look at them, so a meter tracked the pointer rather than the sound.
+//
+// A FLAG RATHER THAN A REDRAW REQUEST FROM HERE. synthlib_request_redraw() is safe from any thread,
+// but it calls glfwPostEmptyEvent(), and doing that once per audio block is a syscall on the audio
+// thread several hundred times a second. Setting a relaxed atomic costs nothing, and the loop is
+// already awake on a timeout whenever the engine is running.
+//
+// COMPARED, NOT SET BLINDLY. The publish happens every block whatever the value, so setting this
+// unconditionally would hold the GUI at the tick rate for as long as the engine was on, silence
+// included. atomic_exchange gives the old value back for free, so the comparison is one operation.
+static _Atomic bool       gMetersDirty;
 static _Atomic uint32_t   gModuleMeter[locationMax][MAX_NUM_MODULES];
 
 // AND THE LEDS, same packing and same reasoning. A module's LED value is a two-bit field - bit 0
@@ -4506,9 +4520,13 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
                 }
             }
         }
-        atomic_store_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
-                              METER_WRITTEN | (((lit == 0u) ? 0u : ((1u << lit) - 1u))
-                                               & METER_VALUE_MASK), memory_order_relaxed);
+        uint32_t              packed      = METER_WRITTEN | (((lit == 0u) ? 0u : ((1u << lit) - 1u))
+                                                             & METER_VALUE_MASK);
+
+        if (atomic_exchange_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
+                                     packed, memory_order_relaxed) != packed) {
+            atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
+        }
     }
     return input * gain;
 }
@@ -5063,6 +5081,12 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
 // instrument last sent over USB. False when the engine is idle or has nothing for that module, and the
 // caller then falls back to the database - so a patch shown with the engine off, or a module the
 // engine does not meter, looks exactly as it always did.
+// Whether any published meter or LED has changed since this was last asked. Consuming, so the render
+// loop can ask once a tick and redraw only when there is something new to draw.
+bool sound_engine_meters_dirty(void) {
+    return atomic_exchange_explicit(&gMetersDirty, false, memory_order_relaxed);
+}
+
 // The LED the engine would light, alongside sound_engine_module_meter() and false in the same cases.
 // ledIndex is accepted for the modules that will eventually have more than one; only 0 is published
 // today, and anything else falls back to the database.
@@ -5845,9 +5869,12 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             // publishes: a polyphonic patch runs one LFO per voice and the face has one LED, and the
             // instrument shows a single blink rather than however many voices happen to be sounding.
             if (voice == 0u) {
-                atomic_store_explicit(&gModuleLed[spec->location][spec->moduleIndex],
-                                      METER_WRITTEN | ((value[n][0] > 0.0) ? 1u : 0u),
-                                      memory_order_relaxed);
+                uint32_t lamp = METER_WRITTEN | ((value[n][0] > 0.0) ? 1u : 0u);
+
+                if (atomic_exchange_explicit(&gModuleLed[spec->location][spec->moduleIndex],
+                                             lamp, memory_order_relaxed) != lamp) {
+                    atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
+                }
             }
             break;
         }
@@ -6104,8 +6131,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                     packed |= ((uint32_t)level << (leg * METER_LEG_SHIFT));
                 }
 
-                atomic_store_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
-                                      packed, memory_order_relaxed);
+                if (atomic_exchange_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
+                                             packed, memory_order_relaxed) != packed) {
+                    atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
+                }
             }
             break;
         }
