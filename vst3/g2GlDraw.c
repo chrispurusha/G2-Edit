@@ -64,7 +64,7 @@
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "splitView.h"
-#include "palette.h"      // palette_band_height, for the topbar the palette grows
+#include "palette.h"      // palette_band_height and palette_render — the band the topbar grows
 #include "fileBrowser.h"
 #include "msgQueue.h"
 #include "g2AppStubs.h"
@@ -301,6 +301,14 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     // reason for reusing its renderer. The controls that describe hardware draw too and should:
     // "Offline" is the truthful state here, and the TX/RX lamps simply stay dark.
     render_top_bar();
+
+    // THE PALETTE BAND, and it belongs here rather than with the popups: apply_top_bar_height()
+    // above has already reserved its height in the theme, so the canvas starts below it whether or
+    // not anything is drawn there. Omitting this call did not hide the palette — it left the band
+    // it had already pushed the patch down for EMPTY, which is what "the plug-in doesn't show the
+    // extended top bar" looked like. Straight after render_top_bar(), exactly as render_frame()
+    // orders the two in graphics.c.
+    palette_render();
 
     // The morph group dials that sit at the right-hand end of the bar — Wheel, Vel, Keyb, Aft.Tch
     // and the rest. A separate function in the application too, and already linked here.
