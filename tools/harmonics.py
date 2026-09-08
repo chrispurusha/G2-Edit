@@ -29,12 +29,22 @@
    waveform and DEVSET parameter 6 for Shape. The instrument free-runs, so no note is needed.
    Capture with tools/capture; the G2 arrives on QU-24 input 5, which is channel 4 here."""
 import sys, math
-sys.path.insert(0, "/private/tmp/claude-501/-Users-chris-Documents-GitHub/644f7128-d8f1-401c-949d-02141e23a455/scratchpad")
-import wav
+
+# READS THROUGH analyse_ir, which is the repository's own WAV reader. This used to import a module
+# called `wav` from a scratchpad directory belonging to a session that ended months ago, so the tool
+# has been dead on arrival - "No module named 'wav'" - ever since, and every harmonic analysis since
+# then was written out from scratch instead of using it. analyse_ir.read_wav() is better anyway: it
+# builds ONLY the channel asked for, which matters when a 192 kHz eight-channel take would otherwise
+# want gigabytes to answer a question about one of them.
+from analyse_ir import read_wav
+
 
 def load(path, ch):
-    r = wav.read_wav(path)
-    return r[0], next(x for x in r if isinstance(x, dict))[ch]
+    """`ch` is ZERO-BASED, as the docstring above uses it - the G2 on QU-24 input 5 is channel 4.
+       read_wav() numbers from one, hence the +1."""
+    channels, rate = read_wav(path, wanted=[ch + 1])
+
+    return rate, channels[ch]
 
 def goertzel(x, rate, freq, win):
     n = len(x); w = 2.0 * math.pi * freq / rate
@@ -62,6 +72,21 @@ def analyse(path, ch, harmonics=8, seconds=0.5, coarse=None, pin=None):
         if tot > best[0]: best = (tot, f)
         f += coarse * 0.00002
     f0 = pin if pin is not None else best[1]
+
+    # SUB-OCTAVE GUARD. The coarse autocorrelation locks onto twice the period readily - a saw
+    # correlates with itself just as well at 2T as at T - and every harmonic after that is read at
+    # the wrong place: on a synthetic 220 Hz saw it reported 110 Hz and then +157 dB for the second
+    # "harmonic", which is the real fundamental seen from an empty bin. If the candidate's own
+    # fundamental is far weaker than the bin an octave up, the octave up is the real one.
+    if pin is None:
+        for _ in range(2):
+            a = goertzel(x, rate, f0, win)
+            b = goertzel(x, rate, f0 * 2.0, win)
+
+            if b > (a * 8.0):        # 18 dB, far more than any real harmonic series inverts by
+                f0 *= 2.0
+            else:
+                break
     h = [goertzel(x, rate, f0 * k, win) for k in range(1, harmonics + 1)]
     return f0, [20 * math.log10(max(v, 1e-12) / h[0]) for v in h]
 

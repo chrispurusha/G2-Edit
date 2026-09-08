@@ -80,7 +80,8 @@ MEASUREMENT PROGRAMME
 - Compressor UI: draw the settings graphically (threshold, ratio, RefLvl as a transfer curve) - CT's idea 2026-09-07. The live half is DONE: the engine now drives the meter, see findings.txt
 - Extend engine-driven meters/LEDs beyond the compressor and the LFOs: every other module with a volumeType or LEDs still shows only what the instrument last sent
 - Compressor level probe BUILT and validated (see findings.txt); now use it for the unmeasured absolute levels: mixer level-dial law, mixer -6/-12 Pad, 4-Out Pad, FxtoIn/2-Out absolute references
-- Compressor DETECTOR responds to neither peak nor RMS - sine, saw and square all trigger at the same threshold; settle what it reads (the METER is separately understood: it shows excess over threshold, not applied gain)
+- Compressor DETECTOR: test the PEAK-ON-MAX(|L|,|R|) hypothesis - two experiments that need no absolute calibration, see findings 2026-09-08. Feeding both channels vs one must NOT move the trigger point if it is a max; a narrow pulse against a sine at equal internal amplitude separates peak from RMS
+- Compressor detector: re-run the sine/saw/square comparison driving the sidechain from Constant through LevAmp rather than from an oscillator - the oscillator's own waveform amplitudes are unknown, which is the free parameter that made the first result look impossible
 - pch2csd (MIT) is an independent cross-check for parameter maps - worth diffing against ours
 
 PROTOCOL AND SECOND OPINIONS (each is a code comment needing hardware or a manual, not a code guess)
@@ -181,3 +182,4 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
   (EmuUtility/SynthEdit's are 26/95), but what remains is legitimately G2-specific domain action logic
   operating on tModule/tParam/tCable, which do not exist in the other two apps.
 - Bottom of the module grid is not a hard wall: a module created (or grown by a replace) near row 127 extends past MAX_ROWS instead of being raised or refused - shift_fit_row() guards collisions with other modules but not the grid edge. Pre-existing, affects plain Add Module identically, and needs a decision on whether the last row should be a wall at all
+- gPaletteList and the sixteen static create-module arrays in menus.c are two copies of the same 171 entries - verified identical 2026-09-08, but only one of them should exist; build the menu from the table
