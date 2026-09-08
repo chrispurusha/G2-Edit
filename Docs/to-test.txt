@@ -221,3 +221,44 @@ CROSS-PROJECT
   unplugged mid-op is the obvious one - should now clear its busy overlay after five seconds with a
   line in the log, rather than locking the editor. Worth provoking once by pulling the cable during a
   bank operation.
+- ***REPLACE WITH NOW COVERS ALL NINETEEN GROUPS (2026-09-08).*** It was Filter-only, which is why it
+  looked permanently greyed out - almost nothing you right-click is a filter. Every module except the
+  eleven that are in no group (Blue2Red, Red2Blue, DXRouter, Resonator, NoteDet, NoteZone, LevScaler
+  and the four hidden ones) now offers its group. Driven through the real GUI on an FltClassic and
+  verified: the menu enables, the submenu lists the other thirteen, and the swap keeps the module's
+  index, position and user-given name. Cables and knobs carry BY ROLE - FltClassic's Freq (parameter
+  0) became FltVoice's parameter 6, and replacing with an FltStatic correctly DROPPED the pitch
+  modulation cable it has no input for. Oscillator and envelope swaps checked the same way. What
+  needs your ear rather than my eye: whether a swapped module SOUNDS like the settings it inherited.
+- ***MODULE COLOUR SELECTOR IN THE PALETTE BAND (2026-09-08), CT's suggestion.*** Swatches to the
+  right of the group grid set the colour NEW modules are created in, and the choice persists, which
+  is what the instrument does (manual p.61). Verified by clicking a swatch and adding a module - it
+  came out in that colour. Check it applies to the right-click Create Module route too, and that the
+  standard grey default still behaves for anyone who never touches it.
+- ***PALETTE COLOUR SWATCHES, ENLARGED AND EXTENDED (2026-09-08).*** The swatches are now the same
+  height as the group buttons and sit on the same two rows. A swatch does two things: it sets the
+  colour NEW modules are created in (the drag ghost is drawn in it too, so it previews), and it
+  recolours whatever is SELECTED, group selections included. With nothing selected only the first
+  applies. The module right-click menu's colour entry now recolours the whole selection as well - it
+  used to do only the clicked module even with several selected, which the manual says is wrong.
+  Verified by selecting two oscillators and clicking one swatch: both changed. Check the undo puts
+  them all back, and that the colours reach a connected G2.
+- ***DOUBLE-CLICK A PALETTE TILE TO ADD (2026-09-08)*** - adds below the focused module without a
+  drag, which is what the manual describes (p.81). Check it does not also leave a ghost behind, and
+  that it lands where you would expect when nothing is focused.
+- ***TOPBAR BUTTON RENAMED "Module Bar"*** and it lights green while the band is open.
+- ***REPLACE CONFIRMED ON THE INSTRUMENT (2026-09-08)*** - the whole-patch write path had never run
+  with hardware attached before. FltClassic to FltNord, then slot B and back to pull the G2's own
+  copy: still FltNord. Replacing with an FltStatic kept the two audio cables and dropped the pitch
+  modulation one on the DEVICE'S copy too. Column rearrangement checked on a packed column - growing
+  a 4-row filter to an 8-row Vocoder pushed everything below down by four with no overlaps. Slot A
+  was used and has been put back to SimpleLead. Nothing checked by ear yet.
+- ***PALETTE TILES NOW CARRY THE SELECTED COLOUR (2026-09-08)*** - pick a swatch and the whole tile
+  row is drawn in it, so the choice previews on the tiles as well as on the drag ghost. Hover is a
+  black frame rather than a paler fill, which would have thrown that colour away exactly when the
+  pointer is on the tile you are about to pick up. The selected GROUP button is the app's usual green
+  with black text, not the blue it started as.
+- ***DRAGGING INTO THE FX AREA CONFIRMED (2026-09-08)*** - dropped into both panes and checked where
+  each landed. A release on the split bar or the scrollbar gutter between them creates nothing and
+  disturbs nothing, which is intended. Worth confirming by hand that the ghost tracks smoothly ACROSS
+  the split bar rather than jumping.

@@ -35,6 +35,9 @@ void init_params_on_module_all_variations(tModule * module, uint32_t location);
 // A module of `type` with the defaults a freshly created one gets, with no key, no position and
 // nothing written to the database. The palette's drag ghost renders one of these.
 void module_prototype(tModuleType type, tModule * module);
+// Recolours every module in the current selection. Used by the module right-click menu and by the
+// palette band's colour swatches, so the two cannot diverge.
+void modules_set_colour(uint32_t colour);
 int32_t find_unique_module_id(uint32_t location);
 void open_module_area_context_menu(tCoord coord);
 

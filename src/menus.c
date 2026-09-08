@@ -42,6 +42,7 @@ extern "C" {
 #include "selection.h"
 #include "undo.h"
 #include "moduleReplace.h"
+#include "palette.h"
 #include "cableChain.h"
 
 // ── Synth settings action targets ──────────────────────────────────────────
@@ -651,22 +652,39 @@ static void action_toggle_exclude_from_mutation(int index) {
 // Only ever called for items with no subMenu — handle_context_menu_click()/
 // update_context_menu_hover() open a subMenu-bearing item's flyout themselves
 // and never invoke its action.
-static void action_set_module_colour(int index) {
-    tMessageContent messageContent = {0};
-    tModule *       module         = get_module(gMenuContext.moduleKey);
+// Recolours EVERY module in the current selection, not just one. The manual describes it that way
+// ("make a selection of any combination of modules... to apply the color to the module(s)", p.61),
+// and the right-click entry used to recolour only the module that was clicked even with a group
+// selected. Shared with the palette band's colour swatches so both routes behave identically.
+//
+// One undo entry per module rather than a grouped one, matching what the Exclude From Mutation
+// toggle does: colour has no audible effect and is trivial to set again, so it does not warrant a
+// bulk-undo payload of its own.
+void modules_set_colour(uint32_t colour) {
+    for (uint32_t i = 0; i < gSelection.count; i++) {
+        tMessageContent messageContent = {0};
+        tModule *       module         = get_module(gSelection.keys[i]);
 
-    if (module == NULL) {
-        return;
+        if ((module == NULL) || (module->colour == colour)) {
+            continue;
+        }
+        undo_push_module_colour(module->key, module->colour, colour);
+        module->colour                            = colour;
+
+        messageContent.cmd                        = eMsgCmdSetModuleColour;
+        messageContent.slot                       = module->key.slot;
+        messageContent.moduleColourData.moduleKey = module->key;
+        messageContent.moduleColourData.colour    = module->colour;
+
+        msg_send(&gToUsbThread, &messageContent);
     }
-    undo_push_module_colour(module->key, module->colour, gContextMenu.items[index].param);
-    module->colour                            = gContextMenu.items[index].param;
 
-    messageContent.cmd                        = eMsgCmdSetModuleColour;
-    messageContent.slot                       = module->key.slot;
-    messageContent.moduleColourData.moduleKey = module->key;
-    messageContent.moduleColourData.colour    = module->colour;
+    synthlib_request_redraw();
+}
 
-    msg_send(&gToUsbThread, &messageContent);
+static void action_set_module_colour(int index) {
+    ensure_module_selected();
+    modules_set_colour((uint32_t)gContextMenu.items[index].param);
 }
 
 static void action_rename_morph_label(int index) {
@@ -794,6 +812,12 @@ int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool s
     module.column                                 = column;
     module.row                                    = row;
     module.excludeFromMutation                    = default_mutation_lock(module.type) ? 1 : 0;
+
+    // The palette's colour swatch applies to everything created from here on, which is what the
+    // instrument does too (manual p.61: the selector "stays in its new selection, causing any new
+    // modules you add to the Patch window to get the selected color"). It defaults to the standard
+    // grey, so nothing changes for anyone who never touches it.
+    module.colour                                 = palette_new_module_colour();
 
     // How many parameters this module actually has. Only parse_param_list() used to set this, so a
     // module created here rather than received from the G2 was left at 0 — and write_param_list()
