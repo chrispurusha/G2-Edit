@@ -87,29 +87,34 @@ static bool          gScrollable;
 // read as one piece of furniture rather than as a grid with something small parked beside it. Its
 // row position is derived from PALETTE_GROUP_H rather than from its own height for that reason:
 // the two cannot drift apart when one of them is changed.
-#define PALETTE_SWATCH_W        (20.0)
-#define PALETTE_SWATCH_H        PALETTE_GROUP_H
-#define PALETTE_SWATCH_GAP      (3.0)
-#define PALETTE_SWATCH_RING     (2.0)
-#define PALETTE_SWATCH_COLS     (13)
+#define PALETTE_SWATCH_W       (20.0)
+#define PALETTE_SWATCH_H       PALETTE_GROUP_H
+#define PALETTE_SWATCH_GAP     (3.0)
+#define PALETTE_SWATCH_RING    (2.0)
+// TWELVE, so each hue's four shades occupy the SAME four columns on both rows - red, green and blue
+// above; yellow, purple and cyan below - and the grades line up the way the right-click menu's grid
+// does. The standard grey then falls at the END of the second row rather than leading the first,
+// where it pushed every hue one column along and broke the alignment (CT, 2026-09-08).
+#define PALETTE_SWATCH_COLS     (12)
 static uint32_t gNewModuleColour;
 #define PALETTE_MAX_SWATCHES    (32)
-static tRectangle    gSwatchRect[PALETTE_MAX_SWATCHES];              // horizontal, for a group wider than the band
+static tRectangle  gSwatchRect[PALETTE_MAX_SWATCHES];
+static uint32_t    gSwatchColour[PALETTE_MAX_SWATCHES];                // horizontal, for a group wider than the band
 
 // Rebuilt every render so the hit test and the drawing can never disagree about where a tile is.
-static tModuleType   gTile[PALETTE_MAX_TILES];
-static tRectangle    gTileRect[PALETTE_MAX_TILES];
-static uint32_t      gTileCount;
-static tRectangle    gGroupRect[palGroupCount];
-static int32_t       gHoverTile       = -1;
+static tModuleType gTile[PALETTE_MAX_TILES];
+static tRectangle  gTileRect[PALETTE_MAX_TILES];
+static uint32_t    gTileCount;
+static tRectangle  gGroupRect[palGroupCount];
+static int32_t     gHoverTile       = -1;
 
 // Double-click a tile and the module is added below the focused one, without a drag. The manual
 // offers it as a first-class alternative ("you could also double-click a module icon to
 // automatically add it to the Patch window below the currently focused module", p.81), and it is
 // the only route that works when the target is off-screen or the hand is not steady.
 #define PALETTE_DOUBLE_CLICK_MS    (400.0)
-static double        gLastTileClickMs;
-static int32_t       gLastTileClicked = -1;
+static double      gLastTileClickMs;
+static int32_t     gLastTileClicked = -1;
 
 static struct {
     bool        pressed;      // a tile is held but has not moved far enough to be a drag
@@ -117,7 +122,7 @@ static struct {
     tModuleType type;
     tCoord      pressCoord;
     tCoord      coord;
-}                    gDrag;
+}                  gDrag;
 
 bool palette_is_open(void) {
     return gOpen;
@@ -308,10 +313,25 @@ void palette_render(void) {
             colours = PALETTE_MAX_SWATCHES;
         }
 
+        // HUE BY HUE, four shades of each together, THEN the grey - gModuleColourFamily's order,
+        // not the wire order gModuleColourMap is stored in, which interleaves the hues and made the
+        // row look shuffled beside the right-click menu's tidy grid.
         for (c = 0; c < colours; c++) {
-            uint32_t   col  = c % PALETTE_SWATCH_COLS;
-            uint32_t   rw   = c / PALETTE_SWATCH_COLS;
-            tRectangle rect = {
+            uint32_t   swatch = 0;
+            uint32_t   col    = c % PALETTE_SWATCH_COLS;
+            uint32_t   rw     = c / PALETTE_SWATCH_COLS;
+
+            if (c >= (MODULE_COLOUR_HUES * MODULE_COLOUR_SHADES)) {
+                // The standard grey goes at the END of the second row - a thirteenth cell on that
+                // row alone. Letting the row arithmetic place it put it on a THIRD row, which the
+                // band is not tall enough for: it landed on top of the module tiles.
+                swatch = 0;
+                col    = PALETTE_SWATCH_COLS;
+                rw     = 1;
+            } else {
+                swatch = gModuleColourFamily[c / MODULE_COLOUR_SHADES][c % MODULE_COLOUR_SHADES];
+            }
+            tRectangle rect   = {
                 {
                     originX + ((PALETTE_SWATCH_W + PALETTE_SWATCH_GAP) * (double)col),
                     top + PALETTE_GROUP_Y + ((PALETTE_GROUP_H + 1.0) * (double)rw)
@@ -320,15 +340,16 @@ void palette_render(void) {
                 }
             };
 
-            gSwatchRect[c] = rect;
+            gSwatchRect[c]   = rect;
+            gSwatchColour[c] = swatch;
 
             // The selected one is marked by a black frame drawn INSIDE its own cell, with the
             // colour inset within it - not by a ring around the outside, which at this row pitch
             // would reach into the row above and the row below.
-            if (c == gNewModuleColour) {
+            if (swatch == gNewModuleColour) {
                 set_rgb_colour((tRgb)RGB_BLACK);
                 render_rectangle(mainArea, rect);
-                set_rgb_colour(gModuleColourMap[c]);
+                set_rgb_colour(gModuleColourMap[swatch]);
                 render_rectangle(mainArea, (tRectangle){
                     {
                         rect.coord.x + PALETTE_SWATCH_RING, rect.coord.y + PALETTE_SWATCH_RING
@@ -338,7 +359,7 @@ void palette_render(void) {
                     }
                 });
             } else {
-                set_rgb_colour(gModuleColourMap[c]);
+                set_rgb_colour(gModuleColourMap[swatch]);
                 render_rectangle_with_border(mainArea, rect);
             }
         }
@@ -589,7 +610,7 @@ bool palette_left_down(tCoord coord) {
 
         for (c = 0; c < colours; c++) {
             if (within_rectangle(coord, gSwatchRect[c])) {
-                gNewModuleColour = c;
+                gNewModuleColour = gSwatchColour[c];
 
                 // A swatch does two things, as the instrument's own colour selector does: it sets
                 // the colour NEW modules get, and it recolours whatever is selected right now

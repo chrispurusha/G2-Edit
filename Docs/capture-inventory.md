@@ -56,7 +56,7 @@ impulse is what this rig gives.
 | module | what exists | what is missing |
 |---|---|---|
 | **StChorus** | 3 files in `G2 Captures/`, two Detune settings at two tone frequencies | Rate, centre delay and the triangle LFO shape are settled. There is no systematic sweep of either dial, and the STEREO behaviour has never been measured — it is on `to-test.txt` as needing an ear. |
-| **DelayA / DelayB** | 3 files, feedback at 64/96/127 | Feedback and the LP dial measured; the Time dial and its Clk mapping were measured separately and are hardware-confirmed. No captures retained for either. |
+| **DelayA / DelayB** | 3 files, feedback at 64/96/127 | **More complete than this row used to claim.** Feedback is linear to exactly unity (measured at 64/96/127; the hardware does not decay at all at 127). LP measured at five settings and HP at four, both by the BURST method - a short saw burst separates the repeats so repeat[n+1]/repeat[n] is the per-pass response - with the HP fit then validated at three settings that were NOT used to fit it. Dry/wet measured and found to be the same non-crossfade the reverb uses, needing no wet attenuation. Time and its Clk mapping hardware-confirmed separately. The audio is not retained; the numbers and the method are in `findings.txt`. |
 | **Compress** | none retained | Threshold, ratio, attack and release were all measured and corrected — the numbers are in `findings.txt`, the audio is not. Re-deriving anything means re-capturing. |
 | **EnvADSR** | none retained | Curve sharpness measured 2026-08-24; the attack FORM re-measured 2026-09-07 and our law confirmed against a one-pole. Both from captures that were not kept. |
 | **LevAmp** | none retained | Gain law measured at 33 dial positions 2026-08-30, four segments. |
@@ -84,9 +84,8 @@ module, and the engine can render the same patch for comparison. So the FX modul
 
 1. **StChorus** — already partly done, the stereo question is open, and it is the last unmeasured
    effect anyone will hear.
-2. **DelayA / DelayB** — a tail measurement the rig is already shaped for.
-3. **Compress** — needs a different stimulus (a level ramp, not an impulse), so it wants thought.
-4. **The shaper group** — and the ramp Compress wants is the SAME stimulus these need, so capture it
+2. **Compress** — needs a different stimulus (a level ramp, not an impulse), so it wants thought.
+3. **The shaper group** — and the ramp Compress wants is the SAME stimulus these need, so capture it
    once and run it through all eight. A memoryless module plotted output-against-input from a single
    full-scale ramp gives its entire transfer function with no windowing, no decay fit and no
    spectrum: five curves (Clip, Overdrive, Saturate, ShpExp, WaveWrap) times their modes, in one
