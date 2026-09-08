@@ -139,6 +139,25 @@ face from the outset; once the cursor enters a pane it tracks the drop position 
 outline there at first, which left the opening moments of every drag showing a module with none of
 its controls in it.
 
+**Double-click a tile to add** the module below the focused one, without a drag - the manual offers
+it as a first-class alternative (p.81) and it is the only route that works when the target is off
+screen. The second click of a pair cancels the drag the first one started, so it never also drops a
+ghost somewhere.
+
+**A colour selector sits to the right of the group grid** (CT's suggestion, 2026-09-08), and the
+instrument does the same thing - manual p.61: the selector "stays in its new selection, causing any
+new modules you add to the Patch window to get the selected color". It applies to everything
+`create_module_at()` makes, from the palette or from the right-click menu, and defaults to the
+standard grey so nothing changes for anyone who never touches it. The drag ghost is drawn in it too,
+so the choice is previewed rather than discovered after the drop.
+
+A swatch does the OTHER half of what the instrument's selector does as well: it recolours whatever
+is selected right now, a group selection included (manual p.61). With nothing selected only the
+new-module colour changes, so setting up the next few modules never repaints anything by surprise.
+The module right-click menu's own colour entry now goes through the same function - it used to
+recolour only the module that had been clicked even with a group selected, which the manual says it
+should not.
+
 ### Three bugs this shook out
 
 - **Every drop into the already-focused pane was discarded.** `split_view_focus_at()` returns
