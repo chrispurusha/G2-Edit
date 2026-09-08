@@ -64,6 +64,7 @@
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "splitView.h"
+#include "palette.h"      // palette_band_height, for the topbar the palette grows
 #include "fileBrowser.h"
 #include "msgQueue.h"
 #include "g2AppStubs.h"
@@ -101,6 +102,21 @@ static void g2_on_file_chosen(const char * path) {
     }
 }
 
+// THE THEME, KEPT so the topbar can grow. The application holds its own copy in graphics.c for the
+// same reason: configure_synthlib_theme() takes the struct by value and there is nothing to read it
+// back with, so re-applying one field means owning all of them.
+static tSynthLibTheme gPluginTheme;
+
+// The palette opens by making the topbar taller, and the canvas origin is derived from exactly one
+// value - so this is the whole of it. The application's version lives in graphics.c and is not in
+// this build; the arithmetic is the same but the base is NOT, because the plug-in reserves a
+// smaller band than the application's slot-and-clock bar.
+void apply_top_bar_height(void) {
+    gPluginTheme.topBarHeight = MENU_BAR_HEIGHT + G2_PLUGIN_TOPBAR_HEIGHT + palette_band_height();
+    configure_synthlib_theme(gPluginTheme);
+    synthlib_request_redraw();
+}
+
 void g2_gl_draw_init(void) {
     // The same session-wide drawing state the application sets from synthlibWindow.c. Shared
     // rather than repeated, so the plug-in and the application cannot drift apart on it.
@@ -109,7 +125,7 @@ void g2_gl_draw_init(void) {
     // The renderer asks the host application what its colours mean rather than including that app's
     // defs.h, so it has to be told before anything is drawn — exactly as init_graphics() does. The
     // values come from synthlibDefs.h so the plug-in and the application cannot drift apart.
-    configure_synthlib_theme((tSynthLibTheme){
+    gPluginTheme = (tSynthLibTheme){
         // The canvas starts BELOW the menu bar and the reserved topbar band. topBarHeight is how the
         // renderer is told that, and it is what keeps modules from being drawn underneath them.
         // NOT the application's value: its bar carries slot, performance and clock controls that a
@@ -120,7 +136,9 @@ void g2_gl_draw_init(void) {
         .orange2        = (tRgb)RGB_ORANGE_2,
         .greenOn        = (tRgb)RGB_GREEN_ON,
         .backgroundGrey = (tRgb)RGB_BACKGROUND_GREY,
-    });
+    };
+
+    configure_synthlib_theme(gPluginTheme);
 
     // SynthLib's popups and menu bar ask the host where the pointer is rather than reaching for a
     // window — the same injection init_graphics() performs. g2Input.c answers it from the host's
