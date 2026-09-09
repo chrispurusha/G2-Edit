@@ -39,7 +39,7 @@
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 
 #include "g2Editor.h"
-#include "g2GlView.h"
+#include "g2View.h"
 
 extern "C" {
 #include "g2Menu.h"
