@@ -798,27 +798,6 @@ void open_experimental_menu(tCoord anchor) {
     static tMenuItem items[20];
     int              i = 0;
 
-    // WHICH RENDERER IS RUNNING - a readout, not a control, since 2026-09-09.
-    //
-    // There was a "Use Metal Renderer (on restart)" item here while Metal was new and OpenGL was
-    // what everything relied on. On macOS the position is now the other way round: Metal is the
-    // default and the plug-in has nothing else linked, so an item offering to switch back is
-    // offering a path that is no longer exercised - and one a user could leave themselves on
-    // without knowing what it cost them.
-    //
-    // THE WAY BACK IS STILL THERE and is deliberately not in the menu: synthlibWindow.c reads
-    // "renderBackend" from prefs.txt at start-up, so setting it by hand still forces OpenGL if Metal
-    // ever misbehaves on a particular machine. That is a recovery route, which is what it should
-    // look like, rather than a setting to browse.
-    {
-        static char rendererLine[48];
-
-        snprintf(rendererLine, sizeof(rendererLine), "Renderer: %s",
-                 gfx_backend_name(gfx_backend_current()));
-        items[i++] = (tMenuItem){
-            rendererLine, (tRgb)RGB_GREY_5, NULL, 0, NULL, 0, 0.0
-        };
-    }
     // The engine follows whichever single oscillator is selected, so this is deliberately never
     // greyed out — it simply makes no sound until one is. Same state-in-the-label idiom as the
     // Mutator entry under Tools.
