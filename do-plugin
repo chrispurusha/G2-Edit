@@ -1,0 +1,569 @@
+#!/bin/zsh
+# Build the G2-Edit plug-ins.
+#
+#   ./do-plugin            both formats, and installs them
+#   ./do-plugin vst3       the VST3 alone
+#   ./do-plugin au         the Audio Unit alone
+#   ./do-plugin --no-install
+#
+# EACH BUNDLE IS INSTALLED AS SOON AS IT IS BUILT, over whatever was there before. A host loads the
+# copy in its plug-in folder and never the one in build/, so a build that stopped short of copying
+# meant every test ran against the previous build - and an Audio Unit is worse than a VST3 here,
+# since it cannot be loaded from an arbitrary path at all: the system finds it through the component
+# registry or not at all. The quarantine flag is cleared at the same time, for the same reason.
+#
+# do-release passes --no-install: it builds into its own private tree, and a release must not touch
+# what the developer has installed.
+#
+# A script rather than an Xcode target, because a .vst3 and a .component are both a bundle around one
+# dylib and this needs no build system to say so - the same reasoning that keeps do-release a script.
+#
+# ONE SOURCE LIST, TWO WRAPPERS. Everything below the FORMAT-SPECIFIC heading is what differs between
+# an Audio Unit and a VST3; everything above it is the plug-in itself and is compiled ONCE and linked
+# into both. That is the point of SynthLib/plugin/ - see synthlibPlugin.h.
+#
+# THE AUDIO UNIT NEEDS NO SDK AT ALL. Only the VST3 half wants ~/Documents/vst3sdk, so `./do-plugin
+# au` works on a machine that has never downloaded it, and a missing SDK is only an error when a VST3
+# was actually asked for.
+
+set -e
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+SDK="${VST3_SDK:-$HOME/Documents/vst3sdk}"
+
+# Which formats to build. No argument means both.
+FORMATS=()
+INSTALL=1
+
+for arg in "$@"; do
+    case "$arg" in
+        vst3|VST3)       FORMATS+=(vst3) ;;
+        au|AU|audiounit) FORMATS+=(au) ;;
+        all)             FORMATS=(vst3 au) ;;
+        --no-install)    INSTALL=0 ;;
+        *)
+            print -u2 "usage: ${0:t} [vst3|au|all] [--no-install]"
+            exit 2
+            ;;
+    esac
+done
+
+if [[ ${#FORMATS[@]} -eq 0 ]]; then
+    FORMATS=(vst3 au)
+fi
+
+# Overridable so a RELEASE can build the bundles inside its own private tree instead of the shared
+# build/ directory. That matters for more than tidiness: build/ is also where Xcode puts its IDE
+# products, so an IDE build or a Clean Build Folder running alongside a release can delete a bundle
+# between its creation and its link step - which is exactly the "lipo: can't create temporary output
+# file ... (No such file or directory)" failure a release hit. It also stops a release from
+# clobbering the developer's own build/G2 Alike.vst3, which is the copy usually installed for testing.
+OUT_DIR="${G2_PLUGIN_OUT_DIR:-$HERE/build}"
+
+PLUGIN_NAME="G2 Alike"
+
+# The Audio Unit's four-character codes and its bundle identifier.
+#
+# THESE THREE MUST MATCH plugin/g2Plugin.c, and the identifier especially: the wrapper looks its own
+# bundle up by it to tell a host where the editor's Cocoa view class lives, so a mismatch is a
+# plug-in that loads, plays, and has no editor at all.
+AU_TYPE="aumu"          # kAudioUnitType_MusicDevice - an instrument
+AU_SUBTYPE="G2al"
+AU_MANUFACTURER="CPur"
+AU_VERSION=256          # 0x00000100, i.e. 0.1.0 as 0xMMMMmmbb - G2_AU_VERSION in g2Plugin.c
+AU_BUNDLE_ID="com.chrispurusha.g2alike.au"
+VST3_BUNDLE_ID="com.chrispurusha.g2alike.vst3"
+
+# THE OBJECTIVE-C CLASS NAME THE AUDIO UNIT PUBLISHES ITS EDITOR UNDER. Objective-C class names are
+# global to the process, so a name SynthLib chose for itself would collide the moment two
+# SynthLib-based Audio Units were loaded into one host - see synthlibPluginAuView.m.
+AU_VIEW_CLASS="G2AlikeAUView"
+
+# WHERE A HOST ACTUALLY LOOKS. The system-wide folders, which is where all four projects' install
+# instructions point: they are group-writable for an admin account, so no sudo is needed, and a copy
+# in the per-user folder AS WELL means a host may list the plug-in twice and load whichever it finds
+# first. Overridable for a machine set up differently.
+VST3_INSTALL_DIR="${G2_VST3_INSTALL_DIR:-/Library/Audio/Plug-Ins/VST3}"
+AU_INSTALL_DIR="${G2_AU_INSTALL_DIR:-/Library/Audio/Plug-Ins/Components}"
+
+if (( ${FORMATS[(I)vst3]} )) && [[ ! -d "$SDK/pluginterfaces" ]]; then
+    print -u2 "error: VST3 SDK not found at $SDK"
+    print -u2 "       set VST3_SDK to its location, or build the Audio Unit alone with: ${0:t} au"
+    exit 1
+fi
+
+# ------------------------------------------------------------------------------------------------
+# The plug-in itself - compiled once, linked into every format
+# ------------------------------------------------------------------------------------------------
+
+# The engine and everything it reads the patch through. Deliberately NOT graphics.c, mouseHandle.c
+# or anything else with a window in it - if this list ever needs one of those, something that should
+# have stayed platform-free has grown a dependency on the GUI.
+SOURCES=(
+    "$HERE/src/soundEngine.c"
+    "$HERE/src/paramCurves.c"
+    # The measured wave laws, shared by the renderer and the sound engine — see waveModels.h.
+    "$HERE/src/waveModels.c"
+    "$HERE/src/dataBase.c"
+    "$HERE/src/globalVars.c"
+    "$HERE/src/cableChain.c"
+    "$HERE/src/moduleResourcesAccess.c"
+    "$HERE/src/protocol.c"
+    # The .pch2/.prf2 writer, split out of graphics.c on 2026-09-09 — graphics.c is the
+    # application's render loop and is not in this build, but File > Save needs the writer.
+    "$HERE/src/patchWrite.c"
+    "$HERE/src/patchParamsResources.c"
+    # WHAT G2 ALIKE IS, said once and in C: ten parameters, a patch path, notes and a canvas. Both
+    # wrappers below are driven entirely by the descriptor this file returns.
+    "$HERE/plugin/g2Plugin.c"
+    "$HERE/plugin/g2Patch.c"
+    "$HERE/plugin/g2HostIo.c"
+    "$HERE/plugin/g2Draw.c"
+    "$HERE/plugin/g2AppStubs.c"
+    "$HERE/plugin/g2Input.c"
+    "$HERE/plugin/g2Menu.c"
+    "$HERE/plugin/g2Prefs.c"
+    "$HERE/src/persistence.c"
+    # The canvas renderer itself, unchanged from the application. moduleGraphics.c and
+    # renderParams.c also contain the canvas CLICK HANDLERS, which is why g2AppStubs.c exists —
+    # those handlers never run here but their references still have to resolve.
+    "$HERE/src/moduleGraphics.c"
+    "$HERE/src/renderParams.c"
+    "$HERE/src/selection.c"
+    "$HERE/src/menus.c"
+    "$HERE/src/appMenuBar.c"
+    "$HERE/src/menuActions.c"
+    # The panels the Settings and Tools menus open. Each was checked for real GLFW CALLS first:
+    # only mutatorUI.c had one (glfwGetKey, now the shared modifier seam) and virtualKeyboard.c
+    # (glfwGetTime, now get_time_ms). The rest only use GLFW's key CONSTANTS, which need the header
+    # and not the library.
+    "$HERE/src/mutatorUI.c"
+    "$HERE/src/mutator.c"
+    "$HERE/src/paramPages.c"
+    "$HERE/src/paramOverview.c"
+    "$HERE/src/paramOverlay.c"
+    "$HERE/src/midiCcList.c"
+    "$HERE/SynthLib/src/floatingPanel.c"   # moved out of src/ 2026-08-20 — this list is MANUAL
+    "$HERE/src/helpPanel.c"
+    "$HERE/src/virtualKeyboard.c"
+    "$HERE/src/patchAdjuster.c"
+    "$HERE/SynthLib/src/alertDialog.c"
+    "$HERE/src/canvasCoords.c"
+    "$HERE/src/noteStack.c"
+    "$HERE/src/canvasDrag.c"
+    "$HERE/src/splitView.c"
+    "$HERE/src/topbarRender.c"
+    "$HERE/src/mouseTopbar.c"
+    # THE TOPBAR'S TWO PANELS. src/ is a synchronized folder for the application, so a new file
+    # there compiles into the app the moment it exists and into the plug-in never - this list is
+    # MANUAL, and both of these arrived after it was last touched. The plug-in draws the same
+    # topbar, so the moment topbarRender.c or mouseTopbar.c reference them, they have to be here.
+    "$HERE/src/palette.c"
+    "$HERE/src/moduleReplace.c"
+    "$HERE/src/topbarResourcesAccess.c"
+    "$HERE/SynthLib/src/clickRegion.c"
+    "$HERE/SynthLib/src/synthlibHost.c"
+    "$HERE/SynthLib/src/contextMenu.c"
+    "$HERE/SynthLib/src/menuBar.c"
+    # The popup registry. Needed for the WHEEL, which routes through it exactly as the application's
+    # scroll_event() does - the plug-in registers nothing of its own but uses SynthLib's own table,
+    # so every popup listed above and below gets its scroll for free. See g2_input_scroll().
+    "$HERE/SynthLib/src/synthlibPopups.c"
+    "$HERE/SynthLib/src/utils.c"
+    # Modifier-key state. Platform-free by design, which is what lets the same predicates answer from
+    # GLFW's mods in the application and an NSEvent's flags here — see SynthLib/src/inputState.h.
+    "$HERE/SynthLib/src/inputState.c"
+    # The state blob and the parameter formatting, shared by BOTH wrappers so a project saved from
+    # the Audio Unit and one saved from the VST3 hold the identical bytes.
+    "$HERE/SynthLib/plugin/synthlibPluginState.c"
+    # The application's renderer, unchanged. It includes GLFW's header for the GL declarations but
+    # makes no GLFW CALL, so it needs the include path below and not the library — which is the
+    # whole reason the editor's drawing can appear in a plug-in at all.
+    "$HERE/SynthLib/src/utilsGraphics.c"
+    # THE RENDER BACKEND, AND THERE IS ONLY ONE OF THEM HERE. renderBackendGL.c is deliberately NOT
+    # in this list: SYNTHLIB_NO_GL_BACKEND below compiles its declaration out of renderBackend.c, so
+    # a GL table is neither linked nor reachable. The file itself is untouched in SynthLib - it is
+    # still the application's default and will be the only backend on Windows and Linux.
+    "$HERE/SynthLib/src/renderBackend.c"
+    "$HERE/SynthLib/src/synthlibVersion.c"
+    "$HERE/SynthLib/src/renderBackendMetal.m"
+    "$HERE/SynthLib/src/geometry.c"
+)
+
+# Plain Objective-C: the view is an AppKit subclass, which needs the runtime but no C++. Kept out of
+# the Objective-C++ pass below so the C++ is confined to the files that have to speak it — a VST3
+# interface is a C++ vtable, and that is the only reason any C++ is here at all.
+OBJC_SOURCES=(
+    "$HERE/plugin/g2View.m"
+)
+
+# C++ the plug-in needs whatever format it is wrapped in.
+CXX_SOURCES=(
+    "$HERE/SynthLib/src/prefs.cpp"
+    "$HERE/SynthLib/src/fileBrowser.cpp"
+    "$HERE/SynthLib/src/bankBrowser.cpp"
+)
+
+# ------------------------------------------------------------------------------------------------
+# FORMAT-SPECIFIC
+# ------------------------------------------------------------------------------------------------
+
+# The VST3 wrapper. Built against pluginterfaces/ ONLY: public.sdk and vstgui are not compiled, so
+# there is no CMake anywhere in this.
+VST3_CXX_SOURCES=(
+    "$HERE/SynthLib/plugin/synthlibPluginVst3.cpp"
+    "$SDK/pluginterfaces/base/funknown.cpp"
+    "$SDK/pluginterfaces/base/coreiids.cpp"
+    # The one file taken from public.sdk. It contains no logic at all - it exists solely to
+    # instantiate the VST interface IIDs that the headers only declare - so taking it does not
+    # pull in the helper classes or their build system.
+    "$SDK/public.sdk/source/vst/vstinitiids.cpp"
+    # Likewise for the GUI-side interface IDs — IPlugView and friends, which the editor needs.
+    "$SDK/public.sdk/source/common/commoniids.cpp"
+    "$SDK/pluginterfaces/base/ustring.cpp"
+    "$SDK/pluginterfaces/base/conststringtable.cpp"
+)
+
+VST3_OBJCXX_SOURCES=(
+    "$HERE/SynthLib/plugin/synthlibPluginVst3View.mm"
+)
+
+# The Audio Unit wrapper. AUv2 written straight against the C API - no AUBase, no CoreAudio Utility
+# Classes, for the same reason the VST3 half does not use public.sdk.
+AU_C_SOURCES=(
+    "$HERE/SynthLib/plugin/synthlibPluginAu.c"
+)
+
+AU_OBJC_SOURCES=(
+    "$HERE/SynthLib/plugin/synthlibPluginAuView.m"
+)
+
+# ------------------------------------------------------------------------------------------------
+# Flags
+# ------------------------------------------------------------------------------------------------
+
+# WARNINGS ARE ERRORS HERE TOO. The Xcode project sets GCC_TREAT_WARNINGS_AS_ERRORS for the app, and a
+# plug-in build that stayed permissive would let a warning through on exactly the sources the two share
+# — which is how the uninitialised-read in canvasDrag.c survived for months.
+#
+# Plain -I is still fine for the SDK and ThirdParty headers below, unlike the Xcode project which had to
+# move them to -isystem: this build uses clang's default warning set, which does not include the
+# -Wdocumentation that glfw3.h trips 352 times under Xcode's. Switch them to -isystem here too if this
+# ever gains -Wall or -Weverything, or other people's headers will start failing our build.
+WARNFLAGS=(-Werror)
+
+# WHICH VERSION THIS BINARY CLAIMS TO BE, and the sequencing matters — see the About box in
+# SynthLib's synthlibVersion.h.
+#
+# Standalone, `git describe` is the truth: the last tag, the commits since, the commit itself, and
+# "-dirty" if the tree does not match any of them.
+#
+# BUT DO-RELEASE BUILDS BEFORE THE TAG EXISTS. It works out the NEXT version from the newest tag and
+# only prints the `git tag` command to run once the .dmg has been checked — so at the moment it
+# calls this script, `git describe` still names the PREVIOUS release. A .dmg labelled 0.6.4-beta.6
+# whose plug-in says 0.6.4-beta.5 is worse than no version at all, because a wrong version number is
+# believed. do-release therefore sets G2_VERSION_STRING and that wins.
+if [ -n "$G2_VERSION_STRING" ]; then
+    VERSION_STRING="$G2_VERSION_STRING"
+else
+    VERSION_STRING="$(git describe --tags --always --dirty 2>/dev/null || echo 'development build')"
+fi
+
+echo "Version: $VERSION_STRING"
+echo "Formats: ${FORMATS}"
+
+# METAL ONLY ON macOS, SINCE 2026-09-09.
+#
+# The plug-in used to build either backend - its view's SUPERCLASS differed between them
+# (NSOpenGLView against NSView) so the choice had to be made here rather than at run time. Metal is
+# the only one now: it is what ships, both sibling plug-ins have only ever had it, and the OpenGL
+# half was an unreachable second surface implementation that still had to keep compiling.
+#
+# WHAT IS GONE IS macOS-SPECIFIC OPENGL. SynthLib's renderBackendGL.c is untouched, is still what the
+# APPLICATION uses by default, and will be the only backend when there are Windows and Linux versions
+# - where a plug-in's view is an HWND or an X11 window and could not have used a line of what was
+# removed from g2View.m anyway.
+#
+# SYNTHLIB_NO_GL_BACKEND is what makes it Metal ONLY rather than Metal by default: it compiles the
+# GL table's declaration out of renderBackend.c, so renderBackendGL.c is not in the source list
+# above, -framework OpenGL is not on the link line below, and gfx_backend_available() answers false
+# for OpenGL if anything ever asks.
+#
+# SYNTHLIB_PLUGIN_BUILD is "this is a plug-in, there is no GLFW". It was called G2_VST3_BUILD until
+# there were two formats; the sibling plug-ins still pass the old name, which SynthLib accepts for
+# now, and that spelling goes when they move onto this wrapper too.
+DEFS=(-DSYNTHLIB_VERSION_STRING="\"$VERSION_STRING\"" -DSYNTHLIB_NO_GL_BACKEND=1 -DSYNTHLIB_PLUGIN_BUILD=1)
+
+INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/SynthLib/plugin" -I"$HERE/plugin"
+          # Headers only. GLFW's is here because utilsGraphics.c includes it for the GL
+          # declarations; freetype's because the text renderer is built on it. The bundled copies
+          # are used rather than Homebrew's so the deployment target matches the application's —
+          # see "Docs/Third Party build notes.txt".
+          -I"$HERE/SynthLib/ThirdParty/glfw/include"
+          -I"$HERE/SynthLib/ThirdParty/freetype/include")
+
+VST3_INCLUDES=(-I"$SDK")
+
+# freetype is the one real library the renderer needs. The static build is taken so each bundle stays
+# self-contained — a host will not go looking in Homebrew for it.
+FREETYPE_LIB="$HERE/SynthLib/ThirdParty/freetype/build/libfreetype.a"
+
+ARCHS=(-arch arm64 -arch x86_64)
+MIN=-mmacosx-version-min=11.5
+
+COMMON_LIBS=(-framework CoreFoundation -framework Cocoa -framework Metal -framework QuartzCore)
+AU_LIBS=(-framework AudioToolbox -framework AudioUnit -framework CoreAudio)
+
+OBJDIR="$(mktemp -d)"
+trap 'rm -rf "$OBJDIR"' EXIT
+
+# ------------------------------------------------------------------------------------------------
+# Compile
+# ------------------------------------------------------------------------------------------------
+
+# COMPILED ONCE FOR BOTH FORMATS. Nothing in this set knows which wrapper it will be linked into, so
+# building it twice would only be slower - and would invite the two bundles to differ in ways nobody
+# had asked for.
+print "Building ${#SOURCES[@]} C + ${#CXX_SOURCES[@]} C++ + ${#OBJC_SOURCES[@]} Obj-C shared sources..."
+
+COMMON_OBJECTS=()
+
+for src in "${SOURCES[@]}"; do
+    obj="$OBJDIR/$(basename "${src%.*}").o"
+    clang $ARCHS $MIN -O2 -std=gnu11 "${WARNFLAGS[@]}" "${DEFS[@]}" "${INCLUDES[@]}" -c "$src" -o "$obj"
+    COMMON_OBJECTS+=("$obj")
+done
+
+for src in "${CXX_SOURCES[@]}"; do
+    obj="$OBJDIR/$(basename "${src%.*}").oxx"
+    clang++ $ARCHS $MIN -O2 -std=gnu++17 "${WARNFLAGS[@]}" "${DEFS[@]}" "${INCLUDES[@]}" -c "$src" -o "$obj"
+    COMMON_OBJECTS+=("$obj")
+done
+
+for src in "${OBJC_SOURCES[@]}"; do
+    obj="$OBJDIR/$(basename "${src%.*}").om"
+    clang $ARCHS $MIN -O2 -std=gnu11 -fobjc-arc "${WARNFLAGS[@]}" "${DEFS[@]}" "${INCLUDES[@]}" \
+          -x objective-c -c "$src" -o "$obj"
+    COMMON_OBJECTS+=("$obj")
+done
+
+# ------------------------------------------------------------------------------------------------
+# Bundle up
+# ------------------------------------------------------------------------------------------------
+
+# Ad-hoc signed, same as do-release: there is no paid Apple membership behind this, so a host will
+# still need the quarantine flag cleared before it will load the bundle.
+sign_bundle() {
+    codesign --force --sign - "$1" 2>/dev/null || print -u2 "warning: ad-hoc signing failed for $1"
+}
+
+# Installed over whatever was there, then unquarantined. A FAILURE HERE IS A WARNING, NOT AN ERROR:
+# the bundle in build/ is correct and complete either way, and a machine whose plug-in folders are
+# not writable should still get a build rather than an aborted one.
+install_bundle() {
+    local bundle=$1
+    local dest=$2
+    local name="${bundle:t}"
+
+    if [[ $INSTALL -ne 1 ]]; then
+        return
+    fi
+
+    if [[ ! -d $dest ]]; then
+        print -u2 "warning: $dest does not exist - not installing $name"
+        return
+    fi
+
+    # REMOVED FIRST, not copied over. cp -R onto an existing bundle MERGES, so a file that a build
+    # no longer produces would survive inside the installed copy indefinitely.
+    if ! rm -rf "$dest/$name" 2>/dev/null; then
+        print -u2 "warning: could not remove $dest/$name - not installing"
+        return
+    fi
+
+    if ! cp -R "$bundle" "$dest/" 2>/dev/null; then
+        print -u2 "warning: could not install into $dest (permission?) - $name left in $OUT_DIR"
+        return
+    fi
+    xattr -dr com.apple.quarantine "$dest/$name" 2>/dev/null || true
+    print "    installed: $dest/$name"
+    INSTALLED+=("$dest/$name")
+}
+
+BUILT=()
+INSTALLED=()
+
+build_vst3() {
+    local out="$OUT_DIR/$PLUGIN_NAME.vst3"
+    local bin="$out/Contents/MacOS/$PLUGIN_NAME"
+    local objects=("${COMMON_OBJECTS[@]}")
+
+    print ""
+    print "==> VST3"
+
+    for src in "${VST3_CXX_SOURCES[@]}"; do
+        local obj="$OBJDIR/vst3_$(basename "${src%.*}").oxx"
+        clang++ $ARCHS $MIN -O2 -std=gnu++17 "${WARNFLAGS[@]}" "${DEFS[@]}" \
+                "${INCLUDES[@]}" "${VST3_INCLUDES[@]}" -c "$src" -o "$obj"
+        objects+=("$obj")
+    done
+
+    for src in "${VST3_OBJCXX_SOURCES[@]}"; do
+        local obj="$OBJDIR/vst3_$(basename "${src%.*}").omm"
+        clang++ $ARCHS $MIN -O2 -std=gnu++17 -fobjc-arc "${WARNFLAGS[@]}" "${DEFS[@]}" \
+                "${INCLUDES[@]}" "${VST3_INCLUDES[@]}" -x objective-c++ -c "$src" -o "$obj"
+        objects+=("$obj")
+    done
+
+    rm -rf "$out"
+    mkdir -p "$out/Contents/MacOS"
+
+    clang++ $ARCHS $MIN -bundle "${objects[@]}" "$FREETYPE_LIB" "${COMMON_LIBS[@]}" -o "$bin"
+
+    # A bundle needs its Info.plist and the four-character PkgInfo, or the host will not look inside it.
+    cat > "$out/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key><string>$PLUGIN_NAME</string>
+    <key>CFBundleIdentifier</key><string>$VST3_BUNDLE_ID</string>
+    <key>CFBundleName</key><string>$PLUGIN_NAME</string>
+    <key>CFBundlePackageType</key><string>BNDL</string>
+    <key>CFBundleSignature</key><string>????</string>
+    <key>CFBundleShortVersionString</key><string>0.1.0</string>
+    <key>CFBundleVersion</key><string>0.1.0</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>LSMinimumSystemVersion</key><string>11.5</string>
+</dict>
+</plist>
+PLIST
+
+    printf 'BNDL????' > "$out/Contents/PkgInfo"
+    sign_bundle "$out"
+    BUILT+=("$out")
+    install_bundle "$out" "$VST3_INSTALL_DIR"
+}
+
+build_au() {
+    local out="$OUT_DIR/$PLUGIN_NAME.component"
+    local bin="$out/Contents/MacOS/$PLUGIN_NAME"
+    local objects=("${COMMON_OBJECTS[@]}")
+
+    print ""
+    print "==> Audio Unit"
+
+    for src in "${AU_C_SOURCES[@]}"; do
+        local obj="$OBJDIR/au_$(basename "${src%.*}").o"
+        clang $ARCHS $MIN -O2 -std=gnu11 "${WARNFLAGS[@]}" "${DEFS[@]}" "${INCLUDES[@]}" \
+              -c "$src" -o "$obj"
+        objects+=("$obj")
+    done
+
+    for src in "${AU_OBJC_SOURCES[@]}"; do
+        local obj="$OBJDIR/au_$(basename "${src%.*}").om"
+        clang $ARCHS $MIN -O2 -std=gnu11 -fobjc-arc "${WARNFLAGS[@]}" "${DEFS[@]}" "${INCLUDES[@]}" \
+              -DSYNTHLIB_AU_VIEW_CLASS=$AU_VIEW_CLASS -x objective-c -c "$src" -o "$obj"
+        objects+=("$obj")
+    done
+
+    rm -rf "$out"
+    mkdir -p "$out/Contents/MacOS"
+
+    clang++ $ARCHS $MIN -bundle "${objects[@]}" "$FREETYPE_LIB" \
+            "${COMMON_LIBS[@]}" "${AU_LIBS[@]}" -o "$bin"
+
+    # THE AudioComponents ARRAY IS HOW macOS FINDS AN AUDIO UNIT AT ALL. Without it the bundle is
+    # just a bundle: the component manager scans Info.plist, not the binary, and a .component with
+    # no such array is invisible to every host on the machine.
+    #
+    # `name` is read as "Manufacturer: Plug-in", split on the colon, and that is what a host's
+    # instrument menu groups by - so the two halves are not decoration.
+    #
+    # `sandboxSafe` is true so that sandboxed hosts (GarageBand, Logic) will load it at all. The
+    # caveat is real and already documented for the VST3: a sandboxed host may deny the plug-in
+    # access to ~/Documents, where a perfectly correct patch path then yields silence that looks
+    # identical to every other cause of silence.
+    cat > "$out/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key><string>$PLUGIN_NAME</string>
+    <key>CFBundleIdentifier</key><string>$AU_BUNDLE_ID</string>
+    <key>CFBundleName</key><string>$PLUGIN_NAME</string>
+    <key>CFBundlePackageType</key><string>BNDL</string>
+    <key>CFBundleSignature</key><string>????</string>
+    <key>CFBundleShortVersionString</key><string>0.1.0</string>
+    <key>CFBundleVersion</key><string>0.1.0</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>LSMinimumSystemVersion</key><string>11.5</string>
+    <key>AudioComponents</key>
+    <array>
+        <dict>
+            <key>name</key><string>Chris Purusha: $PLUGIN_NAME</string>
+            <key>description</key><string>$PLUGIN_NAME - plays a Nord G2 patch</string>
+            <key>factoryFunction</key><string>SynthLibAUFactory</string>
+            <key>type</key><string>$AU_TYPE</string>
+            <key>subtype</key><string>$AU_SUBTYPE</string>
+            <key>manufacturer</key><string>$AU_MANUFACTURER</string>
+            <key>version</key><integer>$AU_VERSION</integer>
+            <key>sandboxSafe</key><true/>
+        </dict>
+    </array>
+</dict>
+</plist>
+PLIST
+
+    printf 'BNDL????' > "$out/Contents/PkgInfo"
+    sign_bundle "$out"
+    BUILT+=("$out")
+    install_bundle "$out" "$AU_INSTALL_DIR"
+
+    # THE REGISTRY CACHES, so a freshly installed component is invisible until it is rebuilt - and
+    # a REPLACED one is worse than invisible, because a host will happily go on using the version
+    # the registrar last saw. Killing the registrar is the documented way to force a rescan; it is
+    # restarted on demand.
+    if [[ $INSTALL -eq 1 ]]; then
+        killall -9 AudioComponentRegistrar 2>/dev/null || true
+    fi
+}
+
+mkdir -p "$OUT_DIR"
+
+for fmt in "${FORMATS[@]}"; do
+    case "$fmt" in
+        vst3) build_vst3 ;;
+        au)   build_au ;;
+    esac
+done
+
+print ""
+
+for bundle in "${BUILT[@]}"; do
+    bin="$bundle/Contents/MacOS/$PLUGIN_NAME"
+    archs=$(lipo -archs "$bin")
+    print "Built: $bundle  ($archs)"
+done
+
+print ""
+
+if [[ ${#INSTALLED[@]} -gt 0 ]]; then
+    print "Installed ${#INSTALLED[@]} of ${#BUILT[@]}; a host will pick these up on its next scan."
+elif [[ $INSTALL -eq 1 ]]; then
+    print "NOTHING WAS INSTALLED - see the warnings above. To do it by hand:"
+
+    if (( ${FORMATS[(I)vst3]} )); then
+        print "  cp -R \"$OUT_DIR/$PLUGIN_NAME.vst3\" \"$VST3_INSTALL_DIR/\""
+    fi
+
+    if (( ${FORMATS[(I)au]} )); then
+        print "  cp -R \"$OUT_DIR/$PLUGIN_NAME.component\" \"$AU_INSTALL_DIR/\""
+        print "  killall -9 AudioComponentRegistrar"
+    fi
+else
+    print "Not installed (--no-install)."
+fi
+print ""
+print "Patch source, in order: host-saved path, then \$G2_PLUGIN_PATCH,"
+print "then ~/Documents/G2-Edit/plugin.pch2"

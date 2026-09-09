@@ -1,0 +1,17 @@
+#!/bin/zsh
+# Build the minimal Audio Unit host - see tools/auhost.m.
+#
+# NO SDK OF ANY KIND. An Audio Unit is a system API, so unlike do-vst3host this needs nothing but the
+# frameworks that ship with macOS.
+
+set -e
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+clang -fobjc-arc -O1 -std=gnu11 -Wall \
+    -o "$HERE/auhost" \
+    "$HERE/auhost.m" \
+    -framework Cocoa -framework AudioToolbox -framework AudioUnit
+
+echo "Built: $HERE/auhost"
+echo "  ./auhost --shot /tmp/editor.png"

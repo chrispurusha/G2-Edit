@@ -8673,3 +8673,77 @@ in a host that skips the deterministic path.
   fixed 20 Hz the gate saves one redraw of an idle canvas and buys exactly that ambiguity, so it
   consumes the flag and redraws whenever sound_engine_active().
 
+
+- ***THE AUDIO UNIT, AND THE SHARED WRAPPERS THAT MADE IT CHEAP (2026-09-09)*** - "G2 Alike" now
+  builds as an Audio Unit as well as a VST3, from one source list, and `./do-vst3` is now
+  `./do-plugin [vst3|au|all]`.
+
+  WHAT WAS ACTUALLY IN THE WAY was not the Audio Unit API. It was that g2Vst3.cpp was 982 lines of
+  which the part about the G2 - ten parameters, a patch path, note on, note off - came to well under
+  two hundred; an AU written the same way would have duplicated the other eight hundred in a
+  different dialect and every fix after that would have had to be made twice. The three sibling
+  plug-ins already show what that costs: GenBridge's gbView.m and MidiSyncTool's msView.m differ by
+  85 lines out of 360 and are the same file.
+
+  So SynthLib/plugin/ gained a format-free DESCRIPTION of a plug-in (synthlibPlugin.h: a descriptor,
+  a parameter table, a callback set, all in plain C - the one language a C++ VST3 vtable and an
+  Objective-C Cocoa view can both call) and one wrapper per format. plugin/g2Plugin.c is the whole
+  of what is G2-specific. g2Vst3.cpp and g2Editor.mm are gone; the VST3 is now the generic wrapper
+  and behaves the same, confirmed by tools/vst3host rendering the same canvas.
+
+  AUv2 AND NOT AUv3, and the reason is distribution rather than API taste: an AUv3 is an app
+  EXTENSION that has to live inside a containing .app under /Applications and be launched once so
+  pluginkit registers it, and an ad-hoc-signed extension - all an unpaid Apple membership can
+  produce - does not survive that on somebody else's machine. An AUv2 is a plain bundle around one
+  dylib, exactly what the .vst3 already is, so it ships in the same .dmg with the same instructions.
+  It is written straight against the C AudioComponentPlugInInterface: no AUBase, no CoreAudio
+  Utility Classes, for the same reason the VST3 half does not use public.sdk.
+
+  THE FOUR THINGS auval CAUGHT, all of them the kind that a hand-written host would not:
+    1. kAudioUnitProperty_ParameterList answered the same list on EVERY scope. auval concluded there
+       were parameters on the input and output scopes, read one back with AudioUnitGetParameter, got
+       kAudioUnitErr_InvalidScope (-10866), and failed the parameter test on a plug-in whose
+       parameters were all correct. Global scope only, empty list elsewhere.
+    2. Latency, TailTime and the rest answered on every scope too - "returning valid information for
+       scope/element for [Output/0], which should be invalid". There is an is_global_only() list now.
+    3. Setting kAudioUnitProperty_MaximumFramesPerSlice fired no property-changed notification.
+       auval waits for it, and so does anything that sizes a buffer from it.
+    4. Advertising kAudioUnitProperty_SupportedChannelLayoutTags obliges the plug-in to answer
+       kAudioUnitProperty_AudioChannelLayout for every scope it claimed, and auval checks the INPUT
+       scope even on an instrument that has none: "Cannot verify Audio Channel Layouts as Format
+       handling has problems". Both properties are simply absent now - plain stereo needs neither,
+       the channel count in the stream format says all there is to say.
+  auval -v aumu G2al CPur now passes with no errors and no warnings, and CT confirms it loads and
+  plays in Ableton the same day.
+
+  THE OBJECTIVE-C CLASS NAME COMES FROM THE BUILD (-DSYNTHLIB_AU_VIEW_CLASS=G2AlikeAUView). This is
+  the trap worth remembering: kAudioUnitProperty_CocoaUI answers with a bundle and the NAME of a
+  class in it, and Objective-C class names are global to the PROCESS - so two SynthLib-based Audio
+  Units each defining "SynthLibAUView" would collide, the runtime would keep one and say so in a log
+  line nobody reads, and a host would open one plug-in's editor from inside the other.
+
+  THE STATE BLOB IS THE SAME BYTES IN BOTH FORMATS (synthlibPluginState.c, magic "SLP1": parameters
+  then the plug-in's own blob). A VST3 stores it in an IBStream and an Audio Unit as CFData inside
+  its ClassInfo dictionary, but a project saved from one is readable by the other. A blob WITHOUT
+  the magic is a project from before the header existed - G2 Alike's state was a bare patch path -
+  and is handed to the plug-in whole, which is what stops this from emptying an existing project's
+  slot. The VST3 also never saved its parameters at all before this; only the path.
+
+  BOTH BUNDLES ARE INSTALLED AS SOON AS THEY ARE BUILT, over whatever was there, quarantine cleared.
+  A host loads the copy in its plug-in folder and never the one in build/, so a build that stopped
+  short of copying meant every test ran against the previous build - and an Audio Unit is worse than
+  a VST3 here, because it cannot be loaded from an arbitrary path at all: the system finds it through
+  the component registry, which also has to be kicked (killall -9 AudioComponentRegistrar) or a host
+  goes on using the version the registrar last saw. do-release passes --no-install.
+
+  tools/auhost is the AU counterpart to tools/vst3host and exists for the one thing auval does not
+  do: auval never opens the Cocoa editor, so the whole CocoaUI path - our own bundle found by
+  identifier, the view class loaded out of it by name, the view placed in a window somebody else
+  owns - was untested by the tool that says "AU VALIDATION SUCCEEDED". It also renders a few blocks
+  with a note held and prints the peak, so "does it make a sound from the patch it loaded" is
+  answered in the same command.
+
+  INSTRUMENTS ONLY, DELIBERATELY. An effect needs kAudioUnitProperty_SetRenderCallback,
+  kAudioUnitProperty_MakeConnection and an AudioUnitRender() pull, and nothing in these projects has
+  an Audio Unit with an input yet. Untested plumbing that only looks right is worse than a property
+  that honestly answers "not supported"; it goes in when GenBridge moves over, against a real host.
