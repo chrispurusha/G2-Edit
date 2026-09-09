@@ -53,9 +53,11 @@
 #include "g2View.h"
 #include "g2Input.h"
 #include "inputState.h"
+#include "soundEngine.h"    // sound_engine_meters_dirty() - see -startMeterTimer
 
 @interface G2View : NSView
 @property (strong) NSTimer * dragTimer;
+@property (strong) NSTimer * meterTimer;
 @end
 
 // THE PLUG-IN'S HALF OF SynthLib's MODIFIER SEAM. The application translates GLFW's `mods`; this
@@ -171,6 +173,8 @@ static __weak G2View * gCurrentView = nil;
     // below is talking to rather than leaving it to a default.
     gfx_backend_choose(eRenderBackendMetal);
 
+    [self startMeterTimer];
+
     // LAYER-HOSTING, and the order matters: gfx_attach_window() assigns the layer and only then
     // sets wantsLayer, which is what tells AppKit the contents are the layer's and that it must not
     // draw over them. Handing it the VIEW rather than a window is the whole difference from the
@@ -188,6 +192,7 @@ static __weak G2View * gCurrentView = nil;
 - (void)removeFromSuperview {
     cursor_release();        // an editor closed mid-drag must not leave the host without a pointer
     [self stopDragTimer];    // the timer retains self through its block; leaving it running leaks the view
+    [self stopMeterTimer];
 
     // Hand back the layer and render targets. Without this a host that opens and closes editors
     // would exhaust the backend's window slots, since every new view is a different pointer — and
@@ -218,6 +223,7 @@ static __weak G2View * gCurrentView = nil;
 // sibling plug-ins do it; this catches the host that skips it. mtl_detach_window() clears the
 // slot's `native`, so whichever runs second finds nothing and does nothing.
 - (void)dealloc {
+    [self stopMeterTimer];    // the backstop for a host that never takes the view out of its superview
     gfx_detach_window((__bridge void *)self);
 }
 
@@ -337,6 +343,72 @@ static __weak G2View * gCurrentView = nil;
 - (void)stopDragTimer {
     [self.dragTimer invalidate];
     self.dragTimer = nil;
+}
+
+// THE METERS AND LEDs, WHICH NOTHING ELSE ASKS TO BE DRAWN.
+//
+// The sound engine publishes what a module's meter and LED should show from the AUDIO thread, into
+// atomic arrays, and it cannot ask for a frame itself without a syscall per block. So it raises a
+// flag when a published value actually CHANGES - not every block, or the panel would run flat out
+// over a silent patch - and something has to consume it.
+//
+// In the application that consumer is the render loop (graphics.c, 2026-09-08). A plug-in has no
+// loop: it draws when AppKit is told to, and everything else that changes the canvas says so through
+// synthlib_request_redraw(). The engine is the one thing that cannot, so this timer does it for it,
+// and the symptom without it is exactly the application's was - the compressor's LED and the volume
+// meters moving only while the mouse did.
+//
+// 50 ms, which is the application's cadence, and NOT the drag timer's 60 Hz: a meter is read by eye
+// and twenty frames a second is more than enough for one, where a drag is followed by the hand and
+// is not. It runs for as long as the editor is open, because in the PLUG-IN the engine is always
+// running - it is what the plug-in is for, started in setupProcessing() rather than switched on from
+// a menu as it is in the application. An idle tick costs one atomic exchange.
+- (void)startMeterTimer {
+    __weak G2View * weakSelf = self;
+
+    [self stopMeterTimer];
+
+    // +timerWithTimeInterval:, NOT +scheduledTimerWithTimeInterval:. The scheduled one is already on
+    // the run loop in NSDefaultRunLoopMode, so adding it again below registered the same timer with
+    // the same run loop twice - which the documentation says not to do, and which is the first thing
+    // to suspect if a timer stops firing. Created unscheduled and added ONCE, in common modes.
+    //
+    // WEAK self. The block is retained by the timer and the timer by the view, so capturing self
+    // strongly made a cycle the view could never escape - and -dealloc, the documented backstop for
+    // a host that never calls -removeFromSuperview, could then never run. That backstop is what
+    // stops a reopened editor drawing into a dead view's Metal layer, so the cycle was not merely a
+    // leak: it disarmed the fix for the crash in project_g2alike_metal_layer_crash.
+    self.meterTimer = [NSTimer timerWithTimeInterval:0.05
+                                             repeats:YES
+                                               block:^(NSTimer * t) {
+        G2View * strongSelf = weakSelf;
+
+        if (strongSelf == nil) {
+            [t invalidate];
+            return;
+        }
+        // ASKED, BUT NOT OBEYED, and the flag is consumed rather than tested. The application
+        // redraws only when this says something changed, because its loop would otherwise spin at
+        // the display's rate; here the rate is already fixed at 20 Hz by the timer, so the gate
+        // saves one redraw of an idle canvas and buys a whole class of confusion - a meter that has
+        // stopped and a flag that says nothing changed look identical from the outside. It has to
+        // be consumed either way, or the application's own render loop would find it permanently
+        // set the moment the two ever share a build.
+        (void)sound_engine_meters_dirty();
+
+        if (sound_engine_active() == true) {
+            [strongSelf setNeedsDisplay:YES];
+        }
+    }];
+
+    // Without this the meters freeze while a menu is tracking or the window is being resized, which
+    // is the same fault in a smaller window - the sibling plug-ins' panels carry the same line.
+    [[NSRunLoop mainRunLoop] addTimer:self.meterTimer forMode:NSRunLoopCommonModes];
+}
+
+- (void)stopMeterTimer {
+    [self.meterTimer invalidate];    // the timer retains self, so this is also what lets the view go
+    self.meterTimer = nil;
 }
 
 // Pushed from EVERY event that carries flags, before the event is acted on — a press must be judged

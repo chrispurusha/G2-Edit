@@ -3,6 +3,13 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.txt.
 Full detail for each is in findings.txt, searchable by the wording below.
+- ***THE PLUG-IN'S METERS AND LEDs NOW REDRAW ON THEIR OWN (2026-09-09)*** - the application half of
+  this landed on 2026-09-08; the plug-in had no consumer for the engine's dirty flag, so its
+  compressor LED and volume meters moved only while the mouse did. Open the editor in a host with a
+  patch playing and confirm the compressor's gain-reduction LED and the module volumes move with the
+  mouse still. Worth checking too that an LfoShpA LED blinks at the LFO rate, and that closing and
+  reopening the editor leaves nothing running - the timer is stopped in -removeFromSuperview and
+  -dealloc, and it retains the view through its block.
 
 HARDWARE CHECKS
 
@@ -293,3 +300,7 @@ CROSS-PROJECT
   UNMEASURED and worth one capture: a steady tone BELOW the threshold. This law returns it with the
   makeup on it; a true gate returns it untouched. Nothing captured so far was played quietly enough
   to tell the two apart.
+- ***THE PLUG-IN CAN SAVE (2026-09-09)*** - File > Save and Save As now reach a writer; CT confirms
+  the dialogue works in Ableton. STILL UNCHECKED: that the .pch2 it writes opens unchanged in the
+  application, that File > Open Recent lists what was opened and saved, and that a save into an
+  unwritable folder shows the alert rather than failing silently.
