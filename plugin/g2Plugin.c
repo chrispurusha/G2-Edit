@@ -221,8 +221,10 @@ static void load_patch(tG2Plugin * g2) {
 // Lifecycle
 // ------------------------------------------------------------------------------------------------
 
-static void * g2_create(void) {
+static void * g2_create(const tSynthLibPluginDesc * desc) {
     tG2Plugin * g2 = (tG2Plugin *)calloc(1, sizeof(tG2Plugin));
+
+    (void)desc;     // one variant only - see synthlib_plugin_variants() at the foot of this file
 
     if (g2 == NULL) {
         return NULL;
@@ -287,10 +289,20 @@ static void g2_reset(void * inst) {
 // Audio
 // ------------------------------------------------------------------------------------------------
 
-static void g2_render(void * inst, float ** out, uint32_t numChannels, uint32_t frames) {
+static void g2_process(void * inst,
+                       const float * const * in, uint32_t numIn,
+                       float ** out, uint32_t numOut,
+                       uint32_t frames,
+                       const tSynthLibTransport * transport) {
     tG2Plugin * g2 = (tG2Plugin *)inst;
 
-    if ((numChannels < 2u) || (out == NULL)) {
+    // An instrument: there is no input, and the transport is not read. The engine free-runs and has
+    // nothing to sync to - a patch is a patch whether the host is rolling or not.
+    (void)in;
+    (void)numIn;
+    (void)transport;
+
+    if ((numOut < 2u) || (out == NULL)) {
         return;
     }
 
@@ -493,6 +505,10 @@ static void g2_editor_width_save(long width) {
 // The descriptor
 // ------------------------------------------------------------------------------------------------
 
+static const tSynthLibBus gOutputs[1] = {
+    { "Output", 2, false, true }
+};
+
 static const tSynthLibPluginDesc gDescriptor = {
     .name              = "G2 Alike",
     .vendor            = "Chris Purusha",
@@ -501,9 +517,13 @@ static const tSynthLibPluginDesc gDescriptor = {
     .version           = "0.1.0",
 
     .isInstrument      = true,
-    .numInputChannels  = 0,
-    .numOutputChannels = 2,
-    .wantsMidi         = true,
+    .vst3SubCategory   = NULL,          // "Instrument|Synth", from isInstrument
+    .inputs            = NULL,
+    .numInputs         = 0,
+    .outputs           = gOutputs,
+    .numOutputs        = 1,
+    .wantsMidiIn       = true,
+    .wantsTransport    = false,
 
     .vst3ProcessorUid  = gProcessorUid,
     .vst3ControllerUid = gControllerUid,
@@ -540,7 +560,7 @@ static const tSynthLibPluginDesc gDescriptor = {
         .setActive     = g2_set_active,
         .reset         = g2_reset,
 
-        .render        = g2_render,
+        .process       = g2_process,
 
         .noteOn        = g2_note_on,
         .noteOff       = g2_note_off,
@@ -559,6 +579,13 @@ static const tSynthLibPluginDesc gDescriptor = {
     }
 };
 
-const tSynthLibPluginDesc * synthlib_plugin_descriptor(void) {
-    return &gDescriptor;
+// ONE VARIANT. The set exists because a binary MAY register several plug-ins - GenBridge registers
+// itself as both an effect and an instrument - and G2 Alike is simply a list of length one.
+static const tSynthLibPluginSet gVariants = {
+    .variants = &gDescriptor,
+    .count    = 1
+};
+
+const tSynthLibPluginSet * synthlib_plugin_variants(void) {
+    return &gVariants;
 }
