@@ -4,7 +4,11 @@ Things to do. ONE LINE PER ITEM - keep it that way.
 Measurements, reasoning and completed-work narrative go in findings.txt, NOT here.
 Built-but-unchecked work goes in to-test.txt.
 
-FROM CT
+CT - PRIORITY
+- Plugin GUI seems to maybe not refresh as quickly as standalone on Ableton at least.
+- Plugin mono voicing doesn’t seem to work as per hardware. If I have a relatively fast attack and delay, with no sustain and I press a keyboard key, hold it and press another - doesn’t move to new note. Does on hardware. - EmuUtility and SynthEdit need the MIDI input and output selection on a pop up dialogue, opened from the main menu. Scan should move to that dialogue as an option.
+
+CT - LOWER PRIORITY
 - Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
 - Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE <ctrl>V should Paste
 - Zoom to Fit from a right click, fitting the area under the cursor
@@ -13,11 +17,6 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
 - Add a top-level Edit menu (Undo, Redo, Cut, Copy, Paste, Delete, Paste Params, Select All)
 - Nudge arrows on knobs and sliders, for step-by-step mouse/touchpad adjustment
-- Modules can be dropped on top of existing ones at the bottom of the canvas
-- Red and orange cable colours are too close together (accessibility)
-- Replace-with-similar-module: FILTER GROUP DONE. Write the role table for the other 18 groups, oscillators first - see module-replace-design.md; everything but the table itself is group-agnostic
-- Module palette: topbar mode + drag/double-click to add - design settled, see module-palette-design.md
-- Second screen renders pixelated
 - Yellow module-selection border is not obvious enough; try twice the line width
 - Reconnection dialogue does not always appear
 - Open Recent for patches loaded from a bank
