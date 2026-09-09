@@ -50,6 +50,7 @@ extern "C" {
 #include "paramPages.h"
 #include "nameCache.h"
 #include "graphics.h"      // set_patch_name_from_filename / write_database_to_file (extern "C")
+#include "patchWrite.h"
 #include "mouseHandle.h"   // init_patch (extern "C")
 #include <stdatomic.h>
 #include <pthread.h>

@@ -38,6 +38,7 @@ extern "C" {
 #include "graphics.h"
 #include "prefs.h"
 #include "deviceSync.h"
+#include "patchWrite.h"
 
 // Does this queued command change the patch the G2 holds? Queries, view state and whole-file
 // operations do not: replaying them would be pointless rather than wrong, and counting them as

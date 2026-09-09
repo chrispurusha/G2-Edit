@@ -174,13 +174,22 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         return dispatch_drag();
     }
 
-    // THE BROWSER IS MODAL. While it is open nothing behind it may act on a click — the application
-    // makes the same check before anything else in its own press handler.
-    if (file_browser_active() == true) {
-        if (phase == eClickPress) {
-            handle_file_browser_mouse_down(gMouse);
-            (void)handle_file_browser_click(gMouse);
-        }
+    // A MODAL POPUP OWNS THE CLICK. While one is open nothing behind it may act on a click — the
+    // application makes the same check before anything else in its own press handler.
+    //
+    // Through SynthLib's coordinator rather than by hand. This tested file_browser_active() alone
+    // and called the browser's two handlers directly, which left the OTHER modal popups — the alert
+    // dialog above all — with no way to be clicked, and so no way to be dismissed. The coordinator
+    // knows the layer order and which popups are modal, and dispatches to the frontmost active one.
+    // BOTH PHASES, and the release is not optional: the alert dialog arms its button on the press
+    // and ACTS on the release, so dispatching the press alone drew a pressed OK that never did
+    // anything. The file browser acts on the press, which is why sending only that had looked
+    // sufficient.
+    if (synthlib_popups_modal_active() == true) {
+        // Anything that is not a press is an up here: eClickDrag has already returned above, which
+        // leaves eClickRelease and eClickReleaseOutside, and the popups treat both as the release.
+        (void)synthlib_popups_dispatch_click(gMouse, (phase == eClickPress) ? mouseButtonLeftDown
+                                                                           : mouseButtonLeftUp);
         return true;
     }
 

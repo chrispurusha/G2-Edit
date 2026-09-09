@@ -68,8 +68,23 @@
 // from, and the editor looks the same whether it was built this morning or three weeks ago —
 // which is exactly what prompted this (CT, 2026-08-29).
 static void action_about(int index) {
+    static char text[1024] = {0};
+
     (void)index;
-    show_alert("About", synthlib_about_text("G2 Alike"));
+
+    // AND WHAT THE ENGINE THINKS IT IS DOING. Kept after the meters were reported dead in Ableton
+    // and turned out to be drawing an honest zero - the track was not armed, so nothing was reaching
+    // the plug-in at all. Nothing on the editor says that: the canvas looks identical whether the
+    // engine is playing or idle, so a still meter reads as a broken meter. This line says which,
+    // in the words the application already uses - "Playing 6 modules, 3/8 voices" against
+    // "Playing 6 modules, 0/8 voices" or "Select a module, or patch something into an Out".
+    //
+    // STATIC, not on the stack. show_alert() does copy what it is given (wrap_message() splits it
+    // into its own lines), but this string outlives nothing and there is no reason to make that a
+    // dependency of a dialog that appears a frame later.
+    snprintf(text, sizeof(text), "%s\n\nEngine: %s",
+             synthlib_about_text("G2 Alike"), sound_engine_status_text());
+    show_alert("About", text);
 }
 
 // Named apart from the application's open_help_menu(), which appMenuBar.h declares and this

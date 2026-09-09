@@ -8593,3 +8593,83 @@ THE READOUT WENT AS WELL, in all three applications. "Renderer: <name>" was wort
 were two backends to be uncertain between; with one it is a constant, and the About box has printed
 it all along. G2-Edit KEEPS its Experimental menu - the sound engine lives there - where SynthEdit's
 and EmuUtility's held the renderer and nothing else, so those two menus are gone entirely.
+
+
+2026-09-09  THE SAME METER FREEZE, IN THE PLUG-IN
+
+CT: "Compressor LEDs and volume indications on the G2-Edit plugin aren't updating unless the mouse is
+moved. I think the app was fixed in this respect."
+
+It was, on 2026-09-08, and the plug-in needed the other half of it. The engine publishes what a
+module's meter and LED should show from the AUDIO thread into atomic arrays and cannot ask for a
+frame itself without a syscall per block, so it raises gMetersDirty when a published value actually
+CHANGES and something has to consume it. In the application that consumer is the render loop
+(graphics.c). A plug-in has no loop - it draws when AppKit is told to, and everything else that
+changes the canvas says so through synthlib_request_redraw(). The engine is the one thing that
+cannot, so nothing was looking, and the symptom was identical to the application's: meters that moved
+only while the mouse did.
+
+g2View.m now runs a 50 ms timer that consumes the flag and marks the view dirty - the application's
+own cadence, and deliberately not the drag timer's 60 Hz beside it: a meter is read by eye and twenty
+frames a second is plenty, where a drag is followed by the hand and is not. It runs for as long as
+the editor is open, because in the PLUG-IN the engine is always running - it is what the plug-in is
+for, started in setupProcessing() rather than switched on from a menu. An idle tick costs one atomic
+exchange.
+
+TWO THINGS CHECKED RATHER THAN ASSUMED. The timer is scheduled and firing inside a real host: 62
+ticks in a 3 second tools/vst3host run, 20.7 Hz, which is the 50 ms asked for. And the flag has
+exactly ONE consumer in each binary - graphics.c is deliberately not in do-vst3's source list - so
+the two cannot eat each other's notifications, which is the failure a consuming flag invites.
+
+Stopped in -removeFromSuperview beside the drag timer and again in -dealloc, for the same reason the
+detach is in both: the timer retains the view through its block, so leaving it running leaks the view
+in a host that skips the deterministic path.
+
+- ***THE PLUG-IN COULD NOT SAVE, AND NEVER HAD (2026-09-09)*** - File > Save and File > Save As did
+  nothing in the VST3 plug-in. vst3/g2Draw.c's deferred-menu drain handled ONE message,
+  eRspShowOpenRead, so the eRspShowOpenWrite / eRspSaveToCurrentPath the File menu posts were taken
+  off the queue and dropped - no browser, no error, nothing. The drain now covers the same four cases
+  the application's does (graphics.c), and an open or a save records the path and adds the file to
+  File > Open Recent, which it also never did. write_database_to_file()/write_perf_to_file() were
+  split out of graphics.c into src/patchWrite.c to make it possible at all: they are pure
+  database-in, file-out and lived in graphics.c only because the file-browser callback does, and the
+  plug-in has its own render loop and does not compile graphics.c - so the writer was simply not in
+  the build. CT confirms Save works in Ableton.
+
+- ***THE PLUG-IN NEVER DREW SynthLib's POPUPS (2026-09-09)*** - vst3/g2Draw.c named
+  render_file_browser() and render_context_menu() individually, so the other three popups SynthLib
+  registers - the alert dialog above all - were never drawn. show_alert() had therefore never once
+  been visible in the plug-in: Help > About did nothing at all, and neither would any error it tried
+  to report. Now one synthlib_popups_render(), which is what the application calls and which picks up
+  any popup added later without this file changing. The clicks had the matching gap: g2Input.c tested
+  file_browser_active() by hand and called that browser's two handlers, so nothing could reach the
+  alert to dismiss it - and only the PRESS was dispatched, so OK greyed under the finger and then did
+  nothing (CT saw exactly that). The alert arms its button on the press and acts on the release; the
+  file browser acts on the press, which is why sending only that had looked sufficient. Both phases
+  now go through synthlib_popups_dispatch_click(). Verified by driving tools/vst3host with cliclick:
+  About opens, OK closes it.
+  STILL MISSING, and on the todo: keys and characters do not reach the popups at all, so a filename
+  cannot be typed into the Save browser.
+
+- ***THE METERS WERE DRAWING AN HONEST ZERO (2026-09-09)*** - reported as "compressor LEDs and volume
+  indications aren't updating unless the mouse is moved", then as not moving at all. The plug-in has
+  no render loop, so a 50 ms NSTimer in g2View.m now asks for the frame the engine cannot ask for
+  itself. Two real defects were found in that timer on the way and are worth keeping in mind for the
+  next one: it was created with +scheduledTimerWithTimeInterval: and then added to the run loop a
+  SECOND time for common modes (the documentation forbids registering one timer twice), and its block
+  captured self strongly, so the view could never deallocate - which silently disarmed -dealloc, the
+  backstop against a reopened editor drawing into a dead view's CAMetalLayer (see the Metal layer
+  crash). Neither was the cause.
+  THE CAUSE WAS THAT NO AUDIO WAS ARRIVING: the track was not record-armed. Three temporary counters
+  in Help > About settled it in one reading - ticks and frames both climbing, "changes" stopped at 1.
+  That is the signature of the engine publishing ONE value and then never a different one, because
+  every publish site packs METER_WRITTEN with a level of 0 for silence: the first block flags a change
+  and no block after it does. So the timer, the flag and the canvas were all working and the engine
+  was rendering silence, faithfully drawn.
+  WHAT STAYED: About prints sound_engine_status_text() - "Playing 6 modules, 3/8 voices" against
+  "0/8 voices" or "Select a module, or patch something into an Out". Nothing else on the editor
+  distinguishes an idle engine from a broken one, and a still meter reads as a broken meter. The
+  counters themselves are gone. The timer also no longer GATES its redraw on the dirty flag: at a
+  fixed 20 Hz the gate saves one redraw of an idle canvas and buys exactly that ambiguity, so it
+  consumes the flag and redraws whenever sound_engine_active().
+

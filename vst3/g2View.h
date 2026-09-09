@@ -20,6 +20,9 @@
 #ifndef __G2_GL_VIEW_H__
 #define __G2_GL_VIEW_H__
 
+#include <stdint.h>
+#include <stdbool.h>
+
 // An OpenGL surface that lives inside a window somebody else owns.
 //
 // This is the experiment described in vst3/plugin-gui-notes.md: the application's renderer draws

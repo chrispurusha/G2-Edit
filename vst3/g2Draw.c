@@ -67,6 +67,10 @@
 #include "palette.h"      // palette_band_height and palette_render — the band the topbar grows
 #include "fileBrowser.h"
 #include "msgQueue.h"
+#include "patchWrite.h"   // write_database_to_file() — split out of graphics.c, which is not in this build
+#include "misc.h"         // recent_files_add()
+#include "alertDialog.h"       // show_alert() on a failed write
+#include "synthlibPopups.h"    // synthlib_popups_render() — draws the alert dialog and the browsers
 #include "g2AppStubs.h"
 #include "g2Patch.h"
 #include "g2Draw.h"
@@ -83,6 +87,18 @@
 
 static bool gFontReady = false;
 
+// Remembers where the patch on screen came from, so File > Save can write straight back to it.
+// The application's remember_file_path() (graphics.c) carries a performance branch and four slots;
+// a plug-in instance is one patch in slot 0, so this is the whole of it. Self-copy is guarded for
+// the same reason it is there: File > Save hands this the very buffer it is about to write into,
+// and COPY_STRING expands its destination three times.
+static void g2_remember_file_path(const char * path) {
+    if ((path == NULL) || (path[0] == '\0') || (gSavedPatchPath[0] == path)) {
+        return;
+    }
+    COPY_STRING(gSavedPatchPath[0], path);
+}
+
 // What the file browser hands back. The application's equivalent goes through its own loader, which
 // carries an online branch and pulls in GLFW; the plug-in already has its own in g2Patch.c.
 static void g2_on_file_chosen(const char * path) {
@@ -94,6 +110,37 @@ static void g2_on_file_chosen(const char * path) {
     // The topbar reads the patch name out of gGlobalSettings, not from us — so set it the way the
     // application does when it opens a file, rather than only remembering it for ourselves.
     set_patch_name_from_filename(0, path);
+
+    // Both the same event as in the application: the file just opened is what File > Save writes
+    // back to, and what File > Open Recent should list. Without these the Save entry has no target
+    // and the recent list stays empty however many patches are opened.
+    recent_files_add(path);
+    g2_remember_file_path(path);
+
+    {
+        const char * leaf = strrchr(path, '/');
+
+        g2_menu_set_loaded_patch_name((leaf != NULL) ? (leaf + 1) : path);
+    }
+}
+
+// The other half. The application's on_file_saved() (graphics.c) chooses between serialising on the
+// USB thread and writing here, according to whether a G2 is connected; there is never one here, so
+// only the offline branch survives. The writer itself is shared — patchWrite.c was split out of
+// graphics.c so this file could reach it.
+static void g2_on_file_saved(const char * path) {
+    if ((path == NULL) || (path[0] == '\0')) {
+        return;     // Cancelled
+    }
+    LOG_INFO("Saving file: %s", path);
+
+    if (write_database_to_file(path, 0) != EXIT_SUCCESS) {
+        show_alert("Save Patch", "The patch could not be written. Check the folder is writable.");
+        return;
+    }
+    set_patch_name_from_filename(0, path);
+    g2_remember_file_path(path);
+    recent_files_add(path);     // A save lists the file too, exactly as an open does
 
     {
         const char * leaf = strrchr(path, '/');
@@ -235,10 +282,55 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
         tMessageContent msg = {0};
 
         if (g2_take_gui_message(&msg) == true) {
-            if (msg.cmd == eRspShowOpenRead) {
-                // Where it opens and what it remembers are set up once at start-up by
-                // load_saved_settings() (persistence.c), exactly as in the application.
-                open_file_browser_read(g2_on_file_chosen);
+            // The same four cases the application's drain handles (graphics.c). Only the read one
+            // used to be here, so File > Save As and File > Save posted a message that this drain
+            // took off the queue and threw away — the dialogue simply never appeared.
+            switch (msg.cmd) {
+                case eRspShowOpenRead:
+                    // Where it opens and what it remembers are set up once at start-up by
+                    // load_saved_settings() (persistence.c), exactly as in the application.
+                    open_file_browser_read(g2_on_file_chosen);
+                    break;
+
+                case eRspOpenPath:
+                    // File > Open Recent. Through the same callback as the browser, so a recent
+                    // open settles Save's target and re-orders the list by one route, not two.
+                    g2_on_file_chosen(msg.patchFileData.filePath);
+                    break;
+
+                case eRspShowOpenWrite:
+                {
+                    // File > Save As. The default name comes from the patch name the way the
+                    // application builds it; there is no performance branch here, since a plug-in
+                    // instance is a single patch in slot 0.
+                    char patchName[CLAVIA_NAME_SIZE + 1]   = {0};
+                    char defaultName[CLAVIA_NAME_SIZE + 6] = {0};   // name (16) + extension (5) + null
+
+                    COPY_STRING(patchName, gGlobalSettings.slot[0].patchName);
+
+                    if (patchName[0] != '\0') {
+                        snprintf(defaultName, sizeof(defaultName), "%s.pch2", patchName);
+                    } else {
+                        snprintf(defaultName, sizeof(defaultName), "patch.pch2");
+                    }
+                    open_file_browser_write(g2_on_file_saved, defaultName);
+                    break;
+                }
+
+                case eRspSaveToCurrentPath:
+
+                    // File > Save: straight back to the remembered path, no browser. Re-checked
+                    // here rather than trusted from the menu, for the application's reason — the
+                    // drain runs a frame or more after the click.
+                    if (gSavedPatchPath[0][0] == '\0') {
+                        open_file_browser_write(g2_on_file_saved, "patch.pch2");
+                    } else {
+                        g2_on_file_saved(gSavedPatchPath[0]);
+                    }
+                    break;
+
+                default:
+                    break;
             }
         }
     }
@@ -316,11 +408,18 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
 
     render_menu_bar(gPluginMenuBar, g2_menu_bar_rect(pointWidth));
 
-    // LAST, so an open menu is drawn over everything it overlaps.
-    // Above the canvas and the chrome, below nothing.
-    render_file_browser();
-
-    render_context_menu();
+    // LAST, so an open menu is drawn over everything it overlaps: above the canvas and the chrome,
+    // below nothing.
+    //
+    // ONE CALL, AND THE ORDER IS DATA - the application's own words for the same line in
+    // render_frame(). This used to be render_file_browser() and render_context_menu(), named
+    // individually, and the consequence was that the THREE SynthLib popups nobody had thought to
+    // name were never drawn. The alert dialog is one of them, so show_alert() had never once been
+    // visible in the plug-in: Help > About did nothing at all, and so would any error it ever tried
+    // to report. The coordinator draws SynthLib's own five in layer order, so a popup added there
+    // arrives here without this file changing. The menu bar is the exception above: its render slot
+    // is NULL because the BAR is the application's, drawn from gPluginMenuBar.
+    synthlib_popups_render();
 
     if (gFontReady == false) {
         // A patch of unreadable modules and a patch of missing font look far too similar to leave
