@@ -3043,13 +3043,13 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeDlyStereo,  paramTypeBypass,         {{   -3,     0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 182 On/Off
     {moduleTypeDlyStereo,  paramTypeFreq,           {{   70,    -3}, { 7,  7}}, anchorBottomLeft,  "HP",           128,   0, NULL,                                  NULL          }, // 180 HP
     // 183 OscPM
-    {moduleTypeOscPM,      paramTypeOscFreq,        {{   40, -13.4}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 9 Coarse
-    {moduleTypeOscPM,      paramTypeCommonDial,     {{   51, -16.5}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 9 Fine
-    {moduleTypeOscPM,      paramTypeToggle,         {{   29,  -4.7}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 9 Kbt
-    {moduleTypeOscPM,      paramTypeMenu,           {{ 24.1,     4}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 9 Tune Mode
-    {moduleTypeOscPM,      paramTypeCommonDial,     {{ 76.9, -10.3}, { 7,  7}}, anchorBottomLeft,  "PhM",          128,   0, NULL,                                  NULL          }, // FM
+    {moduleTypeOscPM,      paramTypeOscFreq,        {{   29, -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 9 Coarse
+    {moduleTypeOscPM,      paramTypeCommonDial,     {{   45, -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 9 Fine
+    {moduleTypeOscPM,      paramTypeToggle,         {{   12,  -15}, { 7,  7}}, anchorBottomLeft,  NULL,            2,   1, kbStrMap,                           offOnColourMap}, // 9 Kbt
+    {moduleTypeOscPM,      paramTypeMenu,           {{ 29,     -15}, { 7,  7}}, anchorBottomLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 9 Tune Mode
+    {moduleTypeOscPM,      paramTypeCommonDial,     {{ 77, -3}, { 7,  7}}, anchorBottomLeft,  "PhM",          128,   0, NULL,                                  NULL          }, // FM
     {moduleTypeOscPM,      paramTypeBypass,         {{   -3,     0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 9 Bypass
-    {moduleTypeOscPM,      paramTypeCommonDial,     {{  7.1, -10.3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // Pitch Mode
+    {moduleTypeOscPM,      paramTypeCommonDial,     {{  12, -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // Pitch Mode
     // 184 Mix1-1A
     {moduleTypeMix1to1A,   paramTypeCommonDial,     {{   64,    14}, { 7,  7}}, anchorTopLeft,     NULL,           128, 100, NULL,                                  NULL          }, // 184 Level
     {moduleTypeMix1to1A,   paramTypeEnable,         {{   40,    16}, {17,  3}}, anchorTopLeft,     NULL,             2,   1, NULL,                                  offOnColourMap}, // 184 Enable1
@@ -4026,10 +4026,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDlyStereo,   connectorDirOut, connectorTypeAudio,   {{  -10,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocLeft }, // 181 Out1
     {moduleTypeDlyStereo,   connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocLeft }, // 181 Out2
     // 183 OscPM
-    {moduleTypeOscPM,       connectorDirIn,  connectorTypeControl, {{  1.6,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight}, // 9 OscC PitchVar
-    {moduleTypeOscPM,       connectorDirIn,  connectorTypeAudio,   {{   62,  -6.7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sync",          labelLocRight}, // Sync
-    {moduleTypeOscPM,       connectorDirIn,  connectorTypeAudio,   {{ 71.4,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight}, // Phase M
-    {moduleTypeOscPM,       connectorDirIn,  connectorTypeControl, {{  1.6, -19.3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight}, // Pitch
+    {moduleTypeOscPM,       connectorDirIn,  connectorTypeControl, {{  3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",            labelLocRight}, // 9 OscC PitchVar
+    {moduleTypeOscPM,       connectorDirIn,  connectorTypeAudio,   {{   57,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sync",          labelLocUp}, // Sync
+    {moduleTypeOscPM,       connectorDirIn,  connectorTypeAudio,   {{ 70,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",            labelLocRight}, // Phase M
+    {moduleTypeOscPM,       connectorDirIn,  connectorTypeControl, {{  3, -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight}, // Pitch
     {moduleTypeOscPM,       connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   }, // Out
     // 184 Mix1-1A
     {moduleTypeMix1to1A,    connectorDirIn,  connectorTypeControl, {{   -3,     6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocRight}, // 184 In
@@ -4168,7 +4168,7 @@ const tModeLocation      modeLocationList[] = {
     {moduleTypeDelayB,     paramTypeMenu,   {{   3,   25}, { 7, 7}}, anchorTopLeft,     "Range", 4, 0, delayABRangeStrMap  }, // 177 Delay Range
     {moduleTypeDlyStereo,  paramTypeMenu,   {{   3,   30}, { 7, 7}}, anchorTopLeft,     "Range", 3, 0, dlyStereoRangeStrMap}, // 182 Delay Range
     {moduleTypeDlyEight,   paramTypeMenu,   {{15.7, -8.4}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 181 Delay Range
-    {moduleTypeOscPM,      paramTypeMenu,   {{-6.7,    4}, { 7, 7}}, anchorTopRight,    "Wave",  2, 0, oscPmWaveStrMap     }, // 183 Wave
+    {moduleTypeOscPM,      paramTypeMenu,   {{  51,    10}, { 7, 7}}, anchorTopLeft,    "Wave",  2, 0, oscPmWaveStrMap     }, // 183 Wave
     {moduleTypeRndClkB,    paramTypeMenu,   {{   3,    8}, { 7, 7}}, anchorTopLeft,     "Char",  2, 0, rndClkBCharStrMap   }, // 206 Character
     {moduleTypeRndPattern, paramTypeToggle, {{   3,    8}, { 7, 7}}, anchorTopLeft,     "Wave",  2, 0, rndPatternWaveStrMap}, // 208 Wave
 };
