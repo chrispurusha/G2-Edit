@@ -612,3 +612,27 @@ NSView * g2_create_gl_view(NSRect frame) {
     gCurrentView = view;
     return view;
 }
+
+// The plain-C door into the above, for the wrapper - see g2View.h.
+//
+// __bridge_retained IS THE POINT OF IT. The view crosses to the caller as a void *, where ARC can
+// see nothing at all, so the +1 has to be handed over explicitly; the wrapper's __bridge_transfer
+// takes it back. Returning an autoreleased object through a void * would have it freed out from
+// under the host at the end of the run loop's next pass.
+void * g2_view_create(double width, double height) {
+    NSView * view = g2_create_gl_view(NSMakeRect(0.0, 0.0, width, height));
+
+    return (__bridge_retained void *)view;
+}
+
+void g2_view_destroy(void * view) {
+    G2View * v = (__bridge G2View *)view;
+
+    // THE TIMERS, WHICH RETAIN THEIR TARGET. A repeating NSTimer holds a strong reference to the
+    // view, so a view the host has removed would otherwise never be deallocated and would go on
+    // waking the main thread for a drag and a meter refresh that no longer have a window.
+    [v.dragTimer invalidate];
+    v.dragTimer = nil;
+    [v.meterTimer invalidate];
+    v.meterTimer = nil;
+}

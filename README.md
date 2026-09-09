@@ -173,66 +173,79 @@ After editing source files, run from the repository root:
 ./do-uncrustify
 ```
 
-Note this covers `src/` and `SynthLib/src/` only — **not** `vst3/`.
+Note this covers `src/` and `SynthLib/src/` only — **not** `plugin/` or `SynthLib/plugin/`.
 
-## Building the VST3 plug-in (experimental)
+## Building the plug-ins (experimental)
 
-The sound engine can also be built as a VST3 plug-in. It plays a `.pch2` file rather than talking
-to a G2, and it renders through the same `soundEngine.c` the application uses.
+The sound engine can also be built as a plug-in, in **two formats from the same sources**: a VST3
+and an Audio Unit. It plays a `.pch2` file rather than talking to a G2, and it renders through the
+same `soundEngine.c` the application uses.
 
 ### Prerequisites
 
-Download the [VST3 SDK](https://github.com/steinbergmedia/vst3sdk) — MIT licensed, so it is
-compatible with this project's GPLv3 — and place it at `~/Documents/vst3sdk`, or point
-`VST3_SDK` at wherever you put it. Only its `pluginterfaces/` directory is compiled, plus one file
-from `public.sdk` that does nothing but instantiate interface IDs. No CMake is involved, and the
-SDK does **not** need building first.
+Only the VST3 needs anything extra. Download the
+[VST3 SDK](https://github.com/steinbergmedia/vst3sdk) — MIT licensed, so it is compatible with this
+project's GPLv3 — and place it at `~/Documents/vst3sdk`, or point `VST3_SDK` at wherever you put it.
+Only its `pluginterfaces/` directory is compiled, plus one file from `public.sdk` that does nothing
+but instantiate interface IDs. No CMake is involved, and the SDK does **not** need building first.
+
+The Audio Unit needs nothing at all — it is written against the system's own C API — so
+`./do-plugin au` works on a machine that has never downloaded the SDK.
 
 ### Build
 
 ```
-./do-vst3
+./do-plugin            # both formats
+./do-plugin vst3       # or just one
+./do-plugin au
 ```
 
-Writes `build/G2 Alike.vst3` — universal (arm64 + x86_64), ad-hoc signed. To install it:
+Writes `build/G2 Alike.vst3` and `build/G2 Alike.component` — universal (arm64 + x86_64), ad-hoc
+signed — and **installs each one** into the system-wide plug-in folder, over whatever was there
+before, clearing its quarantine flag:
 
 ```
-cp -R "build/G2 Alike.vst3" /Library/Audio/Plug-Ins/VST3/
-xattr -dr com.apple.quarantine /Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
+/Library/Audio/Plug-Ins/VST3/G2 Alike.vst3
+/Library/Audio/Plug-Ins/Components/G2 Alike.component
 ```
 
-As with the application, there is no paid Apple Developer membership behind this, so a host may
-refuse to load the bundle until its quarantine flag is cleared — hence the second line.
+Those folders are group-writable on an administrator account, so no `sudo` is needed. Pass
+`--no-install` to build without touching them. As with the application, there is no paid Apple
+Developer membership behind this, so a host would otherwise refuse to load the bundle until its
+quarantine flag was cleared — hence the automatic `xattr`.
+
+An Audio Unit is found through the system's component registry rather than by path, so `do-plugin`
+also restarts `AudioComponentRegistrar` after installing one. If a host still does not list it,
+quit the host and open it again.
 
 ### Which patch it plays
 
-**Temporarily, one patch is compiled into the plug-in** — `PatchTestFiles/SimpleLead.pch2` by
-default, overridable at build time with `$G2_BUILTIN_PATCH`. `do-vst3` generates
-`vst3/g2BuiltInPatch.h` from it on every build, so the file is the source of truth and the header
-is build output.
+The plug-in has a **File** menu of its own, which opens a `.pch2` through the same code the
+application uses. What it loads on startup is chosen in this order:
 
-That is not just convenience. A host may sandbox a plug-in and deny it access to `~/Documents`, in
-which case a perfectly correct file path still produces silence — and silence looks the same
-whatever caused it. Embedding removes that whole class of failure while the rest is being proven.
+1. the path saved into the host project — a *path*, not the patch bytes, so edits you make in
+   G2-Edit are picked up rather than frozen into the project
+2. `$G2_PLUGIN_PATCH`
+3. `~/Documents/G2-Edit/plugin.pch2`
 
-The file-path machinery is still in the source behind it, unused for now, and will choose the patch
-in this order when it comes back: the path saved into the host project, then `$G2_VST3_PATCH`, then
-`~/Documents/G2-Edit/plugin.pch2`. Note that a host launched from the Dock does not inherit shell
-environment variables, so that middle option only ever applies to a scripted run.
+A host launched from the Dock does not inherit shell environment variables, so the middle option
+only ever applies to a scripted run.
+
+Watch for the sandbox trap: a host may deny the plug-in access to `~/Documents`, in which case a
+perfectly correct path still produces silence — and silence looks the same whatever caused it.
 
 ### Controls
 
 The plug-in is called **G2 Alike**, since it plays a patch rather than editing one.
 
-It has its own editor window: a Cocoa panel with sliders for **Morph 1-8** — the G2's own
-performance controls — and an **Output Level** trim, plus a readout of which patch is loaded. All
-nine are exposed as automatable VST3 parameters as well, so a host can record them.
+**Its editor is the application's own canvas.** It draws the patch, with the same File, Settings,
+Controls, Tools, View and Help menus, and it is the same window whichever format your host loaded —
+the two wrappers are thin shells around one view.
 
-That window is *not* a view of the patch. The application draws through GLFW, which owns its own
-window and cannot adopt the one a host provides, so the plug-in has a second and much smaller
-interface rather than a port of the editor's canvas.
-
-Pitch bend and mod wheel are not yet routed.
+Ten parameters are exposed to the host and are all automatable: **Morph 1-8**, the G2's own
+performance controls, an **Output Level** trim and **Pitch Bend**. Pitch bend, the mod wheel,
+aftertouch, sustain and the control pedal all work, routed onto the morph groups the G2 itself wires
+them to.
 
 ### What to expect
 

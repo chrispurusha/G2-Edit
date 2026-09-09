@@ -3,6 +3,19 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.txt.
 Full detail for each is in findings.txt, searchable by the wording below.
+- ***THE AUDIO UNIT (2026-09-09)*** - "G2 Alike.component", aumu G2al CPur, built by ./do-plugin
+  from the same sources as the VST3. auval -v aumu G2al CPur passes clean with no warnings, and
+  tools/auhost opens its Cocoa editor and renders a note. Ableton confirmed working by CT on the
+  day. STILL TO CHECK: Logic and GarageBand, which are the sandboxed hosts - if the plug-in cannot
+  reach ~/Documents the patch path yields silence that looks like every other cause of silence.
+  Also worth confirming there: automation of the ten parameters, the mod wheel and pitch bend
+  (which the AU wrapper maps itself from raw MIDI, where a VST3 host does the mapping), and that a
+  saved project reopens playing the same patch.
+- ***THE SHARED PLUG-IN WRAPPERS (2026-09-09)*** - the VST3 is no longer its own g2Vst3.cpp; it is
+  SynthLib's generic wrapper driven by plugin/g2Plugin.c. Behaviour should be identical, but the
+  paths that changed and are not covered by tools/vst3host are: a project SAVED by an older build
+  reopening (the state blob has a header now, and a headerless blob is meant to be read as a bare
+  patch path), the host's own generic parameter panel, and automation recorded before the change.
 - ***THE PLUG-IN'S METERS AND LEDs NOW REDRAW ON THEIR OWN (2026-09-09)*** - the application half of
   this landed on 2026-09-08; the plug-in had no consumer for the engine's dirty flag, so its
   compressor LED and volume meters moved only while the mouse did. Open the editor in a host with a
