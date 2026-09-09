@@ -8577,3 +8577,19 @@ WORTH KNOWING, and it is why this is not the gamble it sounds: this machine's ow
 said renderBackend=1. The application has been running Metal here for some time, which is the "real
 use" renderBackendSelect.h's old comment was waiting for. SynthEdit's says 0, so it stays on OpenGL
 until someone changes it - a saved setting still wins over the default on either platform.
+
+AND THEN IT GREW TO EVERY TARGET, the same day. The switch above was the plug-in's; SYNTHLIB_NO_GL_BACKEND
+is now set for every Apple build in renderBackendSelect.h, so the APPLICATION is Metal only too, as
+are SynthEdit and EmuUtility. Their Renderer menu items went with it - all three keep the greyed
+"Renderer: <name>" readout and nothing that switches. The prefs.txt escape hatch is gone with the
+backend; SYNTHLIB_ALLOW_GL_ON_APPLE is the rebuild that restores both it and the A/B.
+
+WORTH KNOWING BEFORE THE NEXT RELEASE: this machine had renderBackend=1 saved for G2-Edit (Metal
+already) and renderBackend=0 for SynthEdit (OpenGL). SynthEdit therefore CHANGES renderer on its next
+launch - the saved key now names a backend that is not linked, gfx_backend_choose() refuses it, and
+the LOG_ERROR in synthlibWindow.c says so before falling back to Metal.
+
+THE READOUT WENT AS WELL, in all three applications. "Renderer: <name>" was worth a line while there
+were two backends to be uncertain between; with one it is a constant, and the About box has printed
+it all along. G2-Edit KEEPS its Experimental menu - the sound engine lives there - where SynthEdit's
+and EmuUtility's held the renderer and nothing else, so those two menus are gone entirely.
