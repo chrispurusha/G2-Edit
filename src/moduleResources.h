@@ -3104,7 +3104,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscPerc,    paramTypeOscFreq,        {{   50,    -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 196 Coarse
     {moduleTypeOscPerc,    paramTypeFine,           {{   60,    -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 196 Fine
     {moduleTypeOscPerc,    paramTypeMenu,           {{   50,   -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 196 Tune Mode
-    {moduleTypeOscPerc,    paramTypeToggle,         {{   40,    -7}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   0, offOnStrMap,                           offOnColourMap}, // 196  Kbt
+    {moduleTypeOscPerc,    paramTypeToggle,         {{   40,    -7}, { 7,  7}}, anchorBottomLeft,  NULL,            2,   0, kbStrMap,                           offOnColourMap}, // 196  Kbt
     {moduleTypeOscPerc,    paramTypeCommonDial,     {{   12,    -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 196 Pitch M
     {moduleTypeOscPerc,    paramTypeADRTime,        {{   70,    -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          }, // 196 Decay
     {moduleTypeOscPerc,    paramTypeCommonDial,     {{   80,    -3}, { 7,  7}}, anchorBottomLeft,  "Click",        128,  64, NULL,                                  NULL          }, // 196 Click
@@ -3313,9 +3313,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{    3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Wheel",         labelLocUp   }, // 30 Wheel
     {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{   18,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AftTouch",      labelLocUp   }, // 30 AfterTouch
     {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{   33,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "CtrlPedal",     labelLocUp   }, // 30 ControlPedal
-    {moduleTypeDevice,      connectorDirOut, connectorTypeLogic,   {{   48,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sustain",       labelLocUp   }, // 30 SustainPedal
+    {moduleTypeDevice,      connectorDirOut, connectorTypeLogic,   {{   50,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sustain",       labelLocUp   }, // 30 SustainPedal
     {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{   63,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Stick",         labelLocUp   }, // 30 PitchStick
-    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{   78,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "GWh1",          labelLocUp   }, // 30 Global Wheel 1
+    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{   76,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "GWh1",          labelLocUp   }, // 30 Global Wheel 1
     {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{   88,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "GWh2",          labelLocUp   }, // 30 Global Wheel 2
     // 31 Noise
     {moduleTypeNoise,       connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   }, // 31 Out
