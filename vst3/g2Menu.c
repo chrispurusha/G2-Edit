@@ -100,8 +100,8 @@ void g2_menu_init(void) {
     app_menu_set_device_capable(false);
 }
 
-// The patch the File menu last opened, for the topbar to show. Set by the plug-in's own
-// file_menu_open_patch() in g2FileMenu.c.
+// The patch the File menu last opened, for the topbar to show. Set by file_menu_open_patch(), which
+// is the application's own (src/menuActions.c) and is compiled into the plug-in.
 static char gLoadedPatchName[256] = {0};
 
 const char * g2_menu_loaded_patch_name(void) {
