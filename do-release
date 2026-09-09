@@ -1,7 +1,7 @@
 #!/bin/zsh
 
-# Builds a universal (arm64 + x86_64) Release binary of the editor AND the VST3
-# plug-in, and packages both as a .dmg
+# Builds a universal (arm64 + x86_64) Release binary of the editor AND both
+# plug-in formats - a VST3 and an Audio Unit - and packages all three as a .dmg
 # ready to attach to a GitHub release.
 #
 # Versions are semver: V<major>.<minor>.<patch>-beta.<n>. The .dmg is normally
@@ -246,55 +246,65 @@ xattr -cr "$APP"
 codesign --force --options runtime --sign - "$APP"
 codesign --verify --strict "$APP"
 
-# --- plug-in -------------------------------------------------------------
+# --- plug-ins ------------------------------------------------------------
 
-# The VST3 ships in the same .dmg as the app. It is built by do-vst3 rather than
-# by Xcode - a .vst3 is a bundle wrapped around one dylib, and it needs no build
-# system to say so - so it is a separate invocation here.
+# BOTH PLUG-IN FORMATS SHIP IN THE SAME .dmg AS THE APP - a VST3 and an Audio
+# Unit, built from the identical sources by do-plugin. It is a script rather than
+# an Xcode target because each bundle is a wrapper around one dylib and needs no
+# build system to say so, so it is a separate invocation here.
 #
 # A MISSING SDK ABORTS THE RELEASE rather than quietly producing a .dmg with no
-# plug-in in it. The .dmg's own Read Me First.txt tells the user the plug-in is
-# there, so shipping one without it is worse than a build that stops and says so.
-# Set G2_RELEASE_SKIP_VST3=1 for the app on its own, deliberately.
+# plug-ins in it. The .dmg's own Read Me First.txt tells the user they are there,
+# so shipping one without them is worse than a build that stops and says so. Only
+# the VST3 half wants the SDK - `./do-plugin au` needs nothing - but a release
+# ships both or it stops.
+# Set G2_RELEASE_SKIP_PLUGINS=1 for the app on its own, deliberately.
 
-VST3_BUNDLE=""
+PLUGIN_BUNDLES=()
+PLUGIN_ARCHS=""
 
-if [[ -n ${G2_RELEASE_SKIP_VST3:-} ]]; then
-    echo "==> skipping the VST3 (G2_RELEASE_SKIP_VST3 is set)"
+if [[ -n ${G2_RELEASE_SKIP_PLUGINS:-} ]]; then
+    echo "==> skipping the plug-ins (G2_RELEASE_SKIP_PLUGINS is set)"
 else
-    echo "==> building the VST3"
+    echo "==> building the plug-ins"
 
     # BUILT IN THE RELEASE'S OWN TEMPORARY TREE, not the shared build/ directory. build/ is where
     # Xcode puts its IDE products too, so an IDE build or a Clean Build Folder running alongside a
-    # release can delete the bundle between do-vst3 creating it and linking into it — which is how a
+    # release can delete a bundle between do-plugin creating it and linking into it — which is how a
     # release failed with "lipo: can't create temporary output file ... (No such file or directory)".
-    # Keeping it in $DERIVED also means a release never overwrites the developer's own
+    # Keeping them in $DERIVED also means a release never overwrites the developer's own
     # build/G2 Alike.vst3, which is the copy normally installed for testing - and, since $DERIVED is
     # now a temporary directory, never leaves a second bundle of that name where a host will find it.
-    # G2_VERSION_STRING, because do-vst3's own `git describe` would name the PREVIOUS release: the
-    # tag for this one is not created until after the .dmg has been checked. See do-vst3.
-    if ! G2_VERSION_STRING="$VERSION" G2_VST3_OUT="$DERIVED/vst3/G2 Alike.vst3" ./do-vst3 >/dev/null; then
-        echo "error: the VST3 build failed - see ./do-vst3 for the reason" >&2
-        echo "       (needs the VST3 SDK; set VST3_SDK if it is not in ~/Documents/vst3sdk)" >&2
-        echo "       set G2_RELEASE_SKIP_VST3=1 to release the app without the plug-in" >&2
+    #
+    # --no-install for the same reason: do-plugin normally copies each bundle into the machine's
+    # plug-in folders, and a RELEASE must not disturb what the developer has installed.
+    #
+    # G2_VERSION_STRING, because do-plugin's own `git describe` would name the PREVIOUS release: the
+    # tag for this one is not created until after the .dmg has been checked. See do-plugin.
+    if ! G2_VERSION_STRING="$VERSION" G2_PLUGIN_OUT_DIR="$DERIVED/plugins" ./do-plugin --no-install >/dev/null; then
+        echo "error: the plug-in build failed - see ./do-plugin for the reason" >&2
+        echo "       (the VST3 needs the VST3 SDK; set VST3_SDK if it is not in ~/Documents/vst3sdk)" >&2
+        echo "       set G2_RELEASE_SKIP_PLUGINS=1 to release the app without them" >&2
         exit 1
     fi
-    VST3_BUNDLE="$DERIVED/vst3/G2 Alike.vst3"
 
-    if [[ ! -d $VST3_BUNDLE ]]; then
-        echo "error: do-vst3 reported success but $VST3_BUNDLE is not there" >&2
-        exit 1
-    fi
-    # Same universal check the app gets. A single-architecture plug-in would load
-    # for half the users and be invisible to the other half.
-    VST3_BINARY="$VST3_BUNDLE/Contents/MacOS/G2 Alike"
-    VST3_ARCHS=$(lipo -archs "$VST3_BINARY" 2>/dev/null || echo "")
+    for bundle in "$DERIVED/plugins/G2 Alike.vst3" "$DERIVED/plugins/G2 Alike.component"; do
+        if [[ ! -d $bundle ]]; then
+            echo "error: do-plugin reported success but $bundle is not there" >&2
+            exit 1
+        fi
+        # Same universal check the app gets. A single-architecture plug-in would
+        # load for half the users and be invisible to the other half.
+        archs=$(lipo -archs "$bundle/Contents/MacOS/G2 Alike" 2>/dev/null || echo "")
 
-    if [[ $VST3_ARCHS != *arm64* || $VST3_ARCHS != *x86_64* ]]; then
-        echo "error: the VST3 is not universal, got '$VST3_ARCHS'" >&2
-        exit 1
-    fi
-    echo "==> VST3 built $VST3_ARCHS"
+        if [[ $archs != *arm64* || $archs != *x86_64* ]]; then
+            echo "error: ${bundle:t} is not universal, got '$archs'" >&2
+            exit 1
+        fi
+        PLUGIN_BUNDLES+=("$bundle")
+        PLUGIN_ARCHS=$archs
+        echo "==> ${bundle:t} built $archs"
+    done
 fi
 
 # --- stage ---------------------------------------------------------------
@@ -309,12 +319,85 @@ STAGE=$(mktemp -d)
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 
-# NO SYMLINK TO THE VST3 FOLDER beside the Applications one, deliberately: the
-# plug-in folder lives under the user's own home directory and a symlink baked
-# into a .dmg would point at the machine that built it. The Read Me First covers
-# it with a Terminal line and a Finder route instead.
-if [[ -n $VST3_BUNDLE ]]; then
-    cp -R "$VST3_BUNDLE" "$STAGE/"
+# NO SYMLINK TO THE PLUG-IN FOLDERS beside the Applications one, deliberately:
+# there are two of them, both outside the user's reach from a .dmg, and a symlink
+# baked into one would point at the machine that built it. The Read Me First
+# covers them with a Terminal line and a Finder route instead.
+for bundle in "${PLUGIN_BUNDLES[@]}"; do
+    cp -R "$bundle" "$STAGE/"
+done
+
+# THE READ ME MUST NOT PROMISE WHAT IS NOT IN THE .dmg, which is why these two
+# blocks are built rather than written out: with G2_RELEASE_SKIP_PLUGINS set, the
+# plug-in lines have to disappear entirely rather than describe files that are not
+# there. Both are empty in that case and the heredoc below simply loses a section.
+PLUGIN_CONTENTS=""
+PLUGIN_SECTION=""
+PLUGIN_REQUIREMENT=""
+
+if [[ ${#PLUGIN_BUNDLES[@]} -gt 0 ]]; then
+    PLUGIN_CONTENTS=$(cat <<CONTENTS
+
+  G2 Alike.vst3      the same experimental instrument in both plug-in formats.
+  G2 Alike.component It PLAYS a patch rather than editing one, which is why it
+                     has its own name. Install whichever your host uses - see
+                     "THE PLUG-INS" below, and install neither if you only want
+                     the editor.
+CONTENTS
+)
+
+    PLUGIN_SECTION=$(cat <<SECTION
+
+THE PLUG-INS (OPTIONAL)
+
+"G2 Alike" is an instrument that PLAYS a patch rather than editing one. There are
+two copies of it here and they are the same plug-in: "G2 Alike.vst3" for a VST3
+host and "G2 Alike.component" for an Audio Unit host. Install the one your host
+uses; installing both is fine, and hosts that read both formats will then list it
+twice.
+
+It is experimental: it covers around 17 module types, so many patches will load
+without complaint and make no sound.
+
+The editor does not need it and it does not need the editor. Skip this section
+entirely if you only want the editor.
+
+For a VST3 host, in Terminal:
+
+    cp -R "/Volumes/${${VOL_NAME}[1,15]} $VERSION_CLEAN/G2 Alike.vst3" /Library/Audio/Plug-Ins/VST3/
+    xattr -dr com.apple.quarantine /Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
+
+For an Audio Unit host - Logic, GarageBand, Ableton Live on a Mac:
+
+    cp -R "/Volumes/${${VOL_NAME}[1,15]} $VERSION_CLEAN/G2 Alike.component" /Library/Audio/Plug-Ins/Components/
+    xattr -dr com.apple.quarantine /Library/Audio/Plug-Ins/Components/"G2 Alike.component"
+
+Or in Finder: choose Go > Go to Folder, enter
+
+    /Library/Audio/Plug-Ins/VST3          (or .../Components for the Audio Unit)
+
+and drag the plug-in from this window into it. It is unsigned in the same way the
+app is, so still run the matching xattr line above afterwards, or your host will
+refuse to load it with no useful explanation.
+
+Those are the system-wide plug-in folders, which is where installers put things
+and where hosts look first. On an administrator account they are writable without
+any special step. If Terminal says "Permission denied", or a folder does not exist
+at all, put sudo in front of both lines and it will ask for your password.
+
+There are per-user folders at ~/Library/Audio/Plug-Ins/VST3 and
+~/Library/Audio/Plug-Ins/Components which also work. Use one or the other - a copy
+in both means your host may list the plug-in twice and load whichever it finds
+first.
+
+Then rescan plug-ins in your host - most do it at startup. It appears as
+"G2 Alike" by Chris Purusha, as an instrument. An Audio Unit host may need a
+moment the first time while macOS registers the new component; if it does not
+appear at all, quit the host and open it again.
+SECTION
+)
+
+    PLUGIN_REQUIREMENT="The plug-ins need a host; they do not work on their own."
 fi
 
 cat > "$STAGE/Read Me First.txt" <<EOF
@@ -323,9 +406,7 @@ $VOL_NAME $VERSION_CLEAN
 
 WHAT IS IN HERE
 
-  $APP_NAME     the editor
-  G2 Alike.vst3      an experimental VST3 instrument that plays a patch
-                     (see "THE PLUG-IN" below - install it only if you want it)
+  $APP_NAME     the editor$PLUGIN_CONTENTS
 
 STEP 1 - INSTALL
 
@@ -358,44 +439,12 @@ Alternative, if you would rather not use Terminal: double-click the app in
 Applications, dismiss the warning, then open System Settings > Privacy &
 Security, scroll down, and click "Open Anyway".
 
-THE PLUG-IN (OPTIONAL)
-
-"G2 Alike.vst3" is a VST3 instrument that PLAYS a patch rather than editing one,
-which is why it has its own name. It is experimental: it covers around 17 module
-types, so many patches will load without complaint and make no sound.
-
-The editor does not need it and it does not need the editor. Skip this section
-entirely if you only want the editor.
-
-To install it, copy it into your VST3 folder. In Terminal:
-
-    cp -R "/Volumes/${${VOL_NAME}[1,15]} $VERSION_CLEAN/G2 Alike.vst3" /Library/Audio/Plug-Ins/VST3/
-    xattr -dr com.apple.quarantine /Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
-
-Or in Finder: choose Go > Go to Folder, enter
-
-    /Library/Audio/Plug-Ins/VST3
-
-and drag "G2 Alike.vst3" from this window into it. It is unsigned in the same way
-the app is, so still run the xattr line above afterwards, or your host will
-refuse to load it with no useful explanation.
-
-That is the system-wide plug-in folder, which is where installers put things and
-where hosts look first. On an administrator account it is writable without any
-special step. If Terminal says "Permission denied", or the folder does not exist
-at all, put sudo in front of both lines and it will ask for your password.
-
-There is a second, per-user folder at ~/Library/Audio/Plug-Ins/VST3 which also
-works. Use one or the other - a copy in both means your host may list the plug-in
-twice and load whichever it finds first.
-
-Then rescan plug-ins in your host - most do it at startup. It appears as
-"G2 Alike" by Chris Purusha, as an instrument.
+$PLUGIN_SECTION
 
 REQUIREMENTS
 
 macOS 11.5 or later, Apple Silicon or Intel.
-The plug-in needs a VST3 host; it does not work on its own.
+$PLUGIN_REQUIREMENT
 EOF
 
 # --- package -------------------------------------------------------------
@@ -419,10 +468,10 @@ echo
 echo "done: $DMG ($(du -h "$DMG" | cut -f1))"
 echo "architectures: $ARCHS"
 
-if [[ -n $VST3_BUNDLE ]]; then
-    echo "contents: $APP_NAME + G2 Alike.vst3 ($VST3_ARCHS)"
+if [[ ${#PLUGIN_BUNDLES[@]} -gt 0 ]]; then
+    echo "contents: $APP_NAME + ${(j:, :)${(@)PLUGIN_BUNDLES:t}} ($PLUGIN_ARCHS)"
 else
-    echo "contents: $APP_NAME ONLY - no plug-in (G2_RELEASE_SKIP_VST3 was set)"
+    echo "contents: $APP_NAME ONLY - no plug-ins (G2_RELEASE_SKIP_PLUGINS was set)"
 fi
 echo "signature: ad-hoc, NOT notarized - users must clear quarantine"
 

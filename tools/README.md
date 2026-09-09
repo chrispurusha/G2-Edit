@@ -9,7 +9,8 @@ stdlib only, deliberately, so they run wherever the editor builds.
 
 ```
 cc -O2 -Wall -o capture capture.c -framework CoreAudio -framework AudioToolbox -framework CoreFoundation
-./do-vst3host      # the VST3 host; needs the VST3 SDK, same as do-vst3
+./do-vst3host      # the VST3 host; needs the VST3 SDK, same as ../do-plugin
+./do-auhost        # the Audio Unit host; needs no SDK at all
 ```
 
 ## The three parts
@@ -20,6 +21,7 @@ cc -O2 -Wall -o capture capture.c -framework CoreAudio -framework AudioToolbox -
 | `measure.py` | Steps a parameter or a mode on the hardware while `capture` records, and writes a `.json` sidecar describing the plan. |
 | `analyse_ir.py` | Turns a capture into numbers: pre-delay, arrivals, recirculating delays, decay time, spectra. `--selftest` checks it against a synthetic response with known answers. |
 | `vst3host.mm` + `do-vst3host` | A minimal VST3 host, for looking at our own editor. `./vst3host "../build/G2 Alike.vst3" --shot out.png`. Loads the bundle, instantiates component and controller, asks for the editor view and puts it in a window it owns — the one relationship with a plug-in view that cannot be tested any other way. `--seconds N` and `--shot PATH` make it scriptable, so a plug-in rendering change is diffed exactly like an application one. **It proves the plug-in works, not that a host will accept it** — read the header comment before trusting it. |
+| `auhost.m` + `do-auhost` | The same harness for the Audio Unit, and it exists for the one thing `auval` does not do: `auval` instantiates the plug-in, renders it and sends it MIDI, but never opens the Cocoa editor — which leaves the whole `kAudioUnitProperty_CocoaUI` path untested by the tool that says "AU VALIDATION SUCCEEDED". `./auhost --shot out.png` finds the component, renders a few blocks with a note held and reports the peak, then loads the view class out of the plug-in's own bundle by name and puts it in a window it owns. **The component must be installed** — an Audio Unit is found through the system registry, not by path, so `./do-plugin` has to have run first. Run `auval -v aumu G2al CPur` alongside it; the two cover different halves. |
 | `rsrc_layout.py` | Reads module faces out of the original editor's resource file — control positions, `CodeRef`, `InfoFunc`, module height — and transforms them into our percentage space. `./rsrc_layout.py --list`, `./rsrc_layout.py Delay`. **The file's structure is the whole trick**: modules are delimited by indent-2 `Name:` lines, not by `<#Module` blocks, and one block can hold six modules. See `Docs/module-layout-rules.md`. |
 | `g2_note.swift` | Sends MIDI note-on/off to a named destination — `./g2_note "Elektron TM-1" 3 60 100`, velocity 0 for the release; lists the destinations when the name does not match. **Use this, not the backdoor's DEVNOTE, whenever the NOTE BEHAVIOUR is what is being measured.** DEVNOTE is the editor's virtual keyboard and will not start a note while one is releasing — identical at one voice mono and eight voices poly, so it is the path and not voice allocation. Measured through MIDI the same instrument retriggers immediately from the current level; measured through DEVNOTE it appears not to retrigger at all, which is a property of the path and cost most of a session. |
 | `render.c` + `do-render` | Renders **our own engine's** reverb response into a file shaped like a hardware capture, so one analyser command line measures both and the difference is a diff. |

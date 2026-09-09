@@ -56,6 +56,18 @@ void g2_view_request_redraw(void);
 // arrives cannot leave the host without a pointer — see cursor_capture() in g2View.m.
 bool cursor_is_captured(void);
 
+// The editor view, built for a plug-in wrapper that knows no Cocoa.
+//
+// PLAIN C AND A void *, because the caller is g2Plugin.c, which fills in SynthLib's format-free
+// descriptor and must not include an AppKit header to do it. RETAINED (+1) on the way out, as
+// SynthLib's createView() contract requires — see synthlibPlugin.h.
+void * g2_view_create(double width, double height);
+
+// Counterpart to g2_view_create(). Does NOT release the view: the wrapper owns that reference and
+// hands it to ARC. This is for whatever the editor hung off it — timers, in this case, which would
+// otherwise keep firing at a view the host has taken out of its window.
+void g2_view_destroy(void * view);
+
 #ifdef __cplusplus
 }
 #endif

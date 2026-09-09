@@ -588,7 +588,7 @@ static void action_toggle_mutator(int index) {
 // The engine follows whatever single oscillator is selected at the time, so it is deliberately not
 // greyed out when the selection is unsuitable — it simply makes no sound until one is selected, and
 // can be left switched on while clicking around the patch.
-#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+#ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 // A 32-output interface is 16 pairs, and a machine can easily have half a dozen devices. At file
 // scope rather than inside open_experimental_menu(), because the UID snapshot below is sized by the
@@ -616,24 +616,24 @@ static void action_select_audio_device(int index) {
         show_alert("Audio device", "That output could not be opened. It may be in use by another application, or no longer connected.");
     }
 }
-#endif // G2_VST3_BUILD
+#endif // SYNTHLIB_PLUGIN_BUILD
 
 
 // Output level. Attenuation only — see sound_engine_set_output_level_db() for why boosting into the
 // limiter is not offered.
 static const int32_t kOutputLevels[]                                          = {0, -3, -6, -9, -12, -18, -24};
 
-#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+#ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_output_level(int index) {
     if ((index >= 0) && (index < (int)(sizeof(kOutputLevels) / sizeof(kOutputLevels[0])))) {
         audio_output_select_level_db(kOutputLevels[index]);
     }
 }
-#endif // G2_VST3_BUILD
+#endif // SYNTHLIB_PLUGIN_BUILD
 
 
-#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+#ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_buffer_frames(int index) {
     // Item 0 is "Device default"; the rest are the powers of two below.
@@ -641,26 +641,26 @@ static void action_select_buffer_frames(int index) {
 
     audio_output_select_buffer_frames(sizes[((size_t)index < (sizeof(sizes) / sizeof(sizes[0]))) ? index : 0]);
 }
-#endif // G2_VST3_BUILD
+#endif // SYNTHLIB_PLUGIN_BUILD
 
 
-#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+#ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_left_output(int index) {
     audio_output_select_left_channel((uint32_t)index);
 }
-#endif // G2_VST3_BUILD
+#endif // SYNTHLIB_PLUGIN_BUILD
 
 
-#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+#ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_right_output(int index) {
     audio_output_select_right_channel((uint32_t)index);
 }
-#endif // G2_VST3_BUILD
+#endif // SYNTHLIB_PLUGIN_BUILD
 
 
-#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+#ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_midi_source(int index) {
     // The list is offered with "None" first and "All sources" second, so the real sources start at
@@ -673,24 +673,24 @@ static void action_select_midi_source(int index) {
         midi_input_select_source(index - 2);
     }
 }
-#endif // G2_VST3_BUILD
+#endif // SYNTHLIB_PLUGIN_BUILD
 
 
-#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+#ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_midi_channel(int index) {
     midi_input_select_channel((uint32_t)index);   // 0 is Omni, 1..16 a channel
 }
-#endif // G2_VST3_BUILD
+#endif // SYNTHLIB_PLUGIN_BUILD
 
 
-#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+#ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_toggle_midi_to_synth(int index) {
     (void)index;
     midi_input_set_sends_to_synth(!midi_input_sends_to_synth());
 }
-#endif // G2_VST3_BUILD
+#endif // SYNTHLIB_PLUGIN_BUILD
 
 static void action_toggle_sound_engine(int index) {
     (void)index;
@@ -786,7 +786,7 @@ void open_tools_menu(tCoord anchor) {
 // Work that is being tried out rather than relied on. Kept as its own menu so that what is
 // finished and what is an experiment are not sitting side by side under Tools — anything here may
 // change or disappear, and graduates into one of the other menus once it has settled.
-#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+#ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 void open_experimental_menu(tCoord anchor) {
     // Sized with room to spare, and deliberately generous: the entries here are conditional — the
@@ -1025,7 +1025,7 @@ void open_experimental_menu(tCoord anchor) {
 
     open_context_menu(anchor, items, 0, 0.0);
 }
-#endif // G2_VST3_BUILD
+#endif // SYNTHLIB_PLUGIN_BUILD
 
 
 tMenuBarItem gAppMenuBar[] = {
@@ -1036,7 +1036,7 @@ tMenuBarItem gAppMenuBar[] = {
     {"Controls",     open_controls_menu    },
     {"Tools",        open_tools_menu       },
     {"View",         open_view_menu        },
-#ifndef G2_VST3_BUILD
+#ifndef SYNTHLIB_PLUGIN_BUILD
     {"Experimental", open_experimental_menu},
     {"Help",         open_help_menu        },
 #endif
