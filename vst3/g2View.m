@@ -17,38 +17,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// The OpenGL surface, and nothing else.
+// The plug-in's drawing surface, and nothing else.
 //
-// Plain Objective-C, not Objective-C++: an NSOpenGLView subclass genuinely needs the runtime, but
-// nothing here needs C++, and the drawing itself needs neither (g2GlDraw.c). The three languages in
-// this folder each earn their place — g2Editor.mm is Objective-C++ only because IPlugView is a C++
+// METAL ONLY, SINCE 2026-09-09, and this file used to be both. It carried an NSOpenGLView subclass
+// beside the NSView one, chosen by G2_VST3_METAL at build time, because a superclass is fixed when
+// the file is compiled and a runtime choice would have meant two copies of the four hundred lines of
+// input handling below. That was the right trade while OpenGL was the path with the hours in it.
+//
+// It is not the right trade now. The Metal path is what ships, the sibling plug-ins have only ever
+// had Metal, and the OpenGL half was an unreachable second surface implementation that still had to
+// keep compiling - the deprecated NSOpenGLView, a pixel format, a context lock, prepareOpenGL and
+// reshape. WHAT WENT IS macOS-SPECIFIC OPENGL and nothing more: SynthLib's renderBackendGL.c is
+// untouched and is still the application's default, still OpenGL 1.1, and will be the ONLY backend
+// when there are Windows and Linux versions - where a plug-in view is an HWND or an X11 window and
+// could not have used a line of what was removed here anyway.
+//
+// Plain Objective-C, not Objective-C++: a view subclass genuinely needs the runtime, but nothing
+// here needs C++, and the drawing itself needs neither (g2Draw.c). The three languages in this
+// folder each earn their place - g2Editor.mm is Objective-C++ only because IPlugView is a C++
 // interface that has to hand a Cocoa view to the host.
 //
-// NSOpenGLView rather than a bare NSView with a CAOpenGLLayer, and not a layer-backed view either.
-// That follows JUCE, which has shipped exactly this arrangement across a very large number of hosts
-// for years; the layer-backed routes are what people reach for when they hit trouble, and starting
-// at the trouble is a poor way to find out whether there is any.
-
-// THE PLUG-IN'S BACKEND IS A BUILD-TIME CHOICE, unlike the application's.
-//
-// The application picks its backend at start-up from a saved setting, because all that differs is
-// how the window is made. Here the difference reaches further: the view's SUPERCLASS is either
-// NSOpenGLView or NSView, and a superclass is fixed when the file is compiled. Selecting at run
-// time would mean two view classes and so two copies of the four hundred lines of input handling
-// below — a bad trade for a plug-in whose editor is opened and closed by a host anyway.
-//
-// So: G2_VST3_METAL, set by do-vst3, and OpenGL without it. The macro is tested by name rather
-// than compared against RENDER_BACKEND, which no longer exists — when it did, and both sides of
-// the comparison became undefined, this file quietly compiled the OpenGL path because 0 == 0.
-//
-// THE SURFACE IS THE ONLY PART THAT DIFFERS BETWEEN BACKENDS. Roughly thirty lines below are
-// conditional — the superclass, the pixel format, prepareOpenGL/reshape, and the body of
-// -drawRect:. The other four hundred and fifty are mouse, keyboard, tracking areas and the drag
-// timer, none of which care what draws. That is why this is one file with a few #ifs rather than
-// two files sharing a base class: duplicating the input handling to avoid four conditionals would
-// be a bad trade, and the two copies would drift.
-
-#define GL_SILENCE_DEPRECATION    1
+// A LAYER-HOSTING NSView. The CAMetalLayer on it is the surface; there is no context to own, so
+// there is nothing to prepare and nothing to -update on a resize. gfx_set_surface() resizes the
+// layer, called every frame with the view's backing size.
 
 #import <Cocoa/Cocoa.h>
 
@@ -56,26 +47,14 @@
 
 #include "renderBackend.h"
 
-#ifndef G2_VST3_METAL
- #import <OpenGL/OpenGL.h>
- #import <OpenGL/gl.h>
-#endif
 
 #include "defs.h"        // WHEEL_SCROLL_STEP — one wheel notch, shared with the application
-#include "g2GlDraw.h"
-#include "g2GlView.h"
+#include "g2Draw.h"
+#include "g2View.h"
 #include "g2Input.h"
 #include "inputState.h"
 
-#ifndef G2_VST3_METAL
-@interface G2GlView : NSOpenGLView
-#else
-// A PLAIN NSView. Under Metal there is no context to own, so there is nothing for NSOpenGLView to
-// provide — the view is layer-hosting and the CAMetalLayer on it is the surface. Everything
-// NSOpenGLView was doing for us (the -update on resize, the deprecated surface notification it
-// watches on our behalf) simply stops being a problem rather than needing replacing.
-@interface G2GlView : NSView
-#endif
+@interface G2View : NSView
 @property (strong) NSTimer * dragTimer;
 @end
 
@@ -171,83 +150,15 @@ void cursor_release(void) {
     [NSCursor unhide];
 }
 
-// The view currently attached, for g2_gl_view_request_redraw() to find. A host can open more than
+// The view currently attached, for g2_view_request_redraw() to find. A host can open more than
 // one instance of the plug-in, so this is "the most recently attached" rather than "the" view —
 // enough while the editor is a single window per instance, and the thing to revisit when a redraw
 // needs to reach a specific instance. Weak so a closed editor leaves nil here rather than a dangling
 // pointer.
-static __weak G2GlView * gCurrentView = nil;
+static __weak G2View * gCurrentView = nil;
 
-@implementation G2GlView
+@implementation G2View
 
-#ifndef G2_VST3_METAL
-
-- (instancetype)initWithFrame:(NSRect)frame {
-    // No profile attribute, so this is the legacy (compatibility) profile. That is deliberate and
-    // not laziness: the application's renderer is fixed-function throughout — glOrtho, the
-    // client-side vertex arrays the geometry batch submits through, and GL_TEXTURE_2D texturing
-    // with no shader behind it — so a core-profile context here would draw nothing, silently.
-    // (glBegin/glVertex went when the batch arrived, 2026-08-28; the profile requirement did not.)
-    // The multisample buffer has to be in the pixel format; there is no enabling it afterwards.
-    // The application asks GLFW for the same thing with GLFW_SAMPLES — this is the plug-in's copy,
-    // because it has no GLFW to ask. Keep the two in step; GFX_MSAA_SAMPLES is the single value.
-    NSOpenGLPixelFormatAttribute attrs[] = {
-        NSOpenGLPFADoubleBuffer,
-        NSOpenGLPFAAccelerated,
-        NSOpenGLPFAColorSize, 24,
-        NSOpenGLPFAAlphaSize,  8,
-#if GFX_MSAA_SAMPLES > 1
-        NSOpenGLPFAMultisample,
-        NSOpenGLPFASampleBuffers, 1,
-        NSOpenGLPFASamples,       GFX_MSAA_SAMPLES,
-#endif
-        0
-    };
-
-    NSOpenGLPixelFormat * format = [[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
-
-    if (format == nil) {
-        return nil;
-    }
-    self = [super initWithFrame:frame pixelFormat:format];
-
-    if (self == nil) {
-        return nil;
-    }
-
-    // Retina. Without this the surface is allocated at point resolution and scaled up, which looks
-    // soft rather than broken — the kind of fault that survives a long time because nobody can say
-    // exactly what is wrong with it.
-    [self setWantsBestResolutionOpenGLSurface:YES];
-    return self;
-}
-
-- (void)prepareOpenGL {
-    [super prepareOpenGL];
-
-    NSOpenGLContext * context = [self openGLContext];
-    GLint             swap    = 1;
-
-    [context makeCurrentContext];
-    [context setValues:&swap forParameter:NSOpenGLContextParameterSwapInterval];
-    g2_gl_draw_init();
-}
-
-// NO NSViewGlobalFrameDidChangeNotification OBSERVER, though JUCE has one and copying it was the
-// first thing tried here. The compiler rejects it in as many words: that notification is deprecated
-// with "Use NSOpenGLView instead", because NSOpenGLView already watches it and calls -update for
-// you. JUCE needs it because JUCE attaches a context to a bare NSView; subclassing NSOpenGLView buys
-// exactly this, and adding the observer back would only double up the -update calls.
-//
-// If a host ever does resize the view without the surface following, THAT is the thing to reach for
-// — a bare NSView plus a hand-managed NSOpenGLContext and this notification. It is a bigger change
-// than it looks, so it is worth being sure the simple arrangement has actually failed first.
-- (void)reshape {
-    [super reshape];
-    [[self openGLContext] update];
-}
-
-#else  // G2_VST3_METAL
 
 - (instancetype)initWithFrame:(NSRect)frame {
     self = [super initWithFrame:frame];
@@ -255,8 +166,9 @@ static __weak G2GlView * gCurrentView = nil;
     if (self == nil) {
         return nil;
     }
-    // The application does this from its window layer, reading a saved setting; the plug-in has
-    // neither, so the build-time choice is asserted here before anything touches the backend.
+    // ASSERTED, not chosen. The application picks a backend at start-up from a saved setting; this
+    // build has only one linked (SYNTHLIB_NO_GL_BACKEND), so this says out loud which one everything
+    // below is talking to rather than leaving it to a default.
     gfx_backend_choose(eRenderBackendMetal);
 
     // LAYER-HOSTING, and the order matters: gfx_attach_window() assigns the layer and only then
@@ -264,14 +176,10 @@ static __weak G2GlView * gCurrentView = nil;
     // draw over them. Handing it the VIEW rather than a window is the whole difference from the
     // application — in a plug-in the window belongs to the host.
     gfx_attach_window((__bridge void *)self);
-    g2_gl_draw_init();
+    g2_draw_init();
     return self;
 }
 
-// No -prepareOpenGL and no -reshape: there is no context to prepare and nothing to -update. The
-// layer is resized from gfx_set_surface(), which every frame calls with the view's backing size.
-
-#endif  // G2_VST3_METAL
 
 // WITHOUT A TRACKING AREA, -mouseMoved: IS NEVER CALLED. That is why menu items did not highlight:
 // the highlight is drawn from the pointer position (render_context_menu reads it), and the position
@@ -598,22 +506,6 @@ static __weak G2GlView * gCurrentView = nil;
     NSRect backing = [self convertRectToBacking:bounds];
     double scale   = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
 
-#ifndef G2_VST3_METAL
-    NSOpenGLContext * context = [self openGLContext];
-    CGLContextObj     cgl     = [context CGLContextObj];
-
-    // The lock is not needed while only this method touches the context, but it is what makes it
-    // safe for the USB thread to ever drive a redraw — which is how the real editor works, and the
-    // reason the application has a wake callback at all. Establishing the discipline now costs one
-    // pair of calls; retrofitting it after a threading bug costs considerably more.
-    CGLLockContext(cgl);
-    [context makeCurrentContext];
-
-    g2_gl_draw_frame((int)backing.size.width, (int)backing.size.height, scale);
-
-    [context flushBuffer];
-    CGLUnlockContext(cgl);
-#else
     // SELECT THIS VIEW'S CONTEXT FIRST. The backend keeps one CURRENT window, so with two editors
     // open whichever drew last left it pointing at its own layer, and drawing without claiming ours
     // would paint into the other one's window. Attaching an already-known view is a pointer
@@ -622,14 +514,12 @@ static __weak G2GlView * gCurrentView = nil;
     // editor to end up drawing into another's layer.
     gfx_attach_window((__bridge void *)self);
 
-    // No lock and no current-context dance: a Metal command buffer is built and committed here and
-    // nowhere else, and the backend owns its own state. The frame is drawn into the backend's
-    // offscreen target and gfx_present() blits it to this view's layer — the same two calls the
-    // application's render_present() makes, spelled out because a plug-in's frame is driven by
-    // AppKit rather than by a render loop.
-    g2_gl_draw_frame((int)backing.size.width, (int)backing.size.height, scale);
+    // A Metal command buffer is built and committed here and nowhere else, and the backend owns its
+    // own state. The frame is drawn into the backend's offscreen target and gfx_present() blits it
+    // to this view's layer — the same two calls the application's render_present() makes, spelled
+    // out because a plug-in's frame is driven by AppKit rather than by a render loop.
+    g2_draw_frame((int)backing.size.width, (int)backing.size.height, scale);
     gfx_present();
-#endif
 }
 
 @end
@@ -638,14 +528,14 @@ static __weak G2GlView * gCurrentView = nil;
 // why the main-thread hop is here rather than being every caller's problem. dispatch_async and not
 // _sync: a synchronous hop from a thread the main thread is waiting on is a deadlock, and redrawing
 // a frame later is never worth that risk.
-void g2_gl_view_request_redraw(void) {
+void g2_view_request_redraw(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [gCurrentView setNeedsDisplay:YES];    // nil-safe; a closed editor simply does nothing
     });
 }
 
 NSView * g2_create_gl_view(NSRect frame) {
-    G2GlView * view = [[G2GlView alloc] initWithFrame:frame];
+    G2View * view = [[G2View alloc] initWithFrame:frame];
 
     gCurrentView = view;
     return view;

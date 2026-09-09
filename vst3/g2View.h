@@ -47,10 +47,10 @@ extern "C" {
 // how synthlib_request_redraw() is answered in the plug-in (g2AppStubs.c), which is the whole
 // mechanism by which a change anywhere in the editor causes a repaint. The application posts an
 // empty event to wake a blocked GLFW loop; here, AppKit schedules the frame.
-void g2_gl_view_request_redraw(void);
+void g2_view_request_redraw(void);
 
 // True while cursor_capture() has the pointer hidden. Polled by the drag tick so a release that never
-// arrives cannot leave the host without a pointer — see cursor_capture() in g2GlView.m.
+// arrives cannot leave the host without a pointer — see cursor_capture() in g2View.m.
 bool cursor_is_captured(void);
 
 #ifdef __cplusplus

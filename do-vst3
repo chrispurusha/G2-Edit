@@ -43,7 +43,7 @@ SOURCES=(
     "$HERE/src/patchParamsResources.c"
     "$HERE/vst3/g2Patch.c"
     "$HERE/vst3/g2HostIo.c"
-    "$HERE/vst3/g2GlDraw.c"
+    "$HERE/vst3/g2Draw.c"
     "$HERE/vst3/g2AppStubs.c"
     "$HERE/vst3/g2Input.c"
     "$HERE/vst3/g2Menu.c"
@@ -102,23 +102,21 @@ SOURCES=(
     # makes no GLFW CALL, so it needs the include path below and not the library — which is the
     # whole reason the editor's drawing can appear in a plug-in at all.
     "$HERE/SynthLib/src/utilsGraphics.c"
-    # The chosen render backend. THIS LIST IS MANUAL, and the file compiles to nothing unless
-    # renderBackendSelect.h picks it — so adding renderBackendMetal.m here later is additive,
-    # not a swap. Omitting one entirely breaks the plug-in alone, and only at link time.
+    # THE RENDER BACKEND, AND THERE IS ONLY ONE OF THEM HERE. renderBackendGL.c is deliberately NOT
+    # in this list: SYNTHLIB_NO_GL_BACKEND below compiles its declaration out of renderBackend.c, so
+    # a GL table is neither linked nor reachable. The file itself is untouched in SynthLib - it is
+    # still the application's default and will be the only backend on Windows and Linux.
     "$HERE/SynthLib/src/renderBackend.c"
     "$HERE/SynthLib/src/synthlibVersion.c"
-    "$HERE/SynthLib/src/renderBackendGL.c"
-    # Both backends are always in the list. Each compiles to nothing unless renderBackendSelect.h
-    # picks it, so this is not a swap — see G2_VST3_METAL below for how to choose.
     "$HERE/SynthLib/src/renderBackendMetal.m"
     "$HERE/SynthLib/src/geometry.c"
 )
 
-# Plain Objective-C: the GL surface subclasses NSOpenGLView, which needs the runtime but no C++.
-# Kept out of the Objective-C++ pass below so the C++ is confined to the one file that has to speak
-# it — a VST3 interface is a C++ vtable, and that is the only reason any of this folder is C++.
+# Plain Objective-C: the view is an AppKit subclass, which needs the runtime but no C++. Kept out of
+# the Objective-C++ pass below so the C++ is confined to the one file that has to speak it — a VST3
+# interface is a C++ vtable, and that is the only reason any of this folder is C++.
 OBJC_SOURCES=(
-    "$HERE/vst3/g2GlView.m"
+    "$HERE/vst3/g2View.m"
 )
 
 # Objective-C++ for the editor window: it builds an AppKit view, and the host owns the NSView it is
@@ -155,12 +153,17 @@ CXX_SOURCES=(
 # ever gains -Wall or -Weverything, or other people's headers will start failing our build.
 WARNFLAGS=(-Werror)
 
-# Both backend files are always compiled and both frameworks always linked — see renderBackend.h.
+# METAL ONLY ON macOS, SINCE 2026-09-09.
 #
-# BUT THE PLUG-IN STILL CHOOSES AT BUILD TIME, unlike the application, because its view's SUPERCLASS
-# differs between the two (NSOpenGLView against NSView) and a superclass is fixed at compile time.
-# G2_VST3_METAL=1 selects Metal; without it the plug-in is OpenGL, which is what has been in a real
-# host and remains the default.
+# The plug-in used to build either backend - its view's SUPERCLASS differed between them
+# (NSOpenGLView against NSView) so the choice had to be made here rather than at run time. Metal is
+# the only one now: it is what ships, both sibling plug-ins have only ever had it, and the OpenGL
+# half was an unreachable second surface implementation that still had to keep compiling.
+#
+# WHAT IS GONE IS macOS-SPECIFIC OPENGL. SynthLib's renderBackendGL.c is untouched, is still what the
+# APPLICATION uses by default, and will be the only backend when there are Windows and Linux versions
+# - where a plug-in's view is an HWND or an X11 window and could not have used a line of what was
+# removed from g2View.m anyway.
 # WHICH VERSION THIS BINARY CLAIMS TO BE, and the sequencing matters — see the About box in
 # SynthLib's synthlibVersion.h.
 #
@@ -180,20 +183,14 @@ fi
 
 echo "Version: $VERSION_STRING"
 
-BACKEND_DEFS=(-DSYNTHLIB_VERSION_STRING="\"$VERSION_STRING\"")
+# SYNTHLIB_NO_GL_BACKEND is what makes it Metal ONLY rather than Metal by default: it compiles the
+# GL table's declaration out of renderBackend.c, so renderBackendGL.c is not in the source list
+# above, -framework OpenGL is not on the link line below, and gfx_backend_available() answers false
+# for OpenGL if anything ever asks.
+BACKEND_DEFS=(-DSYNTHLIB_VERSION_STRING="\"$VERSION_STRING\"" -DSYNTHLIB_NO_GL_BACKEND=1)
 BACKEND_LIBS=(-framework Metal -framework QuartzCore)
 
-# METAL IS THE DEFAULT HERE, unlike the application, and deliberately so: the plug-in is
-# experimental in its entirety, it cannot offer the runtime choice the application does (its view's
-# superclass is fixed at compile time), and Metal is where this is going. G2_VST3_OPENGL=1 builds
-# the OpenGL one instead — worth keeping, because it is the path with the most hours in a real host
-# and so the thing to fall back to if a host misbehaves.
-if [ "$G2_VST3_OPENGL" = "1" ]; then
-    echo "Plug-in backend: OpenGL"
-else
-    BACKEND_DEFS+=(-DG2_VST3_METAL=1)
-    echo "Plug-in backend: Metal (set G2_VST3_OPENGL=1 for OpenGL)"
-fi
+echo "Plug-in backend: Metal"
 
 INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/vst3" -I"$SDK"
           # Headers only. GLFW's is here because utilsGraphics.c includes it for the GL
@@ -251,7 +248,7 @@ done
 mkdir -p "$OUT/Contents/MacOS"
 
 clang++ $ARCHS $MIN -bundle "${OBJECTS[@]}" "$FREETYPE_LIB" \
-    -framework CoreFoundation -framework Cocoa -framework OpenGL "${BACKEND_LIBS[@]}" -o "$BIN"
+    -framework CoreFoundation -framework Cocoa "${BACKEND_LIBS[@]}" -o "$BIN"
 
 # A bundle needs its Info.plist and the four-character PkgInfo, or the host will not look inside it.
 cat > "$OUT/Contents/Info.plist" <<PLIST

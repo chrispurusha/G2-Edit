@@ -17,7 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// The plug-in's mouse input, in C. g2GlView.m turns Cocoa events into calls on this; nothing below
+// The plug-in's mouse input, in C. g2View.m turns Cocoa events into calls on this; nothing below
 // knows what an NSEvent is.
 //
 // THE HIT-TESTING IS NOT REIMPLEMENTED HERE, and that is the point. Every clickable thing on the
@@ -46,7 +46,7 @@
 #include "clickRegion.h"
 #include "globalVars.h"
 #include "canvasDrag.h"
-#include "inputState.h"    // multi_select_modifier_held() — real modifiers now, see g2GlView.m
+#include "inputState.h"    // multi_select_modifier_held() — real modifiers now, see g2View.m
 #include "canvasCoords.h"  // canvas_zoom_step() — shared with the application's Cmd +/-
 #include "contextMenu.h"
 #include "menuBar.h"
@@ -59,7 +59,7 @@
 #include "topbarResourcesAccess.h"
 #include "palette.h"          // the module palette band, which the topbar opens under itself
 
-#include "g2GlView.h"      // cursor_is_captured() — the hidden-pointer safety net
+#include "g2View.h"      // cursor_is_captured() — the hidden-pointer safety net
 #include "g2Input.h"
 
 // The last position the host told us about, in the canvas's logical units with a top-left origin —
@@ -151,7 +151,7 @@ static bool dispatch_drag(void) {
 // g2_input_set_mouse() takes, so the conversion to logical units is identical — see there.
 //
 // This is what makes an incremental dial drag unbounded: with the pointer decoupled from the hardware
-// (cursor_capture() in g2GlView.m), its absolute position is frozen, so differencing absolute positions
+// (cursor_capture() in g2View.m), its absolute position is frozen, so differencing absolute positions
 // would report no movement at all. Accumulating the deltas into gMouse gives the same VIRTUAL pointer
 // GLFW's disabled-cursor mode hands the application — see cocoa_window.m in ThirdParty, which adds
 // [event deltaY] to a top-left-origin position exactly as this does, and is where the sign came from.
@@ -400,7 +400,7 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
     // CMD + WHEEL ZOOMS, as it does in the application, around the pointer rather than the corner.
     //
     // ONE STEP PER EVENT rather than scaling by the delta: the deltas arriving here are PIXELS (see
-    // the caller in g2GlView.m, which multiplies by the backing scale), so feeding them to a zoom
+    // the caller in g2View.m, which multiplies by the backing scale), so feeding them to a zoom
     // factor that moves in 0.1 steps would fling the canvas from one limit to the other on a single
     // flick. A notch is a step, which is what Cmd +/- does too.
     if (cmd_modifier_held() == true) {
@@ -431,7 +431,7 @@ bool g2_input_drag_tick(void) {
     // A CAPTURED POINTER KEEPS THIS TICKING, and that is the whole point of the line. cursor_capture()
     // hides the pointer for the entire HOST process and decouples it from the hardware, so a mouse-up
     // that never arrives leaves the user with no cursor and a frozen mouse in their DAW. The recovery
-    // that catches that lives in g2GlView.m (-recoverLostRelease), because the authority on whether the
+    // that catches that lives in g2View.m (-recoverLostRelease), because the authority on whether the
     // button is still down is [NSEvent pressedMouseButtons] and not anything visible from here — but it
     // can only run while this timer is alive, and a parameter drag on its own never made it busy.
     //
@@ -502,7 +502,7 @@ void cursor_raw_coord(double * rawX, double * rawY) {
 // what a real implementation would add is NSCursor hide/unhide plus
 // CGAssociateMouseAndMouseCursorPosition (or CGDisplayHideCursor with warping), so that the pointer
 // stays put on the dial instead of travelling away from it and eventually running out of screen.
-// cursor_capture()/cursor_release() are NOT here — they need NSCursor, so they live in g2GlView.m
+// cursor_capture()/cursor_release() are NOT here — they need NSCursor, so they live in g2View.m
 // with the rest of this shell's Cocoa. See there for how the pointer is hidden and put back.
 
 // The application reads this from GLFW; the plug-in reads it from whatever the host last delivered.
@@ -515,7 +515,7 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
 
 // ── Keyboard ────────────────────────────────────────────────────────────────────────────────────
 //
-// The shell decodes, the shared code acts — the same split as the modifier seam. g2GlView.m hands over
+// The shell decodes, the shared code acts — the same split as the modifier seam. g2View.m hands over
 // a character it took from -charactersIgnoringModifiers (so this sees the key's unshifted meaning, and
 // '+' and '=' are both worth accepting) plus whether Command was down.
 //

@@ -24,7 +24,7 @@
 // canvas is built from — rather than through raw GL calls of its own. That is the point of the
 // exercise: the drawing code was never the part tied to GLFW, and this file is the evidence.
 //
-// The split from g2GlView.m matters more than the contents. That file owns the NSOpenGLView, the
+// The split from g2View.m matters more than the contents. That file owns the NSOpenGLView, the
 // context and the host's resize notifications; this one owns pixels and knows nothing about who is
 // hosting it. It is C rather than Objective-C because nothing here needs a runtime.
 
@@ -69,7 +69,7 @@
 #include "msgQueue.h"
 #include "g2AppStubs.h"
 #include "g2Patch.h"
-#include "g2GlDraw.h"
+#include "g2Draw.h"
 
 // The application's canvas grey (graphics.c render_frame()), so the strip reads as a piece of the
 // editor rather than as a debug surface that happens to be switched on.
@@ -117,7 +117,7 @@ void apply_top_bar_height(void) {
     synthlib_request_redraw();
 }
 
-void g2_gl_draw_init(void) {
+void g2_draw_init(void) {
     // The same session-wide drawing state the application sets from synthlibWindow.c. Shared
     // rather than repeated, so the plug-in and the application cannot drift apart on it.
     render_backend_init();
@@ -177,7 +177,7 @@ void g2_gl_draw_init(void) {
     gFontReady = preload_glyph_textures(FONT_PATH, FONT_PRELOAD_SIZE);
 }
 
-void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
+void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     double pointWidth  = 0.0;
     double pointHeight = 0.0;
 

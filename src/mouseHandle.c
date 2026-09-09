@@ -244,7 +244,7 @@ bool handle_scrollbar_click(tCoord coord) {
 // the release is synthesised through the ORDINARY path — mouse_button() with a GLFW_RELEASE, exactly
 // what the callback would have delivered — so the drag ends the way it should have, undo entry
 // included, rather than being torn down by hand here. Same authority and same approach as the
-// plug-in shell's recoverLostRelease (vst3/g2GlView.m).
+// plug-in shell's recoverLostRelease (vst3/g2View.m).
 void recover_lost_cursor(void) {
     // A CANVAS GESTURE WITH NO BUTTON BEHIND IT LOST ITS RELEASE. Every one of them is torn down by
     // the left-up handler, so if one is still running while nothing is pressed, that event never

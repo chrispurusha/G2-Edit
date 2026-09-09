@@ -73,7 +73,7 @@ void register_sleep_wake_notifications(void) {
 // is derived from the event that went missing: our drag flags were set by the press and cleared by
 // the release, and glfwGetMouseButton() reports the last event GLFW was handed, which is the same
 // stream. [NSEvent pressedMouseButtons] reports the hardware, so it is true whether or not we were
-// told — and it is what the VST3 shell already uses for the same job (vst3/g2GlView.m).
+// told — and it is what the VST3 shell already uses for the same job (vst3/g2View.m).
 bool platform_any_mouse_button_down(void) {
     return [NSEvent pressedMouseButtons] != 0;
 }

@@ -27,7 +27,7 @@ extern "C" {
 // One-off GL state and the font atlas. Must be called with the context CURRENT — building the glyph
 // textures is a GL operation, and doing it without a context silently produces a font that draws
 // nothing.
-void g2_gl_draw_init(void);
+void g2_draw_init(void);
 
 // Draw one frame into the current context.
 //
@@ -35,7 +35,7 @@ void g2_gl_draw_init(void);
 // already resolved both, because asking for them is a platform question and this file is
 // deliberately not part of the platform. The renderer works in logical points, so the scale is what
 // connects the two.
-void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale);
+void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale);
 
 #ifdef __cplusplus
 }

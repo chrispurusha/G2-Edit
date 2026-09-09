@@ -8528,3 +8528,52 @@ TWO TESTS, NEITHER NEEDING ABSOLUTE CALIBRATION, which is what makes them worth 
      all in peak; if the trigger point does not move, it is a peak detector.
 
 Test 1 is a few minutes with the existing probe. Do it before anything that depends on the law.
+
+
+2026-09-09  THE PLUG-IN IS METAL ONLY ON macOS
+
+vst3/g2GlView.m carried two surfaces - an NSOpenGLView subclass and an NSView hosting a CAMetalLayer
+- chosen by G2_VST3_METAL at build time because a view's SUPERCLASS is fixed when the file compiles.
+Metal has been the default since it landed. The OpenGL half is now deleted, along with
+-framework OpenGL on the link line and renderBackendGL.c from the plug-in's source list.
+
+WHAT MAKES IT "ONLY" RATHER THAN "BY DEFAULT" is a new SynthLib switch, SYNTHLIB_NO_GL_BACKEND,
+defined by do-vst3. It compiles the GL table's declaration out of renderBackend.c, so the GL backend
+is not linked, gfx_backend_available() answers false for OpenGL, and RENDER_BACKEND_DEFAULT resolves
+to Metal. There is a #error for the case that would leave a build with no backend at all. The
+symmetry is deliberate: Metal is excluded by PLATFORM (#ifdef __APPLE__) and OpenGL by CHOICE, and
+only where the target has something better.
+
+WHAT WAS NOT REMOVED, AND WHY IT MATTERS FOR WINDOWS AND LINUX. SynthLib/src/renderBackendGL.c is
+untouched. It is still what the APPLICATION uses by default, it is still OpenGL 1.1, and it will be
+the ONLY backend when there are Windows and Linux versions. Nothing in this change makes that harder:
+what went from the plug-in was macOS-specific OpenGL - NSOpenGLView, an NSOpenGLPixelFormat, a
+CGLLockContext dance, prepareOpenGL and reshape - and a plug-in on Windows or Linux is handed an HWND
+or an X11 window and could not have used a line of it.
+
+RENAMED, because the names had stopped being true: g2GlView.m/.h -> g2View.m/.h, g2GlDraw.c/.h ->
+g2Draw.c/.h, and g2_gl_view_* / g2_gl_draw_* -> g2_view_* / g2_draw_*. The class G2GlView is G2View.
+Entries ABOVE this line still name the old files - they are the history and are left alone.
+
+VERIFIED: the editor screenshot from tools/vst3host is BYTE-IDENTICAL to the build before the change,
+otool shows Metal and QuartzCore and no OpenGL, and nm reports zero undefined gl* symbols. The file
+went from 652 lines to 542.
+
+vst3/plugin-gui-notes.md now opens with a note saying it is history: its subject is how to host an
+OpenGL context in a plug-in window, which is a question this project has stopped asking on macOS.
+
+AND THE MENU ITEM WENT WITH IT. Settings had "Use Metal Renderer (on restart)" / "Use OpenGL Renderer
+(on restart)" while Metal was the new thing worth trying. On macOS the position is now the other way
+round - Metal is the default, and the plug-in has nothing else linked - so an item offering to switch
+back offers a path nothing exercises, and one a user could leave themselves on without knowing what
+it cost. Only the greyed "Renderer: <name>" readout stays, because otherwise there is no way to tell
+what drew the window.
+
+THE WAY BACK IS STILL THERE, deliberately not in the menu: synthlibWindow.c reads "renderBackend" from
+prefs.txt at start-up, so one line in a text file still forces OpenGL on a machine that has trouble
+with Metal. A recovery route should look like one.
+
+WORTH KNOWING, and it is why this is not the gamble it sounds: this machine's own prefs.txt already
+said renderBackend=1. The application has been running Metal here for some time, which is the "real
+use" renderBackendSelect.h's old comment was waiting for. SynthEdit's says 0, so it stays on OpenGL
+until someone changes it - a saved setting still wins over the default on either platform.

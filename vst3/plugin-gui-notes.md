@@ -1,5 +1,15 @@
 # Getting the editor canvas into a plug-in window
 
+> **HISTORY, SINCE 2026-09-09.** The question below has been answered and the answer is not the one
+> these notes work towards: the plug-in draws through **Metal only** on macOS, and the OpenGL half
+> of `g2View.m` (then `g2GlView.m`) has been deleted along with `-framework OpenGL` and
+> `renderBackendGL.c` from its build. Everything here about `NSOpenGLView`, `CAOpenGLLayer`,
+> `NSViewGlobalFrameDidChangeNotification`, the compatibility profile and JUCE's context handling is
+> kept because it is the reasoning that got there and because **Windows and Linux will need OpenGL** -
+> `SynthLib/src/renderBackendGL.c` is untouched and is still the application's default renderer. What
+> is gone is macOS-specific OpenGL *in the plug-in*, which a Windows or Linux plug-in could not have
+> used anyway. Read the sections below as a record of what was tried, not as instructions.
+
 Reference notes, not a plan. The question behind all of it: G2-Edit draws through GLFW, which
 creates and owns its window, and a VST3 host instead hands the plug-in an `NSView` it owns. What
 would it take for the application's renderer to draw there?
@@ -40,7 +50,7 @@ enum and translate once at the boundary. The genuinely platform-bound API surfac
 pixel dimensions and does the `glViewport` + `glOrtho` with no GLFW involvement. Only
 `synthlib_scale_query_initial()` and `synthlib_scale_set_content_scale()` call GLFW, and both only to
 *ask* for a scale factor. Splitting those two out is a concrete, small first refactor step — it is
-the reason `g2GlDraw.c` currently repeats four lines of projection set-up rather than calling the
+the reason `g2Draw.c` currently repeats four lines of projection set-up rather than calling the
 shared function.
 
 **Fonts load from an absolute system path** (`/System/Library/Fonts/Supplemental/Arial.ttf`, in
@@ -149,7 +159,7 @@ leverage, but the change gets reviewed and committed in that repo rather than th
 
 ## What has been built so far
 
-The spike, in `g2GlView.m` (the surface) and `g2GlDraw.c` (the pixels), wired into `g2Editor.mm` as a
+The spike, in `g2View.m` (the surface) and `g2Draw.c` (the pixels), wired into `g2Editor.mm` as a
 200pt strip below the existing controls. It answers only the question that decides everything else:
 **will an OpenGL context attached to a host-owned NSView draw at all.**
 
@@ -161,7 +171,7 @@ backing-scale path.
 **Confirmed in Ableton Live**, 2026-08-08 — the strip renders correctly below the controls, alongside
 Live's own drawing, with no host complaint.
 
-**The application's renderer then replaced the raw GL**, same day. `g2GlDraw.c` now draws through
+**The application's renderer then replaced the raw GL**, same day. `g2Draw.c` now draws through
 `render_rectangle_with_border()`, `render_text()`, `set_rgb_colour()` and `get_text_width()` — the
 same SynthLib calls the editor canvas is built from. Text, borders, colours and text *measurement*
 all work unchanged. Nothing in SynthLib had to be modified to achieve it.
@@ -179,7 +189,7 @@ What that took, and it was less than expected:
 - `topBarHeight` is set to 0 here, deliberately, not to the application's value: it tells the
   renderer how much of the window the top bar and menu occupy, and this strip has neither.
 
-**The actual patch canvas followed**, same day. `g2GlDraw.c` now calls `render_modules()` and
+**The actual patch canvas followed**, same day. `g2Draw.c` now calls `render_modules()` and
 `render_cables()` — the application's own canvas functions — against the module database that
 `g2Patch.c` fills when the plug-in loads its `.pch2`. Modules, dials, values, response curves,
 envelope graphs, connectors and cables all draw correctly. The AppKit slider panel is gone; the
@@ -214,7 +224,7 @@ Known limits of what is drawn:
 **Repaint-on-change and mouse CLICKS work**, same day. Verified by clicking a module in a host
 window and watching it acquire the selection border and repaint.
 
-- `synthlib_request_redraw()` is no longer a stub. It calls `g2_gl_view_request_redraw()`, which
+- `synthlib_request_redraw()` is no longer a stub. It calls `g2_view_request_redraw()`, which
   hops to the main thread (`dispatch_async`, never `_sync` — a sync hop from a thread the main
   thread waits on is a deadlock) and marks the view dirty. Every part of the editor that changes
   something already calls this, so one function made the whole canvas repaint on change.
@@ -322,7 +332,7 @@ scaled in points rather than backing pixels, so a little less sensitive than the
 Retina display. Rotary is the fallback default, but the choice persists in the plug-in's own prefs.
 
 **THE POINTER IS HIDDEN FOR A DRAG NOW** (2026-08-09), which this paragraph previously said was
-missing. `cursor_capture()`/`cursor_release()` in `g2GlView.m` hide it on a capturing drag and warp it
+missing. `cursor_capture()`/`cursor_release()` in `g2View.m` hide it on a capturing drag and warp it
 back to where the drag started on release — without the warp it would reappear wherever the physical
 mouse had wandered to, which is most of the way across a screen after a long drag.
 
@@ -376,7 +386,7 @@ The press already worked: `connector_click_handler` in `moduleGraphics.c` sets `
 plug-in links that file. What moved out of `mouseHandle.c` into `canvasDrag.c` was
 `handle_cable_connect()` and its three helpers (`set_up_cable_key`, `swap_cable_to_from_if_needed`,
 `input_connector_has_cable`), plus the loose-end motion added to `canvas_drag_motion()`. The in-flight
-cable is drawn in `g2GlDraw.c` after the settled ones, as `render_frame()` does — without it a drag is
+cable is drawn in `g2Draw.c` after the settled ones, as `render_frame()` does — without it a drag is
 invisible until it lands, which reads as nothing happening.
 
 `msg_send()` inside the connect tells the G2 about the new cable; here it reaches a stub and does
@@ -397,7 +407,7 @@ TWO CONSEQUENCES worth knowing:
 - **Canvas coordinates are LOGICAL UNITS, not points** (~1.42 per point at a 900pt window). Everything
   the renderer draws is in them, including `MENU_BAR_HEIGHT`, so the chrome scales with the canvas
   exactly as it does in the application.
-- **Mouse input had to follow.** `g2GlView.m` now hands over PHYSICAL PIXELS — it is authoritative
+- **Mouse input had to follow.** `g2View.m` now hands over PHYSICAL PIXELS — it is authoritative
   about Cocoa's origin and its own backing scale, and nothing else — and `g2Input.c` divides by
   `gGlobalGuiScale`, which is the same conversion `get_global_gui_scaled_mouse_coord()` performs in
   the application. The two were only equal while the logical canvas was mis-sized.
@@ -560,7 +570,7 @@ the editor's file browser rather than an `NSOpenPanel`. `vst3/g2FileDialog.m` ha
 browser is modal: `file_browser_active()` is checked before anything else in the press path, as the
 application checks it.
 
-**A REAL BUG FOUND BY TESTING ZOOM, unrelated to zoom.** `g2_gl_draw_init()` runs when the editor
+**A REAL BUG FOUND BY TESTING ZOOM, unrelated to zoom.** `g2_draw_init()` runs when the editor
 view is first created — AFTER the processor has loaded its patch. It called `init_patch(0)`
 unconditionally, so OPENING THE EDITOR WIPED THE LOADED PATCH. Now guarded with
 `slot_has_modules(0) == false`: defaults are for an empty plug-in, not for one that already has
@@ -598,7 +608,7 @@ THE SOURCE LIST IS ONLY THE FIRST OF THREE PLACES, and this is the general shape
 of shared chrome needs:
 
 1. its file in `do-vst3`'s `SOURCES` — `src/` is synchronized into the app target and MANUAL here;
-2. its render call in `g2GlDraw.c` — the plug-in's frame is a hand-written sequence, not
+2. its render call in `g2Draw.c` — the plug-in's frame is a hand-written sequence, not
    `render_frame()`, so nothing appears merely because the file links;
 3. its input calls in `g2Input.c` — `mouseHandle.c` is deliberately not in this build, so every
    `palette_left_down/left_up/cursor_moved/scroll/drag_active` call had to be placed by hand, in the
@@ -654,8 +664,8 @@ Remaining, in order:
    of repeating its four lines. Lands in the SynthLib repo and affects SynthEdit and EmuUtility when
    they next advance their pin — which is why it has been deferred rather than done in passing.
 
-The language split in this folder is deliberate: `g2GlDraw.c` is plain C because pixels need no
-runtime, `g2GlView.m` is plain Objective-C because `NSOpenGLView` needs one but nothing needs C++,
+The language split in this folder is deliberate: `g2Draw.c` is plain C because pixels need no
+runtime, `g2View.m` is plain Objective-C because `NSOpenGLView` needs one but nothing needs C++,
 and `g2Editor.mm` is Objective-C++ only because `IPlugView` is a C++ vtable that has to hand over a
 Cocoa view.
 
@@ -754,7 +764,7 @@ argument is not just tidier, it is more correct — the poll answered "now", and
 event was queued.
 
 One writer, many readers. Each shell translates its own toolkit (`modifier_bits_from_glfw()` in
-`mouseHandle.c`, `modifier_bits_from_ns()` in `g2GlView.m`) into `tModifierBits` and pushes; the
+`mouseHandle.c`, `modifier_bits_from_ns()` in `g2View.m`) into `tModifierBits` and pushes; the
 predicates read state and know nothing about windows. Results:
 - `glfwGetKey` call sites in `src/`: **13 → 0.**
 - The three plug-in stubs in `g2AppStubs.c` are **gone, not reimplemented** — Shift and Command now
