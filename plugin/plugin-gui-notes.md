@@ -10,6 +10,14 @@
 > is gone is macOS-specific OpenGL *in the plug-in*, which a Windows or Linux plug-in could not have
 > used anyway. Read the sections below as a record of what was tried, not as instructions.
 
+> **ALSO SINCE 2026-09-09.** This folder was `vst3/` and there is now a second plug-in format, so
+> file paths below that begin `vst3/` are `plugin/`. The view these notes are about has not moved —
+> `plugin/g2View.m` is still the NSView and `plugin/g2Draw.c` still draws the frame — but the
+> *format* shells around it are SynthLib's now and are shared: `SynthLib/plugin/`'s
+> `synthlibPluginVst3View.mm` is the `IPlugView` and `synthlibPluginAuView.m` is the Audio Unit's
+> `AUCocoaUIBase` factory, and **both hand the host the same view**. `g2Editor.mm`, which is where
+> the `IPlugView` used to be and which several sections below name, is gone.
+
 Reference notes, not a plan. The question behind all of it: G2-Edit draws through GLFW, which
 creates and owns its window, and a VST3 host instead hands the plug-in an `NSView` it owns. What
 would it take for the application's renderer to draw there?
