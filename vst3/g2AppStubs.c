@@ -52,7 +52,7 @@
 #include "paramOverlay.h"
 #include "utilsGraphics.h"
 #include "synthlibGlobals.h"
-#include "g2GlView.h"
+#include "g2View.h"
 #include "prefs.h"
 #include "g2Prefs.h"
 #include "canvasDrag.h"
@@ -69,7 +69,7 @@
 // multi_select_modifier_held(), shift_modifier_held() and cmd_modifier_held() were stubs returning
 // false, so Shift-drag on a mutator slider and Cmd-click behaved as unmodified clicks here. They are
 // now REAL, from SynthLib's inputState.c, because that seam holds pushed state instead of polling a
-// window: g2GlView.m translates each NSEvent's modifierFlags and pushes them exactly as the
+// window: g2View.m translates each NSEvent's modifierFlags and pushes them exactly as the
 // application pushes GLFW's. A stub that answers false is a feature quietly missing; a shared piece
 // of state each shell fills in is the same code working in both.
 //
@@ -271,7 +271,7 @@ void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint3
 // part of the editor that changes something already calls this, so wiring this one function is what
 // makes the whole canvas repaint on change.
 void synthlib_request_redraw(void) {
-    g2_gl_view_request_redraw();
+    g2_view_request_redraw();
 }
 
 // The application's wake-the-render-loop wrapper (graphics.c). It is one line there too — this is

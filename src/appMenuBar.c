@@ -710,33 +710,6 @@ static void action_toggle_sound_engine(int index) {
     }
 }
 
-// SWITCHING TAKES EFFECT ON THE NEXT LAUNCH, and the alert says so rather than leaving the user to
-// wonder why nothing changed. It cannot be done live: the window itself is built differently for
-// each backend — OpenGL has GLFW create a context alongside it, Metal has GLFW create none — so
-// changing it means destroying and rebuilding the window, its context, every glyph atlas and
-// texture, and all the callbacks established around it. See renderBackend.h.
-static void action_toggle_render_backend(int index) {
-    (void)index;
-
-    tRenderBackendId wanted = (gfx_backend_current() == eRenderBackendOpenGL)
-                              ? eRenderBackendMetal : eRenderBackendOpenGL;
-
-    if (!gfx_backend_available(wanted)) {
-        show_alert("Renderer", "That renderer is not available in this build.");
-        return;
-    }
-    // Written, not applied. gfx_backend_choose() is deliberately NOT called here: the running
-    // window belongs to the current backend and would be left talking to the wrong one.
-    prefs_set_int("renderBackend", (long)wanted);
-
-    static char      message[160];
-
-    snprintf(message, sizeof(message),
-             "The %s renderer will be used the next time G2-Edit starts.\n\nCurrently running: %s.",
-             gfx_backend_name(wanted), gfx_backend_name(gfx_backend_current()));
-    show_alert("Renderer", message);
-}
-
 static void action_assign_midi_cc_all(int index) {
     (void)index;
     midi_cc_assign_all_knobs(gSlot);
@@ -825,18 +798,19 @@ void open_experimental_menu(tCoord anchor) {
     static tMenuItem items[20];
     int              i = 0;
 
-    // WHICH RENDERER, offered here because Metal is exactly what this menu is for — new, worth
-    // trying, not yet what anything relies on. The label names the backend it will switch TO, the
-    // same state-in-the-label idiom as the Mutator and the sound engine, and says outright that it
-    // needs a restart so nobody clicks it twice wondering why the screen looks the same.
-    if (gfx_backend_available(eRenderBackendMetal)) {
-        items[i++] = (tMenuItem){
-            (gfx_backend_current() == eRenderBackendOpenGL)
-            ? "Use Metal Renderer (on restart)" : "Use OpenGL Renderer (on restart)",
-            (tRgb)RGB_GREY_3, action_toggle_render_backend, 0, NULL, 0, 0.0
-        };
-        // What is running now, greyed so it reads as information rather than a control. Without it
-        // there is no way to tell which backend drew the window you are looking at.
+    // WHICH RENDERER IS RUNNING - a readout, not a control, since 2026-09-09.
+    //
+    // There was a "Use Metal Renderer (on restart)" item here while Metal was new and OpenGL was
+    // what everything relied on. On macOS the position is now the other way round: Metal is the
+    // default and the plug-in has nothing else linked, so an item offering to switch back is
+    // offering a path that is no longer exercised - and one a user could leave themselves on
+    // without knowing what it cost them.
+    //
+    // THE WAY BACK IS STILL THERE and is deliberately not in the menu: synthlibWindow.c reads
+    // "renderBackend" from prefs.txt at start-up, so setting it by hand still forces OpenGL if Metal
+    // ever misbehaves on a particular machine. That is a recovery route, which is what it should
+    // look like, rather than a setting to browse.
+    {
         static char rendererLine[48];
 
         snprintf(rendererLine, sizeof(rendererLine), "Renderer: %s",
