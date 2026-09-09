@@ -40,6 +40,9 @@ SOURCES=(
     "$HERE/src/cableChain.c"
     "$HERE/src/moduleResourcesAccess.c"
     "$HERE/src/protocol.c"
+    # The .pch2/.prf2 writer, split out of graphics.c on 2026-09-09 — graphics.c is the
+    # application's render loop and is not in this build, but File > Save needs the writer.
+    "$HERE/src/patchWrite.c"
     "$HERE/src/patchParamsResources.c"
     "$HERE/vst3/g2Patch.c"
     "$HERE/vst3/g2HostIo.c"

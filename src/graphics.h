@@ -55,12 +55,12 @@ void toggle_mouse_crosshair(void); // TEMPORARY debug aid — F9, Debug builds o
 // Patch DB <-> file helpers. Serialising/naming a slot touches the shared patch database, so when
 // online these run on the USB thread (via eMsgCmdSavePatchFile / eMsgCmdSavePerfFile / eMsgCmdLoadFile)
 // to stay atomic against the USB thread's own DB writes — see their handlers in usbComms.c.
-int write_database_to_file(const char * filepath, uint32_t slot);  // EXIT_SUCCESS / EXIT_FAILURE
 
 // Asks the user whose copy wins after edits were made while the G2 was disconnected. Called from
 // the reverse-queue drain on eRspOfflineConflict; writes recovery files before it asks.
 void show_offline_conflict_dialog(uint32_t slotMask);
-int write_perf_to_file(const char * filepath);                     // EXIT_SUCCESS / EXIT_FAILURE
+// write_database_to_file() / write_perf_to_file() moved to patchWrite.h on 2026-09-09 so the
+// plug-in, which does not compile graphics.c, can save too.
 
 // Busy state for in-flight whole-slot device ops. device_op_begin() is called when the op is enqueued
 // (label e.g. "Loading…"/"Saving…"); device_op_end() when its completion response is drained.
