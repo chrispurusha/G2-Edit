@@ -2004,17 +2004,17 @@ const tParamLocation     paramLocationList[] = {
     //  5 Invert -- No params
     //  6 Unknown
     //  7 OscB
-    {moduleTypeOscB,       paramTypeOscFreq,        {{   29,    -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },       // 7 Tune
-    {moduleTypeOscB,       paramTypeFine,           {{   45,    -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },       // 7 Cent
+    {moduleTypeOscB,       paramTypeOscFreq,        {{   28,    -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },       // 7 Tune
+    {moduleTypeOscB,       paramTypeFine,           {{   44,    -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },       // 7 Cent
     {moduleTypeOscB,       paramTypeToggle,         {{   12,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},       // 7 Kbt
     {moduleTypeOscB,       paramTypeCommonDial,     {{   12,    -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },       // 7 Pitch M
-    {moduleTypeOscB,       paramTypeMenu,           {{   29,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },       // 7 Pitch Type
-    {moduleTypeOscB,       paramTypeCommonDial,     {{   62,    -3}, { 7,  7}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },       // FM M
+    {moduleTypeOscB,       paramTypeMenu,           {{   28,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },       // 7 Pitch Type
+    {moduleTypeOscB,       paramTypeCommonDial,     {{   60,    -3}, { 7,  7}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },       // FM M
     {moduleTypeOscB,       paramTypeShape,          {{   55,    10}, { 7,  7}}, anchorTopLeft,     "Shape",        128,   0, NULL,                                  NULL          },       // 7 Shape 50% to 99%, not decimals
-    {moduleTypeOscB,       paramTypeCommonDial,     {{   80,    -3}, { 7,  7}}, anchorBottomLeft,  "ShpM",         128,   0, NULL,                                  NULL          },       // 7 Shape M
+    {moduleTypeOscB,       paramTypeCommonDial,     {{   76,    -3}, { 7,  7}}, anchorBottomLeft,  "ShpM",         128,   0, NULL,                                  NULL          },       // 7 Shape M
     {moduleTypeOscB,       paramTypeMenu,           {{   39,    12}, { 7,  7}}, anchorTopLeft,     "Wave",           5,   2, shapeTypeStrMap,                       NULL          },       // 7 Waveform
     {moduleTypeOscB,       paramTypeBypass,         {{   -3,     0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },       // 7 Bypass
-    {moduleTypeOscB,       paramTypeMenu,           {{   62,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fmTypeStrMap,                          NULL          },       // 7 FM Type
+    {moduleTypeOscB,       paramTypeMenu,           {{   60,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fmTypeStrMap,                          NULL          },       // 7 FM Type
     // 8 OscShpB
     {moduleTypeOscShpB,    paramTypeOscFreq,        {{   29,    -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },       // 8 Tune  (nudged left so wide Freq/Factor value clears Cent)
     {moduleTypeOscShpB,    paramTypeFine,           {{   45,    -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },       // 8 Cent
@@ -2441,13 +2441,13 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscD,       paramTypeCommonDial,     {{   12,    -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },    // 96 Pitch M
     {moduleTypeOscD,       paramTypeBypass,         {{   -3,     3}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          },    // 96 Bypass
     // 97 OscA
-    {moduleTypeOscA,       paramTypeOscFreq,        {{   29,    -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },    // 97 Tune
-    {moduleTypeOscA,       paramTypeFine,           {{   45,    -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },    // 97 Fine
+    {moduleTypeOscA,       paramTypeOscFreq,        {{   28,    -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },    // 97 Tune
+    {moduleTypeOscA,       paramTypeFine,           {{   44,    -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },    // 97 Fine
     {moduleTypeOscA,       paramTypeToggle,         {{   12,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},    // 97 Kbt
     {moduleTypeOscA,       paramTypeCommonDial,     {{   12,    -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },    // 97 Pitch M
     {moduleTypeOscA,       paramTypeMenu,           {{   51,    10}, { 7,  7}}, anchorTopLeft,     "Wave",           6,   2, shapeOscATypeStrMap,                   NULL          },    // 97 Waveform
     {moduleTypeOscA,       paramTypeBypass,         {{   -3,     4}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },    // 97 Bypass  (moved off middle-right to clear the wave graph — CT, 2026-08-24. NOT to the bottom corner: the audio output already sits at {-3,-3}, and the two drew on top of each other)
-    {moduleTypeOscA,       paramTypeMenu,           {{   29,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },    // 97 Pitch Type
+    {moduleTypeOscA,       paramTypeMenu,           {{   28,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },    // 97 Pitch Type
 
     // 98 FreqShift
     {moduleTypeFreqShift,  paramTypeFreqShift,      {{ 65.1, -12.7}, { 7,  7}}, anchorBottomLeft,  "FreqShift",    128,   0, NULL,                                  NULL          },                 // 98 FreqShift
@@ -3103,14 +3103,14 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeModAmt,     paramTypeMenu,           {{    3,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, expStrMap,                             NULL          }, // 195 Exp/Lin
     {moduleTypeModAmt,     paramTypeMenu,           {{   20,    -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invertStrMap,                          NULL          }, // 195 m/1-m
     // 196 OscPerc
-    {moduleTypeOscPerc,    paramTypeOscFreq,        {{   50,    -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 196 Coarse
-    {moduleTypeOscPerc,    paramTypeFine,           {{   60,    -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 196 Fine
-    {moduleTypeOscPerc,    paramTypeMenu,           {{   50,   -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 196 Tune Mode
-    {moduleTypeOscPerc,    paramTypeToggle,         {{   40,    -7}, { 7,  7}}, anchorBottomLeft,  NULL,            2,   0, kbStrMap,                           offOnColourMap}, // 196  Kbt
+    {moduleTypeOscPerc,    paramTypeOscFreq,        {{   28,    -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 196 Coarse
+    {moduleTypeOscPerc,    paramTypeFine,           {{   44,    -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 196 Fine
+    {moduleTypeOscPerc,    paramTypeMenu,           {{   28,   -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 196 Tune Mode
+    {moduleTypeOscPerc,    paramTypeToggle,         {{   12,    -15}, { 7,  7}}, anchorBottomLeft,  NULL,            2,   0, kbStrMap,                           offOnColourMap}, // 196  Kbt
     {moduleTypeOscPerc,    paramTypeCommonDial,     {{   12,    -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 196 Pitch M
-    {moduleTypeOscPerc,    paramTypeADRTime,        {{   70,    -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          }, // 196 Decay
-    {moduleTypeOscPerc,    paramTypeCommonDial,     {{   80,    -3}, { 7,  7}}, anchorBottomLeft,  "Click",        128,  64, NULL,                                  NULL          }, // 196 Click
-    {moduleTypeOscPerc,    paramTypeToggle,         {{   90,    -7}, { 7,  7}}, anchorBottomLeft,  "Punch",          2,   0, offOnStrMap,                           offOnColourMap}, // 196 Punch
+    {moduleTypeOscPerc,    paramTypeADRTime,        {{   60,    -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          }, // 196 Decay
+    {moduleTypeOscPerc,    paramTypeCommonDial,     {{   76,    -3}, { 7,  7}}, anchorBottomLeft,  "Click",        128,  64, NULL,                                  NULL          }, // 196 Click
+    {moduleTypeOscPerc,    paramTypeToggle,         {{   76,    -15}, { 7,  7}}, anchorBottomLeft,  "Punch",          2,   0, offOnStrMap,                           offOnColourMap}, // 196 Punch
     {moduleTypeOscPerc,    paramTypeBypass,         {{   -3,     3}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          }, // 196 Bypass
     // 197 Status -- No params
     // 198 PitchTrack
@@ -3195,8 +3195,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscB,        connectorDirIn,  connectorTypeControl, {{    3,   -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight}, // 7 OscB Pitch
     {moduleTypeOscB,        connectorDirIn,  connectorTypeControl, {{    3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",            labelLocRight}, // PitchVar
     {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{    3,     7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Sync",          labelLocRight}, // Sync
-    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{   55,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight}, // FmMod
-    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{   73,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight}, // Shape Mod
+    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{   53,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight}, // FmMod
+    {moduleTypeOscB,        connectorDirIn,  connectorTypeAudio,   {{   69,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight}, // Shape Mod
     {moduleTypeOscB,        connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   }, // Out
     //  8 OscShpB
     {moduleTypeOscShpB,     connectorDirIn,  connectorTypeControl, {{    3,   -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   }, // 8 OscShpB
@@ -4088,9 +4088,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeModAmt,      connectorDirOut, connectorTypeControl, {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   }, // 194 Out
 
     // 196 OscPerc
-    {moduleTypeOscPerc,     connectorDirIn,  connectorTypeControl, {{    3,   -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight},     // 196 Pitch
+    {moduleTypeOscPerc,     connectorDirIn,  connectorTypeControl, {{    3,   -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight},     // 196 Pitch
     {moduleTypeOscPerc,     connectorDirIn,  connectorTypeControl, {{    3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight},     // 196  PitchVar
-    {moduleTypeOscPerc,     connectorDirIn,  connectorTypeAudio,   {{   25,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",          labelLocUp   },     // 196 Trig
+    {moduleTypeOscPerc,     connectorDirIn,  connectorTypeAudio,   {{   3,    7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "Trig",          labelLocRight   },     // 196 Trig
     {moduleTypeOscPerc,     connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },     // 196 Out
 
     // 197 Status
