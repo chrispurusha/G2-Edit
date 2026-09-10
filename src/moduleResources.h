@@ -2920,20 +2920,22 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscShpA,    paramTypeMenu,           {{   38,    10}, { 7,  7}}, anchorTopLeft,     "Wave",           6,   0, oscShpAStrMap,                         NULL          },           // 163 Wave
     {moduleTypeOscShpA,    paramTypeBypass,         {{   -3,     0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },
     // 164 OscDual
-    {moduleTypeOscDual,    paramTypeOscFreq,        {{ 12, -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          },                // 164 Coarse
-    {moduleTypeOscDual,    paramTypeFine,           {{ 45, -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                // 164 Fine
+    {moduleTypeOscDual,    paramTypeOscFreq,        {{ 28, -3}, { 7,  7}}, anchorBottomLeft,  "Tune",        128,  64, NULL,                                  NULL          },                // 164 Coarse
+    {moduleTypeOscDual,    paramTypeFine,           {{ 44, -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                // 164 Fine
     {moduleTypeOscDual,    paramTypeToggle,         {{ 12, -15}, { 7,  7}}, anchorBottomLeft,  NULL,            2,   1, kbStrMap,                           offOnColourMap},                // 164 Kbt
-    {moduleTypeOscDual,    paramTypeCommonDial,     {{  30, -12}, { 7,  7}}, anchorBottomLeft,  "PitchM",        128,   0, NULL,                                  NULL          },                // 164 Pitch M
-    {moduleTypeOscDual,    paramTypeMenu,           {{  3.8, -25.8}, { 7,  7}}, anchorBottomLeft,  "TuneM",             4,   0, pitchTypeStrMap,                       NULL          },                // 164 Tune M
-    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 76, 9}, { 7,  7}}, anchorTopLeft,  "SqrLvl",       128, 127, NULL,                                  NULL          },                // 164 SqrLvl
-    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 61,   9}, { 7,  7}}, anchorTopLeft,  "PW",           128,   0, NULL,                                  NULL          },                // 164 PW
-    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 76,   15}, { 7,  7}}, anchorTopLeft,  "SawLvl",       128,   0, NULL,                                  NULL          },                // 164 SawLvl
-    {moduleTypeOscDual,    paramTypePhase,          {{ 63.1,   -13}, { 7,  7}}, anchorBottomLeft,  "Phase",        128,   0, NULL,                                  NULL          },                // 164 Phase
-    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 88, 9}, { 7,  7}}, anchorTopLeft,  "SubLvl",        128,   0, NULL,                                  NULL          },                // 164 Suboct Lvl
-    {moduleTypeOscDual,    paramTypeBypass,         {{-3,  0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },
-    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 63.1, -42.6}, { 7,  7}}, anchorBottomLeft,  "SqrM",           128,   0, NULL,                                  NULL          },                // 164 Sqr M
-    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 54.1, -11.4}, { 7,  7}}, anchorBottomLeft,  "SawM",           128,   0, NULL,                                  NULL          },                // 164 Saw M
-    {moduleTypeOscDual,    paramTypeMenu,           {{ -4.4,   -17}, { 7,  7}}, anchorBottomRight, "TuneM",           2,   0, offOnStrMap,                           NULL          },                // 164 Tune M
+    {moduleTypeOscDual,    paramTypeCommonDial,     {{  12, -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                // 164 Pitch M
+    {moduleTypeOscDual,    paramTypeMenu,           {{  28, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },                // 164 Tune M
+    
+    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 72, 13}, { 7,  7}}, anchorTopLeft,  "SqrL",       128, 127, NULL,                                  NULL          },                // 164 SqrLvl
+    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 56,   13}, { 7,  7}}, anchorTopLeft,  "PW",           128,   0, NULL,                                  NULL          },                // 164 PW
+    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 72,   28}, { 7,  7}}, anchorTopLeft,  "SawL",       128,   0, NULL,                                  NULL          },                // 164 SawLvl
+    {moduleTypeOscDual,    paramTypePhase,          {{ 56,   28}, { 7,  7}}, anchorTopLeft,  "Phase",        128,   0, NULL,                                  NULL          },                // 164 Phase
+    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 88, 13}, { 7,  7}}, anchorTopLeft,  "SubL",        128,   0, NULL,                                  NULL          },                // 164 Suboct Lvl
+    {moduleTypeOscDual,    paramTypeBypass,         {{-3,  -12}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },
+    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 40, 13}, { 7,  7}}, anchorTopLeft,  "SqrM",           128,   0, NULL,                                  NULL          },                // 164 Sqr M
+    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 40, 28}, { 7,  7}}, anchorTopLeft,  "SawM",           128,   0, NULL,                                  NULL          },                // 164 Saw M
+    {moduleTypeOscDual,    paramTypeMenu,           {{ -5,   25}, { 7,  7}}, anchorTopRight, "Soft",           2,   0, offOnStrMap,                           NULL          },                // 164 Tune M
+    
     // 165 DXRouter
     {moduleTypeDXRouter,   paramTypeMenu,           {{   10,   -17}, { 7,  7}}, anchorBottomLeft,  "Algorithm",     32,   0, dxAlgStrMap,                           NULL          },                // 165 Algorithm
     {moduleTypeDXRouter,   paramTypeMenu,           {{   10,    -7}, { 7,  7}}, anchorBottomLeft,  "Feedback",       8,   0, dxFeedbackStrMap,                      NULL          },                // 165 Feedback
@@ -3912,11 +3914,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscShpA,     connectorDirIn,  connectorTypeAudio,   {{   73,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight},   // 163 Shape
     {moduleTypeOscShpA,     connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },   // Out
     // 164 OscDual
-    {moduleTypeOscDual,     connectorDirIn,  connectorTypeControl, {{  3, -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   },   // 164 Pitch
-    {moduleTypeOscDual,     connectorDirIn,  connectorTypeControl, {{  3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   },   // 164 PitchVar
+    {moduleTypeOscDual,     connectorDirIn,  connectorTypeControl, {{  3, -18}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight   },   // 164 Pitch
+    {moduleTypeOscDual,     connectorDirIn,  connectorTypeControl, {{  3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",            labelLocRight   },   // 164 PitchVar
     {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{  3, 7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "Sync",          labelLocRight   },   // 164 Sync
-    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{ 48.6, -37.4}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   },   // 164 PW
-    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{ 48.6,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   },   // 164 Phase
+    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{ 33, 15.5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "-",            labelLocRight   },   // 164 PW
+    {moduleTypeOscDual,     connectorDirIn,  connectorTypeAudio,   {{ 33,    30.5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "-",            labelLocRight   },   // 164 Phase
     {moduleTypeOscDual,     connectorDirOut, connectorTypeAudio,   {{   -3,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },   // 164 Out
     // 165 DXRouter
     {moduleTypeDXRouter,    connectorDirIn,  connectorTypeAudio,   {{    5,    -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",             labelLocLeft },   // 164 In1
