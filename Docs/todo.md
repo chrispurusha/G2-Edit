@@ -6,6 +6,7 @@ Built-but-unchecked work goes in to-test.md.
 
 CT - PRIORITY
 - G2 Alike shouldn't just be single instance. You claimed it's a single instance model.
+- Claude identified some common code between projects. Worth consilidating and making common.
 
 CT - LOWER PRIORITY
 - Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
