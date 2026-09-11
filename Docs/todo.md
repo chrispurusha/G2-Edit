@@ -7,8 +7,8 @@ Built-but-unchecked work goes in to-test.txt.
 CT - PRIORITY
 - Continue with audio unit plugins for the siblings
 - You'll see that I've been renaming documents from .txt to .md, rename all of them that way
-- Plugin GUI seems to maybe not refresh as quickly as standalone on Ableton at least.
 - Plugin mono voicing doesn’t seem to work as per hardware. If I have a relatively fast attack and delay, with no sustain and I press a keyboard key, hold it and press another - doesn’t move to new note. Does on hardware.
+- Plugin GUI seems to maybe not refresh as quickly as standalone on Ableton at least.
 - EmuUtility and SynthEdit need the MIDI input and output selection on a pop up dialogue, opened from the main menu. Scan should move to that dialogue as an option.
 
 CT - LOWER PRIORITY
