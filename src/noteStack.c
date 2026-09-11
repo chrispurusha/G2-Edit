@@ -68,6 +68,10 @@ void note_stack_note_off(uint8_t note) {
         // THE LEGATO CASE, and it is monophonic by definition. Retrigger the newest note still held
         // rather than releasing — releasing here is what makes a monophonic synth stop dead when a
         // passing note is let go.
+        //
+        // Whether that note's envelopes START AGAIN is the voice mode's business, not the stack's:
+        // the engine restarts them in Mono and glides on in Legato (voice_note_on() in soundEngine.c).
+        // So in Mono the note returned to attacks afresh, which is unconfirmed on the hardware.
         sound_engine_note((int32_t)gHeld[gHeldCount - 1], true);
     } else {
         sound_engine_note(-1, false);

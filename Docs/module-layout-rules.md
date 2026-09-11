@@ -186,4 +186,4 @@ gaps up, or the graphs will have nowhere to go.
   from.
 
 _Status: modules changed under these rules are flagged "NEEDS (CT) VERIFY" in
-`Module dev debug notes.txt` until confirmed on hardware by the owner._
+`Module dev debug notes.md` until confirmed on hardware by the owner._

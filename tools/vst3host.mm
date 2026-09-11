@@ -25,7 +25,7 @@
 // change in the plug-in can be diffed the same way one in the application is.
 //
 // THIS EXISTED TWICE BEFORE AND WAS LOST TWICE, because both times it was written into a scratchpad
-// rather than the repository (see todo.txt, "the hand-written test host in the scratchpad"). It is
+// rather than the repository (see todo.md, "the hand-written test host in the scratchpad"). It is
 // here now for that reason as much as any other.
 //
 // WHAT IT PROVES, AND WHAT IT DOES NOT. It proves the plug-in loads, instantiates, and that its

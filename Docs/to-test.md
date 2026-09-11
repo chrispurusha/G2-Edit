@@ -1,8 +1,35 @@
 G2-Edit - TO TEST
 
 Built, not yet checked against real hardware or a real user session.
-Confirmed -> delete the line. Check failed -> move it to todo.txt.
-Full detail for each is in findings.txt, searchable by the wording below.
+Confirmed -> delete the line. Check failed -> move it to todo.md.
+Full detail for each is in findings.md, searchable by the wording below.
+- ***THE EDITOR NO LONGER SLOWS DOWN THE LONGER IT IS OPEN (2026-09-11)*** - CT's "does not refresh
+  as quickly as standalone". do-plugin compiled the Metal backend without ARC, so every vertex buffer
+  leaked: in tools/vst3host, forty seconds of pointer movement took the process from 1.7 GB to 12.7 GB
+  and a frame from 3.8 ms to 44 ms (60 frames a second down to 23). Built with ARC: 511 -> 523 MB and
+  a flat 3 ms at 60 frames a second over the same run. In Live the meter timer redraws 20 times a
+  second while the engine runs, so it leaked whether or not the mouse moved. STILL TO CHECK in Live:
+  leave the editor open on a playing patch for a few minutes - it should stay as responsive as the
+  application, and Activity Monitor should show Live's memory flat. For numbers, `launchctl setenv
+  G2_PLUGIN_FRAME_STATS 1` before starting Live, and Console shows a line a second from the editor.
+- ***MONO NOW RESTARTS THE ENVELOPES, LEGATO STILL DOES NOT (2026-09-11)*** - a key played over a
+  held one landed on a voice whose gate was already open, so no envelope ever restarted: every mode
+  behaved as Legato, and with no sustain the second key was silent. Checked offline on SimpleLead
+  with attack 0, decay 40, sustain 0: the second key's first 100 ms went from 0.00032 RMS to 0.01087
+  in Mono, and stayed 0.00032 in Legato and 0.01212 in Poly. STILL TO CHECK against the G2, same
+  patch in both: (1) Mono, hold a key, play another - it should sound, as CT reports the hardware
+  does; (2) Legato the same - it should NOT restart; (3) Mono, let the second key go with the first
+  still held - the engine now restarts the envelope on the note it returns to, and whether the
+  hardware does that too is not known.
+- ***THE PLUG-IN WRAPPERS ARE PER-INSTANCE NOW (2026-09-11)*** - SynthLib's VST3 and AU wrappers were
+  reworked so several copies of a plug-in can be loaded at once (a controller finds its own processor
+  through the host's connection, not a global), and the saved state moved from "SLP1" to "SLP2".
+  Checked offline: auval clean, tools/auhost renders SimpleLead (peak 0.0716) and opens the editor,
+  tools/vst3host opens the editor, and SynthLib/plugin/test passes (21 multi-instance checks, state
+  round trips). STILL TO CHECK in Live: (1) a set saved by the 2026-09-09..10 build reopens with its
+  patch and parameter values - that is the SLP1 read path; (2) automation, the host's generic panel,
+  mod wheel and pitch bend; (3) in Logic or GarageBand, the mod wheel and bend again, since the AU now
+  queues its MIDI and delivers it inside the render rather than on arrival.
 - ***THE AUDIO UNIT (2026-09-09)*** - "G2 Alike.component", aumu G2al CPur, built by ./do-plugin
   from the same sources as the VST3. auval -v aumu G2al CPur passes clean with no warnings, and
   tools/auhost opens its Cocoa editor and renders a note. Ableton confirmed working by CT on the
@@ -138,7 +165,7 @@ CROSS-PROJECT
   the middle of the dial. Anything whose timing depends on a Pulse gate will have moved. Needs an ear
   on a patch that uses one, and ideally a re-check of the two shortest dial settings.
 - Reverb Brightness constants are NOT yet refitted against the new dial 8-64 measurements in
-  findings.txt - the engine is unchanged. Nothing to test yet; listed so the data is not mistaken
+  findings.md - the engine is unchanged. Nothing to test yet; listed so the data is not mistaken
   for a fix.
 - ***STCHORUS REBUILT AS TWO TAPS (2026-09-07) - THIS ONE NEEDS AN EAR.*** It ran one delay line per
   channel; the instrument runs two, sweeping in opposite directions about a 2.71 ms centre and MEETING
@@ -154,7 +181,7 @@ CROSS-PROJECT
   per tap, +3 dB) and the wet/dry ratio reaches 1.19 at Amount 127 rather than 1.0. Stereo width now
   measures 0.1473 against the instrument's 0.1495. Needs an ear: it should now sound as wide and as
   pronounced as the G2 at high Detune. KNOWN REMAINING: our output is still about 1 dB below the
-  instrument's, more at low frequency than high - see findings.txt, it needs an Amount sweep to fix.
+  instrument's, more at low frequency than high - see findings.md, it needs an Amount sweep to fix.
 - ***CHORUS, THIRD ROUND (2026-09-07) - NEEDS AN EAR.*** The taps are now ASYMMETRIC (2.628 and
   1.943 ms about a 2.677 ms centre), so the pair's centre moves and the comb slides - that is the
   "wah at around 1 second intervals" CT heard on the instrument against our "metallic". The LFO rate

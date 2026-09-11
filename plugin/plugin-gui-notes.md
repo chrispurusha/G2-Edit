@@ -719,7 +719,7 @@ contained `bool altHeld = (altHeld);` — a local shadowing the parameter and in
 present since eb26908. The garbage byte it read had been zero and became non-zero, so every plain dial
 drag started writing the morph offset. `-Wuninitialized` had reported it in every build for months.
 `OTHER_CFLAGS = "-Werror=uninitialized"` is now set in both configurations and verified to reject that
-exact line; see todo.txt for what stands between here and a project-wide `-Werror`.
+exact line; see todo.md for what stands between here and a project-wide `-Werror`.
 
 **3. `cursor_pos()` never used its `GLFWwindow *` argument.**
 It read the pointer through `get_global_gui_scaled_mouse_coord()`. The signature implied a GLFW

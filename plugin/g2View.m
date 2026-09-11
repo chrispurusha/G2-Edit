@@ -42,6 +42,7 @@
 // layer, called every frame with the view's backing size.
 
 #import <Cocoa/Cocoa.h>
+#import <QuartzCore/QuartzCore.h>    // CACurrentMediaTime(), for the frame statistics
 
 #include "renderBackendSelect.h"
 
@@ -159,6 +160,53 @@ void cursor_release(void) {
 // pointer.
 static __weak G2View * gCurrentView = nil;
 
+// FRAME STATISTICS, for "the editor does not refresh as quickly as the application". With
+// G2_PLUGIN_FRAME_STATS=1 in the host's environment, one line a second on stderr: how many frames
+// were drawn, the mean and worst time spent building one and presenting it, and the longest gap
+// between two. The first two answer "is a frame expensive"; the gap answers "is the host asking for
+// frames at all" - the two causes look identical from the outside and want opposite fixes.
+static bool   gFrameStats       = false;
+static double gFrameWindowStart = 0.0;
+static double gFrameLast        = 0.0;
+static double gFrameGapMax      = 0.0;
+static double gFrameDrawSum     = 0.0;
+static double gFrameDrawMax     = 0.0;
+static double gFramePresentSum  = 0.0;
+static double gFramePresentMax  = 0.0;
+static int    gFrameCount       = 0;
+
+static void frame_stats_record(double start, double drawn, double presented) {
+    double drawMs    = (drawn - start) * 1000.0;
+    double presentMs = (presented - drawn) * 1000.0;
+
+    if (gFrameWindowStart == 0.0) {
+        gFrameWindowStart = start;
+    } else if (((start - gFrameLast) * 1000.0) > gFrameGapMax) {
+        gFrameGapMax = (start - gFrameLast) * 1000.0;
+    }
+    gFrameLast        = start;
+    gFrameCount++;
+    gFrameDrawSum    += drawMs;
+    gFramePresentSum += presentMs;
+    gFrameDrawMax     = (drawMs > gFrameDrawMax) ? drawMs : gFrameDrawMax;
+    gFramePresentMax  = (presentMs > gFramePresentMax) ? presentMs : gFramePresentMax;
+
+    if ((presented - gFrameWindowStart) >= 1.0) {
+        fprintf(stderr, "G2 Alike frames: %d in %.2f s, draw %.2f/%.2f ms, present %.2f/%.2f ms "
+                "(mean/worst), longest gap %.1f ms\n",
+                gFrameCount, presented - gFrameWindowStart,
+                gFrameDrawSum / gFrameCount, gFrameDrawMax,
+                gFramePresentSum / gFrameCount, gFramePresentMax, gFrameGapMax);
+        gFrameWindowStart = presented;
+        gFrameGapMax      = 0.0;
+        gFrameDrawSum     = 0.0;
+        gFrameDrawMax     = 0.0;
+        gFramePresentSum  = 0.0;
+        gFramePresentMax  = 0.0;
+        gFrameCount       = 0;
+    }
+}
+
 @implementation G2View
 
 
@@ -172,6 +220,8 @@ static __weak G2View * gCurrentView = nil;
     // build has only one linked (SYNTHLIB_NO_GL_BACKEND), so this says out loud which one everything
     // below is talking to rather than leaving it to a default.
     gfx_backend_choose(eRenderBackendMetal);
+
+    gFrameStats = (getenv("G2_PLUGIN_FRAME_STATS") != NULL);
 
     [self startMeterTimer];
 
@@ -590,8 +640,26 @@ static __weak G2View * gCurrentView = nil;
     // own state. The frame is drawn into the backend's offscreen target and gfx_present() blits it
     // to this view's layer — the same two calls the application's render_present() makes, spelled
     // out because a plug-in's frame is driven by AppKit rather than by a render loop.
-    g2_draw_frame((int)backing.size.width, (int)backing.size.height, scale);
-    gfx_present();
+    //
+    // ONE AUTORELEASE POOL PER FRAME, drained before this returns. The backend's command buffer,
+    // encoder and drawable are autoreleased, and the command buffer keeps every vertex buffer the
+    // frame drew with alive for as long as it lives - so without a pool of our own, freeing them
+    // waits on whichever pool the HOST drains, whenever it drains it. Hygiene, and NOT the cure for
+    // the editor slowing down the longer it was open: that was the Metal backend compiled without
+    // ARC, and this pool made no measurable difference to it (see do-plugin's OBJC_SOURCES).
+    @autoreleasepool {
+        double started = gFrameStats ? CACurrentMediaTime() : 0.0;
+
+        g2_draw_frame((int)backing.size.width, (int)backing.size.height, scale);
+
+        double drawn = gFrameStats ? CACurrentMediaTime() : 0.0;
+
+        gfx_present();
+
+        if (gFrameStats) {
+            frame_stats_record(started, drawn, CACurrentMediaTime());
+        }
+    }
 }
 
 @end

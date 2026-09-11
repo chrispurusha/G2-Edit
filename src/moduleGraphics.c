@@ -604,7 +604,7 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
     // WHERE THE WIDGET ACTUALLY WENT. A local, because that is all it ever was: the value is written
     // here, handed to register_click_region() a few lines down and returned to the caller, and
     // nothing reads it afterwards. It used to be a slot in a 6MB [slot][location][module][param]
-    // global that every hit test in the app then re-read — see the migration note in Docs/todo.txt.
+    // global that every hit test in the app then re-read — see the migration note in Docs/todo.md.
     tRectangle widgetRect                  = {0};
     char       buff[16]                    = {0};
     char       label[CLAVIA_NAME_SIZE + 1] = {0};
@@ -2362,7 +2362,7 @@ static bool filter_graph_map(uint32_t moduleType, tFilterGraph * out) {
     // FltClassic, FltNord, FltLP, FltHP, FltComb and FltPhase, but NOT FltStatic - and we differ
     // from it twice, deliberately: FltStatic gains one because its face has the room and its
     // response is worth seeing, while FltComb and FltPhase have none yet because a comb and a
-    // phaser want their own renderer rather than this response curve. See todo.txt.
+    // phaser want their own renderer rather than this response curve. See todo.md.
     switch (moduleType) {
         case moduleTypeFltClassic:
             *out = (tFilterGraph){
@@ -2372,7 +2372,7 @@ static bool filter_graph_map(uint32_t moduleType, tFilterGraph * out) {
             return true;
 
         case moduleTypeFltNord:
-            // dB/Oct is param 5 and FilterType param 8 - see param-validation.txt.
+            // dB/Oct is param 5 and FilterType param 8 - see param-validation.md.
             *out = (tFilterGraph){
                 .freq     = 0, .res = 4, .slope = 5, .slopeMode = -1, .shape = 8, .gc = 3,
                 .topology = eFilterTopologyLadder
@@ -2394,7 +2394,7 @@ static bool filter_graph_map(uint32_t moduleType, tFilterGraph * out) {
             return true;
 
         case moduleTypeFltStatic:
-            // Freq 0, Res 1, FilterType 2 (LP/BP/HP) - see param-validation.txt.
+            // Freq 0, Res 1, FilterType 2 (LP/BP/HP) - see param-validation.md.
             *out = (tFilterGraph){
                 .freq     = 0, .res = 1, .slope = -1, .slopeMode = -1, .shape = 2, .gc = -1,
                 .topology = eFilterTopologyBiquad
