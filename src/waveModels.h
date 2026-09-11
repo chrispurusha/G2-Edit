@@ -29,7 +29,7 @@
 // achieve; these wave laws had the same problem and now get the same treatment.
 //
 // THE PROBLEM THIS SOLVES WAS REAL, not theoretical. The editor DREW these waves from laws measured
-// off the hardware in August 2026 (Docs/todo.txt has the capture method, the sweeps and the
+// off the hardware in August 2026 (Docs/todo.md has the capture method, the sweeps and the
 // correlation figures), while soundEngine.c's osc_shp_wave() carried a separate set derived from the
 // manual's prose. The two disagreed on things the measurement had settled: the engine remapped Shape
 // as (shape - 0.5)/0.49 CLAMPED AT ZERO, so HALF THE DIAL WAS DEAD where the capture shows harmonics

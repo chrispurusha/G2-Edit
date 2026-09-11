@@ -1,13 +1,13 @@
 # Module palette — design & progress
 
 Living design note. Nothing is built yet; this records the decisions and the numbers
-behind them so the work can start without re-deriving any of it. See also `todo.txt`
+behind them so the work can start without re-deriving any of it. See also `todo.md`
 ("Module palette").
 
 ## What is being asked for
 
 Users want to add modules by dragging them from a palette onto the patch, as the
-original editor does. `todo.txt` has carried "Module palette drag selection" as a
+original editor does. `todo.md` has carried "Module palette drag selection" as a
 one-liner under USER REQUESTS; this note is that item worked out.
 
 ## What the original ACTUALLY does — corrected 2026-09-07 from the manual's own figures

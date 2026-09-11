@@ -412,7 +412,7 @@ double flt_ladder_magnitude(double ratio, double feedback, uint32_t tap) {
 // ── The filters that are NOT ladders ─────────────────────────────────────────
 // Three topologies cover the seven filter modules, and they are genuinely different - anything that
 // draws them from one model is wrong for four of the six. All measured 2026-08-29/30 by putting
-// noise through the module and dividing by the same patch bypassed. See findings.txt.
+// noise through the module and dividing by the same patch bypassed. See findings.md.
 
 // FltLP and FltHP: N IDENTICAL ONE-POLES AT A COMMON CORNER, and the slope mode IS the pole count.
 // Fitting N and fc freely returned N = 1,2,3,4,5,6 for the six slope names with fc within 4% of the
@@ -516,7 +516,7 @@ double flt_biquad_magnitude(double ratio, double q, tFilterShape shape) {
 //     dB    0.00  -0.88  -2.28  -3.81  -5.84  -8.33 -11.61 -17.09
 //
 // The cubic below fits those to +/-0.6 dB. Measured on the 24 dB low-pass; whether GC follows the
-// same law on the other slopes and types is not yet established - see Docs/findings.txt, where the
+// same law on the other slopes and types is not yet established - see Docs/findings.md, where the
 // 12 dB band-pass is recorded as self-oscillating at Res 127 even with GC on, which this does not
 // model.
 double flt_nord_gc_gain(double resParam) {

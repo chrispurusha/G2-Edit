@@ -140,7 +140,7 @@ So the remaining work, for the eighteen groups that are not the Filter group, is
 3. Undo. The cable work already has before/after snapshotting for a location's whole cable set; a
    replace is a bigger version of the same thing and should reuse it.
 4. The UI: the manual puts the arrow beside the module name. A right-click menu entry is the
-   cheaper first version and is what `todo.txt` asks for.
+   cheaper first version and is what `todo.md` asks for.
 
 Steps 2 to 4 are done and are group-agnostic, so each further group costs only its role table. The
 Filter group was first because it is the one with the most awkward geometry — Vocoder's audio input

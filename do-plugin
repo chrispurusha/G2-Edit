@@ -186,15 +186,20 @@ SOURCES=(
     # still the application's default and will be the only backend on Windows and Linux.
     "$HERE/SynthLib/src/renderBackend.c"
     "$HERE/SynthLib/src/synthlibVersion.c"
-    "$HERE/SynthLib/src/renderBackendMetal.m"
     "$HERE/SynthLib/src/geometry.c"
 )
 
 # Plain Objective-C: the view is an AppKit subclass, which needs the runtime but no C++. Kept out of
 # the Objective-C++ pass below so the C++ is confined to the files that have to speak it — a VST3
 # interface is a C++ vtable, and that is the only reason any C++ is here at all.
+#
+# THE METAL BACKEND BELONGS HERE, NOT IN SOURCES ABOVE, and the difference is -fobjc-arc. Listed with
+# the C files it compiled without ARC, so every Metal buffer it created was leaked: the editor grew by
+# gigabytes a minute and got slower with every frame, from 4 ms to 44 ms in forty seconds of pointer
+# movement. The file now refuses to compile without ARC, so this cannot quietly come back.
 OBJC_SOURCES=(
     "$HERE/plugin/g2View.m"
+    "$HERE/SynthLib/src/renderBackendMetal.m"
 )
 
 # C++ the plug-in needs whatever format it is wrapped in.
@@ -298,7 +303,7 @@ INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/SynthLib/plugin" -I"$HER
           # Headers only. GLFW's is here because utilsGraphics.c includes it for the GL
           # declarations; freetype's because the text renderer is built on it. The bundled copies
           # are used rather than Homebrew's so the deployment target matches the application's —
-          # see "Docs/Third Party build notes.txt".
+          # see "Docs/Third Party build notes.md".
           -I"$HERE/SynthLib/ThirdParty/glfw/include"
           -I"$HERE/SynthLib/ThirdParty/freetype/include")
 
