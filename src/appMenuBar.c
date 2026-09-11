@@ -519,7 +519,7 @@ static void action_toggle_palette(int index) {
 void open_view_menu(tCoord anchor) {
     // 3 zoom entries + Zoom to Fit + one per overlay view + the NULL terminator. It was exactly full
     // at 9 before Zoom to Fit was added; overflowing one of these arrays does not fail visibly, it
-    // quietly writes over whatever static follows it (see the Experimental menu's note in todo.txt).
+    // quietly writes over whatever static follows it (see the Experimental menu's note in todo.md).
     // 3 zoom + Zoom to Fit + the palette toggle + one per overlay view + the NULL terminator.
     // GROWN FROM 10 when the palette toggle was added: it was exactly full, and overflowing one of
     // these arrays does not fail visibly - it quietly writes over whatever static follows it.

@@ -796,7 +796,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         // PatchTestFiles have their LED-bearing modules in VA and none in FX. The 0x39 stream's
         // index space is the two areas concatenated, so with one of them empty both possible area
         // orderings give the same answer and every LED test we have passes either way. Settling
-        // which order the instrument really uses needs LEDs in both areas — see todo.txt.
+        // which order the instrument really uses needs LEDs in both areas — see todo.md.
         char         name[64] = {0};
         uint32_t     col      = 0;
         uint32_t     row      = 0;

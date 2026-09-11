@@ -2,7 +2,7 @@
 
 What the sound engine implements, what has been captured off the hardware, and what has not. Written
 2026-09-07 because the answer was not written down anywhere and had to be reconstructed from three
-capture directories and `findings.txt`.
+capture directories and `findings.md`.
 
 **Where captures live.** None are in the repository — they are far too large.
 
@@ -13,7 +13,7 @@ capture directories and `findings.txt`.
 | `~/Documents/GitHub/G2Captures/` | oscillator and filter sets, plus the A/B listening files |
 
 A capture is only worth keeping if its `.json` sidecar is beside it. Several early ones have no
-sidecar and their settings are only recoverable from `findings.txt`.
+sidecar and their settings are only recoverable from `findings.md`.
 
 **TWO RIGS, AND THE SIDECAR DOES NOT SAY WHICH.** Verified 2026-09-07 by reading the WAV headers, not
 from any note - nothing recorded it at the time. The rate and channel count identify the rig on
@@ -48,16 +48,16 @@ impulse is what this rig gives.
 | **Reverb** | 19 files: four rooms × Time, decay, stereo; Brightness in Hall, Small and Medium | The most complete. Room scale, decay law, pre-delay, wet level, input filtering, stereo tap sets and the Brightness law are all measured. |
 | **OscShpB** | `G2Captures/oscshpb/`, 8 files | Harmonic spectra per waveform at two Shape settings. |
 | **OscA** | `G2Captures/osca/`, 6 files | |
-| **Pulse** | `pulse192b.wav`, 17 dial values at 192 kHz | Time dial measured across the whole range in Sub. Every width is an integer count of 96 kHz samples. Our closed form is ~11% long and needs refitting - see `findings.txt`. Amplitude still uncalibrated. |
+| **Pulse** | `pulse192b.wav`, 17 dial values at 192 kHz | Time dial measured across the whole range in Sub. Every width is an integer count of 96 kHz samples. Our closed form is ~11% long and needs refitting - see `findings.md`. Amplitude still uncalibrated. |
 | **FltClassic** | `G2Captures/fltclassic/`, 18 files | Bypass, resonance and spectra. Ladder topology and K range settled from it. |
 
 ## Partly covered — measured, but the captures are thin or gone
 
 | module | what exists | what is missing |
 |---|---|---|
-| **StChorus** | 3 files in `G2 Captures/`, two Detune settings at two tone frequencies | Rate, centre delay and the triangle LFO shape are settled. There is no systematic sweep of either dial, and the STEREO behaviour has never been measured — it is on `to-test.txt` as needing an ear. |
-| **DelayA / DelayB** | 3 files, feedback at 64/96/127 | **More complete than this row used to claim.** Feedback is linear to exactly unity (measured at 64/96/127; the hardware does not decay at all at 127). LP measured at five settings and HP at four, both by the BURST method - a short saw burst separates the repeats so repeat[n+1]/repeat[n] is the per-pass response - with the HP fit then validated at three settings that were NOT used to fit it. Dry/wet measured and found to be the same non-crossfade the reverb uses, needing no wet attenuation. Time and its Clk mapping hardware-confirmed separately. The audio is not retained; the numbers and the method are in `findings.txt`. |
-| **Compress** | none retained | Threshold, ratio, attack and release were all measured and corrected — the numbers are in `findings.txt`, the audio is not. Re-deriving anything means re-capturing. |
+| **StChorus** | 3 files in `G2 Captures/`, two Detune settings at two tone frequencies | Rate, centre delay and the triangle LFO shape are settled. There is no systematic sweep of either dial, and the STEREO behaviour has never been measured — it is on `to-test.md` as needing an ear. |
+| **DelayA / DelayB** | 3 files, feedback at 64/96/127 | **More complete than this row used to claim.** Feedback is linear to exactly unity (measured at 64/96/127; the hardware does not decay at all at 127). LP measured at five settings and HP at four, both by the BURST method - a short saw burst separates the repeats so repeat[n+1]/repeat[n] is the per-pass response - with the HP fit then validated at three settings that were NOT used to fit it. Dry/wet measured and found to be the same non-crossfade the reverb uses, needing no wet attenuation. Time and its Clk mapping hardware-confirmed separately. The audio is not retained; the numbers and the method are in `findings.md`. |
+| **Compress** | none retained | Threshold, ratio, attack and release were all measured and corrected — the numbers are in `findings.md`, the audio is not. Re-deriving anything means re-capturing. |
 | **EnvADSR** | none retained | Curve sharpness measured 2026-08-24; the attack FORM re-measured 2026-09-07 and our law confirmed against a one-pole. Both from captures that were not kept. |
 | **LevAmp** | none retained | Gain law measured at 33 dial positions 2026-08-30, four segments. |
 
@@ -67,7 +67,7 @@ These play in the engine and have never been measured against the instrument.
 
 | module | what is assumed |
 |---|---|
-| **FltLP, FltHP, FltStatic, FltNord** | All four are on `to-test.txt` as needing an ear and none is tuned. FltClassic is the only filter with captures. |
+| **FltLP, FltHP, FltStatic, FltNord** | All four are on `to-test.md` as needing an ear and none is tuned. FltClassic is the only filter with captures. |
 | **LfoShpA** | Rate Sub, Rate Lo and Rate Hi all MEASURED 2026-09-07 and now agree within 0.013% - Rate Lo's base was 0.43% low and is now derived as Rate Hi over 16. BPM and Clk still unverified (they need a master clock). LfoC untested. |
 | **LevMult** | |
 | **Mix4to1C, Mix4to1S** | SUMS - measured 2026-09-07, +6.02 dB per doubling of identical inputs, and the engine already matches. Its level-dial law and its -6/-12 dB Pad are still unmeasured. |
@@ -97,4 +97,4 @@ Two that are worth doing for a different reason, being upstream of everything el
 5. **LfoShpA** — its rate now sets the timebase of every capture.
 
 The filters need a stimulus the rig does not have yet: a magnitude/phase response wants a sweep or
-noise, not a click. See the MEASUREMENT PROGRAMME entry in `todo.txt`.
+noise, not a click. See the MEASUREMENT PROGRAMME entry in `todo.md`.

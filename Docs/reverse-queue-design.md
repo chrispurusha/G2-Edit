@@ -1,6 +1,6 @@
 # Reverse (USB→UI) message queue — design & progress
 
-Living design note. Updated as the work proceeds. See also `todo.txt`
+Living design note. Updated as the work proceeds. See also `todo.md`
 ("Reverse (USB->UI) message queue + GUI busy state").
 
 ## Problem

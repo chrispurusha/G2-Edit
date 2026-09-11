@@ -44,7 +44,7 @@
 // position, swapping nothing and overwriting whatever was there. The original also supports
 // dragging a box out onto a module parameter in the patch window to CREATE an assignment; that
 // direction is not possible here while the panel is a full-canvas modal overlay, so creating an
-// assignment stays where it already was — the canvas's right-click Assign menu. See todo.txt.
+// assignment stays where it already was — the canvas's right-click Assign menu. See todo.md.
 //
 // Opened from Settings > Parameter Overview. NO keyboard shortcut: the original uses Ctrl-L, but
 // the owner's standing call for this family of panels is menu-only (as with Parameter Pages,

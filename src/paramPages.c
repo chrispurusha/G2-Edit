@@ -276,7 +276,7 @@ static tKnobMetrics knob_metrics(uint32_t pos, double textH) {
             // Label on its own line, then a button sized to largest_text_width() over the param's
             // declared range. Measure the string actually on screen as well: where a module's
             // declared range is out of step with its strMap (there are known cases - see the
-            // module-verification items in todo.txt) the current entry can be longer than
+            // module-verification items in todo.md) the current entry can be longer than
             // anything largest_text_width() looked at.
             metrics.content   = fmax(PP_DIAL_SIZE, labelW);
 

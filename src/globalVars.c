@@ -117,7 +117,7 @@ _Atomic uint64_t        gUsbRxTime                                              
 // parameter widget's clickable rectangle, written by the renderer and read back by every hit test in
 // the app. It is gone (2026-08-20). Hit-testing comes from the click-region registry, which the
 // renderer already fills and which clear_click_regions() empties every frame, so a widget that is not
-// drawn cannot be clicked without anyone having to blank a table to say so. See Docs/todo.txt.
+// drawn cannot be clicked without anyone having to blank a table to say so. See Docs/todo.md.
 pthread_mutex_t         gStringCopyMutex                                         = PTHREAD_MUTEX_INITIALIZER;
 _Atomic bool            gBankBackupActive                                        = false;
 _Atomic bool            gBankBackupIsPerf                                        = false;

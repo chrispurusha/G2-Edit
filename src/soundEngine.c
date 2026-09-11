@@ -880,6 +880,7 @@ typedef struct {
     uint32_t quiet;        // consecutive samples this voice's output has been inaudible
     uint32_t released;     // samples since the key came up, 0 while it is held
     double   fade;         // 1.0 normally; driven to 0 to retire a voice that will not stop on its own
+    uint32_t trigger;      // counts note-ons that restart the envelopes - see voice_note_on()
 } tVoice;
 
 static tVoice             gVoice[MAX_VOICES] = {0};
@@ -890,6 +891,11 @@ static uint64_t           gVoiceClock        = 0;
 // it is read from the MIDI thread, and copying the whole snapshot to answer one question would be
 // absurd. See sound_engine_is_polyphonic().
 static _Atomic uint32_t   gEngineVoices      = 1;
+
+// Whether the patch is in LEGATO voice mode, the one mode where a key played while another is held
+// does not restart the envelopes. Published beside gEngineVoices for the same reason: it is read by
+// voice_note_on() on the audio thread, per note, where copying the snapshot to ask would be absurd.
+static _Atomic bool       gEngineLegato      = false;
 
 // RENDER LOAD, as a percentage of real time, peak-held. The time spent inside sound_engine_render()
 // against the time the buffer it filled will take to play: at 100 % the engine is using the whole of
@@ -1044,7 +1050,7 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 //     16 combs    3.6% and FLAT, with the 18 Hz peak gone entirely
 //
 // The other eight lengths continue Freeverb's progression and are prime, so no two lines reinforce.
-// THE INSTRUMENT HAS ABOUT 31 DELAY LINES (see Docs/todo.txt), so sixteen is still short of it —
+// THE INSTRUMENT HAS ABOUT 31 DELAY LINES (see Docs/todo.md), so sixteen is still short of it —
 // but it is now dense enough that the flutter does not survive the measurement.
 #define REVERB_COMBS      (16)
 #define REVERB_ALLPASS    (3)
@@ -1244,7 +1250,7 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 // are near-disjoint tap sets (Small L 2338/2407/2420/4214/5022 against R 2378/2904/3903/3972/4046)
 // but its tank has about 31 lines against this one's 4 combs and 3 allpasses, and the ROUTING is not
 // recoverable — a real set of lengths in the wrong arrangement sounds plausible and is wrong, which
-// is the hardest kind of error to find. See the REVERB entry in Docs/todo.txt.
+// is the hardest kind of error to find. See the REVERB entry in Docs/todo.md.
 //
 // So this claims no new structure. It is Freeverb's own answer to the same question, and what makes
 // it honest is that the thing it is aimed at IS measured: the instrument's two outputs correlate at
@@ -1283,7 +1289,7 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 //
 // Expressed as sample counts at the 48 kHz base rate, times ENGINE_OVERSAMPLE, for the same reason
 // the comb lengths are: an array bound has to be an INTEGER constant expression. Sizing one with a
-// float cast is what produced the -Wgnu-folding-constant pair recorded in Docs/todo.txt.
+// float cast is what produced the -Wgnu-folding-constant pair recorded in Docs/todo.md.
 //
 //                        Small   Medium   Large    Hall
 //     left    (ms)       12.89   13.05    13.30    13.36
@@ -1542,7 +1548,7 @@ static const double   kRvTapSign[RV_OUTTAPS]                  = {1.0, -1.0, 1.0,
 // dominate — so the peak wanders between rooms and windows rather than sitting at 1504 * roomScale.
 // That is a property of the architecture, not of these numbers, and no tap placement fixes it. It is
 // what a single shared buffer would fix. Do not tune this further: see the reverb entry in
-// Docs/findings.txt for the full specification of the instrument's tank, which is what closes it.
+// Docs/findings.md for the full specification of the instrument's tank, which is what closes it.
 
 static uint32_t gRvAddr[eRvSpanCount + 1];
 
@@ -1667,6 +1673,10 @@ static bool     gSmoothPrimed[MAX_ENGINE_NODES];
 static double   gEnvProgress[MAX_VOICES][MAX_ENGINE_NODES];
 static double   gEnvStart[MAX_VOICES][MAX_ENGINE_NODES];
 static uint32_t gEnvStage[MAX_VOICES][MAX_ENGINE_NODES];
+
+// The voice's trigger count this envelope last started an attack for. When the voice's count moves
+// past it, a note-on has asked for a restart that the gate alone cannot show - see envelope_step().
+static uint32_t gEnvTrigger[MAX_VOICES][MAX_ENGINE_NODES];
 
 typedef enum {
     eEnvIdle = 0,
@@ -1819,6 +1829,7 @@ static void reset_node_state(void) {
             gEnvProgress[v][i]   = 0.0;
             gEnvStart[v][i]      = 0.0;
             gEnvStage[v][i]      = eEnvIdle;
+            gEnvTrigger[v][i]    = gVoice[v].trigger;   // nothing pending: idle already attacks on a gate
             gCompEnv[v][i]       = 0.0;
             gPulseCount[v][i]    = 0;
             gPulsePrev[v][i]     = 0.0;
@@ -2203,6 +2214,20 @@ static void voice_note_on(int32_t note) {
     // playing anything, so nothing slides. That is correct. A glide in Poly only happens when a
     // voice is reused, which is also what the hardware does.
     voice->glideActive = voice->gate;
+
+    // MONO RESTARTS THE ENVELOPES, LEGATO DOES NOT, and that is the whole difference between them.
+    // The G2 manual's Voice Mode description: in Legato "the Envelope modules do not retrigger when
+    // you play a new key before releasing the previous key" - which says Mono does.
+    //
+    // THE GATE CANNOT SAY IT. A key played over a held one lands on a voice whose gate is already
+    // open, so the envelope sees no edge; this engine used to treat that as legato in every mode, and
+    // with no sustain the second key sounded nothing at all once the decay had run out. Hence a count
+    // the envelope compares against rather than a flag it could miss.
+    //
+    // Poly gains from it too: a note that STEALS a held voice is a new note, and now starts like one.
+    if ((voice->gate == false) || (atomic_load(&gEngineLegato) == false)) {
+        voice->trigger++;
+    }
 
     if (voice->glidePitch < 0.0) {
         voice->glidePitch = (double)note;   // first note this voice has had: start where it is played
@@ -3094,7 +3119,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // which reverbs often do — the late part is invisible here and the true RT60 is LONGER than
             // these numbers. That would also explain the manual's 17.58 s, which is not reachable even
             // at Brightness 127 (Hall measures 11.83 s there). Resolving it needs a quieter floor, not
-            // a different formula. See the REVERB entry in todo.txt.
+            // a different formula. See the REVERB entry in todo.md.
             node->timeNorm   = param_value(module, variation, REVERB_PARAM_TIME) / 127.0;
             {
                 uint32_t reverbType = module->mode[REVERB_MODE_TYPE].value;
@@ -3400,7 +3425,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // have counted the droop twice and left FltNord about 29 dB quiet at high resonance.
             //
             // This corrects the LEVEL behaviour. Whether FltNord's peak has the same shape as
-            // FltClassic's is a separate question and still open - see Docs/todo.txt.
+            // FltClassic's is a separate question and still open - see Docs/todo.md.
             if (map.gc >= 0) {
                 double res = param_value(module, variation, (uint32_t)map.res);
                 double gc  = (param_value(module, variation, (uint32_t)map.gc) != 0.0)
@@ -3752,6 +3777,7 @@ void sound_engine_update_from_patch(void) {
     // because the note stack asks the same question from the MIDI thread, where reading the whole
     // snapshot to answer it would be absurd.
     atomic_store(&gEngineVoices, snapshot.voiceCount);
+    atomic_store(&gEngineLegato, gPatchDescr[gSlot].monoPoly == monoPolyLegato);
 
     // The snapshot above was built into a local, so only this section needs the writers' mutex.
     pthread_mutex_lock(&gParamsWriteMutex);
@@ -3963,7 +3989,7 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 // of it is mixed in. Stereo on the hardware; mono here, since the engine sums to mono anyway.
 //
 // THE STEREO OFFSET IS HALF A CYCLE, measured 2026-08-15 and the one number the stereo chorus was
-// waiting on (Docs/todo.txt). The two channels run the SAME algorithm with their LFOs in ANTIPHASE:
+// waiting on (Docs/todo.md). The two channels run the SAME algorithm with their LFOs in ANTIPHASE:
 // comparing the phase of each channel's amplitude modulation gave R - L = 179.9, 179.6 and 178.9
 // degrees across three captures at two tone frequencies and two Detune settings. Not a quarter cycle,
 // which was the other candidate.
@@ -4061,7 +4087,7 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 // THESE ARE THE CHEAPEST MEASUREMENTS LEFT. A memoryless module gives up its ENTIRE transfer
 // function to one capture: send a slow full-scale ramp - or simply a low sine, which sweeps every
 // input level twice per cycle - through it and plot output against input. One capture per mode,
-// no impulse, no windowing, no decay fitting. See to-test.txt.
+// no impulse, no windowing, no decay fitting. See to-test.md.
 static double shaper_odd_power(double x, double p) {
     // |x|^p with the sign carried through: an odd-symmetric power curve, which is what a shaper
     // graph that passes through the origin unchanged has to be.
@@ -4533,7 +4559,7 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
     // Interpolated between those points rather than fitted: the spacing is uneven - about 1.5 dB per
     // LED at the bottom and 3 dB at the top - and six points will not settle what curve that is.
     // Below the threshold it reads zero, which is what makes first movement a clean threshold
-    // crossing and is the basis of the level probe in findings.txt.
+    // crossing and is the basis of the level probe in findings.md.
     if (spec->threshold > 0.0) {
         static const double   kExcessDb[] = {0.0, 3.0, 6.0, 9.0, 12.0, 15.0};
         static const uint32_t kLit[]      = {1u, 3u, 5u, 6u, 7u, 8u};
@@ -5353,10 +5379,16 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
         // FALLING, holding the filter part open, and the attack began late from wherever it landed.
         // Attacking from the current level is what an ADSR does — the level is deliberately not
         // zeroed, so a fast retrigger rises from where it was rather than clicking to nothing first.
-        if ((gEnvStage[voice][node] == eEnvIdle) || (gEnvStage[voice][node] == eEnvRelease)) {
+        //
+        // And from ANY stage when the voice's trigger count has moved: a Mono key played over a held
+        // one, which keeps the gate open throughout - see voice_note_on().
+        if (  (gEnvStage[voice][node] == eEnvIdle)
+           || (gEnvStage[voice][node] == eEnvRelease)
+           || (gEnvTrigger[voice][node] != gVoice[voice].trigger)) {
             gEnvStage[voice][node]    = eEnvAttack;
             gEnvProgress[voice][node] = 0.0;
             gEnvStart[voice][node]    = level;   // rise from wherever a fast retrigger caught it
+            gEnvTrigger[voice][node]  = gVoice[voice].trigger;
         }
     } else if (gEnvStage[voice][node] != eEnvIdle) {
         if (gEnvStage[voice][node] != eEnvRelease) {
@@ -6127,7 +6159,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
     // roughly what a panel meter does and is slow enough for the UI's own frame rate to sample it
     // without aliasing.
     //
-    // THE SCALE IS MEASURED BUT COARSE - see findings.txt. The renderer takes the low nibble as a
+    // THE SCALE IS MEASURED BUT COARSE - see findings.md. The renderer takes the low nibble as a
     // level 0..15 with green up to 7, and on the instrument a signal at 0 dB internal reads about 7
     // with roughly one step per 7 dB below that. Eight points is not enough to separate that from a
     // slightly different slope, and it is confounded with whether the instrument's meter reads peak
@@ -6332,7 +6364,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     //
     // A "reset phase on note-on" option, for predictable bass, would zero gPhase for the allocated
     // voice instead. It is deliberately not the default and not written yet - the hardware
-    // free-runs. See Docs/todo.txt.
+    // free-runs. See Docs/todo.md.
     if (engine_no_free_run() == false) {
         double idleSamples = (double)frameCount * (double)ENGINE_OVERSAMPLE;
 
@@ -6474,7 +6506,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 // The cost is that an LFO in an ENVELOPED patch still does not advance between
                 // notes, which is what the instrument does. Fixing that properly means asking
                 // whether a node reaches an Out without passing through a gated envelope, rather
-                // than whether an envelope exists at all - see Docs/todo.txt.
+                // than whether an envelope exists at all - see Docs/todo.md.
                 bool freeVoice = (v == 0) && (chainHasEnvelope == false)
                                  && (engine_no_free_run() == false);
                 bool freeRun   = (voice->sounding == false) && (freeVoice == true);

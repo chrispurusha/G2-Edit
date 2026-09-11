@@ -24,7 +24,7 @@
 #include "synthlibTypes.h"
 
 // The Patch Window Split Bar — the original editor shows the Voice Area and the FX Area at the same
-// time in one window, divided by a drag-resizable horizontal bar (see todo.txt). This owns which
+// time in one window, divided by a drag-resizable horizontal bar (see todo.md). This owns which
 // areas are on screen, how the canvas band is divided between them, and which one has focus.
 //
 // It sits on top of SynthLib's module PANES (utilsGraphics.h): a pane owns a scroll position and a

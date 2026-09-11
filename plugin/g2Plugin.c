@@ -27,10 +27,11 @@
 // It is C, and so is SynthLib's descriptor, so nothing here needs C++ or Objective-C: the two
 // places that do - a VST3 vtable and a Cocoa view - are on the other side of the seam.
 //
-// THE ENGINE IS PROCESS-WIDE. soundEngine.c keeps its state in globals reached through atomics, so
-// this "instance" is a handle rather than an owner: two copies of the plug-in in one project would
-// fight over the same engine. Both wrappers know this and say so; it is a property of the engine,
-// not of the wrapping.
+// THE ENGINE IS PROCESS-WIDE, AND THAT IS NOW THE ONLY THING STOPPING TWO COPIES. soundEngine.c keeps
+// its state in globals reached through atomics, and the patch lives in the application's global
+// database, so this "instance" is a handle rather than an owner: two copies of the plug-in in one
+// project would fight over the same engine. The wrappers used to assume one instance as well; since
+// 2026-09-11 they do not, so what is left is a property of the engine - see todo.md.
 
 #include <stdatomic.h>
 #include <stdio.h>
@@ -338,19 +339,33 @@ static void g2_process(void * inst,
 // a note has to fall back to whatever is still held or legato playing breaks - hold D, play F, let F
 // go, and the D under your finger must come back rather than the sound stopping. noteStack.c is the
 // application's own logic, moved out of midiInput.c so both get it from one place.
-static void g2_note_on(void * inst, uint8_t note, float velocity) {
+//
+// OMNI, AND AT THE START OF THE BLOCK: the channel and the sample offset are both ignored. The engine
+// has one voice and no way to start a note part-way through a buffer, so a note lands at the start of
+// the block it arrived in - under 12 ms at 44.1 kHz and 512 frames.
+static void g2_note_on(void * inst, uint8_t channel, uint8_t note, float velocity,
+                       uint32_t sampleOffset) {
     (void)inst;
+    (void)channel;
     (void)velocity;                             // the engine has no velocity response yet
+    (void)sampleOffset;
     note_stack_note_on(note);
 }
 
-static void g2_note_off(void * inst, uint8_t note) {
+static void g2_note_off(void * inst, uint8_t channel, uint8_t note, float velocity,
+                        uint32_t sampleOffset) {
     (void)inst;
+    (void)channel;
+    (void)velocity;
+    (void)sampleOffset;
     note_stack_note_off(note);
 }
 
-static void g2_poly_pressure(void * inst, uint8_t note, float pressure) {
+static void g2_poly_pressure(void * inst, uint8_t channel, uint8_t note, float pressure,
+                             uint32_t sampleOffset) {
     (void)inst;
+    (void)channel;
+    (void)sampleOffset;
 
     // The engine has one voice, so as in the application only the note actually SOUNDING may move
     // the morph; without that test a key still held underneath would fight the one being played.
@@ -398,7 +413,9 @@ static double g2_get_param(void * inst, uint32_t id) {
     return (id < G2_NUM_PARAMS) ? g2->params[id] : 0.0;
 }
 
-static bool g2_param_text(void * inst, uint32_t id, double normalized, char * out, size_t len) {
+static bool g2_param_text(const tSynthLibPluginDesc * desc, void * inst, uint32_t id,
+                          double normalized, char * out, size_t len) {
+    (void)desc;
     (void)inst;
 
     if (id == (uint32_t)G2_PARAM_LEVEL) {
@@ -470,7 +487,8 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
 // its window through GLFW, which creates and owns one, while a plug-in is handed an NSView the HOST
 // owns and GLFW has no "adopt this existing NSView". gfx_attach_window() takes the host's view,
 // SynthLib's utilsGraphics.c is the only thing that draws, and the same canvas code serves both.
-static void * g2_create_view(void * inst, double width, double height) {
+static void * g2_create_view(const tSynthLibPluginDesc * desc, void * inst, double width, double height) {
+    (void)desc;
     (void)inst;
     return g2_view_create(width, height);
 }
@@ -524,6 +542,11 @@ static const tSynthLibPluginDesc gDescriptor = {
     .numOutputs        = 1,
     .wantsMidiIn       = true,
     .wantsTransport    = false,
+
+    // Levels, not events: a morph or the output level delivered twice - once here on the UI thread,
+    // once by the host inside a block - is harmless, and on a host that never routes the controller's
+    // values to the processor it is the only way a move on the host's own panel is heard.
+    .controllerAppliesParams = true,
 
     .vst3ProcessorUid  = gProcessorUid,
     .vst3ControllerUid = gControllerUid,

@@ -30,7 +30,7 @@ SOURCES=(
     "$HERE/src/moduleResourcesAccess.c"
     "$HERE/src/patchParamsResources.c"
     "$HERE/src/noteStack.c"
-    "$HERE/vst3/g2HostIo.c"
+    "$HERE/plugin/g2HostIo.c"
 )
 
 # Warnings as errors, as the application builds. Two suppressions, both about the SHARED sources rather
@@ -43,7 +43,7 @@ SOURCES=(
 #                            moduleResourcesAccess.c that predate this tool. They are worth tidying, but
 #                            a tool build is not the place to impose new rules on shared source and then
 #                            edit it to suit — that belongs with the progressive warnings work in
-#                            todo.txt, where the same change gets made once for every target.
+#                            todo.md, where the same change gets made once for every target.
 cc -O2 -std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sign-compare \
    -I"$HERE/src" -I"$HERE/SynthLib/src" \
    -o "$OUT" "${SOURCES[@]}" -lm

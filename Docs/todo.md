@@ -1,15 +1,10 @@
 G2-Edit TODO
 
 Things to do. ONE LINE PER ITEM - keep it that way.
-Measurements, reasoning and completed-work narrative go in findings.txt, NOT here.
-Built-but-unchecked work goes in to-test.txt.
+Measurements, reasoning and completed-work narrative go in findings.md, NOT here.
+Built-but-unchecked work goes in to-test.md.
 
 CT - PRIORITY
-- Continue with audio unit plugins for the siblings
-- Claude should be able to pull SynthLib on all the siblings, once I've pushed it. One to remember.
-- You'll see that I've been renaming documents from .txt to .md, rename all of them that way
-- Plugin mono voicing doesn’t seem to work as per hardware. If I have a relatively fast attack and delay, with no sustain and I press a keyboard key, hold it and press another - doesn’t move to new note. Does on hardware.
-- Plugin GUI seems to maybe not refresh as quickly as standalone on Ableton at least.
 - EmuUtility and SynthEdit need the MIDI input and output selection on a pop up dialogue, opened from the main menu. Scan should move to that dialogue as an option.
 - G2 Alike shouldn't just be single instance. You claimed it's a single instance model.
 
@@ -34,7 +29,7 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 MODULES AND GRAPHICS
 - Build the layout comparison: per module, how far each control sits from its transformed .rsrc position
 - Delay draws a bypass button in the original at CodeRef 3 but stores only 3 params - decide if we want it
-- Port the remaining custom graph displays from the original editor (see findings.txt for the full 43)
+- Port the remaining custom graph displays from the original editor (see findings.md for the full 43)
 - Draw the waveform graphics from captured samples rather than by hand
 - Gate's type selector should be a SYMBOL picker, not two text dropdowns (six 90x26 line drawings)
 - Verify the remaining 117 unverified module types against the hardware
@@ -43,7 +38,7 @@ MODULES AND GRAPHICS
 
 FILTERS
 - FltNord's LP/BP/HP/BR modes are NOT implemented - fltShape is read but the ladder path ignores it
-- Try FltNord as a state-variable filter (svf_filter already takes a shape); evidence in findings.txt
+- Try FltNord as a state-variable filter (svf_filter already takes a shape); evidence in findings.md
 - FltNord's PEAK shape still borrows FltClassic's k law; its LEVEL behaviour is now measured and fixed
 - Whether FltNord's GC follows the same law on the 12dB slope and on BP/HP/BR is not established
 - Pin FltComb's tuning constant: teeth land at nominal/1.67, is it 5/3 or an integer delay length?
@@ -59,7 +54,7 @@ FILTERS
 
 SOUND ENGINE
 - Reverb L/R peak-correlation LAG cannot be matched in an 8-line tank and no tap placement fixes it; only a single shared buffer would - do not tune the taps further
-- Audit the other positionally-initialised tables for the tFilterParams trap (see findings.txt)
+- Audit the other positionally-initialised tables for the tFilterParams trap (see findings.md)
 - Extend engine module coverage; recount the supported types, 23 predates the filter work
 - Run the engine-vs-hardware diff: both sides can produce the file, the comparison has not been run
 - Notes are not sent to the G2 while the local engine is sounding (owner's request)
@@ -82,9 +77,9 @@ MEASUREMENT PROGRAMME
 - Oscillators: the engine covers OscB, OscShpB, OscA and OscShpA. Eight more exist (OscC, OscD, OscDual, OscMaster, OscNoise, OscPerc, OscPM, OscString) and a patch using any of them renders silence. OscNoise is the next cheap one - no pitch tracking - but needs a noise source the engine does not have
 - tools/harmonics.py is BROKEN: fails at import with "No module named 'wav'", so every harmonic analysis is being written from scratch each time
 - OscA's harmonic ROLL-OFF is unverified - the osca/ captures look filtered (saw reads -16 dB at h2 against an ideal -6), so a capture with a known patch is needed; waveform identities and pulse duties ARE confirmed
-- Compressor UI: draw the settings graphically (threshold, ratio, RefLvl as a transfer curve) - CT's idea 2026-09-07. The live half is DONE: the engine now drives the meter, see findings.txt
+- Compressor UI: draw the settings graphically (threshold, ratio, RefLvl as a transfer curve) - CT's idea 2026-09-07. The live half is DONE: the engine now drives the meter, see findings.md
 - Extend engine-driven meters/LEDs beyond the compressor and the LFOs: every other module with a volumeType or LEDs still shows only what the instrument last sent
-- Compressor level probe BUILT and validated (see findings.txt); now use it for the unmeasured absolute levels: mixer level-dial law, mixer -6/-12 Pad, 4-Out Pad, FxtoIn/2-Out absolute references
+- Compressor level probe BUILT and validated (see findings.md); now use it for the unmeasured absolute levels: mixer level-dial law, mixer -6/-12 Pad, 4-Out Pad, FxtoIn/2-Out absolute references
 - Compressor DETECTOR: test the PEAK-ON-MAX(|L|,|R|) hypothesis - two experiments that need no absolute calibration, see findings 2026-09-08. Feeding both channels vs one must NOT move the trigger point if it is a max; a narrow pulse against a sine at equal internal amplitude separates peak from RMS
 - Compressor detector: re-run the sine/saw/square comparison driving the sidechain from Constant through LevAmp rather than from an oscillator - the oscillator's own waveform amplitudes are unknown, which is the free parameter that made the first result look impossible
 - pch2csd (MIT) is an independent cross-check for parameter maps - worth diffing against ours
@@ -100,12 +95,13 @@ PROTOCOL AND SECOND OPINIONS (each is a code comment needing hardware or a manua
 - SUB_RESPONSE_PARAM_LIST (0x4d): confirm the fix in parse_command_response() is right
 
 VST3
-- ***PRIORITY*** Ship the Metal window-slot fix: commit SynthLib/src/renderBackendMetal.m in the submodule, then bump the pin in all five projects (GenBridge and MidiSyncTool need ONLY the pin)
-- MIDI events are applied at block granularity, not sample-accurate
+- G2 Alike ignores the sample offset both wrappers now deliver with every note (2026-09-11), so a note still lands at the start of its block - needs an engine that can start a voice mid-buffer
 - ./do-uncrustify does not cover plugin/ or SynthLib/plugin/, so the plug-in sources and both format wrappers are unformatted
+- ./do-uncrustify rewrites ~2000 lines of src/moduleResources.h as committed (column alignment only, 0 non-whitespace lines) - format it once and commit, or every run leaves that file dirty
+- G2 Alike is still ONE INSTANCE PER PROCESS, and since 2026-09-11 only because of the engine: soundEngine.c's voice/DSP/snapshot statics (gVoice, gParams, gDelayLine...) need to become a per-instance struct, and each instance's patch its own database slot (gModule is already [MAX_SLOTS]) - the wrappers no longer stand in the way
+- tools/vst3host never connects processor and controller, so it only exercises the wrappers' single-instance fallback; the per-instance binding is covered offline by SynthLib/plugin/test (./do-test)
 
-- SynthLib's AU wrapper is INSTRUMENTS ONLY: an effect needs kAudioUnitProperty_SetRenderCallback, kAudioUnitProperty_MakeConnection and an AudioUnitRender() pull in au_render(). Left unwritten deliberately - write it against a real effect when GenBridge moves over
-- Move GenBridge and MidiSyncTool onto SynthLib/plugin/, then delete the G2_VST3_BUILD spelling renderBackendGL.c still accepts for them
+- tools/vst3host takes the LAST controller class in the factory rather than asking the component's getControllerClassId() - harmless with one variant, wrong with two; fixed in GenBridge's copy 2026-09-11
 - tools/auhost is not in the .gitignore and its BINARY is untracked; tools/vst3host's binary IS tracked, so pick one convention
 - The Audio Unit's version number is in two places that must agree: G2_AU_VERSION in plugin/g2Plugin.c and AU_VERSION in do-plugin
 

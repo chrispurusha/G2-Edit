@@ -4,9 +4,9 @@ The history that used to live in todo.txt. Everything here is DONE, MEASURED or 
 kept because the reasoning and the hardware numbers are worth more than the diffs, and because
 several entries record traps that cost real time.
 
-todo.txt is now a list of things TO DO and nothing else. to-test.txt is finished code awaiting a
+todo.md is now a list of things TO DO and nothing else. to-test.md is finished code awaiting a
 real-world check. If an item here still has open work in it, it also has a one-line entry in
-todo.txt pointing back.
+todo.md pointing back.
 
 This file is the VERBATIM former todo.txt, so nothing has been lost in the split. Line numbers
 quoted anywhere else in the repo still refer to it.
@@ -697,7 +697,7 @@ negative offsets to anchorTopLeft against the new y=0-at-body-top convention.
       out in rising.
     - LFOSHPA'S SHAPE PARAM TYPE WAS WRONG and is now paramTypeLfoShape (1%..99%, neutral at centre)
       rather than a raw CommonDial. It is NOT the oscillators' paramTypeShape, which runs 50%..99%.
-      LOGGED FOR CT TO VALIDATE against the original editor — see Docs/param-validation.txt, which
+      LOGGED FOR CT TO VALIDATE against the original editor — see Docs/param-validation.md, which
       states what is solid (the three ends, from the manual AND from measurement) and what is assumed
       (linearity between them).
 
@@ -2304,7 +2304,7 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   advanced 2026-07-28. Still wants an owner eyeball on a real non-Retina / "Low Resolution" display.
   NO-OP on 2x/Retina by construction, so only the 1x case can tell you anything.
 
-- Module layout cleanup — NEEDS (CT) VERIFY, flagged in Module dev debug notes.txt. All 12 mix
+- Module layout cleanup — NEEDS (CT) VERIFY, flagged in Module dev debug notes.md. All 12 mix
   modules audited and fixed (Mix4-1B/19, Mix8-1B/40, MixStereo/48); principles in
   module-layout-rules.md. Cross-family sweep of 9 dense/metered modules found no overlaps.
   STILL OPEN (optional): a fuller systematic sweep of the remaining ~190 module types — cheap now
@@ -3626,7 +3626,7 @@ OPEN WORK
   the plug-in.
 
 === SOUND ENGINE HANDOVER 2026-08-07 ===
-(Say "read the SOUND ENGINE HANDOVER section in G2-Edit/Docs/todo.txt" to pick this up in a new session.)
+(Say "read the SOUND ENGINE HANDOVER section in G2-Edit/Docs/todo.md" to pick this up in a new session.)
 
 --- 1. FIXED 2026-08-07: the engine no longer depends on connector data the RENDERER fills in ---
 
@@ -4154,7 +4154,7 @@ resources already hold.
   earlier note here claimed it needed the Blink stream and was unimplemented; that was wrong.
 
 - Verify remaining 117 unverified module types (filters, oscillators, delay lines, sequencer/logic,
-  MIDI send/receive, Resonator, Operator, Random* family, etc.) — see Module dev debug notes.txt.
+  MIDI send/receive, Resonator, Operator, Random* family, etc.) — see Module dev debug notes.md.
 
 - Add performance keyboard split/layer/zone UI (manual's "Layering Patches" section) — currently
   only the standalone NoteZone module exists.
@@ -4838,7 +4838,7 @@ resources already hold.
   All three had 3.5.1 HEADERS, so those two were compiling against one version and linking another.
   It linked and ran — a patch-level GLFW does not break ABI — which is exactly why it went unnoticed
   for a month.
-  REBUILT BOTH with the recipe in Third Party build notes.txt (delete build/ first: cmake caches the
+  REBUILT BOTH with the recipe in Third Party build notes.md (delete build/ first: cmake caches the
   architecture and deployment target, so re-running over an existing build directory silently keeps
   the old values). All three are now 3.5.1, minos 11.5, x86_64+arm64.
   NOTHING CHANGED ON SCREEN, checked rather than assumed: captures before and after differ by 455
@@ -6647,7 +6647,7 @@ output below -20 dBFS, every point carrying its own linearity check:
       check    -1.08  -0.11  -0.17  -0.22  +0.12  +0.90  +0.11     (dB difference at a lower drive)
   Peak gain is Q to within 3% once Q >= 2, so the measured Q runs about 3.2, 5.2, 11.4, 35.5, 148.
   flt_resonance_q() predicts 1.67, 2.67, 4.89, 10.3, 22.3 for the same settings.
-  THESE ARE TWO DIFFERENT QUANTITIES AND BOTH CAN BE RIGHT: param-validation.txt confirms
+  THESE ARE TWO DIFFERENT QUANTITIES AND BOTH CAN BE RIGHT: param-validation.md confirms
   flt_resonance_q() against the number the G2 PRINTS on its own panel, and that is what the dial
   text must keep showing. What a RESPONSE GRAPH needs is the measured one. Do not "fix" one with the
   other.
@@ -6720,7 +6720,7 @@ was the one measurement of the set that had already been turned into a constant.
   NOT CHANGED, DELIBERATELY: soundEngine.c's LADDER_K_MAX of 4.3. It is a discrete-time constant
   with a sample of loop delay and saturating stages, measured by a different method (saw harmonics),
   and it is right to differ. But it was chosen while the drawn constant was believed to be 3.914, so
-  it is worth an ear - see to-test.txt.
+  it is worth an ear - see to-test.md.
 
   NOISE-FLOOR SUBTRACTION ADDED to the analysis (CT: "noise floor also needs compensating for").
   The floor is captured with the filter bypassed and the input off, then subtracted IN POWER from
@@ -6821,7 +6821,7 @@ one module face).
 
 
 2026-08-30 — TODO.TXT AUDITED AGAINST THE CODE (CT: "I think there are quite a lot of items in
-todo.txt, which have actually already been done").
+todo.md, which have actually already been done").
 
   Correct, and it was my doing: the list was rebuilt from an automated extraction of the old file and
   I kept anything ambiguous rather than checking it, on the reasoning that an item wrongly kept is
@@ -6889,14 +6889,14 @@ AND THE AUDIT FOUND A REAL BUG NOBODY HAD LOOKED FOR.
   THE FACE NOW NEEDS RE-LAYING, which the fix does not do. The original's controls run YPos 5 to 32
   of its 45px body - the top two thirds - while ours are bottom-anchored and sit in the bottom two,
   so the added row appears as dead space at the top. Same job as Operator on 2026-08-29, same
-  procedure in module-layout-rules.md. In todo.txt.
+  procedure in module-layout-rules.md. In todo.md.
 
   NOT TOUCHED: GLFW_COCOA_RETINA_FRAMEBUFFER. Removing a deprecated window hint changes behaviour
   only if the new default differs, and Retina rendering here is already flagged as not re-verified
   since the glyph rewrite. Not a change to make blind on a non-Retina display.
 
 
-2026-08-30 — A SELECTION SURVIVED NEW PATCH. Found while chasing todo.txt's "clear_slot_data() and
+2026-08-30 — A SELECTION SURVIVED NEW PATCH. Found while chasing todo.md's "clear_slot_data() and
 the morph-defaults block disagree", which turned out to be the wrong description of a real fault.
 
   THE ITEM'S OWN CLAIM WAS NOT A BUG. init_patch() sets the patch name to "Init" and
@@ -6974,7 +6974,7 @@ patch, should minimise the FX area. We're initially working in the VA area for n
   IN THE SUBMODULE, so it is committed with SynthLib rather than with G2-Edit.
 
 
-2026-08-30 — THE TWO SWITCH ITEMS IN todo.txt WERE BOTH ALREADY DONE (CT: "Not sure they actually
+2026-08-30 — THE TWO SWITCH ITEMS IN todo.md WERE BOTH ALREADY DONE (CT: "Not sure they actually
 mean anything now though. Could check against the original editor's resources" - and: "You did
 already add radio buttons for some switches", and "Isn't the bare '0' box, the offset - which is
 calculated?"). Both hunches were right.
@@ -7035,7 +7035,7 @@ calculated?"). Both hunches were right.
   u128StrMap IS RETIRED. It had exactly two users, both of them these rows, and existed only to
   spell integers - which is what the "calculate, do not tabulate" rule exists to prevent.
 
-  STILL WANTS CT'S EYE ON THE PANEL, and it is in to-test.txt: the range of 64 comes from the manual
+  STILL WANTS CT'S EYE ON THE PANEL, and it is in to-test.md: the range of 64 comes from the manual
   and the original's formatter, NOT from the instrument. Written directly through the backdoor the
   G2 accepted and stored a raw 127, so nothing on the wire enforces 64 - only the module's own UI
   range does, and I cannot read the G2's display from here.
@@ -7359,7 +7359,7 @@ FREE-RUNNING OSCILLATORS - WHY NOTHING SOUNDS BETWEEN NOTES (2026-08-30, owner-r
   envelope's audio input arguably does not.
 
   Owner asked for it to be CONFIGURABLE rather than simply switched on, so the idle cost stays a
-  choice. Not started; the todo.txt line under SOUND ENGINE is the reminder.
+  choice. Not started; the todo.md line under SOUND ENGINE is the reminder.
 
 
 OSCILLATOR WAVE LAWS RE-MEASURED (2026-08-30)
@@ -8747,3 +8747,48 @@ in a host that skips the deterministic path.
   kAudioUnitProperty_MakeConnection and an AudioUnitRender() pull, and nothing in these projects has
   an Audio Unit with an input yet. Untested plumbing that only looks right is worse than a property
   that honestly answers "not supported"; it goes in when GenBridge moves over, against a real host.
+
+2026-09-11  THE PLUG-IN EDITOR LEAKED EVERY METAL BUFFER IT DREW WITH
+------------------------------------------------------------------------------------------------------
+CT: "Plugin GUI seems to maybe not refresh as quickly as standalone on Ableton at least." It was not
+a refresh rate. A frame got SLOWER THE MORE FRAMES HAD BEEN DRAWN, and nothing else explains a
+report that says "maybe": the editor is fine when opened and degrades while it is looked at.
+
+HOW IT WAS FOUND. G2_PLUGIN_FRAME_STATS=1 (g2View.m, kept) logs frames drawn, draw and present
+time, and the longest gap between frames, once a second. First run through tools/vst3host with
+cliclick moving the pointer: ten frames a second, flat - but that was cliclick, which manages about
+ten commands a second, and the editor was drawing exactly once per event. A 120 Hz event generator
+showed the real picture: 60 frames a second, locked to the display, and a draw time climbing
+linearly from 3.8 ms to 42 ms over forty seconds while the frame rate fell to 24.
+
+sample(1) put the late frames' time inside -[MTLDevice newBufferWithBytes:] -> IOGPUResourceCreate,
+i.e. creating the next vertex buffer, one per mtl_submit(). A counter said submissions per frame
+were CONSTANT (468, 23358 vertices), so the growth was in the cost of each one; vmmap said why -
+physical footprint 1.7 GB -> 12.7 GB and IOAccelerator (graphics) regions 60,074 -> 741,645 in
+thirty seconds. Every buffer was being kept.
+
+THE CAUSE WAS THE BUILD, NOT THE CODE. -newBufferWithBytes: returns an object the caller owns and
+renderBackendMetal.m relies on ARC to release it. do-plugin listed that file in SOURCES, whose
+compile line is the plain C one with no -fobjc-arc, rather than in OBJC_SOURCES. The applications
+build it in Xcode with ARC, and GenBridge's and MidiSyncTool's scripts already listed it with their
+Objective-C sources, which is why only G2 Alike ever showed it. Moved, and the file now refuses to
+compile without ARC. Same run afterwards: 511 -> 523 MB, a flat 3 ms at 60 frames a second.
+
+IN A HOST IT DID NOT NEED THE MOUSE. The meter timer redraws 20 times a second whenever the engine
+is running, so an editor left open on a playing patch leaked about 9,000 buffers a second.
+
+WHAT DID NOT HELP, recorded so it is not tried again as the fix: an @autoreleasepool around the
+frame. It is still there, as hygiene, but it changed nothing measurable - the buffers were never
+waiting on a pool.
+
+2026-09-11  MONO WAS LEGATO
+------------------------------------------------------------------------------------------------------
+CT: with a fast attack, a short decay and no sustain, holding a key and playing another does not
+move to the new note; it does on the hardware. In a single-voice mode the second key lands on the
+voice already sounding, whose gate is open, and the envelope only restarted on a gate that opened -
+so no envelope ever restarted over a held key in ANY mode, which is Legato's behaviour, and with the
+decay finished the second note was silent. The G2 manual's Voice Mode text says Legato alone does not
+retrigger. Each voice now counts the note-ons that should restart its envelopes, and an envelope
+restarts when that count moves; Legato's note-ons over a held key do not advance it. Offline on
+SimpleLead (attack 0, decay 40, sustain 0), the second key's first 100 ms: Mono 0.00032 -> 0.01087
+RMS, Legato 0.00032 unchanged, Poly 0.01212 unchanged. Not yet heard against the instrument.
