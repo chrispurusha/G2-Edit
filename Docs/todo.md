@@ -5,7 +5,6 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT - PRIORITY
-- EmuUtility and SynthEdit need the MIDI input and output selection on a pop up dialogue, opened from the main menu. Scan should move to that dialogue as an option.
 - G2 Alike shouldn't just be single instance. You claimed it's a single instance model.
 
 CT - LOWER PRIORITY
