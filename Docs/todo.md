@@ -17,12 +17,13 @@ CT - LOWER PRIORITY
 - Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
 - Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE <ctrl>V should Paste
 - Zoom to Fit from a right click, fitting the area under the cursor
+- Separate zoom for VA and FX.
 
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
 - Add a top-level Edit menu (Undo, Redo, Cut, Copy, Paste, Delete, Paste Params, Select All)
 - Nudge arrows on knobs and sliders, for step-by-step mouse/touchpad adjustment
-- Yellow module-selection border is not obvious enough; try twice the line width
+- Yellow module-selection border is not obvious enough; try twice the line width and/or more prominent yellow
 - Reconnection dialogue does not always appear
 - Open Recent for patches loaded from a bank
 - Move Delete Unused Cables out of the cable popup to a top-level menu
