@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/helpPanel.h.md - "// notes §k" refers there.
 
 #ifndef __HELP_PANEL_H__
 #define __HELP_PANEL_H__
@@ -27,13 +28,7 @@ extern "C" {
 #include "types.h"
 #include "floatingPanel.h"
 
-// The keyboard and mouse reference, as a floating panel (floatingPanel.h) so it can be left open
-// beside the canvas while you try the things it lists — which is the whole point of a shortcut list
-// and the reason it is not a modal dialogue.
-//
-// Its content is a static table in helpPanel.c. That table is DOCUMENTATION: every row has to match
-// what the code actually does, so a binding changed in mouseHandle.c or virtualKeyboard.c means that
-// row changes too. A shortcut list that lies is worse than none, because it is believed.
+// notes §1
 typedef struct {
     bool           active;
     tFloatingPanel panel;

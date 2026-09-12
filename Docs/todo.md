@@ -4,12 +4,9 @@ Things to do. ONE LINE PER ITEM - keep it that way.
 Measurements, reasoning and completed-work narrative go in findings.md, NOT here.
 Built-but-unchecked work goes in to-test.md.
 
-CT - PRIORITY
-- G2 Alike shouldn't just be single instance. You claimed it's a single instance model.
-- Claude identified some common code between projects. Worth consilidating and making common.
-- General stability of the projects. Memory leaks, CPU usage, graphics updates etc.
-
-CT - LOWER PRIORITY
+CT
+- Fix various module presentation and make module presentation have a common approach (dial and button positions etc.).
+- Implement more modules in sound engine.
 - Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
 - Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE <ctrl>V should Paste
 - Zoom to Fit from a right click, fitting the area under the cursor
@@ -40,6 +37,10 @@ MODULES AND GRAPHICS
 FILTERS
 - FltNord's LP/BP/HP/BR modes are NOT implemented - fltShape is read but the ladder path ignores it
 - Try FltNord as a state-variable filter (svf_filter already takes a shape); evidence in findings.md
+- FltNord may share FltMulti's filter: the DSP part behind FltMulti (§10.2) has output selections FltMulti does not use (a BR among them) - test that model against FltNord's captures before building another
+- Eq2Band/Eq3band Hi Freq: setting 0 sounds at 8 kHz and 1 at 6 kHz, the reverse of eq2BandHiStrMap's names - check what the G2's own display calls them and fix whichever is wrong (the engine follows the sound)
+- EqPeak/Eq3band deep wide cuts above ~1 kHz: the instrument's Chamberlin form is unstable there - measure what it actually does (§11.5)
+- FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs
 - FltNord's PEAK shape still borrows FltClassic's k law; its LEVEL behaviour is now measured and fixed
 - Whether FltNord's GC follows the same law on the 12dB slope and on BP/HP/BR is not established
 - Pin FltComb's tuning constant: teeth land at nominal/1.67, is it 5/3 or an integer delay length?
@@ -59,6 +60,9 @@ SOUND ENGINE
 - Extend engine module coverage; recount the supported types, 23 predates the filter work
 - Run the engine-vs-hardware diff: both sides can produce the file, the comparison has not been run
 - Notes are not sent to the G2 while the local engine is sounding (owner's request)
+- FM is not modelled on any oscillator: OscB's and OscC's FmMod input, FM amount and FM Lin/Trk are ignored by the engine
+- OscNoise's Width and WidthMod are SWAPPED in G2-Edit's tables: on the instrument parameter 6 is Width (it widens the band) and 5 is the Width modulation amount - the module tables (and so the face) call them 5 Width, 6 WidthMod. Fix the face and any engine read; measured 2026-09-12
+- OscD's face draws a "Pitch" dial at parameter 3, where the module tables have Tune Md (a Semi/Freq/Factor/Partial drop-down) - check against the instrument and fix the face
 - OscB's DualSaw renders as eOscWaveSuper in the engine; hardware says it is DblSaw (detune 0.5*Shape)
 - tOscWave has no DualSaw and value 4 means Sqr25 on OscA/C/D - the waveform enum needs a per-module map
 - Free-run RENDER is gated on the patch having no per-voice envelope; the exact test is "does a node
@@ -66,6 +70,8 @@ SOUND ENGINE
 - Option to reset oscillator phase on note-on, for predictable bass; hardware free-runs, so not default
 - Let oscillators free-run rather than only while a note sounds - some patches depend on it; make it configurable
 - Sound engine across cores - investigated and deprioritised, kept for later
+- OscNoise computes sin, exp and sqrt every sample for every voice (engine load 13% for a two-module patch against 6-8% for Noise) - with nothing patched into Pitch or Width the coefficients are constant and could be computed once per block
+- The engine costs ~2% of a core while SILENT (SimpleLead, no notes: 0.62 s CPU per 30 s, output all zero; a 4-voice chord is 2.2 s) - every instance on an idle track pays it. The time is the whole graph running: per-sample parameter smoothing of every node's 12 values, the voice loop, the reverb. A 'sleep when silent' mode (no voice sounding and the post-mix output below a floor for a second) would recover it, but must keep LFO and oscillator phase advancing and let effect tails finish - not a quick change. (Hoisting the per-sample exp() coefficients was tried 2026-09-11 and gained nothing: the compiler already does it)
 
 MEASUREMENT PROGRAMME
 - Finish the EnvADSR oracle at ~/Documents/G2EnvTrace: it compiles and runs but outputs zero until the state-block layout and ENV_TIME_TABLES contents are worked out
@@ -74,8 +80,8 @@ MEASUREMENT PROGRAMME
 - Shaper group is IMPLEMENTED but only Rect and ShpStatic are known; capture a transfer curve for Clip, Overdrive, Saturate, ShpExp and WaveWrap - one slow full-scale ramp (or a low sine) per mode gives the ENTIRE curve, since all seven are memoryless
 - Confirm the shaper parameter and connector ORDER on the instrument: it was read off the layout tables, and WaveWrap's mod dial and Mod jack both come before its signal ones
 - FX modules still missing from the engine: Phaser, Flanger, Vocoder, Digitizer, FreqShift, PShift, Resonator, Scratch, WahWah, NoiseGate, the EQs and the rest of the delay family
-- Control modules that promote to audio rate and cost almost nothing to add: the level maths (LevAdd, LevConv, LevMod, LevScaler, ModAmt, Invert), the remaining mixers and Pan, the switches and multiplexers, and Blue2Red/Red2Blue
-- Oscillators: the engine covers OscB, OscShpB, OscA and OscShpA. Eight more exist (OscC, OscD, OscDual, OscMaster, OscNoise, OscPerc, OscPM, OscString) and a patch using any of them renders silence. OscNoise is the next cheap one - no pitch tracking - but needs a noise source the engine does not have
+- Control modules that promote to audio rate and cost almost nothing to add: the level maths (LevAdd, LevConv, LevMod, LevScaler, ModAmt, Invert), the switches and multiplexers, and Blue2Red/Red2Blue (the summing mixers are done; Pan, X-Fade, the faders and MixStereo are in hand)
+- Oscillators: the engine covers OscB, OscShpB, OscA and OscShpA. Eight more exist (OscC, OscD, OscDual, OscMaster, OscNoise, OscPerc, OscPM, OscString) and a patch using any of them renders silence. OscNoise, OscC and OscD are done (2026-09-12)
 - tools/harmonics.py is BROKEN: fails at import with "No module named 'wav'", so every harmonic analysis is being written from scratch each time
 - OscA's harmonic ROLL-OFF is unverified - the osca/ captures look filtered (saw reads -16 dB at h2 against an ideal -6), so a capture with a known patch is needed; waveform identities and pulse duties ARE confirmed
 - Compressor UI: draw the settings graphically (threshold, ratio, RefLvl as a transfer curve) - CT's idea 2026-09-07. The live half is DONE: the engine now drives the meter, see findings.md
@@ -96,13 +102,15 @@ PROTOCOL AND SECOND OPINIONS (each is a code comment needing hardware or a manua
 - SUB_RESPONSE_PARAM_LIST (0x4d): confirm the fix in parse_command_response() is right
 
 VST3
-- G2 Alike ignores the sample offset both wrappers now deliver with every note (2026-09-11), so a note still lands at the start of its block - needs an engine that can start a voice mid-buffer
 - ./do-uncrustify does not cover plugin/ or SynthLib/plugin/, so the plug-in sources and both format wrappers are unformatted
 - ./do-uncrustify rewrites ~2000 lines of src/moduleResources.h as committed (column alignment only, 0 non-whitespace lines) - format it once and commit, or every run leaves that file dirty
-- G2 Alike is still ONE INSTANCE PER PROCESS, and since 2026-09-11 only because of the engine: soundEngine.c's voice/DSP/snapshot statics (gVoice, gParams, gDelayLine...) need to become a per-instance struct, and each instance's patch its own database slot (gModule is already [MAX_SLOTS]) - the wrappers no longer stand in the way
-- tools/vst3host never connects processor and controller, so it only exercises the wrappers' single-instance fallback; the per-instance binding is covered offline by SynthLib/plugin/test (./do-test)
+- G2 Alike instances share EDITOR state: each has its own document (four slots) and engine since 2026-09-11, but two open editors still share palette.c, menus.c, splitView.c, mutatorUI.c, paramOverlay.c and SynthLib's click regions and popups, plus the panels and drag flags kept out of the document because static tables point at them (gTopbarControls, gPatchSettingsEdit, gPerfSettingsEdit, gPatchParamsEdit, gPatchNotesEdit, gPatchParamRects) - scroll, zoom and an open panel follow you between editors
+- Performance playback in the engine: an instance holds all four slots but plays only the selected one; bind one engine per slot (sound_engine_bind_slot()) and mix them, with each slot's keyboard range and channel
+- The plug-in build's engine is ~5% slower than the application's (2.24 s vs 2.14 s CPU for 30 s of a 4-voice chord; it was 13% before SE_LOCAL, 2026-09-11). The thread-local read is now ~1% in a profile; the rest is indexing each banked access by a variable instead of the constant 0 - only a per-engine state struct reached through one pointer would recover it
+- At most SOUND_ENGINE_MAX_ENGINES (32) G2 Alike instances per process; the 33rd fails to load. Raise it if anyone hits it - unused banks are zero-fill
+- g2Menu.c's loaded-patch name is still one per process, so two editors show whichever file was opened last
+- Plug-in editors in tools/vst3host own ~350 MB of GPU memory that is NOT this code's (49 x 8 MB 'owned unmapped (graphics)' regions; the backend allocates one 1120x1660 target, its 4x MSAA copy and six small atlases, ~37 MB), and it barely changes with editor size (431 MB at a quarter of the area). The apps show nothing like it (EmuUtility 128 MB total). Check Live's own footprint per editor before chasing - it may be the harness. In G2 Alike it belongs to the FIRST editor: after closing and re-creating the editor 40 times (vst3host --reopen) the process sat at 196 MB, drawing correctly; GenBridge and MidiSyncTool stayed at ~470 MB either way
 
-- tools/vst3host takes the LAST controller class in the factory rather than asking the component's getControllerClassId() - harmless with one variant, wrong with two; fixed in GenBridge's copy 2026-09-11
 - tools/auhost is not in the .gitignore and its BINARY is untracked; tools/vst3host's binary IS tracked, so pick one convention
 - The Audio Unit's version number is in two places that must agree: G2_AU_VERSION in plugin/g2Plugin.c and AU_VERSION in do-plugin
 
@@ -188,8 +196,6 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
   (EmuUtility/SynthEdit's are 26/95), but what remains is legitimately G2-specific domain action logic
   operating on tModule/tParam/tCable, which do not exist in the other two apps.
 - Bottom of the module grid is not a hard wall: a module created (or grown by a replace) near row 127 extends past MAX_ROWS instead of being raised or refused - shift_fit_row() guards collisions with other modules but not the grid edge. Pre-existing, affects plain Add Module identically, and needs a decision on whether the last row should be a wall at all
-- gPaletteList and the sixteen static create-module arrays in menus.c are two copies of the same 171 entries - verified identical 2026-09-08, but only one of them should exist; build the menu from the table
-- Level-meter SCALE reads low against the instrument's own meters over USB (CT, 2026-09-08). soundEngine.c already flags the 7 dB-per-step law as approximate and eight points as too few; the confound named there is whether the instrument meters peak or RMS. Settle it with a known level rather than by ear: same signal, engine on and off, compare lit segments
-- Plug-in: File > Save has no performance branch - a plug-in instance is one patch in slot 0, so write_perf_to_file() is linked but never reached from there
-- Plug-in: key and character events never reach SynthLib's popups (no synthlib_popups_dispatch_key/_char in plugin/g2Input.c), so a filename cannot be typed into the Save browser and Escape does not close a dialog
+- write_perf_to_file() does not round-trip a .prf2: ArpTrance.prf2 (Version=22, 8456 bytes) saved by it (Version=23, 8108 bytes) reloads with Morph 8's source label "Group 8" shown as "Knob" and the yellow cable-filter button changed - shared by the app and G2 Alike; diff the two files section by section (morph labels, cable visibility) to find what is dropped
+- The G2 and the editor DIVERGE on cable deletes (2026-09-12): after ~80 scripted cable edits in one patch, DELCABLE of X-Fade Out -> 2-Out L and R updated the editor but not the G2 - the patch read back from the G2 held both deleted cables plus the new ones into the same inputs, and the G2 went silent while the engine played; repro in findings.md, cause not isolated (edit count, deleting a fanned-out output's cables, or both)
 - tools/vst3host crashed once on EXIT (2026-09-09, CT saw it too): EXC_BAD_ACCESS in objc_release, from objc_autoreleasePoolPop in main - an over-release of something the harness holds, at teardown only. Three clean runs since, so intermittent; the plug-in had already returned from every teardown call by then, but rule out the editor view before blaming the harness

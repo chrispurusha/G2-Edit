@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/usbLog.c.md - "// notes §k" refers there.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,11 +40,7 @@ void usb_log_open(void) {
     } else {
         snprintf(path, sizeof(path), "/tmp/G2_usb.log");
     }
-    // APPEND, not truncate. This used to open "w", so relaunching the app destroyed the previous
-    // session's capture — which is precisely the wrong behaviour when the thing being captured is a
-    // fault that only shows on a particular device state and may not survive being reproduced twice.
-    // Each session is separated by the marker below. Grows without bound; this is a temporary
-    // diagnostic (see ENABLE_USB_LOG in defs.h) and the file is meant to be deleted afterwards.
+    // notes §1
     logFile = fopen(path, "a");
 
     if (logFile == NULL) {

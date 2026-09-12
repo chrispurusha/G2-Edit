@@ -273,9 +273,7 @@ const tRgb          gModuleColourMap[]                                          
                                                                                       MODULE_PURPLE_4};
 
 // Indices match tConnectorType (types.h): Audio, Control, Logic, TurboLogic. TurboLogic's RGB
-// (1.0, 0.75, 0.31) is the real value the synth uses
-// (Original Editor/G2Editor.c: kCableRGBColorTurboLogic = CRGBColor(0xff00, 0xc000, 0x5000)) —
-// the only one of the four not otherwise inferable from the manual's colour-name descriptions
+// (1.0, 0.75, 0.31) is the real value the synth uses — the only one of the four not otherwise inferable from the manual's colour-name descriptions
 // alone (the manual just says "orange", not an exact hue).
 const tRgb          connectorColourMap[]             = {
     {0.7,  0.2,  0.2},
@@ -501,13 +499,13 @@ const tPaletteEntry gPaletteList[]                   = {
     {palGroupLogic,  moduleTypeADConv,      "ADConv"               },
     {palGroupLogic,  moduleTypeDAConv,      "DAConv"               },
 
-    // MIDI
+    // MIDI. No NoteDet: the G2 manual describes it in the In/Out group only, above, and the
+    // original editor's help lists it there too. It was in both until 2026-09-12.
     {palGroupMidi,   moduleTypeCtrlSend,    "CtrlSend"             },
     {palGroupMidi,   moduleTypePCSend,      "PCSend"               },
     {palGroupMidi,   moduleTypeNoteSend,    "NoteSend"             },
     {palGroupMidi,   moduleTypeCtrlRcv,     "CtrlRcv"              },
     {palGroupMidi,   moduleTypeNoteRcv,     "NoteRcv"              },
-    {palGroupMidi,   moduleTypeNoteDet,     "NoteDet"              },
     {palGroupMidi,   moduleTypeNoteZone,    "NoteZone"             },
     {palGroupMidi,   moduleTypeAutomate,    "Automate"             }, };
 

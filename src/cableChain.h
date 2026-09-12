@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/cableChain.h.md - "// notes §k" refers there.
 
 #ifndef CABLE_CHAIN_H
 #define CABLE_CHAIN_H
@@ -28,17 +29,7 @@ extern "C" {
 #include <stdint.h>
 #include "types.h"
 
-// A serial cable chain is a TREE of connectors. Its root is an OUTPUT (the signal source);
-// every other node is an INPUT. The G2 wire format encodes that shape directly:
-//
-//   linkType == cableLinkTypeFromOutput  ->  from-end is an output, to-end is an input
-//   linkType == cableLinkTypeFromInput   ->  from-end is an input,  to-end is an input
-//
-// so the to-end is ALWAYS an input, and (moduleIndex, ioCount) alone is ambiguous between an
-// input 0 and an output 0 — the direction has to be carried alongside it. Hence tCableNode.
-//
-// A chain whose root is not an output has NO SIGNAL SOURCE. The original editor renders those
-// white and refuses to operate on them; see cable_chain_colour().
+// notes §1
 typedef struct {
     uint32_t moduleIndex;
     uint32_t ioCount;
@@ -60,10 +51,7 @@ tCableNode cable_chain_to_node(tCable * cable);
 
 bool cable_chain_node_equal(tCableNode a, tCableNode b);
 
-// Creates a cable between two nodes, writing it to the database and telling the G2. The link
-// type follows the from-end's direction, which is how the wire format encodes it (and why
-// tCableKey.linkType can be assigned straight from a tConnectorDir — the two enums align).
-// Fails if the to-end is not an input; only inputs can be fed.
+// notes §2
 bool cable_chain_connect(uint32_t slot, uint32_t location, tCableNode from, tCableNode to, tCableColour colour);
 
 // The one cable feeding this node, or NULL. Only inputs can be fed, and each input takes at
@@ -90,17 +78,7 @@ uint32_t cable_chain_collect(uint32_t slot, uint32_t location, tCableNode node, 
 // (the original uses a PARTIAL tree iterator there, where connect uses a COMPLETE one).
 uint32_t cable_chain_collect_subtree(uint32_t slot, uint32_t location, tCableNode node, tCableKey * out, uint32_t maxOut);
 
-// Collects the BRANCH at `node`: the cable feeding it, if any, plus its whole subtree.
-//
-// This is the scope of the original's COLOR and DELETE, both of which run over a
-// CCompleteBranchIterator seeded at the clicked connector (GetRecolorCableMolecules 158993,
-// GetDeleteCableChainMolecules 158869 — structurally identical, one emitting CMCableRecolor
-// and the other CMCableDelete). It is what the manual means by "the entire serial cable chain
-// that the connection is part of", and why it also says a complete branch must be deleted from
-// its origin: seed the iterator lower down and you only get what hangs off that point.
-//
-// Break uses cable_chain_collect_subtree() instead — it deletes the feeding cable rather than
-// recolouring it, so including it here would be pointless.
+// notes §3
 uint32_t cable_chain_collect_branch(uint32_t slot, uint32_t location, tCableNode node, tCableKey * out, uint32_t maxOut);
 
 // Applies `colour` to the given cables, updating the database and telling the G2 about any
@@ -110,25 +88,13 @@ uint32_t cable_chain_apply_colour(uint32_t slot, uint32_t location, tCableKey * 
 // Deletes the given cables, from the database and from the G2.
 void cable_chain_delete_keys(uint32_t slot, uint32_t location, tCableKey * keys, uint32_t count);
 
-// DISCONNECT — splices `node` out of its chain and joins the chain back up around it, so what
-// remains keeps working. Mirrors GetDisconnectCableNodeMolecules (G2Editor.c:163473): one
-// surviving neighbour becomes the new parent (the node's own parent, or its first child when
-// the node is the chain root, i.e. an output), and every other neighbour is reconnected to it.
-// Returns false if nothing was attached to `node`.
+// notes §4
 bool cable_chain_disconnect(uint32_t slot, uint32_t location, tCableNode node);
 
-// BREAK — cuts the chain at `node` WITHOUT splicing, leaving everything past the cut connected
-// but dead, and recoloured white. Mirrors GetBreakCableNodeMolecules (163878), including its
-// no-op on a chain that has no source: such a chain has no chain ID in the original, is already
-// white, and so has nothing left to break. Returns false if nothing was broken.
+// notes §5
 bool cable_chain_break(uint32_t slot, uint32_t location, tCableNode node);
 
-// Re-applies the invariant to the whole chain containing `node`: recomputes the chain colour
-// and paints every cable in the chain with it.
-//
-// Call this after any edit that can change a chain's SOURCE-REACHABILITY. It must NOT be
-// called unconditionally after unrelated edits: chain colour is user-overridable via the
-// colour menu, and the original only discards that override on a topology change.
+// notes §6
 void cable_chain_recolour(uint32_t slot, uint32_t location, tCableNode node);
 
 #ifdef __cplusplus

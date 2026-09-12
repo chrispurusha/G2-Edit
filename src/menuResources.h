@@ -16,11 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/menuResources.h.md - "// notes §k" refers there.
 
-/*
- * Static menu item arrays for synth settings dropdowns.
- * Included only by menus.c, after action_setting_u8 / action_setting_i8 are defined.
- */
+// notes §1
 
 static tMenuItem gMidiChanItems[]      = {
     {"Off", RGB_GREY_3, action_setting_u8, 0x10, NULL},

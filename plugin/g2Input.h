@@ -66,6 +66,11 @@ bool g2_input_drag_tick(void);
 // was used — the view must pass anything else on, since the host owns its own shortcuts.
 bool g2_input_key(int character, bool cmdHeld);
 
+// A key for SynthLib's popups - the file browser's filename box, a dialog's Escape and Enter - FIRST,
+// before any shortcut. macKeyCode is NSEvent's keyCode and characters its UTF-8 text. True if a popup
+// took it, in which case nothing else should see it.
+bool g2_input_popup_key(unsigned short macKeyCode, const char * characters, bool isRepeat);
+
 #ifdef __cplusplus
 }
 #endif

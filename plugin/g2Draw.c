@@ -16,27 +16,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2Draw.c.md - "// notes §k" refers there.
 
-// What gets drawn into the plug-in's OpenGL surface — plain C, no Cocoa.
-//
-// THIS NOW USES THE APPLICATION'S OWN RENDERER. Everything below draws through SynthLib's
-// utilsGraphics.c — the same render_rectangle(), render_text() and set_rgb_colour() the editor
-// canvas is built from — rather than through raw GL calls of its own. That is the point of the
-// exercise: the drawing code was never the part tied to GLFW, and this file is the evidence.
-//
-// The split from g2View.m matters more than the contents. That file owns the NSOpenGLView, the
-// context and the host's resize notifications; this one owns pixels and knows nothing about who is
-// hosting it. It is C rather than Objective-C because nothing here needs a runtime.
+// notes §1
 
 #define GL_SILENCE_DEPRECATION    1
 
 #include <OpenGL/gl.h>
 
 #include "sysIncludes.h"
-// defs.h BEFORE synthlibDefs.h — it defines G2_EDIT, and synthlibDefs.h gates TOP_BAR_HEIGHT, the
-// colour palette and several layout constants on it. Included the other way round, TOP_BAR_HEIGHT
-// silently becomes 0.0 (the non-G2 branch), which put the module band 80 units too high, hidden
-// behind the top bar and with the margin between them swallowed.
+// notes §2
 #include "defs.h"
 #include "synthlibDefs.h"
 #include "synthlibTypes.h"
@@ -87,35 +76,28 @@
 
 static bool gFontReady = false;
 
-// Remembers where the patch on screen came from, so File > Save can write straight back to it.
-// The application's remember_file_path() (graphics.c) carries a performance branch and four slots;
-// a plug-in instance is one patch in slot 0, so this is the whole of it. Self-copy is guarded for
-// the same reason it is there: File > Save hands this the very buffer it is about to write into,
-// and COPY_STRING expands its destination three times.
+// notes §3
 static void g2_remember_file_path(const char * path) {
-    if ((path == NULL) || (path[0] == '\0') || (gSavedPatchPath[0] == path)) {
+    if ((path == NULL) || (path[0] == '\0') || (gSavedPatchPath[gSlot] == path)) {
         return;
     }
-    COPY_STRING(gSavedPatchPath[0], path);
+    COPY_STRING(gSavedPatchPath[gSlot], path);
 }
 
 // What the file browser hands back. The application's equivalent goes through its own loader, which
 // carries an online branch and pulls in GLFW; the plug-in already has its own in g2Patch.c.
 static void g2_on_file_chosen(const char * path) {
-    if ((path == NULL) || (g2_plugin_load_patch(path, 0) == false)) {
+    // A patch goes into the selected slot; a performance fills all four. Either way the loader
+    // records the path as Save's target and sets the names, as the application's own loader does.
+    tG2FileKind kind = g2_plugin_open_file(path, gSlot);
+
+    if (kind == eG2FileFailed) {
         return;
     }
     sound_engine_update_from_patch();
 
-    // The topbar reads the patch name out of gGlobalSettings, not from us — so set it the way the
-    // application does when it opens a file, rather than only remembering it for ourselves.
-    set_patch_name_from_filename(0, path);
-
-    // Both the same event as in the application: the file just opened is what File > Save writes
-    // back to, and what File > Open Recent should list. Without these the Save entry has no target
-    // and the recent list stays empty however many patches are opened.
+    // The same event as in the application: the file just opened is what File > Open Recent lists.
     recent_files_add(path);
-    g2_remember_file_path(path);
 
     {
         const char * leaf = strrchr(path, '/');
@@ -124,21 +106,34 @@ static void g2_on_file_chosen(const char * path) {
     }
 }
 
-// The other half. The application's on_file_saved() (graphics.c) chooses between serialising on the
-// USB thread and writing here, according to whether a G2 is connected; there is never one here, so
-// only the offline branch survives. The writer itself is shared — patchWrite.c was split out of
-// graphics.c so this file could reach it.
+// notes §4
 static void g2_on_file_saved(const char * path) {
     if ((path == NULL) || (path[0] == '\0')) {
         return;     // Cancelled
     }
     LOG_INFO("Saving file: %s", path);
 
-    if (write_database_to_file(path, 0) != EXIT_SUCCESS) {
+    // IN PERFORMANCE MODE, THE PERFORMANCE: all four slots and the performance settings, as the
+    // application's offline save does (graphics.c). write_perf_to_file() was linked in and never
+    // reached, because the plug-in held one slot and had no performance to write.
+    if (gGlobalSettings.perfMode == 1) {
+        if (write_perf_to_file(path) != EXIT_SUCCESS) {
+            show_alert("Save Performance", "The performance could not be written. Check the folder is writable.");
+            return;
+        }
+
+        if (gSavedPerfPath != path) {
+            COPY_STRING(gSavedPerfPath, path);
+        }
+        recent_files_add(path);
+        return;
+    }
+
+    if (write_database_to_file(path, gSlot) != EXIT_SUCCESS) {
         show_alert("Save Patch", "The patch could not be written. Check the folder is writable.");
         return;
     }
-    set_patch_name_from_filename(0, path);
+    set_patch_name_from_filename(gSlot, path);
     g2_remember_file_path(path);
     recent_files_add(path);     // A save lists the file too, exactly as an open does
 
@@ -154,14 +149,17 @@ static void g2_on_file_saved(const char * path) {
 // back with, so re-applying one field means owning all of them.
 static tSynthLibTheme gPluginTheme;
 
-// The palette opens by making the topbar taller, and the canvas origin is derived from exactly one
-// value - so this is the whole of it. The application's version lives in graphics.c and is not in
-// this build; the arithmetic is the same but the base is NOT, because the plug-in reserves a
-// smaller band than the application's slot-and-clock bar.
+// notes §5
 void apply_top_bar_height(void) {
     gPluginTheme.topBarHeight = MENU_BAR_HEIGHT + G2_PLUGIN_TOPBAR_HEIGHT + palette_band_height();
     configure_synthlib_theme(gPluginTheme);
     synthlib_request_redraw();
+}
+
+// The view's way in: it is Objective-C and knows its document only as a pointer, and selecting one
+// is all it needs - every name the drawing and input code uses then refers to that instance.
+void g2_draw_enter(void * doc) {
+    g2_document_select((tG2Document *)doc);
 }
 
 void g2_draw_init(void) {
@@ -173,11 +171,7 @@ void g2_draw_init(void) {
     // defs.h, so it has to be told before anything is drawn — exactly as init_graphics() does. The
     // values come from synthlibDefs.h so the plug-in and the application cannot drift apart.
     gPluginTheme = (tSynthLibTheme){
-        // The canvas starts BELOW the menu bar and the reserved topbar band. topBarHeight is how the
-        // renderer is told that, and it is what keeps modules from being drawn underneath them.
-        // NOT the application's value: its bar carries slot, performance and clock controls that a
-        // plug-in has no use for, so the reserved band here is smaller. Reserving it now means adding
-        // the topbar's controls later does not shift the whole patch down.
+        // notes §6
         .topBarHeight   = MENU_BAR_HEIGHT + G2_PLUGIN_TOPBAR_HEIGHT,
         .orange1        = (tRgb)RGB_ORANGE_1,
         .orange2        = (tRgb)RGB_ORANGE_2,
@@ -194,14 +188,7 @@ void g2_draw_init(void) {
         .mouseCoord = get_global_gui_scaled_mouse_coord,
     });
 
-    // A brand-new empty patch FIRST. gPatchDescr is otherwise all zeroes, and the pane divider's
-    // position is patch data (gPatchDescr[].barPosition) — zero meaning "Voice Area takes no
-    // height", which pinned the divider to the top of an empty window. init_patch() sets the same
-    // 300 the application uses for a new patch, deliberately showing both areas.
-    //
-    // A patch loaded afterwards carries its own barPosition and overwrites this, exactly as in the
-    // application.
-    // Tells appMenuBar.c there can never be a G2 attached, so its bank entries are omitted.
+    // notes §7
     g2_menu_init();
 
     // ONLY IF NOTHING IS LOADED. This runs when the editor view is first created, which is AFTER the
@@ -215,10 +202,7 @@ void g2_draw_init(void) {
     // arrangement the application starts in.
     split_view_init();
 
-    // The top bar's controls take their colours from here. WITHOUT IT every control is drawn with a
-    // zeroed tRgb — which is BLACK — so Undo/Redo and the A-D slot buttons came out as black
-    // rectangles. init_graphics() calls it for the same reason; nothing about the bar works until
-    // it has.
+    // notes §8
     topbar_init_controls();
 
     gFontReady = preload_glyph_textures(FONT_PATH, FONT_PRELOAD_SIZE);
@@ -235,29 +219,18 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     // canvas's own coordinate space, which is what every render call below expects.
     (void)backingScale;
 
-    // The viewport-and-projection half of synthlibScale.c's synthlib_scale_update(). That file
-    // cannot be linked here — its two OTHER functions call glfwGetWindowContentScale, which would
-    // drag GLFW into the plug-in — but the graphics half now lives in utilsGraphics.c, which the
-    // plug-in already compiles, so it is shared rather than repeated. What stays below is the
-    // scaling arithmetic, which genuinely does differ from the application's.
+    // notes §9
     render_backend_set_surface(pixelWidth, pixelHeight);
+
+    // notes §10
+    set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId, (tTopbarControlId)((uint32_t)topbarSlotAId + gSlot));
+    set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
+                                   (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[gSlot].activeVariation));
 
     set_render_width(pixelWidth);
     set_render_height(pixelHeight);
 
-    // THE APPLICATION'S OWN SCALING FORMULA, and adopting it is what makes the plug-in show the same
-    // field of view as the editor rather than a cropped corner of it.
-    //
-    // The whole UI is laid out in a fixed logical canvas TARGET_FRAME_BUFF_WIDTH/2 units wide (1280),
-    // and gGlobalGuiScale maps that onto however many physical pixels there are. This used to be set
-    // to the backing scale, which quietly redefined the logical canvas as 900 units — so roughly 70%
-    // of the app's field of view, with larger patches running off the edge and no scrolling to
-    // recover them.
-    //
-    // A consequence worth stating: coordinates below are now LOGICAL UNITS, not points. At a 900pt
-    // window they are about 1.42 to the point. Everything the renderer draws — including the menu
-    // bar's own MENU_BAR_HEIGHT — is in those units, which is exactly how the application treats
-    // them, so the chrome scales with the canvas instead of staying a fixed pixel size.
+    // notes §11
     gGlobalGuiScale = (double)pixelWidth / (TARGET_FRAME_BUFF_WIDTH / 2.0);
 
     pointWidth      = (double)pixelWidth / gGlobalGuiScale;
@@ -265,19 +238,7 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
 
     render_backend_clear((tRgb){BACKGROUND_GREY, BACKGROUND_GREY, BACKGROUND_GREY});
 
-    // PUSH THE PATCH TO THE ENGINE, exactly as the application's render_frame() does (graphics.c).
-    //
-    // Turning a dial writes to the module database; the audio thread reads a parameter SNAPSHOT, and
-    // nothing is heard until that snapshot is rebuilt. In the application a redraw is the event that
-    // rebuilds it, and every edit causes a redraw — so doing it here gives the plug-in the same
-    // behaviour, and covers every kind of edit rather than dials alone.
-    //
-    // Safe against process() rebuilding on the audio thread at the same moment: the snapshot's
-    // writers were given a mutex (gParamsWriteMutex in soundEngine.c) when the mod wheel latency was
-    // fixed, and the critical section is one struct copy.
-    // Deferred menu actions, drained here for the same reason the application drains them in its
-    // render loop: a browser must not be opened from inside a menu callback. See msg_send() in
-    // g2AppStubs.c for how the message gets this far.
+    // notes §12
     {
         tMessageContent msg = {0};
 
@@ -300,18 +261,23 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
 
                 case eRspShowOpenWrite:
                 {
-                    // File > Save As. The default name comes from the patch name the way the
-                    // application builds it; there is no performance branch here, since a plug-in
-                    // instance is a single patch in slot 0.
+                    // File > Save As. The default name comes from the patch or performance name,
+                    // the way the application builds it.
                     char patchName[CLAVIA_NAME_SIZE + 1]   = {0};
                     char defaultName[CLAVIA_NAME_SIZE + 6] = {0};   // name (16) + extension (5) + null
 
-                    COPY_STRING(patchName, gGlobalSettings.slot[0].patchName);
+                    if (gGlobalSettings.perfMode == 1) {
+                        COPY_STRING(patchName, gGlobalSettings.perfName);
+                    } else {
+                        COPY_STRING(patchName, gGlobalSettings.slot[gSlot].patchName);
+                    }
 
                     if (patchName[0] != '\0') {
-                        snprintf(defaultName, sizeof(defaultName), "%s.pch2", patchName);
+                        snprintf(defaultName, sizeof(defaultName), "%s.%s", patchName,
+                                 (gGlobalSettings.perfMode == 1) ? "prf2" : "pch2");
                     } else {
-                        snprintf(defaultName, sizeof(defaultName), "patch.pch2");
+                        snprintf(defaultName, sizeof(defaultName), "%s",
+                                 (gGlobalSettings.perfMode == 1) ? "performance.prf2" : "patch.pch2");
                     }
                     open_file_browser_write(g2_on_file_saved, defaultName);
                     break;
@@ -322,10 +288,15 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
                     // File > Save: straight back to the remembered path, no browser. Re-checked
                     // here rather than trusted from the menu, for the application's reason — the
                     // drain runs a frame or more after the click.
-                    if (gSavedPatchPath[0][0] == '\0') {
-                        open_file_browser_write(g2_on_file_saved, "patch.pch2");
-                    } else {
-                        g2_on_file_saved(gSavedPatchPath[0]);
+                    {
+                        char * target = (gGlobalSettings.perfMode == 1) ? gSavedPerfPath : gSavedPatchPath[gSlot];
+
+                        if (target[0] == '\0') {
+                            open_file_browser_write(g2_on_file_saved,
+                                                    (gGlobalSettings.perfMode == 1) ? "performance.prf2" : "patch.pch2");
+                        } else {
+                            g2_on_file_saved(target);
+                        }
                     }
                     break;
 
@@ -342,14 +313,11 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     // as long as the window is open.
     clear_click_regions();
 
-    // The plug-in loads its patch into slot 0; a plug-in instance is one patch, and the G2's
-    // four-slot performance layout is a hardware notion with nothing to map onto here.
-    gSlot = 0;
+    // NO LONGER PINNED TO SLOT A. An instance holds all four slots (the document, globalVars.h), which
+    // is what performance mode needs, and the top bar's A-D buttons choose between them exactly as the
+    // application's do; this used to force gSlot back to 0 on every frame.
 
-    // BOTH PANES, driven exactly as render_frame() drives them. render_modules()/render_cables()
-    // read gLocation at their top, so the location is set around each pass rather than passed in —
-    // the "mode rather than argument" style the pane machinery uses throughout. gLocation is put
-    // back to the focused pane's afterwards, since that is what every other reader means by it.
+    // notes §13
     split_view_apply();
 
     {
@@ -387,19 +355,10 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
         }
     }
 
-    // THE APPLICATION'S OWN TOP BAR, not a second implementation of it. An earlier attempt here
-    // drew a hand-picked subset — patch name, variations, cable toggles — and looked nothing like
-    // the editor, which defeats the point: a plug-in that resembles the application is the whole
-    // reason for reusing its renderer. The controls that describe hardware draw too and should:
-    // "Offline" is the truthful state here, and the TX/RX lamps simply stay dark.
+    // notes §14
     render_top_bar();
 
-    // THE PALETTE BAND, and it belongs here rather than with the popups: apply_top_bar_height()
-    // above has already reserved its height in the theme, so the canvas starts below it whether or
-    // not anything is drawn there. Omitting this call did not hide the palette — it left the band
-    // it had already pushed the patch down for EMPTY, which is what "the plug-in doesn't show the
-    // extended top bar" looked like. Straight after render_top_bar(), exactly as render_frame()
-    // orders the two in graphics.c.
+    // notes §15
     palette_render();
 
     // The morph group dials that sit at the right-hand end of the bar — Wheel, Vel, Keyb, Aft.Tch
@@ -408,17 +367,7 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
 
     render_menu_bar(gPluginMenuBar, g2_menu_bar_rect(pointWidth));
 
-    // LAST, so an open menu is drawn over everything it overlaps: above the canvas and the chrome,
-    // below nothing.
-    //
-    // ONE CALL, AND THE ORDER IS DATA - the application's own words for the same line in
-    // render_frame(). This used to be render_file_browser() and render_context_menu(), named
-    // individually, and the consequence was that the THREE SynthLib popups nobody had thought to
-    // name were never drawn. The alert dialog is one of them, so show_alert() had never once been
-    // visible in the plug-in: Help > About did nothing at all, and so would any error it ever tried
-    // to report. The coordinator draws SynthLib's own five in layer order, so a popup added there
-    // arrives here without this file changing. The menu bar is the exception above: its render slot
-    // is NULL because the BAR is the application's, drawn from gPluginMenuBar.
+    // notes §16
     synthlib_popups_render();
 
     if (gFontReady == false) {

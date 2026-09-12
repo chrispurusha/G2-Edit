@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/appMenuBar.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,10 +56,7 @@ extern "C" {
 #include "helpPanel.h"
 #include "synthlibPersistence.h"
 
-// Real actions land in these six open_*_menu() functions as misc.mm's Cocoa
-// menu items get ported over (File first, then
-// Settings/Backup/Restore/Controls/View). The bar itself, its layout, and
-// click/hover routing are already real and final.
+// notes §1
 static void action_open_patch(int index) {
     (void)index;
     file_menu_open_patch();
@@ -120,12 +118,7 @@ static void action_store_to_bank(int index) {
     file_menu_store_to_bank();
 }
 
-// WHETHER A G2 CAN EVER BE ATTACHED, as distinct from whether one is attached right now.
-//
-// The application greys its bank and device entries while offline, because going online is a thing
-// that can happen and a greyed entry says "this exists". The VST3 plug-in has no USB layer at all,
-// so for it those entries are not disabled — they are meaningless, and a permanently greyed row is
-// worse than no row. Default true, so the application is unchanged.
+// notes §2
 static bool sDeviceCapable = true;
 
 void app_menu_set_device_capable(bool capable) {
@@ -142,14 +135,7 @@ void open_file_menu(tCoord anchor) {
         "Open Patch/Perf File...", (tRgb)RGB_GREY_3, action_open_patch, 0, NULL, 0, 0.0
     };
 
-    // OPEN RECENT, as a flyout. Both arrays are static because the menu engine keeps the pointers it
-    // is given and reads them while the menu is open — a stack array would be gone by then. So are
-    // the labels: tMenuItem.label is a borrowed const char *, and a basename points into the stored
-    // path, which outlives the menu.
-    //
-    // A MISSING FILE IS SHOWN GREYED, not hidden. Removing it silently would make a patch on an
-    // unplugged drive vanish from the list for good; greying says "this is still yours, it is just
-    // not reachable right now", which is what the platform menus do.
+    // notes §3
     static tMenuItem recentItems[RECENT_FILES_MAX + 2];
     uint32_t         recentCount = recent_files_count();
     uint32_t         r           = 0;
@@ -421,11 +407,7 @@ void open_controls_menu(tCoord anchor) {
         {NULL,           (tRgb)RGB_BLACK,  NULL,                        0, NULL, 0, 0.0},
     };
 
-    // Labels are fixed strings with a checkmark prefix baked in (tMenuItem has no separate
-    // "checked" flag) — point each entry's label at the checked or unchecked variant depending
-    // on the current dial mode, rather than mutating the string in place. Plain "*" rather than a
-    // Unicode checkmark glyph: the app's glyph atlas only preloads ASCII (MAX_GLYPH_CHAR == 127 in
-    // synthlibDefs.h), so anything above that silently fails to render.
+    // notes §4
     static char *    checked[3]   = {"* Rotary", "* Vertical", "* Horizontal"};
     static char *    unchecked[3] = {"Rotary", "Vertical", "Horizontal"};
     int              i;
@@ -469,12 +451,7 @@ static void action_zoom_to_fit(int index) {
     wake_glfw();
 }
 
-// The overlay views. Selecting the mode already showing turns it off again, so the entries behave
-// as a radio group with a toggle on the active one.
-//
-// NOTE the argument is the item's POSITION in the menu, not the payload - contextMenu.c calls
-// action(index) and leaves the action to fetch its own value out of
-// gContextMenu.items[index].param, the same way every action in menus.c does.
+// notes §5
 static void action_overlay_mode(int index) {
     tParamOverlayMode mode = (tParamOverlayMode)gContextMenu.items[index].param;
 
@@ -517,12 +494,7 @@ static void action_toggle_palette(int index) {
 }
 
 void open_view_menu(tCoord anchor) {
-    // 3 zoom entries + Zoom to Fit + one per overlay view + the NULL terminator. It was exactly full
-    // at 9 before Zoom to Fit was added; overflowing one of these arrays does not fail visibly, it
-    // quietly writes over whatever static follows it (see the Experimental menu's note in todo.md).
-    // 3 zoom + Zoom to Fit + the palette toggle + one per overlay view + the NULL terminator.
-    // GROWN FROM 10 when the palette toggle was added: it was exactly full, and overflowing one of
-    // these arrays does not fail visibly - it quietly writes over whatever static follows it.
+    // notes §6
     static tMenuItem items[11]                        = {0};
     static char      paletteLabel[40]                 = {0};
     static char      overlayLabel[overlayModeMax][40] = {0};
@@ -597,10 +569,7 @@ static void action_toggle_mutator(int index) {
 #define MAX_OUTPUT_CHANNEL_ITEMS    (65)
 #define MAX_MIDI_SOURCE_ITEMS       (34)
 
-// THE UID SNAPSHOT TAKEN WHEN THE MENU WAS BUILT, one per row. The row a user clicks means "the
-// device whose name I just read", and only the UID can still say which device that was: the list is
-// re-enumerated on every audio_output_device_count(), so by the time this action runs, row 3 may be a
-// different device — or the list may be shorter than the menu still on screen.
+// notes §7
 static char          sDeviceUid[MAX_AUDIO_DEVICE_ITEMS][AUDIO_DEVICE_UID_MAX] = {0};
 
 static void action_select_audio_device(int index) {
@@ -609,10 +578,7 @@ static void action_select_audio_device(int index) {
     }
 
     if (audio_output_select_device_by_uid(sDeviceUid[index]) == false) {
-        // Said out loud rather than swallowed. A device can be listed and still refuse to open — in
-        // exclusive use by another application, or unable to offer the rate asked of it — and the
-        // previous version discarded that, leaving a ticked device making no sound and no way to tell
-        // why. It can also have been unplugged while this very menu was open.
+        // notes §8
         show_alert("Audio device", "That output could not be opened. It may be in use by another application, or no longer connected.");
     }
 }
@@ -738,10 +704,7 @@ void open_tools_menu(tCoord anchor) {
     bool             online        = device_ready();
     int              i             = 0;
 
-    // Label reflects current state the same way Controls' dial-mode items do (checkmark-style
-    // "* " prefix — see open_controls_menu — isn't used here since the item's own name already
-    // says what it does; a "Close Mutator" vs "Open Mutator" label reads clearer for a single
-    // toggle than a checkmark would).
+    // notes §9
     items[i++] = (tMenuItem){
         gMutator.active ? "Close Mutator" : "Open Mutator", (tRgb)RGB_GREY_3, action_toggle_mutator, 0, NULL, 0, 0.0
     };
@@ -789,12 +752,7 @@ void open_tools_menu(tCoord anchor) {
 #ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
 
 void open_experimental_menu(tCoord anchor) {
-    // Sized with room to spare, and deliberately generous: the entries here are conditional — the
-    // status line only appears with the engine running, the output lists only on a multi-channel
-    // device — so the real count varies, and overrunning this array corrupts whatever static
-    // follows it. It did exactly that, blanking the device flyout only while the engine was on.
-    // One slot per entry with room to spare. This overflowed once already, at 8, and the symptom
-    // was another menu's array being quietly overwritten rather than anything obviously wrong here.
+    // notes §10
     static tMenuItem items[20];
     int              i = 0;
 
@@ -969,10 +927,7 @@ void open_experimental_menu(tCoord anchor) {
             sourceLabel[0], (tRgb)RGB_GREY_3, action_select_midi_source, 0, NULL, 0, 0.0
         };
 
-        // ALL SOURCES AT ONCE, which is what a desk with a keyboard, a control surface and a DAW port
-        // on it actually wants, and it takes anything plugged in LATER too — the setup-changed
-        // notification reconnects. It was already the startup state, with no way back to it once a
-        // single source had been chosen.
+        // notes §11
         snprintf(sourceLabel[1], sizeof(sourceLabel[1]), "%sAll sources",
                  midi_input_all_sources_selected() ? "* " : "  ");
         sources[1]     = (tMenuItem){

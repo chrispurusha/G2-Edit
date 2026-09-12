@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/undo.h.md - "// notes §k" refers there.
 
 #ifndef UNDO_H
 #define UNDO_H
@@ -43,23 +44,11 @@ void undo_push_move(uint32_t slot, uint32_t location, tUndoMoveEntry * entries, 
 // that removes the pasted modules; redo needs no such list, as the paste re-derives it.
 void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint32_t anchorRow, tModuleKey * pastedKeys, uint32_t pastedCount, tClipboardModule * clipModules, uint32_t clipModuleCount, tClipboardCable * clipCables, uint32_t clipCableCount, tUndoMoveEntry * displaced, uint32_t displacedCount);
 
-// Cable-chain edits are recorded as a before/after snapshot of every cable in one location
-// rather than as a list of individual changes: a single command (Disconnect especially) can
-// delete, re-create AND recolour cables at once, and the set it touches is only known by
-// walking the chain. Snapshotting the location sidesteps all of that, and a patch's cable
-// count is small enough that it costs nothing worth counting.
-//
-// Bracket the edit with begin/commit. Commit pushes nothing if the cables came out unchanged,
-// so a command that turns out to be a no-op leaves no undo entry behind. Nesting is not
-// supported — a begin while one is already open is ignored, which keeps the outermost
-// bracket authoritative when one cable operation is built from others.
+// notes §1
 void undo_begin_cable_edit(uint32_t slot, uint32_t location);
 void undo_commit_cable_edit(void);
 
-// Record an Add Module, AFTER the module exists — the snapshot is what redo puts back. displaced/
-// displacedCount carry the modules the new one pushed down its column, as for undo_push_paste; here
-// redo needs them too, since it puts the module back at its recorded position rather than re-running
-// the shift that produced it.
+// notes §2
 void undo_push_create_module(tModuleKey key, tUndoMoveEntry * displaced, uint32_t displacedCount);
 
 // Record a module colour change (old → new).

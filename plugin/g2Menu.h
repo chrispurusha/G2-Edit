@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2Menu.h.md - "// notes §k" refers there.
 
 #ifndef __G2_MENU_H__
 #define __G2_MENU_H__
@@ -30,13 +31,7 @@
 extern "C" {
 #endif
 
-// Height reserved above the canvas for the topbar that is not built yet — variation buttons, patch
-// name, voice count, patch volume and the cable view toggles. Reserved NOW so the canvas is laid out
-// around it from the start; adding it later would otherwise shift the whole patch down at that
-// point. The application's own TOP_BAR_HEIGHT is 80; this is smaller because the slot, performance
-// and clock controls that fill much of the app's bar have no meaning in a plug-in.
-// The application's own bar height, because it IS the application's bar — render_top_bar() lays
-// itself out against TOP_BAR_HEIGHT, so anything else here would clip it.
+// notes §1
 #define G2_PLUGIN_TOPBAR_HEIGHT    (TOP_BAR_HEIGHT)
 
 // Everything above the canvas. The editor sizes its window by this so it need not know how the

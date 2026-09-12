@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/sound-engine-notes.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,12 +65,7 @@ extern "C" {
 #define OSCA_PARAM_ACTIVE        (5)
 #define OSCA_PARAM_PITCH_TYPE    (6)
 
-// Where each filter module keeps its parameters. They are NOT all laid out like FltClassic: FltLP
-// has no resonance at all, and its Slope sits one index earlier because of it. Reading a missing
-// parameter would take whatever the next one happens to be — for FltLP that would be Slope read as
-// resonance, i.e. a filter that self-oscillates because a menu index landed in a gain.
-//
-// -1 for a parameter the module does not have.
+// notes §1
 typedef struct {
     int freq;
     int env;
@@ -82,13 +78,7 @@ typedef struct {
     int active;
 } tFilterParams;
 
-// G2_FILTER_LEGACY=1 restores the filter behaviour as it stood before 2026-08-30 — FltLP reading
-// its Slope from the Bypass parameter, and a maximum of four poles. It exists so the corrected
-// filters can be A/B'd by ear against the old ones without a rebuild, and so a regression can be
-// backed out in one environment variable rather than a revert.
-// THE VOICE AREA RUNS CONTINUOUSLY ON THE INSTRUMENT, and this makes the engine do the same.
-// Set G2_ENGINE_NO_FREERUN=1 to get the old note-gated behaviour back without a rebuild, the same
-// way G2_FILTER_LEGACY works.
+// notes §2
 static bool engine_no_free_run(void) {
     static int cached = -1;
 
@@ -110,10 +100,7 @@ bool engine_filter_legacy(void) {
 }
 
 static bool filter_param_map(tModuleType type, tFilterParams * map) {
-    // DESIGNATED INITIALISERS DELIBERATELY. These were positional, and adding slopeMode in the
-    // middle of the struct silently shifted every one of them - slopeMode took what active meant
-    // and active became 0, which switched the filter off rather than failing to build. Naming the
-    // fields makes the next insertion harmless.
+    // notes §3
     switch (type) {
         case moduleTypeFltClassic:
         {
@@ -124,13 +111,7 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
         }
         case moduleTypeFltLP:
         {
-            // Freq, FreqMod, Kbt, Bypass - no Res, and SLOPE IS A MODE, not a parameter.
-            //
-            // This read .slope = 3 and .active = 4 until 2026-08-30. FltLP has FOUR parameters, so
-            // that took Slope from param 3 - which is BYPASS - and the active flag from a param that
-            // does not exist. The slope therefore followed the bypass switch, and only two of the
-            // six slopes were ever reachable. modeLocationList had already moved Slope to a mode on
-            // 2026-08-15; this map was not moved with it.
+            // notes §4
             if (engine_filter_legacy()) {
                 *map = (tFilterParams){
                     .freq = 0, .env = 1, .kbt = 2, .res = -1, .slope = 3, .slopeMode = -1, .gc = -1, .shape = -1, .active = 4
@@ -173,26 +154,23 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
     }
 }
 
-#define FLT_PARAM_FREQ       (0)
-#define FLT_PARAM_ENV        (1)       // modulation depth for the Env input, 0..200%
-#define FLT_PARAM_KBT        (2)
-#define FLT_PARAM_RES        (3)
-#define FLT_PARAM_SLOPE      (4)
-#define FLT_PARAM_ACTIVE     (5)
+#define FLT_PARAM_FREQ           (0)
+#define FLT_PARAM_ENV            (1)   // modulation depth for the Env input, 0..200%
+#define FLT_PARAM_KBT            (2)
+#define FLT_PARAM_RES            (3)
+#define FLT_PARAM_SLOPE          (4)
+#define FLT_PARAM_ACTIVE         (5)
 
-#define ENV_PARAM_SHAPE      (0)
-#define ENV_PARAM_ATTACK     (1)
-#define ENV_PARAM_DECAY      (2)
-#define ENV_PARAM_SUSTAIN    (3)
-#define ENV_PARAM_RELEASE    (4)
+#define ENV_PARAM_SHAPE          (0)
+#define ENV_PARAM_ATTACK         (1)
+#define ENV_PARAM_DECAY          (2)
+#define ENV_PARAM_SUSTAIN        (3)
+#define ENV_PARAM_RELEASE        (4)
 
-#define LEVAMP_PARAM_GAIN    (0)
-#define LEVAMP_PARAM_TYPE    (1)       // 0 = lin, 1 = exp
+#define LEVAMP_PARAM_GAIN        (0)
+#define LEVAMP_PARAM_TYPE        (1)   // 0 = lin, 1 = exp
 
-// "Out to" — where the module sends. NOT every Out module reaches the speakers: the other settings
-// are internal routing, and a patch commonly uses one to feed its FX area.
-//   2toOut, outToStrMap:     Out 1/2, Out 3/4, FX 1/2, FX 3/4, Bus 1/2, Bus 3/4  -> 0,1 audible
-//   4toOut, outTo4OutStrMap: Out, Fx, Bus                                        -> 0   audible
+// notes §5
 #define OUT_PARAM_DESTINATION    (0)
 #define FXIN_PARAM_SOURCE        (0)   // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
 #define OUT_PARAM_ACTIVE         (1)   // 2toOut's Bypass, non-zero is on
@@ -208,49 +186,27 @@ typedef enum {
 
 // OscShpB lays its parameters out differently from OscB — Active is 8, not 9, and the waveform is
 // at 10 with eight choices rather than at 8 with five.
-#define SHPB_PARAM_TUNE          (0)
-#define SHPB_PARAM_CENT          (1)
-#define SHPB_PARAM_KBT           (2)
-#define SHPB_PARAM_PITCH_MOD     (3)
-#define SHPB_PARAM_PITCH_TYPE    (4)
-#define SHPB_PARAM_SHAPE         (6)
-#define SHPB_PARAM_ACTIVE        (8)
+#define SHPB_PARAM_TUNE            (0)
+#define SHPB_PARAM_CENT            (1)
+#define SHPB_PARAM_KBT             (2)
+#define SHPB_PARAM_PITCH_MOD       (3)
+#define SHPB_PARAM_PITCH_TYPE      (4)
+#define SHPB_PARAM_SHAPE           (6)
+#define SHPB_PARAM_ACTIVE          (8)
 
-// The waveform selector is a MODE, not a parameter — the G2 keeps drop-down selectors out of the
-// parameter list entirely because, unlike a knob, they cannot be assigned to a morph group or a
-// controller and hold one setting across every variation (manual p.20). It lives in
-// modeLocationList, so it is read from module->mode[] and reading param[10] found nothing.
-#define SHPB_MODE_WAVEFORM    (0)
+// notes §6
+#define SHPB_MODE_WAVEFORM         (0)
 
-// OscShpA is OscShpB's sibling and shares its DSP, but two things differ and both were read off the
-// instrument rather than assumed. Its Waveform is a PLAIN PARAMETER, not a mode - a PARAMDUMP of a
-// freshly added one reports "modes count=0" where OscShpB has one - and its parameters run in a
-// different order, which the same dump pins exactly: 64 64 1 0 0 0 0 0 0 0 1 puts Kbt at 2 and the
-// power button at 10.
-//
-// Its Wave menu is OscShpB's with DblSaw and Pulse removed: {Sine1, Sine2, Sine3, Sine4, TriSaw,
-// SymPulse} against {Sine1, Sine2, Sine3, Sine4, TriSaw, DblSaw, Pulse, SymPulse}. So 0..4 are the
-// same waveform in both and A's fifth is B's seventh - see kShpAWave.
-#define SHPA_PARAM_TUNE         (0)
-#define SHPA_PARAM_CENT         (1)
-#define SHPA_PARAM_KBT          (2)
-#define SHPA_PARAM_PITCH_MOD    (3)
-#define SHPA_PARAM_SHAPE        (7)
-#define SHPA_PARAM_WAVEFORM     (9)
-#define SHPA_PARAM_ACTIVE       (10)
+// notes §7
+#define SHPA_PARAM_TUNE            (0)
+#define SHPA_PARAM_CENT            (1)
+#define SHPA_PARAM_KBT             (2)
+#define SHPA_PARAM_PITCH_MOD       (3)
+#define SHPA_PARAM_SHAPE           (7)
+#define SHPA_PARAM_WAVEFORM        (9)
+#define SHPA_PARAM_ACTIVE          (10)
 
-// SHAPER GROUP - Clip, Overdrive, Saturate, ShpExp, WaveWrap, ShpStatic and Rect (manual p.204-207).
-//
-// Every one of these is MEMORYLESS: the output depends only on the present input sample, through
-// what the manual calls a transfer function and draws as a graph. That is why they arrive as one
-// node kind carrying a mode rather than as seven, and why they cost nothing to run at audio rate -
-// which is exactly what the G2 means by a control module promoted to audio.
-//
-// THE ORDERS ARE NOT UNIFORM AND ARE NOT GUESSES WORTH REPEATING FROM MEMORY. WaveWrap lists its
-// modulation depth BEFORE its amount and its Mod jack BEFORE its In jack; Overdrive and Clip list
-// the mod dial first but the In jack first; Saturate and ShpExp list the amount first. Every one of
-// these came from the layout tables in moduleResources.h, and none is confirmed against the
-// instrument yet.
+// notes §8
 #define CLIP_PARAM_LEVEL_MOD       (0)
 #define CLIP_PARAM_LEVEL           (1)
 #define CLIP_PARAM_SHAPE           (2)
@@ -291,19 +247,135 @@ typedef enum {
 // What counts as a logic high. The G2's logic signals are full-scale 0/1, so anything near the
 // middle separates them; the envelope that drives this in the measurement patch sweeps the whole
 // range, so the exact threshold is not delicate.
-#define PULSE_THRESHOLD             (0.5)
+#define PULSE_THRESHOLD    (0.5)
 
-// Mix4to1C: one level per input, then a pad and a curve.
-#define MIX_PARAM_LEVEL_BASE        (0)
-// The four Channel Mute buttons sit directly after the four level dials. offOnColourMap indexes
-// them {grey, green}, so NON-ZERO IS ENABLED — a lit button is a channel that sounds.
-#define MIX_PARAM_ENABLE_BASE       (4)
-#define MIX_CHANNELS                (4)
-// The two mixers put Curve in different places: Mix4to1C has a Pad at 8 and Curve at 9, Mix4to1S
-// has no Pad and Curve at 8.
-#define MIX_PARAM_PAD               (8) // Mix4to1C only: 0 dB or -6 dB on every input at once
-#define MIX_PARAM_CURVE             (9)
-#define MIXS_PARAM_CURVE            (8)
+// §3.1 - where each summing mixer keeps its controls; -1 is "has none".
+typedef struct {
+    tModuleType type;
+    uint8_t     channels;   // level-controlled channels; the Chain input(s) follow them
+    bool        stereo;     // each channel is an L/R pair of input legs
+    int8_t      lev;        // channel 1's level dial
+    int8_t      levStep;    // how far apart successive channels' dials sit
+    int8_t      on;         // channel 1's On button
+    int8_t      onStep;
+    int8_t      inv;        // channel 1's Inv switch (invStrMap {Pos, Inv})
+    int8_t      invStep;
+    int8_t      curve;      // expStrMap drop-down
+    int8_t      pad;        // mixerPadStrMap / db12BPadStrMap drop-down
+} tMixSpec;
+
+static const tMixSpec kMixSpecs[] = {
+    //  type                 ch  stereo  lev st  on  st  inv st curve pad
+    {moduleTypeMix1to1A, 1, false,  0, 1,  1, 1, -1, 0,  2, -1},
+    {moduleTypeMix1to1S, 1, true,   0, 1,  1, 1, -1, 0,  2, -1},
+    {moduleTypeMix2to1A, 2, false,  0, 2,  1, 2, -1, 0,  4, -1},    // Lev1 On1 Lev2 On2 - interleaved
+    {moduleTypeMix2to1B, 2, false,  1, 2, -1, 0,  0, 2,  4, -1},    // Inv1 Lev1 Inv2 Lev2
+    {moduleTypeMix4to1A, 4, false, -1, 0, -1, 0, -1, 0, -1, -1},
+    {moduleTypeMix4to1B, 4, false,  0, 1, -1, 0, -1, 0,  4, -1},
+    {moduleTypeMix4to1C, 4, false,  0, 1,  4, 1, -1, 0,  9,  8},
+    {moduleTypeMix4to1S, 4, true,   0, 1,  4, 1, -1, 0,  8, -1},
+    {moduleTypeMix8to1A, 8, false, -1, 0, -1, 0, -1, 0, -1,  0},
+    {moduleTypeMix8to1B, 8, false,  0, 1, -1, 0, -1, 0,  8,  9},
+    {moduleTypeMixFader, 8, false,  0, 1,  8, 1, -1, 0, 16, 17},
+};
+
+// §4
+typedef enum {
+    eFadePan = 0,       // In, Mod -> L, R            PanMod 0, Pan 1, LogLin 2
+    eFadeCross,         // In1, In2, Mod -> Out       MixMod 0, Mix 1, LogLin 2
+    eFadeOneToTwo,      // In, Ctrl -> Out1, Out2     Mix 0, MixMod 1
+    eFadeTwoToOne,      // In1, In2, Ctrl -> Out      Mix 0, MixMod 1
+} tFadeKind;
+
+// §7.2
+static const struct {
+    double dial;
+    double cornerHz;
+    double rmsDb;
+}                     kNoiseColour[] = {
+    {  0, 18305.6,  -7.67}, {  8, 11848.2,  -8.66}, { 16, 7664.3,  -9.63}, { 24, 4869.2, -10.18},
+    { 32,  3164.4, -10.22}, { 40,  2015.7,  -9.78}, { 48, 1352.6,  -9.37}, { 56,  905.5,  -8.86},
+    { 64,   614.9,  -8.55}, { 72,   438.8,  -8.67}, { 80,  322.6,  -9.06}, { 88,  241.8,  -9.74},
+    { 96,   193.6, -10.72}, {104,   163.8, -11.76}, {112,  142.6, -12.75}, {120,  136.2, -14.55},
+    {127,   128.8, -14.84},
+};
+
+// §7.2 - the gain makes uniform white noise come out at the tabulated RMS.
+static void noise_colour(double value, double sampleRate, double * pole, double * gain) {
+    const uint32_t last   = (uint32_t)(sizeof(kNoiseColour) / sizeof(kNoiseColour[0])) - 1u;
+    uint32_t       i      = 0;
+
+    if (value < 0.0) {
+        value = 0.0;
+    } else if (value > 127.0) {
+        value = 127.0;
+    }
+
+    while ((i < (last - 1u)) && (value > kNoiseColour[i + 1u].dial)) {
+        i++;
+    }
+    double         t      = (value - kNoiseColour[i].dial) / (kNoiseColour[i + 1u].dial - kNoiseColour[i].dial);
+    double         corner = exp(log(kNoiseColour[i].cornerHz)
+                                + (t * (log(kNoiseColour[i + 1u].cornerHz) - log(kNoiseColour[i].cornerHz))));
+    double         rmsDb  = kNoiseColour[i].rmsDb + (t * (kNoiseColour[i + 1u].rmsDb - kNoiseColour[i].rmsDb));
+    double         a      = exp(-2.0 * M_PI * corner / sampleRate);
+
+    *pole = a;
+    *gain = pow(10.0, rmsDb / 20.0) / sqrt((1.0 - a) / (3.0 * (1.0 + a)));
+}
+
+// §2.1
+static double dial_fraction(double value) {
+    return (value >= 127.0) ? 1.0 : (value / 128.0);
+}
+
+// §6.1 - where each basic oscillator keeps its dials and its waveform; -1 is "has none".
+typedef struct {
+    tModuleType type;
+    int8_t      tune;
+    int8_t      cent;
+    int8_t      kbt;
+    int8_t      pitchMod;       // the PitchVar attenuator
+    int8_t      pitchType;      // pitchTypeStrMap {Semi, Freq, Factor, Partial}
+    int8_t      active;
+    int8_t      waveParam;      // waveform as a parameter...
+    int8_t      waveMode;       // ...or as a mode
+    int8_t      shape;
+    bool        aWaves;         // OscA's six, with three fixed pulse widths
+} tOscParams;
+
+#define OSCNOISE_PARAM_WIDTH_MOD    (5)    // §8.1 - the module tables have 5 and 6 swapped
+#define OSCNOISE_PARAM_WIDTH        (6)
+
+static const tOscParams kOscParams[] = {
+    //  type             tune cent kbt pmod ptype on  wparam wmode shape aWaves
+    {moduleTypeOscB,     0, 1, 2,  3, 4, 9,  8, -1,  6, false},
+    {moduleTypeOscA,     0, 1, 2,  3, 6, 5,  4, -1, -1, true },
+    {moduleTypeOscC,     0, 1, 2,  7, 3, 5, -1,  0, -1, true },               // FmM 4, FM type 6: FM not modelled, as on OscB
+    {moduleTypeOscD,     0, 1, 2, -1, 3, 4, -1,  0, -1, true },
+    {moduleTypeOscNoise, 0, 1, 2,  3, 4, 7, -1, -1, -1, false},
+};
+
+static const tOscParams * osc_params(tModuleType type) {
+    for (uint32_t i = 0; i < (sizeof(kOscParams) / sizeof(kOscParams[0])); i++) {
+        if (kOscParams[i].type == type) {
+            return &kOscParams[i];
+        }
+    }
+
+    return NULL;
+}
+
+static const tMixSpec * mix_spec(tModuleType type) {
+    for (uint32_t i = 0; i < (sizeof(kMixSpecs) / sizeof(kMixSpecs[0])); i++) {
+        if (kMixSpecs[i].type == type) {
+            return &kMixSpecs[i];
+        }
+    }
+
+    return NULL;
+}
+
 #define MIX_CURVE_LIN               (1) // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
 
 // StChorus: a detune depth and an amount, then its power button.
@@ -354,72 +426,31 @@ static double compressor_ratio(double rawValue) {
     return (double)tenths / 10.0;
 }
 
-// DelayB. Its range is a MODE, like the shape oscillators' waveform.
-// The two delays share their first four parameters but NOT their Bypass: DelayA has six parameters
-// with Bypass at 4, DelayB has nine with Bypass at 7 (and an extra HP at 8). Reading DelayB's index
-// on a DelayA lands past the end of its parameter list, reads zero, and silently bypasses it.
+// notes §9
 #define DELAY_PARAM_TIME        (0)
 #define DELAY_PARAM_FEEDBACK    (1)
 #define DELAY_PARAM_LP          (2)   // DelayA calls this Filter; both are a damping control
 #define DELAY_PARAM_DRYWET      (3)
 #define DELAY_PARAM_HP          (8)
 
-// The LP dial's cutoff, swept exponentially across its travel — see where node->damping is set.
-//
-// FITTED TO A BURST MEASUREMENT, which is how to measure anything inside a feedback loop: a short
-// burst of saw leaves the repeats separated in time, so each can be transformed on its own and
-// repeat[n+1]/repeat[n] IS the per-pass response, feedback and filter together. Normalising that to
-// its own flattest point leaves the filter alone.
-//
-//     LP 127   flat within 0.2 dB from 0.5 to 15 kHz  -> wide open, cutoff at or above 20 kHz
-//     LP  64   -1.9 dB at 2.8 kHz, -3.2 at 3.7, -4.2 at 5.6  -> one-pole knee near 3.5 kHz
-//     LP   0   only two repeats survive at all        -> cutoff well down, most energy removed
-//
-// 660 Hz at the bottom puts fc(64) at 3.7 kHz, which is that knee. A CONTINUOUS tone cannot measure
-// this: the repeats overlap, and at high feedback the loop regenerates and the ratios stop meaning
-// anything — measured per-pass "gains" came out above unity at FB 100.
-#define DELAY_LP_MIN_HZ    (660.0)
+// notes §10
+#define DELAY_LP_MIN_HZ         (660.0)
 
-// The HP dial's cutoff, as a QUADRATIC IN THE DIAL VALUE — log fc = a + b*hp + c*hp^2, not the
-// exponential the LP uses. That is not a preference, it is what the instrument does: an exponential
-// fitted to the two ends misses the middle of this dial by a factor of 2.4.
-//
-// MEASURED with the burst method — short saw burst, repeats separated in time, repeat[n+1]/repeat[n]
-// per harmonic, each row referenced to the 6-12 kHz band which sits above every cutoff here:
-//
-//     HP    32     64     96    127
-//     -3dB  92    841   2342   4561 Hz        fit error  +0.4  -1.1  +1.1  -0.4 dB
-//
-// VALIDATED at three settings that were NOT used to fit it:
-//
-//     HP    48     80    112
-//     meas 313   1208   3696 Hz               error      -0.6  +2.1  +0.1 dB
-//
-// HP 0 is the filter switched out rather than its lowest cutoff — it measures flat within 0.9 dB.
-//
-// The reference band matters more than it looks: taking it at 1.5-4.5 kHz, as a first attempt did,
-// puts the reference INSIDE the transition band at high settings, which flattens the measured curve
-// and hides the filter completely. HP 127 looked unmeasurable until the reference moved above it.
-#define DELAY_HP_LOG_A         (1.74224)
-#define DELAY_HP_LOG_B         (0.100227)
-#define DELAY_HP_LOG_C         (-0.000377517)
-#define DELAY_LP_MAX_HZ        (20000.0)
-#define DELAYA_PARAM_ACTIVE    (4)
-#define DELAYB_PARAM_ACTIVE    (7)
-#define DELAY_MODE_RANGE       (0)
+// notes §11
+#define DELAY_HP_LOG_A          (1.74224)
+#define DELAY_HP_LOG_B          (0.100227)
+#define DELAY_HP_LOG_C          (-0.000377517)
+#define DELAY_LP_MAX_HZ         (20000.0)
+#define DELAYA_PARAM_ACTIVE     (4)
+#define DELAYB_PARAM_ACTIVE     (7)
+#define DELAY_MODE_RANGE        (0)
 
-#define REVERB_PARAM_TIME      (0)
-#define REVERB_PARAM_BRIGHT    (1)
-#define REVERB_PARAM_DRYWET    (2)
-#define REVERB_PARAM_ACTIVE    (3)
+#define REVERB_PARAM_TIME       (0)
+#define REVERB_PARAM_BRIGHT     (1)
+#define REVERB_PARAM_DRYWET     (2)
+#define REVERB_PARAM_ACTIVE     (3)
 
-// The four LFO variants share a design but not a parameter order, so each one carries its own index
-// set. A -1 means the variant does not have that control at all: LfoC has no waveform selector and
-// no Kbt, and only LfoShpA has a Shape dial.
-//
-// None of them has an output LEVEL. G2 LFOs emit at full scale and the DEPTH is set at the
-// destination — the oscillator's own Pitch modulation knob — which is exactly how a vibrato patch is
-// wired, and why no level parameter is read here.
+// notes §12
 typedef struct {
     int rate;
     int range;      // which of the Rate Sub/Lo/Hi/BPM/Clk sweeps the rate dial walks
@@ -441,47 +472,30 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4};
 #define FXIN_PARAM_ACTIVE      (1)
 #define FXIN_PARAM_PAD         (2)    // db12PadStrMap: +6 dB, 0 dB, -6 dB, -12 dB
 
-// A node takes at most this many inputs. Eight, because the STEREO 4-into-1 mixer has four channels
-// of two legs each and both legs have to be read: patches routinely put two different modules on the
-// left and right of one channel — this patch feeds its two delays to In2L and In2R — so taking only
-// the left leg silently dropped whichever module sat on the right.
-#define MAX_NODE_INPUTS    (8)
+// §9.1
+#define MAX_NODE_INPUTS        (10)
+
+// §9.3
+#define NODE_OUTPUTS           (3)
+
+// §9.2
+#define MAX_NODE_LEVELS        (12)
 
 // Which connector carries the signal into each module. Everything the walk follows is a module's
 // FIRST input; LevMult and 2toOut take a second as well.
-#define CONNECTOR_IN_A    (0)
-#define CONNECTOR_IN_B    (1)
-// FltClassic's control input, the one beside its Env knob.
-//
-// A RAW CONNECTOR INDEX, like every other entry in the connector maps below — cable_chain_node_from_
-// connector() indexes module->connector[] directly and derives the ioCount itself. FltClassic's
-// connectors run In(audio), Out(audio), In(control), In(control), so 2 is the first control input.
-// Briefly changed to 1 on the mistaken belief that these were input-direction indices; 1 is the
-// module's OUTPUT connector, which broke the filter outright.
+#define CONNECTOR_IN_A          (0)
+#define CONNECTOR_IN_B          (1)
+// notes §13
 #define FLT_CONNECTOR_ENV_IN    (2)
 
 // The G2 caps the total pitch modulation reaching an oscillator or filter at +/-64 semitones
 // (manual p.78), which is what an Env amount of 100% corresponds to.
-#define FULL_MOD_SEMITONES    (64.0)
+#define FULL_MOD_SEMITONES     (64.0)
 
-// A full-scale bipolar signal on an oscillator's Pitch input sweeps one octave either way: the
-// manual's own worked example (p.78) is an A4 modulated "up and down by one octave", and it stays an
-// octave whatever note is played, because a Pitch input modulates on the note scale rather than
-// linearly in frequency. That is a much smaller range than the filter's Env input above.
+// notes §14
 #define PITCH_MOD_SEMITONES    (12.0)
 
-// The oscillators' Pitch mod-amount knob is an ATTENUATOR TYPE II — exponential, not linear. The
-// manual names the family ("the pitch mod-input on the various oscillators ... are examples of Type
-// II attenuation", p.79) and says what it means: "a setting of 50 attenuates the incoming signal by
-// a factor considerably less than 0.5". Reading the knob linearly, as this did, leaves roughly twice
-// the modulation at a half-open knob, which on a vibrato patch is the difference between a detune
-// and a siren.
-//
-// SQUARED is the same approximation the mixer's Exp/dB curve already uses (see eNodeMix, which the
-// manual confirms is the same Type II scale). Exact at both ends — 0 "shuts off the modulation
-// completely", 127 "leaves the incoming signal unaffected" — and convex between them, which is the
-// shape described. The exact law is not stated numerically anywhere in the manual, and the knob has
-// no value display to read it off, so this is closer rather than right.
+// notes §15
 static double type_ii_attenuator(double knob) {
     return knob * knob;
 }
@@ -507,56 +521,35 @@ typedef enum {
     eOscWaveSuper,
 } tOscWave;
 
-// The G2's Tune value is the MIDI note number of the oscillator's base pitch: value 0 is 8.1758 Hz
-// (note 0) and value 127 is 12.55 kHz (note 127), which is why the "Semi" display shows the value
-// minus 64 and the "Freq" display shows the same dial in Hz. So a single pitch calculation covers
-// both display modes, and 64 is the value at which the oscillator plays the note as struck.
+// notes §16
 #define OSCB_TUNE_UNITY       (64.0)
 #define MIDI_NOTE_A440        (69.0)
 #define MIDI_NOTE_MIDDLE_C    (60.0)
 
-// Output trim. A busy patch — several oscillators into a mixer, a resonant filter, then a second
-// mixer summing dry against delays and reverb — genuinely reaches five or six times a single
-// oscillator's level, and that is the G2's own arrangement rather than anything wrong. So the trim
-// has to leave room for it: 0.15 puts a hot patch just under full scale instead of 3 dB into the
-// clipper, at the cost of a single-oscillator sketch being quieter.
-#define VOICE_GAIN           (0.15)
+// notes §17
+#define VOICE_GAIN            (0.15)
 
 // Where the output starts bending rather than shearing.
-#define OUTPUT_KNEE          (0.80)
-#define ENVELOPE_SECONDS     (0.005)       // the anti-click ramp used when no EnvADSR is in the chain
+#define OUTPUT_KNEE           (0.80)
+#define ENVELOPE_SECONDS      (0.005)      // the anti-click ramp used when no EnvADSR is in the chain
 
 // Every ladder runs its full four poles whatever slope is selected — see ladder_filter().
-#define LADDER_POLES         (6)    // state available: FltLP's 36 dB setting is six poles
-#define LADDER_LOOP_POLES    (4)    // the RESONANCE loop is four long whatever is tapped - measured
+#define LADDER_POLES          (6)   // state available: FltLP's 36 dB setting is six poles
+#define LADDER_LOOP_POLES     (4)   // the RESONANCE loop is four long whatever is tapped - measured
 
-// The chain the engine renders. Small and fixed: these are hand-built sketches, not whole patches,
-// and a bound is what keeps the walk safe against a patch that feeds back into itself.
-// Raised from 12 once whole patches came into scope: a real one runs to a couple of dozen modules
-// across the Voice and FX areas.
-#define MAX_ENGINE_NODES    (28)
+// notes §18
+#define MAX_ENGINE_NODES      (28)
 
-// How many voices the engine can hold at once. The patch's own figure is what actually governs it —
-// see voice_count_for_patch() — and this is only the ceiling that sizes the state arrays. 32 is the
-// most the patch descriptor can ask for: voiceCount is a 5-bit field holding the count MINUS ONE.
-//
-// COST IS PER SOUNDING VOICE, NOT PER ALLOCATED VOICE. Only voices actually producing sound are
-// rendered (see voice_is_finished()), so a 32-voice patch played one note at a time costs what the
-// monophonic engine cost. Holding 32 notes really does cost 32 times as much, which no amount of
-// arranging avoids — it is 32 copies of the Voice Area.
-#define MAX_VOICES    (32)
+// notes §19
+#define MAX_VOICES            (32)
 
 // What counts as an inaudible voice, and how long it has to stay that way before the voice can be
 // handed to another note. -80 dB is below anything that survives the output stage; the window is
 // long enough that a waveform passing through zero cannot be mistaken for silence.
-#define VOICE_SILENCE            (1.0e-4)
-#define VOICE_SILENCE_SECONDS    (0.02)
+#define VOICE_SILENCE             (1.0e-4)
+#define VOICE_SILENCE_SECONDS     (0.02)
 
-// How long a voice may go on sounding after its key is up and its envelope has finished, before it
-// is faded out and taken back. A patch whose EnvADSR modulates only the filter never stops on its
-// own — correct, and what the hardware does, but on a soft synth it means every voice the patch owns
-// stays in the render for ever, and the cost of that is permanent rather than while you are playing.
-// The fade is what makes taking it back inaudible; without one this would be a click.
+// notes §20
 #define VOICE_MAX_TAIL_SECONDS    (2.0)
 #define VOICE_FADE_SECONDS        (0.03)
 
@@ -590,6 +583,12 @@ typedef enum {
     eNodePassThru,       // an effect that is not modelled yet: passes its input along unchanged
     eNodePulse,          // a one-shot gate, fired by a rising edge at its input
     eNodeShaper,         // the whole Shaper group - a memoryless transfer function
+    eNodeFade,           // Pan, X-Fade, Fade1-2, Fade2-1 - one position, two weights (fade_weights())
+    eNodeMixStereo,      // MixStereo: six mono channels, each levelled and panned, to a stereo pair
+    eNodeNoise,          // Noise: white noise through the Color dial's one-pole low-pass
+    eNodeOscNoise,       // §8
+    eNodeFltMulti,       // §10 - LP, BP and HP from one filter
+    eNodeEq,             // §11 - EqPeak, Eq2Band, Eq3band
     eNodeOut,
 } tNodeKind;
 
@@ -598,24 +597,25 @@ typedef struct {
     uint32_t  moduleIndex;   // so per-node audio state can survive a knob turn (see topology_signature)
     uint32_t  location;      // Voice or FX — the two areas number their modules independently
 
-    // What feeds each input: the node index, and WHICH of that node's outputs the cable came from.
-    // The output matters because a module can offer more than one — an EnvADSR's first output is the
-    // envelope itself and its second is the audio it has shaped, and a cable to one means something
-    // quite different from a cable to the other.
-    int32_t  in[MAX_NODE_INPUTS];
-    uint32_t srcOut[MAX_NODE_INPUTS];
-    uint32_t inCount;
-    bool     active;                 // the module's own power button
+    // notes §21
+    int32_t   in[MAX_NODE_INPUTS];
+    uint32_t  srcOut[MAX_NODE_INPUTS];
+    uint32_t  srcLeg[MAX_NODE_INPUTS]; // which of the source's NODE_OUTPUTS legs that output is
+    uint32_t  inCount;
+    bool      active;                  // the module's own power button
 
-    double   level[MAX_NODE_INPUTS]; // mixer channel levels
+    double    level[MAX_NODE_LEVELS];  // mixer channel levels, then 1.0 for the Chain input(s);
+                                       // MixStereo: L and R gain of each channel, interleaved
+    uint32_t  levelCount;              // how many of level[] are in use, and so smoothed
+    bool      mixStereo;               // mixer: inputs are L/R pairs sharing a channel's level
 
-    tOscWave wave;                   // oscillator
-    bool     oscKbt;
-    double   basePitch;
-    double   shape;
-    double   rateHz;         // LFO speed
-    uint32_t polarity;       // LFO output range, posStrMap order
-    bool     shpWave;        // LFO uses LfoShpA's waveform set rather than the plain one
+    tOscWave  wave;                    // oscillator
+    bool      oscKbt;
+    double    basePitch;
+    double    shape;
+    double    rateHz;        // LFO speed
+    uint32_t  polarity;      // LFO output range, posStrMap order
+    bool      shpWave;       // LFO uses LfoShpA's waveform set rather than the plain one
 
     // The filter's Freq DIAL VALUE (0..127, fractional), not a frequency. Kept in dial units because
     // that is the domain modulation and keyboard tracking act in, and because the dial is itself
@@ -651,18 +651,36 @@ typedef struct {
     double          releaseCoeff;
     // Shaper group. `shaperIn` is which input leg carries the signal rather than the modulation,
     // because WaveWrap puts its Mod jack FIRST and every other shaper puts it second.
-    uint32_t        shaperKind;   // tShaperKind
-    uint32_t        shaperCurve;  // the Type/Curve/Mode drop-down, raw - a mode carries no morph
-    bool            shaperSym;    // Clip and Overdrive: Sym shapes both halves, Asym the positive one
-    double          shaperAmount; // the dial, 0..1
-    double          shaperMod;    // the modulation attenuator, 0..1
-    uint32_t        shaperIn;     // input leg carrying the signal; the other one is the modulation
+    uint32_t        shaperKind;    // tShaperKind
+    uint32_t        shaperCurve;   // the Type/Curve/Mode drop-down, raw - a mode carries no morph
+    bool            shaperSym;     // Clip and Overdrive: Sym shapes both halves, Asym the positive one
+    double          shaperAmount;  // the dial, 0..1
+    double          shaperMod;     // the modulation attenuator, 0..1
+    uint32_t        shaperIn;      // input leg carrying the signal; the other one is the modulation
 
-    double          constant;     // Constant module's value
-    uint32_t        line;         // which shared delay line this node owns, if it needs one
-    double          brightness;   // reverb, 0..1 as the dial reads it — HIGH IS BRIGHT
-    double          timeNorm;     // reverb Time as the dial reads it, 0..1 — drives the diffusion
-    uint32_t        reverbType;   // reverb room size: Small/Medium/Large/Hall
+    double          constant;      // Constant module's value
+    // Fade family (§4); the position rides on the shape smoother.
+    double          noisePole;     // Noise: the one-pole low-pass's feedback coefficient, from Color
+    double          noiseGain;     // and the gain that keeps its level where the instrument's is
+    double          oscNoiseWidth; // §8.3, as a dial fraction
+    double          oscNoiseWidthMod;
+    bool            fltSixDb;      // FltMulti dB/Oct: 0 is 6 dB
+    bool            fltGainComp;   // FltMulti GComp
+    double          eqInputLevel;  // §11
+    double          eqLowHz;       // 0 = no low shelf
+    double          eqLowGain;
+    double          eqHighHz;      // 0 = no high shelf
+    double          eqHighGain;
+    double          eqPeakHz;      // 0 = no peak
+    double          eqPeakDamping;
+    double          eqPeakGain;
+    uint32_t        fadeKind;      // tFadeKind
+    double          fadeMod;       // the modulation attenuator, 0..1
+    bool            fadeLog;       // logStrMap {Log, Lin}: 0 is Log. The two faders have no choice
+    uint32_t        line;          // which shared delay line this node owns, if it needs one
+    double          brightness;    // reverb, 0..1 as the dial reads it — HIGH IS BRIGHT
+    double          timeNorm;      // reverb Time as the dial reads it, 0..1 — drives the diffusion
+    uint32_t        reverbType;    // reverb room size: Small/Medium/Large/Hall
 
     // Evaluated ONCE per sample, after the voices are summed, rather than once per voice. True for
     // everything in the FX Area, for the three module kinds that own a shared delay buffer wherever
@@ -670,10 +688,7 @@ typedef struct {
     bool postMix;
 } tEngineNode;
 
-// A patch can hold more than one Out module — SimpleLead has two, a Voice Area output carrying the
-// dry voice and an FX Area output carrying the delays and reverb — and on the hardware they SUM at
-// the sockets. Tapping only the first one silently drops the other, which on that patch means
-// hearing the effects with no dry signal underneath them.
+// notes §22
 #define MAX_ENGINE_TAPS    (4)
 
 typedef struct {
@@ -694,41 +709,42 @@ typedef struct {
     tEngineNode node[MAX_ENGINE_NODES];
 } tSoundEngineParams;
 
-// Published by the UI thread, consumed by the audio thread, via a seqlock: the writer makes the
-// sequence odd before touching the snapshot and even again after, so a reader that sees an odd
-// sequence — or a different one either side of its copy — knows it read during a write. Neither
-// side ever blocks, and the audio thread never waits on the UI thread. A plain pair of buffers
-// would not do: the UI can publish twice while one audio buffer is being filled, which is long
-// enough to land back on the buffer the audio thread is mid-copy of.
-static tSoundEngineParams gParams           = {0};
-static _Atomic uint32_t   gParamsSeq        = 0;
+// notes §23
+#ifdef SYNTHLIB_PLUGIN_BUILD
+#define SE          (tEngineIdx)
+#define SE_LOCAL    const uint32_t tEngineIdx                                      = gDoc->engineIndex
+#else
+#define SE          (0u)
+#define SE_LOCAL    (void)0
+#endif
 
-// SERIALISES WRITERS ONLY. The audio thread never takes this — it is the seqlock's reader and stays
-// lock-free, so there is no priority inversion to worry about.
-//
-// A seqlock tolerates exactly one writer, and for a long time there was one: the render thread,
-// rebuilding the snapshot every frame. That is what forced a morph to go the long way round —
-// sound_engine_set_morph() records the position, but only a rebuild folds it into what the audio
-// thread reads, so the MIDI thread had to ask for a REDRAW and wait for it. Mod wheel response was
-// therefore capped at the frame rate, with a full canvas repaint sitting between the wheel and the
-// sound.
-//
-// With writers serialised here, any thread may rebuild. The MIDI thread now does so immediately on a
-// morph change (midiInput.c) instead of waiting to be drawn.
-static pthread_mutex_t    gParamsWriteMutex = PTHREAD_MUTEX_INITIALIZER;
+// WHICH SLOT THIS ENGINE PLAYS: -1 follows the document's selected slot, which is all there is today;
+// a performance will bind one engine to each slot. See sound_engine_bind_slot().
+static int32_t gPatchSlotBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = -1};
+#define gPatchSlot    (gPatchSlotBank[SE])
+
+// The reverb type each engine last laid its delay lines out for - see the reverb's reset.
+static uint32_t                    sLastTypeBank[SOUND_ENGINE_MAX_ENGINES]         = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = UINT32_MAX};
+
+static uint32_t engine_slot(void) {
+    SE_LOCAL;
+
+    return (gPatchSlot >= 0) ? (uint32_t)gPatchSlot : (uint32_t)gSlot;
+}
+
+static tSoundEngineParams          gParamsBank[SOUND_ENGINE_MAX_ENGINES];
+#define gParams       (gParamsBank[SE])
+static _Atomic uint32_t            gParamsSeqBank[SOUND_ENGINE_MAX_ENGINES];
+#define gParamsSeq    (gParamsSeqBank[SE])
+
+// notes §24
+static pthread_mutex_t             gParamsWriteMutexBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = PTHREAD_MUTEX_INITIALIZER};
+#define gParamsWriteMutex       (gParamsWriteMutexBank[SE])
 
 #define PARAMS_READ_ATTEMPTS    (4)   // then keep last good — a retry loop must not spin in audio
 
-// Note events queue up here rather than being a single "current note" the audio thread samples once
-// per buffer. Two things were wrong with that: the note only took effect at a buffer boundary, which
-// is audible jitter at any sensible buffer size, and if two events landed inside one buffer only the
-// last survived — so fast playing dropped notes.
-//
-// Written by the MIDI thread and the UI thread, drained by the audio thread. Multiple producers, one
-// consumer: the write index is claimed with a fetch_add so no two producers take the same slot, and
-// each slot publishes its own sequence number afterwards so the consumer can tell a slot that has
-// been claimed from one that has actually been filled in.
-#define NOTE_QUEUE_SIZE    (64)
+// notes §25
+#define NOTE_QUEUE_SIZE         (64)
 
 typedef struct {
     int32_t          note;
@@ -736,93 +752,62 @@ typedef struct {
     _Atomic uint32_t sequence;   // claim index + 1 once written; 0 means never used
 } tNoteEvent;
 
-static tNoteEvent       gNoteQueue[NOTE_QUEUE_SIZE];
-static _Atomic uint32_t gNoteWrite                  = 0;
-static uint32_t         gNoteRead                   = 0;   // audio thread only
+static tNoteEvent                  gNoteQueueBank[SOUND_ENGINE_MAX_ENGINES][NOTE_QUEUE_SIZE];
+#define gNoteQueue    (gNoteQueueBank[SE])
+static _Atomic uint32_t            gNoteWriteBank[SOUND_ENGINE_MAX_ENGINES];
+#define gNoteWrite    (gNoteWriteBank[SE])
+static uint32_t                    gNoteReadBank[SOUND_ENGINE_MAX_ENGINES]; // audio thread only
+#define gNoteRead     (gNoteReadBank[SE])
 
-static _Atomic bool     gActive                     = false;
+static _Atomic bool                gActiveBank[SOUND_ENGINE_MAX_ENGINES];
+#define gActive       (gActiveBank[SE])
 
 // Morph positions, 0..1, one per group. Written by the MIDI thread as controllers move, read by the
 // UI thread when it builds a snapshot. Plain atomics: each is independent and a torn read is not
 // possible on a value this size.
-static _Atomic uint32_t gMorphMilli[NUM_MORPHS]     = {0};
+static _Atomic uint32_t            gMorphMilliBank[SOUND_ENGINE_MAX_ENGINES][NUM_MORPHS];
+#define gMorphMilli    (gMorphMilliBank[SE])
 // The highest each morph has reached. The live value is useless as a diagnostic — by the time you
 // have let go of the key and opened a menu to look at it, it has fallen back to zero.
-static _Atomic uint32_t gMorphPeakMilli[NUM_MORPHS] = {0};
+static _Atomic uint32_t            gMorphPeakMilliBank[SOUND_ENGINE_MAX_ENGINES][NUM_MORPHS];
+#define gMorphPeakMilli     (gMorphPeakMilliBank[SE])
 
-// Pitch bend as it arrives, -1..+1. Scaled to semitones by the patch's own Bend range at render
-// time, so changing the range takes effect without the wheel having to move.
-// Output attenuation, as a gain x1000 so the audio thread reads one atomic rather than calling pow.
-// Applied BEFORE the output knee, which is the point of it: pulling a hot patch down so the limiter
-// stops being the thing that controls the level.
-// METERS THE ENGINE PRODUCES, for the module faces to show while it is playing. Indexed by location
-// and module index rather than by node, so a reader needs neither the snapshot nor a lock: the audio
-// thread stores, the UI thread loads, and the worst a race can do is a meter one frame old.
-//
-// THE SAME 8-BIT VALUE THE USB STREAM CARRIES, deliberately - usbComms.c reads volumes as an 8-bit
-// field and the renderer already knows how to draw one, so the engine's meter needs no new path and
-// no new drawing code. For the compressor that value is a BAR, (1 << lit) - 1, which is exactly what
-// the instrument sends: 1, 7, 31, 63, 127, 255 were read off it.
-//
-// A WRITTEN FLAG PACKED WITH THE VALUE, in one word, and both parts matter.
-//
-// The FLAG rather than a sentinel value, because the value has to stay byte-identical to what the USB
-// stream carries: the whole point of metering from the engine is to be able to put the two side by
-// side, and a value shifted by one to make room for a sentinel could not be compared without
-// remembering to undo it. METER_VALUE_MASK is the 8 bits usbComms.c reads; METER_WRITTEN sits above
-// them.
-//
-// ONE WORD rather than two, because the flag and the value must be read from the SAME store. Split
-// across two atomics a reader could take the flag from one update and the value from another, and
-// find a meter that says "valid" carrying a number from a different moment.
-//
-// ONLY THE COMPRESSOR SO FAR: its meter is the one whose meaning has been measured.
+// notes §26
 #define METER_VALUE_MASK    (0xFFu)
 #define METER_WRITTEN       (1u << 8)
 #define METER_LEG_SHIFT     (16u)   // leg 1 above the flag; leg 0 occupies METER_VALUE_MASK
 
-// SET WHEN A PUBLISHED METER OR LED VALUE ACTUALLY CHANGES, and read by the render loop, which
-// only draws when something asks it to (see synthlib_request_redraw). Without this the meters moved
-// only while the mouse did: the audio thread was updating the arrays perfectly well and nothing was
-// telling the GUI to look at them, so a meter tracked the pointer rather than the sound.
-//
-// A FLAG RATHER THAN A REDRAW REQUEST FROM HERE. synthlib_request_redraw() is safe from any thread,
-// but it calls glfwPostEmptyEvent(), and doing that once per audio block is a syscall on the audio
-// thread several hundred times a second. Setting a relaxed atomic costs nothing, and the loop is
-// already awake on a timeout whenever the engine is running.
-//
-// COMPARED, NOT SET BLINDLY. The publish happens every block whatever the value, so setting this
-// unconditionally would hold the GUI at the tick rate for as long as the engine was on, silence
-// included. atomic_exchange gives the old value back for free, so the comparison is one operation.
-static _Atomic bool       gMetersDirty;
-static _Atomic uint32_t   gModuleMeter[locationMax][MAX_NUM_MODULES];
+// notes §27
+static _Atomic bool                gMetersDirtyBank[SOUND_ENGINE_MAX_ENGINES];
+#define gMetersDirty    (gMetersDirtyBank[SE])
+static _Atomic uint32_t            gModuleMeterBank[SOUND_ENGINE_MAX_ENGINES][locationMax][MAX_NUM_MODULES];
+#define gModuleMeter    (gModuleMeterBank[SE])
 
-// AND THE LEDS, same packing and same reasoning. A module's LED value is a two-bit field - bit 0
-// green, bit 1 red - so the mask below covers it with room to spare and the value stays exactly what
-// parse_led_data() would have put there.
-//
-// ONLY THE LFOs SO FAR. Their LED was MEASURED rather than assumed (2026-09-07): polled against
-// LEDDUMP's own timestamps at Rate Lo 60, it ran at 0.5226 Hz against a predicted LFO rate of
-// 0.5110 Hz with a 53% duty cycle - so it simply follows the SIGN of the LFO output, on for half the
-// cycle, and it is green rather than red.
-static _Atomic uint32_t   gModuleLed[locationMax][MAX_NUM_MODULES];
+// notes §28
+static _Atomic uint32_t            gModuleLedBank[SOUND_ENGINE_MAX_ENGINES][locationMax][MAX_NUM_MODULES];
+#define gModuleLed    (gModuleLedBank[SE])
 
 // The follower behind the level meters. Per NODE, not per voice: the face has one meter however many
 // voices are sounding, and only voice 0 writes it. About 200 ms of release at 96 kHz.
-#define METER_DECAY    (0.00005)
-static double             gMeterEnv[MAX_ENGINE_NODES][2];
+#define METER_DECAY         (0.00005)
+static double                      gMeterEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
+#define gMeterEnv           (gMeterEnvBank[SE])
 
-static _Atomic int32_t    gOutputGainMilli = 1000;
+static _Atomic int32_t             gOutputGainMilliBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1000};
+#define gOutputGainMilli    (gOutputGainMilliBank[SE])
 
-static _Atomic int32_t    gBendMilli       = 0;
+static _Atomic int32_t             gBendMilliBank[SOUND_ENGINE_MAX_ENGINES];
+#define gBendMilli          (gBendMilliBank[SE])
 
 // Highest absolute sample the audio thread has produced since this was last read. Purely a
 // diagnostic — it is what lets a test say "sound is coming out" without a pair of ears.
-static _Atomic uint32_t   gPeakMilli       = 0;
+static _Atomic uint32_t            gPeakMilliBank[SOUND_ENGINE_MAX_ENGINES];
+#define gPeakMilli    (gPeakMilliBank[SE])
 
 // The peak BEFORE the output gain, so the real headroom a patch needs is visible rather than being
 // hidden by whatever the guard clamped it to.
-static _Atomic uint32_t   gRawPeakMilli    = 0;
+static _Atomic uint32_t            gRawPeakMilliBank[SOUND_ENGINE_MAX_ENGINES];
+#define gRawPeakMilli    (gRawPeakMilliBank[SE])
 
 // Why the engine is or is not making a sound. UI thread only — written while building the snapshot,
 // read by the menu.
@@ -837,19 +822,12 @@ typedef enum {
     eStatusPlaying,
 } tSoundEngineStatus;
 
-static tSoundEngineStatus gStatus          = eStatusOff;
-static uint32_t           gPlayingCount    = 0;            // how many modules are in the rendered chain
+static tSoundEngineStatus          gStatusBank[SOUND_ENGINE_MAX_ENGINES]     = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = eStatusOff};
+#define gStatus              (gStatusBank[SE])
+static uint32_t                    gPlayingCountBank[SOUND_ENGINE_MAX_ENGINES]; // how many modules are in the rendered chain
+#define gPlayingCount        (gPlayingCountBank[SE])
 
-// Audio-thread-only state. Nothing else may touch these.
-// THE WHOLE GRAPH RUNS OVERSAMPLED, which is what the G2 does: its audio rate is 96 kHz against a
-// typical 48 kHz output (manual p.71). Two things need it and cannot get it any other way — the
-// ladder filter, whose model stops holding as its poles approach Nyquist, and any nonlinearity,
-// whose harmonics fold back down if they are made too close to the output rate.
-//
-// Doing it for the WHOLE graph rather than per node is both simpler and better: there is no input
-// to interpolate for each nonlinear node and no per-node decimator, just one filter at the very
-// end. The linear parts (mixers, amplifiers, delay, reverb) gain nothing from it but cost little,
-// and having one rate throughout means nothing has to know it is happening.
+// notes §29
 #define ENGINE_OVERSAMPLE    (2)
 
 // The tempo a clock-synced module works to. The engine does not run the patch's master clock, so
@@ -857,18 +835,12 @@ static uint32_t           gPlayingCount    = 0;            // how many modules a
 // second. See the delay's Clk branch — this is a stand-in, not the hardware's tempo.
 #define ENGINE_REFERENCE_BPM    (120.0)
 
-static double             gDeviceRate      = 48000.0;
-static double             gSampleRate      = 96000.0;
+static double                      gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
+#define gDeviceRate             (gDeviceRateBank[SE])
+static double                      gSampleRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
+#define gSampleRate             (gSampleRateBank[SE])
 
-// ── VOICES ──────────────────────────────────────────────────────────────────────────────────────
-//
-// One of these per simultaneously sounding note. Everything here used to be a single global, which
-// is what made the engine monophonic — not any shortage of oscillators, just one copy of "which note
-// is playing and is its key still down".
-//
-// `note` OUTLIVES THE GATE. A released voice is still sounding its release, and that release has to
-// stay at the pitch it was played at, so the note is only cleared when the voice is taken for
-// something else.
+// notes §30
 typedef struct {
     int32_t  note;         // MIDI note this voice holds, -1 for none
     bool     gate;         // key still down
@@ -883,71 +855,38 @@ typedef struct {
     uint32_t trigger;      // counts note-ons that restart the envelopes - see voice_note_on()
 } tVoice;
 
-static tVoice             gVoice[MAX_VOICES] = {0};
-static uint64_t           gVoiceClock        = 0;
+static tVoice                      gVoiceBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES];
+#define gVoice         (gVoiceBank[SE])
+static uint64_t                    gVoiceClockBank[SOUND_ENGINE_MAX_ENGINES];
+#define gVoiceClock    (gVoiceClockBank[SE])
 
-// Published for the note stack, which has to know whether to release the note it was given or to
-// fall back to the newest one still held. An atomic rather than a look into the parameter snapshot:
-// it is read from the MIDI thread, and copying the whole snapshot to answer one question would be
-// absurd. See sound_engine_is_polyphonic().
-static _Atomic uint32_t   gEngineVoices      = 1;
+// notes §31
+static _Atomic uint32_t            gEngineVoicesBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1};
+#define gEngineVoices    (gEngineVoicesBank[SE])
 
 // Whether the patch is in LEGATO voice mode, the one mode where a key played while another is held
 // does not restart the envelopes. Published beside gEngineVoices for the same reason: it is read by
 // voice_note_on() on the audio thread, per note, where copying the snapshot to ask would be absurd.
-static _Atomic bool       gEngineLegato      = false;
+static _Atomic bool                gEngineLegatoBank[SOUND_ENGINE_MAX_ENGINES];
+#define gEngineLegato    (gEngineLegatoBank[SE])
 
-// RENDER LOAD, as a percentage of real time, peak-held. The time spent inside sound_engine_render()
-// against the time the buffer it filled will take to play: at 100 % the engine is using the whole of
-// its deadline and the next buffer is late, which is heard as crackling rather than as anything
-// musical. Peak-held because the interesting figure is the worst buffer, not the average — one late
-// buffer in a hundred is plainly audible and would vanish into a mean.
-static _Atomic uint32_t   gLoadPercent       = 0;
+// notes §32
+static _Atomic uint32_t            gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
+#define gLoadPercent    (gLoadPercentBank[SE])
 
 static void reset_voices(void);
 static uint32_t voice_count_for_patch(uint32_t slot);
 
-static double             gVibratoPhase      = 0.0;
-static tSoundEngineParams gLastGoodParams    = {0};
-static uint64_t           gSeenTopology      = 0;
+static double                      gVibratoPhaseBank[SOUND_ENGINE_MAX_ENGINES];
+#define gVibratoPhase        (gVibratoPhaseBank[SE])
+static tSoundEngineParams          gLastGoodParamsBank[SOUND_ENGINE_MAX_ENGINES];
+#define gLastGoodParams      (gLastGoodParamsBank[SE])
+static uint64_t                    gSeenTopologyBank[SOUND_ENGINE_MAX_ENGINES];
+#define gSeenTopology        (gSeenTopologyBank[SE])
 
-// Per-node state, indexed by node position. Carried across snapshots while the topology signature
-// holds, so turning a knob does not restart the oscillator or reopen the envelope.
-// Oversampling for the oscillator section. The G2 runs its audio at 96 kHz against the 48 kHz
-// typical here, so 2x alone would match the hardware's rate; 4x is used because polyBLEP's residual
-// error falls with the square of the phase step, and the shape waveforms have no band-limiting of
-// their own at all and depend entirely on this.
-//
-// The two numbers are not independent, and the filter is the one that matters. Measured on a
-// sawtooth at C7 (the worst case in the audible range), residual aliasing went:
-//
-//     32 taps -34 dB | 64 taps -43 dB | 128 taps -71 dB | 256 taps -73 dB
-//
-// and 8x oversampling at 256 taps measured the same as 4x at 128 — what counts is the transition
-// width, which is taps DIVIDED BY the oversampling factor, so doubling the rate without doubling the
-// filter buys nothing and costs twice the arithmetic. 4x/128 sits at the knee: the hardware capture
-// this was matched against measures about -32 dB, so the engine is now well clear of it.
-//
-// Decimation only computes the samples it keeps, so the cost is 128 multiply-accumulates plus four
-// waveform evaluations per oscillator per output sample.
-// Relative to the ENGINE rate, which is itself oversampled — so the oscillators still run at four
-// times the device rate overall, as they did when the graph ran at the device rate and this was 4.
-#define OSC_OVERSAMPLE    (4 / ENGINE_OVERSAMPLE)
-// 48, not the 128 this began with, and the difference is CPU rather than taste. This filter is the
-// engine's single largest cost — it runs once per oscillator per voice per oversampled sample, so
-// its length is multiplied by the polyphony, and at eight voices 128 taps was enough on its own to
-// miss the audio deadline (CoreAudio reports that as "skipping cycle due to overload", heard as
-// crackling).
-//
-// MEASURED, worst image folding back into 0..20 kHz when decimating 192 kHz to 96 kHz, against the
-// deviation the filter causes inside that band:
-//
-//     128 taps  -116 dB   0.00 dB      48 taps   -90 dB   0.00 dB
-//      64 taps   -98 dB   0.00 dB      32 taps   -82 dB   0.00 dB
-//
-// The passband is untouched at every length because the cutoff sits at 43 kHz, far above anything
-// audible — the taps buy stopband depth alone. 90 dB is below the noise floor of any playback path
-// this will meet, so the remaining 26 dB was being paid for in CPU and heard by nobody.
+// notes §33
+#define OSC_OVERSAMPLE       (4 / ENGINE_OVERSAMPLE)
+// notes §34
 #define OSC_DECIMATE_TAPS    (48)
 
 // The engine's own output filter, removing everything above the DEVICE's Nyquist before the extra
@@ -955,362 +894,120 @@ static uint64_t           gSeenTopology      = 0;
 // transition width, not the oversampling factor, is what governs the result.
 #define OUT_DECIMATE_TAPS    (64)
 
-static double   gOutDecimate[OUT_DECIMATE_TAPS];
-static double   gOutHistory[4][OUT_DECIMATE_TAPS];   // [pair*2 + channel]; one shared cursor, see the render loop
-static uint32_t gOutHistoryPos = 0;
+static double                      gOutDecimateBank[SOUND_ENGINE_MAX_ENGINES][OUT_DECIMATE_TAPS];
+#define gOutDecimate         (gOutDecimateBank[SE])
+static double                      gOutHistoryBank[SOUND_ENGINE_MAX_ENGINES][4][OUT_DECIMATE_TAPS]; // [pair*2 + channel]; one shared cursor, see the render loop
+#define gOutHistory          (gOutHistoryBank[SE])
+static uint32_t                    gOutHistoryPosBank[SOUND_ENGINE_MAX_ENGINES];
+#define gOutHistoryPos       (gOutHistoryPosBank[SE])
 
-static double   gOscDecimate[OSC_DECIMATE_TAPS];
+static double                      gOscDecimateBank[SOUND_ENGINE_MAX_ENGINES][OSC_DECIMATE_TAPS];
+#define gOscDecimate         (gOscDecimateBank[SE])
 
-// ── PER-VOICE NODE STATE ────────────────────────────────────────────────────────────────────────
-//
-// The Voice Area is instantiated once PER VOICE on the hardware and the FX Area once for the whole
-// patch (manual p.85: "you don't need a separate Reverb in each voice, all voices can share one
-// Reverb module in the FX Area"). So everything a Voice Area module remembers between samples —
-// oscillator phase, filter poles, envelope stage — has to exist once per voice, or two notes held
-// together share one oscillator phase and one envelope and behave as one.
-//
-// Indexed [voice][node]. The voice index is 0 for everything in the FX Area, which is evaluated once
-// after the voices have been summed.
-//
-// NOT per voice, deliberately: the delay lines, the chorus lines and the reverb. They are the large
-// buffers, they are FX modules, and one shared instance is what the hardware has. A patch that puts
-// one of them in the VOICE area gets a single shared instance rather than one per voice — an
-// approximation, and the only one in this split.
-// FLOAT, not double, and for the same reason the tap count came down: at eight voices this array is
-// walked a few million times a second and the loop is bound by how fast it can be read rather than
-// by the arithmetic. Halving the bytes halves that. The accumulation is still done in double.
-static float    gOscHistory[MAX_VOICES][MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
-static uint32_t gOscHistoryPos[MAX_VOICES][MAX_ENGINE_NODES];
+// notes §35
+static float                       gOscHistoryBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
+#define gOscHistory       (gOscHistoryBank[SE])
+static uint32_t                    gOscHistoryPosBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gOscHistoryPos    (gOscHistoryPosBank[SE])
 
-static double   gPhase[MAX_VOICES][MAX_ENGINE_NODES];
-static double   gLfoLastPhase[MAX_VOICES][MAX_ENGINE_NODES];
-static double   gLfoTarget[MAX_VOICES][MAX_ENGINE_NODES];
-static double   gLfoHeld[MAX_VOICES][MAX_ENGINE_NODES];
-static double   gSuperPhase[MAX_VOICES][MAX_ENGINE_NODES][2];
-static double   gLadder[MAX_VOICES][MAX_ENGINE_NODES][LADDER_POLES];
+static double                      gPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+// §7.1
+static uint32_t                    gNoiseSeedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gNoiseSeed       (gNoiseSeedBank[SE])
+static double                      gNoiseLpBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gNoiseLp         (gNoiseLpBank[SE])
+#define gPhase           (gPhaseBank[SE])
+static double                      gLfoLastPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gLfoLastPhase    (gLfoLastPhaseBank[SE])
+static double                      gLfoTargetBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gLfoTarget       (gLfoTargetBank[SE])
+static double                      gLfoHeldBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gLfoHeld         (gLfoHeldBank[SE])
+static double                      gSuperPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][2];
+#define gSuperPhase      (gSuperPhaseBank[SE])
+static double                      gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][LADDER_POLES];
+#define gLadder          (gLadderBank[SE])
 
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
 // sensible rate, four lines, is enough for the delays a patch normally has and keeps this under a
 // megabyte. Nodes beyond that many run dry rather than sharing a line and smearing into each other.
-#define MAX_DELAY_LINES    (4)
-// Long enough for the longest range the Time dial offers (2.7 s), at the INTERNAL rate. It used to
-// be a flat 48000, i.e. one second at 48 kHz — so the top of the dial was silently truncated to
-// well under half the delay it promised.
-// 2.8 s at 48 kHz, times the oversampling — integer arithmetic so it stays a constant expression an
-// array can be sized with.
+#define MAX_DELAY_LINES       (4)
+// notes §36
 #define DELAY_LINE_SAMPLES    (134400 * ENGINE_OVERSAMPLE)
-static float    gDelayLine[MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
-static uint32_t gDelayWrite[MAX_DELAY_LINES];
-static double   gDelayDamp[MAX_DELAY_LINES];
-static double   gDelayHp[MAX_DELAY_LINES];   // the HP's lowpass half; the filter is x - this
+static float                       gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
+#define gDelayLine            (gDelayLineBank[SE])
+static uint32_t                    gDelayWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
+#define gDelayWrite           (gDelayWriteBank[SE])
+static double                      gDelayDampBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
+#define gDelayDamp            (gDelayDampBank[SE])
+static double                      gDelayHpBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES]; // the HP's lowpass half; the filter is x - this
+#define gDelayHp              (gDelayHpBank[SE])
 
-// The chorus's own short sweep, plus its LFO phase. TWO LINES PER NODE: the instrument runs left and
-// right through the same algorithm with their LFOs in ANTIPHASE, so one phase accumulator serves
-// both — the right channel simply reads it half a cycle along. See chorus_step().
-// WHERE THE LFO RESTS, which only shows at Detune 0 - where the instrument does not sweep at all but
-// holds the two taps 2.4425 ms apart with their centre at 2.856 ms (measured). That separation puts
-// the triangle at |T| = 0.5343, and the centre picks the sign: +0.5343 predicts a centre of 2.860
-// against the measured 2.856, where -0.5343 would give 2.494. Starting at phase 0 instead - i.e.
-// T = -1 - left the static comb 4.571 ms wide rather than 2.44, notches every 219 Hz instead of 410.
-// For any other Detune the LFO free-runs and the starting phase does not matter; both channels take
-// it together, so the quarter-cycle L/R relationship is untouched.
-#define CHORUS_PHASE0      (0.3836)                // chorus_triangle(0.3836) = +0.5343
+// notes §37
+#define CHORUS_PHASE0         (0.3836)             // chorus_triangle(0.3836) = +0.5343
 
-#define CHORUS_SAMPLES     (2048 * ENGINE_OVERSAMPLE)
-#define CHORUS_CHANNELS    (2)
-static float    gChorusLine[MAX_ENGINE_NODES][CHORUS_CHANNELS][CHORUS_SAMPLES];
-static uint32_t gChorusWrite[MAX_ENGINE_NODES][CHORUS_CHANNELS];
-static double   gChorusLfo[MAX_ENGINE_NODES];
+#define CHORUS_SAMPLES        (2048 * ENGINE_OVERSAMPLE)
+#define CHORUS_CHANNELS       (2)
+static float                       gChorusLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS][CHORUS_SAMPLES];
+#define gChorusLine           (gChorusLineBank[SE])
+static uint32_t                    gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS];
+#define gChorusWrite          (gChorusWriteBank[SE])
+static double                      gChorusLfoBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gChorusLfo            (gChorusLfoBank[SE])
 
 // Pulse: the countdown still to run, and the previous input, so a rising edge can be seen. Per voice,
 // because the gate is fired by that voice's own envelope.
-static uint32_t gPulseCount[MAX_VOICES][MAX_ENGINE_NODES];
-static double   gPulsePrev[MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t                    gPulseCountBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gPulseCount    (gPulseCountBank[SE])
+static double                      gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gPulsePrev     (gPulsePrevBank[SE])
 
 // Compressor gain-reduction state, one per node.
-static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
+static double                      gCompEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gCompEnv               (gCompEnvBank[SE])
 
-// A Schroeder reverb: eight combs into three allpasses. One reverb is modelled; any further ones pass
-// their input through, which is what a patch with two of them would mostly sound like anyway.
-//
-// SIXTEEN COMBS SINCE 2026-08-18, AND THE SHORTAGE IS WHY IT FLUTTERED. This bank started as
-// Freeverb's, which specifies eight; only the FIRST FOUR were ever here, so the tank ran at a quarter
-// of the density it now has. A comb is a periodic echo generator, and too few of them means the tail
-// is not a decay at all but a train of discrete echoes at the comb recirculation rates.
-//
-// MEASURED AGAINST THE INSTRUMENT, same patch and settings (Hall, Time 122, Bright 64), using the
-// MODULATION SPECTRUM of the tail's envelope — which is what "flutter" actually names, and the only
-// metric tried that separated the two. Envelope ripple and echo density both said the engine was
-// FINE, and both were wrong:
-//
-//     hardware    flat: nothing above 2.9% anywhere from 5 to 58 Hz
-//     4 -> 8      5.4% at 18.2 Hz, standing clear of everything around it. 18.2 Hz is a 55 ms
-//                 period against Hall's longest comb of 56.6 ms — one comb ringing on its own
-//     + damping   4.4%, no longer clear of its neighbours (see comb_damping)
-//     16 combs    3.6% and FLAT, with the 18 Hz peak gone entirely
-//
-// The other eight lengths continue Freeverb's progression and are prime, so no two lines reinforce.
-// THE INSTRUMENT HAS ABOUT 31 DELAY LINES (see Docs/todo.md), so sixteen is still short of it —
-// but it is now dense enough that the flutter does not survive the measurement.
-#define REVERB_COMBS      (16)
-#define REVERB_ALLPASS    (3)
+// notes §38
+#define REVERB_COMBS           (16)
+#define REVERB_ALLPASS         (3)
 
-// The Reverb's TYPE selector — Small, Medium, Large, Hall (reverbTypeStrMap) — is what sets the size
-// of the room, and it was not read at all: all four types sounded identical, which is most of why
-// this reverb does not sound like the instrument's. It is a MODE, not a parameter, so it comes from
-// module->mode[] like OscShpB's waveform does.
-#define REVERB_MODE_TYPE     (0)
-#define REVERB_TYPE_COUNT    (4)
+// notes §39
+#define REVERB_MODE_TYPE       (0)
+#define REVERB_TYPE_COUNT      (4)
 
-// Decay time against the Time dial, MEASURED per room type 2026-08-09: seconds = base + slope * value,
-// with value the raw 0..127. See the long note at the point of use for the measurements, for why the
-// slope is not simply proportional to room size, and for why these are early-decay figures rather than
-// true RT60.
-//
-// This replaced "Range: 1.1 ms to 17.58 s" (manual p.251) driven through a cubic whose exponent was
-// fitted by ear. The endpoints were the only documented part and the measurement does not reach them:
-// Large tops out at 8.11 s. The manual's figure is left recorded here because it is still unexplained,
-// not because it is unused — nothing reads it now.
-// How hard the Brightness dial damps the comb loop. The one-pole coefficient is _MAX times brightness
-// raised to _CURVE, and both are FITTED against nine measured points of the instrument's own dial.
-//
-// WHAT TO MEASURE THIS AGAINST, because two other metrics sent me the wrong way first. The right target
-// is the ratio of HIGH-BAND to LOW-BAND DECAY RATE, which is what an in-loop lowpass actually controls.
-// Hall at Time 127, decay of 3-10 kHz over decay of 150-800 Hz:
-//
-//     Brightness       16     64    127
-//     hardware       0.54   0.75   0.95
-//     engine         0.53   0.70   1.00     (with the constants below)
-//
-//   - Broadband decay is NOT the target: it follows whichever band holds the energy, so it agreed with
-//     several quite different filters. It also made the engine look 40-60% short of its decay target
-//     when the low band was in fact within a second of the hardware; the shortfall was the measurement.
-//   - Absolute tail COLOUR at a fixed moment is not the target either: scored that way, an exponent of
-//     1.0 beat 0.15, which is the opposite of what the decay rates say. Colour at an instant mixes the
-//     loop's damping with everything outside the loop, so it cannot isolate this coefficient.
-//
-// BRIGHTNESS, FITTED ACROSS THREE ROOMS (2026-09-07). A per-pass one-pole coefficient, and the dial
-// maps to it exponentially: on the instrument the amount by which the top decays faster than the
-// bottom falls by a roughly constant factor every sixteen dial steps.
-//
-// THE ROOM DEPENDENCE IS REAL AND MUST NOT BE NORMALISED AWAY. The same dial position damps far
-// harder in a small room, because the filter runs once per pass and a Small room's lines are 1.68x
-// shorter, so they are traversed that much more often per second. MEASURED on the instrument, HF
-// excess in dB/s at Brightness 64:
-//
-//     Small -17.1     Medium -12.5     Hall -8.9        i.e. 1.92 / 1.40 / 1.00
-//
-// A per-pass coefficient reproduces that for free — it gives 1.80 / 1.35 / 1.00. THIS WAS TRIED THE
-// OTHER WAY AND IT WAS WRONG: reasoning that "one dial should mean one thing", the coefficient was
-// once solved from a target dB PER SECOND so the loss per second came out equal in every room. That
-// is defensible physics and does not match the instrument — it flattened the spread to 1.39 / 1.26 /
-// 1.00 and left a Small room audibly under-damped. The instrument's dial sets a coefficient, not a
-// rate. Do not re-derive this; the sweeps that settle it are g_small_bright7, g_medium_bright7 and
-// g_hall_bright9.
-//
-//     dial            48     64     80     96    112
-//     instrument   -29.0  -17.1   -9.2   -6.8   -4.3     Small,  dB/s, 8 kHz minus 125 Hz
-//     engine       -28.4  -12.8   -8.9   -5.8   -3.3
-//     instrument   -15.2   -8.9   -5.0   -2.9   -1.5     Hall
-//     engine       -14.2   -7.1   -4.3   -2.5   -1.7
-//
-// RMS error 1.5 dB/s over three rooms and five dial positions. The weakest point is Brightness 64,
-// under-damped in every room, which says the dial's shape is not quite a pure exponential — but five
-// points per room will not settle what it is instead, and fitting harder here would be fitting noise.
-//
-// BELOW BRIGHTNESS 48 NOTHING CAN BE FITTED, on either side. The instrument's high band is in the
-// noise there and the engine's own decay fit returns nothing usable, so both stop measuring in the
-// same place. The ceiling governs that region and is a guess.
-//
-// REFIT WHENEVER THE LOOP'S HIGH-FREQUENCY BEHAVIOUR CHANGES: these constants absorb whatever else
-// costs high frequency per pass, which is how replacing the linear interpolator with a Hermite one
-// invalidated the previous pair. Render a Brightness sweep per room and read 8 kHz minus 125 Hz.
-// REFITTED 2026-09-07 against FOUR rooms and six dial positions, replacing a fit made on three rooms
-// and five. The engine was UNDER-DAMPED everywhere - at Brightness 64 it lost roughly half the high
-// end the instrument does (Medium 6.6 dB/s of excess against 10.3), and at 16 about a third
-// (18.7 against 56.3). The old CEILING of 0.9 was also biting from dial 19 downwards, which is why
-// the engine's excess went NON-MONOTONIC at the bottom of the dial where the instrument's does not.
-//
-// FITTED THROUGH THE FILTER, not by scaling the dial constant. The measured quantity is excess decay
-// in dB/s, which is passes-per-second times the one-pole's per-pass loss; passes-per-second is fixed
-// by the room, so the RATIO of measured to rendered excess gives the ratio of per-pass losses
-// directly, and |H(w)| = (1-a)/sqrt(1 - 2a cos w + a^2) inverts that to the coefficient the
-// instrument implies. Doing it that way is what let four rooms agree: the implied coefficients at
-// dial 32 are 0.780 / 0.783 / 0.718 / 0.702 across Small / Medium / Large / Hall, where the raw
-// dB/s figures differ by a factor of two between those rooms.
-//
-//     dial                      24      32      40      48      64
-//     implied                 0.5475  0.4866  0.4137  0.3718  0.2742
-//     this law                0.5526  0.4811  0.4189  0.3648  0.2766
-//
-// THE FOUR ROOMS AGREE, which is what says the model is right rather than merely fitted: at dial 32
-// they imply 0.4566 / 0.5263 / 0.4921 / 0.4715 for Small / Medium / Large / Hall, within 8% of each
-// other, from raw dB/s figures that differ by 60% between those rooms.
-//
-// MEASURE THE BANDS WITH A SHARP FILTER OR THE ANSWER IS THE FILTER'S. A single Q=4 bandpass at 8 kHz
-// leaks enough of the much louder, slowly-decaying low band that the measured HF decay FLOORS OUT:
-// scored that way the engine's excess ran 11.4 dB/s at dial 16 and 7.1 at 64, a range of 1.6x, where
-// two cascaded Q=8 sections on the same renders give 59.9 and 17.4, a range of 3.4x. Both sides of
-// the comparison have to use the same filter, and it has to be sharp enough that the number belongs
-// to the band it names. A per-pass coefficient is what
-// makes that collapse.
-//
-// THE CEILING NO LONGER BITES. The old curve was far too steep - 0.90 at dial 16 against an implied
-// 0.63, and 0.2165 at 64 against 0.2898 - so it over-damped the bottom of the dial and under-damped
-// the top, and the 0.9 clamp cut in below dial 19, which is why the engine's excess went
-// NON-MONOTONIC at the bottom where the instrument's does not. This curve peaks at 0.8024 at dial 0
-// and never reaches the ceiling, so that artefact is gone.
-//
-// A WRONG TURN WORTH RECORDING. Fitting from the RATIO of measured to rendered excess gave 0.99 at
-// dial 16 and blew the whole tail up - the rendered excess it was divided by was itself saturated by
-// the old ceiling. It also assumed the 500 Hz band is untouched by the filter, which fails once the
-// coefficient is large: at 0.99 the one-pole corner is 154 Hz and the BASELINE decay went from 26 to
-// 134 dB/s. Calibrate passes-per-second from a dial position where the coefficient is small, then
-// invert each measurement against the filter absolutely.
+// notes §40
 #define REVERB_DAMP_MAX        (0.8370)
 #define REVERB_BRIGHT_K        (57.799)
 #define REVERB_DAMP_CEILING    (0.9000)
-// RE-FITTED 2026-08-18 FOR THE NEW STRUCTURE. The old 0.15 was fitted against a comb bank, where
-// the damping sat inside every comb's own loop and bit hard. In a feedback network the signal passes
-// the damping once per circuit instead, so the same exponent barely moved the tail at all: the
-// high-to-low decay ratio measured 0.89 / 0.94 / 0.96 at Brightness 16 / 64 / 127 against the
-// instrument's 0.54 / 0.75 / 0.95, i.e. the dial did almost nothing. At 0.70 it reads
-// 0.51 / 0.83 / 0.96. The ends are close; the middle is still about 0.08 too bright, which says the
-// dial's shape is not a pure power law on this structure.
+// notes §41
 
-static const double kReverbDecayBase[REVERB_TYPE_COUNT]  = {0.045, 0.29, 0.39, 0.32};
-static const double kReverbDecaySlope[REVERB_TYPE_COUNT] = {0.02238, 0.04094, 0.06082, 0.08212};
+static const double                kReverbDecayBase[REVERB_TYPE_COUNT]  = {0.045, 0.29, 0.39, 0.32};
+static const double                kReverbDecaySlope[REVERB_TYPE_COUNT] = {0.02238, 0.04094, 0.06082, 0.08212};
 
-// The allpass diffusion coefficient rises with the reverb time and is held between two limits. The
-// slope and the limits are the instrument's; what drives them is normalised Time here, which is the
-// part that is inferred rather than known — but the limits are close enough together that the whole
-// range is only 0.45..0.62, so being wrong about the position within it is a small error and being
-// outside it would not be.
+// notes §42
 #define REVERB_DIFFUSE_SLOPE    (0.75)
 #define REVERB_DIFFUSE_BASE     (0.40)
 #define REVERB_DIFFUSE_MIN      (0.45)
 #define REVERB_DIFFUSE_MAX      (0.62)
 
-// How much bigger each type's room is than the base set below. THE SHAPE OF THIS IS RIGHT: the
-// instrument really does scale every one of its delay lines by a single factor per type, so one
-// number per room is the correct form rather than a convenience.
-//
-// MEASURED ON THE HARDWARE, 2026-08-09, and the four numbers are no longer guesses. A click was fed
-// through the Reverb at 192 kHz with the dry impulse captured on a second output pair, and the tail's
-// autocorrelation gives the lengths the tank recirculates at (tools/measure.py, tools/analyse_ir.py).
-// Fitting ONE scale per room against every lag Small shows lands within 0.1% on the strong ones:
-//
-//     Small  2408 -> Large  3669  (predicted 3673.4, -0.12%)   -> Hall  4042  (4044.2, -0.06%)
-//     Small  2422 -> Large  3695  (predicted 3694.8, +0.01%)   -> Hall  4064  (4067.7, -0.09%)
-//     Small  4215 -> Large  6430  (predicted 6430.0, +0.00%)   -> Hall  7078  (7079.1, -0.02%)
-//     Small  4599 -> Large  7016  (predicted 7015.8, +0.00%)   -> Hall  7723  (7724.0, -0.01%)
-//
-// Four independent lengths agreeing with a ONE-parameter fit to a hundredth of a percent is not a
-// coincidence, and it settles the assumption as well as the numbers: the instrument does scale the
-// whole tank by a single factor. The short diffusion lags scale by the same factor (Small 216 ->
-// Large 329, exact; Small 576 -> Hall 965, -0.25%), so it is the room and not just the tail.
-//
-// SMALL IS THE REFERENCE (1.0), not Large, because Small is the room whose lengths were measured most
-// completely — the base table below is Small's. See [[project_g2_reverb_measurements]].
-static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 1.6795};
-#define REVERB_SCALE_MAX    (1.6795)
+// notes §43
+static const double                kReverbTypeScale[REVERB_TYPE_COUNT]  = {1.0, 1.2690, 1.5255, 1.6795};
+#define REVERB_SCALE_MAX           (1.6795)
 
-// Mutually prime lengths, so the combs do not reinforce each other into a ringing tone. The buffers
-// are sized from the longest of each set rather than a hand-written number — getting those out of
-// step is a buffer overrun, and it is the kind that only shows up as a crash much later. The base
-// set is scaled with the rate (these are sample counts, so leaving them fixed would halve the room)
-// AND by the type, hence the extra headroom for the largest type in the two MAX figures.
-//
-// THE BASE SET IS STILL NOT THE INSTRUMENT'S, and now that the scale above is measured it is the only
-// part of the room that is not. Measured Small recirculates at 2376, 2408, 2422, 4215 and 4599 samples
-// at 96 kHz on Out 3 alone — a tight cluster of three plus two lines at roughly 1.8x — where this base
-// set is four lengths spread over 1.21:1 and nothing long. It is deliberately NOT swapped for the
-// measured numbers yet: three lengths within 2% of each other in a PARALLEL COMB BANK beat against
-// each other, so the measured set only makes sense in a network that feeds each line from the others,
-// and the measurement does not say which topology the instrument uses. Loading them into this
-// structure could easily sound worse while matching the numbers better.
-//
-// The scale fix stands on its own, though: it is a ratio, so it is right whatever the base set is, and
-// it moves Small from half the room to the whole of it.
-#define REVERB_COMB_BASE       (1667 * ENGINE_OVERSAMPLE)   // the LONGEST comb of EITHER channel; buffers are sized from it
-#define REVERB_ALLPASS_BASE    (225 * ENGINE_OVERSAMPLE)
-// INTEGER ARITHMETIC, NOT A CAST OF A FLOAT PRODUCT. These size static arrays, and an array bound has
-// to be an integer constant expression — `(uint32_t)(base * 1.6)` is not one, so clang accepted it only
-// as a GNU extension, "variable length array folded to constant array". A static VLA is not something
-// to leave resting on an extension.
-//
-// x18/10 COVERS REVERB_SCALE_MAX (1.6795) WITH ROOM TO SPARE, and it must: this pair and the scale
-// table are one decision in two places, so a scale raised without raising this writes past the end of
-// every delay line. It was 16/10 when the largest type was exactly 1.6, which the measured 1.6795 then
-// silently outgrew by 66 samples per comb. Rounding up rather than tracking the scale exactly costs a
-// few kilobytes and removes the trap.
-// THE STEREO SPREAD: the right channel runs the SAME topology with every line lengthened by this.
-//
-// Deliberately a spread rather than the instrument's own measured lengths. Its two output channels
-// are near-disjoint tap sets (Small L 2338/2407/2420/4214/5022 against R 2378/2904/3903/3972/4046)
-// but its tank has about 31 lines against this one's 4 combs and 3 allpasses, and the ROUTING is not
-// recoverable — a real set of lengths in the wrong arrangement sounds plausible and is wrong, which
-// is the hardest kind of error to find. See the REVERB entry in Docs/todo.md.
-//
-// So this claims no new structure. It is Freeverb's own answer to the same question, and what makes
-// it honest is that the thing it is aimed at IS measured: the instrument's two outputs correlate at
-// +0.012..+0.045, so 0.03 is the target, and tools/render + analyse_ir.py read the same number off
-// this code. Tuned against that — see the note in sound_engine_render_reverb_ir().
-// THE RIGHT CHANNEL READS ITS TAPS EARLIER, NOT LATER. The instrument's two outputs were measured
-// 1.14 ms apart with the RIGHT one arriving first -- 12.89 ms against 11.75 in the Small room, and
-// the same gap in each of the other three -- so this is SUBTRACTED from the right channel's tap
-// offsets. 110 samples is that gap at 96 kHz. It used to be added, which put the right channel on
-// the wrong side of the left; no amount of correcting the magnitude would have found that.
-#define REVERB_SPREAD         (110)
-#define REVERB_CHANNELS       (2)
+// notes §44
+#define REVERB_COMB_BASE           (1667 * ENGINE_OVERSAMPLE) // the LONGEST comb of EITHER channel; buffers are sized from it
+#define REVERB_ALLPASS_BASE        (225 * ENGINE_OVERSAMPLE)
+// notes §45
+#define REVERB_SPREAD              (110)
+#define REVERB_CHANNELS            (2)
 
-#define REVERB_COMB_MAX       (((REVERB_COMB_BASE * 18) / 10) + REVERB_SPREAD + 1)
-#define REVERB_ALLPASS_MAX    (((REVERB_ALLPASS_BASE * 18) / 10) + REVERB_SPREAD + 1)
+#define REVERB_COMB_MAX            (((REVERB_COMB_BASE * 18) / 10) + REVERB_SPREAD + 1)
+#define REVERB_ALLPASS_MAX         (((REVERB_ALLPASS_BASE * 18) / 10) + REVERB_SPREAD + 1)
 
-// PER-CHANNEL PRE-DELAY, MEASURED PER ROOM ON THE HARDWARE 2026-08-18. The instrument's two outputs
-// do not start together, and this engine had no pre-delay at all, so both tails began at the input.
-//
-// THIS IS THE ONE LINE IN THIS REVERB THAT DOES NOT FOLLOW THE ONE-FACTOR RULE. Every other length
-// here is a room-size factor times a constant (see kReverbTypeScale), and an earlier version of this
-// table assumed the pre-delay was too. It is not: across the four rooms the left pre-delay moves only
-// 12.90 -> 13.33 ms, a 3.3% spread, where kReverbTypeScale spans 68%. Scaling it would have put Hall
-// at 21.67 ms against a measured 13.33. So these are eight independent numbers, not two and a factor.
-//
-// AND THE OLD RIGHT-CHANNEL FIGURE WAS SIMPLY WRONG — recorded as 7.54 ms, actually 11.75 ms. At
-// 7.5 ms both channels are still in the noise (3.8-6.7% of peak); the right channel leaves it at
-// 11.50 ms and the left at 12.75 ms, read sample by sample off the raw capture rather than through a
-// threshold. So the two channels are about 1.15 ms apart, not 5.34.
-//
-// MEASURED TWICE, INDEPENDENTLY, AND THEY AGREE TO 0.06 ms: once from the stored 192 kHz Fireface
-// captures (tools/ rig, Time sweeps read at Time 0 where the tail clears between impulses) and once
-// live into a QU-24 at 48 kHz. Pre-delay is a fixed line length — Type sets the delay lengths, Time
-// only the feedback gain — which the measurement confirms: the same figures come back at Time 0, 32
-// and 64.
-//
-// Expressed as sample counts at the 48 kHz base rate, times ENGINE_OVERSAMPLE, for the same reason
-// the comb lengths are: an array bound has to be an INTEGER constant expression. Sizing one with a
-// float cast is what produced the -Wgnu-folding-constant pair recorded in Docs/todo.md.
-//
-//                        Small   Medium   Large    Hall
-//     left    (ms)       12.89   13.05    13.30    13.36
-//     right   (ms)       11.75   11.90    12.14    12.20
+// notes §46
 #define REVERB_PREDELAY_MAXSAMP    (641 * ENGINE_OVERSAMPLE)   // the largest below, Hall left
 #define REVERB_PREDELAY_MAX        (((REVERB_PREDELAY_MAXSAMP * 11) / 10) + 1)
-// ─── THE INSTRUMENT'S OWN REVERB STRUCTURE ──────────────────────────────────────────────────────
-//
-// Recovered 2026-08-18 and rebuilt here. It is NOT a bank of parallel combs, which is what this used
-// to be and why no amount of tuning ever made it sound right: a comb generates a periodic echo at
-// its own rate, and with every line between 23 and 34 ms that periodicity is audible as flutter,
-// worst at the end of a tail where the density thins.
-//
-// The instrument is a serial allpass diffuser feeding a feedback delay network, read by a set of
-// fixed output taps. Its lines span 1.1 ms to 235 ms; ours spanned 23 to 34 ms and nothing else,
-// which is the whole difference.
-//
-// THE LENGTHS ARE EXACT, in samples at the base rate for the Small room, scaled by kReverbTypeScale
-// for the others. What is inferred rather than measured is how the mixing stages are wired to each
-// other — the tap set, the stage pairings and the coefficients are all recovered.
-#define RV_OUTTAPS    (7)
+// notes §47
+#define RV_OUTTAPS                 (7)
 // THE ALLPASS COEFFICIENTS ARE THE INSTRUMENT'S, read straight out of its mixing gains: the two it
 // pairs 0.4820 with 0.7676 and 0.3102 with 0.9038, and 1 - g*g for those g values is exactly those
 // two numbers. The input diffuser's own gains come out heavier, at 0.75/0.5.
@@ -1326,17 +1023,9 @@ static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 
 // 1/sqrt(8) -- what makes the 8-point Hadamard butterfly orthogonal rather than a gain of 8.
 #define RV_HADAMARD     (0.35355339059327373)
 
-// ONE TRIP IS BOTH BRANCHES, since each feeds the other: the two branch lengths added. In samples
-// at 96 kHz, and NOT scaled by the room — every span scales together, so the trip scales with it,
-// which is why a Hall rings longer than a Small room at the same Time setting.
-// Nothing shared here any more: each line gets its own decay gain from its own length, worked out
-// in gRvGain below. A single figure for the whole tank is what a series loop needs, and this is not
-// one.
+// notes §48
 
-// THE LAYOUT. Spans laid end to end, each one a line; a section writes at its own base and reads at
-// the next, so these lengths ARE the delays. Every length is the instrument's, recovered from the
-// spacing of its tap addresses: the allpasses at 672, 738, 666 and 812, the lines at 2300, 2456,
-// 3999 and 5326.
+// notes §49
 typedef enum {
     eRvPre = 0,
     eRvDf1,
@@ -1356,144 +1045,38 @@ typedef enum {
     eRvSpanCount
 } tRvSpan;
 
-#define RV_LINES    (8)
+#define RV_LINES        (8)
 
-// MODULATION DEPTH, in samples at 96 kHz, and the rate each line sweeps it at.
-//
-// A TANK WITH FIXED DELAYS HAS FIXED MODES, and fixed modes ring -- that is what a metallic reverb
-// is. Measured as how much a tail's magnitude spectrum resembles itself a moment later, over
-// 400 Hz to 4 kHz and at matched resolution:
-//
-//                      0.05 s  0.15 s  0.35 s  0.75 s  1.50 s
-//     the instrument    +0.31   +0.23   +0.26   +0.19   +0.34
-//     fixed delays      +0.74   +0.74   +0.73   +0.76   +0.73
-//
-// The instrument's fine structure is somewhere else a twentieth of a second later and stays that
-// way; a fixed tank is still three-quarters itself a second and a half on. Sliding each line a few
-// samples breaks the modes up without moving anything the ear hears as pitch: 16 samples at about
-// 1 Hz is a peak shift near 0.9 cents, and on the shortest line it is 2.4% of its length.
-//
-// THE RATES SHARE NO SIMPLE RATIO, for the same reason the line lengths do not -- eight sweeps that
-// realign every cycle would put their own period into the tail, which is the fault being fixed.
+// notes §50
 #define RV_MOD_DEPTH    (28)
 
-// WHAT THE SWEEP COSTS THE DECAY -- WHICH TURNS OUT TO BE NOTHING MEASURABLE.
-//
-// Reading a delay line at a fractional position interpolates between two samples, and linear
-// interpolation is a mild lowpass, so every pass round the tank might lose a little that a
-// whole-sample read would not. This constant existed to give that back, at 0.9955.
-//
-// IT WAS COMPENSATING FOR A DIFFERENT BUG. The measurement that produced 0.9955 was made while the
-// Brightness detent was applying 0.021 of low-frequency damping inside the loop at every normal
-// setting -- see the tilt mapping in reverb_step(). The tail really was short; the interpolator was
-// not why. With the detent landing on zero as it should, the engine delivers the RT60 its dial asks
-// for with NO compensation at all:
-//
-//     dial Time            40     64     90    127
-//     rendered / asked   0.975  1.010  0.990  0.978    at 1.0000, this value
-//                        1.037  1.125  1.150  1.221    at 0.9955, the old one
-//                        0.943  0.954  0.916  0.869    at 1.0027, overshooting the other way
-//
-// Within 2.5% across the whole range, against 4% to 22% before, and the instrument matches its own
-// law to 0.1-0.8% by the same measurement. A residual that GREW with the requested time was the tell:
-// that is a fixed per-pass gain error, not anything the interpolator does.
-//
-// KEPT AT 1.0 RATHER THAN DELETED so the question stays asked. If a future change to the modulation
-// depth or the interpolator makes the loss real, this is where it goes and this is how to measure it
-// -- render a Time sweep and look at rendered/asked, which should be flat at 1.0.
-#define RV_MOD_LOSS    (1.0000)
+// notes §51
+#define RV_MOD_LOSS     (1.0000)
 
-static const double kRvModHz[RV_LINES] = {
+static const double   kRvModHz[RV_LINES]                      = {
     0.61, 0.73, 0.89, 1.03, 1.19, 1.31, 1.47, 1.61
 };
 
-static double       gRvLfo[RV_LINES];
+static double         gRvLfoBank[SOUND_ENGINE_MAX_ENGINES][RV_LINES];
+#define gRvLfo          (gRvLfoBank[SE])
 #define RV_DIFFUSERS    (6)
 
-// EIGHT LINES IN PARALLEL, EACH WITH AN ALLPASS IN FRONT OF IT, MIXED INTO ONE ANOTHER.
-//
-// THE INPUT DIFFUSER IS WHAT MAKES IT DENSE, and density is a separate question from anything the
-// frequency response can show. Measured as normalised echo density -- the fraction of samples in a
-// sliding window exceeding that window's own standard deviation, over the 0.3173 a Gaussian gives,
-// so 1.0 means fully dense, each side measured from its OWN wet onset:
-//
-//                        5 ms   10 ms   20 ms   40 ms
-//     the instrument      0.97    0.99    1.01    1.00
-//     four diffusers      0.78    0.82    0.99    1.00
-//     six diffusers       0.85    0.99    1.08    1.01
-//
-// Sparse early reflections are heard as separate echoes, which is a metallic ring, and the two short
-// sections at the head of the chain -- 43 and 73 -- are what fixed it. TEN sections made it worse,
-// not better, dropping the 10 ms figure to 0.66: a run of very short allpasses lays its own
-// repeating fine structure over the response. Six is where it matches.
-//
-// ALIGN BOTH SIDES TO THEIR OWN ONSET before comparing this. Measured from t=0 the engine's early
-// windows sit in the pre-delay's silence and read 0.45 at 5 ms, which is the measurement and not
-// the tank.
-//
-// THE LINE LENGTHS MUST SHARE NO COMMON FACTOR. Lines whose lengths share a factor share a period,
-// and a shared period is a ring. The recovered figures -- 666, 672, 738, 812, 2300, 2456, 3999,
-// 5326 -- are every one of them even and three share a 3, so these are the nearest prime to each.
-static const uint32_t kRvLen[eRvSpanCount]      = {
+// notes §52
+static const uint32_t kRvLen[eRvSpanCount]                    = {
     1060,                            // pre-delay
     43,     73,  107, 145, 277, 389, // the input diffuser
     661,   673,  739, 811,           // the four short lines
     2297, 2459, 4001, 5323           // and the four long ones
 };
 
-static const uint32_t kRvDiffuser[RV_DIFFUSERS] = {
+static const uint32_t kRvDiffuser[RV_DIFFUSERS]               = {
     eRvDf1, eRvDf2, eRvDf3, eRvDf4, eRvDf5, eRvDf6
 };
-static const uint32_t kRvLineDl[RV_LINES]       = {
+static const uint32_t kRvLineDl[RV_LINES]                     = {
     eRvLn0, eRvLn1, eRvLn2, eRvLn3, eRvLn4, eRvLn5, eRvLn6, eRvLn7
 };
 
-// WHICH LINE EACH OUTPUT TAP READS, AND HOW FAR ALONG IT — ONE SET PER CHANNEL.
-//
-// THIS IS WHERE THE STEREO COMES FROM, and it is the whole of it. There is ONE tank; the two
-// channels are two different sets of taps into it, which is what the instrument does — its own
-// reverb holds a single 32768-word memory and reads it twice. Two tanks fed the same mono input
-// hold the same state by construction, so anything derived from one is derivable from the other,
-// and no amount of offsetting the read positions changes that.
-//
-// WHAT THE PREVIOUS ARRANGEMENT ACTUALLY DID, measured rather than argued: it ran two identical
-// tanks and read the right one's taps REVERB_SPREAD samples earlier. With the line modulation
-// switched off the right channel was then a BIT-EXACT COPY of the left delayed by 110 samples —
-// cross-correlation +1.0000 at lag 110, in all four rooms. Every bit of the decorrelation came
-// from the modulation LFOs running a quarter cycle apart, none from the structure, so turning the
-// modulation down would have collapsed the image without touching anything named "stereo".
-//
-// AND THE METRIC THAT PASSED IT WAS BLIND TO EXACTLY THAT. Correlation read at lag zero scores a
-// signal against a delayed copy of itself as uncorrelated: the old arrangement read +0.03 at lag 0
-// against the instrument's +0.012..+0.045 and looked like a match. Score the PEAK over lag
-// instead, which is what tells a decorrelated pair from a delayed one:
-//
-//                          peak r      at lag (96 kHz samples)
-//     the instrument      +0.124..+0.159    676..1185, and it SCALES with the room
-//     two tanks + spread  +0.126..+0.137    74..111, pinned to REVERB_SPREAD
-//     two tanks, no mod   +1.0000           110, exactly
-//
-// The instrument's peak lag scaling with the room (1.00, 1.26, 1.59, 1.75 against kReverbTypeScale's
-// 1.00, 1.27, 1.53, 1.68) is the tell that its two channels are tap sets on one tank: the residual
-// similarity sits at the DISTANCE BETWEEN AN L TAP AND AN R TAP on the same line, and every length
-// in the tank scales with the room. A fixed offset cannot do that, and the old one did not.
-//
-// TWO TAPS PER LINE, SIXTEEN PER CHANNEL, AND NO FRACTION SHARED BETWEEN THE SETS. A tap the two
-// channels read at the same point on the same line is common-mode and contributes nothing but
-// correlation.
-//
-// EVERY TAP MUST SIT AT LEAST AS FAR ALONG AS ITS CHANNEL'S EARLIEST ONE. The first arrival at a
-// tap is frac * length after the tank's input, so the SMALLEST frac * length in a set is that
-// channel's onset, and kRvTankLead is that number for the left set. A tap placed nearer the head of
-// a short line silently becomes the new onset and moves the whole room forward — which is why the
-// short lines carry the large fractions here and only the long ones carry small ones.
-//
-// THE RIGHT CHANNEL ARRIVES FIRST, by the 110 samples measured on the hardware and previously spent
-// on REVERB_SPREAD. Here it is a tap position rather than a subtraction: left's earliest is
-// 0.13 * 2297 = 299 samples, right's is 0.0823 * 2297 = 189, and the difference is the 1.14 ms gap.
-// Being a position, it scales with the room the way the instrument's does, and it cannot clamp —
-// the old subtraction hit zero on the short lines of the Small room and handed those taps to both
-// channels identically.
+// notes §53
 static const uint32_t kRvTapLine[REVERB_CHANNELS][RV_OUTTAPS] = {
     {eRvLn4, eRvLn4, eRvLn5, eRvLn6, eRvLn6, eRvLn7, eRvLn7},     // left
     {eRvLn4, eRvLn4, eRvLn5, eRvLn6, eRvLn6, eRvLn7, eRvLn7}      // right
@@ -1508,83 +1091,41 @@ static const double   kRvTapFrac[REVERB_CHANNELS][RV_OUTTAPS] = {
 };
 static const double   kRvTapSign[RV_OUTTAPS]                  = {1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0};
 
-// ─── THE OUTPUT TAP SETS ARE THE INSTRUMENT'S OWN ────────────────────────────────────────────────
-//
-// Its output stage sums SEVEN taps into each wet slot, and the two sets are DISJOINT: seven PAIRS,
-// with the left channel reading the later member. Separations in samples at roomSize 1.0:
-//
-//     the instrument   1909   904  1645  1919  1067  1672  1871      mean 1569
-//     measured L/R correlation peak, hardware, 2026-09-06:           1504 (Small)
-//
-// THOSE TWO NUMBERS ARE THE SAME MEASUREMENT FROM DIFFERENT DIRECTIONS, which is the reason to trust
-// both: the recovered pair separations average 1569 and the hardware's cross-correlation peaks at
-// 1504. Six of the seven separations are used here; the seventh slot carries the measured 110-sample
-// ONSET gap instead, which the instrument gets from propagation through its network rather than from
-// any pair, and which this tank has to place explicitly because its pre-delay is a span.
-//
-// BOTH CHANNELS COMBINE THEIR SEVEN AS + - + + - - +, the SAME pattern, so the stereo is carried
-// entirely by tap POSITION and never by sign. That is the instrument's pattern, read off its two
-// output accumulators, not an alternation chosen for convenience.
-//
-// WATCH THE CROSS PAIRS, NOT JUST THE INTENDED ONES. Every L tap correlates with every R tap on the
-// SAME line, so a set of seven pairs really carries thirteen distances. Two taps that land near each
-// other by accident dominate the result: L at 2403 against R at 2342 on the long line put the
-// correlation peak at lag 61 and hid everything else. Shifting BOTH taps of that pair together fixes
-// it while preserving the separation the instrument specifies.
-//
-// WHAT THIS MATCHES, AND WHAT IT CANNOT. Peak L/R cross-correlation, against hardware measured the
-// same way:
-//
-//     room             Small   Medium   Large    Hall
-//     the instrument   0.161   0.168    0.171    0.173
-//     this engine      0.186   0.166    0.141    0.157
-//
-// Close, and flat across the rooms the way the instrument's is — which the sixteen-tap fit that
-// preceded this was not, declining 0.159 -> 0.124 as the room grew.
-//
-// THE LAG IS NOT MATCHED AND CANNOT BE, in this tank. The instrument reads ONE shared 32768-word
-// memory, so all forty-nine tap-pair distances contribute and they cluster; here the eight lines are
-// separate, only same-line pairs correlate at all, and thirteen distances are too few for any one to
-// dominate — so the peak wanders between rooms and windows rather than sitting at 1504 * roomScale.
-// That is a property of the architecture, not of these numbers, and no tap placement fixes it. It is
-// what a single shared buffer would fix. Do not tune this further: see the reverb entry in
-// Docs/findings.md for the full specification of the instrument's tank, which is what closes it.
+// notes §54
 
-static uint32_t gRvAddr[eRvSpanCount + 1];
+static uint32_t       gRvAddrBank[SOUND_ENGINE_MAX_ENGINES][eRvSpanCount + 1];
+#define gRvAddr    (gRvAddrBank[SE])
 
-// THE RECOVERED LENGTHS ARE ALREADY IN 96 kHz SAMPLES — that is the rate the instrument's tank runs
-// at and the rate every recovered figure is quoted in. They must NOT be multiplied by
-// ENGINE_OVERSAMPLE the way the old Freeverb constants were: those were 44.1 kHz numbers that needed
-// scaling up, these are not. Doing it anyway made every delay twice as long as it should be, put the
-// feedback loop at 1.7 s instead of 0.85, and had the tail arriving in audible waves about a second
-// apart. Converting by the engine's ACTUAL rate keeps the times right at any device rate.
+// notes §55
 #define RV_RATE    (gSampleRate / 96000.0)
 
-// The sixteen recovered tap ADDRESSES are gone from here. They were positions in the instrument's
-// own memory map, and this tank lays its spans out differently, so an address off that map means
-// nothing against this one; kRvTapLine/kRvTapFrac say which line and how far along instead. What
-// carried over is the count and the spread — sixteen taps scattered across every long line.
+// notes §56
 
 
-// ONE SHARED MEMORY FOR THE WHOLE TANK, big enough for the largest room's highest address
-// (21432 * 1.6795 + 1200, about 37200) with room to spare. The instrument uses 32768 words and
-// wraps; the next power of two above what the addresses need costs 256 kB a channel and removes
-// any question of a site aliasing onto another.
+// notes §57
 #define RV_MEM_SHIFT    (17)
 #define RV_MEM          (1u << RV_MEM_SHIFT)
 
-static float          gRvMem[RV_MEM];
-static uint32_t       gRvCur;
-static double         gRvDamp[RV_LINES];
+static float          gRvMemBank[SOUND_ENGINE_MAX_ENGINES][RV_MEM];
+#define gRvMem          (gRvMemBank[SE])
+static uint32_t       gRvCurBank[SOUND_ENGINE_MAX_ENGINES];
+#define gRvCur          (gRvCurBank[SE])
+static double         gRvDampBank[SOUND_ENGINE_MAX_ENGINES][RV_LINES];
+#define gRvDamp         (gRvDampBank[SE])
 
 
 // The two input poles. MEASURED, not chosen: the instrument's reverb is far darker than what goes
 // into it, and this is the filter that makes it so -- see the fit by REVERB_INPUT_LP_HZ.
-static double         gRevInLp;
-static double         gRevInLp2;
-static double         gRevInLp3;
-static double         gRevInLp4;
-static double         gRvLoop[RV_LINES];
+static double         gRevInLpBank[SOUND_ENGINE_MAX_ENGINES];
+#define gRevInLp     (gRevInLpBank[SE])
+static double         gRevInLp2Bank[SOUND_ENGINE_MAX_ENGINES];
+#define gRevInLp2    (gRevInLp2Bank[SE])
+static double         gRevInLp3Bank[SOUND_ENGINE_MAX_ENGINES];
+#define gRevInLp3    (gRevInLp3Bank[SE])
+static double         gRevInLp4Bank[SOUND_ENGINE_MAX_ENGINES];
+#define gRevInLp4    (gRevInLp4Bank[SE])
+static double         gRvLoopBank[SOUND_ENGINE_MAX_ENGINES][RV_LINES];
+#define gRvLoop      (gRvLoopBank[SE])
 
 // [room type][channel], in samples at the base rate. NOT scaled by kReverbTypeScale — see above.
 static const uint32_t kReverbPreDelay[REVERB_TYPE_COUNT][REVERB_CHANNELS] = {
@@ -1593,90 +1134,64 @@ static const uint32_t kReverbPreDelay[REVERB_TYPE_COUNT][REVERB_CHANNELS] = {
     {638 * ENGINE_OVERSAMPLE, 583 * ENGINE_OVERSAMPLE},    // Large   13.30 / 12.14 ms
     {641 * ENGINE_OVERSAMPLE, 586 * ENGINE_OVERSAMPLE}     // Hall    13.36 / 12.20 ms
 };
-// THE TANK IS FED THROUGH A LOWPASS, because the instrument's tail STARTS darker than ours did.
-//
-// This is NOT the same thing as the in-loop damping, and the two were confused for a whole session.
-// The damping sets how fast the high end DECAYS relative to the low, and it is already right —
-// measured against the instrument at Hall / Time 122 / Bright 64, the decay rates agree closely
-// (hardware -5.6 dB/s low and -7.7 high, engine -6.0 and -7.6, i.e. a high-to-low decay-time ratio
-// of 0.72 against 0.79, on a fitted target of 0.75). What was wrong is where the tail STARTS: the
-// instrument's is band-limited going in, ours was white.
-//
-// MEASURED, same capture, tail spectrum normalised so the two agree below 500 Hz:
-//
-//     1 kHz  -1.4 dB      2 kHz  -3.7 dB      4 kHz  -9.0 dB      8 kHz  -17.9 dB
-//
-// which is a one-pole to within about 3 dB at the very top. Hence the cutoff below, fitted to those
-// four points. This is what the owner heard as "the G2 has more low end" — it does, relatively,
-// because ours had far too much top.
-// TWO POLES, not one: a single pole matched the instrument up to 2 kHz but left 4 and 8 kHz 2.0 and
-// 6.7 dB too bright, because the instrument's roll-off is steeper than 6 dB/octave at the very top.
-// The second pole sits an octave up so it barely touches the region the first one already fitted.
-#define REVERB_INPUT_LP_HZ     (4600.0)
-#define REVERB_INPUT_LP2_HZ    (4600.0)
+// notes §58
+#define REVERB_INPUT_LP_HZ      (4600.0)
+#define REVERB_INPUT_LP2_HZ     (4600.0)
 
-// A THIRD POLE, AND THIS ONE IS THE INSTRUMENT'S OWN, not a fit. Its coefficient comes straight off
-// the Time dial as 0.7 * time, so the filter closes as the room gets longer -- and the hardware does
-// exactly that. Measured at Brightness 64, Hall, relative to 1 kHz:
-//
-//                   4 kHz    8 kHz   12 kHz   16 kHz
-//     Time  32      -4.26   -12.86   -18.81   -22.07
-//     Time 122      -5.93   -15.42   -21.84   -26.05
-//
-// A longer tail is a darker one, by 1.7 dB at 4 kHz rising to 4.0 dB at 16 kHz, and this pole is
-// where that comes from. The two fixed poles above it carry the rest: at Time 32 this one is nearly
-// wide open, yet the instrument is still 12.9 dB down at 8 kHz, so most of the darkness does not
-// move with the dial and cannot be this.
+// notes §59
 #define REVERB_INPUT_LP_TIME    (0.7)
 
-// A FOURTH POLE, well above the other three, and this one IS a fit. With the three above it the
-// engine still ran 2 to 3 dB bright from 8 kHz up at both ends of the Time dial -- a fixed shortfall
-// that gets steeper with frequency, which wants another pole rather than a lower corner on the ones
-// already there. Dropping those instead would have cost a decibel at 4 kHz, where the match is
-// already good.
-#define REVERB_INPUT_LP4_HZ    (12000.0)
-static float    gPreDelay[REVERB_CHANNELS][REVERB_PREDELAY_MAX];
-static uint32_t gPreDelayPos[REVERB_CHANNELS];
-static double   gEnvLevel[MAX_VOICES][MAX_ENGINE_NODES];
-// Linear 0..1 through the current segment, and the level it started from. Shaping this rather than
-// the step keeps a segment's DURATION exactly what its dial says, whatever curve it draws.
-// PARAMETER SMOOTHING. The G2 runs its modulation at 24 kHz (manual p.71 — "modules can process and
-// output signals at two sample rates: 96kHz and 24kHz", the lower one being for modulation), so a
-// dial being turned arrives at the DSP finely stepped and needs no smoothing of its own. This engine
-// rebuilds its parameter snapshot on a REDRAW, i.e. at frame rate, which is a few hundred times
-// coarser — and a stepped parameter is audible as zipper noise, most obviously on a Shape sweep
-// where each step moves the waveform itself.
-//
-// Interpolating per sample toward the snapshot value restores what the hardware gets for free.
-// The time constant is short enough not to lag a deliberate move and long enough to bridge the gap
-// between frames.
+// notes §60
+#define REVERB_INPUT_LP4_HZ     (12000.0)
+static float          gPreDelayBank[SOUND_ENGINE_MAX_ENGINES][REVERB_CHANNELS][REVERB_PREDELAY_MAX];
+#define gPreDelay               (gPreDelayBank[SE])
+static uint32_t       gPreDelayPosBank[SOUND_ENGINE_MAX_ENGINES][REVERB_CHANNELS];
+#define gPreDelayPos            (gPreDelayPosBank[SE])
+static double         gEnvLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gEnvLevel               (gEnvLevelBank[SE])
+// notes §61
 #define PARAM_SMOOTH_SECONDS    (0.008)
 
-static double   gSmoothShape[MAX_ENGINE_NODES];
-static double   gSmoothCutoff[MAX_ENGINE_NODES];
-static double   gSmoothRes[MAX_ENGINE_NODES];
-static double   gSmoothGain[MAX_ENGINE_NODES];
-static double   gSmoothLevel[MAX_ENGINE_NODES][MAX_NODE_INPUTS];
+static double         gSmoothShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothShape            (gSmoothShapeBank[SE])
+static double         gSmoothCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothCutoff           (gSmoothCutoffBank[SE])
+static double         gSmoothResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothRes              (gSmoothResBank[SE])
+static double         gSmoothGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothGain             (gSmoothGainBank[SE])
+static double         gSmoothLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
+#define gSmoothLevel            (gSmoothLevelBank[SE])
 
 // Where the per-sample smoothing pass leaves its results, for the voice passes to read. Not per
 // voice: a knob is in one place however many notes are sounding, and smoothing it inside the voice
 // loop would advance the filter once per voice — so a sweep would speed up as more keys went down.
-static double   gSmoothedShape[MAX_ENGINE_NODES];
-static double   gSmoothedCutoff[MAX_ENGINE_NODES];
-static double   gSmoothedRes[MAX_ENGINE_NODES];
-static double   gSmoothedGain[MAX_ENGINE_NODES];
-static double   gSmoothedLevel[MAX_ENGINE_NODES][MAX_NODE_INPUTS];
+static double         gSmoothedShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothedShape     (gSmoothedShapeBank[SE])
+static double         gSmoothedCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothedCutoff    (gSmoothedCutoffBank[SE])
+static double         gSmoothedResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothedRes       (gSmoothedResBank[SE])
+static double         gSmoothedGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothedGain      (gSmoothedGainBank[SE])
+static double         gSmoothedLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
+#define gSmoothedLevel     (gSmoothedLevelBank[SE])
 // Until a node has been seen once there is nothing to interpolate FROM, so the first sample snaps.
 // Also what stops a patch load sweeping every parameter up from whatever the last patch left.
-static bool     gSmoothPrimed[MAX_ENGINE_NODES];
+static bool           gSmoothPrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothPrimed    (gSmoothPrimedBank[SE])
 
-static double   gEnvProgress[MAX_VOICES][MAX_ENGINE_NODES];
-static double   gEnvStart[MAX_VOICES][MAX_ENGINE_NODES];
-static uint32_t gEnvStage[MAX_VOICES][MAX_ENGINE_NODES];
+static double         gEnvProgressBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gEnvProgress     (gEnvProgressBank[SE])
+static double         gEnvStartBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gEnvStart        (gEnvStartBank[SE])
+static uint32_t       gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gEnvStage        (gEnvStageBank[SE])
 
 // The voice's trigger count this envelope last started an attack for. When the voice's count moves
 // past it, a note-on has asked for a restart that the gate alone cannot show - see envelope_step().
-static uint32_t gEnvTrigger[MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t       gEnvTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gEnvTrigger    (gEnvTriggerBank[SE])
 
 typedef enum {
     eEnvIdle = 0,
@@ -1687,6 +1202,8 @@ typedef enum {
 } tEnvStage;
 
 void sound_engine_pitch_bend(double bend) {
+    SE_LOCAL;
+
     if (bend < -1.0) {
         bend = -1.0;
     } else if (bend > 1.0) {
@@ -1696,6 +1213,8 @@ void sound_engine_pitch_bend(double bend) {
 }
 
 void sound_engine_set_output_level_db(double db) {
+    SE_LOCAL;
+
     double gain = pow(10.0, db / 20.0);
 
     if (db >= 0.0) {
@@ -1705,6 +1224,8 @@ void sound_engine_set_output_level_db(double db) {
 }
 
 bool sound_engine_set_morph(uint32_t group, double amount) {
+    SE_LOCAL;
+
     uint32_t scaled = 0;
 
     if (group >= NUM_MORPHS) {
@@ -1723,14 +1244,7 @@ bool sound_engine_set_morph(uint32_t group, double amount) {
     return atomic_exchange(&gMorphMilli[group], scaled) != scaled;
 }
 
-// The Glide dial's 128 settings are a table of times running from 19 ms to 6.27 s, written as text
-// for the patch-settings display. Reading the milliseconds back out of it means the engine glides
-// for exactly as long as the editor says it will.
-// Glide time. INTERPOLATED between table entries rather than computed, because unlike the A/D/R
-// curve this table has no decent closed form — the best power-law fit is 17% out at the median and
-// 38% at worst, which would be a far bigger error than reading it. Interpolating gives what
-// computing was wanted for, a value that moves continuously with a morphed or smoothed dial, while
-// staying exact at every position the dial can actually stop on.
+// notes §62
 static double glide_time_seconds(double setting) {
     const char * lowText  = NULL;
     const char * highText = NULL;
@@ -1761,6 +1275,8 @@ static double glide_time_seconds(double setting) {
 // value — under 128 it is positive, at or above it is that value minus 256 — so a morph sweeps the
 // parameter from where the knob sits towards its morph target as the controller moves.
 static double param_value(tModule * module, uint32_t variation, uint32_t index) {
+    SE_LOCAL;
+
     const tParam * param = &module->param[variation][index];
     double         value = (double)param->value;
     uint32_t       group = 0;
@@ -1788,6 +1304,8 @@ static double param_value(tModule * module, uint32_t variation, uint32_t index) 
 }
 
 bool sound_engine_active(void) {
+    SE_LOCAL;
+
     return atomic_load(&gActive);
 }
 
@@ -1795,6 +1313,8 @@ bool sound_engine_active(void) {
 // rate, so every coefficient already derived from it — envelope and glide times, filter and chorus
 // coefficients, LFO and oscillator increments — scales with no further change.
 void sound_engine_set_sample_rate(double sampleRate) {
+    SE_LOCAL;
+
     if (sampleRate > 0.0) {
         gDeviceRate = sampleRate;
         gSampleRate = sampleRate * (double)ENGINE_OVERSAMPLE;
@@ -1802,6 +1322,8 @@ void sound_engine_set_sample_rate(double sampleRate) {
 }
 
 static void reset_node_state(void) {
+    SE_LOCAL;
+
     uint32_t i = 0;
     uint32_t v = 0;
 
@@ -1813,18 +1335,18 @@ static void reset_node_state(void) {
             gOscHistoryPos[v][i] = 0;
             memset(gOscHistory[v][i], 0, sizeof(gOscHistory[v][i]));
 
-            // Spread rather than zeroed, for the same reason the note-on path leaves them alone:
-            // from the very first note the oscillators should be at unrelated points in their
-            // cycles. The step is irrational-ish so no two land together — and the VOICE is folded
-            // into it as well, so two voices playing the same note are not phase-locked copies of
-            // each other. Held notes on the hardware do not cancel and reinforce like that.
+            // notes §63
             gPhase[v][i]         = fmod(((double)i + ((double)v * 0.618034)) * 0.381966, 1.0);
             gSuperPhase[v][i][0] = 0.0;
             gSuperPhase[v][i][1] = 0.0;
+            gNoiseSeed[v][i]     = 0x9E3779B9u ^ ((v + 1u) * 0x85EBCA6Bu) ^ ((i + 1u) * 0xC2B2AE35u);
+            gNoiseLp[v][i]       = 0.0;
             gLadder[v][i][0]     = 0.0;
             gLadder[v][i][1]     = 0.0;
             gLadder[v][i][2]     = 0.0;
             gLadder[v][i][3]     = 0.0;
+            gLadder[v][i][4]     = 0.0;
+            gLadder[v][i][5]     = 0.0;
             gEnvLevel[v][i]      = 0.0;
             gEnvProgress[v][i]   = 0.0;
             gEnvStart[v][i]      = 0.0;
@@ -1859,11 +1381,10 @@ static void reset_node_state(void) {
     memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 }
 
-// The lowpass that turns OSC_OVERSAMPLE samples back into one. A windowed sinc: cut just under the
-// output rate's Nyquist so nothing is lost from the audible band, with a Blackman window to hold the
-// stopband down where the images sit — an image that survives here is exactly the aliasing the
-// oversampling was meant to remove.
+// notes §64
 static void build_decimator(void) {
+    SE_LOCAL;
+
     double   cutoff = 0.45 / (double)OSC_OVERSAMPLE;    // as a fraction of the oversampled rate
     double   sum    = 0.0;
     uint32_t i      = 0;
@@ -1914,11 +1435,10 @@ static void build_decimator(void) {
 // owns the device already — the VST3 wrapper, which is handed a buffer to fill rather than asking
 // CoreAudio for one — can prepare the engine without audioOutput.c being involved at all.
 static void engine_prime(void) {
+    SE_LOCAL;
+
     build_decimator();
-    // Start from silence rather than inheriting whatever the last run left behind. That includes
-    // the note queue: anything posted while the engine was off — the Virtual Keyboard, or MIDI from
-    // a previous run — is stale, and starting the read index behind the write index would have the
-    // audio thread chewing through history instead of playing what is being pressed now.
+    // notes §65
     gNoteRead = atomic_load(&gNoteWrite);
     reset_node_state();
     reset_voices();
@@ -1927,24 +1447,27 @@ static void engine_prime(void) {
 // For a plug-in host: prime the engine and mark it live, but leave the audio device alone. The
 // caller drives sound_engine_render() from its own process callback.
 void sound_engine_start_hosted(double sampleRate) {
+    SE_LOCAL;
+
     sound_engine_set_sample_rate(sampleRate);
     engine_prime();
     atomic_store(&gActive, true);
 }
 
 void sound_engine_stop_hosted(void) {
+    SE_LOCAL;
+
     atomic_store(&gActive, false);
 }
 
 bool sound_engine_start(void) {
+    SE_LOCAL;
+
     if (atomic_load(&gActive) == true) {
         return true;
     }
     build_decimator();
-    // Start from silence rather than inheriting whatever the last run left behind. That includes
-    // the note queue: anything posted while the engine was off — the Virtual Keyboard, or MIDI from
-    // a previous run — is stale, and starting the read index behind the write index would have the
-    // audio thread chewing through history instead of playing what is being pressed now.
+    // notes §66
     gNoteRead = atomic_load(&gNoteWrite);
     reset_node_state();
     reset_voices();
@@ -1958,6 +1481,8 @@ bool sound_engine_start(void) {
 }
 
 void sound_engine_stop(void) {
+    SE_LOCAL;
+
     if (atomic_load(&gActive) == false) {
         return;
     }
@@ -1968,6 +1493,8 @@ void sound_engine_stop(void) {
 }
 
 const char * sound_engine_status_text(void) {
+    SE_LOCAL;
+
     static char text[80];
 
     if (atomic_load(&gActive) == false) {
@@ -2017,11 +1544,10 @@ const char * sound_engine_status_text(void) {
     }
 }
 
-// Answers the question "why is there no vibrato" without a debugger: whether the keyboard is
-// sending pressure at all, where that has left the morph, and whether the patch actually put an LFO
-// into the graph. Those three failures look identical from the outside — silence — but need
-// completely different fixes.
+// notes §67
 const char * sound_engine_modulation_text(void) {
+    SE_LOCAL;
+
     static char text[160];
     char        vib[48] = {0};
     uint32_t    lfos    = 0;
@@ -2051,6 +1577,8 @@ const char * sound_engine_modulation_text(void) {
 }
 
 const char * sound_engine_debug_text(void) {
+    SE_LOCAL;
+
     // Big enough for a full patch: a couple of dozen nodes at roughly 230 characters each. It was
     // 1024, which silently cut the listing off after five nodes.
     static char  text[8192];
@@ -2067,7 +1595,7 @@ const char * sound_engine_debug_text(void) {
                              "active=%d status=%d nodes=%u tap=%d extraTaps=%u variation=%u peak=%.3f rawpeak=%.3f\n",
                              (int)atomic_load(&gActive), (int)gStatus, (unsigned)gParams.nodeCount,
                              (int)gParams.tap, (unsigned)gParams.extraTapCount,
-                             (unsigned)gPatchDescr[gSlot].activeVariation,
+                             (unsigned)gPatchDescr[engine_slot()].activeVariation,
                              (double)atomic_exchange(&gPeakMilli, 0) / 1000.0,
                              (double)atomic_exchange(&gRawPeakMilli, 0) / 1000.0);
 
@@ -2096,6 +1624,8 @@ const char * sound_engine_debug_text(void) {
 }
 
 void sound_engine_note(int32_t note, bool on) {
+    SE_LOCAL;
+
     uint32_t claim = atomic_fetch_add(&gNoteWrite, 1);
     uint32_t slot  = claim % NOTE_QUEUE_SIZE;
 
@@ -2109,6 +1639,8 @@ void sound_engine_note(int32_t note, bool on) {
 // ── VOICE ALLOCATION (audio thread) ─────────────────────────────────────────────────────────────
 
 static void reset_voices(void) {
+    SE_LOCAL;
+
     uint32_t v = 0;
 
     for (v = 0; v < MAX_VOICES; v++) {
@@ -2127,10 +1659,7 @@ static void reset_voices(void) {
     gVoiceClock = 0;
 }
 
-// How many voices this patch may use at once. Mono and Legato are one voice whatever the count says,
-// and in Poly the descriptor's field holds the count MINUS ONE — the topbar's readout does exactly
-// this arithmetic (topbarRender.c), and taking it from the same place is what stops the engine
-// playing a different number of notes from the one on screen.
+// notes §68
 static uint32_t voice_count_for_patch(uint32_t slot) {
     uint32_t count = 1;
 
@@ -2148,6 +1677,8 @@ static uint32_t voice_count_for_patch(uint32_t slot) {
 // note-on for something still releasing belongs on the voice that is releasing it, or the release
 // carries on underneath the new note as a duplicate.
 static int32_t voice_holding_note(int32_t note, uint32_t count) {
+    SE_LOCAL;
+
     for (uint32_t v = 0; v < count; v++) {
         if ((gVoice[v].note == note) && (gVoice[v].sounding || gVoice[v].gate)) {
             return (int32_t)v;
@@ -2157,11 +1688,10 @@ static int32_t voice_holding_note(int32_t note, uint32_t count) {
     return -1;
 }
 
-// Which voice a new note should take, out of the `count` the patch allows. In preference order: one
-// that is doing nothing, then the longest-released, then the oldest still held. Only the last of
-// those is a steal — cutting a note off — and it is what a polyphonic instrument does when it runs
-// out, so it is worth being sure the two cheaper cases are exhausted first.
+// notes §69
 static uint32_t voice_to_allocate(uint32_t count) {
+    SE_LOCAL;
+
     uint32_t best    = 0;
     uint64_t bestAge = UINT64_MAX;
 
@@ -2193,6 +1723,8 @@ static uint32_t voice_to_allocate(uint32_t count) {
 }
 
 static void voice_note_on(int32_t note) {
+    SE_LOCAL;
+
     uint32_t count = atomic_load(&gEngineVoices);
 
     // Bounded BEFORE it is used to pick a voice, not after. A published count is already clamped,
@@ -2206,25 +1738,10 @@ static void voice_note_on(int32_t note) {
     int32_t  held  = voice_holding_note(note, count);
     uint32_t v     = (held >= 0) ? (uint32_t)held : voice_to_allocate(count);
     tVoice * voice = &gVoice[v];
-    // Auto glide only slides between overlapping notes, which is the point of it: a phrase played
-    // legato slides, a detached note starts where it means to. Whether THIS VOICE'S gate is already
-    // open is that test — and it is why the check has to happen before the gate is opened below.
-    //
-    // Per voice rather than patch-wide: in Poly each note lands on a voice of its own, which was not
-    // playing anything, so nothing slides. That is correct. A glide in Poly only happens when a
-    // voice is reused, which is also what the hardware does.
+    // notes §70
     voice->glideActive = voice->gate;
 
-    // MONO RESTARTS THE ENVELOPES, LEGATO DOES NOT, and that is the whole difference between them.
-    // The G2 manual's Voice Mode description: in Legato "the Envelope modules do not retrigger when
-    // you play a new key before releasing the previous key" - which says Mono does.
-    //
-    // THE GATE CANNOT SAY IT. A key played over a held one lands on a voice whose gate is already
-    // open, so the envelope sees no edge; this engine used to treat that as legato in every mode, and
-    // with no sustain the second key sounded nothing at all once the decay had run out. Hence a count
-    // the envelope compares against rather than a flag it could miss.
-    //
-    // Poly gains from it too: a note that STEALS a held voice is a new note, and now starts like one.
+    // notes §71
     if ((voice->gate == false) || (atomic_load(&gEngineLegato) == false)) {
         voice->trigger++;
     }
@@ -2243,6 +1760,8 @@ static void voice_note_on(int32_t note) {
 // A note-off names its note; -1 is all-notes-off. Only the gate closes — the voice keeps its note
 // and goes on sounding its release, at the pitch it was played at.
 static void voice_note_off(int32_t note) {
+    SE_LOCAL;
+
     for (uint32_t v = 0; v < MAX_VOICES; v++) {
         if ((note < 0) || (gVoice[v].note == note)) {
             gVoice[v].gate = false;
@@ -2253,20 +1772,28 @@ static void voice_note_off(int32_t note) {
 // Peak render load since the last read, as a percentage of real time. READING IT CLEARS IT, so the
 // figure is always "the worst buffer since you last looked".
 uint32_t sound_engine_load_percent(void) {
+    SE_LOCAL;
+
     return atomic_exchange(&gLoadPercent, 0);
 }
 
 bool sound_engine_is_polyphonic(void) {
+    SE_LOCAL;
+
     return atomic_load(&gEngineVoices) > 1;
 }
 
 uint32_t sound_engine_voice_count(void) {
+    SE_LOCAL;
+
     return atomic_load(&gEngineVoices);
 }
 
 // Read without a lock from whichever thread asks. It is a display figure that changes every time a
 // key moves, so a torn read is one frame of a number that is about to change anyway.
 uint32_t sound_engine_voices_sounding(void) {
+    SE_LOCAL;
+
     uint32_t count  = 0;
     uint32_t voices = atomic_load(&gEngineVoices);
 
@@ -2290,6 +1817,8 @@ uint32_t sound_engine_voices_sounding(void) {
 // empty. Called per sample, so a note lands on the sample it arrived rather than at the next buffer
 // boundary.
 static bool take_next_note_event(void) {
+    SE_LOCAL;
+
     uint32_t write = atomic_load(&gNoteWrite);
     uint32_t slot  = 0;
 
@@ -2297,11 +1826,7 @@ static bool take_next_note_event(void) {
         return false;
     }
 
-    // If the writer has lapped us the oldest events have already been overwritten, and the slot the
-    // read index points at now holds something far newer. Waiting for a sequence number that can
-    // never arrive would wedge the queue for good — every later note silently dropped — so skip
-    // forward to the oldest event still intact. Losing the tail of a burst is recoverable; wedging
-    // is not, and wedging is what made rapid playing fall apart.
+    // notes §72
     if ((write - gNoteRead) > NOTE_QUEUE_SIZE) {
         gNoteRead = write - NOTE_QUEUE_SIZE;
     }
@@ -2324,41 +1849,7 @@ static bool take_next_note_event(void) {
 // Building the chain (UI thread)
 // ---------------------------------------------------------------------------------------------
 
-// The exact scale the dial prints, rather than the power-law fit this used to be — see
-// adr_time_seconds() in renderParams.c. Shared so the envelope that is heard cannot take a
-// different time from the one shown.
-// THE PULSE'S WIDTH IN SECONDS, as a closed form rather than a copy of the dial's 128 readings.
-// Written this way deliberately: a 128-entry table truncates the FRACTIONAL dial values a morph or a
-// smoothed knob produces, and would disagree with the dial's own text between steps.
-//
-// MEASURED ON HARDWARE 2026-09-07 - 17 dial values in the Sub range, captured at 192 kHz so the
-// shortest gate is resolved (at 48 kHz it is four samples and cannot be). EVERY width came back an
-// integer count of 96 kHz samples: 8, 16, 28, 52, 92, 160, 288, 512, 912, 1628, 2916, 5244, 9460,
-// 17116, 31076, 56660, 96083 at dials 0, 8, 16 ... 120, 127. That is also independent confirmation
-// of the 96 kHz engine rate, arrived at from a different module and a different rig than the reverb.
-//
-// IT IS NOT A CONSTANT-RATIO PROGRESSION, which is what this used to assume. The per-step ratio
-// drifts smoothly from about 1.0748 low on the dial to 1.0768 at the top - small, but compounded over
-// 127 steps it is the curvature the polynomial below carries, and without it a straight line in log
-// runs about 11% LONG
-// across the whole middle of the dial (+24.8% at dial 0, +11.3% at 64, converging only at 127 because
-// that endpoint was pinned). The old two-endpoint form fitted the ends and missed everything between.
-//
-// A CUBIC IN LOG, over all 17 points, because nothing simpler covers the whole dial. A quadratic
-// fitted only where the measurement is sharpest (dial >= 48, where the gate is hundreds of samples
-// and edge placement is worth a fraction of a percent) lands inside 0.12% from there to the top - but
-// extrapolates to 9.9 samples at dial 0 where BOTH measurement methods, a 50% crossing and an
-// edge-slope, independently returned 8. Something in the bottom two dial steps is not on the curve
-// the top follows. Rather than be exact over most of the range and 24% out at one end, this fits
-// everything: worst case 4.1%, and 1.8% rms.
-//
-// THAT REMAINS THE OPEN QUESTION on this module. Either the very bottom of the dial genuinely departs
-// from the curve, or an 8-sample gate defeats both measures - at 192 kHz it is 16 samples with the
-// reconstruction filter's ringing across its edges, so a two-sample bias is not impossible. Settling
-// it needs either a higher capture rate or the instrument's own readout via DEVKNOB.
-//
-// Range shifts it by a decade either way (pulseRangeStrMap order: Sub, Lo, Hi). Sub is the base here
-// because Sub is what was measured; the old code based it on Lo.
+// notes §73
 static double pulse_time_seconds(double value, uint32_t range) {
     // ln(width in 96 kHz samples) = k0 + k1*d + k2*d^2 + k3*d^3
     const double k0      = 2.11883047;
@@ -2402,12 +1893,19 @@ static const tLfoParams * lfo_params(tModuleType type) {
     }
 }
 
+// §9.3
+static uint32_t node_output_legs(tNodeKind kind) {
+    return (kind == eNodeFltMulti) ? 3u : 2u;
+}
+
 static bool module_kind(tModule * module, tNodeKind * kind) {
     switch (module->type) {
         case moduleTypeOscB:
         case moduleTypeOscA:
+        case moduleTypeOscC:
+        case moduleTypeOscD:
         {
-            *kind = eNodeOsc;
+            *kind = eNodeOsc;       // see kOscParams
             return true;
         }
         case moduleTypeFltClassic:
@@ -2455,10 +1953,54 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeOscShp;
             return true;
         }
+        case moduleTypeMix1to1A:
+        case moduleTypeMix1to1S:
+        case moduleTypeMix2to1A:
+        case moduleTypeMix2to1B:
+        case moduleTypeMix4to1A:
+        case moduleTypeMix4to1B:
         case moduleTypeMix4to1C:
         case moduleTypeMix4to1S:
+        case moduleTypeMix8to1A:
+        case moduleTypeMix8to1B:
+        case moduleTypeMixFader:
         {
-            *kind = eNodeMix;
+            *kind = eNodeMix;       // see kMixSpecs
+            return true;
+        }
+        case moduleTypePan:
+        case moduleTypeXtoFade:
+        case moduleTypeFade1to2:
+        case moduleTypeFade2to1:
+        {
+            *kind = eNodeFade;
+            return true;
+        }
+        case moduleTypeMixStereo:
+        {
+            *kind = eNodeMixStereo;
+            return true;
+        }
+        case moduleTypeNoise:
+        {
+            *kind = eNodeNoise;
+            return true;
+        }
+        case moduleTypeOscNoise:
+        {
+            *kind = eNodeOscNoise;
+            return true;
+        }
+        case moduleTypeFltMulti:
+        {
+            *kind = eNodeFltMulti;
+            return true;
+        }
+        case moduleTypeEqPeak:
+        case moduleTypeEq2Band:
+        case moduleTypeEq3band:
+        {
+            *kind = eNodeEq;
             return true;
         }
         case moduleTypeStChorus:
@@ -2520,22 +2062,39 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
 #define anyConnectorType    ((tConnectorType) - 1)
 static int connector_index_for_input(tModuleType moduleType, uint32_t nth, tConnectorType wantedType);
 
+// The first `max` input connectors, in the order the module's own resources list them.
+static uint32_t inputs_in_module_order(tModuleType moduleType, uint32_t max, uint32_t * derived) {
+    uint32_t count = 0;
+
+    while (count < max) {
+        int found = connector_index_for_input(moduleType, count, anyConnectorType);
+
+        if (found < 0) {
+            break;
+        }
+        derived[count] = (uint32_t)found;
+        count++;
+    }
+    return count;
+}
+
 static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool stereoMix, const uint32_t ** connectors) {
     // Derived from the module resources rather than written out — see connector_index_for_input().
     // Static because the chain is built on one thread; the contents are rewritten per call.
-    static uint32_t       derived[MAX_NODE_INPUTS];
-    static const uint32_t oneIn[]       = {CONNECTOR_IN_A};
-    static const uint32_t twoIn[]       = {CONNECTOR_IN_A, CONNECTOR_IN_B};
-    static const uint32_t mixIn[]       = {0, 1, 2, 3};
+    // Per THREAD: two instances can build their chains at the same moment on different threads.
+    static _Thread_local uint32_t derived[MAX_NODE_INPUTS];
+    static const uint32_t         oneIn[]       = {CONNECTOR_IN_A};
+    static const uint32_t         twoIn[]       = {CONNECTOR_IN_A, CONNECTOR_IN_B};
+    static const uint32_t         mixIn[]       = {0, 1, 2, 3};
     // In1L, In1R .. In4L, In4R as RAW CONNECTOR indices: Mix4to1S's connector list really does run
     // Out, Out, then ten inputs, so the first eight input legs are connectors 2..9.
-    static const uint32_t mixStereoIn[] = {2, 3, 4, 5, 6, 7, 8, 9};
-    static const uint32_t envIn[]       = {0};                      // connector 0 is the audio the envelope shapes
+    static const uint32_t         mixStereoIn[] = {2, 3, 4, 5, 6, 7, 8, 9};
+    static const uint32_t         envIn[]       = {0};              // connector 0 is the audio the envelope shapes
     // OscB has "two pitch modulation inputs, one frequency modulation input, one sync modulation
     // input and a Shape modulation input" (manual, OscB). The two pitch inputs are the control-rate
     // pair at 0 and 1; both are summed and scaled by the one Pitch knob the module carries.
-    static const uint32_t oscIn[]       = {0, 1};
-    static const uint32_t none[]        = {0};
+    static const uint32_t         oscIn[]       = {0, 1};
+    static const uint32_t         none[]        = {0};
 
     switch (kind) {
         case eNodeFilter:
@@ -2554,8 +2113,15 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeOsc:
         case eNodeOscShp:
         {
+            // §6.3
+            static const uint32_t oscCIn[] = {3, 0};
+
+            if (moduleType == moduleTypeOscC) {
+                *connectors = oscCIn;
+                return 2;
+            }
             *connectors = oscIn;
-            return 2;
+            return (moduleType == moduleTypeOscD) ? 1 : 2;
         }
         case eNodeLevMult:
         case eNodePulse:
@@ -2566,19 +2132,16 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeMix:
         {
-            // A mono mixer's four inputs, or a stereo one's eight legs as four stereo pairs. Both
-            // are just "the first N inputs", which the resources can answer — Mix4to1C happens to
-            // put its inputs first and Mix4to1S puts its two outputs first, and neither fact needs
-            // to be written down here any more.
-            uint32_t count = stereoMix ? 8 : 4;
-            uint32_t leg   = 0;
+            // §3.1, §3.5 - channels first, then the Chain input(s).
+            uint32_t count = inputs_in_module_order(moduleType, MAX_NODE_INPUTS, derived);
 
-            for (leg = 0; leg < count; leg++) {
-                int found = connector_index_for_input(moduleType, leg, anyConnectorType);
+            if (count == 0) {
+                count = stereoMix ? 8 : 4;
 
-                derived[leg] = (found >= 0) ? (uint32_t)found : (stereoMix ? mixStereoIn[leg] : mixIn[leg]);
+                for (uint32_t leg = 0; leg < count; leg++) {
+                    derived[leg] = stereoMix ? mixStereoIn[leg] : mixIn[leg];
+                }
             }
-
             *connectors = derived;
             return count;
         }
@@ -2604,6 +2167,30 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             *connectors = none;   // filled in by the Voice-area bridge, not by a cable
             return 0;
         }
+        case eNodeNoise:
+        {
+            *connectors = none;     // a source: no inputs at all
+            return 0;
+        }
+        case eNodeFltMulti:
+        case eNodeOscNoise:
+        {
+            uint32_t count = inputs_in_module_order(moduleType, 3u, derived);
+            *connectors = derived;
+            return count;
+        }
+        case eNodeMixStereo:
+        {
+            uint32_t count = inputs_in_module_order(moduleType, 6u, derived);
+            *connectors = derived;
+            return count;
+        }
+        case eNodeFade:
+        {
+            uint32_t count = inputs_in_module_order(moduleType, 3u, derived);
+            *connectors = derived;
+            return count;
+        }
         case eNodeShaper:
         {
             // One jack or two, in the module's OWN order: WaveWrap's Mod comes first and every
@@ -2627,6 +2214,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeLevAmp:
         case eNodePassThru:
+        case eNodeEq:
         {
             *connectors = oneIn;
             return 1;
@@ -2647,16 +2235,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
 // Connector lookup, derived from the module resources rather than hard-coded
 // ---------------------------------------------------------------------------------------------
 
-// The RAW connector index of a module type's Nth input, optionally restricted to a connector type.
-//
-// The engine used to carry hand-written index constants per module — CONNECTOR_IN_A, an "env in" at
-// 2, a mixer's legs at {2..9}. Every one of those encodes a fact the resources already state, and
-// getting one wrong is invisible: the signal simply never arrives, or arrives from the wrong socket.
-// Two such constants were "corrected" in opposite directions in one session before it became clear
-// they were describing the same thing badly. Ask the table instead.
-//
-// `anyConnectorType` means "any". Returns -1 when there is no such input, which callers treat as
-// unconnected.
+// notes §74
 static int connector_index_for_input(tModuleType moduleType, uint32_t nth, tConnectorType wantedType) {
     uint32_t total   = module_connector_count(moduleType);
     uint32_t seen    = 0;
@@ -2714,22 +2293,7 @@ static tModule * module_feeding(tModule * sink, uint32_t connectorIndex, uint32_
     return get_module_slot(sink->key.slot, sink->key.location, root.moduleIndex);
 }
 
-// The Voice area's Out module, which is what feeds the FX area. There is no cable for this link —
-// the 2-Out's "Out to" setting routes it — so the walk has to make the jump itself when it reaches
-// an Fx-In, or the whole FX chain would look like it had nothing patched into it.
-// The Voice area Out that feeds a given Fx-In — the one whose "Out to" names the same FX bus the
-// Fx-In is listening on.
-//
-// This used to return the FIRST Out module in the Voice area whatever it was set to, which routed
-// signal into the FX area even when the Out was aimed at the speakers and nothing was being sent to
-// FX at all. The two selectors have to agree for anything to cross:
-//
-//   2toOut "Out to":  0 Out 1/2, 1 Out 3/4, 2 FX 1/2, 3 FX 3/4, 4 Bus 1/2, 5 Bus 3/4
-//   4toOut "Out to":  0 Out, 1 Fx, 2 Bus            — one setting for all four channels
-//   Fx-In  "In from": 0 FX 1/2, 1 FX 3/4
-//
-// Returns NULL when nothing is feeding that bus, which is correct: an Fx-In listening to a bus
-// nobody sends to receives silence.
+// notes §75
 static tModule * voice_area_output_for_fx(uint32_t slot, uint32_t wantedBus) {
     uint32_t index = 0;
 
@@ -2758,20 +2322,143 @@ static tModule * voice_area_output_for_fx(uint32_t slot, uint32_t wantedBus) {
     return NULL;
 }
 
-// Adds `module` and everything upstream of it, depth first so a node's inputs always occupy lower
-// indices than the node itself — which is what lets the audio thread evaluate the list as a single
-// forward pass. Returns the node's index, or -1 if it could not be added.
-//
-// `depth` bounds the recursion. G2 patches are allowed to contain feedback loops, so without it a
-// cycle would recurse until the stack ran out.
+static const double kEqLowShelfHz[]  = {80.0, 110.0, 160.0};      // §11.2
+static const double kEqHighShelfHz[] = {8000.0, 6000.0, 12000.0}; // measured order, not the names'
+
+#define EQ_MID_OCTAVES    (1.0)    // §11.3
+
+static double eq_dial_gain(double dial) {
+    return pow(10.0, ((dial - 64.0) * (18.0 / 64.0)) / 20.0);    // §11.1
+}
+
+static double eq_peak_damping(double octaves) {
+    double ratio = exp2(octaves);
+
+    return 2.0 * (ratio - 1.0) / sqrt(ratio);
+}
+
+// §11.4 - a cut mirrors the boost of the same size.
+static void eq_mirror_cuts(tEngineNode * node) {
+    if ((node->eqLowHz > 0.0) && (node->eqLowGain < 1.0)) {
+        node->eqLowHz /= node->eqLowGain;
+    }
+
+    if ((node->eqHighHz > 0.0) && (node->eqHighGain < 1.0)) {
+        node->eqHighHz *= node->eqHighGain;
+    }
+
+    if ((node->eqPeakHz > 0.0) && (node->eqPeakGain < 1.0)) {
+        node->eqPeakDamping /= node->eqPeakGain;
+    }
+}
+
+static double eq_shelf_hz(const double * table, uint32_t selector) {
+    return table[(selector > 2u) ? 2u : selector];
+}
+
+static void eq_build(tEngineNode * node, tModule * module, uint32_t variation) {
+    node->eqLowHz  = 0.0;
+    node->eqHighHz = 0.0;
+    node->eqPeakHz = 0.0;
+
+    switch (module->type) {
+        case moduleTypeEqPeak:
+        {
+            node->eqPeakHz      = flt_cutoff_hz(param_value(module, variation, 0));
+            node->eqPeakGain    = eq_dial_gain(param_value(module, variation, 1));
+            node->eqPeakDamping = eq_peak_damping((128.0 - param_value(module, variation, 2)) / 64.0);
+            node->active        = (param_value(module, variation, 3) != 0.0);
+            node->eqInputLevel  = mix_level_gain(param_value(module, variation, 4));
+            break;
+        }
+        case moduleTypeEq2Band:
+        {
+            node->eqLowGain    = eq_dial_gain(param_value(module, variation, 0));
+            node->eqHighGain   = eq_dial_gain(param_value(module, variation, 1));
+            node->eqInputLevel = mix_level_gain(param_value(module, variation, 2));
+            node->active       = (param_value(module, variation, 3) != 0.0);
+            node->eqLowHz      = eq_shelf_hz(kEqLowShelfHz, module->param[variation][4].value);
+            node->eqHighHz     = eq_shelf_hz(kEqHighShelfHz, module->param[variation][5].value);
+            break;
+        }
+        default:
+        {
+            node->eqLowGain     = eq_dial_gain(param_value(module, variation, 0));
+            node->eqPeakGain    = eq_dial_gain(param_value(module, variation, 1));
+            node->eqPeakHz      = 100.0 * pow(80.0, param_value(module, variation, 2) / 127.0);
+            node->eqPeakDamping = eq_peak_damping(EQ_MID_OCTAVES);
+            node->eqHighGain    = eq_dial_gain(param_value(module, variation, 3));
+            node->eqInputLevel  = mix_level_gain(param_value(module, variation, 4));
+            node->active        = (param_value(module, variation, 5) != 0.0);
+            node->eqLowHz       = eq_shelf_hz(kEqLowShelfHz, module->param[variation][6].value);
+            node->eqHighHz      = eq_shelf_hz(kEqHighShelfHz, module->param[variation][7].value);
+            break;
+        }
+    }
+    eq_mirror_cuts(node);
+}
+
+// §11 - the shelves, then the peak; each adds its boost to what passes through.
+static double eq_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input) {
+    SE_LOCAL;
+
+    double * state  = gLadder[voice][node];       // low shelf, high shelf, the peak's two
+    double   signal = input * spec->eqInputLevel;
+
+    if (spec->eqLowHz > 0.0) {
+        double pole = exp(-2.0 * M_PI * spec->eqLowHz / gSampleRate);
+
+        state[0] += (1.0 - pole) * (signal - state[0]);
+        signal   += (spec->eqLowGain - 1.0) * state[0];
+    }
+
+    if (spec->eqHighHz > 0.0) {
+        double pole = exp(-2.0 * M_PI * spec->eqHighHz / gSampleRate);
+        double half = 0.5 * (1.0 + pole) * signal;
+        double high = state[1] + half;
+
+        state[1] = (pole * high) - half;
+        signal  += (spec->eqHighGain - 1.0) * high;
+    }
+
+    if (spec->eqPeakHz > 0.0) {                               // §11.5
+        double g       = tan(M_PI * fmin(spec->eqPeakHz, gSampleRate * 0.45) / gSampleRate);
+        double damping = spec->eqPeakDamping;
+        double high    = (signal - ((damping + g) * state[2]) - state[3]) / (1.0 + (damping * g) + (g * g));
+        double band    = (g * high) + state[2];
+
+        state[2] = (g * high) + band;
+        state[3] = (2.0 * g * band) + state[3];
+        signal  += (spec->eqPeakGain - 1.0) * damping * band;
+    }
+    return signal;
+}
+
+static void set_osc_pitch(tEngineNode * node, tModule * module, uint32_t variation, const tOscParams * p) {
+    double tune      = param_value(module, variation, (uint32_t)p->tune);
+    double cent      = param_value(module, variation, (uint32_t)p->cent);
+    int    pitchType = (int)param_value(module, variation, (uint32_t)p->pitchType);
+
+    // Factor and Partial set the pitch against a master oscillator, which the engine does not have.
+    if (pitchType > 1) {
+        LOG_DEBUG("Sound engine: Osc PitchType %d not supported, reading Tune as Semi\n", pitchType);
+    }
+    node->oscKbt    = (param_value(module, variation, (uint32_t)p->kbt) != 0.0);
+    node->basePitch = tune + (osc_fine_cents(cent) / 100.0);
+    node->modAmount = (p->pitchMod >= 0)
+                      ? type_ii_attenuator(param_value(module, variation, (uint32_t)p->pitchMod) / 127.0)
+                      : 0.0;
+    node->active    = (param_value(module, variation, (uint32_t)p->active) != 0.0);
+}
+
+// notes §76
 static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t variation, uint32_t depth) {
+    SE_LOCAL;
+
     tNodeKind     kind                            = eNodeOsc;
     tEngineNode * node                            = NULL;
     int32_t       self                            = 0;
-    // Every leg starts UNCONNECTED. This used to be written {-1, -1, -1, -1}, which supplies only
-    // four of the eight and lets C zero-fill the rest — and 0 is not "unconnected", it is node 0,
-    // the first node in the chain. A stereo mixer reads all eight legs, so its unpatched channels
-    // were quietly summing in whatever node 0 happened to be, usually an oscillator, raw.
+    // notes §77
     int32_t       resolvedIn[MAX_NODE_INPUTS];
     uint32_t      resolvedSrcOut[MAX_NODE_INPUTS] = {0};
 
@@ -2808,14 +2495,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     // Inputs first, so they land at lower node indices than this one.
     {
         const uint32_t * connectors                     = NULL;
-        uint32_t         count                          = input_connectors(kind, module->type, module->type == moduleTypeMix4to1S, &connectors);
+        uint32_t         count                          = input_connectors(kind, module->type, (mix_spec(module->type) != NULL) && mix_spec(module->type)->stereo, &connectors);
         uint32_t         c                              = 0;
-        // COPIED before the loop, because input_connectors() may hand back a pointer to a static
-        // buffer and add_node() below recurses into itself for every input — a deeper node's own
-        // call would otherwise overwrite this node's list while it is still being walked, leaving
-        // every input after the first reading whatever the deepest module happened to want. The
-        // chain then differs from one build to the next, and since the engine resets its node state
-        // whenever the topology signature changes, the result is envelopes restarting continuously.
+        // notes §78
         uint32_t         connectorList[MAX_NODE_INPUTS] = {0};
 
         if (count > MAX_NODE_INPUTS) {
@@ -2836,21 +2518,13 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
         inCount = count;
 
-        // An Fx-In takes no cable: it carries whatever a Voice area Out sends across the FX bus it is
-        // listening on. Follow that link explicitly, or a patch whose real output lives in the FX
-        // area looks like it has nothing patched into it and plays silence. The bus has to MATCH,
-        // though — see voice_area_output_for_fx().
+        // notes §79
         if (kind == eNodeFxIn) {
             uint32_t  wantedBus = module->param[variation][FXIN_PARAM_SOURCE].value;
             tModule * feeder    = voice_area_output_for_fx(module->key.slot, wantedBus);
             int32_t   source    = (feeder != NULL) ? add_node(params, feeder, variation, depth + 1) : -1;
 
-            // BOTH LEGS, because the FX bus is a STEREO pair and this used to take only the left.
-            // The module has two audio outputs and a stereo meter; the Voice-area Out it listens to
-            // fills leg 0 and leg 1 with a genuine left and right and keeps them apart. Resolving
-            // only leg 0 threw the right channel away entirely — not summed into the left, discarded
-            // — so anything panned right vanished and a stereo source arrived as its own left
-            // channel doubled. A Reverb fed from it then summed two copies of the same signal.
+            // notes §80
             resolvedIn[0]     = source;
             resolvedSrcOut[0] = 0;
             resolvedIn[1]     = source;
@@ -2877,17 +2551,21 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         for (c = 0; c < MAX_NODE_INPUTS; c++) {
             node->in[c]     = (c < inCount) ? resolvedIn[c] : -1;
             node->srcOut[c] = (c < inCount) ? resolvedSrcOut[c] : 0;
+            node->srcLeg[c] = 0;
+
+            // §9.3
+            if ((c < inCount) && (resolvedIn[c] >= 0) && (resolvedSrcOut[c] > 0)) {
+                uint32_t legs = node_output_legs(params->node[resolvedIn[c]].kind);
+
+                node->srcLeg[c] = (legs > 2u) ? ((resolvedSrcOut[c] < legs) ? resolvedSrcOut[c] : (legs - 1u)) : 1u;
+            }
         }
     }
 
     switch (kind) {
         case eNodeOscShp:
         {
-            // The waveform index is kept RAW: the shape oscillators have their own eight waveforms
-            // with their own meanings, and Shape morphs each of them rather than acting as a pulse
-            // width. osc_shp_wave() does the work — mapping these onto the plain oscillator's
-            // waveforms lost the entire point of the module, since at 50% Shape all four Sine
-            // variants ARE a plain sine and everything interesting happens as Shape opens.
+            // notes §81
             bool isShpA = (module->type == moduleTypeOscShpA);
 
             if (isShpA == true) {
@@ -2908,13 +2586,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                               + (osc_fine_cents(param_value(module, variation,
                                                             isShpA ? SHPA_PARAM_CENT
                                                             : SHPB_PARAM_CENT)) / 100.0);
-            // RAW, normalised to 0..1 - not the displayed percentage. waveModels.h states the
-            // contract ("Shape is the raw 0-127 parameter normalised to 0..1. It is NOT a
-            // percentage"), and module_shape_value() in moduleGraphics.c passes param/127 to draw
-            // the same wave. Feeding osc_shape_percent()/100 here handed the models 0.5..0.99, so
-            // the dial acted over the model's upper half only and raw 0 - the capture's pure sine -
-            // came out already half-shaped. Drawn wave and heard wave disagreed, which is the drift
-            // waveModels.c exists to make impossible.
+            // notes §82
             node->shape     = param_value(module, variation,
                                           isShpA ? SHPA_PARAM_SHAPE : SHPB_PARAM_SHAPE) / 127.0;
             node->modAmount = type_ii_attenuator(param_value(module, variation,
@@ -2934,22 +2606,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeCompress:
         {
-            // ALL FOUR OF THESE WERE WRONG, and none of it needed the hardware: the instrument's own
-            // dial readings settle every one. The note that used to sit here called the curve "an
-            // approximation, not a reading of it", which was honest and is now unnecessary.
-            //
-            //   THRESHOLD  the dial reads raw - 30 dB, and raw 42 reads "Off". This had raw - 42,
-            //              putting every setting 12 dB too low, and had no Off at all — so the
-            //              compressor was still working where the instrument stops.
-            //   RATIO      three straight runs, reaching about 95:1. This was 1 + raw/8, which tops
-            //              out at 9.6:1 — a tenth of the range, so the hardest settings barely
-            //              compressed.
-            //   ATTACK     0.53 ms to 767 ms, and raw 0 is "Fast", i.e. instant. This was
-            //              0.1 ms to 300 ms.
-            //   RELEASE    125 ms to 10.2 s. This was 10 ms to 3 s.
-            //
-            // Attack and release are pure exponentials across the dial — fitted to the printed
-            // scales, worst error 0.07 dB and 0.04 dB respectively, so the shape is not in doubt.
+            // notes §83
             double thrRaw = param_value(module, variation, COMP_PARAM_THRESHOLD);
             double att    = param_value(module, variation, COMP_PARAM_ATTACK);
             double rel    = param_value(module, variation, COMP_PARAM_RELEASE) / 127.0;
@@ -2979,12 +2636,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeDelay:
         {
-            // The range selector is a mode. Its four settings are progressively longer maximum
-            // times; the dial then scales within the chosen one.
-            // The four range settings, straight off delayABRangeStrMap: 500ms, 1.0s, 2.0s, 2.7s.
-            // Three different Range tables exist and the delay modules do not share one — this
-            // held only DelayA/DelayB's, so every other delay's Range was read against the wrong
-            // list. delay_range_max_seconds() is the single definition, shared with the dial.
+            // notes §84
             uint32_t range   = module->mode[DELAY_MODE_RANGE].value;
             double   maxTime = delay_range_max_seconds(module->type, range);
 
@@ -2994,24 +2646,11 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                                 && (module->param[variation][clkIndex].value != 0);
 
                 if (clocked == true) {
-                    // Clock mode: the dial picks a musical division, not a time. The engine has no
-                    // running master clock of its own, so it works to a FIXED 120 BPM reference —
-                    // half a second to the beat. That keeps a clocked delay musically proportioned
-                    // and the dial honest about which division it selects; it will not agree with a
-                    // patch running at some other tempo on the hardware.
+                    // notes §85
                     node->timeSeconds = clk_sync_beats(param_value(module, variation, DELAY_PARAM_TIME))
                                         * (60.0 / ENGINE_REFERENCE_BPM);
 
-                    // The Range still caps it. Manual, Time/Clk scroll button: "if the delay time
-                    // (based on the current Master Clock rate and the Sync factor) should exceed the
-                    // selected 'Range' time, the actual delay time will automatically be divided by
-                    // two." Halving repeatedly is what makes the long divisions land somewhere
-                    // musical instead of simply being clamped to the Range — 2/1 is four seconds at
-                    // 120 BPM, past every Range there is, so without this the top of the dial was
-                    // wrong on every setting.
-                    //
-                    // The DISPLAY deliberately does not do this: the dial shows the sync factor you
-                    // chose, which is what the hardware shows too.
+                    // notes §86
                     while ((node->timeSeconds > maxTime) && (node->timeSeconds > 0.0)) {
                         node->timeSeconds *= 0.5;
                     }
@@ -3022,44 +2661,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                                                            param_value(module, variation, DELAY_PARAM_TIME));
                 }
             }
-            // FEEDBACK IS LINEAR TO EXACTLY UNITY, MEASURED ON THE INSTRUMENT 2026-08-15. This was
-            // scaled by 0.95, which is why the engine's repeats died away where the hardware's hold.
-            //
-            // DelayB, Range 500 ms, LP wide open so the in-loop filter is transparent, decay read off
-            // the repeat train of a note-gated click captured from the G2's main outputs:
-            //
-            //     FB dial      64        96       127
-            //     measured   0.4973    0.7413    1.0004
-            //     value/127  0.5039    0.7559    1.0000
-            //     was (x.95) 0.4787    0.7181    0.9500
-            //
-            // At 127 the hardware does not decay AT ALL — nine repeats within 0.06 dB of each other,
-            // then flat. The old 0.95 turned that infinite sustain into -0.45 dB a repeat, audibly
-            // gone inside thirty. The measured values sit ~0.7% under value/127 at the two lower
-            // settings, which is the residual loss of the LP even at its widest, not a different law.
+            // notes §87
             node->depth = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0;
-            // LP IS A CUTOFF, AND 127 IS WIDE OPEN. This read the dial as an amount of damping and
-            // had it the wrong way round, with a fatal end point: delay_step() uses (1 - damping) as
-            // its one-pole coefficient, so LP 127 — the brightest, most ordinary setting there is —
-            // gave a coefficient of exactly ZERO. The filter state then never updated, nothing was
-            // ever fed back, and the delay produced NO REPEATS AT ALL. Anywhere near the top of the
-            // dial it was near enough silent.
-            //
-            // MEASURED ON THE INSTRUMENT (DelayB, fully wet, FB 96, repeats measured after cutting
-            // the oscillator). The dial runs dark-to-bright and the tail lengthens with it:
-            //
-            //     LP    0     32     64     96    127
-            //     tilt  -37.1  -41.4  -23.2  -13.2  -10.7 dB   (2-10 kHz against 80-400 Hz)
-            //     tail  0.5    1.6    1.8    2.0    2.0  s
-            //
-            // So LP 0 is dark and short, LP 127 open and long — the exact opposite of what this did.
-            //
-            // An exponential sweep of the cutoff fits that: 200 Hz at the bottom of the dial, 20 kHz
-            // at the top. Against the measurements above, taking LP 127 as the open reference, it
-            // predicts about 28 dB of extra rolloff at LP 0 where 26 was measured, and 8 dB at LP 64
-            // where 12.5 was. Close, and the right shape — but the filter sits INSIDE the feedback
-            // loop, so what is measured is several passes through it rather than one, and these
-            // constants deserve a proper fit before they are called settled.
+            // notes §88
             {
                 double lp    = param_value(module, variation, DELAY_PARAM_LP) / 127.0;
                 double fc    = DELAY_LP_MIN_HZ * pow(DELAY_LP_MAX_HZ / DELAY_LP_MIN_HZ, lp);
@@ -3094,32 +2698,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeReverb:
         {
-            // MEASURED ON THE HARDWARE 2026-08-09. The Time dial is LINEAR in decay time, with a
-            // slope per room type — not the cubic that used to be here, and not reaching anything like
-            // the 17.58 s the manual quotes:
-            //
-            //     room     Time 42   Time 85   Time 127    s per dial unit
-            //     Small          -    1.95 s    2.89 s     0.0224
-            //     Medium    2.01 s    3.72 s    5.49 s     0.0409
-            //     Large     2.94 s    5.49 s    8.11 s     0.0608
-            //     Hall      3.77 s    7.30 s   10.75 s     0.0821
-            //
-            // Straight lines (r2 0.996..0.998) whose slope agrees across both halves of the range to
-            // three digits, so the shape is not in doubt. The old cubic gave 17.58 s at Time 127 where
-            // Large measures 8.11 s — more than twice too long — and its exponent was openly a guess
-            // fitted to make the midpoint musical.
-            //
-            // THE SLOPE IS NOT PROPORTIONAL TO ROOM SIZE (Hall/Small is 3.67 against a size ratio of
-            // 1.68), so Type sets the feedback GAIN as well as the delay lengths. That is why this is a
-            // table rather than kReverbTypeScale doing the work.
-            //
-            // READ AS EARLY DECAY, EXTRAPOLATED. The G2's tail only clears the measurement noise floor
-            // by about 21 dB, so each figure is a straight-line fit over ~15 dB stretched to 60. If the
-            // instrument has a double-slope tail — a bright early decay over a longer low-frequency one,
-            // which reverbs often do — the late part is invisible here and the true RT60 is LONGER than
-            // these numbers. That would also explain the manual's 17.58 s, which is not reachable even
-            // at Brightness 127 (Hall measures 11.83 s there). Resolving it needs a quieter floor, not
-            // a different formula. See the REVERB entry in todo.md.
+            // notes §89
             node->timeNorm   = param_value(module, variation, REVERB_PARAM_TIME) / 127.0;
             {
                 uint32_t reverbType = module->mode[REVERB_MODE_TYPE].value;
@@ -3155,6 +2734,86 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                              ? (param_value(module, variation, (uint32_t)p->shape) / 127.0) : 0.5;
             node->active   = (param_value(module, variation, (uint32_t)p->active) != 0.0);
             node->shpWave  = (module->type == moduleTypeLfoShpA);
+            break;
+        }
+        case eNodeFltMulti:
+        {
+            // Freq 0, FreqM 1, KBT 2, GComp 3, Res 4, dB/Oct 5, On 6 - §10.1
+            node->cutoffParam = param_value(module, variation, 0);
+            node->modAmount   = dial_fraction(param_value(module, variation, 1));
+            node->fltKbt      = param_value(module, variation, 2) * 0.25;
+            node->fltGainComp = (module->param[variation][3].value != 0);
+            node->resonance   = param_value(module, variation, 4) / 127.0;
+            node->fltSixDb    = (module->param[variation][5].value == 0);
+            node->active      = (param_value(module, variation, 6) != 0.0);
+            break;
+        }
+        case eNodeEq:
+        {
+            eq_build(node, module, variation);
+            break;
+        }
+        case eNodeOscNoise:
+        {
+            const tOscParams * p = osc_params(module->type);
+
+            if (p == NULL) {
+                break;
+            }
+            set_osc_pitch(node, module, variation, p);
+            node->oscNoiseWidth    = dial_fraction(param_value(module, variation, OSCNOISE_PARAM_WIDTH));
+            node->oscNoiseWidthMod = dial_fraction(param_value(module, variation, OSCNOISE_PARAM_WIDTH_MOD));
+            break;
+        }
+        case eNodeNoise:
+        {
+            noise_colour(param_value(module, variation, 0), gSampleRate, &node->noisePole, &node->noiseGain);
+            node->active = (param_value(module, variation, 1) != 0.0);
+            break;
+        }
+        case eNodeMixStereo:
+        {
+            // §5 - Lev1..6 are params 0..5, Pan1..6 are 6..11, LevMaster is 12.
+            static const double kPanScale = (127.0 / 128.0) * (127.0 / 128.0);   // see above
+            double              master    = mix_level_gain(param_value(module, variation, 12));
+
+            for (uint32_t c = 0; c < 6u; c++) {
+                double level = mix_level_gain(param_value(module, variation, c)) * master;
+                double u     = param_value(module, variation, 6u + c) / 127.0;
+
+                if (u > 1.0) {
+                    u = 1.0;
+                } else if (u < 0.0) {
+                    u = 0.0;
+                }
+                node->level[2u * c]       = level * kPanScale * (1.0 - (u * u));
+                node->level[(2u * c) + 1] = level * kPanScale * (1.0 - ((1.0 - u) * (1.0 - u)));
+            }
+
+            node->levelCount = 12u;
+            break;
+        }
+        case eNodeFade:
+        {
+            switch (module->type) {
+                case moduleTypePan:
+                case moduleTypeXtoFade:
+                {
+                    node->fadeKind = (module->type == moduleTypePan) ? eFadePan : eFadeCross;
+                    node->shape    = dial_fraction(param_value(module, variation, 1));
+                    node->fadeMod  = dial_fraction(param_value(module, variation, 0));
+                    node->fadeLog  = (module->param[variation][2].value == 0);
+                    break;
+                }
+                default:
+                {
+                    node->fadeKind = (module->type == moduleTypeFade1to2) ? eFadeOneToTwo : eFadeTwoToOne;
+                    node->shape    = dial_fraction(param_value(module, variation, 0));
+                    node->fadeMod  = dial_fraction(param_value(module, variation, 1));
+                    node->fadeLog  = false;
+                    break;
+                }
+            }
             break;
         }
         case eNodeShaper:
@@ -3256,97 +2915,80 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeMix:
         {
-            uint32_t            c         = 0;
-            // Read raw, not through param_value(): Curve is a drop-down, and drop-downs cannot be
-            // assigned to a morph group (manual p.20), so there is never a morph range on one.
-            //
-            // expStrMap is {"Exp", "Lin", "dB"} — Lin is the MIDDLE entry, so the test is against 1
-            // and not against 0. The manual (p.216) is explicit that Exp and dB are the same curve:
-            // "there is no functional difference between the Exp and the dB curves, it is just a
-            // matter of whether you want the knobs to display an exact dB value or the basically
-            // meaningless Exp value". So both non-Lin settings take the same branch.
-            bool                linear    = (module->param[variation][(module->type == moduleTypeMix4to1S)
-                                                        ? MIXS_PARAM_CURVE : MIX_PARAM_CURVE].value == MIX_CURVE_LIN);
+            const tMixSpec *    mix       = mix_spec(module->type);
+            // notes §90
+            bool                linear    = (mix != NULL) && (mix->curve >= 0)
+                                            && (module->param[variation][(uint32_t)mix->curve].value == MIX_CURVE_LIN);
 
-            // THE PAD HAS THREE POSITIONS, not two - measured 2026-09-07 as 0.00, -6.01 and
-            // -12.04 dB, the parameter clamping at 2. This treated anything non-zero as -6 dB, so the
-            // third position was 6 dB out. It attenuates every input together; Mix4to1S has no Pad.
+            // notes §91
             static const double kMixPad[] = {1.0, 0.5, 0.25};
-            uint32_t            padValue  = (uint32_t)param_value(module, variation, MIX_PARAM_PAD);
-            double              pad       = (module->type == moduleTypeMix4to1S)
-                                            ? 1.0
-                                            : kMixPad[(padValue < 3u) ? padValue : 2u];
+            double              pad       = 1.0;
 
-            // Only four channels: the parameters after the level dials are the Channel Mute
-            // buttons, not four more levels. Reading all eight as levels was harmless only because
-            // nothing downstream used level[4..7] — Mix4to1S has four channels too, its eight legs
-            // being stereo pairs that share a level.
-            for (c = 0; c < MIX_CHANNELS; c++) {
-                double knob    = param_value(module, variation, MIX_PARAM_LEVEL_BASE + c) / 127.0;
-                bool   enabled = (module->param[variation][MIX_PARAM_ENABLE_BASE + c].value != 0);
-
-                // THE EXPONENTIAL TAPER IS A CUBE, measured 2026-09-07. This used to be a square,
-                // flagged in the comment here as an approximation because "the manual does not state
-                // numerically" - so it was measured instead, by sweeping the dial and reading the
-                // level at the converter, which resolves far finer than the compressor probe because
-                // a taper is a RATIO and needs no absolute reference:
-                //
-                //     dial        110     96     80     64     48
-                //     measured  -3.72  -7.23 -11.91 -17.61 -24.86 dB
-                //     cube      -3.74  -7.29 -12.04 -17.86 -25.35
-                //     square    -2.50  -4.86  -8.03 -11.90 -16.90
-                //
-                // The square was nearly 6 dB out by mid-dial and 8 dB by 48. Dial 16 measured -49.5
-                // against a cube's -54.0 and was discarded: at -91.9 dBFS it is under the converter's
-                // own floor, which ADDS energy and always flatters the low end of a taper.
-                //
-                // LIN WAS ALREADY RIGHT and was checked at the same time: -2.50 and -6.03 dB at dials
-                // 96 and 64, against a plain ratio's -2.43 and -5.95.
-                node->level[c] = enabled ? ((linear ? knob : (knob * knob * knob)) * pad) : 0.0;
+            if (mix == NULL) {
+                break;
             }
+
+            if (mix->pad >= 0) {
+                uint32_t padValue = (uint32_t)param_value(module, variation, (uint32_t)mix->pad);
+
+                pad = kMixPad[(padValue < 3u) ? padValue : 2u];
+            }
+            node->mixStereo = mix->stereo;
+
+            for (uint32_t c = 0; c < mix->channels; c++) {
+                double level = 1.0;     // no dial at all: Mix4-1A and Mix8-1A sum at unity
+
+                if (mix->lev >= 0) {
+                    double raw = param_value(module, variation, (uint32_t)(mix->lev + ((int)c * mix->levStep)));
+
+                    // §3.2 (Exp, dB), §3.3 (Lin)
+                    level = linear ? dial_fraction(raw) : mix_level_gain(raw);
+                }
+
+                if ((mix->on >= 0) && (module->param[variation][(uint32_t)(mix->on + ((int)c * mix->onStep))].value == 0)) {
+                    level = 0.0;
+                }
+
+                if ((mix->inv >= 0) && (module->param[variation][(uint32_t)(mix->inv + ((int)c * mix->invStep))].value != 0)) {
+                    level = -level;
+                }
+                node->level[c] = level * pad;
+            }
+
+            // §3.5
+            for (uint32_t c = mix->channels; c < MAX_NODE_INPUTS; c++) {
+                node->level[c] = 1.0;
+            }
+
+            node->levelCount = node->inCount;
 
             break;
         }
         case eNodeOsc:
         {
-            // OSCA SHARES THIS ENTIRELY and differs only in where its dials sit and what its Wave
-            // menu offers. It has no Shape and no FM, so its parameters are packed four indices
-            // tighter, and its waveform list is {Sine, Tri, Saw, Sqr50, Sqr25, Sqr10} against OscB's
-            // {Sine, Tri, Saw, Sqr, DualSaw} - three FIXED pulse widths in place of one square whose
-            // width a dial varies.
-            bool   isA       = (module->type == moduleTypeOscA);
-            double tune      = param_value(module, variation, isA ? OSCA_PARAM_TUNE : OSCB_PARAM_TUNE);
-            double cent      = param_value(module, variation, isA ? OSCA_PARAM_CENT : OSCB_PARAM_CENT);
-            int    pitchType = (int)param_value(module, variation,
-                                                isA ? OSCA_PARAM_PITCH_TYPE : OSCB_PARAM_PITCH_TYPE);
+            // notes §92
+            const tOscParams * p    = osc_params(module->type);
 
-            // Factor and Partial set the pitch as a ratio against a master oscillator, which the
-            // engine has no notion of; reading the dial as Semi at least tracks the knob.
-            if (pitchType > 1) {
-                LOG_DEBUG("Sound engine: Osc PitchType %d not supported, reading Tune as Semi\n", pitchType);
+            if (p == NULL) {
+                break;
             }
-            node->oscKbt    = (param_value(module, variation,
-                                           isA ? OSCA_PARAM_KBT : OSCB_PARAM_KBT) != 0.0);
-            node->basePitch = tune + (osc_fine_cents(cent) / 100.0);
-            node->modAmount = type_ii_attenuator(param_value(module, variation,
-                                                             isA ? OSCA_PARAM_PITCH_MOD
-                                                             : OSCB_PARAM_PITCH_MOD) / 127.0);
-            node->active    = (param_value(module, variation,
-                                           isA ? OSCA_PARAM_ACTIVE : OSCB_PARAM_ACTIVE) != 0.0);
+            set_osc_pitch(node, module, variation, p);
 
-            if (isA == true) {
+            // A drop-down is read raw: a mode cannot carry a morph (manual p.20).
+            uint32_t           wave = (p->waveMode >= 0) ? module->mode[p->waveMode].value
+                            : (uint32_t)param_value(module, variation, (uint32_t)p->waveParam);
+
+            if (p->aWaves == true) {
                 // THE THREE SQUARES ARE FIXED DUTIES, reached through the same Shape the DSP already
                 // uses: wave_pulse_duty() is 0.5 - shape * 0.49, so 0, 0.5102 and 0.8163 land exactly
                 // on 50%, 25% and 10%. Nothing in the oscillator itself needed changing.
                 static const double kSqrShape[] = {0.0, 0.510204081632653, 0.816326530612245};
-                uint32_t            wave        = (uint32_t)param_value(module, variation,
-                                                                        OSCA_PARAM_WAVEFORM);
 
                 node->wave  = (wave >= 3u) ? eOscWaveSquare : (tOscWave)wave;
                 node->shape = (wave >= 3u) ? kSqrShape[(wave - 3u) < 3u ? (wave - 3u) : 2u] : 0.0;
             } else {
-                node->wave  = (tOscWave)param_value(module, variation, OSCB_PARAM_WAVEFORM);
-                node->shape = osc_shape_percent(param_value(module, variation, OSCB_PARAM_SHAPE)) / 100.0;
+                node->wave  = (tOscWave)wave;
+                node->shape = osc_shape_percent(param_value(module, variation, (uint32_t)p->shape)) / 100.0;
             }
             break;
         }
@@ -3405,27 +3047,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 node->tapStage = flt_nord_tap((uint32_t)param_value(module, variation, (uint32_t)map.slope)) - 1u;
             }
 
-            // GUARD THESE TWO. They were read unguarded because every filter mapped until now had
-            // both; FltStatic has NEITHER an Env input nor a Kbt selector, and -1 cast to uint32_t
-            // indexes far off the end of the parameter array. It CRASHED the application rather
-            // than misbehaving, which is at least a loud failure - but the -1 convention is only
-            // safe where every reader checks it, and two of them did not.
-            // FLTNORD IS NOT FLTCLASSIC'S LADDER, and this is where that shows. MEASURED
-            // 2026-08-30, both modules through the same rig at an input verified linear:
-            //
-            //     passband level    Res 0    Res 110
-            //     FltClassic        -1.3 dB   -12.7 dB    droops - real ladder feedback
-            //     FltNord, GC off   +0.5 dB    +1.6 dB    FLAT; only the peak grows, to +29.7
-            //     FltNord, GC on    -1.3 dB   -15.5 dB    GC pulls it down
-            //
-            // We borrow FltClassic's ladder for FltNord, so our passband droops where the
-            // instrument's does not. A four-pole ladder's DC gain is 1/(1 + k), so multiplying by
-            // (1 + k) cancels exactly that droop and leaves the flat passband the hardware has;
-            // GC's measured attenuation then goes on top. Applying GC WITHOUT the (1 + k) would
-            // have counted the droop twice and left FltNord about 29 dB quiet at high resonance.
-            //
-            // This corrects the LEVEL behaviour. Whether FltNord's peak has the same shape as
-            // FltClassic's is a separate question and still open - see Docs/todo.md.
+            // notes §93
             if (map.gc >= 0) {
                 double res = param_value(module, variation, (uint32_t)map.res);
                 double gc  = (param_value(module, variation, (uint32_t)map.gc) != 0.0)
@@ -3469,27 +3091,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeOut:
         {
             node->active  = (param_value(module, variation, OUT_PARAM_ACTIVE) != 0.0);
-            // THE PAD'S SENSE IS THE OTHER WAY ROUND, measured on the instrument 2026-09-07. Setting
-            // it makes the output 6.02 dB LOUDER, not quieter - checked on two independent 2-Out
-            // modules (the VA one feeding the FX bus and an FX one feeding Out 1/2), with the write
-            // read back from the instrument each time and the OTHER output pair confirmed unchanged.
-            // The ratio is 2.0016, i.e. exactly a factor of two. This code had it as 0.5, so it was
-            // 12 dB out whenever the setting was engaged.
-            //
-            // WHICH OF THE PAIR IS UNITY IS NOT SETTLED. All these measurements give RATIOS: every
-            // path runs through several pads and none of them is a known 0 dB reference, so 1.0/2.0
-            // and 0.5/1.0 fit the data equally. Unity is put on the DEFAULT setting here, so existing
-            // patches are unaffected and only the engaged state moves - but see the note in
-            // capture-inventory.md, because the label says "-6dB" for the setting that measures +6,
-            // and whether the strings, the wire values or both are inverted needs the instrument's
-            // own display read back through DEVKNOB.
+            // notes §94
             node->gain    = (param_value(module, variation, OUT_PARAM_PAD) != 0.0) ? 2.0 : 1.0;
-            // WHICH PHYSICAL PAIR IT FEEDS. A 2-Out's "Out to" selects Out 1/2 or Out 3/4, and a
-            // measurement patch depends on the difference: the rig puts its dry reference on one
-            // pair and the processed signal on the other, so summing them would destroy the very
-            // comparison it exists to make. A 4-Out has one "Out" setting covering all four
-            // channels and is only half-modelled here anyway (eNodeOut carries two legs, not four),
-            // so it stays on the first pair.
+            // notes §95
             node->outDest = (  (module->type == moduleType2toOut)
                             && (param_value(module, variation, OUT_PARAM_DESTINATION) >= 1.0)) ? 1U : 0U;
             break;
@@ -3502,24 +3106,16 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     return self;
 }
 
-// A chain has to start somewhere. An oscillator is the only thing here that generates a signal from
-// nothing, so without one the whole thing renders silence and the menu should say why rather than
-// leaving it a mystery — the usual cause is a filter with an empty input.
-// A PULSE COUNTS AS A SOURCE, not just an oscillator. It generates a click of its own and needs
-// nothing upstream but an edge to fire on, so a patch whose only generator is a Pulse is not silent
-// and should not be reported as having nothing patched into it.
-//
-// THIS IS WHAT THE MEASUREMENT RIG IS BUILT FROM — see PatchTestFiles/FxMeasure.pch2, where a
-// free-running LfoShpA fires a Pulse into the module under test. Without this the engine resolves
-// that patch correctly, all nine nodes and the right topology, and then refuses to play it, so the
-// one patch designed for comparing engine against instrument could be rendered by neither.
+// notes §96
 static bool chain_has_source(const tSoundEngineParams * params) {
     uint32_t i = 0;
 
     for (i = 0; i < params->nodeCount; i++) {
         if (  (params->node[i].kind == eNodeOsc)
            || (params->node[i].kind == eNodeOscShp)
-           || (params->node[i].kind == eNodePulse)) {
+           || (params->node[i].kind == eNodePulse)
+           || (params->node[i].kind == eNodeNoise)
+           || (params->node[i].kind == eNodeOscNoise)) {
             return true;
         }
     }
@@ -3535,7 +3131,9 @@ static bool chain_is_bypassed(const tSoundEngineParams * params) {
     for (i = 0; i < params->nodeCount; i++) {
         if (  (  (params->node[i].kind == eNodeOsc)
               || (params->node[i].kind == eNodeOscShp)
-              || (params->node[i].kind == eNodePulse))
+              || (params->node[i].kind == eNodePulse)
+              || (params->node[i].kind == eNodeNoise)
+              || (params->node[i].kind == eNodeOscNoise))
            && (params->node[i].active == true)) {
             return false;
         }
@@ -3554,27 +3152,18 @@ static uint64_t topology_signature(const tSoundEngineParams * params) {
         sig = (sig * 1099511628211ull)
               ^ ((uint64_t)params->node[i].kind << 40)
               ^ ((uint64_t)params->node[i].moduleIndex << 20)
-              ^ ((uint64_t)params->node[i].location << 56)
-              ^ ((uint64_t)(uint32_t)(params->node[i].in[0] + 1) << 10)
-              ^ ((uint64_t)(uint32_t)(params->node[i].in[1] + 1))
-              ^ ((uint64_t)(uint32_t)(params->node[i].in[2] + 1) << 30)
-              ^ ((uint64_t)(uint32_t)(params->node[i].in[3] + 1) << 50)
-              ^ ((uint64_t)(uint32_t)(params->node[i].in[6] + 1) << 12)
-              ^ ((uint64_t)(uint32_t)(params->node[i].in[7] + 1) << 34);
+              ^ ((uint64_t)params->node[i].location << 56);
+
+        for (uint32_t c = 0; c < MAX_NODE_INPUTS; c++) {
+            sig = (sig * 1099511628211ull) ^ (uint64_t)(uint32_t)(params->node[i].in[c] + 1)
+                  ^ ((uint64_t)params->node[i].srcOut[c] << 32);
+        }
     }
 
     return sig;
 }
 
-// With nothing selected, play the patch: find the Out module that is actually the end of it.
-//
-// The FX area is searched FIRST and that ordering matters. A patch like this one has an Out in each
-// area: the Voice area's is labelled "Fx Out" and routes into the FX area rather than to the
-// speakers, and the FX area's is the real end of the chain. Taking the Voice one — which is what
-// scanning in area order does — plays the patch dry, with the delays and reverb silently skipped.
-// Does this Out module actually reach the speakers, or is it internal routing? Getting this wrong is
-// audible in both directions: treat a send as an output and the FX area's input is heard raw
-// alongside the finished signal; ignore a real output and the patch is silent.
+// notes §97
 static bool out_module_is_audible(tModule * module) {
     uint32_t destination = 0;
 
@@ -3596,7 +3185,7 @@ static tModule * find_output_module(void) {
 
     for (l = 0; l < 2; l++) {
         for (index = 0; index < MAX_NUM_MODULES; index++) {
-            tModule * module = get_module_slot(gSlot, locations[l], index);
+            tModule * module = get_module_slot(engine_slot(), locations[l], index);
 
             if ((module == NULL) || (module->type == 0)) {
                 continue;
@@ -3612,18 +3201,7 @@ static tModule * find_output_module(void) {
     return NULL;
 }
 
-// Which nodes are evaluated after the voices are mixed rather than once per voice.
-//
-// THE DELAY, CHORUS AND REVERB MODULES OWN ONE BUFFER EACH, and a buffer has one write pointer. Run
-// one of them once per voice and that pointer advances as many times per sample as there are notes
-// held: the delay time divides by the number of voices and the read position sweeps at that multiple
-// too, which is heard as the sound stretching and tearing — intermittently, because it only happens
-// while more than one note is down. They are therefore evaluated exactly once, on the summed voices,
-// which is what the FX Area already does and what the hardware does with the FX Area.
-//
-// The flag has to spread DOWNSTREAM as well. A module fed by one of these has an input that only
-// exists after the mix, so it cannot be evaluated per voice either. add_node() lists every node
-// after its own inputs, so one forward pass settles the whole graph.
+// notes §98
 static void mark_post_mix_nodes(tSoundEngineParams * params) {
     for (uint32_t n = 0; n < params->nodeCount; n++) {
         tEngineNode * node = &params->node[n];
@@ -3644,6 +3222,8 @@ static void mark_post_mix_nodes(tSoundEngineParams * params) {
 }
 
 void sound_engine_update_from_patch(void) {
+    SE_LOCAL;
+
     tSoundEngineParams snapshot  = {0};
     tModule *          tapModule = NULL;
     uint32_t           variation = 0;
@@ -3656,8 +3236,8 @@ void sound_engine_update_from_patch(void) {
     // Glide and Bend come from the patch, not from any module in the chain — they sit on hidden
     // modules in the Morph location alongside the rest of the patch settings.
     {
-        tModule * glide = get_module_slot(gSlot, (uint32_t)locationMorph, patchModuleGlide);
-        tModule * bend  = get_module_slot(gSlot, (uint32_t)locationMorph, patchModuleBend);
+        tModule * glide = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleGlide);
+        tModule * bend  = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleBend);
 
         if (glide != NULL) {
             uint32_t mode = glide->param[0][GLIDE_TYPE].value;
@@ -3666,7 +3246,7 @@ void sound_engine_update_from_patch(void) {
             snapshot.glideSeconds = glide_time_seconds(glide->param[0][GLIDE_SPEED].value);
         }
         {
-            tModule * vibrato = get_module_slot(gSlot, (uint32_t)locationMorph, patchModuleVibrato);
+            tModule * vibrato = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleVibrato);
 
             if (vibrato != NULL) {
                 // Depth is in cents as the dial reads it, and the rate dial spans 4 to 8 Hz.
@@ -3682,13 +3262,7 @@ void sound_engine_update_from_patch(void) {
         }
     }
 
-    // SOUND COMES FROM THE PATCH'S AUDIBLE OUTPUTS, never from whatever happens to be selected.
-    //
-    // Auditioning the selected module was useful while the engine could only render a fragment of a
-    // patch; now that it resolves the whole thing, a selection quietly changing what you hear is a
-    // surprise rather than a feature. It also gave the application and the plug-in two different
-    // signal paths from one patch — the plug-in has no selection and always took the outputs — which
-    // hid engine faults in whichever path was not being listened to.
+    // notes §99
     {
         tapModule = find_output_module();
 
@@ -3710,7 +3284,7 @@ void sound_engine_update_from_patch(void) {
                         uint32_t location = (l == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
 
                         for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
-                            tModule * other = get_module_slot(gSlot, location, index);
+                            tModule * other = get_module_slot(engine_slot(), location, index);
 
                             if ((other == NULL) || (other == tapModule)) {
                                 continue;
@@ -3771,13 +3345,13 @@ void sound_engine_update_from_patch(void) {
     }
     mark_post_mix_nodes(&snapshot);
     snapshot.topology   = topology_signature(&snapshot);
-    snapshot.voiceCount = voice_count_for_patch((uint32_t)gSlot);
+    snapshot.voiceCount = voice_count_for_patch(engine_slot());
 
     // How many voices the audio thread may allocate. Published separately as well as in the snapshot
     // because the note stack asks the same question from the MIDI thread, where reading the whole
     // snapshot to answer it would be absurd.
     atomic_store(&gEngineVoices, snapshot.voiceCount);
-    atomic_store(&gEngineLegato, gPatchDescr[gSlot].monoPoly == monoPolyLegato);
+    atomic_store(&gEngineLegato, gPatchDescr[engine_slot()].monoPoly == monoPolyLegato);
 
     // The snapshot above was built into a local, so only this section needs the writers' mutex.
     pthread_mutex_lock(&gParamsWriteMutex);
@@ -3791,6 +3365,8 @@ void sound_engine_update_from_patch(void) {
 // read cleanly if the UI thread happens to be publishing right now — one buffer of slightly stale
 // parameters is inaudible, and blocking here would not be.
 static tSoundEngineParams read_params(void) {
+    SE_LOCAL;
+
     uint32_t attempt = 0;
 
     for (attempt = 0; attempt < PARAMS_READ_ATTEMPTS; attempt++) {
@@ -3802,16 +3378,7 @@ static tSoundEngineParams read_params(void) {
         }
         copy = gParams;
 
-        // FENCE BETWEEN THE COPY AND THE RE-READ. Without it the second load only guarantees that
-        // what follows it is not hoisted above it - it says nothing about the copy above being
-        // allowed to sink below it. That is the classic seqlock hole: the validation can be
-        // performed against a sequence read before the data was actually fetched, and the reader
-        // then accepts a torn snapshot as whole.
-        //
-        // In practice both loads are seq_cst and compile to ldar on arm64, which makes this very
-        // unlikely to bite - but "unlikely on today's compiler and architecture" is not the same as
-        // correct, and an audio thread reading a half-written node table is not a failure anyone
-        // would enjoy diagnosing.
+        // notes §100
         atomic_thread_fence(memory_order_acquire);
 
         if (atomic_load(&gParamsSeq) == before) {
@@ -3872,22 +3439,9 @@ static double osc_triangle(double phase, double width) {
     return 1.0 - ((2.0 * (phase - width)) / (1.0 - width));
 }
 
-// OscShpB's eight waveforms. Shape runs 50%..99% and morphs each one — at 50% every waveform in the
-// first four is a pure sine, and the character only appears as Shape is opened. Descriptions are
-// from the G2 manual (p.176-177); the implementations are ordinary floating point approximations of
-// what it describes, not models of the hardware.
-//
-// `t` below is Shape mapped to 0..1 across that 50%..99% range.
+// notes §101
 static double osc_shp_wave(uint32_t waveform, double phase, double dt, double shape) {
-    // THE LAWS LIVE IN waveModels.c, shared with the wave the editor DRAWS so the two cannot drift
-    // apart. They had: everything here once came from the manual's prose, which is wrong in several
-    // places, and from a dial mapping that was wrong everywhere — (shape - 0.5)/0.49 clamped at
-    // zero, so nothing happened below raw 64 and HALF THE DIAL WAS DEAD. That is fixed and, more to
-    // the point, can no longer come back on one side only.
-    //
-    // What stays here is BAND-LIMITING, which is this file's business and not the drawing's: a step
-    // rendered as a step aliases across the whole spectrum, so the four waves that contain one are
-    // built from osc_saw/osc_square/osc_triangle, which take dt and limit accordingly.
+    // notes §102
     switch (waveform) {
         case 0:
         case 1:
@@ -3934,6 +3488,8 @@ static double osc_shp_wave(uint32_t waveform, double phase, double dt, double sh
 // what the LP knob on the module controls.
 static double delay_step(uint32_t line, double input, double timeSeconds, double feedback,
                          double damping, double hpCoeff, double mix) {
+    SE_LOCAL;
+
     uint32_t samples = (uint32_t)(timeSeconds * gSampleRate);
     uint32_t readPos = 0;
     double   wet     = 0.0;
@@ -3955,10 +3511,7 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
     gDelayDamp[line]                   += (1.0 - damping) * (wet - gDelayDamp[line]);
     double   fed     = gDelayDamp[line];
 
-    // Then the high-pass, also in the loop, so each repeat loses more low end than the last — the
-    // counterpart to the LP above. Built as a one-pole lowpass subtracted from the signal, which is
-    // the cheapest honest one-pole high-pass there is. A coefficient of zero is the dial at 0,
-    // where the filter measures flat and is simply switched out.
+    // notes §103
     if (hpCoeff > 0.0) {
         gDelayHp[line] += hpCoeff * (fed - gDelayHp[line]);
         fed             = fed - gDelayHp[line];
@@ -3966,17 +3519,7 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
     gDelayLine[line][gDelayWrite[line]] = (float)(input + (fed * feedback));
     gDelayWrite[line]                   = (gDelayWrite[line] + 1) % DELAY_LINE_SAMPLES;
 
-    // DRY/WET IS THE SAME NON-CROSSFADE THE REVERB USES, and this was a plain linear blend. The two
-    // gains are independent, each a ramp cubed, and they overlap: dry holds full scale until the
-    // knob passes the middle and only then falls, while wet reaches full AT the middle and stays.
-    //
-    // MEASURED ON THE INSTRUMENT — a saw through a real DelayB with the oscillator cut, so the
-    // repeats could be read on their own. The repeat level came out IDENTICAL at DryWet 64 and 127,
-    // both -12.2 dB against the dry reference, where a linear crossfade would put 64 a full 6 dB
-    // below 127. Total output stayed flat within 0.8 dB across the whole dial.
-    //
-    // Unlike the reverb, the delay's wet needs NO overall attenuation: fully wet measures -0.3 dB
-    // against fully dry, where the reverb needed -11.3. REVERB_WET_GAIN does not belong here.
+    // notes §104
     {
         double wetRamp = (mix >= 0.5) ? 1.0 : (mix * 2.0);
         double dryRamp = (mix <= 0.5) ? 1.0 : ((1.0 - mix) * 2.0);
@@ -3985,77 +3528,7 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
     }
 }
 
-// A short delay whose length is swept by a slow LFO — detune sets the sweep depth, amount how much
-// of it is mixed in. Stereo on the hardware; mono here, since the engine sums to mono anyway.
-//
-// THE STEREO OFFSET IS HALF A CYCLE, measured 2026-08-15 and the one number the stereo chorus was
-// waiting on (Docs/todo.md). The two channels run the SAME algorithm with their LFOs in ANTIPHASE:
-// comparing the phase of each channel's amplitude modulation gave R - L = 179.9, 179.6 and 178.9
-// degrees across three captures at two tone frequencies and two Detune settings. Not a quarter cycle,
-// which was the other candidate.
-// Measured on the instrument — see the notes inside chorus_step().
-// REMEASURED 2026-08-15 AND RAISED BY A FACTOR OF 3.9. The old 0.853 made the sweep four times
-// slower than the instrument's, which is why turning Detune up did so much less here than there.
-//
-// Method, deliberately different from the null counting that produced the old figure: a steady tone
-// through a real StChorus comes out AMPLITUDE modulated, because the comb notch walks across it as
-// the delay sweeps, so the modulation rate IS the LFO rate — no disentangling of rate from depth.
-// Captured from the G2's main outputs and read three independent ways, all agreeing:
-//
-//     Detune 32   0.840 Hz        Detune 64   1.680 Hz      exactly 2x for 2x the dial
-//
-//   - at a 98 Hz tone and again at 16 Hz. The second matters: there the sweep spans only 0.14 of a
-//     wavelength, so the modulation CANNOT be a harmonic of the LFO, which is the one way this
-//     method could have been read four times too fast.
-//   - and by eye off the envelope: minima 1.19 s apart at Detune 32, which is 0.84 Hz.
-//
-// Proportional to the dial as before, so 127 gives 0.02625 * 127. THE OLD FIGURE IS EXACTLY 1/3.907
-// OF THIS AT BOTH SETTINGS, which is close enough to 4 to suggest the null-counting method dropped a
-// factor rather than being noisy — its own note says the gaps swell "once per half LFO cycle", and
-// reading that as a whole cycle is worth two of the four. That is not explained, only bounded.
-//
-// RE-ANALYSED FROM THE RETAINED CAPTURES, 2026-08-15, offline and with no G2 present. The three
-// files in ~/Documents/G2 Captures/ were demodulated at the tone frequency: for a single input tone
-// the module's output is dry + m*delayed, so |z|^2 of the demodulate is a direct read-out of the
-// comb argument, and its modulation IS the LFO. What that settled, in order of importance:
-//
-//   - THE RATE ABOVE IS CONFIRMED. AM fundamentals of 0.8382 Hz (Detune 32) and 1.6795 Hz (Detune
-//     64), exactly 2:1, so 0.8382 * 127/32 = 3.327 Hz at Detune 127. An earlier pass in the same
-//     session called this 4x too fast; that was a frequency scan capped at 1.2 Hz clipping the real
-//     peak in the Detune 64 files, not a fault in the figure.
-//   - THE HALF-CYCLE STEREO OFFSET IS CONFIRMED to a fraction of a degree: L/R phase at the AM
-//     fundamental of 180.0, 179.9 and 180.1 degrees across the three files.
-//   - THE LFO IS A SYMMETRIC TRIANGLE, NOT A SINE. This is the one that was wrong. Where the phase
-//     swing is small the folded profile IS the LFO waveform, and the 32.7 Hz captures fold to a
-//     triangle — straight flanks, sharp turn — with a fitted rise fraction of exactly 0.50. Fitting
-//     P + Q*cos(th0 + X*triangle) to the folded profiles lands at R^2 = 0.9992..1.0000, where every
-//     sinusoid-based estimator returned impossible sweeps of 4 to 14 ms against a 3 ms centre.
-//   - THE SWEEP IS 2.38 ms, from the 98 Hz capture (both channels agreeing to 0.1%), which is the
-//     well-conditioned one: at 32.7 Hz the swing and the mix trade off against each other and those
-//     fits are not to be believed. The old 2.1 ms was close, so the frozen-delay cross-check below
-//     stands. Both tone frequencies independently put the centre at 2.4..3.9 ms, bracketing
-//     CHORUS_CENTRE_S — a consistency check that only passes if the model is right.
-//
-// ALL THREE OF THOSE NUMBERS WERE REPLACED ON 2026-09-07, and so was the topology they belonged to.
-// The measurement above was made from a SUSTAINED TONE, which can only ever show the envelope of the
-// delay; an impulse response with a dry reference on a second output pair shows the delay line
-// itself, and it shows TWO taps where this assumed one. See chorus_tap(). The old sweep of 2.38 ms
-// about a 3.00 ms centre is very close to the two real taps' combined envelope of 0.425..4.995 ms,
-// which is how one tap came to stand in for two.
-// THE TWO TAPS ARE NOT SYMMETRIC, found 2026-09-07 from CT hearing "a wah at around 1 second
-// intervals" on the instrument where ours sounded "a little bit metallic". Both are driven by ONE
-// triangle but with DIFFERENT depths, so the pair's CENTRE moves as well as its separation - and a
-// moving centre is a comb whose whole structure slides, which is the wah. A symmetric pair holds its
-// centre still and pins the comb in place, which is the metallic part.
-//
-// THE RATE HERE IS HALF WHAT IT WAS, and the old figure was an artefact of the analysis rather than a
-// reading of the instrument: the tap extractor SORTED the two taps, so once they cross it reports
-// |separation| and doubles the apparent frequency. The centre does not fold, so it gave the rate
-// directly - and came out at exactly half the separation's at every Detune (0.2620 against 0.5236 Hz
-// at dial 24, 1.3905 against 2.7809 at 127), which is what a fold looks like.
-//
-// A + B is the widest separation (4.571 ms) and A - B is the centre's swing (0.685 ms); both were
-// measured, and the pair reproduces the centre range 2.334..3.020 against a measured 2.341..3.026.
+// notes §105
 #define CHORUS_RATE_MAX_HZ    (1.3905)             // 0.010949 Hz per dial step
 #define CHORUS_CENTRE_S       (0.002677)           // the fixed point both taps pass through
 #define CHORUS_TAP_A_S        (0.002628)           // one tap swings this far...
@@ -4065,29 +3538,7 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 #define CHORUS_WET_B          (0.7744)
 #define CHORUS_BLEND_K        (0.9542)             // overall trim on the pair of blend gains
 
-// A one-shot gate: a rising edge at the input starts it, and it stays high for the width above.
-//
-// A RISING EDGE WHILE THE GATE IS STILL HIGH RESTARTS IT rather than being ignored. That is what the
-// instrument does, and it matters only for an input faster than the width — the measurement patch
-// fires one edge per note, so nothing there depends on it.
-//
-// ------------------------------------------------------------------------------------------------
-// SHAPER GROUP
-//
-// Seven memoryless transfer functions, sharing one entry point. Full scale is +-1.0 here, which is
-// the +-64 units the manual quotes for the instrument's headroom.
-//
-// HOW MUCH OF THIS IS KNOWN. Rect is EXACT: the manual states all four operations in words, and
-// there is no dial to get wrong. ShpStatic's four labels - Inv x3, Inv x2, x2, x3 - name their own
-// curves, so its SHAPE is known and only whether the instrument normalises them is not. Everything
-// else here is structurally right and numerically a guess: the manual describes the family (a
-// logarithmic curve for Saturate, an exponential one for ShpExp, four named overdrive characters,
-// a fold rather than a clip for WaveWrap) but names no constant anywhere.
-//
-// THESE ARE THE CHEAPEST MEASUREMENTS LEFT. A memoryless module gives up its ENTIRE transfer
-// function to one capture: send a slow full-scale ramp - or simply a low sine, which sweeps every
-// input level twice per cycle - through it and plot output against input. One capture per mode,
-// no impulse, no windowing, no decay fitting. See to-test.md.
+// notes §106
 static double shaper_odd_power(double x, double p) {
     // |x|^p with the sign carried through: an odd-symmetric power curve, which is what a shaper
     // graph that passes through the origin unchanged has to be.
@@ -4118,6 +3569,60 @@ static double shaper_clamp(double x) {
         return -1.0;
     }
     return x;
+}
+
+#define OSCNOISE_Q_AT_FULL_WIDTH      (3.34)    // §8.3
+#define OSCNOISE_Q_GROWTH_PER_STEP    (0.032)
+#define OSCNOISE_LEVEL                (0.5957)  // -4.5 dB RMS, §8.4
+
+static double white_noise(uint32_t * seed) {
+    uint32_t x = *seed;
+
+    x    ^= x << 13;
+    x    ^= x >> 17;
+    x    ^= x << 5;
+    *seed = x;
+    return ((double)x / 2147483648.0) - 1.0;
+}
+
+static double oscnoise_q(double widthFraction) {
+    double dial = fmin(127.0, fmax(0.0, widthFraction * 128.0));
+
+    return OSCNOISE_Q_AT_FULL_WIDTH * exp(OSCNOISE_Q_GROWTH_PER_STEP * (127.0 - dial));
+}
+
+// §4.2, §4.3
+#define MOD_INPUT_SCALE    (4.0)
+
+static void fade_weights(const tEngineNode * spec, double pos, double * wa, double * wb) {
+    if (pos < 0.0) {
+        pos = 0.0;
+    } else if (pos > 1.0) {
+        pos = 1.0;
+    }
+
+    switch ((tFadeKind)spec->fadeKind) {
+        case eFadePan:
+        case eFadeCross:
+        {
+            if (spec->fadeLog) {
+                *wa = 1.0 - (pos * pos);
+                *wb = 1.0 - ((1.0 - pos) * (1.0 - pos));
+            } else {
+                *wa = 1.0 - pos;
+                *wb = pos;
+            }
+            break;
+        }
+        default:
+        {
+            double x = (2.0 * pos) - 1.0;
+
+            *wa = (x < 0.0) ? -x : 0.0;
+            *wb = (x > 0.0) ? x : 0.0;
+            break;
+        }
+    }
 }
 
 static double shaper_step(double input, double modulation, const tEngineNode * spec) {
@@ -4153,10 +3658,7 @@ static double shaper_step(double input, double modulation, const tEngineNode * s
         }
         case eShaperShpStatic:
         {
-            // shpStaticStrMap is {"Inv x3", "Inv x2", "x2", "x3"}: the inverses are the roots, so
-            // the four exponents are 1/3, 1/2, 2 and 3. Every one of them leaves full scale at
-            // full scale and moves only what is between, which is what "amplification/attenuation
-            // characteristic" means on the module's own buttons.
+            // notes §107
             static const double kExp[] = {1.0 / 3.0, 0.5, 2.0, 3.0};
             uint32_t            curve  = (spec->shaperCurve < 4) ? spec->shaperCurve : 2;
 
@@ -4164,11 +3666,7 @@ static double shaper_step(double input, double modulation, const tEngineNode * s
         }
         case eShaperShpExp:
         {
-            // shpExpCurveStrMap is {"x2", "x3", "x4", "x5"}, and Amount morphs the EXPONENT from
-            // linear towards the named curve rather than crossfading between two signals. That
-            // keeps full scale at full scale at every setting, which is the property the manual
-            // describes when it warns the module wants a fixed-amplitude input: the output falls
-            // exponentially only as the INPUT falls.
+            // notes §108
             static const double kExp[] = {2.0, 3.0, 4.0, 5.0};
             uint32_t            curve  = (spec->shaperCurve < 4) ? spec->shaperCurve : 0;
 
@@ -4176,10 +3674,7 @@ static double shaper_step(double input, double modulation, const tEngineNode * s
         }
         case eShaperSaturate:
         {
-            // "Shapes an input signal in a logarithmic fashion", Curve 1 smooth and Curve 4 hard.
-            // A log curve normalised to unity at full scale: y = log(1 + k|x|) / log(1 + k), with
-            // k rising with both the Curve selector and the Amount dial, and k -> 0 giving back a
-            // straight line. Structure from the manual, k range UNMEASURED.
+            // notes §109
             static const double kCurve[] = {4.0, 16.0, 64.0, 256.0};
             uint32_t            curve    = (spec->shaperCurve < 4) ? spec->shaperCurve : 0;
             double              k        = amount * kCurve[curve];
@@ -4193,30 +3688,12 @@ static double shaper_step(double input, double modulation, const tEngineNode * s
         }
         case eShaperWaveWrap:
         {
-            // Amplify, then fold. Up to 19 dB of drive, which is four folds on a full-scale input -
-            // the "deep distortion and FM-like characteristics" of the manual.
-            //
-            // THE MAXIMUM DRIVE IS ODD ON PURPOSE. shaper_fold() returns exactly zero at every EVEN
-            // integer, so an even maximum - 16 was the first thing written here - sends full scale
-            // to silence at the top of the dial, and a full-scale input then vanishes exactly where
-            // the module should be at its most extreme. Nine folds full scale back to full scale.
+            // notes §110
             return shaper_fold(x * (1.0 + (amount * 8.0)));
         }
         case eShaperOverdrive:
         {
-            // Drive into a soft limiter whose KNEE is what the four type names select:
-            // y = x / (1 + |x|^n)^(1/n) reaches +-1 asymptotically, gently for a small n and
-            // almost squarely for a large one. odTypeStrMap is {Soft, Hard, Fat, Heavy}, so Fat
-            // takes the most drive and Hard the sharpest knee.
-            //
-            // AMOUNT BOTH DRIVES AND MIXES, and the mix is what makes zero mean zero. The limiter
-            // bends the curve at every drive setting, unity included - x/(1+x^2)^(1/2) is already
-            // 3 dB down at full scale with no drive at all - so a dial that only fed the drive
-            // would leave the module audibly distorting with its depth control shut. Crossfading
-            // the shaped signal against the dry one by the same dial is the only construction here
-            // that reaches genuine transparency at 0 and full character at 127. Which of the two
-            // the instrument actually does is UNMEASURED; that it is transparent at 0 is not in
-            // doubt, since the module has no separate bypass reading of its own dial.
+            // notes §111
             static const double kKnee[]  = {2.0, 16.0, 3.0, 6.0};
             static const double kDrive[] = {8.0, 8.0, 24.0, 32.0};
             uint32_t            type     = (spec->shaperCurve < 4) ? spec->shaperCurve : 0;
@@ -4234,10 +3711,7 @@ static double shaper_step(double input, double modulation, const tEngineNode * s
         case eShaperClip:
         default:
         {
-            // "Decreasing the clip level limit below the normal headroom": the dial LOWERS the
-            // threshold rather than raising a gain, which is why the manual warns the level drops
-            // as it opens and suggests a feedback loop to get it back. 36 dB of travel is a guess;
-            // only the direction is from the manual.
+            // notes §112
             double t = pow(2.0, -6.0 * amount);
 
             if (x > t) {
@@ -4255,6 +3729,8 @@ static double shaper_step(double input, double modulation, const tEngineNode * s
 // TimeMod is NOT implemented: the module has a modulation input for its width and this ignores it,
 // which is honest rather than inventing a law for it. Nothing measured so far uses it.
 static double pulse_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
+    SE_LOCAL;
+
     double   prev    = gPulsePrev[voice][node];
     double   width   = spec->pulseSeconds * gSampleRate;
     uint32_t samples = (width < 1.0) ? 1U : (uint32_t)width;
@@ -4272,40 +3748,17 @@ static double pulse_step(uint32_t voice, uint32_t node, double input, const tEng
     return 0.0;
 }
 
-// The LFO shape: a symmetric triangle in [-1, 1], phase in [0, 1). Measured, not assumed — see above.
-//
-// IT IS THE SHAPE, NOT THE DEPTH, THAT MAKES THIS SOUND LIKE A CHORUS. Pitch shift through a swept
-// delay is the sweep VELOCITY, so a triangle gives a CONSTANT detune that flips sign twice a cycle
-// — two steady pitches alternating, which is what doubling is — where a sine glides smoothly
-// through zero to a peak and back, which is the textbook definition of vibrato. With a sine here,
-// Amount 127 came out sounding like a slow vibrato rather than a chorus.
+// notes §113
 static double chorus_triangle(double phase) {
     double p = phase - floor(phase);
 
     return (p < 0.5) ? (-1.0 + (4.0 * p)) : (3.0 - (4.0 * p));
 }
 
-// ONE CHANNEL of the sweep, read at the LFO phase it is given. The two channels differ ONLY in that
-// phase, which is why this is one function called twice rather than two structures — measured, see
-// the antiphase note above chorus_step().
-// A FRACTIONAL READ, and for a chorus this is not a refinement - it is the effect.
-//
-// The pitch shift a chorus produces IS the rate of change of its delay. Read at whole samples only,
-// the delay is a staircase: within each step the delay is CONSTANT and there is no shift at all, and
-// the whole of it collects into a discontinuity at the step edge. So an integer-delay chorus does not
-// produce a weak detune, it produces NO detune plus a click - and the faster the sweep the more
-// clicks, which is why the fault showed up first at maximum Detune (CT, by ear, 2026-09-07) where the
-// instrument is at its most obvious.
-//
-// Catmull-Rom rather than linear, the same choice and for the same measured reason as the reverb's
-// RVDLYM: linear interpolation is |1 - fr + fr*e^-jw|, a null at Nyquist at the half-sample offset,
-// i.e. a lowpass whose corner moves with the sweep. Four multiplies more buys a response flat far
-// higher.
-//
-// Clamped so all four taps stay inside the line. The delays this is called with are 0.4..5.0 ms, so
-// 41..480 samples at 96 kHz against a 4096-sample line - the clamp never bites in practice and is
-// here so it cannot read outside the buffer if a constant is ever changed.
+// notes §114
 static double chorus_read(uint32_t node, uint32_t ch, double delaySeconds) {
+    SE_LOCAL;
+
     double   want  = delaySeconds * gSampleRate;
     uint32_t w     = gChorusWrite[node][ch];
 
@@ -4331,31 +3784,14 @@ static double chorus_read(uint32_t node, uint32_t ch, double delaySeconds) {
 }
 
 static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase, double amount) {
+    SE_LOCAL;
+
     double wet = 0.0;
 
-    // TWO TAPS PER CHANNEL, MOVING IN OPPOSITE DIRECTIONS about a common centre. This is the shape of
-    // the module and it is what a single sweeping tap cannot reproduce: two taps crossing put a pair
-    // of comb notches through each other, which is the sound, where one tap gives a single moving
-    // notch. Measured 2026-09-07 by impulse response against a dry reference - 46 Hz impulses, both
-    // channels, the whole Detune dial - and cross-checked unclipped after the instrument's own meter
-    // showed red.
-    //
-    // THE TAPS MEET. The measured minimum separation tracked whatever threshold the analysis used to
-    // call two peaks distinct (0.354 ms at a 0.35 ms threshold, 0.094 at 0.06), so the separation
-    // really does reach zero rather than resting on a floor - hence a spread that starts at 0.
-    //
-    // The shape is a TRIANGLE, confirmed rather than assumed for the first time: folded over 888
-    // impulses at Detune 24 it fits a triangle with a mean error of 0.025 against a sine's 0.045,
-    // and the flanks are straight to a few parts in a hundred. See chorus_triangle().
+    // notes §115
     double tri = chorus_triangle(phase);                   // [-1, 1]
 
-    // 1/sqrt(2) EACH, NOT A HALF. The blend below was fitted from notch depth on a static delay, which
-    // measures the SUM of the two taps without being able to see that there are two, so the pair has
-    // to carry that same total - but the taps are at DIFFERENT delays and are therefore largely
-    // decorrelated, and decorrelated signals add in POWER. Splitting by amplitude threw away 3 dB:
-    // measured against the hardware through the same dry saw, the engine's wet sat 2.1 to 2.9 dB low
-    // UNIFORMLY from 200 Hz to 14 kHz - flat, so a level error and not the filtering it was mistaken
-    // for. The residual after this correction is the taps not being perfectly decorrelated.
+    // notes §116
     wet                                           = MS_SQRT1_2
                                                     * (chorus_read(node, ch, CHORUS_CENTRE_S + (CHORUS_TAP_A_S * tri))
                                                        + chorus_read(node, ch, CHORUS_CENTRE_S - (CHORUS_TAP_B_S * tri)));
@@ -4363,62 +3799,9 @@ static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase,
     gChorusLine[node][ch][gChorusWrite[node][ch]] = (float)input;
     gChorusWrite[node][ch]                        = (gChorusWrite[node][ch] + 1) % CHORUS_SAMPLES;
 
-    // A CONSTANT-POWER BLEND whose wet/dry ratio IS the dial, measured on the instrument.
-    //
-    // Setting Detune to zero makes the delay static, which turns the module into a plain comb
-    // filter — and the depth of a comb's notches is a direct read-out of the dry/wet balance, since
-    // equal parts cancel completely. Sweeping Amount on a real StChorus:
-    //
-    //     Amount        0     32     64     96    127
-    //     wet/dry    0.02   0.28   0.64   0.94   0.91      (from notch depth)
-    //     total      -0.0   -0.2   -0.0   +0.4   +1.1 dB
-    //
-    // So the ratio tracks the dial roughly one for one and the total stays flat. Both matter: this
-    // used to be dry (1 - amount/2) against wet (amount/2), which gives a ratio of only 0.33 at the
-    // middle of the dial where 0.64 was measured — half the chorus it should have been — and loses
-    // 3 dB of level at the top where the instrument holds steady.
-    //
-    // Dividing by sqrt(1 + m^2) is what keeps the sum constant: at full Amount both legs sit at
-    // 0.707 rather than both at 0.5.
-    //
-    // THE RATIO REACHES 1.19 AT THE TOP OF THE DIAL, NOT 1.0 (measured 2026-09-07). The table above
-    // came from NOTCH DEPTH, and a notch cannot tell a ratio r from 1/r - it is deepest at exactly
-    // equal parts and shallows symmetrically either side. That is why the table's own top is
-    // non-monotonic, 0.94 at Amount 96 then 0.91 at 127: the reading had folded back through 1.0.
-    //
-    // Measured instead by STEREO WIDTH, which has no such ambiguity. The L/R correlation of the wet
-    // output falls as the wet leg grows, because what the two channels share is the direct. Against a
-    // hardware capture of the same dry saw the instrument sits at 0.1495; the engine reaches 0.1479 at
-    // a ratio of 1.189 and 0.2723 at 1.0. Scaled back down the dial that lands on 0.30 and 0.60 at
-    // Amount 32 and 64, against the notch table's 0.28 and 0.64 - which agree, because below 1.0 the
-    // notch is unambiguous. So the law is linear in the dial and only its endpoint was wrong.
+    // notes §117
     {
-        // THE WET/DRY RATIO IS NOT LINEAR IN THE DIAL. Measured 2026-09-07 across the whole Amount
-        // dial by STEREO WIDTH - the L/R correlation of the wet output falls as the wet leg grows,
-        // because what the two channels share is the direct, and unlike a notch depth it cannot
-        // confuse a ratio r with 1/r. Inverting the engine's own correlation-versus-ratio curve
-        // against the instrument at eight settings gives
-        //
-        //     Amount   32     48     64     80     96    112    127
-        //     ratio   0.194  0.316  0.465  0.643  0.856  1.110  1.429
-        //
-        // which the form below reproduces to about 1%: 0.197, 0.320, 0.464, 0.639, 0.851, 1.115,
-        // 1.429. It reaches 1.429 at the top, not the 1.0 a linear law would give.
-        //
-        // THE FORM IS A DIVIDING DRY LEG, not an added wet one: m = x / (A - B*x) is what a ratio
-        // looks like when the DENOMINATOR falls with the dial, here from 1.474 down to 0.700. That is
-        // a crossfade attenuating the dry, which is a thing an instrument would plausibly do, rather
-        // than a curve fitted for its own sake.
-        // NOT A CONSTANT-POWER BLEND. That was the wrong SHAPE, not the wrong constant: it holds the
-        // total flat by construction, and the instrument's total is not flat - it FALLS from +2.46 dB
-        // on the dry at Amount 16 to +0.91 dB around 80..96 and then rises again to +1.35 dB at 127.
-        // A normalised blend can never produce a dip.
-        //
-        // Two fixed gains do, and with the SAME two constants the ratio law already needed: the dry
-        // leg falls as the dial rises while the wet leg follows it, so their ratio is
-        // x / (A - B*x) - the law measured across the whole Amount dial - and the total is whatever
-        // those two gains happen to sum to. One overall trim then puts it on the instrument: the
-        // model reproduces all eight measured levels to +/-0.05 dB, dip included.
+        // notes §118
         double dryGain = CHORUS_BLEND_K * (CHORUS_WET_A - (CHORUS_WET_B * amount));
         double wetGain = CHORUS_BLEND_K * amount;
 
@@ -4426,36 +3809,14 @@ static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase,
     }
 }
 
-// STEREO, from one LFO: the right channel reads it HALF A CYCLE along. Measured 2026-08-15 and
-// re-confirmed from the retained captures the same day — L/R phase at the AM fundamental of 180.0,
-// 179.9 and 180.1 degrees across three files, so antiphase and not the quarter cycle that was the
-// other candidate.
+// notes §119
 static void chorus_step(uint32_t node, double input, double depth, double amount,
                         double * outLeft, double * outRight) {
+    SE_LOCAL;
+
     double phase = gChorusLfo[node];
 
-    // DETUNE SETS THE RATE, NOT THE DEPTH — this had it the other way round, with the rate fixed at
-    // 0.7 Hz and the sweep scaled by the dial.
-    //
-    // MEASURED with a pure 1976 Hz tone through a real StChorus. Dry and wet beat against each other
-    // as the delay moves, and one null is exactly one wavelength of delay change, so counting nulls
-    // measures the sweep VELOCITY outright. The gaps between nulls swell and shrink once per half
-    // LFO cycle, which separates rate from depth:
-    //
-    //     Detune 32   rate 0.215 Hz   depth 2.11 ms      Detune 0   no nulls at all: static
-    //     Detune 64   rate 0.430 Hz   depth 2.04 ms
-    //
-    // Exactly twice the rate for twice the dial, at constant depth. Above about 96 the nulls come
-    // too close to separate the two, so the top of the range is extrapolated from that proportion.
-    // (The RATES in that table are the ones later found to be 3.907x low; the DEPTHS survived the
-    // 2026-08-15 re-analysis nearly unchanged, at 2.38 ms.)
-    //
-    // CROSS-CHECKED against a quite different measurement: at Detune 0 the LFO stops wherever it
-    // happens to be, and rebuilding the patch repeatedly froze the delay at 1.33, 1.52, 1.94, 2.13
-    // and 5.33 ms. A 3 ms centre swept +/-2.38 ms spans 0.6 to 5.4 ms, and every one of those frozen
-    // values falls inside it.
-    // BOTH TAPS READ THE PHASE BEFORE IT ADVANCES, so the two channels are sampled at the same
-    // instant rather than one being a sample ahead of the other.
+    // notes §120
     *outLeft          = chorus_tap(node, 0, input, phase, amount);
     // A QUARTER CYCLE, not a half - of the TRUE LFO. The measured antiphase was in the FOLDED
     // separation, which runs at twice the LFO, so half a cycle there is a quarter of one here. What
@@ -4469,68 +3830,10 @@ static void chorus_step(uint32_t node, double input, double depth, double amount
     }
 }
 
-// A LEVELLER, NOT A DOWNWARD COMPRESSOR - and that is a difference in kind, not in tuning. This used
-// to divide the excess over the threshold by the ratio, the textbook arrangement, and it ignored Ref
-// Level completely. The manual says what the module actually does: "With the Ref Level knob you set
-// the level to compress the stereo signals TOWARDS."
-//
-// MEASURED 2026-09-07. With the signal at -1 dB, threshold -15 dB and ratio 80:1, the output tracks
-// Ref Level one for one:
-//
-//     RefLvl    +12    +6      0     -6    -12    -18    -24    -30 dB
-//     output  -30.24 -36.16 -42.08 -48.10 -54.02 -57.03 -57.03 -57.03 dBFS
-//
-// Six dB in, six dB out - and note it BOOSTS when Ref Level is above the signal, which a downward
-// compressor can never do. Below -18 it floors at -57.03, which is the threshold (-15 dB internal is
-// -56.4 dBFS on that rig), so the threshold bounds how far down it will drive the signal.
-//
-// RATIO SETS HOW FAR TOWARDS REF LEVEL IT GETS. With Ref Level 11 dB under the signal, the fraction of
-// that gap actually closed came out 0.00, 0.36, 0.54, 0.75, 0.86, 0.96 at ratios 1.0, 1.5, 2.0, 3.4,
-// 5.0 and 9.5 to 1 - against (1 - 1/ratio) of 0.00, 0.33, 0.50, 0.71, 0.80, 0.90. That also CONFIRMS
-// compressor_ratio(), which had been transcribed from the instrument's formatter and never checked.
-//
-// So the whole law is one line in decibels,
-//
-//     out = env - (env - target) * (1 - 1/ratio),   target = max(RefLvl, threshold)
-//
-// which is the pow() below once it is written as a gain. It behaves correctly at both ends without
-// special-casing: at ratio 1 the exponent is 0 and the gain is exactly 1, and as the ratio grows the
-// gain tends to target/env, putting the output exactly on Ref Level.
-//
-// THE THRESHOLD IS A MAXIMUM-GAIN LIMIT, NOT A GATE - corrected 2026-09-08, and this was audible
-// rather than theoretical (CT: "when the compressor lights a LED the effect is quite brutal, and it
-// has audio glitches around it").
-//
-// The law above has a gain of 1 only where env == target. Gating it - returning unity below the
-// threshold and the law above it - therefore puts a STEP at the threshold of exactly the makeup the
-// law asks for there, and the threshold crossing is the very moment the LED lights. At the stock
-// settings (Thr -12 dB, RefLvl 0 dB, Ratio 4:1) that step is
-//
-//     (target/threshold)^(1 - 1/ratio) = (1.0 / 0.2512)^0.75 = 2.82  ->  +9.0 dB IN ONE SAMPLE
-//
-// up on the way in and -9.0 dB on the way out, on every note onset and again on every decay - and
-// with the detector sitting near the threshold it chatters between the two at audio rate. A step is
-// a click; a chattering step is a buzz. Both are what was reported.
-//
-// The fix is to CLAMP THE DETECTOR AT THE THRESHOLD FROM BELOW rather than to branch on it. Below
-// the threshold the compressor then holds the gain it had AT the threshold, so the function is
-// continuous through the crossing and the law above the threshold is untouched:
-//
-//     gain = (target / max(env, threshold))^(1 - 1/ratio)
-//
-// which is one expression with no branch and no step. Every measurement above still holds: they were
-// all taken with the signal 14 dB OVER the threshold, where max(env, threshold) is env and nothing
-// has changed. What HAS changed is silence: the module now applies its makeup all the time instead of
-// only while working, so a patch with a compressor in it is up to (target/threshold)^(1-1/ratio)
-// louder in the gaps - +9 dB at the stock settings. That is what a compressor with makeup gain does,
-// and it is the only reading of "the level to compress towards" that does not step.
-//
-// STILL UNMEASURED, and the one test that would settle it: feed a steady tone BELOW the threshold and
-// read the output. This law says it comes back with the makeup on it; a true gate says it comes back
-// untouched. Nothing captured so far distinguishes the two, because nothing was ever played quietly
-// enough. What is NOT in doubt is that the instrument does not step 9 dB at the threshold - a module
-// that did would be notorious.
+// notes §121
 static double compress_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
+    SE_LOCAL;
+
     double level = fabs(input);
     double gain  = 1.0;
 
@@ -4551,15 +3854,7 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
         gain = pow(target / env, 1.0 - (1.0 / spec->ratio));
     }
 
-    // THE PANEL METER SHOWS SOMETHING DIFFERENT FROM THE GAIN ABOVE - measured 2026-09-07. Holding Ref
-    // Level over the signal so the gain is constant, the instrument's meter still climbs as the
-    // threshold falls, so it displays HOW FAR OVER THRESHOLD the signal is, not what was done about
-    // it. Lit LEDs against excess were 1, 3, 5, 6, 7, 8 at 0, 3, 6, 9, 12 and 15 dB over.
-    //
-    // Interpolated between those points rather than fitted: the spacing is uneven - about 1.5 dB per
-    // LED at the bottom and 3 dB at the top - and six points will not settle what curve that is.
-    // Below the threshold it reads zero, which is what makes first movement a clean threshold
-    // crossing and is the basis of the level probe in findings.md.
+    // notes §122
     if (spec->threshold > 0.0) {
         static const double   kExcessDb[] = {0.0, 3.0, 6.0, 9.0, 12.0, 15.0};
         static const uint32_t kLit[]      = {1u, 3u, 5u, 6u, 7u, 8u};
@@ -4592,97 +3887,35 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
     return input * gain;
 }
 
-// Schroeder reverb — parallel combs for density, allpasses to smear the result.
-//
-// brightness is the dial as it reads: HIGH IS BRIGHT. It used to be handed straight to the damping
-// filter's coefficient, which inverted it — a knob labelled Brightness made the tail darker as it
-// opened, and the manual's advice that "the most natural range is between 25 and 50" (p.251) landed
-// on the dullest part of the travel instead of the liveliest.
+// notes §123
 static void reverb_step(double input, double timeSeconds, double timeNorm, double brightness,
                         double mix, uint32_t type, double * outLeft, double * outRight) {
+    SE_LOCAL;
+
     double   sum[REVERB_CHANNELS] = {0.0, 0.0};
     uint32_t ch                   = 0;
     uint32_t i                    = 0;
     double   lfo[RV_LINES];
-    // A one-pole lowpass inside each comb, so every pass round the loop loses more high end — which
-    // is what makes a tail decay into a thump rather than ringing on with the same tone.
-    //
-    // THE DIAL DRIVES THE COEFFICIENT THROUGH A CURVE, and it has to. Taken linearly — which is what
-    // this was — the filter is savage over most of the travel: measured on an offline render of this
-    // very code (tools/render), the decay reached 25% of its requested length at Brightness 32, 41% at
-    // 64 and 53% at 96, only arriving at 100% when Brightness 127 switches the filter off altogether.
-    // The instrument does not behave remotely like that: at Brightness 64 it decays for 10.76 s against
-    // 11.83 s at 127, i.e. 91%, so most of the dial is nearly transparent to the DECAY while still
-    // moving the tail's colour (its 6-20 kHz band gains about 5 dB from 64 to 127).
-    //
-    // Note this was NOT a feedback-gain error, which is where I first looked: the one-pole has unity DC
-    // gain, so `fb` sets the low-frequency decay exactly right, and the render proves it by hitting the
-    // requested time to within 0.01 s once the filter is out of the loop. What was wrong is how much
-    // filter a given dial position asks for.
-    //
-    // The dial drives the coefficient through a curve — see REVERB_DAMP_MAX
-    // for the numbers, and for why the obvious ways of scoring this are misleading. Taken linearly, as
-    // this was, the loop damped high frequency about twice as fast as the instrument does at any given
-    // dial position.
-    //
-    // TWO THINGS THIS IS NOT, both of which I diagnosed wrongly before measuring properly. It is not a
-    // feedback-gain error: the one-pole has unity DC gain, so `fb` sets the low-frequency decay exactly
-    // right, and an offline render confirms the requested time to within 0.01 s once the filter is out
-    // of the loop. And the instrument's damping is not a fixed loss dressed up as a dial — its tail
-    // demonstrably darkens as it decays, by 14-16 dB over three seconds at mid dial, which only
-    // something inside the loop can do.
-    // BRIGHTNESS 64 IS THE NEUTRAL DETENT, and the tail there is neither darkened nor lifted. That
-    // is measured: at Type 3, Time 122, Brightness 64 the instrument's own tail decays at -5.47,
-    // -5.35, -6.15 and -5.83 dB/s in the 125 Hz, 500 Hz, 2 kHz and 6 kHz bands — flat to within
-    // 0.8 dB/s across six octaves, so nothing is being taken out of one end.
-    //
-    // This used to read 1.0 - bright^0.7, which puts a coefficient of 0.384 at the detent. A
-    // one-pole that deep loses 3.6 dB of broadband energy EVERY TIME the signal passes it, twice
-    // per trip round the tank, and that loss was most of why a Hall decayed in four seconds where
-    // the instrument takes eleven. A damping control has to pass its neutral position through
-    // untouched or it is a loss dressed up as a tone control.
-    //
-    // THE DIAL IS READ AS A WHOLE, 0 to 127, NOT AS TWO HALVES ABOUT A DETENT. There is no detent:
-    // see the mapping below for the sweep that settled it. An earlier version treated 64 as neutral
-    // and mapped (brightness - 0.5) * 2, which had a second fault of its own worth remembering —
-    // `brightness` is the dial over 127, so 64 arrived as 0.50394 and the tilt as +0.0079 rather
-    // than zero, and NO dial position gave zero because 0.5 falls between 63 and 64. An exponent
-    // under one amplifies that: pow(0.0079, 0.70) is 0.034, so a supposedly neutral detent asked for
-    // 0.021 of damping on every pass. Both faults are gone with the dial read whole.
-    double          dial      = brightness * 127.0;
+    // notes §124
+    double   dial                 = brightness * 127.0;
 
-    // BRIGHTNESS IS HIGH-FREQUENCY DAMPING ACROSS THE WHOLE DIAL, AND NOTHING ELSE. It never damps
-    // the low end at any setting. MEASURED on a nine-point sweep of the dial (Hall, Time 127): the
-    // 125-500 Hz bands sit flat at about -5.0 dB/s from Brightness 16 to 112 while 8 kHz sweeps
-    // -31.5 to -6.9. The dial moves the top and leaves the bottom alone.
-    //
-    // WHAT THIS REPLACES WAS A SYMMETRIC GUESS, and the comment here used to say so: the lower half
-    // damped the top, the upper half damped the BOTTOM by the same law about a neutral detent. The
-    // instrument has no such detent and no low-end damping. Above 64 the engine was subtracting a
-    // low-passed copy inside the loop and destroying the bass -- 125 Hz decayed at -53.8, -71.1 and
-    // -79.8 dB/s at Brightness 80, 96 and 112 against the instrument's flat -5.0. Sixteen times too
-    // fast, at settings anyone reaching for a bright reverb would use.
-    //
-    // The two endpoints of the sweep are NOT usable and were not fitted: at Brightness 0 everything
-    // above 500 Hz is far enough down that the fit is on noise, and 127 goes the same way at the
-    // bottom. The dial was fitted over 16..112, where every band is above the floor.
-    double          damp      = REVERB_DAMP_MAX * exp(-dial / REVERB_BRIGHT_K);
+    // notes §125
+    double   damp                 = REVERB_DAMP_MAX * exp(-dial / REVERB_BRIGHT_K);
 
     if (damp > REVERB_DAMP_CEILING) {
         damp = REVERB_DAMP_CEILING;
     }
-    double          scale     = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
+    double   scale                = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
 
     // ONE TRIP ROUND THE LOOP, and the gain that costs. The sections either side of it are
     // lossless, so this single number is the whole decay: 60 dB in the requested time, three
     // decades over however many trips fit into it.
-    double          gRvGain[RV_LINES];
-    static uint32_t sLastType = REVERB_TYPE_COUNT;   // forces the reset below on the first call
+    double   gRvGain[RV_LINES];
+    // Per engine (sLastTypeBank, at file scope so engine_reset_state() can reach it): two instances
+    // on different reverb types must each notice their own change.
+#define sLastType    (sLastTypeBank[SE])
 
-    // Changing type resizes every delay line, so the positions into them are meaningless and the
-    // contents are a room that no longer exists. Cleared rather than carried over — which is also
-    // what the instrument does: "changing reverb type will force the Sound Engine to recalculate and
-    // thus cause a brief moment of silence" (p.251).
+    // notes §126
     if (type != sLastType) {
         memset(gPreDelay, 0, sizeof(gPreDelay));
         memset(gRvMem, 0, sizeof(gRvMem));
@@ -4703,31 +3936,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         gRvAddr[0] = 16;
 
         for (i = 0; i < eRvSpanCount; i++) {
-            // THE PRE-DELAY IS MEASURED, NOT SCALED. Every other span is a length recovered from
-            // the instrument's tap spacing and grows with the room; this one was read off the
-            // hardware per room, and barely moves between them, for the reason above. The left
-            // channel's figure sets the layout and REVERB_SPREAD carries the right.
-            // THE TANK HAS ITS OWN LEAD-IN and the pre-delay has to give it back. The earliest
-            // wet sample cannot leave before the first output tap, which sits 13% along the first
-            // long line; an allpass passes its input straight through, so nothing in front of that
-            // tap delays anything. Measured onset is input-to-first-tap, so the span in front of
-            // the tank is the measurement MINUS that lead-in, or every room lands 7.2 ms late.
-            //
-            // It also fixes the scaling. The lead-in grows with the room and the measurement does
-            // not, so subtracting one from the other leaves a span that shrinks as the room grows
-            // — which is what keeps the onset near-constant across rooms, the way the hardware's is.
-            // THE TANK'S OWN LEAD-IN, per room, in samples at 96 kHz. The measured pre-delay is
-            // input-to-first-wet-sample, so whatever the tank puts in front of its taps has to come
-            // off the span ahead of them.
-            //
-            // THIS IS A TABLE BECAUSE IT IS NOT DERIVABLE, and pretending otherwise put the Small
-            // room 0.49 ms late. Computing it as the median tap offset assumes the lead-in scales
-            // with the room exactly as every span does; solving for what it would have to be to hit
-            // the measured onsets gives 485.6 * scale + 110.4, i.e. a term that does NOT scale. The
-            // input diffuser's allpasses each pass a fraction of their input straight through, so
-            // the first arrival is a mixture of paths that scale and paths that partly do not, and
-            // no single length stands in for it. Measured against the onsets in kReverbPreDelay,
-            // which is the same kind of table for the same kind of reason.
+            // notes §127
             static const uint32_t kRvTankLead[REVERB_TYPE_COUNT] = {303, 382, 459, 505};
 
             uint32_t              lead                           = (uint32_t)((double)kRvTankLead[(type < REVERB_TYPE_COUNT) ? type : 0] * RV_RATE);
@@ -4742,18 +3951,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         }
     }
 
-    // Diffusion first: three short allpasses smear the input within a few milliseconds, so there is
-    // something there before the combs respond and no single tap stands out as an echo.
-    //
-    // The coefficient RISES WITH THE REVERB TIME rather than sitting at a fixed 0.5, and both the
-    // slope and the two limits it is held between are the instrument's own: a longer room diffuses
-    // harder. The bounds are what matter most here — a coefficient outside them stops sounding like
-    // this reverb — and they are narrow enough that the exact position within them is a detail.
-    // ONE DECAY GAIN PER LINE. A line of L samples is traversed fs/L times a second, so losing 60 dB
-    // in `timeSeconds` means losing 3 decades per timeSeconds, i.e. this per trip. The lines are
-    // different lengths, so their gains differ; the Householder mix is orthogonal and takes nothing
-    // out, which is what lets a closed form like this set the decay exactly with no trim fitted to a
-    // render.
+    // notes §128
     for (i = 0; i < RV_LINES; i++) {
         // THE LINE ALONE, not the allpass in front of it. An allpass passes a fraction of its input
         // straight through -- that is what the -g feedforward term is -- so only some of the energy
@@ -4765,11 +3963,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
                      : 0.0;
     }
 
-    // ONE BANK PER CHANNEL. The two run the same structure and decorrelate through their tap
-    // phases, which is what the instrument does — its own outputs correlate at only +0.0044.
-    // THE SWEEP PHASES, read once and used by both channels. The right channel runs a quarter cycle
-    // behind, so the two never move their modes the same way at the same moment -- one more thing
-    // keeping them uncorrelated, on top of the tap offset.
+    // notes §129
     for (i = 0; i < RV_LINES; i++) {
         lfo[i]    = gRvLfo[i];
         gRvLfo[i] = gRvLfo[i] + (kRvModHz[i] / gSampleRate);
@@ -4784,35 +3978,9 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     {
         double diffused = input;
 
-        // THE PRE-DELAY IS A SPAN OF THE TANK'S OWN MEMORY, the first one, and it does not
-        // scale quite like the rest: the instrument's addresses are roomSize * k + 1200 and that
-        // 1200 is shared by every site, so the distance from the input to the first tap barely
-        // moves between rooms. That is the explanation for a measurement taken long before there
-        // was a structure to explain it — 12.89 ms in the Small room against 13.36 in the Hall,
-        // while every line inside the room gets 68% longer.
+        // notes §130
 
-        // ── THE TANK ──────────────────────────────────────────────────────────────────────────
-        //
-        // ONE BUFFER, A CURSOR THAT WALKS BACKWARDS, AND A LAYOUT OF NON-OVERLAPPING
-        // SPANS. Nothing here computes a delay: a value written at address W reappears at address
-        // W + L exactly L samples later, so each span IS its line and the two cannot drift apart.
-        // Sections are visited in increasing address order and each reads before it writes, so the
-        // read returns that section's own output from L samples ago rather than its neighbour's.
-        //
-        // FOUR ALLPASS SECTIONS, NOT TWELVE. The instrument's recovered mixing gains settle this
-        // exactly: they pair 0.4820 with 0.7676 and 0.3102 with 0.9038, and 1 - g*g for those two
-        // g values is 0.7677 and 0.9038. That identity is the allpass, written out — a section
-        // takes its delayed content d and its input x to (g*d + x, (1 - g*g)*d - g*x) — so the
-        // gain table names four of them and their coefficients, and nothing is being guessed here.
-        //
-        // An earlier build read the same site list as ONE serial chain of twelve allpasses. That is
-        // what a chain of allpasses does to an impulse: at four trips a second it put fifty-odd
-        // passes into every second of tail and turned the whole thing to noise. Four is the number
-        // the gains support and the number a tank of this kind wants.
-        //
-        // THE LINES RUN IN PARALLEL AND MIX INTO EACH OTHER. The input reaches all four, and the
-        // Householder reflection below sends each line's output into all four on the next pass, so
-        // there is no single path back to the start and so no one period for the tail to ring at.
+        // notes §131
         {
             double   v      = diffused;
             uint32_t modMax = (uint32_t)(RV_MOD_DEPTH * RV_RATE);
@@ -4831,21 +3999,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
    }                                     \
    while (0)
 
-            // An allpass section, the form the recovered gains describe.
-            // A MODULATED LINE. The read position sweeps across the slack at the end of the span,
-            // interpolating between the two samples it falls between -- without that the delay would
-            // step a whole sample at a time and the steps would be heard as clicks.
-// FOUR-POINT HERMITE, NOT LINEAR, and the reason is measurable rather than tasteful. Linear
-// interpolation between two samples has the response |1 - fr + fr*e^-jw|, which at a half-sample
-// offset is a complete null at Nyquist — a lowpass sitting inside the feedback loop, applied on
-// every pass. Measured, it left the engine with about 4 dB/s of excess high-frequency decay at the
-// bright end of the Brightness dial that no damping constant could remove, because it is not
-// damping. A Catmull-Rom cubic is flat to far higher frequency for four multiplies more.
-//
-// THE WINDOW IS BIASED DOWN BY THREE SAMPLES so all four taps stay inside this line's own span. The
-// read sweeps [addr[n+1] - modMax - 3, addr[n+1] - 3], so ri+2 cannot reach addr[n+1] and read the
-// NEXT line's first cell, and ri-1 stays clear of addr[n]. Three samples of delay is nothing beside
-// a line of thousands, and reading a neighbour's span would mix two lines together.
+            // notes §132
 #define RVDLYM(n, off)                                                   \
    do {                                                                  \
        double   rd = (double)(gRvAddr[(n) + 1] - modMax - 3) + (off);    \
@@ -4872,20 +4026,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
        v = d - ((g) * w);                \
    } while (0)
 
-            // BAND-LIMIT THE FEED. The instrument's reverb is MUCH darker than its input, and this
-            // is where that comes from. Measured as the wet energy per band against the dry impulse
-            // in the same capture -- which divides the excitation out, so a hardware pulse and a
-            // unit-sample render compare directly -- it runs -1.5 dB at 2 kHz, -5.9 at 4 kHz, -15.4
-            // at 8 kHz and -26.1 at 16 kHz, all relative to 1 kHz. Two poles at 3.5 kHz land within
-            // 0.5 dB of that across the whole range.
-            //
-            // IT IS A FIXED FILTER, NOT IN-LOOP DAMPING, and the tail says which: the instrument's
-            // 6 kHz band decays only about 1 dB/s faster than its 125 Hz band, nowhere near enough
-            // to account for a 15 dB deficit at 8 kHz. Something the signal passes ONCE takes that
-            // out, so it belongs here in front of the tank and not inside it.
-            //
-            // Leaving it out is what made the tank sound metallic: dead flat to 16 kHz, 26 dB of
-            // treble the instrument does not have.
+            // notes §133
             {
                 double a1 = exp(-2.0 * M_PI * REVERB_INPUT_LP_HZ / gSampleRate);
                 double a2 = exp(-2.0 * M_PI * REVERB_INPUT_LP2_HZ / gSampleRate);
@@ -4911,32 +4052,18 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
 
             diffused = v;
 
-            // THE FOUR LINES. Each gets the input with its own sign and its own share of the
-            // previous sample's mix. Injecting in phase into every line drives the tank's common
-            // mode -- the one where all four hold the same thing -- and that mode has a period of
-            // its own, so it beats. In phase it put a 12.2 dB lobe at 6.8 Hz into the tail.
+            // notes §134
             for (i = 0; i < RV_LINES; i++) {
                 v          = ((i & 1) ? -diffused : diffused) + gRvLoop[i];
 
                 RVDLYM(kRvLineDl[i], (0.5 - (0.5 * cos(2.0 * M_PI * lfo[i]))) * (double)modMax);
 
-                // Brightness, one filter per line and inside the loop, so it accumulates with every
-                // pass rather than colouring the output once on the way out.
-                // One damping path, in the loop, so it accumulates with every pass rather than
-                // colouring the output once on the way out. There is no second path taking the low
-                // end out: the instrument does not do that at any dial setting.
+                // notes §135
                 gRvDamp[i] = ((1.0 - damp) * v) + (damp * gRvDamp[i]);
                 line[i]    = gRvDamp[i];
             }
 
-            // THE MIXING MATRIX, a 4-point Hadamard as two butterfly stages. Orthogonal, so it moves
-            // energy between the lines without creating or destroying any -- which is what lets the
-            // decay below be a closed form rather than a figure trimmed against a render.
-            //
-            // EVERY LINE REACHES EVERY OTHER LINE ON EVERY PASS. That is what stops each one being a
-            // comb in its own right: an echo entering one line leaves spread across all four, is
-            // spread again a few milliseconds later, and the echo count squares instead of
-            // repeating. Without it, four parallel lines are just four combs.
+            // notes §136
             {
                 double a0 = line[0] + line[4], a4 = line[0] - line[4];
                 double a1 = line[1] + line[5], a5 = line[1] - line[5];
@@ -4960,16 +4087,7 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
                 gRvLoop[7] = (b6 - b7) * RV_HADAMARD * gRvGain[7];
             }
 
-            // THE OUTPUT TAPS read INSIDE the four lines, never at a section's own write address.
-            // Every cell in this buffer holds delay state, and the state at a write address is a
-            // section's input side -- broadband by construction, and sixteen of those summed is
-            // white noise, which is exactly what an earlier build sounded like. A tap part-way
-            // along a line is the circulating signal at that point of its trip, which is what a
-            // reverb output is made of.
-            //
-            // ALTERNATING SIGNS, and EACH CHANNEL READS ITS OWN SET -- different lines at different
-            // fractions, never the same positions offset by a constant. That is the whole of the
-            // stereo; see kRvTapFrac.
+            // notes §137
             for (ch = 0; ch < REVERB_CHANNELS; ch++) {
                 double tapSum = 0.0;
 
@@ -4994,62 +4112,13 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
         }
     }
 
-    // THE WET PATH IS QUIETER THAN THE DRY ONE, by about 11 dB, and this engine had it at almost
-    // unity — which is why its reverb sat so much more prominently in a patch than the instrument's
-    // does at the same settings.
-    //
-    // MEASURED BOTH SIDES THE SAME WAY, at the module's own defaults (Type 0, Time 64, Bright 64):
-    //
-    //   the instrument   full wet is 11.3 dB below full dry. A saw was fed through a real Reverb and
-    //                    the oscillator cut mid-recording, so the tail could be measured on its own;
-    //                    the DryWet dial was then swept and the steady output read at each step.
-    //   this engine      the wet impulse response carries -1.1 dB of energy against the impulse that
-    //                    produced it (tools/render, sqrt(sum h^2)), i.e. 10.2 dB too much.
-    //
-    // The dial's SHAPE was already right and is unchanged — sweeping DryWet on the instrument gives
-    // 0.0 / 0.0 / +0.3 / -10.0 / -11.3 dB at 0/32/64/96/127, which the ramps below reproduce to
-    // within 0.6 dB once this scale is applied. It was only ever the wet level that was wrong.
-    //
-    // RE-MEASURE IF THE COMB SET OR THEIR COUNT CHANGES: this is the sum of REVERB_COMBS parallel
-    // combs, so its level moves with how many there are.
-// RE-DERIVED THREE TIMES ON 2026-08-18. Twice because the comb count went 4 -> 8 -> 16, which is
-// exactly what the warning above this line is for — this scales the SUM of REVERB_COMBS parallel
-// combs, so it moves with how many there are, and each doubling added close to the 3 dB an incoherent
-// sum predicts (2.96 then 3.17). Once more, and much larger, because REVERB_INPUT_LP_HZ then took
-// 11.9 dB of high-frequency energy out of the tank: 0.31 -> 0.2205 -> 0.1531 -> 0.6028.
-// The last one looks alarming beside the others and is not: the wet path is simply much quieter
-// before this gain now that it is band-limited, and the figure it has to land on is unchanged.
-//
-// AND THE TARGET IS NO LONGER SECOND-HAND: -11.5 dB was measured on the instrument on 2026-08-18,
-// wet-to-dry energy through the impulse rig, agreeing with the -11.3 dB the old figure came from.
-// Re-derived for the tank. The figure below it is measured the same way it always was -- the wet
-// impulse response's energy against the impulse that produced it, sqrt(sum h*h) from tools/render
-// -- and the tank summed its taps 14.05 dB hotter than the comb bank it replaced, so this is the
-// old 1.0695 scaled to put full wet back on the instrument's -11.3 dB.
-//
-// RE-DERIVED ONCE MORE 2026-09-06, 0.3016 -> 0.5002, when the tap set went from sixteen fitted taps
-// to the instrument's own SEVEN. Same method, same target.
-//
-// RE-DERIVED EARLIER THE SAME DAY, 0.3956 -> 0.3016, and for the reason the warning above predicts: the
-// tap tables declared RV_OUTTAPS entries and filled only eight, so the other eight zero-initialised
-// to line eRvPre at fraction 0.0 -- all reading one cell, in +/- pairs that cancelled exactly. Half
-// the taps contributed nothing, proven by rendering with RV_OUTTAPS at 8 and 16 and differencing:
-// bit-identical, 0.000e+00. Filling both sets put sixteen live taps in where there had been eight,
-// which is the 2.36 dB this takes back out. Measured the same way as every figure above it.
+    // notes §138
 #define REVERB_WET_GAIN    (0.5002)
 
     sum[0] *= REVERB_WET_GAIN;
     sum[1] *= REVERB_WET_GAIN;
 
-    // DRY/WET IS NOT A CROSSFADE, and this was the largest single difference from the instrument.
-    // The two gains are independent, each a ramp CUBED, and the ramps overlap: the dry side holds
-    // full scale until the knob passes the middle and only then falls, while the wet side reaches
-    // full scale AT the middle and stays there. So the centre detent is both signals at full, not
-    // half of each — which is why the hardware's reverb at a middle setting is so much wetter, and
-    // louder, than a linear blend of the same two signals.
-    //
-    // The cube makes the taper steep at the quiet end: a quarter-open knob passes an eighth of the
-    // wet signal, where a linear reading would pass a quarter.
+    // notes §139
     {
         double wetRamp = (mix >= 0.5) ? 1.0 : (mix * 2.0);
         double dryRamp = (mix <= 0.5) ? 1.0 : ((1.0 - mix) * 2.0);
@@ -5064,33 +4133,11 @@ static void reverb_step(double input, double timeSeconds, double timeNorm, doubl
     }
 }
 
-// Renders the Reverb's impulse response on its own — no patch, no voice, no audio device.
-//
-// WHY THE ENGINE HAS A MEASUREMENT ENTRY POINT. The room sizes and the decay law above came from
-// putting a click through the real instrument and measuring what came back. The same click can go
-// through this code, and then the two sit in the same units and the same analysis: lag sets, decay
-// time, and how alike the two output channels are. That turns "does it sound like the G2" into a diff,
-// which is the only way the remaining work — the delay lengths and the topology — can converge instead
-// of being tuned by ear against a memory of the hardware.
-//
-// The click is one sample at full scale, not the ~13-sample band-limited pulse the instrument's
-// converters produce. It does not need to match: the lengths are recovered from how the TAIL correlates
-// with itself, which the excitation's shape does not enter.
-//
-// `out` receives `frames` interleaved stereo pairs at the ENGINE's rate, which is
-// deviceRate * ENGINE_OVERSAMPLE — pass 48000 to get the 96 kHz the hardware measurements are
-// expressed in, so a lag is the same integer in both.
-//
-// THE TWO CHANNELS ARE A REAL PAIR, and this is where the tap sets get scored: render, then take the
-// PEAK OF THE L/R CROSS-CORRELATION OVER LAG and compare it with the instrument's 0.124..0.159.
-//
-// TAKE THE PEAK, NEVER THE VALUE AT LAG ZERO. Correlation at lag zero scores a signal against a
-// delayed copy of itself as uncorrelated, so it cannot tell a decorrelated pair from a delayed one —
-// and that is not hypothetical: the arrangement this replaced read +0.03 at lag zero, looking like a
-// match to the instrument, while being a bit-exact copy of the left channel delayed by 110 samples
-// (peak +1.0000 at lag 110 with the line modulation switched off, in all four rooms).
+// notes §140
 void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t timeValue,
                                    uint32_t brightValue, float * out, uint32_t frames) {
+    SE_LOCAL;
+
     if ((out == NULL) || (frames == 0) || (deviceRate <= 0.0)) {
         return;
     }
@@ -5100,10 +4147,7 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
     }
     gSampleRate = deviceRate * (double)ENGINE_OVERSAMPLE;
 
-    // Cleared explicitly rather than relying on reverb_step()'s own type-change reset: a second render
-    // at the SAME type in one process would otherwise start inside the first one's tail, and the
-    // resulting lag set would be a mixture of two rooms — the identical trap the hardware captures hit
-    // when settings were grouped by counting.
+    // notes §141
     memset(gPreDelay, 0, sizeof(gPreDelay));
     memset(gRvMem, 0, sizeof(gRvMem));
     gRvCur      = 0;
@@ -5129,22 +4173,10 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
     }
 }
 
-// THE CHORUS, RENDERED THROUGH ITS OWN INPUT, so an engine wet can be put beside a hardware wet that
-// was made from the same signal. That matters more here than it did for the reverb: the reverb takes
-// an impulse, which is the same everywhere, but a chorus is judged on a sustained tone and any
-// difference in the SOURCE - band-limiting, level, the exact fundamental - would land in the
-// comparison as if it were the module's doing. Feeding it the hardware's own dry capture removes that
-// entirely, and what is left is only what the module did.
-//
-// Rendered at the engine's rate like the reverb IR, so the caller supplies the DEVICE rate and gets
-// back ENGINE_OVERSAMPLE times as many samples per second.
-// WHAT THE ENGINE WOULD PUT ON A MODULE'S METER, for the renderer to show in place of the value the
-// instrument last sent over USB. False when the engine is idle or has nothing for that module, and the
-// caller then falls back to the database - so a patch shown with the engine off, or a module the
-// engine does not meter, looks exactly as it always did.
-// Whether any published meter or LED has changed since this was last asked. Consuming, so the render
-// loop can ask once a tick and redraw only when there is something new to draw.
+// notes §142
 bool sound_engine_meters_dirty(void) {
+    SE_LOCAL;
+
     return atomic_exchange_explicit(&gMetersDirty, false, memory_order_relaxed);
 }
 
@@ -5152,6 +4184,8 @@ bool sound_engine_meters_dirty(void) {
 // ledIndex is accepted for the modules that will eventually have more than one; only 0 is published
 // today, and anything else falls back to the database.
 bool sound_engine_module_led(uint32_t location, uint32_t moduleIndex, uint32_t ledIndex, uint32_t * value) {
+    SE_LOCAL;
+
     if (  (value == NULL) || (ledIndex != 0u) || (location >= (uint32_t)locationMax)
        || (moduleIndex >= MAX_NUM_MODULES)) {
         return false;
@@ -5170,6 +4204,8 @@ bool sound_engine_module_led(uint32_t location, uint32_t moduleIndex, uint32_t l
 }
 
 bool sound_engine_module_meter(uint32_t location, uint32_t moduleIndex, uint32_t leg, uint32_t * value) {
+    SE_LOCAL;
+
     if ((leg > 1u) || (value == NULL) || (location >= (uint32_t)locationMax) || (moduleIndex >= MAX_NUM_MODULES)) {
         return false;
     }
@@ -5188,6 +4224,8 @@ bool sound_engine_module_meter(uint32_t location, uint32_t moduleIndex, uint32_t
 
 void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_t amountValue,
                                 const float * in, float * out, uint32_t frames) {
+    SE_LOCAL;
+
     if ((in == NULL) || (out == NULL) || (frames == 0) || (deviceRate <= 0.0)) {
         return;
     }
@@ -5226,14 +4264,7 @@ static double advance_phase(double * phase, double dt) {
     return current;
 }
 
-// A cascade of one-pole lowpasses with the last stage fed back to the input — the usual ladder
-// arrangement, which is what gives a resonant peak at the cutoff and the gentle saturation the
-// classic filters are liked for. Two stages is 12 dB/octave, three 18, four 24, matching the dB
-// scroll button.
-// Smooth saturation for a ladder stage: y = x - x^3/3, the first two terms of tanh's series, held
-// flat outside +/-1 where the cubic would turn back on itself. Unity slope at the origin, so a quiet
-// signal passes through untouched and only a driven one is shaped.
-// One-pole move toward a target. Snapping when unprimed is what keeps a patch load instant.
+// notes §143
 static double smooth_to(double * current, double target, double coeff, bool primed) {
     if (primed == false) {
         *current = target;
@@ -5243,16 +4274,7 @@ static double smooth_to(double * current, double target, double coeff, bool prim
     return *current;
 }
 
-// LINEAR BELOW THE KNEE, saturating above it. The knee matters as much as the curve: a nonlinearity
-// that acts on every sample generates harmonics on every sample, and this filter runs at the output
-// rate with no oversampling, so anything it makes above Nyquist folds back down. With the cutoff up
-// near Nyquist and the resonant feedback amplifying those products before they fold, a plain
-// x - x^3/3 — only 0.2% away from linear at these levels — was enough to put audible rasp roughly
-// 30 dB below the note. The hardware does not have this problem because it runs at 96 kHz.
-//
-// So below LADDER_KNEE the response is exactly linear and generates nothing at all; above it the
-// curve approaches 1 exponentially, with unity slope at the knee so there is no corner to radiate
-// harmonics of its own. A driven filter still compresses; an ordinary one is untouched.
+// notes §144
 #define LADDER_KNEE    (0.7)
 
 // The highest one-pole coefficient the four-stage feedback model stays well behaved at — see the
@@ -5271,10 +4293,7 @@ static double ladder_saturate(double x) {
     return (x < 0.0) ? -magnitude : magnitude;
 }
 
-// FltHP: N ONE-POLE HIGH-PASSES IN SERIES, measured 2026-08-30 - the slope mode is literally the
-// pole count, 1 to 6, and every pole sits at the dial's own corner. Each stage is the complement of
-// the one-pole low-pass the ladder uses, so the same state array serves both and a node is only ever
-// one topology.
+// notes §145
 static double cascade_hp_filter(double * state, double input, double g, uint32_t poles) {
     double   x = input;
     uint32_t i = 0;
@@ -5287,12 +4306,7 @@ static double cascade_hp_filter(double * state, double input, double g, uint32_t
     return x;
 }
 
-// FltStatic: A PLAIN RESONANT BIQUAD, and the only filter of the seven that is - its passband does
-// not move with resonance, where FltClassic's and FltNord's drop away. A Chamberlin state-variable
-// section gives low, band and high from one pair of states, which is what the FilterType selector
-// needs; band-reject is low + high.
-//
-// state[0] is the low output, state[1] the band. TWO STATES ONLY, so it shares gLadder harmlessly.
+// notes §146
 static double svf_filter(double * state, double input, double f, double q, tFilterShape shape) {
     double low  = state[0];
     double band = state[1];
@@ -5324,6 +4338,23 @@ static double svf_filter(double * state, double input, double f, double q, tFilt
     }
 }
 
+// §8.2 - two unity-peak band-passes in series, then the measured level.
+static double oscnoise_step(uint32_t voice, uint32_t node, double hz, double widthFraction) {
+    SE_LOCAL;
+
+    double * resonators = gLadder[voice][node];       // four of its six slots
+    double   q          = oscnoise_q(widthFraction);
+    double   centre     = fmin(fmax(hz, 1.0), gSampleRate / 8.0);
+    double   f          = 2.0 * sin(M_PI * centre / gSampleRate);
+    double   white      = white_noise(&gNoiseSeed[voice][node]);
+    double   first      = svf_filter(&resonators[0], white, f, 1.0 / q, eFilterShapeBandPass) / q;
+    double   second     = svf_filter(&resonators[2], first, f, 1.0 / q, eFilterShapeBandPass) / q;
+    double   bandwidth  = M_PI * centre / (4.0 * q);   // noise bandwidth of the pair
+    double   gain       = OSCNOISE_LEVEL / sqrt((1.0 / 3.0) * bandwidth / (gSampleRate * 0.5));
+
+    return second * gain;
+}
+
 static double ladder_filter(double * state, double input, double g, double k, uint32_t tapStage) {
     // The feedback tap is pinned to the FOURTH pole and must stay there. LADDER_POLES grew to six
     // for FltLP's 36 dB setting, which has no resonance at all; taking the loop from the new last
@@ -5332,18 +4363,10 @@ static double ladder_filter(double * state, double input, double g, double k, ui
     double   x        = 0.0;
     uint32_t i        = 0;
 
-    // NO PASSBAND COMPENSATION. Feeding the output back subtracts from the input, so a ladder loses
-    // passband level as resonance rises — and that is not an artefact to be corrected, it is the
-    // specified behaviour: the manual (p.198, FltClassic) says "just like on analog filters the
-    // amplitude of the passband will drop about 12 dB when the resonance is set to a high value".
-    // Earlier versions put a quarter of the loss back, which made the filter louder than the
-    // hardware exactly where a patch is most likely to be driven hard.
+    // notes §147
     x = input - (k * feedback);
 
-    // The stage input saturates rather than clipping flat. A real ladder's transistor stages
-    // compress smoothly, which is what rounds off the resonance peak instead of tearing it, and it
-    // is what bounds self-oscillation. The cubic below is the standard cheap stand-in for that
-    // curve: unity slope through zero, flattening to +/-2/3 at the limits, and constant beyond.
+    // notes §148
     x = ladder_saturate(x);
 
     // Run the loop's four, plus any further poles this tap needs. FltClassic therefore costs
@@ -5358,30 +4381,15 @@ static double ladder_filter(double * state, double input, double g, double k, ui
     return state[tapStage];
 }
 
-// One ADSR step. Times are in seconds.
-//
-// EnvADSR's Shape scroll button selects the curve, in envShapeStrMap order: LogExp, LinExp, ExpExp,
-// LinLin - the first word naming the attack and the second the decay and release. The curves live in
-// paramCurves.c, shared with the envelope the editor DRAWS on the module face; the two carried the
-// same law with different sharpness constants until 2026-08-24, so the drawn envelope and the played
-// one were never quite the same curve.
-//
-// APPLIED BY SHAPING A LINEAR 0..1 PROGRESS rather than by changing the step size, so a segment still
-// takes exactly the time its dial states whatever curve it is drawn with. (This used to say the
-// stages move linearly towards their targets; that stopped being true when the shapes were read.)
+// notes §149
 static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * spec, bool gate) {
+    SE_LOCAL;
+
     double level = gEnvLevel[voice][node];
     double step  = 0.0;
 
     if (gate == true) {
-        // Retrigger from Release as well as from Idle. Only accepting Idle meant a note played
-        // before the previous release had finished was ignored until it had: the envelope carried on
-        // FALLING, holding the filter part open, and the attack began late from wherever it landed.
-        // Attacking from the current level is what an ADSR does — the level is deliberately not
-        // zeroed, so a fast retrigger rises from where it was rather than clicking to nothing first.
-        //
-        // And from ANY stage when the voice's trigger count has moved: a Mono key played over a held
-        // one, which keeps the gate open throughout - see voice_note_on().
+        // notes §150
         if (  (gEnvStage[voice][node] == eEnvIdle)
            || (gEnvStage[voice][node] == eEnvRelease)
            || (gEnvTrigger[voice][node] != gVoice[voice].trigger)) {
@@ -5471,28 +4479,19 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
 }
 
 // The signal arriving at one of a node's inputs: whichever output of whichever node feeds it.
-static double signal_in(const tEngineNode * spec, double value[][2], uint32_t input) {
+static double signal_in(const tEngineNode * spec, double value[][NODE_OUTPUTS], uint32_t input) {
     int32_t source = spec->in[input];
 
     if ((input >= spec->inCount) || (source < 0)) {
         return 0.0;
     }
-    return value[source][(spec->srcOut[input] > 0) ? 1 : 0];
+    return value[source][spec->srcLeg[input]];
 }
 
-// One sample of the raw waveform, at whatever rate the caller is stepping the phase.
-// `voice` IS NEEDED HERE, and its absence was a bug rather than an omission. gSuperPhase is
-// [MAX_VOICES][MAX_ENGINE_NODES][2]; the Super branch below indexed it as gSuperPhase[node][0], which
-// puts the NODE number in the VOICE position and 0/1 in the node position. The compiler had been saying
-// so all along — passing `double (*)[2]` where a `double *` is expected is what a two-deep index into a
-// three-deep array produces.
-//
-// It was not out of bounds, by luck: 28 nodes fits inside 32 voices. What it did do was ignore the
-// voice entirely, so every voice sounding the same node shared one pair of phase accumulators, and two
-// different Super oscillators trod on each other's storage. A single voice with one Super oscillator
-// is unaffected — it read [node][0][0] and now reads [0][node][0], the same value in a different slot —
-// so what changes audibly is polyphonic Super and multi-Super patches, which is the point.
+// notes §151
 static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * spec, double phase, double dt, double shape) {
+    SE_LOCAL;
+
     // The shape oscillators have their own eight waveforms, and Shape morphs each of them rather
     // than acting as a pulse width, so they do not share the switch below.
     if (spec->kind == eNodeOscShp) {
@@ -5506,11 +4505,7 @@ static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * sp
         }
         case eOscWaveTriangle:
         {
-            // SHAPE DOES NOT REACH THE TRIANGLE. Measured on the instrument 2026-08-30: OscB set to
-            // Tri returns exactly -19.2 / -28.1 / -34.0 dB with no even harmonics at raw 0, 64 AND
-            // 127 - the same symmetric triangle at every point on the dial. Shape is the PULSE WIDTH
-            // and only the square uses it; we were skewing the triangle with it, which turned Tri
-            // into a sawtooth at the top of the dial. The sine and saw already ignore it.
+            // notes §152
             return osc_triangle(phase, 0.5);
         }
         case eOscWaveSaw:
@@ -5540,20 +4535,8 @@ static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * sp
     }
 }
 
-// Runs the oscillator OSC_OVERSAMPLE times per output sample and filters the result back down.
-//
-// The oscillators are the only part of the graph that creates harmonics which were not already
-// there — the filter, mixers and amplifiers below them are linear — so oversampling here alone
-// removes the aliasing without disturbing the delay, chorus and reverb, whose buffers are sized in
-// samples and would all have to be resized for a change of engine rate.
-static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double voicePitch,
-                              double pitchDirect, double pitchVar, double shape) {
-    double   pitch     = spec->basePitch;
-    double   frequency = 0.0;
-    double   dt        = 0.0;
-    double   sum       = 0.0;
-    uint32_t step      = 0;
-    uint32_t tap       = 0;
+static double osc_frequency_hz(const tEngineNode * spec, double voicePitch, double pitchDirect, double pitchVar) {
+    double pitch = spec->basePitch;
 
     // Kbt on transposes the played note by the oscillator's offset from unity; Kbt off leaves the
     // keyboard disconnected and the oscillator holds the pitch Tune names.
@@ -5561,21 +4544,28 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
         pitch = voicePitch + (spec->basePitch - OSCB_TUNE_UNITY);
     }
 
-    // The two pitch modulation inputs are NOT equivalent. The upper one ("Pitch") is direct — what
-    // arrives is what it does — while the lower one ("PitchVar") is attenuated by the module's Pitch
-    // knob, which is the knob drawn alongside it. A vibrato patch rides on the variable one, since
-    // that is the knob an aftertouch morph can open.
+    // notes §153
     if ((pitchDirect != 0.0) || ((spec->modAmount > 0.0) && (pitchVar != 0.0))) {
         pitch += (pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES;
     }
     // exp2, not pow(2, x). Identical result, and this runs once per oscillator per voice per
     // oversampled sample — at fifteen voices that is a few million calls a second.
-    frequency = 440.0 * exp2((pitch - MIDI_NOTE_A440) / 12.0);
+    return 440.0 * exp2((pitch - MIDI_NOTE_A440) / 12.0);
+}
 
-    // Above Nyquist there is no waveform left to produce, only aliasing. Return silence rather than
-    // just stopping the phase: a halted sawtooth is not silence, it is a DC offset held at whatever
-    // level the waveform sat at, which thumps. The limit stays the OUTPUT rate's Nyquist even though
-    // the oscillator now runs faster, because the decimator would remove anything above it anyway.
+// notes §154
+static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double voicePitch,
+                              double pitchDirect, double pitchVar, double shape) {
+    SE_LOCAL;
+    double   frequency = 0.0;
+    double   dt        = 0.0;
+    double   sum       = 0.0;
+    uint32_t step      = 0;
+    uint32_t tap       = 0;
+
+    frequency = osc_frequency_hz(spec, voicePitch, pitchDirect, pitchVar);
+
+    // notes §155
     if (frequency > (gSampleRate * 0.5)) {
         return 0.0;
     }
@@ -5588,13 +4578,7 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
         gOscHistoryPos[voice][node]                           = (gOscHistoryPos[voice][node] + 1) % OSC_DECIMATE_TAPS;
     }
 
-    // One output for every OSC_OVERSAMPLE inputs, so the filter only has to be evaluated at the
-    // output rate however high the oversampling factor is.
-    // THE INDEX IS WALKED, NOT RECOMPUTED. This loop is the engine's hottest: it runs once per
-    // oscillator per voice per oversampled sample, so at eight voices it is executed a few million
-    // times a second, and it used to do an integer division (the %) on every one of its 128 taps.
-    // Walking the read position and wrapping with a comparison is the identical sequence of taps in
-    // the identical order — bit-for-bit the same output — for a fraction of the cost.
+    // notes §156
     {
         const float * history = gOscHistory[voice][node];
         uint32_t      oldest  = gOscHistoryPos[voice][node];
@@ -5612,14 +4596,10 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
     return sum;
 }
 
-// One LFO sample. The waveform is generated bipolar and then mapped into whichever range the Pos
-// scroll button selects — posStrMap is {Pos, PosInv, Neg, NegInv, Bip, BipInv}, so half the settings
-// are simply the inverse of another, which is what makes an LFO able to close something as it opens
-// something else.
-//
-// Not band-limited, and deliberately so: an LFO runs at control rate on the hardware, well below
-// anything that could alias into the audio band.
+// notes §157
 static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec) {
+    SE_LOCAL;
+
     double phase = advance_phase(&gPhase[voice][node], spec->rateHz / gSampleRate);
     double wave  = 0.0;
 
@@ -5645,11 +4625,7 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec) 
                 wave = osc_triangle(phase, 0.5 + (0.49 * spec->shape));
                 break;
             }                                                                           // Saw>Tri
-            // The synth names this shape Sqr2Tri, i.e. square AT one end of Shape and triangle at
-            // the other. This runs the other way round - Shape at 0 gives very nearly a triangle
-            // and winding it up drives the tanh into a square - so either the name reads
-            // right-to-left or the morph is inverted. Nobody has listened to it against the
-            // hardware, and a label is not enough to justify flipping a waveform, so it stands.
+            // notes §158
             case 4:                                                                     // Sqr2Tri
             {
                 double tri = osc_triangle(phase, 0.5);
@@ -5743,27 +4719,65 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec) 
     }
 }
 
-// MODULATION IS SUMMED INTO THE DIAL VALUE AND CLAMPED THERE, then converted to a frequency exactly
-// once. This is not a rearrangement for tidiness — the clamp is the whole point, and it can only be
-// applied in this domain.
-//
-// The Freq dial is a pitch: flt_cutoff_hz() is 13.75 * 2^(value/12), i.e. the value counts semitones
-// up from A-1, reaching the 21.1 kHz the manual quotes at 127. Because the dial is already
-// logarithmic in frequency, "multiply the cutoff by 2^(semitones/12)" and "add semitones to the dial
-// value" are algebraically THE SAME OPERATION. The previous code did the former, so its shape was
-// never actually wrong — what it lacked was any limit, because there is no natural place to put one
-// in the frequency domain, and a modulated cutoff could run far past the top of the dial's range.
-//
-// It did not run away audibly only because two later clamps caught it: the Nyquist guard below and
-// LADDER_MAX_G. Both are safety limits on the filter model, not statements about the instrument's
-// range, so the cutoff was being bounded by an implementation detail at whatever frequency those
-// happened to bite. Clamping the control to the dial's own 0..127 puts the limit where the hardware
-// has it, and leaves the other two doing only the job they were written for.
-#define FLT_CONTROL_MIN    (0.0)
-#define FLT_CONTROL_MAX    (127.0)
+// notes §159
+#define FLT_CONTROL_MIN         (0.0)
+#define FLT_CONTROL_MAX         (127.0)
+
+#define FLTMULTI_DAMPING_MIN    (0.02)    // §10.3 - keeps Res 127 finite
+
+static double fltmulti_damping(double resDial) {
+    return fmax(FLTMULTI_DAMPING_MIN, 1.0 - (resDial / 127.0));
+}
+
+// §10.2 - LP, BP and HP into the node's three legs.
+static void fltmulti_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input, double pitchVar,
+                          double pitchDirect, double voicePitch, double cutoffParam, double resonance, double legs[3]) {
+    SE_LOCAL;
+
+    double   control   = cutoffParam + ((pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES);
+
+    if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
+        control += (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt;
+    }
+    control  = fmin(fmax(control, FLT_CONTROL_MIN), FLT_CONTROL_MAX);
+
+    double * state     = gLadder[voice][node];            // low, band, the low before last
+    double   cutoff    = fmin(flt_cutoff_hz(control), gSampleRate * 0.45);
+    double   tuning    = 2.0 * sin(M_PI * cutoff / gSampleRate);
+    double   damping   = fltmulti_damping(resonance * 127.0);
+    double   bandScale = 1.0 - (0.5 * tuning);
+    double   feedback  = 2.0 * damping * damping * bandScale;
+    double   drive     = (spec->fltGainComp == true) ? (damping * input) : input;
+    double   lowBefore = state[2];
+    double   lowPrev   = state[0];
+    double   bandPrev  = state[1];
+    double   low       = lowPrev + (tuning * bandPrev);
+    double   high      = drive - low - (feedback * bandPrev);
+    double   band      = bandPrev + (tuning * high);
+
+    state[0] = low;
+    state[1] = band;
+    state[2] = lowPrev;
+
+    double   lowOut    = 0.25 * (low + (2.0 * lowPrev) + lowBefore);
+    double   bandOut   = 0.5 * bandScale * (band + bandPrev);
+    double   highOut   = bandScale * high;
+
+    if (spec->fltSixDb == true) {                         // §10.3
+        legs[0] = 0.5 * (low + band + lowPrev + bandPrev);
+        legs[1] = lowOut - highOut;
+        legs[2] = highOut + bandOut;
+    } else {
+        legs[0] = lowOut;
+        legs[1] = bandOut;
+        legs[2] = highOut;
+    }
+}
 
 static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch,
                           double cutoffParam, double resonance) {
+    SE_LOCAL;
+
     double control = cutoffParam;
     double cutoff  = 0.0;
     double g       = 0.0;
@@ -5772,21 +4786,12 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
         return input;    // a bypassed filter passes its input straight through
     }
 
-    // Whatever is patched into the Env input sweeps the cutoff, scaled by the Env knob. An envelope
-    // there is what turns a static filter into one that opens and closes with the note.
-    //
-    // FULL_MOD_SEMITONES is 64 against a modAmount that reaches 2.0 (the dial's 0..200%), so a
-    // full-scale modulator at the knob's maximum sweeps 128 semitones — the dial's whole range.
-    // That the two constants multiply out to the range exactly is the reason to believe 64 rather
-    // than some value fitted to make the old unclamped arithmetic sound reasonable.
+    // notes §160
     if ((spec->modAmount > 0.0) && (mod != 0.0)) {
         control += mod * spec->modAmount * FULL_MOD_SEMITONES;
     }
 
-    // Kbt moves the cutoff with the note, relative to middle C, at the percentage the scroll button
-    // selects (manual p.196). One semitone of note is one unit of dial, which is what makes 100% Kbt
-    // track the keyboard exactly.
-    // Tracks the SOUNDING pitch, so a glide carries the cutoff with it rather than snapping.
+    // notes §161
     if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
         control += (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt;
     }
@@ -5812,76 +4817,11 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     }
     g      = 1.0 - exp(-2.0 * M_PI * cutoff / gSampleRate);
 
-    // THE LADDER MODEL ONLY HOLDS WHILE g IS WELL BELOW 1. Each stage is a plain one-pole using the
-    // previous sample's output, and four of those inside a feedback loop stop behaving as a filter
-    // once the poles get close to Nyquist: measured with full resonance, everything up to g = 0.806
-    // is clean at 60 dB of margin, g = 0.842 loses 7 dB of it, and by g = 0.874 the margin has
-    // collapsed to 32 dB AND the passband has dropped 6 dB — the filter is misbehaving, not merely
-    // adding a little distortion. What is heard is the saturation's harmonics folding back down,
-    // amplified on the way by the resonant feedback.
-    //
-    // This USED to be load-bearing, and the note here used to say so: when the graph ran at the
-    // output rate, the top of FltClassic's 21.1 kHz range (manual p.198) landed outside the model
-    // and this clamp was what kept it from rasping. Both halves of that have since gone away. The
-    // whole graph now runs oversampled (ENGINE_OVERSAMPLE), so 21.1 kHz against 96 kHz gives
-    // g = 0.75, inside the model; and the control clamp in this function now stops the modulated
-    // cutoff exceeding the top of the dial in the first place.
-    //
-    // So this is now a backstop that should never fire at a normal device rate, rather than
-    // something shaping the sound. Left in place deliberately: it costs one comparison, and it is
-    // the only thing standing between an unusual rate — or a future module whose range exceeds
-    // FltClassic's — and a filter that misbehaves rather than merely distorts.
+    // notes §162
     if (g > LADDER_MAX_G) {
         g = LADDER_MAX_G;
     }
-    // MAXIMUM FEEDBACK, and it is not the textbook 4. That figure is for a ladder with no delay in
-    // its loop; this one has a sample of it, and how much phase that sample contributes depends on
-    // the sample rate — so the rate at which the loop actually reaches oscillation moved when the
-    // engine started running oversampled, and the resonance went quiet with it.
-    //
-    // 4.3 IS MEASURED AGAINST THE INSTRUMENT, not chosen by ear. A saw was put through a real
-    // FltClassic and through this ladder, and both responses taken the same way — output over input
-    // at each harmonic of a 98 Hz saw, so the source spectrum cancels and only the filter is left.
-    // Peak height above the passband at Res 127, a displayed cutoff of 1397 Hz:
-    //
-    //                       12 dB      18 dB      24 dB
-    //     the instrument    +31.5      +28.7      +25.9
-    //     k = 4.3           +31.6      +28.5      +25.4      <- 0.3 dB mean error
-    //     k = 5.0           +37.0      +33.9      +30.7      <- what this used to be
-    //
-    // The previous note here recorded k 5.0 as "+79/+81/+73 dB". That was a different measurement,
-    // not this one, and the two are not comparable — which is precisely why it read as though the
-    // engine were 50 dB out when it was really about 5.
-    //
-    // THE ANSWER DEPENDS ON INPUT LEVEL, because ladder_saturate() does. At a quarter of full scale
-    // the same k peaks some 6 dB higher, the loop being driven less deeply into the knee. 4.3 is
-    // right for a full-scale oscillator straight into the filter, which is how the instrument was
-    // measured; a much quieter source will resonate more sharply here than it does there.
-    //
-    // RE-MEASURE IF ENGINE_OVERSAMPLE CHANGES — the loop's phase, and so the k at which it reaches
-    // oscillation, is a property of the rate rather than of the filter.
-    //
-    // CONFIRMED INDEPENDENTLY 2026-08-24, by a measurement that shares nothing with the one above
-    // except the instrument: noise through FltClassic, every setting divided by the same patch
-    // bypassed, fitted against G^tap / (1 + k.G^4). It agrees with what this code already does, which
-    // is worth recording precisely because it could have disagreed —
-    //   - THE LOOP IS FOUR POLES LONG WHATEVER THE SLOPE, and the dB switch only moves the tap. That
-    //     is what ladder_filter() has always done (feedback from state[LADDER_POLES - 1], return
-    //     state[tapStage]) and it is now measured rather than assumed. Fitting each slope on its own
-    //     gives the same k to within 0.011; a loop that matched the tap fits three to six times worse.
-    //   - THE PEAK SPACING BETWEEN TAPS falls out of that topology at 3.01 dB and needs no fitting.
-    //     The saw measurement above got 2.8 and 2.8; the noise one 3.2 and 3.0.
-    //   - THE Res DIAL IS LINEAR IN FEEDBACK, which is how resonance is scaled here.
-    //   - THE PASSBAND DROP AT FULL RESONANCE MEASURES -13.8 to -15.0 dB, against the "about 12 dB"
-    //     the manual quotes and ladder_filter()'s note cites. Deliberately NOT compensating for it
-    //     therefore remains right, and the real figure is a shade deeper than the manual's.
-    // The continuous-time model used for the DRAWN response (flt_ladder_feedback(), paramCurves.c)
-    // puts the top of the dial at k = 4.0 — measured 2026-08-30, when the hardware was found to sustain
-    // an oscillation at Res 127; it read 3.914 before that, from a peak that was really a limited
-    // oscillation. That is
-    // NOT this number and must not replace it: that model has no delay in its loop and no saturation
-    // in its stages, both of which move where oscillation actually starts. Same topology, different
-    // constant, each measured for what it describes.
+    // notes §163
 #define LADDER_K_MAX    (4.3)
 
     switch (spec->topology) {
@@ -5891,10 +4831,7 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
         }
         case eFilterTopologyBiquad:
         {
-            // g is the one-pole coefficient; the SVF wants 2.sin(pi.fc/sr), and for the corners a
-            // patch actually uses the two agree closely enough that deriving one from the other
-            // keeps a single cutoff path. Damping is 1/Q from the MEASURED resonance law, not from
-            // the Q the dial prints - see flt_static_q() in paramCurves.c.
+            // notes §164
             double f    = 2.0 * sin(M_PI * 0.5 * g);
             double damp = 1.0 / flt_static_q(resonance * 127.0);
 
@@ -5912,19 +4849,17 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     }
 }
 
-// One node's output for one voice, written into value[n]. Extracted so the Voice Area pass and the
-// FX Area pass are the same code rather than two copies that could drift — they differ only in which
-// nodes they visit and in the voice index they carry.
-//
-// `voice` selects the per-voice state; FX Area nodes are evaluated once with voice 0, which is also
-// the only voice the shared delay/chorus/reverb buffers ever see.
+// notes §165
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
-                      double value[][2], double voicePitch) {
+                      double value[][NODE_OUTPUTS], double voicePitch) {
+    SE_LOCAL;
+
     const tEngineNode * spec = &paramsIn->node[n];
     double              a    = signal_in(spec, value, 0);
 
     value[n][0] = 0.0;
     value[n][1] = 0.0;
+    value[n][2] = 0.0;
 
     switch (spec->kind) {
         case eNodeLfo:
@@ -5990,6 +4925,80 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             value[n][0] = pulse_step(voice, n, a, spec);
             break;
         }
+        case eNodeFltMulti:
+        {
+            if (spec->active == false) {
+                value[n][0] = a;
+                value[n][1] = a;
+                value[n][2] = a;
+                break;
+            }
+            double legs[3] = {0.0, 0.0, 0.0};
+
+            fltmulti_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch,
+                          gSmoothedCutoff[n], gSmoothedRes[n], legs);
+            value[n][0] = legs[0];
+            value[n][1] = legs[1];
+            value[n][2] = legs[2];
+            break;
+        }
+        case eNodeEq:
+        {
+            value[n][0] = (spec->active == true) ? eq_step(voice, n, spec, a) : a;
+            break;
+        }
+        case eNodeOscNoise:
+        {
+            double width = spec->oscNoiseWidth
+                           + (MOD_INPUT_SCALE * spec->oscNoiseWidthMod * signal_in(spec, value, 2));
+            double hz    = osc_frequency_hz(spec, voicePitch, a, signal_in(spec, value, 1));
+
+            value[n][0] = (spec->active == true) ? oscnoise_step(voice, n, hz, width) : 0.0;
+            break;
+        }
+        case eNodeNoise:
+        {
+            double white = white_noise(&gNoiseSeed[voice][n]);
+
+            gNoiseLp[voice][n] = (spec->noisePole * gNoiseLp[voice][n])
+                                 + ((1.0 - spec->noisePole) * spec->noiseGain * white);
+            value[n][0]        = (spec->active == true) ? gNoiseLp[voice][n] : 0.0;
+            break;
+        }
+        case eNodeMixStereo:
+        {
+            double left  = 0.0;
+            double right = 0.0;
+
+            for (uint32_t c = 0; c < spec->inCount; c++) {
+                double in = signal_in(spec, value, c);
+
+                left  += in * gSmoothedLevel[n][2u * c];
+                right += in * gSmoothedLevel[n][(2u * c) + 1];
+            }
+
+            value[n][0] = left;
+            value[n][1] = right;
+            break;
+        }
+        case eNodeFade:
+        {
+            bool   oneIn = (spec->fadeKind == eFadePan) || (spec->fadeKind == eFadeOneToTwo);
+            double pos   = gSmoothedShape[n] + (MOD_INPUT_SCALE * spec->fadeMod * signal_in(spec, value, oneIn ? 1u : 2u));
+            double wa    = 0.0;
+            double wb    = 0.0;
+
+            fade_weights(spec, pos, &wa, &wb);
+
+            if (oneIn) {
+                value[n][0] = a * wa;       // L / Out1
+                value[n][1] = a * wb;       // R / Out2
+            } else {
+                value[n][0] = (a * wa) + (signal_in(spec, value, 1) * wb);
+                value[n][1] = value[n][0];
+            }
+            break;
+        }
         case eNodeShaper:
         {
             // `a` is input leg 0. WaveWrap is the one shaper whose Mod jack comes first, so for it
@@ -6004,18 +5013,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             uint32_t c           = 0;
 
-            // A stereo mixer reads eight legs but has only four level knobs, so both legs
-            // of a channel share one — and each CHANNEL contributes the average of its
-            // two legs, not their sum.
-            //
-            // That halving matters because the engine is mono. Where a stereo pair is
-            // fed from one mono-collapsed module — an Fx-In's L and R, or a reverb's two
-            // outputs — both legs carry the SAME value, so summing them counted that
-            // channel twice. A patch mixing dry (one stereo source) against two separate
-            // mono delays (a pair of different modules) therefore heard the dry and the
-            // reverb 6 dB hot against the delays. Averaging is also the right mono
-            // downmix for a genuinely stereo pair, so it is correct in both cases.
-            bool     stereoPairs = (spec->inCount > (MAX_NODE_INPUTS / 2));
+            // notes §166
+            bool     stereoPairs = spec->mixStereo;
             double   legScale    = stereoPairs ? 0.5 : 1.0;
 
             for (c = 0; c < spec->inCount; c++) {
@@ -6087,19 +5086,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeOut:
         {
-            // THE TWO LEGS ARE THE LEFT AND RIGHT CHANNELS AND THEY STAY SEPARATE. This used to sum
-            // them into one value, which is what made the whole engine mono however stereo the
-            // modules feeding it were.
-            //
-            // AN UNPATCHED SOCKET MIRRORS THE OTHER, and that rule is load-bearing rather than
-            // tidiness. Cabling only the left socket is very common, and letting signal_in() return
-            // its usual 0.0 for the absent leg would play such a patch out of one speaker — which
-            // the instrument never does, both of its sockets being real. Mirroring leaves every
-            // one-socket patch exactly as it sounded before this change.
-            //
-            // WHAT DOES CHANGE IS THE DUAL-MONO PATCH: the same signal cabled to both sockets used
-            // to be summed to 2a and that sum sent to both channels, i.e. 6 dB hot. It now plays at
-            // a, which is what the hardware does with two sockets carrying the same thing.
+            // notes §167
             if (spec->active == true) {
                 bool   haveLeft  = (spec->inCount > 0) && (spec->in[0] >= 0);
                 bool   haveRight = (spec->inCount > 1) && (spec->in[1] >= 0);
@@ -6124,21 +5111,14 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
     }
 
-    // EVERY NODE MUST LEAVE BOTH LEGS VALID, and most kinds are mono and write only leg 0 —
-    // the oscillators, the filter, LevAmp, LevMult and the mixers all do.
-    //
-    // Leaving leg 1 at the zero this function starts it from was INVISIBLE while eNodeOut summed its
-    // two legs: a spurious 0 on the right just made the sum equal the left, which is what got played.
-    // It stopped being invisible the moment the Out module began keeping them apart.
-    // PatchTestFiles/SimpleLead.pch2 cables one module's output 0 to Out L and its output 1 to Out R
-    // — an entirely ordinary thing for a patch to do — and the right channel fell silent.
-    //
-    // The three exceptions fill both legs themselves and must NOT be flattened here: an envelope
-    // keeps its SHAPED AUDIO in leg 1, and the chorus and the Out module are genuinely stereo.
+    // notes §168
     switch (spec->kind) {
         case eNodeEnv:
         case eNodeChorus:
         case eNodeReverb:
+        case eNodeFade:         // writes both legs itself: Pan and Fade1-2 have two outputs
+        case eNodeMixStereo:    // a genuine stereo pair
+        case eNodeFltMulti:     // three outputs of its own
         case eNodeOut:
         {
             break;
@@ -6150,23 +5130,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
     }
 
-    // THE LEVEL METER ON THE MODULE'S FACE, for the kinds that have one. Done here rather than inside
-    // each case so there is one copy of it and one decay constant, and so a kind that gains a meter
-    // later only has to join the list.
-    //
-    // A PEAK FOLLOWER WITH A SLOW RELEASE, because a meter that tracked the waveform would sit at
-    // whatever the instantaneous sample happened to be and flicker at audio rate. 200 ms of decay is
-    // roughly what a panel meter does and is slow enough for the UI's own frame rate to sample it
-    // without aliasing.
-    //
-    // THE SCALE IS MEASURED BUT COARSE - see findings.md. The renderer takes the low nibble as a
-    // level 0..15 with green up to 7, and on the instrument a signal at 0 dB internal reads about 7
-    // with roughly one step per 7 dB below that. Eight points is not enough to separate that from a
-    // slightly different slope, and it is confounded with whether the instrument's meter reads peak
-    // or RMS - a saw's 8 dB crest would shift the whole scale. Treated as an approximation for
-    // display, not as a measurement anything depends on.
+    // §1.1
     switch (spec->kind) {
         case eNodeMix:
+        case eNodeMixStereo:
         case eNodeFxIn:
         case eNodeOut:
         {
@@ -6186,14 +5153,25 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                         gMeterEnv[n][leg] += METER_DECAY * (peak - gMeterEnv[n][leg]);
                     }
 
-                    if (gMeterEnv[n][leg] > 1.0e-6) {
-                        level = (int)((7.0 + ((20.0 * log10(gMeterEnv[n][leg])) / 7.0)) + 0.5);
+                    if (gMeterEnv[n][leg] > 0.0) {
+                        int exponent = 0;
+
+                        // peak = f x 2^exponent with f in [0.5, 1), so 0.5..1 gives exponent 0.
+                        (void)frexp(gMeterEnv[n][leg], &exponent);
+
+                        if (exponent <= 0) {
+                            level = 7 + exponent;
+                        } else if (exponent == 1) {
+                            level = 9;
+                        } else if (exponent == 2) {
+                            level = 11;
+                        } else {
+                            level = 12 | 0x40;      // the instrument's clip bit, alongside its top value
+                        }
                     }
 
                     if (level < 0) {
                         level = 0;
-                    } else if (level > 15) {
-                        level = 15;
                     }
                     packed |= ((uint32_t)level << (leg * METER_LEG_SHIFT));
                 }
@@ -6212,15 +5190,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
     }
 }
 
-// One tapped module's stereo pair.
-//
-// DELIBERATELY CONSERVATIVE: only eNodeOut is known to fill BOTH legs with a genuine left and right.
-// Most node kinds mirror leg 0 into leg 1, but some — the oscillators among them — write leg 0 and
-// leave leg 1 at the zero eval_node() starts it from. Reading leg 1 blindly would give those a
-// silent right channel, so anything that is not an Out module has its leg 0 mirrored, which is
-// exactly what the mono path did before stereo. An envelope used as an amp is the standing
-// exception: its SHAPED AUDIO is in leg 1 and is mono, so both channels take that.
-static void tap_pair(const tSoundEngineParams * paramsIn, int32_t node, double value[][2], double out[2]) {
+// notes §169
+static void tap_pair(const tSoundEngineParams * paramsIn, int32_t node, double value[][NODE_OUTPUTS], double out[2]) {
     switch (paramsIn->node[node].kind) {
         case eNodeEnv:
         {
@@ -6243,14 +5214,10 @@ static void tap_pair(const tSoundEngineParams * paramsIn, int32_t node, double v
     }
 }
 
-// A voice is done when its key is up AND it has stopped making sound — only then can it be handed
-// to another note without cutting anything off. Which test that is depends on what is shaping the
-// note: an EnvADSR's own release when the patch has one, the anti-click ramp when it does not.
-//
-// Asking the envelopes rather than watching the output level is deliberate: an envelope says when it
-// has finished, where a level has to be watched for long enough to be sure it is not just passing
-// through zero.
+// notes §170
 static bool voice_is_finished(const tSoundEngineParams * paramsIn, uint32_t v, bool chainHasEnvelope) {
+    SE_LOCAL;
+
     if (gVoice[v].gate == true) {
         return false;
     }
@@ -6275,6 +5242,8 @@ static bool voice_is_finished(const tSoundEngineParams * paramsIn, uint32_t v, b
 }
 
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
+    SE_LOCAL;
+
     tSoundEngineParams params;
     uint32_t           frame            = 0;
     bool               chainHasEnvelope = false;
@@ -6295,29 +5264,14 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     params = read_params();
 
     if (params.topology != gSeenTopology) {
-        // WORTH LOGGING, because reset_node_state() below empties every delay line and reverb buffer
-        // in the engine. A topology change that is real — a module added, a cable moved — has to do
-        // that. One that is NOT real takes the delay repeats and the reverb tail with it, and what
-        // is heard is the effect stopping dead and then filling up again from nothing.
-        //
-        // So if a delay or reverb is ever reported cutting out at random, this line is the first
-        // thing to look for: if it fires when nothing about the patch changed, the signature is
-        // unstable and the wipe is the symptom rather than the cause. Debug builds only.
-        //
-        // Not the explanation for every such report: 45 s of idle playing, 120 parameter edits and
-        // repeated select/deselect cycles all produced ZERO changes here, so whatever else may cut a
-        // delay short, it is not this under those conditions.
+        // notes §171
         LOG_DEBUG("TOPOLOGY CHANGE %llu -> %llu, nodes %u, tap %d — delay and reverb buffers cleared\n",
                   (unsigned long long)gSeenTopology, (unsigned long long)params.topology,
                   (unsigned)params.nodeCount, params.tap);
         gSeenTopology = params.topology;
         reset_node_state();
     }
-    // Oscillator phases are deliberately NOT reset when a note starts. They free-run, as the G2's do
-    // unless something is patched to their Sync input, and that matters more than it sounds: several
-    // oscillators detuned by a few cents are what makes a patch thick, and starting them all at
-    // phase zero has them summing as one voice for the seconds a 7 cent difference takes to drift
-    // apart. Note events themselves are taken inside the sample loop below.
+    // notes §172
 
     if (params.tap < 0) {
         return;
@@ -6332,10 +5286,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         params.voiceCount = MAX_VOICES;
     }
 
-    // A PER-VOICE EnvADSR is the note's shape; the fixed ramp is only there to stop a click when
-    // there is none to do that job. Per-voice only, and it has to be: an envelope after the mix
-    // shapes the effect rather than the note, and counting it here would leave every voice unramped
-    // AND have voice_is_finished() retire voices the moment a key came up.
+    // notes §173
     for (n = 0; n < params.nodeCount; n++) {
         if ((params.node[n].kind == eNodeEnv) && (params.node[n].postMix == false)) {
             chainHasEnvelope = true;
@@ -6343,38 +5294,12 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         }
     }
 
-    // FREE-RUNNING PHASE - THE CHEAP HALF, AND THE HALF THAT MATTERS FOR EVERY PATCH.
-    //
-    // The instrument's oscillators and LFOs never stop, so a note started later finds them
-    // somewhere else. Ours did not: gPhase is seeded once (a golden-ratio scatter, so voices start
-    // decorrelated) and then FROZEN whenever a voice is idle, which meant two notes seconds apart
-    // could begin on identical phase. Not a reset to zero - a freeze - but just as wrong.
-    //
-    // Advancing the STATE and computing the AUDIO are separable: the phase an oscillator would
-    // have reached is arithmetic, so it does not need the graph. MEASURED at 12.8% CPU against
-    // 12.3% with free-running off, i.e. half a point, where rendering the graph instead costs
-    // over a point on a THREE-node patch and scales with the patch.
-    // So do that once per block for the idle voices and skip the DSP entirely. Voices that ARE
-    // sounding advance through the render as before, and the full free-run render still happens
-    // for the patches that can actually be heard while idle.
-    //
-    // MEASURE INSTANTANEOUS CPU, NOT `ps -o %cpu`, which reports an average over the process's
-    // whole lifetime and made an early version of this look fifteen times worse than it was.
-    // Take the delta of `ps -o time=` over a fixed window instead.
-    //
-    // A "reset phase on note-on" option, for predictable bass, would zero gPhase for the allocated
-    // voice instead. It is deliberately not the default and not written yet - the hardware
-    // free-runs. See Docs/todo.md.
+    // notes §174
     if (engine_no_free_run() == false) {
         double idleSamples = (double)frameCount * (double)ENGINE_OVERSAMPLE;
 
         for (uint32_t v = 0; v < params.voiceCount; v++) {
-            // ONLY the voices the render will NOT touch. A free-running voice is rendered even
-            // though it is not sounding, and oscillator_step() advances its phase as it goes - so
-            // advancing it here as well moved it twice, jumping a whole block's worth at every
-            // block boundary. The beat between the block rate and the oscillator's frequency put a
-            // wah of a few Hz on every note. Get this condition wrong in the other direction and
-            // the phase simply stops; it has to mirror the render's own test exactly.
+            // notes §175
             bool rendered = (gVoice[v].sounding == true)
                             || ((v == 0) && (chainHasEnvelope == false) && (engine_no_free_run() == false));
 
@@ -6411,20 +5336,15 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         // ENGINE_OVERSAMPLE passes of the whole graph per output sample. Note events are consumed
         // inside, so they land on the finer grid too rather than being quantised to the output rate.
         for (sub = 0; sub < ENGINE_OVERSAMPLE; sub++) {
-            double value[MAX_ENGINE_NODES][2];
-            double voiceSum[MAX_ENGINE_NODES][2];
+            double value[MAX_ENGINE_NODES][NODE_OUTPUTS];
+            double voiceSum[MAX_ENGINE_NODES][NODE_OUTPUTS];
 
             // One event per sample. A chord's worth of note-ons arriving together therefore lands over
             // consecutive samples rather than all but the last being thrown away, and every note takes
             // effect where it actually arrived instead of at the next buffer boundary.
             (void)take_next_note_event();
 
-            // The patch's own Vibrato, which is nothing to do with the cabling: it lives on a hidden
-            // module beside Glide and Bend, and is how a patch gets aftertouch vibrato without an LFO
-            // anywhere in it. The chosen controller sets the depth, so at rest there is none.
-            //
-            // ONE PHASE FOR THE WHOLE PATCH, not one per voice: it is a property of the patch rather
-            // than of a note, so a chord's notes wobble together instead of drifting apart.
+            // notes §176
             double vibrato      = 0.0;
 
             if (params.vibratoSource != eVibratoOff) {
@@ -6441,6 +5361,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             }
             double bend         = ((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones;
             double sample[2][2] = {{0.0, 0.0}, {0.0, 0.0}};   // [output pair][channel]
+
             double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
             double smoothCoeff  = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
             // Depends on the patch and the rate, not on the voice, so it is worked out once here
@@ -6456,15 +5377,13 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 bool                primed = gSmoothPrimed[n];
 
                 gSmoothedShape[n]  = smooth_to(&gSmoothShape[n], spec->shape, smoothCoeff, primed);
-                // Smoothed in DIAL units, not hertz. Smoothing a logarithmic control linearly in
-                // frequency makes a knob move slowly at the bottom of its travel and leap at the
-                // top; smoothing the dial value sweeps evenly in pitch, which is what the dial
-                // means and what turning it sounds like.
+                // notes §177
                 gSmoothedCutoff[n] = smooth_to(&gSmoothCutoff[n], spec->cutoffParam, smoothCoeff, primed);
                 gSmoothedRes[n]    = smooth_to(&gSmoothRes[n], spec->resonance, smoothCoeff, primed);
                 gSmoothedGain[n]   = smooth_to(&gSmoothGain[n], spec->gain, smoothCoeff, primed);
 
-                for (uint32_t c = 0; c < MAX_NODE_INPUTS; c++) {
+                // §9.2
+                for (uint32_t c = 0; c < spec->levelCount; c++) {
                     gSmoothedLevel[n][c] = smooth_to(&gSmoothLevel[n][c], spec->level[c], smoothCoeff, primed);
                 }
 
@@ -6473,66 +5392,26 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
             memset(voiceSum, 0, sizeof(voiceSum));
 
-            // ── VOICE AREA: the whole area, once per sounding voice ──────────────────────────
-            //
-            // Each voice is a complete instance of the Voice Area with its own oscillator phases,
-            // filter state and envelopes, exactly as the hardware instantiates it. The FX Area is
-            // NOT in here: it is one shared instance fed by the sum of the voices, which is what
-            // lets a chord share one reverb instead of running 8 of them.
+            // notes §178
             for (uint32_t v = 0; v < params.voiceCount; v++) {
-                tVoice * voice = &gVoice[v];
+                tVoice * voice     = &gVoice[v];
 
-                // FREE-RUNNING. The instrument's Voice Area runs whether or not a key is down: an
-                // oscillator patched to an output sounds on its own, an LFO keeps its phase, and a
-                // note gates the ENVELOPE rather than the area. This engine used to skip the whole
-                // voice when nothing was sounding, so any patch that depends on that produced
-                // silence. Voice 0 is therefore always rendered, and while it holds no note it is
-                // rendered UNGATED - no anti-click ramp to zero, no release tail, no retirement.
-                //
-                // ONLY voice 0. The hardware runs every allocated voice continuously, so a poly
-                // patch really does stack that many free-running oscillators, but matching that
-                // would cost 32 voices of idle CPU for a difference of level. One instance is the
-                // deliberate approximation; the post-mix section below already runs unconditionally
-                // for the same reason, so a reverb tail outlives the last note.
-                // FREE-RUN ONLY WHERE IT CAN BE HEARD. A patch whose amp is a per-voice envelope
-                // puts out nothing until a key is pressed, so rendering its whole graph while idle
-                // computes silence. MEASURED on a drone patch, which takes this path: 3.3% CPU
-                // against 2.0% with free-running off - so the render is worth about 1.3 points on
-                // three nodes and more on a large patch. Not ruinous, but it buys nothing at all
-                // for the enveloped case, and the phase advance before the frame loop already
-                // covers the part that IS audible there (where the oscillators are when the next
-                // note starts).
-                //
-                // The cost is that an LFO in an ENVELOPED patch still does not advance between
-                // notes, which is what the instrument does. Fixing that properly means asking
-                // whether a node reaches an Out without passing through a gated envelope, rather
-                // than whether an envelope exists at all - see Docs/todo.md.
-                bool freeVoice = (v == 0) && (chainHasEnvelope == false)
-                                 && (engine_no_free_run() == false);
-                bool freeRun   = (voice->sounding == false) && (freeVoice == true);
+                // notes §179
+                bool     freeVoice = (v == 0) && (chainHasEnvelope == false)
+                                     && (engine_no_free_run() == false);
+                bool     freeRun   = (voice->sounding == false) && (freeVoice == true);
 
                 if ((voice->sounding == false) && (freeRun == false)) {
                     continue;               // costs nothing when it is not playing
                 }
 
-                // A KEY COMING UP MUST NOT INTERRUPT THE OSCILLATOR. The anti-click ramp exists for
-                // patches with no envelope, and in exactly those the instrument carries on sounding
-                // when the note is released - a key gates the envelope, and there isn't one. So the
-                // free-running voice hands straight back to free running instead of ramping to
-                // silence and then waiting out the release tail before resuming, which put an
-                // audible dip in a drone that the hardware does not have. Phase and every other
-                // per-voice state carry across untouched, so the level is continuous and there is
-                // nothing to click. With an envelope in the chain the normal path still runs,
-                // because there the envelope owns the release and cutting it would truncate it.
+                // notes §180
                 if ((freeVoice == true) && (voice->gate == false) && (chainHasEnvelope == false)) {
                     voice->sounding = false;
                     freeRun         = true;
                 }
 
-                // Portamento. The sounding pitch chases the played note; how fast, and whether at
-                // all, comes from the patch's Glide setting. Exponential rather than linear — it is
-                // what a glide sounds like, and the coefficient is set so the remaining distance is
-                // down to a percent by the time the dial says.
+                // notes §181
                 if (voice->note >= 0) {
                     bool sliding = (params.glideMode == eGlideNormal)
                                    || ((params.glideMode == eGlideAuto) && (voice->glideActive == true));
@@ -6595,6 +5474,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     }
                     voiceSum[n][0] += value[n][0] * level;
                     voiceSum[n][1] += value[n][1] * level;
+                    voiceSum[n][2] += value[n][2] * level;
 
                     // What this voice is putting out, measured at its Out modules — the point where
                     // it leaves the voice for the mix or for the FX Area.
@@ -6609,12 +5489,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
                 voice->quiet = (leaving < VOICE_SILENCE) ? (voice->quiet + 1) : 0;
 
-                // RETIRED ONLY WHEN IT HAS GONE QUIET AS WELL as finishing its envelope. The
-                // envelope alone is not enough: a patch whose EnvADSR modulates the filter rather
-                // than acting as the amp goes on sounding after that envelope is idle, and dropping
-                // it from the render at that moment cuts it off mid-note with a click. A patch that
-                // genuinely drones simply never frees the voice, so new notes take the others and
-                // eventually steal — which is what the instrument does with a droning patch too.
+                // notes §182
                 if (  (freeRun == false)
                    && (  (  (voice_is_finished(&params, v, chainHasEnvelope) == true)
                          && (voice->quiet > (uint32_t)(VOICE_SILENCE_SECONDS * gSampleRate)))
@@ -6631,15 +5506,11 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 if (params.node[n].postMix == false) {
                     value[n][0] = voiceSum[n][0];
                     value[n][1] = voiceSum[n][1];
+                    value[n][2] = voiceSum[n][2];
                 }
             }
 
-            // ── AFTER THE MIX: one shared instance, whatever the polyphony ───────────────────────
-            //
-            // The FX Area, plus any delay, chorus or reverb sitting in the Voice Area and anything
-            // downstream of one — see mark_post_mix_nodes(). Runs even with every voice silent, so a
-            // reverb tail or a delay repeat carries on after the last note is released rather than
-            // being cut off with it.
+            // notes §183
             for (n = 0; n < params.nodeCount; n++) {
                 if (params.node[n].postMix == false) {
                     continue;
@@ -6659,11 +5530,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     sample[d][1] += first[1];
                 }
 
-                // The patch's other Out modules, summed rather than mixed at some fraction: that is
-                // what the hardware's sockets do when two areas both drive them. Summed per channel
-                // AND PER PAIR, so a patch whose Out modules feed different physical pairs — which
-                // is what every measurement patch does — keeps them apart instead of folding them
-                // into one stereo image.
+                // notes §184
                 for (uint32_t t = 0; t < params.extraTapCount; t++) {
                     double   extra[2] = {0.0, 0.0};
                     uint32_t d        = params.node[params.extraTap[t]].outDest & 1U;
@@ -6673,10 +5540,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     sample[d][1] += extra[1];
                 }
             }
-            // With an envelope module shaping the note, the fixed ramp would only double up on it; it is
-            // still applied when the chain has none.
-            // THE METERS READ THE LOUDER CHANNEL. A per-channel peak would need a per-channel meter
-            // to show it, and what these drive is one number.
+            // notes §185
             {
                 uint32_t rawMilli = (uint32_t)(fmax(fmax(fabs(sample[0][0]), fabs(sample[0][1])),
                                                     fmax(fabs(sample[1][0]), fabs(sample[1][1]))) * 1000.0);
@@ -6693,16 +5557,10 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 double * sp = &sample[q >> 1][q & 1];
 
                 *sp                           *= VOICE_GAIN;
-                // The anti-click ramp is applied PER VOICE as each voice's output leaves the Voice Area
-                // (see the voice loop), not here. Applying it to the mixed output would fade the whole
-                // instrument — including the FX tail — every time any one note was released.
-                // The user's own attenuation, ahead of the knee.
+                // notes §186
                 *sp                           *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
 
-                // Soft knee rather than a hard edge. Below the knee nothing is touched at all, so ordinary
-                // playing is untouched; above it the curve bends over instead of shearing the tops off, which
-                // is both kinder to listen to and closer to what an overloaded analogue output does. The hard
-                // clamp afterwards is only a guard against a bug producing something enormous.
+                // notes §187
                 if (*sp > OUTPUT_KNEE) {
                     *sp = OUTPUT_KNEE + ((1.0 - OUTPUT_KNEE) * tanh((*sp - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
                 } else if (*sp < -OUTPUT_KNEE) {
@@ -6758,16 +5616,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 atomic_store(&gPeakMilli, (uint32_t)milli);
             }
 
-            // FOUR CHANNELS IF THE CALLER ASKED FOR THEM, otherwise the two pairs are SUMMED.
-            //
-            // The summing is what keeps the application unchanged: its device is stereo, every Out
-            // module used to be added together whatever pair it fed, and a patch sending anything to
-            // Out 3/4 would fall silent if this suddenly routed by destination. A caller that wants
-            // them apart — the measurement harness, which needs the rig's dry reference on one pair
-            // and its processed signal on the other — asks for four and gets them.
-            //
-            // Choosing WHICH pair a stereo device should monitor, rather than always summing, wants
-            // a menu item; see the todo. Summing is the answer that changes nothing until then.
+            // notes §188
             for (channel = 0; channel < channelCount; channel++) {
                 double v = (channelCount >= 4)
                            ? outSample[channel & 3U]
@@ -6803,3 +5652,153 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef SYNTHLIB_PLUGIN_BUILD
+
+// Every bank entry of the CURRENT engine back to its starting state, generated from the declarations
+// above so that no piece of engine state can be missed. A claimed engine may have been an earlier
+// instance's, and its delay lines would otherwise play that instance's tail into this one.
+static void engine_reset_state(void) {
+    SE_LOCAL;
+
+    memset(&gParams, 0, sizeof(gParams));
+    memset(&gNoiseSeed, 0, sizeof(gNoiseSeed));     // reseeded by reset_node_state()
+    memset(&gNoiseLp, 0, sizeof(gNoiseLp));
+    memset(&gParamsSeq, 0, sizeof(gParamsSeq));
+    memset(&gParamsWriteMutex, 0, sizeof(gParamsWriteMutex));
+    memset(&gNoteQueue, 0, sizeof(gNoteQueue));
+    memset(&gNoteWrite, 0, sizeof(gNoteWrite));
+    memset(&gNoteRead, 0, sizeof(gNoteRead));
+    memset(&gActive, 0, sizeof(gActive));
+    memset(&gMorphMilli, 0, sizeof(gMorphMilli));
+    memset(&gMorphPeakMilli, 0, sizeof(gMorphPeakMilli));
+    memset(&gMetersDirty, 0, sizeof(gMetersDirty));
+    memset(&gModuleMeter, 0, sizeof(gModuleMeter));
+    memset(&gModuleLed, 0, sizeof(gModuleLed));
+    memset(&gMeterEnv, 0, sizeof(gMeterEnv));
+    memset(&gOutputGainMilli, 0, sizeof(gOutputGainMilli));
+    memset(&gBendMilli, 0, sizeof(gBendMilli));
+    memset(&gPeakMilli, 0, sizeof(gPeakMilli));
+    memset(&gRawPeakMilli, 0, sizeof(gRawPeakMilli));
+    memset(&gStatus, 0, sizeof(gStatus));
+    memset(&gPlayingCount, 0, sizeof(gPlayingCount));
+    memset(&gDeviceRate, 0, sizeof(gDeviceRate));
+    memset(&gSampleRate, 0, sizeof(gSampleRate));
+    memset(&gVoice, 0, sizeof(gVoice));
+    memset(&gVoiceClock, 0, sizeof(gVoiceClock));
+    memset(&gEngineVoices, 0, sizeof(gEngineVoices));
+    memset(&gEngineLegato, 0, sizeof(gEngineLegato));
+    memset(&gLoadPercent, 0, sizeof(gLoadPercent));
+    memset(&gVibratoPhase, 0, sizeof(gVibratoPhase));
+    memset(&gLastGoodParams, 0, sizeof(gLastGoodParams));
+    memset(&gSeenTopology, 0, sizeof(gSeenTopology));
+    memset(&gOutDecimate, 0, sizeof(gOutDecimate));
+    memset(&gOutHistory, 0, sizeof(gOutHistory));
+    memset(&gOutHistoryPos, 0, sizeof(gOutHistoryPos));
+    memset(&gOscDecimate, 0, sizeof(gOscDecimate));
+    memset(&gOscHistory, 0, sizeof(gOscHistory));
+    memset(&gOscHistoryPos, 0, sizeof(gOscHistoryPos));
+    memset(&gPhase, 0, sizeof(gPhase));
+    memset(&gLfoLastPhase, 0, sizeof(gLfoLastPhase));
+    memset(&gLfoTarget, 0, sizeof(gLfoTarget));
+    memset(&gLfoHeld, 0, sizeof(gLfoHeld));
+    memset(&gSuperPhase, 0, sizeof(gSuperPhase));
+    memset(&gLadder, 0, sizeof(gLadder));
+    memset(&gDelayLine, 0, sizeof(gDelayLine));
+    memset(&gDelayWrite, 0, sizeof(gDelayWrite));
+    memset(&gDelayDamp, 0, sizeof(gDelayDamp));
+    memset(&gDelayHp, 0, sizeof(gDelayHp));
+    memset(&gChorusLine, 0, sizeof(gChorusLine));
+    memset(&gChorusWrite, 0, sizeof(gChorusWrite));
+    memset(&gChorusLfo, 0, sizeof(gChorusLfo));
+    memset(&gPulseCount, 0, sizeof(gPulseCount));
+    memset(&gPulsePrev, 0, sizeof(gPulsePrev));
+    memset(&gCompEnv, 0, sizeof(gCompEnv));
+    memset(&gRvLfo, 0, sizeof(gRvLfo));
+    memset(&gRvAddr, 0, sizeof(gRvAddr));
+    memset(&gRvMem, 0, sizeof(gRvMem));
+    memset(&gRvCur, 0, sizeof(gRvCur));
+    memset(&gRvDamp, 0, sizeof(gRvDamp));
+    memset(&gRevInLp, 0, sizeof(gRevInLp));
+    memset(&gRevInLp2, 0, sizeof(gRevInLp2));
+    memset(&gRevInLp3, 0, sizeof(gRevInLp3));
+    memset(&gRevInLp4, 0, sizeof(gRevInLp4));
+    memset(&gRvLoop, 0, sizeof(gRvLoop));
+    memset(&gPreDelay, 0, sizeof(gPreDelay));
+    memset(&gPreDelayPos, 0, sizeof(gPreDelayPos));
+    memset(&gEnvLevel, 0, sizeof(gEnvLevel));
+    memset(&gSmoothShape, 0, sizeof(gSmoothShape));
+    memset(&gSmoothCutoff, 0, sizeof(gSmoothCutoff));
+    memset(&gSmoothRes, 0, sizeof(gSmoothRes));
+    memset(&gSmoothGain, 0, sizeof(gSmoothGain));
+    memset(&gSmoothLevel, 0, sizeof(gSmoothLevel));
+    memset(&gSmoothedShape, 0, sizeof(gSmoothedShape));
+    memset(&gSmoothedCutoff, 0, sizeof(gSmoothedCutoff));
+    memset(&gSmoothedRes, 0, sizeof(gSmoothedRes));
+    memset(&gSmoothedGain, 0, sizeof(gSmoothedGain));
+    memset(&gSmoothedLevel, 0, sizeof(gSmoothedLevel));
+    memset(&gSmoothPrimed, 0, sizeof(gSmoothPrimed));
+    memset(&gEnvProgress, 0, sizeof(gEnvProgress));
+    memset(&gEnvStart, 0, sizeof(gEnvStart));
+    memset(&gEnvStage, 0, sizeof(gEnvStage));
+    memset(&gEnvTrigger, 0, sizeof(gEnvTrigger));
+    pthread_mutex_init(&gParamsWriteMutex, NULL);
+    gOutputGainMilli  = 1000;
+    gStatus           = eStatusOff;
+    gDeviceRate       = 48000.0;
+    gSampleRate       = 96000.0;
+    gEngineVoices     = 1;
+    sLastTypeBank[SE] = UINT32_MAX;    // no layout yet: the first call resets
+    gPatchSlot        = -1;
+}
+#endif
+
+// ── Engines for documents ───────────────────────────────────────────────────────────────────────
+
+#ifdef SYNTHLIB_PLUGIN_BUILD
+static _Atomic bool gEngineClaimed[SOUND_ENGINE_MAX_ENGINES];
+#endif
+
+bool sound_engine_attach(void) {
+#ifdef SYNTHLIB_PLUGIN_BUILD
+    for (uint32_t i = 0; i < SOUND_ENGINE_MAX_ENGINES; i++) {
+        bool expected = false;
+
+        if (atomic_compare_exchange_strong(&gEngineClaimed[i], &expected, true)) {
+            gDoc->engineIndex = i;
+            engine_reset_state();
+            return true;
+        }
+    }
+
+    return false;
+#else
+    return true;    // the application's one engine is its document's from the start
+#endif
+}
+
+void sound_engine_detach(void) {
+    SE_LOCAL;
+
+#ifdef SYNTHLIB_PLUGIN_BUILD
+    uint32_t index = gDoc->engineIndex;
+
+    atomic_store(&gActive, false);
+
+    if (index < SOUND_ENGINE_MAX_ENGINES) {
+        atomic_store(&gEngineClaimed[index], false);
+    }
+#endif
+}
+
+uint32_t sound_engine_index(void) {
+    SE_LOCAL;
+
+    return SE;
+}
+
+void sound_engine_bind_slot(int32_t slot) {
+    SE_LOCAL;
+
+    gPatchSlot = ((slot >= 0) && (slot < MAX_SLOTS)) ? slot : -1;
+}

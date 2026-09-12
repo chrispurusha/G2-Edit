@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/paramCurves.h.md - "// notes §k" refers there.
 
 #ifndef __PARAM_CURVES_H__
 #define __PARAM_CURVES_H__
@@ -30,14 +31,7 @@
 extern "C" {
 #endif
 
-// The arithmetic behind the oscillator dials, split out from the renderers that print it so
-// that the sound engine can derive its pitch and shape from exactly the same numbers the dial
-// text shows. Changing a curve here changes what you see and what you hear together, which is
-// the point - the two drifting apart would be invisible until it sounded wrong.
-//
-// Each takes the raw 0..127 param value. Which of the frequency curves applies is decided by
-// the module's own PitchType param, whose index differs per module - osc_pitch_type_param_index()
-// gives it, or -1 for a module that has no such param.
+// notes §1
 int osc_pitch_type_param_index(tModule * module);
 double osc_freq_semitones(double paramValue);   // PitchType 0 "Semi":   -64 .. +63 semitones
 double osc_freq_hz(double paramValue);          // PitchType 1 "Freq":   8.1758 Hz .. 12.55 kHz
@@ -63,10 +57,7 @@ double flt_ladder_feedback(double paramValue);                            // Res
 uint32_t flt_ladder_tap(uint32_t slopeValue);                             // 2/3/4 poles tapped: 12/18/24 dB
 double flt_ladder_magnitude(double ratio, double feedback, uint32_t tap); // |G^tap / (1 + k.G^4)| at f/fc
 
-// Which shape a multi-mode filter is currently producing. FltStatic's FilterType selects among the
-// first three; FltNord adds the fourth.
-// Which of the three measured topologies a filter module uses. They are not variants of one
-// another - see the notes in paramCurves.c.
+// notes §2
 typedef enum {
     eFilterTopologyLadder = 0,     // FltClassic, FltNord: four-pole loop, the dB switch moves the tap
     eFilterTopologyCascadeLP,      // FltLP:  N identical one-poles, no resonance
@@ -114,6 +105,7 @@ double phaser_rate_hz(double paramValue);                  // Phaser Rate:  0.05
 // of the dial, where the printed scale reads "-oo"; the two steps above it are named rather than
 // computed. Both are the caller's business - this half of the split stays numeric.
 double mix_level_db(double paramValue);
+double mix_level_gain(double paramValue);   // the same curve as an amplitude, 0..1
 
 // The patch's master volume in dB: -78 at the bottom of the dial, 0 at the top.
 double patch_volume_db(double paramValue);
@@ -121,17 +113,7 @@ double patch_volume_db(double paramValue);
 // An envelope segment's length in seconds: the 0.5 ms .. 45 s scale the manual quotes.
 double adr_time_seconds(double paramValue);
 
-// An envelope segment's SHAPE - the companion to adr_time_seconds() above, which gives its length.
-// The Shape param names both halves at once (envShapeStrMap is {LogExp, LinExp, ExpExp, LinLin}),
-// the first word naming the attack curve and the second the decay and release, so three of the four
-// fall exponentially and only LinLin is straight throughout.
-//
-// SHARED SO THE DRAWN ENVELOPE AND THE PLAYED ONE CANNOT DISAGREE - and they did. The engine and the
-// module face carried the same law with two different sharpness constants, 5.0 against 4.0, so the
-// curve drawn on an EnvADSR was never quite the curve it played. Nothing announced it, because each
-// file was self-consistent; it is exactly the drift this file exists to prevent. Both constants were
-// also wrong: measured on the hardware 2026-08-24, the rise and the fall are not equally curved, so
-// there are now two of them - see ENV_ATTACK_SHARPNESS and ENV_FALL_SHARPNESS in paramCurves.c.
+// notes §3
 typedef enum {
     eEnvShapeLogExp = 0,
     eEnvShapeLinExp,

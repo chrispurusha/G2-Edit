@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/paramOverview.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -99,18 +100,7 @@ static bool knob_is_assigned(uint32_t index) {
     return gKnobArray[gParamOverview.slot].knob[index].assigned;
 }
 
-// Moves the assignment at `from` to `to`, overwriting whatever was there. This is the manual's
-// headline use of this window ("drag a grey display area to another grey display area and you
-// move the knob assignment to the new position"), so it OVERWRITES rather than swaps — that is
-// what the original does, and a swap would silently resurrect an assignment the user was
-// deliberately replacing.
-//
-// The patch case tells the G2 with ONE whole-patch write rather than the deassign/deassign/assign
-// triple the right-click Assign menu sends. write_knobs() (protocol.c) is already part of
-// push_slot_to_device(), and a burst of small slot commands is exactly the pattern that loses
-// assignments to the patch-version race — see the bulk MIDI CC note in menus.c. Global knobs have
-// no whole-perf push to ride on (write_global_knobs() is only used when SAVING a performance
-// file), so those still go as individual commands, matching action_assign_global_knob().
+// notes §1
 static void move_assignment(uint32_t from, uint32_t to) {
     tMessageContent msg = {0};
 
@@ -249,10 +239,10 @@ void render_param_overview_panel(void) {
 
     cellW = fmin(cellW, PO_MAX_CELL_W);
 
-    double gridW = (cellW * NUM_KNOBS_PER_BANK) + (PO_CELL_GAP * (NUM_KNOBS_PER_BANK - 1));
-    double boxW  = (margin * 2.0) + rowLabelW + gridW;
-    double gridH = (cellH * PARAM_OVERVIEW_ROWS) + (PO_CELL_GAP * (PARAM_OVERVIEW_ROWS - 1));
-    double boxH  = titleH + margin + rowH + margin + textH + 2.0 + gridH + margin;
+    double     gridW    = (cellW * NUM_KNOBS_PER_BANK) + (PO_CELL_GAP * (NUM_KNOBS_PER_BANK - 1));
+    double     boxW     = (margin * 2.0) + rowLabelW + gridW;
+    double     gridH    = (cellH * PARAM_OVERVIEW_ROWS) + (PO_CELL_GAP * (PARAM_OVERVIEW_ROWS - 1));
+    double     boxH     = titleH + margin + rowH + margin + textH + 2.0 + gridH + margin;
 
     // Too wide or too tall for the window: give the grid whatever is left. Nothing clips (there is
     // no scissor anywhere in SynthLib), so a box that has to shrink runs its text into its
@@ -267,12 +257,7 @@ void render_param_overview_panel(void) {
         boxH  = renderH - (margin * 2.0);
         cellH = ((boxH - titleH - (margin * 3.0) - rowH - textH - 2.0) - (PO_CELL_GAP * (PARAM_OVERVIEW_ROWS - 1))) / PARAM_OVERVIEW_ROWS;
     }
-    // FLOATING, so the position comes from the panel rather than from the window: chosen once on
-    // first show and thereafter wherever the user has dragged it. Centring every frame is what made
-    // a panel impossible to move — it snapped back before the next redraw.
-    //
-    // No draw_dialog_background_overlay() either. Dimming the canvas behind is what a MODAL dialog
-    // does, and this is not one: the canvas stays live underneath and stays legible to match.
+    // notes §2
     tRectangle panelBox = floating_panel_place(&gParamOverview.panel, boxW, boxH);
     double     boxX     = panelBox.coord.x;
     double     boxY     = panelBox.coord.y;
@@ -304,10 +289,7 @@ void render_param_overview_panel(void) {
         }
     }
 
-    // ── Button row: Patch/Global, View MIDI, and the two bulk MIDI tools ───
-    // Assign MIDI and Clear MIDI live here because this is where the original puts them (manual
-    // p.126); they are the same operations the Tools menu offers, run on the Slot THIS panel is
-    // showing rather than the selected one.
+    // notes §3
     {
         double x       = boxX + margin;
         double patchW  = get_text_width((char *)"Patch", btnH, eCache) + 14.0;
@@ -517,10 +499,7 @@ bool handle_param_overview_mouse(tCoord coord, tMouseButton mouseButton) {
         if (wasClosePressed && within_rectangle(coord, gParamOverview.close)) {
             close_param_overview_panel();
         } else if (dragFrom >= 0) {
-            // A drop on a different box moves the assignment; anywhere else, including the box it
-            // started on, is a no-op. Dropping outside the grid deliberately does NOT clear the
-            // assignment - the original has no such gesture, and losing an assignment to a stray
-            // release would be a nasty way to find that out.
+            // notes §4
             int32_t dropOn = cell_at(coord);
 
             if ((dropOn >= 0) && (dropOn != dragFrom)) {

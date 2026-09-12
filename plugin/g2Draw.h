@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2Draw.h.md - "// notes §k" refers there.
 
 #ifndef __G2_GL_DRAW_H__
 #define __G2_GL_DRAW_H__
@@ -24,17 +25,12 @@
 extern "C" {
 #endif
 
-// One-off GL state and the font atlas. Must be called with the context CURRENT — building the glyph
-// textures is a GL operation, and doing it without a context silently produces a font that draws
-// nothing.
+// notes §1
+void g2_draw_enter(void * doc);
+
 void g2_draw_init(void);
 
-// Draw one frame into the current context.
-//
-// Dimensions are PHYSICAL pixels and backingScale is how many of them make a point; the caller has
-// already resolved both, because asking for them is a platform question and this file is
-// deliberately not part of the platform. The renderer works in logical points, so the scale is what
-// connects the two.
+// notes §2
 void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale);
 
 #ifdef __cplusplus

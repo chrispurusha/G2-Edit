@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/misc.h.md - "// notes §k" refers there.
 
 #ifndef __MISC_H__
 #define __MISC_H__
@@ -28,12 +29,7 @@ extern "C" {
 
 #include <stdbool.h>
 
-// register_sleep_wake_notifications() and setup_main_menu() are implemented in misc.mm — the only
-// two things left in this codebase that genuinely need Objective-C/Cocoa. Everything else
-// declared below is plain C: menu actions live in menuActions.c, settings persistence (backed by
-// SynthLib's cross-platform prefs.h rather than NSUserDefaults) lives in persistence.c.
-// True while any mouse button is physically down, read from the window server rather than from the
-// event stream. Used to recover a drag whose mouse-up never arrived — see the definition.
+// notes §1
 bool platform_any_mouse_button_down(void);
 
 void register_sleep_wake_notifications(void);
@@ -55,11 +51,7 @@ const char * recent_files_path(uint32_t index);
 const char * recent_files_display_name(uint32_t index);
 void recent_files_clear(void);
 
-// File/Settings/Backup/Restore menu actions — plain-C-callable bodies used by the in-window menu
-// bar (src/appMenuBar.c). File open/save and folder picking all go through the custom in-window
-// browser (SynthLib/src/fileBrowser.cpp); alerts/confirms/bank-target pickers go through
-// SynthLib/src/alertDialog.cpp — none of it uses native Cocoa panels any more. Only the dispatch
-// logic (which browser mode to open, with what pre-filled state) lives here.
+// notes §2
 void file_menu_open_patch(void);
 void file_menu_open_path(const char * path);
 void file_menu_save_patch(void);

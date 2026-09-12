@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/mouseHandle.h.md - "// notes §k" refers there.
 
 #ifndef __MOUSE_HANDLE_H__
 #define __MOUSE_HANDLE_H__
@@ -40,12 +41,7 @@ extern "C" {
 
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
 
-// shift_modifier_held(), cmd_modifier_held(), alt_modifier_held() and multi_select_modifier_held()
-// USED TO BE DECLARED HERE, each answered by a glfwGetKey() poll. They are now in SynthLib's
-// inputState.h, answered from state the shell pushes — see that header for why, and
-// modifier_bits_from_glfw() in mouseHandle.c for this application's end of it. Nothing that asks
-// about a modifier needs GLFW any more, which is what lets moduleGraphics.c and mutatorUI.c link
-// into the plug-in, and it means the plug-in gets real modifiers instead of a stub answering false.
+// notes §1
 
 // start_cursor_drag() is gone: call canvas_drag_begin() (canvasDrag.h). The application's own
 // cursor_raw_coord()/cursor_capture()/cursor_release() are implemented in mouseHandle.c.
@@ -56,15 +52,7 @@ void stop_dragging(void);
 // the drag won't be undoable.
 void finish_param_drag(void);
 
-// True while any drag that hides the cursor (CURSOR_DISABLED) is active —
-// param/tempo/perf-tempo/vibrato-rate/vibrato-amount/glide-time dragging.
-// During these, the reported cursor position is a virtual/relative-delta
-// accumulator, not a real on-screen point — it can drift over an unrelated
-// control, so anything that hover-highlights "what's under the mouse"
-// (e.g. render_knob_assignment_overlay()'s per-param hover check) needs to
-// suppress itself while this is true, or it'll highlight the wrong control.
-// Restores the pointer if it is hidden with no drag running — call once per frame. See the note in
-// mouseHandle.c for why this rather than debouncing the mouse button.
+// notes §2
 void recover_lost_cursor(void);
 
 bool is_cursor_hidden_dragging(void);

@@ -8792,3 +8792,413 @@ retrigger. Each voice now counts the note-ons that should restart its envelopes,
 restarts when that count moves; Legato's note-ons over a held key do not advance it. Offline on
 SimpleLead (attack 0, decay 40, sustain 0), the second key's first 100 ms: Mono 0.00032 -> 0.01087
 RMS, Legato 0.00032 unchanged, Poly 0.01212 unchanged. Not yet heard against the instrument.
+
+2026-09-11  G2 ALIKE BECAME MULTI-INSTANCE: A DOCUMENT AND AN ENGINE PER INSTANCE
+------------------------------------------------------------------------------------------------------
+The wrappers had been per-instance since the morning; what kept G2 Alike to one per process was
+that the application's state was ~120 globals plus the database, and the engine another 79 statics.
+CT's correction set the scope: "4 slots are needed for performance mode. Each instance needs to
+support 4 slots" - so an instance is a whole G2, not one slot of a shared one.
+
+THE DOCUMENT (globalVars.h). Every global in globalVars.c and the database became a field of
+tG2Document, reached through a thread-local gDoc, and each old name became a macro onto the current
+document's field - so none of the ~40 files that use them changed. The application has one document,
+current on every thread from the start. A plug-in instance callocs its own (~90 MB, nearly all
+module storage, committed only as a patch touches it) and selects it at every entry. TRAP: a field
+cannot be reached through any other pointer (doc->gSlot expands gSlot), so code that works on a
+document other than the current one selects it first. TRAP 2: fifteen names had to stay OUT, because
+file-scope tables take their addresses and an address in the current document is not a constant -
+the Synth/Perf Settings panel rects, the bank name tables, the tempo/vibrato/glide drag flags, the
+top-bar controls and four floating panels. The app build found them; all are editor state, not
+patch data.
+
+THE ENGINE (soundEngine.c). Each static became an array over engines and the name a macro onto the
+current engine's element: gVoice is gVoiceBank[SE]. SE is the current document's engineIndex in the
+plug-in and the constant 0 in the application, which is why the application's output did not move
+by one bit (checksum 2.641064 before and after) nor its time (2.13 s CPU for 30 s of a 4-voice
+chord). The plug-in build costs ~13% (2.41 s): the thread-local read on every banked access. An
+index rather than a pointer because PERFORMANCE MODE will run four engines per instance, each bound
+to a slot (sound_engine_bind_slot(), -1 = follow the selection, which is all today). A claimed
+engine is reset from a generated list of every banked variable, or it would play the previous
+instance's delay tail.
+
+PROOF: twoInstances (scratchpad test) runs two documents and two engines on two threads, different
+patches, and compares with each rendered alone - 0 of 204,800 samples differ, both. tools/vst3host
+--instances 2 --patch A --patch B now connects each processor to its controller through a real
+IHostApplication (it never had one, so it only ever tested the wrappers' fallback) and shows each
+editor drawing its own patch.
+
+ALSO THIS DAY, found while doing it: the project saved the patch the instance LOADED with, not one
+opened from the editor afterwards (g2_get_state() now reads gSavedPatchPath[0]); the editor pinned
+gSlot to 0 every frame, so A-D did nothing; notes landed at the start of their block (now queued
+per instance and the block rendered in pieces split at each offset - a note at sample 256 is heard
+from frame 284, i.e. the offset plus the engine's 28-frame latency); and the editor never passed
+keys to SynthLib's popups, so Save As could not be typed into.
+
+2026-09-11  STABILITY SWEEP: LEAKS, MEMORY, CPU, EDITOR OPEN AND CLOSE
+------------------------------------------------------------------------------------------------------
+Every app and plug-in measured the same way (scratchpad sweep.sh): footprint after 4 s and after 15 s
+of 120 Hz pointer movement, CPU over 5 s at rest before and after, and leaks(1) on the live process.
+
+LEAKS: NONE OF OURS. Every process reports 190-290 "leaks" of 9-14 KB, and with MallocStackLogging
+they are all three NSXPCConnection root cycles to a system daemon (LNDaemonApplicationInterface) -
+Apple's, in every Cocoa process here, including the harness. Nothing points into our code.
+
+MEMORY: FLAT EVERYWHERE, no growth with activity - G2-Edit 228 MB, SynthEdit 166 MB, EmuUtility
+130 MB, G2 Alike ~590 MB, GenBridge ~460 MB, MidiSyncTool ~470 MB. The plug-in figures are mostly
+GPU memory that is not ours: 49 x 8 MB "owned unmapped (graphics)" regions, where the backend itself
+allocates one render target, its MSAA copy and six small atlases (~37 MB, confirmed by logging every
+allocation). It barely scales with editor size (431 MB at a quarter of the area). An early
+"184 -> 584 MB in 15 s" reading was start-up still in progress, not growth. Open question in todo.md.
+
+CPU AT REST: G2-Edit 0.0%, G2 Alike 0.1%, SynthEdit 0.5%, EmuUtility 1.8% (its display polling),
+GenBridge 3.5% and MidiSyncTool 4.8% - both repaint a full frame 30 times a second while visible.
+Small draws now go through setVertexBytes rather than a new MTLBuffer each (renderBackendMetal.m),
+which took those two to 2.9% and 3.6%; it did NOT change their memory, which is what it was aimed at.
+
+EDITOR OPEN AND CLOSE: vst3host --reopen 40 on all three plug-ins - no crash, no refused attach,
+memory flat, and each editor still draws correctly after the fortieth, well past the backend's eight
+window slots.
+
+ENGINE: the plug-in build's overhead against the application went from 13% to ~5% (SE_LOCAL - the
+engine index read once per call rather than per banked access); a profile puts the thread-local at
+~1% now, the rest being indexing by a variable. Silent rendering costs ~2% of a core per instance
+(0.62 s CPU per 30 s of zeros); hoisting the per-sample exp() coefficients out of the loop gained
+nothing - the compiler already did - and was reverted. A sleep-when-silent mode is in todo.md.
+
+
+2026-09-12  G2 ALIKE: FOUR SLOTS AND PERFORMANCES IN THE PROJECT
+------------------------------------------------------------------------------------------------------
+The project used to hold one thing: slot A's patch path, as a bare string. An instance has held all
+four slots since multi-instance, so B-D and the performance were lost every time a set reopened.
+
+THE STATE IS NOW A SHORT TEXT RECORD ("G2Alike state 2", then key=value lines): perf=<.prf2> in
+performance mode when there is one, otherwise slot0..slot3=<.pch2> for each slot loaded from a
+file, then perfmode= and selected=. Paths, not patches, as before - edits not saved to a file are
+not stored. A blob without the header is the old bare path and goes into slot A, so every earlier
+project still opens. Restoring REPLACES what the instance holds: a slot the record does not name, or
+whose file has gone, becomes an empty patch, since a host restores into live instances too. A file
+that has gone is still REMEMBERED (as Save's target and in the next saved record), so a set whose
+patches sit on an unmounted drive does not forget them by being saved once without it. The old
+"slot A falls back to the creation path" rule is gone: it named the default patch for a slot A the
+record had emptied.
+
+ONE LOADER FOR BOTH FILE TYPES: g2_plugin_open_file() (plugin/g2Patch.c) does what the application's
+offline loader does - type 0 into the given slot, type 1 through parse_perf() into all four, perf
+name from the file name, Perf Mode on - and records the path File > Save writes back to. File >
+Open, the host's state and the instance's default patch all go through it. File > Save and Save As
+write a .prf2 in Perf Mode (write_perf_to_file(), linked since patchWrite.c and never reached).
+
+THE SLOT BUTTONS LIED. Restoring slot C selected showed C's patch under a lit A: the A-D and
+variation highlights are colours in gTopbarControls, outside the document, set only by a click or a
+message from the G2. The plug-in now sets both from gSlot at the start of every frame, which also
+keeps two open editors from showing each other's slot.
+
+Checked with tools/vst3host --dump-state (new): old bare path; a .prf2 by bare path; a v2 record
+with slots A and C, C selected; a v2 perf record with slot B selected and a missing slot file. All
+came back as saved; screenshots show ArpTrance in Perf Mode, and ChorusSaw in slot C with C lit.
+Two instances restored with C and B selected each light their own. File > Save Perf, clicked in the
+editor (the shared menu already reads "Save Perf" in Perf Mode), wrote the file back and it reloads
+as the same performance - apart from two differences that belong to write_perf_to_file() itself and
+so to the application as well: Morph 8's source label "Group 8" reloads as "Knob", and the yellow
+cable-filter button changes. 8456 bytes (Version=22) in, 8108 (Version=23) out. In todo.md.
+
+
+2026-09-12  NOTE DETECTOR WAS IN THE CREATE MENU TWICE
+------------------------------------------------------------------------------------------------------
+The create-module menus have been built from gPaletteList since 6de3554, with every label unchanged
+from the sixteen static arrays they replaced. One module was listed twice: NoteDet, as "Note
+Detector" in In/Out and "NoteDet" in MIDI (the old arrays had both copies in MIDI). The G2 manual
+describes it in the In/Out group only - its MIDI group is CtrlSend, PCSend, NoteSend, CtrlRcv,
+NoteRcv, NoteZone and Automate - so the MIDI row is gone, from the menu and the palette alike.
+170 entries now.
+
+
+2026-09-12  THE LEVEL METER'S LAW, AND MIX4-1C'S TAPER, MEASURED
+------------------------------------------------------------------------------------------------------
+CT reported on 2026-09-08 that the engine's meters read LOW against the instrument's. Settled with the
+engine running WHILE CONNECTED, so one LEDDUMP poll holds both readings of the same signal - LEDDUMP
+gained an eng= field for it - and the desk capturing the G2's outputs 1/2 (QU-24 ch 4/5) for the true
+level at every step.
+
+THE RIG: OscA -> Mix4-1C (all four inputs cabled) -> 2-Out, voice area. The mixer's first level dial
+swept 0 to -60 dB in 1.5 dB steps with the other three at 0, then all four together for +12 dB, so the
+yellow half of the meter was reached too. Sine, saw and square, 82 steps each, 1.8 s per step.
+
+THE METER READS PEAK. Stated in internal dB (each capture against the same waveform at full level),
+the three waveforms cross every meter boundary within 0.3 dB of each other, although their RMS differs
+by up to 4.5 dB (sine -41.5, saw -42.7, square -38.2 dBFS at full level). Equal peaks, different RMS,
+identical meter: a peak detector.
+
+ONE VALUE PER OCTAVE. Where the 2-Out meter first reads each value, against -6.02 dB per step:
+
+  meter reads     1      2      3      4      5      6      7      9     11     12
+  measured     -42.0  -35.9  -29.9  -23.8  -18.2  -12.4   -6.6    0.0   ~+6   ~+12  dB internal
+  octave law   -42.1  -36.1  -30.1  -24.1  -18.1  -12.0   -6.0    0.0   +6.0  +12.0
+
+Below full scale the value is 7 + the binary exponent of the peak; at and above it the instrument
+SKIPS - 9, 11, then 12 with the clip bit (0x40) set, never 8 or 10. The Mix4-1C's meter reads the same
+values as the 2-Out's at every step.
+
+WHY THE ENGINE READ LOW: it used 7 + dB/7 rounded, fitted to the eight coarse points of 2026-09-07.
+Near the top that is up to three values under - 7 where the instrument shows 9 at 0 dB, 9 where it
+shows 12 at +12 - which is exactly what CT saw. The engine now computes the octave law with frexp().
+
+MIX4-1C'S TAPER IS NOT QUITE A CUBE. The same captures, as ratios against dial 127, fit x^3 with 1.01%
+of x mixed in to 0.01 dB RMS over 218 steps; a pure cube is out by 1.74 dB RMS and by 5.8 dB at dial 13.
+
+  dial        13      16      20      24      32      40      64     101
+  measured  -53.6   -49.8   -45.3   -41.3   -34.7   -29.4   -17.6    -5.9 dB
+  cube      -59.4   -54.0   -48.2   -43.4   -35.9   -30.1   -17.9    -6.0
+  cube+1%   -53.7   -49.8   -45.3   -41.4   -34.7   -29.4   -17.6    -5.9
+
+It is identical for sine, saw and square, 4.5 dB apart, so it is not the converter's floor - which is
+what the 2026-09-07 entry blamed for dial 16's -49.5 against the cube's -54.0. That reading was real.
+And it is the curve paramCurves.c's mix_level_db() already used for the dial's dB readout, which had
+it right all along: only the engine used the bare cube. The engine now plays through
+mix_level_gain(), the same curve as an amplitude, so the level printed and the level played are one
+function.
+
+ALSO FOUND: the tables' dB column (the dial through a cube) was wrong by exactly this at low dials,
+which is why the first pass seemed to show the four-input sweep reading a value HIGHER than the
+one-input sweep at the same "level" - the levels were not the same.
+
+VERIFIED ON THE INSTRUMENT the same morning: the saw sweep run again with both changes in, engine and
+G2 metering the same signal. They agree on 67 of 80 steps, where the old law read low by up to three
+values. The 13 that differ are all the same shape - the ENGINE one value HIGHER, at exactly the dial
+that sits 0.1-0.6 dB under a power of two (by the measured taper), and 9 against 7 at full scale.
+That is the engine's saw peaking a fraction of a dB above the instrument's - the overshoot a
+band-limited saw carries - not the meter law, and it is left as a known difference rather than hidden
+by shifting the meter. A sine would not show it.
+
+
+2026-09-12  THE MIXER FAMILY: ELEVEN TYPES IN THE ENGINE, CHECKED ON THE INSTRUMENT
+------------------------------------------------------------------------------------------------------
+The engine had Mix4-1C and Mix4-1S. It now has every summing mixer - Mix1-1A, Mix1-1S, Mix2-1A,
+Mix2-1B, Mix4-1A, Mix4-1B, Mix8-1A, Mix8-1B and MixFader as well - as ONE node driven by a table
+(kMixSpecs in soundEngine.c) saying where each type keeps its level dials, On buttons, Inv switches,
+curve and pad. The types differ only in that: Mix2-1A interleaves Lev/On, Mix2-1B puts an Inv before
+each level, Mix4-1A and Mix8-1A have no dials at all and sum at unity.
+
+A CHAIN INPUT WAS NEVER READ. The engine took the first four inputs (eight legs on Mix4-1S), so
+anything cabled into Mix4-1C's Chain, or Mix4-1S's ChainL/R, was silently dropped. It now takes every
+input the module has, and MAX_NODE_INPUTS went from 8 to 10 for Mix4-1S's eight legs and Chain pair.
+
+CHECKED on the G2, 106 configurations over the eleven types, each measured at the converter against
+the oscillator cabled straight to the output in the same take: full level, dial 100, Exp and Lin at
+64, On off/on, each Pad position, Chain alone, Chain under a pad, and Mix2-1B's Inv (two equal inputs
+cancel to -61.6 dB, the floor). EVERY ONE matches the model to 0.07 dB or better, and the engine's
+own meter agreed with the instrument's at every step bar two - both one value high, at Lin 64 (the
+0.07 dB below) and the Mix2-1B cancellation (the meter's release tail).
+
+  THE CHAIN SUMS AT UNITY AND THE PAD DOES NOT REACH IT: 0.00 dB under Pad -12 on Mix4-1C, Mix8-1B
+  and MixFader alike.
+
+  LIN IS THE DIAL OVER 128, top step pinned to 1: -6.02 dB at 64 on every mixer (exactly 0.5), which
+  64/127 would put at -5.95 - and the 2026-09-07 reading of -2.50 at 96 was 96/128 all along, not
+  "close enough" to 96/127's -2.43. Fixed.
+
+  EXP IS mix_level_gain() (cube + 1%) on every type, -6.18 dB at dial 100 and -17.61 at 64.
+
+AND THE CAPTURES ARE TWO CHANNELS NOW: tools/capture gained --channels, and tools/trimwav.py trims
+old takes (verified sample for sample, original channel numbers kept in the file). The rig's 32-channel
+takes had been 94% bleed and desk mix - G2Captures went from 1.2 GB to 215 MB.
+
+
+2026-09-12  PAN, X-FADE AND THE TWO FADERS: MEASURED AND IN THE ENGINE
+------------------------------------------------------------------------------------------------------
+None of the four was in the engine. Each was swept on the instrument - the Mix/Pan dial over 19
+settings, both Log and Lin where there is a choice - with a sine in and both outputs captured, every
+level against the oscillator cabled straight to the output in the same take.
+
+THE DIAL IS u = value / 128, with 127 pinned to exactly 1 - the same reading the mixers' Lin curve
+turned out to use. 64 is exactly one half.
+
+  Pan, X-Fade  Lin   first 1 - u, second u                 0.0625 per 8 values, 0.5 / 0.5 at 64
+               Log   first 1 - u^2, second 1 - (1-u)^2     0.75 / 0.75 at 64 (-2.5 dB each)
+  Fade1-2      x = 2u - 1: Out1 carries -x left of centre, Out2 carries x right of it
+  Fade2-1      the same, as the weights of In1 and In2
+
+Every Log point fits to 0.001 (dial 32: 0.9381 / 0.4378 measured, 0.9375 / 0.4375 predicted) and the
+linear ones to 0.0005. X-Fade Log is identical to Pan Log - one law for both, as the manual's naming
+suggests.
+
+THE FADERS ARE STEERING, NOT CROSSFADING: at the centre BOTH outputs (Fade1-2) or BOTH inputs
+(Fade2-1) are silent, and one side is simply off while the other rises. Worth knowing before patching
+one as a crossfader - X-Fade is the crossfader.
+
+NOT YET MEASURED: how far the Mod/Ctrl input moves the position. The engine takes full scale through
+a fully open attenuator as the whole range.
+
+X-FADE LIN, RE-MEASURED in a short take of its own: 1 - u and u exactly (0.7500 / 0.2500 at dial
+32, 0.5002 / 0.4999 at 64) - the same as Pan Lin, as the code the engine uses already assumed. The
+first attempt below is kept for what it taught. X-FADE'S FIRST LIN SWEEP read nonsense - both weights falling steadily to
+0.12 where 1.0 belongs. It was captured while a gigabyte of capture files was being rewritten on the
+same machine, and the pattern is what dropped frames do to windows placed by the clock: each one
+lands a little later than the last. The sweep script now keeps capture's own dropped-frames warning
+with every take.
+
+MIXSTEREO, MEASURED THE SAME WAY (channel 1's level with the pan centred, its pan with the level
+full, then the master), and now in the engine as a node of its own - six mono channels, each levelled
+and panned, to a genuine stereo pair:
+
+  LEVEL AND MASTER follow the mixers' Exp curve, mix_level_gain(): dial 96 predicts 0.3196 and read
+  0.3195, dial 32 predicts 0.01351 and read 0.0135.
+
+  THE PAN IS Pan's Log law BUT WITH u = value / 127 - the one dial here that does not use /128. The
+  centre reads L 0.7342 / R 0.7419: a 1% lean that /127 predicts to the digit (ratio 1.011) and /128
+  cannot produce at all. Dial 32 predicts 0.9215 / 0.4335 and read 0.9219 / 0.4336.
+
+  AND THE PAN COEFFICIENTS ARE SCALED TO 127^2, not to full scale, so hard left is (127/128)^2 -
+  the 0.14 dB the module sits below unity with every dial at the top. It belongs to the pan, not to
+  the levels: every channel carries it, whatever its level.
+
+MAX_NODE_LEVELS (12) now sizes a node's smoothed gains separately from its inputs, because MixStereo
+carries an L and an R gain for each of its six inputs; a node smooths only the gains it has, so
+non-mixer nodes no longer smooth eight unused levels every sample.
+
+A CABLE DIVERGENCE FOUND ON THE WAY (2026-09-12), recorded for its own investigation. The Lin-only
+X-Fade take ended with a reference step: DELCABLE VA 2:0 3:0 and 2:0 3:1 (X-Fade Out to 2-Out L and
+R), then CABLE VA 1:0 3:0 and 1:0 3:1 (the oscillator straight to the output). The editor's copy
+then held exactly the three cables it should, and the engine, playing that copy, metered 7/7 - but
+the G2's own meter read 0/0. Restarting the editor made it read the patch back from the instrument,
+which held FIVE: both "deleted" X-Fade cables still in place alongside the two new ones into the same
+inputs. So those two deletes never reached (or were refused by) the instrument, while every one of the
+76 cable edits the sweep had made before them - adds and deletes of the oscillator into the X-Fade's
+inputs - evidently did, since the data they produced is exact. Not isolated: the edit count, deleting
+cables from an output that fans out to two inputs, or both. The earlier long X-Fade take's second
+half, which decayed step by step, is probably the same fault surfacing sooner.
+
+
+2026-09-12  OSCC AND OSCD: IN THE ENGINE, CHECKED AGAINST OSCA ON THE INSTRUMENT
+------------------------------------------------------------------------------------------------------
+The manual says OscC "has the same waveforms as OscA" and OscD is "similar to OscillatorC but has
+less modulation inputs", so both now play through the engine's shared oscillator: the basic
+oscillators are one table (kOscParams) saying where each keeps its dials and its waveform. The one
+real difference is that OscA's waveform is a PARAMETER and OscC's and OscD's a MODE (a drop-down).
+OscC's direct Pitch input is connector 3, after PitchVar, Sync and FmMod; OscD has only Pitch.
+
+CHECKED ON THE G2, all six waveforms, the three oscillators at KBT off and one Coarse, each switched
+in through a mixer's On buttons (parameter changes, not cable edits): OscC and OscD match OscA to
+0.02 dB in level and 0.25 dB at worst over the first ten harmonics (the triangle's small ones), and
+the engine's meters follow the instrument's. Their FM - OscC's FmMod, FM amount and Lin/Trk - is not
+modelled, as it is not on OscB either; that is one todo item now.
+
+
+2026-09-12  THE NOISE MODULE: MEASURED AND IN THE ENGINE
+------------------------------------------------------------------------------------------------------
+Swept on the instrument, Color 0 to 127 in steps of 8, 2.5 s a setting, against an OscA sine for the
+level - the source switched in by a mixer's On buttons. Each setting's averaged spectrum fits a
+ONE-POLE LOW-PASS within 0.5-0.7 dB (about what 2.5 s of noise allows):
+
+  Color     0      16     32     48     64     80     96    112    127
+  corner  18306   7664   3164   1353    615    323    194    143    129 Hz
+  level   -6.5   -8.4   -9.0   -8.2   -7.4   -7.9   -9.5  -11.6  -13.6 dB RMS re full scale
+
+The corner roughly divides by 1.55 every 8 steps, then flattens near 130 Hz. THE LEVEL IS
+COMPENSATED: a fixed-gain one-pole would be 15 dB down by 64, and the instrument is 1 dB down there.
+The instrument's own code agrees on both counts - the dial indexes a stored table for the pole,
+feeds the input at (1 - pole)/4, and adds back a share of the filtered signal that grows as the dial
+CUBED, which is the compensation.
+
+CORRECTION, same day: the LEVELS above are 1.2 dB high. The level reference was meant to be an OscA
+sine and was OscA's default waveform, a SAW - whose RMS on this rig is 1.2 dB under a sine of the same
+peak (-42.7 against -41.5 dBFS in the morning's meter sweep) - so full scale was placed 1.2 dB low.
+The corners are unaffected. The engine's table carries the corrected levels; every rig script now
+sets the waveform it means.
+
+TABULATED in the engine (kNoiseColour, 17 points, corner interpolated geometrically and level in dB),
+against the usual rule, because the instrument's own values are a stored table no formula here
+reproduces. The corner is kept in hertz so the pole follows the engine's rate, and the gain is solved
+so uniform white noise comes out at the measured RMS. Each voice has its own generator, as on the
+instrument.
+
+
+2026-09-12  OSCNOISE: WIDTH IS PARAMETER 6, AND WHAT IT DOES
+------------------------------------------------------------------------------------------------------
+A scripted sweep of OscNoise's "Width" (parameter 5 in the module tables) changed nothing - the
+output stayed a single line at the pitch, with or without the note retriggered. Driving parameters
+3 to 6 in turn found it: ON THE INSTRUMENT, 6 IS WIDTH (it spreads the line into a band) and 5 is
+the Width modulation amount, which does nothing with nothing in the Width jack. The module tables
+have the two names swapped, so G2-Edit's face labels them wrongly too (todo.md). The instrument's
+own code agrees with the hardware: 5 goes to the DSP at full scale, as a mod attenuator does, and 6
+at a quarter, as a dial the DSP scales up by four does - the same pattern as Pan.
+
+MEASURED with Width on 6, at two pitches two octaves apart (329.6 and 1318.5 Hz), the band profile
+read from the averaged spectrum:
+
+  Width        96      112      127
+  -3 dB     0.10-0.13 0.17-0.21 0.23-0.31 octaves
+  -10 dB     ~0.26    ~0.44    0.63-0.65 octaves   (Q about 5 at 127)
+
+The same width in octaves at both pitches - a CONSTANT-Q band, white noise through a resonant
+band-pass whose Q the dial sets - widening about 1.6x per 16 steps at the top of the dial. Below
+80 the band is narrower than the 8192-point analysis resolves; extrapolated, Width 0 is a few
+hundredths of a semitone wide, the manual's "lively fluctuating sine". THE LEVEL IS NORMALISED:
+-2 to -7 dB RMS re full scale across width and pitch, where a fixed-gain band-pass would lose ~20 dB
+from 127 to 0.
+
+A METHOD NOTE, twice over. The first analysis walked down from the loudest bin and reported three
+bins' width for everything, because a noise spectrum's neighbouring bins scatter by more than 3 dB;
+the second forced a single-resonator fit onto a spectrum that was mostly the capture's floor, and
+fitted nothing. Reading the band's own profile, smoothed, is what worked. And the level reference
+in both noise sweeps was OscA's DEFAULT waveform, a saw, not the sine the scripts assumed.
+
+OSCNOISE IN THE ENGINE (same day): white noise through two unity-peak state-variable band-passes in
+series at the oscillator's pitch, Q per resonator from the measured law, scaled to the measured level
+- sound engine reference §8. It shares the oscillators' pitch path (osc_frequency_hz(), set_osc_pitch(),
+pulled out of the oscillator for the purpose) and Noise's generator (white_noise()). From here the
+engine's reasoning lives in Docs/sound-engine-reference.md, numbered, and the code carries one-line
+references to it; the long comments added earlier today were cut down to those references.
+
+
+2026-09-12  FLTMULTI: MEASURED AND IN THE ENGINE
+------------------------------------------------------------------------------------------------------
+Noise through FltMulti, all three outputs switched in by a mixer's On buttons, at three Freq, three
+Res and both slopes, each divided by the unfiltered noise captured in the same take. Laws in sound
+engine reference §10.2-10.3.
+
+FIRST PASS, FITTED: a generic state-variable filter with the laws fitted to the responses. The 12 dB
+outputs and the 6 dB LP/HP fitted to 0.6 dB, but GComp came out as damping^0.87 and the 6 dB BP only
+as an approximation (input - 4·bp, 1.5 dB mean, 2.2 worst).
+
+SECOND PASS, FROM THE DSP CODE, then tested against the same saved responses: a Chamberlin
+state-variable filter with a half-sample correction on its outputs, the damping term scaled by
+(1 - F/2), GComp a plain × d on the drive, and every 6 dB output a sum of the 12 dB ones - the BP
+being LP - HP. Every output, the 6 dB BP included, fits to 0.5-0.6 dB mean with NOTHING fitted, and
+the plain d beats the fitted d^0.87 on level (+0.1/+1.0 dB at Res 64/110 against -0.7/-1.25).
+
+THE ACOUSTIC Q IS NOT THE DISPLAYED Q. Damping falls as 1 - Res/127 (Q = 0.5/d²), where
+flt_resonance_q() - which reproduces the Q the dial displays - uses 1 - 0.9 × Res/127. At Res 110 that
+is Q 28 against 10.3.
+
+THE ENGINE GAINED A THIRD OUTPUT LEG for it (§9.3), and the repeated "first N inputs" loops became one
+helper, inputs_in_module_order().
+
+
+2026-09-12  EQPEAK, EQ2BAND, EQ3BAND: MEASURED AND IN THE ENGINE
+------------------------------------------------------------------------------------------------------
+White noise through all three at 43 settings, the same rig as FltMulti. Structure from the DSP code
+(a Chamberlin peak like FltMulti's, one-pole shelves), then every law fitted per setting before being
+fixed. Laws in sound engine reference §11.
+
+THE DISPLAYED dB IS THE GAIN, to 0.5 dB, and the displayed frequencies are the corners - except:
+
+THE HIGH SHELF'S FIRST TWO SETTINGS ARE SWAPPED. The first sounds at 8 kHz and the second at 6 kHz,
+against the editor's names 6k/8k/12k. Fitted jointly over boost and cut. Whether the names or the
+instrument is "wrong" wants the G2's own display.
+
+CUTS MIRROR BOOSTS. Fitted with a free width, the cuts came out 1/G wider than the boosts every time:
+the instrument makes a cut the exact inverse of the matching boost. Modelled at the boost's width
+instead, the cuts were 2-6 dB out in average level.
+
+THE PEAK IS TWICE AS WIDE AS ITS BW DIAL SAYS, if BW means a band-pass's -3 dB width: the damping is
+2(2^N - 1)/√(2^N). Consistent across 0.25, 1 and 1.75 octaves and across gain.
+
+LEVEL IS THE MIXER TAPER, not linear: Level 64 is -17.6 dB, exactly mix_level_gain(64).
+
+THE ENGINE'S PEAK IS NOT THE INSTRUMENT'S FORM. A Chamberlin filter goes unstable at a deep, wide cut
+above about 1 kHz (F × q > 2); the engine uses a topology-preserving filter with the same response.
+
+Also: gLadder's reset cleared only four of its six slots, so FltLP's fifth and sixth poles (and now the
+EQ's fifth state) could carry state across a topology change. All six are cleared now.

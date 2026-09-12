@@ -16,15 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2Patch.c.md - "// notes §k" refers there.
 
-// Loading a .pch2 into the patch database, for the plug-in.
-//
-// This is deliberately NOT read_file_into_memory_and_process() from graphics.c. That function is
-// the editor's loader and carries two things a plug-in must not have: an online branch that hands
-// the file to the USB thread, and a home in a translation unit that pulls in GLFW. What is left
-// once both are removed is the offline patch path, which is what this is - the same CRC check and
-// the same parse_patch() call, with the performance-file and naming branches dropped since a
-// plug-in hosts exactly one patch.
+// notes §1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,11 +72,7 @@ bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot
         return false;
     }
     clear_slot_data(slot);
-    // THE CAST IS DELIBERATE AND THE CONST IS NOT A LIE: parse_patch() never writes through this
-    // buffer (checked), but its signature and those of the seven sub-parsers and read_bit_stream()
-    // below it all take a non-const uint8_t *. Const-correcting that chain is a protocol.c-wide job,
-    // not part of a warnings sweep — so the discard happens here, once, visibly, instead of as an
-    // implicit conversion the compiler has to complain about on every build.
+    // notes §2
     parse_patch(slot, (uint8_t *)(buff + byteOffset), (uint32_t)((fileSize - byteOffset) - 2));
     return true;
 }
@@ -131,4 +121,106 @@ bool g2_plugin_load_patch(const char * filepath, uint32_t slot) {
     free(buff);
 
     return loaded;
+}
+
+// The whole file, or NULL. The caller frees it.
+static uint8_t * read_whole_file(const char * filepath, int64_t * size) {
+    FILE *    file = NULL;
+    uint8_t * buff = NULL;
+    int64_t   len  = 0;
+
+    if ((filepath == NULL) || (filepath[0] == '\0')) {
+        return NULL;
+    }
+    file = fopen(filepath, "rb");
+
+    if (file == NULL) {
+        return NULL;
+    }
+    fseek(file, 0, SEEK_END);
+    len = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    if (len < 8) {
+        fclose(file);
+        return NULL;
+    }
+    buff = (uint8_t *)malloc((size_t)len);
+
+    if ((buff != NULL) && (fread(buff, 1, (size_t)len, file) != (size_t)len)) {
+        free(buff);
+        buff = NULL;
+    }
+    fclose(file);
+    *size = len;
+    return buff;
+}
+
+// Copies `path` into a remembered-path buffer unless it already IS that buffer - File > Save hands
+// the loader's own buffer back, and copying onto itself is undefined (feedback: COPY_STRING trap).
+static void remember(char * dest, const char * path) {
+    if (dest != path) {
+        snprintf(dest, FILE_PATH_SIZE, "%s", path);
+    }
+}
+
+tG2FileKind g2_plugin_open_file(const char * filepath, uint32_t slot) {
+    int64_t     fileSize   = 0;
+    int64_t     byteOffset = 0;
+    uint8_t *   buff       = read_whole_file(filepath, &fileSize);
+    uint8_t     type       = 0;
+    tG2FileKind kind       = eG2FileFailed;
+
+    if (buff == NULL) {
+        return eG2FileFailed;
+    }
+
+    // The same header walk and CRC check g2_plugin_parse_patch() makes, then a branch on the type.
+    for (int64_t i = 0; i < fileSize; i++) {
+        if (buff[i] == 0x00) {
+            byteOffset = i + 1;
+            break;
+        }
+    }
+
+    if ((byteOffset == 0) || ((byteOffset + 2) >= fileSize)
+       || ((uint32_t)((buff[fileSize - 2] << 8) | buff[fileSize - 1])
+           != calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2)))) {
+        free(buff);
+        return eG2FileFailed;
+    }
+    byteOffset++;                   // version
+    type = buff[byteOffset++];
+
+    if ((type == 0) && (slot < MAX_SLOTS)) {
+        clear_slot_data(slot);
+        parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+        set_patch_name_from_filename(slot, filepath);
+        remember(gSavedPatchPath[slot], filepath);
+        kind = eG2FilePatch;
+    } else if (type == 1) {
+        // notes §3
+        char * dot = NULL;
+
+        for (uint32_t i = 0; i < MAX_SLOTS; i++) {
+            clear_slot_data(i);
+        }
+        {
+            const char * slash = strrchr(filepath, '/');
+
+            snprintf(gGlobalSettings.perfName, sizeof(gGlobalSettings.perfName), "%s",
+                     (slash != NULL) ? (slash + 1) : filepath);
+        }
+        dot = strrchr(gGlobalSettings.perfName, '.');
+
+        if (dot != NULL) {
+            *dot = '\0';
+        }
+        gGlobalSettings.perfMode = 1;
+        parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
+        remember(gSavedPerfPath, filepath);
+        kind = eG2FilePerformance;
+    }
+    free(buff);
+    return kind;
 }

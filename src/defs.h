@@ -16,33 +16,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/defs.h.md - "// notes §k" refers there.
 
 #ifndef __DEFS_H__
 #define __DEFS_H__
 
 #define G2_EDIT
 
-// ENABLE_LOG_DEBUG is supplied by the Debug build configuration's
-// Preprocessor Macros in the Xcode project (so it's off in Release, and so
-// SynthLib's own source files get it too, without needing to include this
-// header — see contextMenu.c/utilsGraphics.cpp).
-//#define ENABLE_LOG_MODULE_DATA    // Uncomment for module-data logging in any configuration
+// notes §1
 
-// Stop dead on something that should not be possible — but only while developing.
-//
-// A malformed patch section is worth halting for on this side of a release: the log line alone
-// scrolls past unnoticed, and the point of finding it is to fix it. It is NOT worth taking a user's
-// editor down for, along with whatever else they had open, when the parse can carry on and lose
-// nothing more than a few cosmetic names. So a Release build logs and continues where a Debug build
-// exits at the first sign of trouble.
-//
-// DEBUG comes from the Debug configuration's Preprocessor Macros in the Xcode project, alongside
-// ENABLE_LOG_DEBUG. It says "this is a development build", which is the question being asked here —
-// logging being on is a separate matter.
-//
-// Always pair it with a LOG_ERROR that says what happened, and always leave the Release path able
-// to continue: this macro compiles to nothing there, so whatever follows it has to be a real
-// recovery, not a fall-through into the case it was meant to prevent.
+// notes §2
 #ifdef DEBUG
 #define EXIT_IN_DEBUG()    exit(1)
 #else
@@ -63,12 +46,7 @@
 
 //#define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
-// TEMPORARY debug aid — mouse crosshair for validating button hit points.
-// Compiled in for Debug builds only, so it can never reach a release .dmg, and
-// even then it stays OFF until toggled with F9 at runtime.
-// To remove entirely: delete this block, render_mouse_crosshair() and its call
-// in graphics.cpp, toggle_mouse_crosshair() in graphics.h, and the F9 branch in
-// mouseHandle.c.
+// notes §3
 #ifdef MOUSE_DEBUG
 #define ENABLE_MOUSE_CROSSHAIR
 #endif
@@ -101,20 +79,14 @@
 #define MAX_CABLES_PER_CONNECTOR     (32)
 #define MAX_LEDS_PER_MODULE          (8)
 #define RADIO_MAX_COLUMNS            (4)                                  // Channel Select buttons wrap after four — see radio_columns()
-// Seven characters, PROTOCOL_PARAM_NAME_SIZE, the most a Channel Select name can be. Every group is
-// measured against this so it never changes size as its buttons are renamed.
-// How much of a module's width a Channel Select group may occupy, measured from the group's own left
-// edge. Leaves a margin at the right so a full-width group does not touch the border.
-#define RADIO_FACE_WIDTH_PERCENT    (94.0)
+// notes §4
+#define RADIO_FACE_WIDTH_PERCENT     (94.0)
 // The wave-icon pickers draw a PICTURE instead of a caption, but the button still takes its width
 // from the text it is given — pass it nothing and it collapses to an invisible sliver, which is
 // exactly what happened. These spaces reserve a face wide enough to read a waveform in.
-#define WAVE_MENU_CAPTION    "          "
+#define WAVE_MENU_CAPTION                    "          "
 
-// The FIXED Shape a waveform ICON is drawn at. Not the module's live value, deliberately: all four
-// shape-oscillator sines are identical at Shape 0, so a live icon would draw the same picture for
-// every entry in the drop-down and there would be nothing to choose between. Full Shape is no good
-// either — SymPulse falls silent there and Pulse narrows to a sliver.
+// notes §5
 #define WAVE_ICON_FIXED_SHAPE                (0.75)
 // LfoShpA's Shape is BIPOLAR and neutral at the centre, unlike the oscillators' which start at 0 and
 // only open, so its icon is drawn at the middle rather than three quarters up.
@@ -148,8 +120,8 @@
 #define SUB_COMMAND_GET_ASSIGNED_VOICES      (0x04)
 #define SUB_RESPONSE_SET_ASSIGNED_VOICES     (0x04)
 #define SUB_RESPONSE_ASSIGNED_VOICES         (0x05)
-#define SUB_COMMAND_GET_SLOT_SELECTION       (0x06) // CMSlotSelectionRequest in G2Editor.c
-#define SUB_RESPONSE_SLOT_SELECTION          (0x07) // CMSlotSelectionDump in G2Editor.c
+#define SUB_COMMAND_GET_SLOT_SELECTION       (0x06)
+#define SUB_RESPONSE_SLOT_SELECTION          (0x07)
 #define SUB_COMMAND_SELECT_SLOT              (0x09)
 #define SUB_RESPONSE_SELECT_SLOT             (0x09)
 #define SUB_COMMAND_RETRIEVE                 (0x0a)
@@ -235,44 +207,33 @@
 #define SUB_RESPONSE_MIDI_CC                 (0x80)
 #define SUB_COMMAND_GET_MIDI_CC              (0x81) // A.k.a. Unknown 1!?
 
-// CONFIRMED on real hardware 2026-07-15: location(8)/moduleIndex(8)/locked-bool(8) payload,
-// verified by toggling live then restarting the app to force a fresh patch redump from the
-// device - the bit came back correctly changed. Derived from the original editor
-// (Original Editor/G2Editor.c): CMMutaLock::WriteStream calls
-// CMIDIOutStream::Initialize(stream, 0x90, 0, 0), the same pattern used by CMParamChange (tag
-// 0x40 == our confirmed SUB_COMMAND_SET_PARAM) and CMModuleMove (tag 0x34 == our confirmed
-// SUB_COMMAND_MOVE_MODULE); CMMutaLock's own WriteStream is structurally identical (same 3 field
-// offsets, same vtable call sequence) to CMModuleRecolor::WriteStream (tag 0x31 == our confirmed
-// SUB_COMMAND_SET_MODULE_COLOUR), which is where the location/moduleIndex/value payload guess
-// came from. (An earlier test looked like the write "didn't stick" - that was a false alarm from
-// unrelated version-gated defaulting logic in parse_module_list clobbering the freshly-read bit
-// on every reparse of an old-format patch; that logic has since been removed.)
-#define SUB_COMMAND_SET_MUTATION_LOCK     (0x90)
+// notes §6
+#define SUB_COMMAND_SET_MUTATION_LOCK        (0x90)
 
-#define SUB_RESPONSE_PERF_HEADER          (0x11)    // TODO - Don't think we've ever seen one of these. Might be worth removing
-#define SUB_RESPONSE_CLEAR_BANK           (0x12)
-#define SUB_RESPONSE_LIST_NAMES           (0x13)
-#define SUB_COMMAND_LIST_NAMES            (0x14)
-#define SUB_RESPONSE_CLEAR                (0x15)
-#define SUB_RESPONSE_ADD_NAMES            (0x16)
-#define SUB_COMMAND_PATCH_BANK_UPLOAD     (0x17)
-#define SUB_RESPONSE_PATCH_BANK_UPLOAD    (0x18)
-#define SUB_COMMAND_PATCH_BANK_DATA       (0x19)
+#define SUB_RESPONSE_PERF_HEADER             (0x11) // TODO - Don't think we've ever seen one of these. Might be worth removing
+#define SUB_RESPONSE_CLEAR_BANK              (0x12)
+#define SUB_RESPONSE_LIST_NAMES              (0x13)
+#define SUB_COMMAND_LIST_NAMES               (0x14)
+#define SUB_RESPONSE_CLEAR                   (0x15)
+#define SUB_RESPONSE_ADD_NAMES               (0x16)
+#define SUB_COMMAND_PATCH_BANK_UPLOAD        (0x17)
+#define SUB_RESPONSE_PATCH_BANK_UPLOAD       (0x18)
+#define SUB_COMMAND_PATCH_BANK_DATA          (0x19)
 
-#define NUM_PATCH_BANKS                   (32)
-#define NUM_PERF_BANKS                    (8)
-#define NUM_LOCATIONS_PER_BANK            (128)
-#define BANK_UPLOAD_DOMAIN_PATCH          (0x00)     // Selects Patch vs Performance Bank Upload domain
-#define BANK_UPLOAD_DOMAIN_PERFORMANCE    (0x01)
+#define NUM_PATCH_BANKS                      (32)
+#define NUM_PERF_BANKS                       (8)
+#define NUM_LOCATIONS_PER_BANK               (128)
+#define BANK_UPLOAD_DOMAIN_PATCH             (0x00)  // Selects Patch vs Performance Bank Upload domain
+#define BANK_UPLOAD_DOMAIN_PERFORMANCE       (0x01)
 
-#define COMMAND_REQ                       (0x20)    // High nibble, expects response
-#define COMMAND_WRITE_NO_RESP             (0x30)    // High nibble, expects response
-#define COMMAND_SYS                       (0x0c)    // Low nibble
-#define COMMAND_SLOT                      (0x08)    // Low nibble
+#define COMMAND_REQ                          (0x20) // High nibble, expects response
+#define COMMAND_WRITE_NO_RESP                (0x30) // High nibble, expects response
+#define COMMAND_SYS                          (0x0c) // Low nibble
+#define COMMAND_SLOT                         (0x08) // Low nibble
 
-#define COMMAND_OFFSET                    (2)       // Shouldn't need when write_uint16 is replaced by bit stream write
+#define COMMAND_OFFSET                       (2)    // Shouldn't need when write_uint16 is replaced by bit stream write
 
-#define CRC_BYTES                         (2)
+#define CRC_BYTES                            (2)
 
 // Patch settings module indices (locationMorph, location 2) — see tPatchModuleIndex in types.h
 
@@ -360,33 +321,18 @@
 #define STANDARD_TEXT_HEIGHT           (12.0)
 #define STANDARD_BUTTON_TEXT_HEIGHT    (12.0)
 
-// Persistent in-window menu bar (see src/menuBar.c) — sits above the existing
-// topbar, which is why every topbar element's Y coordinate has this added
-// in (topbarControls.def's X macro, and the handful of literal-coordinate
-// exceptions in graphics.cpp's render_top_bar()).
-#define MENU_BAR_HEIGHT    (24.0)
+// notes §7
+#define MENU_BAR_HEIGHT                (24.0)
 
-#define CONNECTOR_SIZE     (5)
-// Grown by this much on every side for HIT TESTING only — the circle is drawn at CONNECTOR_SIZE and
-// is not touched. A connector's click target used to be exactly the circle, so it shrank with the
-// zoom and nothing else: 17.5 pt across at 100%, but 8.8 at 50% and 4.4 at 25% — and zooming out is
-// exactly what you do for cable work. A CONSTANT in screen points (rather than a scaled fraction) is
-// deliberate: it is worth +46% of target at 25% zoom where it is needed and only +11% at 100% where
-// it is not.
-//
-// ONE POINT IS THE MOST IT CAN BE. The tightest layout in the tables is the Gate's stacked input
-// pairs, 7 units apart, which leaves 7 pt of clear space between their edges at 100% and 1.8 pt at
-// 25%. At one point a side that stays clear everywhere except 25% zoom, where the two overlap by
-// 0.2 pt — under half a retina pixel. Any more and neighbouring connectors would genuinely fight,
-// and the click registry resolves an overlap by taking the most recently registered, so one of a
-// stacked pair would become unreachable.
-#define CONNECTOR_HIT_PADDING    (1.0)
+#define CONNECTOR_SIZE                 (5)
+// notes §8
+#define CONNECTOR_HIT_PADDING          (1.0)
 
-#define MAX_ROWS                 (127)
-#define MAX_COLUMNS              (127)
-#define MAX_ROWS_MODULE          (12)             // Operator type is 12 rows - largest we have
+#define MAX_ROWS                       (127)
+#define MAX_COLUMNS                    (127)
+#define MAX_ROWS_MODULE                (12)       // Operator type is 12 rows - largest we have
 
-#define LONGEST_PATCH_NAME       "XXXXXXXXXXXXXXXX"
+#define LONGEST_PATCH_NAME             "XXXXXXXXXXXXXXXX"
 // The widest a CLAVIA_NAME_SIZE (16) name can render, used to size the rename box. SIXTEEN Ws,
 // not Xs: a name of all Ws overflowed a box measured on Xs, and the box has to hold whatever
 // the field allows (CT, 2026-08-30).
@@ -395,33 +341,7 @@
 #define NULL_RECTANGLE         {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
-// dst and src are each evaluated EXACTLY ONCE, which they were not until 2026-08-20. The macro used
-// to expand dst three times (the self-copy guard, the strncpy, the terminator) and src twice, and
-// carried a note telling every caller that dst "must be a plain array expression with no side
-// effects — never something like buffer[atomicIndex]". That is a rule a caller has to remember, and
-// forgetting it is silent: with an atomic index the three expansions can resolve to three DIFFERENT
-// rows, so the guard checks one buffer, the copy writes a second and the terminator lands in a
-// third. It had already been paid for once — a Store site in usbComms.c indexing on gSlot had to
-// have the slot hoisted into a local by hand.
-//
-// Hoisting into the do-block moves that from the caller's memory into the macro, where it cannot be
-// got wrong. sizeof(dst) is unaffected: it is compile-time on the array TYPE and never evaluates its
-// operand, so it still measures the destination and not the pointer it decays to.
-//
-// Evaluating src once also closes a deadlock that was reachable in principle: the second expansion
-// of src sat INSIDE the lock, so a src expression that itself used COPY_STRING would have taken this
-// same non-recursive mutex twice. Both operands are now resolved before the lock is taken.
-//
-// The self-copy guard matters: strncpy takes restrict-qualified pointers, so copying a buffer onto
-// itself is undefined behaviour, not a no-op. It is easy to reach by accident whenever a "save back
-// to the remembered path" hands that same buffer in as the source.
-// THE SELF-COPY GUARD GOES THROUGH THIS rather than comparing in the macro body. Written inline as
-// `(const char *)(dst) != (const char *)(src)` it tripped -Wstring-compare at every call site passing
-// a literal — "result of comparison against a string literal is unspecified" — which is three of this
-// project's warnings for a comparison that is deliberate and, with a literal, simply always true.
-// Taking void pointers means the literal has decayed before the comparison happens, so the check is
-// unchanged and the warning has nothing to fire on. Returns int, not bool: defs.h is included
-// before <stdbool.h> in some translation units and must not depend on it.
+// notes §9
 static inline int same_string_storage(const void * dst, const void * src) {
     return dst == src;
 }

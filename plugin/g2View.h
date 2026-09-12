@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2View.h.md - "// notes §k" refers there.
 
 #ifndef __G2_GL_VIEW_H__
 #define __G2_GL_VIEW_H__
@@ -23,18 +24,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// An OpenGL surface that lives inside a window somebody else owns.
-//
-// This is the experiment described in vst3/plugin-gui-notes.md: the application's renderer draws
-// through GLFW, which insists on creating its own window, and a plug-in is handed an NSView by the
-// host instead. The question this answers is the only one that decides whether the editor canvas
-// can ever appear in a plug-in — will an OpenGL context attached to a host-provided NSView draw at
-// all, inside a real host, alongside that host's own rendering.
-//
-// It deliberately does NOT use the application's renderer yet. See the notes file for why: the
-// drawing code is reachable (all of it funnels through SynthLib's utilsGraphics.c) but pulling it in
-// drags GLFW along through synthlibScale.c, and that untangling is only worth doing once the surface
-// itself is known to work.
+// notes §1
 
 // extern "C" because one caller is g2Editor.mm, which is Objective-C++ — the implementation is plain
 // Objective-C, so without this the C++ side asks the linker for a mangled name that the C side never
@@ -43,25 +33,15 @@
 extern "C" {
 #endif
 
-// Mark the surface as needing to be redrawn. Safe from ANY thread: the view must be touched on the
-// main thread, and this hops there itself rather than making every caller remember to.
-//
-// Declared outside the Objective-C section deliberately. This is what plain C reaches for — it is
-// how synthlib_request_redraw() is answered in the plug-in (g2AppStubs.c), which is the whole
-// mechanism by which a change anywhere in the editor causes a repaint. The application posts an
-// empty event to wake a blocked GLFW loop; here, AppKit schedules the frame.
+// notes §2
 void g2_view_request_redraw(void);
 
 // True while cursor_capture() has the pointer hidden. Polled by the drag tick so a release that never
 // arrives cannot leave the host without a pointer — see cursor_capture() in g2View.m.
 bool cursor_is_captured(void);
 
-// The editor view, built for a plug-in wrapper that knows no Cocoa.
-//
-// PLAIN C AND A void *, because the caller is g2Plugin.c, which fills in SynthLib's format-free
-// descriptor and must not include an AppKit header to do it. RETAINED (+1) on the way out, as
-// SynthLib's createView() contract requires — see synthlibPlugin.h.
-void * g2_view_create(double width, double height);
+// notes §3
+void * g2_view_create(void * doc, double width, double height);
 
 // Counterpart to g2_view_create(). Does NOT release the view: the wrapper owns that reference and
 // hands it to ARC. This is for whatever the editor hung off it — timers, in this case, which would
@@ -82,7 +62,7 @@ extern "C" {
 
 // Creates the view, retained by the caller's autorelease pool as usual for ARC. Add it as a subview
 // of whatever the host handed over; it needs no further setup.
-NSView * g2_create_gl_view(NSRect frame);
+NSView * g2_create_gl_view(NSRect frame, void * doc);
 
 #ifdef __cplusplus
 }

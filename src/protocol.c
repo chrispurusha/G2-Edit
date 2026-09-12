@@ -16,13 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/protocol.c.md - "// notes §k" refers there.
 
-/*
- * Reference credit on some of the excellent G2 comms protocol work by
- * Bruno Verhue in his Delphi editor application:
- *
- * https://www.bverhue.nl/g2dev/
- */
+// notes §1
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,28 +37,7 @@ extern "C" {
 #include "globalVars.h"
 #include "undo.h"   // undo_push_param_change() — the linked-variation fan-out records one entry per variation
 
-// Shares gStringCopyMutex (defined in globalVars.c) with the COPY_STRING macro used
-// everywhere on the UI thread to read these same name buffers — a previous private
-// mutex here provided no actual exclusion against those reads (two different locks
-// don't exclude each other), which raced against the UI thread's wake-driven render
-// loop and could leave the topbar showing a name mid-clear until the next redraw.
-// A module arriving with a DIFFERENT parameter count than paramLocationList lists for its type is a
-// gap in that table. This used to EXIT_IN_DEBUG() when the G2 declared MORE than we know about — a
-// deliberate development tripwire, on the reasoning that stopping is how a missing row gets noticed.
-//
-// It no longer stops, because in practice the tripwire destroyed the very evidence it existed to
-// collect. It fires while a patch is arriving from the G2, so it kills the session before the
-// offending module can be looked at, and a mismatch rare enough not to be reproducible on demand is
-// exactly the kind you only get one look at.
-//
-// Both directions are survivable: the count is 7 bits so it cannot exceed 127, and module->param is
-// MAX_NUM_PARAMETERS (128) wide, so every value read lands in bounds either way. What the extra
-// device parameters lack is a table row to draw them with — they are stored, just not shown.
-//
-// Recorded to ~/G2_param_count_mismatch.log in APPEND mode, the point being to outlive the session
-// it happened in (usbLog.c opens with "w" and is gated behind ENABLE_USB_LOG, so it is no use here).
-// Once per module type per session, so a patch full of the same offender writes one line, not one
-// per instance. USB-thread only, which is what makes the plain static safe.
+// notes §2
 static void record_param_count_mismatch(tModuleType moduleType, uint32_t deviceCount, uint32_t tableCount) {
     static bool  reported[moduleTypeMax] = {0};
 
@@ -168,14 +143,7 @@ void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-// Extracts just the category byte from a raw .pch2/.prf2 body (parse_patch()/parse_perf()'s own
-// chunk stream: repeating [type:8][count:16][payload:count bytes], type SUB_RESPONSE_SEL_PARAM_PAGE
-// excepted). Used by restore_bank() (usbComms.c) to refresh gPatchNameTable/gPerfNameTable's
-// category for a freshly-pushed location — deliberately NOT parse_patch_descr() itself, which
-// writes into gPatchDescr[slot] and touches topbar highlight state keyed by a live edit-buffer
-// slot; a bank/location being restored isn't a slot, so re-using that function would corrupt
-// whatever real slot happened to share its index. Returns 0 (patchTypeStrMap's first entry) if no
-// SUB_RESPONSE_PATCH_DESCRIPTION chunk is found.
+// notes §3
 uint8_t peek_patch_category(const uint8_t * content, uint32_t contentLen) {
     uint32_t bitOffset = 0;
 
@@ -266,11 +234,7 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         module->unknown1            = read_bit_stream(buff, subOffset, 6);
         module->modeCount           = read_bit_stream(buff, subOffset, 4);
 
-        // The wire field is 4 bits, so anything up to 15 is expressible whatever our table says. Log
-        // it and carry on rather than exit()ing: the surplus values are still READ below (just not
-        // stored), so the bit stream stays aligned and the rest of the patch parses. Exiting here
-        // took the whole editor down, in Release as well as Debug, and — LOG_MODULE_DATA being
-        // compiled out in every configuration — did it without printing anything at all.
+        // notes §4
         if (module->modeCount > MAX_NUM_MODES) {
             LOG_ERROR("Module type %u reports %u modes, MAX_NUM_MODES is %u — storing the first %u\n",
                       module->type, module->modeCount, MAX_NUM_MODES, MAX_NUM_MODES);
@@ -333,10 +297,7 @@ void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32
         write_bit_stream(buff, bitPos, 6, module->unknown1);
         write_bit_stream(buff, bitPos, 4, module->modeCount);
 
-        // modeCount is written as it was received, so the stream stays the shape the reader expects
-        // even for a module that declares more modes than we can hold. The surplus values are gone —
-        // parse_module_list() logs when it drops them — so write a defined 0 rather than reading off
-        // the end of mode[].
+        // notes §5
         for (j = 0; j < module->modeCount; j++) {
             write_bit_stream(buff, bitPos, 6, (j < MAX_NUM_MODES) ? module->mode[j].value : 0);
         }
@@ -432,15 +393,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     numVariations = read_bit_stream(buff, subOffset, 8);
     LOG_MODULE_DATA("Variation Count      %u\n", numVariations);
 
-    // Expected to always be 10 (live USB) or 9 (a .pch2/.prf2 file) — this function has no way to
-    // tell which source it's parsing, so this only flags anything outside that pair rather than
-    // enforcing the exact value for the actual source.
-    //
-    // Except when the section is EMPTY. A location with no modules is written by the G2 (and by
-    // every .pch2 with an unused area) as moduleCount 0, variation count 0, and there is nothing
-    // wrong with that — half the files in PatchTestFiles have one, and each was logging an error on
-    // load. write_param_list() writes 9/10 even when empty, so this is about what we READ, not what
-    // we produce.
+    // notes §6
     if ((moduleCount > 0) && (numVariations != 9) && (numVariations != 10)) {
         LOG_ERROR("parse_param_list: unexpected Variation Count %u (expected 9 or 10)\n", numVariations);
     }
@@ -470,10 +423,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         module->active           = true;
         module->actualParamCount = paramCount;
 
-        // Compared against the DEVICE parameter count, not the raw row count: SeqNote carries two
-        // paramTypeCustomData rows in slots the G2 never transmits, so against module_param_count()
-        // it reported a permanent 37-vs-39 mismatch. A check that cries wolf on a module that is
-        // correct is worse than no check, because it trains you to ignore the one that isn't.
+        // notes §7
         if ((module->type != moduleTypeUnknown0) && (module_device_param_count(module->type) > 0)) {
             if (paramCount != module_device_param_count(module->type)) {
                 LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module->type, gModuleProperties[module->type].name, paramCount, module_device_param_count(module->type));
@@ -516,10 +466,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     uint32_t moduleCountBitPos = 0;
     uint32_t variationsBitPos  = 0;
     uint32_t paramCount        = 0;
-    // The count the section header declares. It used to be assigned only inside the per-module loop
-    // below, so a location holding no module with parameters wrote 0 here — and parse_param_list()
-    // rejects a variation count of 0 outright, losing the whole section rather than reading it as
-    // empty.
+    // notes §8
     uint32_t variations        = numVariations;
     uint32_t i                 = 0;
     uint32_t j                 = 0;
@@ -545,12 +492,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
         }
         paramCount = module->actualParamCount;
 
-        // actualParamCount is only populated by parse_param_list(), i.e. by data that came from the
-        // G2 or from a file that already had a good parameter section. A module created in the
-        // editor, or one loaded from a file whose parameters were dropped by this very bug, has 0
-        // here — and skipping it would write yet another file with no parameter values, carrying the
-        // breakage forward every time such a patch is re-saved. The module's type knows how many
-        // parameters it has, so fall back to that.
+        // notes §9
         if (paramCount == 0) {
             paramCount = module_param_count(module->type);
         }
@@ -907,12 +849,7 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         moduleLength = read_bit_stream(buff, subOffset, 8);
         LOG_MODULE_DATA("Module length     %d\n\n", moduleLength);
 
-        // AN ENTRY IS THREE BYTES OF HEADER PLUS ITS PAYLOAD, so there has to be room for all three
-        // before another one is read. This used to loop on `j < moduleLength`, which reads a whole
-        // header out of whatever is left even when that is a single byte - and the two bytes it
-        // takes beyond the section belong to the NEXT one. That is where a length of 241 and a param
-        // index of 108 came from on a perfectly ordinary patch: not data, just the following
-        // section misread. Whatever the trailing byte is for, it is not the start of an entry.
+        // notes §10
         for (j = 0; (j + 3) <= (int)moduleLength;) {
             uint32_t entryStart = *subOffset;   // for the diagnostic dump below, if it comes to that
             isString    = read_bit_stream(buff, subOffset, 8);
@@ -923,39 +860,14 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             LOG_MODULE_DATA("Param Index  %d\n", paramIndex);
             j          += 3;
 
-            // NOT EVERY RECORD IN THIS SECTION IS A LIST OF NAME STRINGS, and assuming otherwise is
-            // what made loading this patch from the instrument stop dead. Captured from a real G2 on
-            // 2026-08-20: a SeqNote (module type 121, at index 22) emits a six-byte record reading
-            //
-            //     37 37 00 00 00 00
-            //
-            // where a name record reads 01 <len> <paramIndex> <len-1 bytes of text>. 37 is SeqNote's
-            // own parameter count, so this is evidently a per-parameter record of some other shape
-            // rather than a name list. Read as a name record it claims a 36-byte payload inside a
-            // 6-byte module section, which trips the assert below — and that is exactly what "loads
-            // from a file but not from the flash bank" was: the file copy of this patch carries no
-            // such record, the copy stored on the instrument does.
-            //
-            // Every genuine name record carries isString == 1, so test for that POSITIVELY rather
-            // than waiting for a length to look wrong. The module's remaining bytes are stepped past
-            // by the squaring-up loop after this one, which is what keeps the following modules — and
-            // the following sections — correctly positioned.
-            //
-            // WHAT THIS RECORD MEANS IS NOT DECODED, and nothing here needs it: parameter names are
-            // cosmetic. If it is ever wanted it wants the reference editor's reader, not a guess from
-            // a single capture.
+            // notes §11
             if (isString != 1) {
                 LOG_DEBUG("param names: module %u record type %u is not a name list, skipping its %u bytes\n",
                           key.index, isString, moduleLength);
                 break;
             }
 
-            // A payload that would run past the section means the record is genuinely malformed, and
-            // stopping dead is deliberate — see EXIT_IN_DEBUG in defs.h. It stays an assert BECAUSE
-            // the isString test above now turns away the one record that was reaching here
-            // legitimately; anything still arriving is corruption worth halting on rather than
-            // limping past. The hex dump is what made the SeqNote record identifiable, so it stays
-            // too: if this ever fires again it should be answerable from one capture.
+            // notes §12
             if ((paramLength > 0) && ((j + (int)(paramLength - 1)) > (int)moduleLength)) {
                 uint32_t dumpStart        = BIT_TO_BYTE(entryStart);
                 char     dump[3 * 24 + 1] = {0};
@@ -977,14 +889,7 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             if (paramLength > 0) {
                 numLabels = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
 
-                // A NAME SECTION WE CANNOT STORE IS SKIPPED, NOT FATAL. These three bounds used to
-                // call exit(1), so one unexpected patch took the whole editor down - losing whatever
-                // else was open - when the section is self-delimiting and the rest of the patch
-                // parses perfectly well without it. Names are cosmetic; the modules and cables are
-                // not, and they come later in the same stream.
-                //
-                // Every branch consumes exactly paramLength - 1 bytes so the stream stays in step,
-                // which is what lets parsing carry on rather than desynchronising from here on.
+                // notes §13
                 bool skipParam = false;
 
                 if (module == NULL) {
@@ -1458,19 +1363,7 @@ int parse_midi_cc(uint8_t * buff, int length, uint32_t slot) {
         return EXIT_FAILURE;
     }
 
-    // A record is two bytes — a first byte then the controller NUMBER — and where several are sent
-    // they are SEPARATED by a repeat of the 0x80 sub-response byte. Two shapes arrive here:
-    //
-    //   * UNSOLICITED, one record, no separator, when the synth receives a CC assigned to nothing.
-    //     The capture that settled it is 82 01 04 00 80 00 10 e5 cd — sub-response, record, CRC.
-    //     The slot it belongs to is the one in the message header.
-    //   * THE REPLY TO send_get_midi_cc(), four records, one PER SLOT in order, giving the last CC
-    //     each slot saw. 0xff means that slot has seen none. This is what makes Learn work straight
-    //     after the editor starts, without the user having to move the controller again.
-    //
-    // Both halves of this have been wrong before: the original guard asked for three bytes and so
-    // never ran on a two-byte payload; a flat two-byte stride then walked the four-record reply out
-    // of step, which showed up as impossible channel numbers and invented controllers.
+    // notes §14
     while ((BIT_TO_BYTE_ROUND_UP(bitPos) + 2) <= length) {
         uint32_t first    = read_bit_stream(buff, &bitPos, 8);
         uint32_t ccNumVal = read_bit_stream(buff, &bitPos, 8);
@@ -1540,19 +1433,10 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
-    // WRITE-LOCKED FOR THE WHOLE PARSE. This is the operation the lock exists for: it replaces
-    // modules, cables and parameters wholesale, and a render pass or a snapshot build walking the
-    // tables while it runs sees a patch that never existed. Taken here rather than at the call sites
-    // because all three of them - both USB paths and the file load - want exactly this scope.
-    //
-    // Safe against the read lock because no caller holds one: the file load runs from a menu action
-    // or the backdoor, both outside render_frame(), and the USB paths are on their own thread.
+    // notes §15
     database_write_lock();
 
-    // NOT ALL PATCH LOADS CLEAR THE SLOT FIRST — a patch arriving because the device's own patch
-    // changed is parsed straight over what was there. Bumping here as well as in the two slot-clear
-    // paths means every route that can replace a module ends up counted exactly once or twice, and
-    // the watcher only cares that the number moved.
+    // notes §16
     if (slot < MAX_SLOTS) {
         gPatchGeneration[slot]++;
     }
@@ -1840,22 +1724,7 @@ void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, ui
     msg_send(&gToUsbThread, &msg);
 }
 
-// Fans a parameter value out to every LINKED variation (see variation_is_linked() in globalVars.h)
-// other than the one just edited — same value, same wire command, one message each, and the local
-// database updated to match so the canvas shows it the moment you select one of them.
-//
-// Safe as a burst: send_param_value() above is COMMAND_WRITE_NO_RESP (see send_param_morph() below
-// for the same reasoning), so a run of them carries no acks and cannot lose a patch-version race the
-// way a run of per-entry bulk edits does. No whole-patch write is needed.
-//
-// A linked variation is under no obligation to have been holding the same value as the edited one,
-// so the undo entry per variation carries that variation's OWN previous value. They undo one
-// variation per step rather than as a single atomic group — this app has no generic undo grouping,
-// and one correct step per variation beats one step that only half-reverses.
-//
-// The DRAG path calls this once on RELEASE rather than on every mouse-move. A linked variation is
-// not on screen while you drag, so nothing is lost visually, and it keeps both the wire traffic and
-// the undo stack to one entry per variation instead of one per event.
+// notes §17
 void send_param_value_to_links(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t variation, uint32_t value) {
     tModule * module = get_module(moduleKey);
 
@@ -1878,13 +1747,7 @@ void send_param_value_to_links(uint32_t slot, tModuleKey moduleKey, uint32_t par
     }
 }
 
-// A parameter's morph RANGE for one morph group, as distinct from its value. Same shape and the same
-// COMMAND_WRITE_NO_RESP class as send_param_value() above, so it carries no ack and cannot lose a
-// patch-version race — which is what makes it safe to send several in a row (clearing every group of
-// one parameter, say) rather than having to go through a whole-patch write.
-//
-// Extracted from canvasDrag.c, which built this message inline. It has a second caller now — the
-// param context menu's morph reset — and two hand-built copies of a wire message is one too many.
+// notes §18
 void send_param_morph(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t morphGroup, uint32_t variation, uint32_t value) {
     tMessageContent msg = {0};
 
@@ -1986,15 +1849,7 @@ void update_module_up_rates(void) {
                 int           toConnIndex   = find_index_from_io_count(toModule, connectorDirIn, cable->key.connectorToIoCount);
 
                 if ((fromConnIndex != -1) && (toConnIndex != -1) && (toModule->newUpRate == 0)) {
-                    // Match the original editor's CPatchData::GenerateBandwidthChangeMolecules(): up-rate
-                    // only propagates through a MULTI-BANDWIDTH destination connector — one that can
-                    // actually switch rate (Control/Logic), never a fixed-rate Audio input. The original
-                    // gates its whole per-cable decision on IsMultiBandWidth(destConnector) (≈ dest type
-                    // != Audio) before even looking at the source. A source is "audio rate" if its module
-                    // is already up-rated OR its connector is natively Audio (≈ the original's
-                    // GetBandWidth(sourceConnector) == 1). Previously the dest-type guard was only applied
-                    // to the native-Audio-source branch, so an up-rated module feeding another module's
-                    // Audio input would wrongly up-rate the destination.
+                    // notes §19
                     if (  (toModule->connector[toConnIndex].type != connectorTypeAudio)
                        && (  (fromModule->newUpRate == 1)
                           || (fromModule->connector[fromConnIndex].type == connectorTypeAudio))) {
@@ -2019,14 +1874,7 @@ void update_module_up_rates(void) {
             messageContent.moduleData.upRate    = module->upRate;
             msg_send(&gToUsbThread, &messageContent);
 
-            // Retroactively recolour any cable already attached to one of this module's OUTPUTS,
-            // matching the original editor's bandwidth-change molecule generation
-            // — it walks a bandwidth-changed module's outputs (GetNoOfOutputs) and recolours any
-            // connected cable (GetRecolorCableMolecules) right when the change happens, not only at
-            // cable-creation time. Without this, a cable drawn before its source module up-rated (or
-            // after it de-rates) keeps showing whatever colour it inherited at creation, going stale.
-            // Audio connectors are skipped — they're always top-rate, upRate never changes their
-            // colour (see effective_connector_type()'s own comment, moduleResourcesAccess.h).
+            // notes §20
             uint32_t        connectorCount = module_connector_count(module->type);
 
             for (uint32_t c = 0; c < connectorCount; c++) {
@@ -2136,12 +1984,7 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     }
 }
 
-// Writes a .pch2/.prf2 file from pre-serialized raw content taken directly off the wire during
-// a Bank Upload (backup) request — NOT from the live in-memory database. The content
-// (version byte, type byte, patch/performance descriptor, ... , trailing CRC) is byte-identical
-// to a normal .pch2/.prf2 file's binary body (confirmed by diffing captured responses against
-// real sample files of both types), so it's written verbatim — no re-serialization or CRC
-// recompute needed. typeLabel is "Patch" or "Performance", matching the file's own "Type=" line.
+// notes §21
 void write_bank_upload_file(const char * filepath, const char * typeLabel, const uint8_t * content, uint32_t contentLen) {
     FILE * file         = NULL;
     char   charBuff[64] = {0};
@@ -2178,12 +2021,7 @@ void write_bank_upload_file(const char * filepath, const char * typeLabel, const
     fclose(file);
 }
 
-// Reads a .pch2/.prf2 file for Bank Restore and hands back the raw binary body — the counterpart
-// to write_bank_upload_file's text header. The header lines it writes ("Version=...", "Type=...",
-// etc.) are plain ASCII followed by a single 0x00 separator byte, then the binary body begins; the
-// header text itself never contains a null byte, so the first 0x00 in the file unambiguously marks
-// where the body starts. Fills outContent (caller-owned, size outContentSize) rather than
-// allocating, matching this codebase's static-buffer convention (see sBankUploadContent).
+// notes §22
 bool read_bank_upload_file(const char * filepath, uint8_t * outContent, uint32_t outContentSize, uint32_t * outContentLen) {
     FILE *   file            = NULL;
     long     fileSize        = 0;

@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/undo.c.md - "// notes §k" refers there.
 
 #include <stdlib.h>
 #include <string.h>
@@ -74,10 +75,7 @@ typedef struct {
     tController          controllers[MAX_NUM_CONTROLLERS];
 } tUndoDeletePayload;
 
-// A module swapped for another of the same group. Both images are complete tClipboardModules, so
-// undo and redo are the same operation with a different one — there is no need to work out what
-// changed. The CABLES are not in here: module_replace() brackets itself with undo_begin_cable_edit,
-// so the cable half arrives as its own adjacent entry.
+// notes §1
 typedef struct {
     tModuleKey       key;
     tClipboardModule before;
@@ -196,10 +194,7 @@ typedef struct {
     uint32_t   newColour;
 } tUndoModuleColourPayload;
 
-// MIDI CC assignments are recorded as a before/after image of the whole slot's controller table,
-// for the same reason cable edits are: assigning a CC that another parameter already owns both
-// steals it from that parameter AND assigns it here, so a single click is two changes, and the
-// table is the only thing that describes the result honestly.
+// notes §2
 typedef struct {
     uint32_t    slot;
     uint32_t    beforeCount;
@@ -330,10 +325,7 @@ static void stack_push(tUndoCmdType type, void * payload) {
 
 // ─── Push helpers (public) ─────────────────────────────────────────────────
 
-// Everything about a module that has to survive being deleted and put back: type, position,
-// colour, up-rate, name, every variation's params, modes, and any custom param labels. The same
-// snapshot serves delete-undo, create-redo and the clipboard, which is why it is a tClipboardModule
-// rather than a private struct.
+// notes §3
 static void snapshot_module(tModule * mod, tClipboardModule * cm) {
     memset(cm, 0, sizeof(*cm));
     cm->type                = mod->type;
@@ -941,14 +933,7 @@ void undo_commit_midi_cc_edit(void) {
     stack_push(eUndoCmdMidiCc, p);
 }
 
-// Drives the slot's controller table to the chosen image, then tells the G2 with ONE whole-patch
-// write. This used to replay a deassign per dropped CC followed by an assign per surviving entry,
-// which put it in exactly the position the bulk Tools sweep was in: each of those commands carries
-// the slot's patch version, that version only advances when the device's async 0x38 notification is
-// parsed, and back-to-back commands race it — so undoing a sweep of 120 assignments landed only
-// partly, silently. write_controllers() (protocol.c) sends the whole table inside a single
-// versioned command, which is both atomic and exact, so there is no over-apply to reason about.
-// See the bulk MIDI CC note in menus.c.
+// notes §4
 static void apply_midi_cc(tUndoMidiCcPayload * p, bool isUndo) {
     const tController * target      = isUndo ? p->before : p->after;
     uint32_t            targetCount = isUndo ? p->beforeCount : p->afterCount;
@@ -990,11 +975,7 @@ static void apply_midi_cc(tUndoMidiCcPayload * p, bool isUndo) {
     synthlib_request_redraw();
 }
 
-// ─── Global knob assignments ───────────────────────────────────────────────
-//
-// Same shape as MIDI CC: assigning a knob that is already taken frees it first, so one click is
-// two changes and the table is what has to be recorded. Global knobs are performance-wide, hence
-// no slot on the payload.
+// notes §5
 
 static bool        gGlobalKnobEditOpen = false;
 static tGlobalKnob gGlobalKnobEditTable[MAX_NUM_KNOBS];
@@ -1138,10 +1119,7 @@ static const tUndoCableEntry * find_cable_entry(const tUndoCableEntry * list, ui
     return NULL;
 }
 
-// Cables are compared as a SET, not as two ordered lists: deleting and re-creating a cable
-// moves it to a different index in the database array, so an identical patch can snapshot in a
-// different order. Keys are unique within a location, so with equal counts a one-way lookup is
-// a full set comparison.
+// notes §6
 static bool cable_sets_differ(const tUndoCableEntry * a, uint32_t aCount,
                               const tUndoCableEntry * b, uint32_t bCount) {
     if (aCount != bCount) {
@@ -1253,11 +1231,7 @@ static void apply_cable_edit(tUndoCableEditPayload * p, bool isUndo) {
     synthlib_request_redraw();
 }
 
-// Puts the module back to one of its two images. The whole record is written rather than a diff:
-// a replace changes the type, the parameter count, the mode count, every parameter value and
-// possibly the name, and picking those apart afterwards would be a second chance to get the role
-// mapping wrong. update_module_up_rates() is not called here - the cable entry that always
-// accompanies this one calls it, and the two are applied together.
+// notes §7
 static void apply_module_replace(tUndoModuleReplacePayload * p, bool isUndo) {
     const tClipboardModule * image  = isUndo ? &p->before : &p->after;
     tModule *                module = get_module(p->key);

@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/virtualKeyboard.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,10 +52,7 @@ tVirtualKeyboard  gVirtualKeyboard = {0};
 // Which semitones of an octave are black keys. Index by note % 12.
 static const bool kIsBlack[12]     = {false, true, false, true, false, false, true, false, true, false, true, false};
 
-// How far a black key sits from the left edge of the white key it follows, as a fraction of a white
-// key's width. A real keyboard doesn't centre them on the gap — C# and D# sit slightly left and
-// right of centre respectively, and the same within the F-A# group — but centring is what every
-// software keyboard does and it keeps the hit rects honest against what's drawn.
+// notes §1
 #define VKB_BLACK_W_FRAC    (0.62)
 #define VKB_BLACK_H_FRAC    (0.62)
 
@@ -62,11 +60,8 @@ static const bool kIsBlack[12]     = {false, true, false, true, false, false, tr
 #define VKB_WHITE_H         (86.0)
 #define VKB_NOTE_MAX        (127)
 
-// Repeat's rate. A GUESS: the manual says only "play repeatedly" and gives no rate, and the
-// original offers no control over it either. 250ms is a musically plausible eighth-note-ish pulse
-// and is slow enough that the note is clearly re-struck rather than buzzing. If the real editor
-// turns out to lock this to the master clock, this is the constant to replace.
-#define VKB_REPEAT_MS    (250.0)
+// notes §2
+#define VKB_REPEAT_MS       (250.0)
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -92,14 +87,7 @@ void open_virtual_keyboard_panel(void) {
 static void send_note(uint32_t note, bool on) {
     tMessageContent msg = {0};
 
-    // WITH THE LOCAL ENGINE SOUNDING, THE G2 DOES NOT ALSO GET THE NOTE. Otherwise one key press
-    // plays twice — once here and once on the instrument — which is exactly the comparison the
-    // engine exists to make, ruined by doing both at once.
-    //
-    // NOTE-OFFS ALWAYS GO THROUGH. Enabling the engine while a key is held would otherwise swallow
-    // the release and leave the G2 droning with no way to stop it short of a panic. A release sent
-    // for a note the instrument is not playing is harmless, so this is the safe asymmetry rather
-    // than a tidy one.
+    // notes §3
     if ((on == true) && (sound_engine_active() == true)) {
         return;
     }
@@ -233,10 +221,7 @@ void render_virtual_keyboard_panel(void) {
     gVirtualKeyboard.close              = draw_panel_close_button(mainArea, box, gVirtualKeyboard.closePressed);
     gVirtualKeyboard.panel.closeRect    = gVirtualKeyboard.close; // carve it out of the title-bar drag — see floatingPanel.h
 
-    // ── The button bar ────────────────────────────────────────────────────
-    // Four scroll buttons on the left as in the original — double arrows an octave, singles a note
-    // — then Drone and Repeat, which are toggles and so carry the lit/unlit colour every other
-    // toggle in the app uses.
+    // notes §4
     {
         double x       = boxX + margin;
         double bw      = get_text_width((char *)"<<", btnH, eCache) + 14.0;
@@ -434,10 +419,7 @@ bool handle_virtual_keyboard_mouse(tCoord coord, tMouseButton mouseButton) {
 
         gVirtualKeyboard.closePressed = false;
 
-        // The key is no longer held, so the note goes off — UNLESS Drone is engaged, which is
-        // exactly what that button means: "make the next played note start sounding infinitely".
-        // Repeat holds the note on too, since it is about to re-strike it anyway and releasing
-        // here would just make the first gap longer than the rest.
+        // notes §5
         if (!gVirtualKeyboard.drone && !gVirtualKeyboard.repeat) {
             set_sounding_note(-1);
         }
@@ -475,14 +457,7 @@ bool handle_virtual_keyboard_mouse(tCoord coord, tMouseButton mouseButton) {
 
 // ─── Keyboard ────────────────────────────────────────────────────────────────
 
-// The computer keyboard as note entry: the home row is the white keys and the row above holds the
-// blacks, the layout every tracker and DAW uses — a = C, w = C#, s = D, e = D#, d = E, f = F and so
-// on, with k carrying on into the octave above where the home row runs out. L is the one gap, and
-// deliberately so — see its case below.
-//
-// Returns the semitone offset from the leftmost DRAWN note, or -1 for a key that is not a note.
-// Offsets rather than absolute notes so the played octave follows gVirtualKeyboard.firstNote, which
-// is always a C: what you play is then always what the panel is showing.
+// notes §6
 static int32_t note_offset_for_key(int key) {
     switch (key) {
         case GLFW_KEY_A: return 0;    // C
@@ -513,13 +488,7 @@ static int32_t note_offset_for_key(int key) {
 
         case GLFW_KEY_O: return 13;   // C#
 
-        // L IS DELIBERATELY NOT A NOTE. It is MIDI Learn - the original editor's only bare-key
-        // shortcut, and the reason gParamFocus exists at all. Note entry is dispatched BEFORE the
-        // shortcuts in key_callback() and returns once it claims a key, so while L mapped to D here
-        // a bare L played a note and midi_learn_focused_param() was simply unreachable. The guard
-        // below suppresses note entry for Cmd/Ctrl/Alt so a modified shortcut can never also play;
-        // that cannot help a shortcut which is bare by design, so this one is dropped from the map.
-        // Costs the D above the home row's octave; K and O either side of it still play.
+        // notes §7
         case GLFW_KEY_P: return 15;   // D#
 
         default: return -1;
@@ -574,12 +543,7 @@ bool handle_note_entry_key(int key, int mods, int action) {
         gVirtualKeyboard.nextRepeatAt  = ((get_time_ms() / 1000.0) * 1000.0) + VKB_REPEAT_MS;
         set_sounding_note(note);
     } else if (action == GLFW_RELEASE) {
-        // ONLY the key actually sounding releases it. Roll from one key to the next without lifting
-        // the first and the releases arrive out of order — a release that silenced whatever happened
-        // to be sounding would cut the note still being held.
-        //
-        // Drone and Repeat hold the note deliberately, as they do for a mouse release, and so does a
-        // shift latch on this same note.
+        // notes §8
         if (  (gVirtualKeyboard.noteOn == note)
            && (gVirtualKeyboard.sustainedNote != note)
            && !gVirtualKeyboard.drone

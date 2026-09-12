@@ -16,150 +16,105 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/globalVars.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <stdlib.h>
+
 #include "defs.h"
 #include "synthlibDefs.h"
 #include "globalVars.h"
 
-//double                  gGlobalGuiScale                                                              = 2;
-_Atomic uint32_t        gLocation                                                = locationVa;
+const char *                patchTypeStrMap[patchTypeUserMax]                        = {"No Cat", "Acoustic", "Sequencer", "Bass", "Classic", "Drum", "Fantasy", "Fx", "Lead", "Organ", "Pad", "Piano", "Synth", "Audio In", "User 1", "User 2"};
+const char *                monoPolyStrMap[monoPolyMax]                              = {"Poly", "Mono", "Legato"};
 
-bool                    gCommandKeyPressed                                       = false;
+// Process-wide, deliberately: it serialises string copies between THREADS, and has nothing to do
+// with which G2 a thread is working on.
+pthread_mutex_t             gStringCopyMutex                                         = PTHREAD_MUTEX_INITIALIZER;
 
-tTopbarControl          gTopbarControls[topbarControlMax]                        = {0};
+// Outside the document - see globalVars.h for why.
+bool                        gTempoDragging                                           = false;
+bool                        gPerfTempoDragging                                       = false;
+tTopbarControl              gTopbarControls[topbarControlMax]                        = {0};
+tPerfSettingsPanelRects     gPerfSettingsPanelRects                                  = {0};
+bool                        gVibAmountDragging                                       = false;
+bool                        gVibRateDragging                                         = false;
+bool                        gGlideTimeDragging                                       = false;
+tRectangle                  gPatchParamRects[pPCount]                                = {0};
+tPatchSettingsEdit          gPatchSettingsEdit                                       = {0};
+tPerfSettingsEdit           gPerfSettingsEdit                                        = {0};
+tPatchSettingsEdit          gPatchParamsEdit                                         = {0};
+tPatchNotesEdit             gPatchNotesEdit                                          = {0};
+tSettingsPanelRects         gSettingsPanelRects                                      = {0};
+tNameTableEntry             gPatchNameTable[NUM_PATCH_BANKS][NUM_LOCATIONS_PER_BANK] = {0};
+tNameTableEntry             gPerfNameTable[NUM_PERF_BANKS][NUM_LOCATIONS_PER_BANK]   = {0};
 
-const char *            patchTypeStrMap[patchTypeUserMax]                        = {"No Cat", "Acoustic", "Sequencer", "Bass", "Classic", "Drum", "Fantasy", "Fx", "Lead", "Organ", "Pad", "Piano", "Synth", "Audio In", "User 1", "User 2"};
-const char *            monoPolyStrMap[monoPolyMax]                              = {"Poly", "Mono", "Legato"};
+// notes §1
+static tG2Document          gDefaultDocument;
 
+_Thread_local tG2Document * gDoc                                                     = &gDefaultDocument;
 
-//tScrollState            gScrollState                                                                 = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE};
-tCableDragging          gCableDrag                                               = {0};
-tHoverConnector         gHoverConnector                                          = {0};
-tParamDragging          gParamDragging                                           = {0};
-tParamFocus             gParamFocus                                              = {0};
-_Atomic int32_t         gLastDeviceMidiCC[MAX_SLOTS]                             = {-1, -1, -1, -1};
-int32_t                 gLastDeviceMidiChan[MAX_SLOTS]                           = {-1, -1, -1, -1};
-uint32_t                gDeviceMidiCCCount                                       = 0;
-tModuleDragging         gModuleDrag                                              = {0};
-tSelection              gSelection                                               = {0};
-tRubberBand             gRubberBand                                              = {0};
-_Atomic uint32_t        gPatchGeneration[MAX_SLOTS]                              = {0};
-tClipboard              gClipboard                                               = {0};
-tMessageQueue           gToUsbThread                                             = {0};
-tMessageQueue           gToGuiThread                                             = {0};
-int                     gDeviceOpInProgress                                      = 0;
-char                    gDeviceOpLabel[32]                                       = {0};
-uint32_t                gMorphGroupFocus                                         = 0;
-_Atomic uint32_t        gSlot                                                    = 0;
-tPatchDescr             gPatchDescr[MAX_SLOTS]                                   = {0};
-tKnobArray              gKnobArray[MAX_SLOTS]                                    = {0};
-tGlobalKnob             gGlobalKnobArray[MAX_NUM_KNOBS]                          = {0};
-tSelectedParam          gSelectedParam[MAX_SLOTS]                                = {0};
-uint32_t                gMorphCount[MAX_SLOTS]                                   = {0};
-uint32_t                gNote2Size[MAX_SLOTS]                                    = {0};
-_Atomic uint32_t        gNote2Updates                                            = 0;
-uint8_t                 gNote2[MAX_SLOTS][1024]                                  = {0};
-uint32_t                gAssignedVoices[MAX_SLOTS]                               = {0};
-tControllerArray        gControllerArray[MAX_SLOTS]                              = {0};
-uint32_t                gControllerCount[MAX_SLOTS]                              = {0};
-uint32_t                gPatchNotesSize[MAX_SLOTS]                               = {0};
-uint8_t                 gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1]             = {0};
-// Where each slot's patch (and the performance) was last opened from or saved to, so "Save" can
-// write straight back without a dialogue. Empty until a file has been opened or saved this session.
-char                    gSavedPatchPath[MAX_SLOTS][FILE_PATH_SIZE]               = {0};
-char                    gSavedPerfPath[FILE_PATH_SIZE]                           = {0};
-//_Atomic uint8_t     gPatchVersion[MAX_SLOTS]                                                     = {0};
-tGlobalSettings         gGlobalSettings                                          = {0};                      // Note - should reflect settings in the G2
-_Atomic bool            gDeviceConnected                                         = false;
-_Atomic tCommsState     gCommsState                                              = eCommsNeverConnected;
-_Atomic uint8_t         gGlobalPage                                              = 0;
-tNameEdit               gPatchNameEdit                                           = {0};
-tModuleNameEdit         gModuleNameEdit                                          = {0};
-tParamNameEdit          gParamNameEdit                                           = {0};
-tMenuContext            gMenuContext                                             = {0};
-tNameEdit               gSynthNameEdit                                           = {0};
-tNameEdit               gPerfNameEdit                                            = {0};
-tPerfSettings           gPerfSettings                                            = {0};                      // Note - should reflect settings in the G2
-tPatchNotesEdit         gPatchNotesEdit                                          = {0};
-tSynthSettings          gSynthSettings                                           = {0};                      // Note - should reflect settings in the G2
-tPatchSettingsEdit      gPatchSettingsEdit                                       = {0};
-tSettingsPanelRects     gSettingsPanelRects                                      = {0};
-tPerfSettingsEdit       gPerfSettingsEdit                                        = {0};
-tPerfSettingsPanelRects gPerfSettingsPanelRects                                  = {0};
-tPatchSettingsEdit      gPatchParamsEdit                                         = {0};
-tRectangle              gPatchParamClose                                         = {0};
-bool                    gPatchParamClosePressed                                  = false;
-tRectangle              gPatchParamSlots[MAX_SLOTS]                              = {0};
-tRectangle              gPatchParamRects[pPCount]                                = {0};
-tRectangle              gMorphLabelRect[NUM_MORPHS]                              = {0};
-//_Atomic uint32_t       gHiddenCableMask                             = 0; // TODO - Send to G2 when changes
-bool                    gCablesTransparent                                       = false;
-bool                    gCablesHideAll                                           = false;
-tResourceAlloc          gResourceAlloc[MAX_SLOTS]                                = {0};
+// The non-zero defaults, applied to whichever document is CURRENT - the names below are macros onto
+// it, which is also why this cannot take the document as a pointer and write through it.
+static void document_defaults(void) {
+    gLocation   = locationVa;
+    gCommsState = eCommsNeverConnected;
+    pthread_rwlock_init(&gDatabaseLock, NULL);
 
-tRectangle              gPatchNotesPanelRect                                     = {0};
-tRectangle              gPatchNotesCloseRect                                     = {0};
-bool                    gPatchNotesClosePressed                                  = false;
-tRectangle              gPatchNotesDiscardRect                                   = {0};
-bool                    gPatchNotesDiscardPressed                                = false;
-bool                    gTempoDragging                                           = false;
-bool                    gPerfTempoDragging                                       = false;
-bool                    gVibRateDragging                                         = false;
-bool                    gVibAmountDragging                                       = false;
-bool                    gGlideTimeDragging                                       = false;
-_Atomic uint64_t        gUsbTxTime                                               = 0;
-_Atomic uint64_t        gUsbRxTime                                               = 0;
-// gParamRectangle used to live here: a ~6MB [slot][location][module][param] table of every
-// parameter widget's clickable rectangle, written by the renderer and read back by every hit test in
-// the app. It is gone (2026-08-20). Hit-testing comes from the click-region registry, which the
-// renderer already fills and which clear_click_regions() empties every frame, so a widget that is not
-// drawn cannot be clicked without anyone having to blank a table to say so. See Docs/todo.md.
-pthread_mutex_t         gStringCopyMutex                                         = PTHREAD_MUTEX_INITIALIZER;
-_Atomic bool            gBankBackupActive                                        = false;
-_Atomic bool            gBankBackupIsPerf                                        = false;
-_Atomic bool            gBankBackupIsEverything                                  = false;
-_Atomic uint32_t        gBankBackupBank                                          = 0;
-_Atomic uint32_t        gBankBackupLocation                                      = 0;
-_Atomic uint32_t        gBankBackupWritten                                       = 0;
-_Atomic bool            gBankRestoreActive                                       = false;
-_Atomic bool            gBankRestoreIsEverything                                 = false;
-_Atomic bool            gBankRestoreIsPerf                                       = false;
-_Atomic uint32_t        gBankRestoreBank                                         = 0;
-_Atomic uint32_t        gBankRestoreLocation                                     = 0;
-_Atomic uint32_t        gBankRestoreWritten                                      = 0;
-_Atomic bool            gStorePeekFailed                                         = false;
-_Atomic bool            gStorePeekPopulated                                      = false;
-_Atomic bool            gStorePeekIsPerf                                         = false;
-_Atomic uint32_t        gStorePeekBank                                           = 0;
-_Atomic uint32_t        gStorePeekLocation                                       = 0;
-char                    gStorePeekName[CLAVIA_NAME_SIZE + 1]                     = {0};
-_Atomic bool            gDeletePeekFailed                                        = false;
-_Atomic bool            gDeletePeekPopulated                                     = false;
-_Atomic bool            gDeletePeekIsPerf                                        = false;
-_Atomic uint32_t        gDeletePeekBank                                          = 0;
-_Atomic uint32_t        gDeletePeekLocation                                      = 0;
-char                    gDeletePeekName[CLAVIA_NAME_SIZE + 1]                    = {0};
-_Atomic bool            gLoadPeekFailed                                          = false;
-_Atomic bool            gLoadPeekPopulated                                       = false;
-_Atomic bool            gLoadPeekIsPerf                                          = false;
-_Atomic uint32_t        gLoadPeekBank                                            = 0;
-_Atomic uint32_t        gLoadPeekLocation                                        = 0;
-char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1]                      = {0};
-_Atomic bool            gSynthRestorePeekFailed                                  = false;
-char                    gSynthRestorePeekErrorMessage[256]                       = {0};
-char                    gSynthRestorePeekFileName[64]                            = {0};
-char                    gSynthRestorePeekName[CLAVIA_NAME_SIZE + 1]              = {0};
-tNameTableEntry         gPatchNameTable[NUM_PATCH_BANKS][NUM_LOCATIONS_PER_BANK] = {0};
-tNameTableEntry         gPerfNameTable[NUM_PERF_BANKS][NUM_LOCATIONS_PER_BANK]   = {0};
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        gLastDeviceMidiCC[slot]   = -1;
+        gLastDeviceMidiChan[slot] = -1;
+    }
+}
 
-// One bit per variation, one mask per slot — see the note on variation_is_linked() in globalVars.h.
-// A mask rather than an array of bools because "is the group empty" and "clear it" are then a single
-// comparison and a single store, which is what most of the callers actually ask.
-static uint32_t         gVariationLinks[MAX_SLOTS]                               = {0};
+// Before main(), and before the plug-in's first callback: the loader runs it when the image loads.
+__attribute__((constructor)) static void default_document_init(void) {
+    tG2Document * saved = gDoc;
+
+    gDoc = &gDefaultDocument;
+    document_defaults();
+    gDoc = saved;
+}
+
+tG2Document * g2_document_create(void) {
+    // calloc and not malloc: the zero-fill IS the default state, and at this size it comes straight
+    // from fresh pages, so the four slots of module storage cost nothing until a patch uses them.
+    tG2Document * doc   = (tG2Document *)calloc(1, sizeof(tG2Document));
+    tG2Document * saved = gDoc;
+
+    if (doc == NULL) {
+        return NULL;
+    }
+    gDoc = doc;
+    document_defaults();
+    gDoc = saved;
+    return doc;
+}
+
+void g2_document_destroy(tG2Document * doc) {
+    tG2Document * saved = gDoc;
+
+    if ((doc == NULL) || (doc == &gDefaultDocument)) {
+        return;
+    }
+    gDoc = doc;
+    pthread_rwlock_destroy(&gDatabaseLock);
+    gDoc = (saved == doc) ? &gDefaultDocument : saved;
+    free(doc);
+}
+
+void g2_document_select(tG2Document * doc) {
+    gDoc = (doc != NULL) ? doc : &gDefaultDocument;
+}
+
+tG2Document * g2_document_current(void) {
+    return gDoc;
+}
+
+// notes §2
 
 bool variation_is_linked(uint32_t slot, uint32_t variation) {
     if ((slot >= MAX_SLOTS) || (variation >= VARIATION_INIT)) {
@@ -195,17 +150,7 @@ void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId las
 }
 #endif
 
-// Drag reference points, in RAW cursor coordinates. Shared rather than private to either file: the
-// parameter-drag arm lives in canvasDrag.c (so the plug-in can use it) while the tempo, vibrato and
-// glide drags stayed in mouseHandle.c, and both difference against the same two points.
-//
-// gDragStart* is fixed at the press; gDragPrev* advances with each event. Alt-held morph dragging
-// measures from the START, because the value it is adjusting deliberately does not move — measuring
-// from the previous event would collapse to nothing the moment the mouse paused.
-double gDragStartX = 0.0;
-double gDragStartY = 0.0;
-double gDragPrevX  = 0.0;
-double gDragPrevY  = 0.0;
+// notes §3
 
 // Cancelling an in-progress name edit. One memset each, on state defined in this file — they were
 // in mouseHandle.c, which meant a GUI-less build could not dismiss an edit it could start.
@@ -232,4 +177,3 @@ void stop_synth_name_editing(void) {
 void stop_patch_notes_editing(void) {
     memset(&gPatchNotesEdit, 0, sizeof(gPatchNotesEdit));
 }
-

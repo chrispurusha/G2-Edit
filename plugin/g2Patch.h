@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2Patch.h.md - "// notes §k" refers there.
 
 #ifndef __G2_PATCH_H__
 #define __G2_PATCH_H__
@@ -29,6 +30,15 @@ extern "C" {
 // Read a .pch2 from disk into the database at `slot`. Offline only, no device involved.
 // Returns false for a missing file, a failed CRC, or a performance file rather than a patch.
 bool g2_plugin_load_patch(const char * filepath, uint32_t slot);
+
+// notes §1
+typedef enum {
+    eG2FileFailed = 0,
+    eG2FilePatch,
+    eG2FilePerformance,
+} tG2FileKind;
+
+tG2FileKind g2_plugin_open_file(const char * filepath, uint32_t slot);
 
 // Parse a .pch2 image already in memory into `slot`.
 bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot);

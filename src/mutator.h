@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/mutator.h.md - "// notes §k" refers there.
 
 #ifndef MUTATOR_H
 #define MUTATOR_H
@@ -39,10 +40,7 @@ typedef enum {
     mutatorCatMax
 } tMutatorCategory;
 
-// Quick Lock state. locked/solo are indexed by tMutatorCategory (mutatorCatNone included -
-// it has no button of its own, but a non-empty solo set implicitly locks it too, matching the
-// manual: "solo buttons temporarily lock all other parameters, also those not covered by the
-// other Quick Lock buttons").
+// notes §1
 typedef struct {
     bool locked[mutatorCatMax];
     bool solo[mutatorCatMax];
@@ -60,47 +58,21 @@ typedef struct {
 
 bool category_is_locked(tMutatorCategory category, const tMutatorLocks * locks);
 
-// Classifies a single param into a Quick Lock category. Returns true if the param should never
-// be touched by any operator (module-level exclusion is handled separately via
-// tModule.excludeFromMutation - this is the per-param-type "signal type / mute / bypass" rule from
-// the manual's PERMANENTLY LOCKED PARAMETERS section).
+// notes §2
 bool mutator_is_permanently_locked(tParamType paramType);
 tMutatorCategory classify_param(tModuleType moduleType, tLocation location, tParamType paramType);
 
-// Walks every active, non-excluded module in Voice + FX areas of the given slot and fills
-// entries[] with every continuous, non-permanently-locked param found (stable order: location,
-// module index, param index - same order tModule.param[][] itself uses). Returns the count
-// written (capped at maxEntries).
+// notes §3
 uint32_t mutator_build_schema(uint32_t slot, tMutatorSchemaEntry * entries, uint32_t maxEntries);
 
-// Builds the "chromosome" turtle-walk path, following the original Clavia editor's
-// CDialogMutaBox::DrawChromosome: walks the genome two entries at a time - the first (even index)
-// turns a running heading in degrees (raw byte value minus 63, i.e. centered on a mid-range dial
-// value), the second (odd index) steps forward by its own raw byte value in that heading. One
-// unscaled 2D point is written per genome entry (outPoints[0] is always {0,0}); the caller fits
-// the resulting path to its own rectangle (min/max bounds vary per genome, by design - that's what
-// makes two genomes' chromosomes visually comparable at a glance).
+// notes §4
 void mutator_chromosome_path(const uint8_t * genome, uint32_t count, tCoord * outPoints);
 
 // Reads/writes a flat genome (one uint8_t value per schema entry, same order) from/to the live
 // module database at the given variation index.
 void mutator_read_genome(const tMutatorSchemaEntry * schema, uint32_t count, uint32_t slot, uint32_t variation, uint8_t * outValues);
 
-// Writes values into the module database at the given variation and pushes each changed value
-// over USB (send_param_value) - the same call init_params_on_module/action_copy_variation already
-// use for other variations. pushUndo controls whether each change is also recorded on the undo
-// stack (true for commits to real variations, false for scratch/audition writes).
-//
-// IMPORTANT: real G2 firmware only understands variation indices 0-7 (confirmed on hardware
-// 2026-07-15) - there is no live "ninth variation" on the wire. The original Clavia editor's own
-// "ninth internal variation" is purely a local in-memory scratch slot (never serialized - see
-// CMMutaParamDump in the original editor, which has no ReadStream/GetId/BuildMolecule).
-// So: audition must target whichever variation is presently active on the front panel
-// (gPatchDescr[slot].activeVariation, 0-7) so hardware actually plays it, exactly like an ordinary
-// live knob tweak. Before the first audition write, back up that variation's real values (e.g. via
-// mutator_read_genome into a spare local slot such as index 9, which is fine to use as long as it's
-// never sent to hardware) so they can be restored (mutator_apply_genome back into the active
-// variation, pushUndo=false) if the user backs out of the Mutator without committing.
+// notes §5
 void mutator_apply_genome(const tMutatorSchemaEntry * schema, uint32_t count, uint32_t slot, uint32_t variation, const uint8_t * values, bool pushUndo);
 
 // Operators - all pure functions of (base genome(s), schema, locks) -> out genome. out may not

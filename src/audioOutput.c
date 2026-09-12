@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/audioOutput.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,11 +37,7 @@ extern "C" {
 #include "audioOutput.h"
 #include "soundEngine.h"
 
-// A HAL output AudioUnit rather than the default-output one. The difference is the whole point: the
-// default-output unit always follows the system's chosen device and cannot be pointed anywhere else,
-// while the HAL unit takes a device and a channel map — which is what allows the engine to be sent
-// to, say, outputs 29/30 of an interface while the system carries on using the built-in speakers.
-// See audioOutput.h.
+// notes §1
 
 #define OUTPUT_CHANNELS      (2)
 #define MAX_AUDIO_DEVICES    (32)
@@ -77,10 +74,7 @@ static uint32_t     gRightChannel                 = 1;
 // 0 means "whatever the device already has", which is what it was before this was selectable.
 static uint32_t     gBufferFrames                 = 0;
 
-// The engine's output attenuation, in dB and never positive. Kept here with the other output
-// settings rather than in the engine, because this is where the preferences plumbing already lives
-// and where the rest of the audio path's remembered state is read at startup. The engine holds the
-// working value; this owns the persistence.
+// notes §2
 static int32_t      gLevelDb                      = 0;
 
 // Reads a CFString device property into a plain C buffer.
@@ -293,10 +287,7 @@ void audio_output_load_settings(void) {
     if (uid != NULL) {
         strncpy(gSelectedUid, uid, sizeof(gSelectedUid) - 1);
     }
-    // Left and right used to be one "first channel of a pair" setting. Carry an old one over rather
-    // than dropping someone back to outputs 1/2 without explanation.
-    // Read the level before anything can make a noise, and push it into the engine — the engine has
-    // no preference of its own, so without this a remembered attenuation would be forgotten.
+    // notes §3
     gLevelDb      = (int32_t)prefs_get_int(PREF_KEY_LEVEL, 0);
 
     if (gLevelDb > 0) {
@@ -544,10 +535,7 @@ bool audio_output_start(void) {
         return false;
     }
 
-    // Route our stereo pair to the chosen output channels. The map has one entry per DEVICE channel
-    // saying which of our two it takes, or -1 for silence — so sending to outputs 29 and 30 means a
-    // map of -1s with 0 and 1 at positions 28 and 29. Without this the audio always lands on the
-    // device's first pair, whatever the interface.
+    // notes §4
     if (  (deviceChannels >= OUTPUT_CHANNELS)
        && ((deviceChannels > OUTPUT_CHANNELS) || (gLeftChannel != 0) || (gRightChannel != 1))) {
         SInt32 * map = NULL;
