@@ -222,3 +222,70 @@ known; the one poorly fitting measurement (Eq3band mid at -13.5 dB and 8 kHz, 1.
 unfiltered noise. With 11.1-11.4: EqPeak shape 0.57 dB mean (0.82 worst), Eq2Band 0.53 (0.63), Eq3band
 0.66 (1.42, the setting in 11.5); level within 0.1 dB mean, 1.0 dB worst. Bypass not checked.
 
+## 12. OscDual
+
+**12.1 Parameters and connections.** On the instrument: Coarse 0, Fine 1, Kbt 2, PitchM 3, TuneM 4,
+SqrL 5, PW mod amount 6, SawL 7, Phase 8, SubL 9, On 10, **PW 11**, Phase mod amount 12, Soft 13. The
+module tables have 6 and 11 the other way round (as OscNoise has 5 and 6). Inputs Pitch, PitchVar, Sync,
+PW, Phase; Sync is not modelled.
+
+**12.2 Waveforms.** Three at one pitch, summed:
+
+- Pulse, full scale, DC removed; duty = (1 - PW/128)/2 with 127 pinned - 50, 37.5, 25, 12.6, 3.1% at
+  0, 32, 64, 96, 120, silent at 127.
+- Saw, full scale, falling like OscA's; its fundamental is in phase with the pulse's at Phase 0, and
+  Phase rotates it by Phase/128 of a cycle (the dial's 360/128 degrees).
+- Sub-octave (12.3).
+
+Each level is linear, `dial_fraction()`: -2.50, -6.02, -12.04 dB at 96, 64, 32.
+
+**12.3 Sub-octave.** A square an octave down, through a FIXED first-order shelf - gain 0.38 at DC,
+1.12 at high frequency, corner about 190 Hz - which fits the sub's fundamental at 41, 165 and 659 Hz to
+about 0.3 dB. Soft doubles it and adds a one-pole low-pass that tracks the pitch at 1.5 × the
+oscillator's (3 × the sub's): +5.4 dB on the fundamental and a further -3 dB on the third harmonic, the
+same at all three pitches.
+
+**12.4 Modulation (not measured).** PW += PW mod × input and Phase += Phase mod × input (in cycles),
+each at a scale of 1 until measured.
+
+**12.5 Measurement.** 2026-09-12 - OscDual alone against an OscA sine at the same pitch, harmonics
+read at each setting; the sub at three pitches, Soft off and on.
+By meter the engine reads one value above the G2 at 9 of 10 settings - the pattern of §1.2: the
+instrument's waveforms sit just under full scale, the engine's band-limited edges just over. Both
+order the settings the same way (Soft above plain, the 180° mix below the 0° one). The sub is fitted on
+its harmonic LEVELS only; its phase, and so its peak, is not pinned - the G2 meters it below full scale
+where the model peaks near 1.9. Captured peaks cannot settle it: the output path rings on hard edges
+(the plain square reaches 1.69 × the sine's peak in the capture while metering below full scale).
+
+## 13. FltComb
+
+**13.1 Parameters and connections.** Freq 0, Pitch 1 (the PitchVar attenuator), Kbt 2 (Off, 25-100%),
+FB 3, FB Mod 4, Type 5 (Notch, Peak, Deep), Level 6, On 7. Inputs In, Pitch, PitchVar, FB Mod.
+
+**13.2 Tuning.** The comb's delay is 96000/f - 1 samples at 96 kHz, where f is the Freq curve NINE
+SEMITONES DOWN, `flt_cutoff_hz(Freq - 9)`: the teeth sit a major sixth below what the dial reads. Fits
+the four Freq settings measured to 0.01 samples. (An earlier reading, "nominal / 1.67", was this law
+seen through the one-sample offset, which is why it drifted at high Freq.)
+
+**13.3 Feedback.** g = (FB - 64)/64: 64 is no comb, below 64 the comb inverts.
+
+**13.4 Types.** One section, gain k × (1 + b·z^-D') / (1 - c·z^-D'):
+
+| Type | b | c | D' | k |
+|---|---|---|---|---|
+| Notch | g | 0 | D | 1 |
+| Peak | -0.30 g | 0.90 g | D + 1.1 | +2.45 g² dB |
+| Deep | 0.60 g | 0.85 g | D + 0.5 | -4.1 g² dB |
+
+Notch and Peak fit every setting to the capture's noise floor (about 2 dB rms per bin). Deep fits to
+the floor for |g| up to 0.5 and grows to 5 dB rms at full feedback - a single section is not its whole
+structure (the DSP code reads the delay through a four-point interpolator, which a frequency-flat model
+cannot show). The extra delay of Peak and Deep is part of the same story.
+
+**13.5 Level.** The mixer's Exp taper (§3.2), as the EQs' (§11.1).
+
+**13.6 Measurement.** 2026-09-12 - noise through FltComb against the unfiltered noise, on a LINEAR
+frequency axis (a comb is periodic in linear frequency): four Freq, feedback across the dial, all three
+Types, and again at Level 64 so the resonant Types could not clip. Fitted per setting with the delay
+free, then jointly per Type.
+

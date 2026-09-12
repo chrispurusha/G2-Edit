@@ -9202,3 +9202,47 @@ above about 1 kHz (F × q > 2); the engine uses a topology-preserving filter wit
 
 Also: gLadder's reset cleared only four of its six slots, so FltLP's fifth and sixth poles (and now the
 EQ's fifth state) could carry state across a topology change. All six are cleared now.
+
+
+2026-09-12  OSCDUAL: MEASURED AND IN THE ENGINE
+------------------------------------------------------------------------------------------------------
+OscDual against an OscA sine at the same pitch, harmonics read at every setting. Laws in sound engine
+reference §12.
+
+PW HAD NO EFFECT AT ALL on parameter 6 - exactly 50% at every value. The pulse width is parameter 11;
+6 is its modulation amount. The module tables have them the other way round, as OscNoise has 5 and 6.
+Duty (1 - PW/128)/2, exact from the fundamental's level, silent at 127.
+
+THE SUB-OCTAVE IS NOT A SQUARE. Its fundamental sat 2 dB under a square's with the harmonics above
+1 dB over; in time it jumps at each edge and decays towards about 0.4. Measured at three pitches the
+decay's corner stays near 190 Hz rather than tracking pitch: a fixed first-order shelf, 0.38 at DC to
+1.12 at high frequency. Soft doubles it and low-passes at 1.5 × the pitch - both constant across pitch.
+
+THE METERS COULD NOT ARBITRATE THIS ONE. The engine reads one value high at 9 of 10 settings, the
+band-limited-edge pattern already known from OscA's saw, and the sub (fitted on harmonic levels, not
+phase) is metered below full scale by the G2 where the model's peak is ~1.9. Captured peaks do not
+help: the output path rings on hard edges - the plain square reaches 1.69 × the sine's peak in a
+capture while metering below full scale.
+
+
+2026-09-12  FLTCOMB: MEASURED
+------------------------------------------------------------------------------------------------------
+Noise through FltComb, linear-frequency spectra at 2.9 Hz resolution, fitted with a general comb
+(1 + b z^-D)/(1 - c z^-D) per setting, delay free. Laws in sound engine reference §13.
+
+THE "NOMINAL / 1.67" TUNING IS A MAJOR SIXTH, LESS ONE SAMPLE. The four fitted delays are
+96000/f(Freq - 9) - 1 samples to within 0.01 - 2^(9/12) = 1.682, and the one-sample offset is what made
+the old ratio drift from 1.68 to 1.64 up the dial.
+
+NOTCH IS A PLAIN FEED-FORWARD COMB, g = (FB - 64)/64, no feedback at all - confirmed at six FB values.
+
+PEAK AND DEEP ARE NOT THE OTHER TWO TEXTBOOK COMBS. Each is a mixed section whose coefficients are
+fixed fractions of g, with a slightly longer delay than Notch's (+1.1 and +0.5 samples): Peak fits to
+the noise floor everywhere, Deep only for |g| up to 0.5. The first pass drove them hard enough to clip
+(the owner saw it on the G2); the re-take at Level 64 changed none of the fitted coefficients, so the
+misfit at Deep's extremes is the model's, not the drive's.
+
+LEVEL IS THE MIXER TAPER AGAIN: -17.7 dB at 64, -7.3 at 96.
+
+IN THE ENGINE the same day, by meter against the G2 at Level 64: 10 of 10 settings read the same -
+every Type at FB 32, 96 and 127, and no comb at FB 64.
