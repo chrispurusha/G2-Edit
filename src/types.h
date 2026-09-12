@@ -632,12 +632,12 @@ typedef struct {
 } tParamFocus;
 
 typedef struct {
-    bool       active;
-    tModuleKey fromModuleKey;
-    uint32_t   fromConnectorIndex;
-    tConnector toConnector;
+    bool          active;
+    tModuleKey    fromModuleKey;
+    uint32_t      fromConnectorIndex;
+    tConnector    toConnector;
     // notes §8
-    bool       rerouting;
+    bool          rerouting;
     // The HOLE that was picked up, not one cable: EVERY cable plugged into it moves together, which
     // is what the original does: it re-parents the whole node, emitting a delete and a connect for the parent cable and then the same for every child.
     uint32_t      rerouteModuleIndex;
