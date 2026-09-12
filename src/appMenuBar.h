@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/appMenuBar.h.md - "// notes §k" refers there.
 
 #ifndef __APP_MENU_BAR_H__
 #define __APP_MENU_BAR_H__
@@ -27,12 +28,7 @@
 extern "C" {
 #endif
 
-// G2-Edit's own File/Settings/Backup/Restore/Controls/View row, replacing the
-// native Cocoa menu bar (misc.mm) with SynthLib's cross-platform menuBar
-// engine. gAppMenuBar is a NULL-label-terminated tMenuBarItem[] suitable for
-// passing straight into render_menu_bar()/handle_menu_bar_click()/
-// update_menu_bar_hover(); app_menu_bar_rect() is the bar's screen rectangle
-// for this frame.
+// notes §1
 extern tMenuBarItem gAppMenuBar[];
 
 tRectangle app_menu_bar_rect(void);

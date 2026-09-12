@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/paramOverlay.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,19 +35,12 @@ extern "C" {
 #include "paramPages.h"
 #include "utilsGraphics.h"
 
-// One row per parameter, and a patch can hold MAX_NUM_MODULES modules of MAX_NUM_PARAMETERS each -
-// but only what is on screen is ever queued, and a parameter contributes at most three rows (it
-// can carry a patch knob, a global knob and a MIDI CC at once). This is sized for a full screen of
-// dense modules rather than for the theoretical patch; overflow simply stops queueing, which loses
-// labels off the bottom of a very crowded canvas rather than misdrawing anything.
+// notes §1
 #define MAX_PARAM_OVERLAYS    1024
 #define OVERLAY_TEXT_SCALE    0.8
 
-// The label's backing box is translucent so the control stays readable underneath - the point of
-// these views is to annotate the patch, not to hide it, and a dial with an opaque chip over its
-// centre is just a blank square. Opaque enough that the text stays legible against whatever the
-// module's colour happens to be.
-#define OVERLAY_BOX_ALPHA    0.75
+// notes §2
+#define OVERLAY_BOX_ALPHA     0.75
 
 // Nudge for a chip sitting on a button, on top of the button's own text inset. The chip's text is
 // smaller than the button's, so landing them on exactly the same origin still leaves the chip
@@ -109,20 +103,12 @@ void param_overlay_render_pane(uint32_t pane) {
         if (gOverlayPane[i] != pane) {
             continue;
         }
-        // gOverlayRect is the TEXT rect. draw_button() would pad it and put the text back at
-        // +margin inside; the backing is drawn by hand here to get an alpha on it, so recover the
-        // same padding from draw_button_bounds() and inset the box around the text rather than
-        // letting it hang off to one side.
+        // notes §3
         double     pad = (draw_button_bounds(gOverlayRect[i]).size.w - gOverlayRect[i].size.w) / 2.0;
         tRectangle box = {{gOverlayRect[i].coord.x - pad,        gOverlayRect[i].coord.y - pad       },
                           {gOverlayRect[i].size.w + (pad * 2.0), gOverlayRect[i].size.h + (pad * 2.0)}};
 
-        // Translucent, and nothing is ever blanked underneath: these views annotate the patch, so
-        // the dial, button or menu box being annotated has to stay visible. That is affordable
-        // only because the label never repeats what the widget already shows - see
-        // param_overlay_note_param() - so the chip stays small enough to sit in a corner of a
-        // button rather than across its face.
-        // No blend enable/disable: blending is on for the whole session (render_backend_init()).
+        // notes §4
         set_rgba_colour((tRgba){backing.red, backing.green, backing.blue, OVERLAY_BOX_ALPHA});
         render_rectangle(moduleArea, box);
 
@@ -131,17 +117,7 @@ void param_overlay_render_pane(uint32_t pane) {
     }
 }
 
-// Queues one row over the given rectangle, the way the original editor's popup boxes sit on the
-// parameter rather than under it - there is no room underneath, where in a dense module the next
-// row is already the next widget's label.
-//
-// textAnchor lines the chip up with the widget's OWN text instead of centring it. That is for the
-// widgets that carry text - a button or a menu box - where centring would land the chip across the
-// middle of the word and leave neither readable ("Semi" under a "0" reads as "S0mi"). Starting it
-// exactly where the widget's first character starts means the chip reads as a prefix to the word
-// rather than something dropped on top of it. A dial has nothing inside its circle to collide
-// with, so it gets the centre.
-// Further rows for the same parameter stack downwards from the first.
+// notes §5
 static void queue_row(tRectangle rectangle, const char * label, bool textAnchor) {
     if ((gOverlayCount >= MAX_PARAM_OVERLAYS) || (label[0] == '\0')) {
         return;
@@ -150,12 +126,7 @@ static void queue_row(tRectangle rectangle, const char * label, bool textAnchor)
     // bigger than the one on the dial beside it, and the views read better when every chip looks
     // the same wherever it lands.
     double     textHeight = (double)STANDARD_BUTTON_TEXT_HEIGHT * OVERLAY_TEXT_SCALE;
-    // eNoCache, NOT eCache: that cache is keyed on the text POINTER, so it is only safe for string
-    // literals, whose address and contents travel together. Every label here is built into a caller's
-    // stack buffer, which is the same address on every call — so the first label measured through
-    // that buffer had its width returned for every label after it, whatever the new contents were.
-    // The chip is sized from this, so a value that reached three digits kept the box it was given as
-    // one and overflowed its own backing.
+    // notes §6
     double     labelWidth = get_text_width(label, textHeight, eNoCache);
     double     rowHeight  = textHeight + 2.0;
 
@@ -245,22 +216,13 @@ void param_overlay_note_param(tModule * module, uint32_t paramIndex, tRectangle 
     uint32_t variation    = gPatchDescr[module->key.slot].activeVariation;
     tParam * param        = &module->param[variation][paramIndex];
     char     label[32]    = {0};
-    // A widget that draws TEXT of its own inside the rect - a toggle, menu, enable or bypass
-    // button. Those get the chip lined up with that text so the word stays readable. Dials and
-    // sliders put their text in the rows ABOVE the rect, which the chip never reaches, so they
-    // take it centred; the caller handing us a non-empty display string is what distinguishes them.
-    //
-    // No allowance is needed for a toggle's own label row: render_paramType1StandardToggle() is
-    // button-anchored now, so the rect IS the button whether or not the param carries a label.
+    // notes §7
     bool     isTextWidget = (displayValue == NULL) || (displayValue[0] == '\0');
 
     switch (gMode) {
         case overlayModeNone:
         {
-            // The long-standing hover behaviour: assignment labels for the one parameter under the
-            // mouse. Skipped outright during a cursor-hiding drag, when the reported pointer
-            // position is a relative-delta accumulator rather than a real point and can drift over
-            // an unrelated parameter.
+            // notes §8
             tCoord mouseCoord = {0};
 
             if (is_cursor_hidden_dragging()) {
@@ -284,11 +246,7 @@ void param_overlay_note_param(tModule * module, uint32_t paramIndex, tRectangle 
 
         case overlayModeValues:
 
-            // The raw wire value ONLY. Nothing is blanked any more, so whatever the widget renders
-            // for itself is still on screen - a dial's "554.4Hz" in the row above it, a button's
-            // own "Semi" alongside the chip - and printing it again here would be the same string
-            // twice. Raw and formatted still end up next to each other, which is what the original
-            // shows; the difference is that the formatted half comes from the control itself.
+            // notes §9
             snprintf(label, sizeof(label), "%u", param->value);
             queue_row(rectangle, label, isTextWidget);
             break;
@@ -316,11 +274,7 @@ void param_overlay_note_param(tModule * module, uint32_t paramIndex, tRectangle 
 
         case overlayModeMidiValues:
         {
-            // What the parameter's current value becomes on the wire. A CC carries 0-127, so a
-            // parameter whose range is not 128 is scaled into that.
-            // NEEDS A HARDWARE CHECK: this assumes a plain proportional scale. The G2 may well
-            // round differently, and the manual only says the view shows "how each knob is
-            // actually sent and received over MIDI" without stating the mapping.
+            // notes §10
             uint32_t range   = paramLocationList[param->paramRef].range;
             uint32_t midiVal = param->value;
 

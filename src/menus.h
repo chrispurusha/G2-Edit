@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/menus.h.md - "// notes §k" refers there.
 
 #ifndef __MENUS_H__
 #define __MENUS_H__
@@ -55,10 +56,7 @@ void clear_assignments_for_module(tModuleKey key);
 void midi_cc_assign_all_knobs(uint32_t slot);
 void midi_cc_clear_all(uint32_t slot);
 
-// The original's "Assign MIDI to Selection" / "Deassign MIDI from Selection". NOT the same thing as
-// the pair above: these cover every parameter of the selected modules, assigned to a panel knob or
-// not, where those two only ever touch the 120 panel knob assignments. Always the selected Slot,
-// since that is the only Slot a selection can be in.
+// notes §1
 void midi_cc_assign_selection(void);
 void midi_cc_deassign_selection(void);
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex);

@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2Prefs.h.md - "// notes §k" refers there.
 
 #ifndef __G2_PREFS_H__
 #define __G2_PREFS_H__
@@ -24,13 +25,7 @@
 extern "C" {
 #endif
 
-// Settings the plug-in remembers between sessions, through the same SynthLib prefs store the
-// application uses (prefs.h) — but under its OWN name, so it gets its own file.
-//
-// NOT SHARED WITH THE APPLICATION'S, deliberately. prefs.cpp rewrites the whole file on a change, so
-// two processes writing the same one — and the standalone editor and a hosted plug-in are very
-// likely to be open together — would let a last-writer-wins clobber quietly lose settings. A shared
-// dial-mode preference would be a nice touch; it is not worth that.
+// notes §1
 #define G2_PREFS_APP_NAME    "G2 Alike"
 
 #define G2_PREF_DIAL_MODE    "dialMode"

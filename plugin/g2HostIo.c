@@ -16,21 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2HostIo.c.md - "// notes §k" refers there.
 
-// The plug-in's stand-in for the two platform I/O layers.
-//
-// In the application the sound engine opens its own CoreAudio device (audioOutput.c) and its own
-// CoreMIDI ports (midiInput.c). In a plug-in the host owns both: it hands us a buffer to fill and
-// an event list to read, so neither layer exists. These are the few entry points the engine still
-// references, given null implementations so the link resolves.
-//
-// This IS the "a wrapper replaces audioOutput.c and nothing else" plan, arrived at literally.
-//
-// sound_engine_start()/stop() are the only callers of the audio ones, and the plug-in calls
-// sound_engine_start_hosted()/stop_hosted() instead - so these are compiled in but never reached.
-// They return failure rather than success on purpose: if a future change ever routes the plug-in
-// through sound_engine_start(), it will fail loudly and visibly rather than appear to open a device
-// that is not there.
+// notes §1
 
 #include "sysIncludes.h"
 

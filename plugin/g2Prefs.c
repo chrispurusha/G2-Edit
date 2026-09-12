@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2Prefs.c.md - "// notes §k" refers there.
 
 #include "sysIncludes.h"
 #include "synthlibTypes.h"
@@ -41,10 +42,7 @@ void g2_plugin_prefs_init(void) {
     load_saved_settings();
 }
 
-// synthlibPersistence.c is NOT linked: its only other job is restoring the WINDOW, and it does that
-// with glfwSetWindowSize()/glfwSetWindowPos(). A plug-in owns neither — the host places and sizes
-// the editor, and VST3 offers no way to ask otherwise (the width it reopens at is handled in
-// g2Editor.mm through getSize()). So the dial-mode half is done here and the window half dropped.
+// notes §1
 void synthlib_load_window_and_dial_mode(int targetFrameBuffWidth, int targetFrameBuffHeight) {
     (void)targetFrameBuffWidth;
     (void)targetFrameBuffHeight;

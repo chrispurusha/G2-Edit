@@ -16,16 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/palette.c.md - "// notes §k" refers there.
 
-// The drag-on module palette. Docs/module-palette-design.md carries the design and why it looks the
-// way it does; the short version is that the instrument's own toolbar uses UNIFORM tiles rather than
-// scaled-down module faces, and the module heights say why it has to — 94 of 170 modules are two
-// rows, but Operator is twelve, and no single scale suits both.
-//
-// The band is an EXTENSION of the topbar rather than a mode that swaps its contents. A mode would
-// hide the patch name, the voice count and the Patch Load meters exactly while modules are being
-// added, and the manual ties adding modules to watching those meters. Growing the bar hides nothing
-// and costs canvas only while the palette is open.
+// notes §1
 
 #include <string.h>
 
@@ -48,16 +41,13 @@
 #include "undo.h"
 #include "graphics.h"
 
-#define PALETTE_MAX_TILES     (32)         // the largest group is Osc at 19
-#define PALETTE_GROUP_COLS    (8)
-#define PALETTE_GROUP_ROWS    (2)
-#define PALETTE_GROUP_W       (56.0)
-#define PALETTE_GROUP_H       (16.0)
-#define PALETTE_GROUP_X       (6.0)
-// THE BAND'S PADDING IS SYMMETRIC, and these four have to be changed together to keep it so: the
-// gap above the group grid, between the grid and the tiles, and below the tiles are all 5 px, which
-// makes PALETTE_BAND_HEIGHT 5 + (2 rows x 17) + 5 + 26 + 5 = 74. Two rows of PALETTE_GROUP_H plus
-// one pixel between them is the 34 in the middle.
+#define PALETTE_MAX_TILES      (32)        // the largest group is Osc at 19
+#define PALETTE_GROUP_COLS     (8)
+#define PALETTE_GROUP_ROWS     (2)
+#define PALETTE_GROUP_W        (56.0)
+#define PALETTE_GROUP_H        (16.0)
+#define PALETTE_GROUP_X        (6.0)
+// notes §2
 #define PALETTE_GROUP_Y        (5.0)
 #define PALETTE_TILE_W_MAX     (68.0)
 #define PALETTE_TILE_W_MIN     (52.0)
@@ -79,42 +69,29 @@ static tRectangle    gArrowLeft;
 static tRectangle    gArrowRight;
 static bool          gScrollable;
 
-// The colour NEW modules are created in, and the swatches that set it. The instrument does the same
-// thing (manual p.61: "the color selector stays in its new selection, causing any new modules you
-// add to the Patch window to get the selected color"), and the band has the room for it - the group
-// grid leaves the whole right-hand half of its own row empty. 0 is the standard grey.
-// A swatch is exactly as TALL as a group button and sits on the same two rows, so the two blocks
-// read as one piece of furniture rather than as a grid with something small parked beside it. Its
-// row position is derived from PALETTE_GROUP_H rather than from its own height for that reason:
-// the two cannot drift apart when one of them is changed.
-#define PALETTE_SWATCH_W       (20.0)
-#define PALETTE_SWATCH_H       PALETTE_GROUP_H
-#define PALETTE_SWATCH_GAP     (3.0)
-#define PALETTE_SWATCH_RING    (2.0)
-// TWELVE, so each hue's four shades occupy the SAME four columns on both rows - red, green and blue
-// above; yellow, purple and cyan below - and the grades line up the way the right-click menu's grid
-// does. The standard grey then falls at the END of the second row rather than leading the first,
-// where it pushed every hue one column along and broke the alignment (CT, 2026-09-08).
+// notes §3
+#define PALETTE_SWATCH_W        (20.0)
+#define PALETTE_SWATCH_H        PALETTE_GROUP_H
+#define PALETTE_SWATCH_GAP      (3.0)
+#define PALETTE_SWATCH_RING     (2.0)
+// notes §4
 #define PALETTE_SWATCH_COLS     (12)
 static uint32_t gNewModuleColour;
 #define PALETTE_MAX_SWATCHES    (32)
-static tRectangle  gSwatchRect[PALETTE_MAX_SWATCHES];
-static uint32_t    gSwatchColour[PALETTE_MAX_SWATCHES];                // horizontal, for a group wider than the band
+static tRectangle    gSwatchRect[PALETTE_MAX_SWATCHES];
+static uint32_t      gSwatchColour[PALETTE_MAX_SWATCHES];              // horizontal, for a group wider than the band
 
 // Rebuilt every render so the hit test and the drawing can never disagree about where a tile is.
-static tModuleType gTile[PALETTE_MAX_TILES];
-static tRectangle  gTileRect[PALETTE_MAX_TILES];
-static uint32_t    gTileCount;
-static tRectangle  gGroupRect[palGroupCount];
-static int32_t     gHoverTile       = -1;
+static tModuleType   gTile[PALETTE_MAX_TILES];
+static tRectangle    gTileRect[PALETTE_MAX_TILES];
+static uint32_t      gTileCount;
+static tRectangle    gGroupRect[palGroupCount];
+static int32_t       gHoverTile       = -1;
 
-// Double-click a tile and the module is added below the focused one, without a drag. The manual
-// offers it as a first-class alternative ("you could also double-click a module icon to
-// automatically add it to the Patch window below the currently focused module", p.81), and it is
-// the only route that works when the target is off-screen or the hand is not steady.
+// notes §5
 #define PALETTE_DOUBLE_CLICK_MS    (400.0)
-static double      gLastTileClickMs;
-static int32_t     gLastTileClicked = -1;
+static double        gLastTileClickMs;
+static int32_t       gLastTileClicked = -1;
 
 static struct {
     bool        pressed;      // a tile is held but has not moved far enough to be a drag
@@ -122,7 +99,7 @@ static struct {
     tModuleType type;
     tCoord      pressCoord;
     tCoord      coord;
-}                  gDrag;
+}                    gDrag;
 
 bool palette_is_open(void) {
     return gOpen;
@@ -187,10 +164,7 @@ static uint32_t tile_connectors(tModuleType moduleType, tConnectorDir dir, tRgb 
 }
 
 static void draw_tile(tRectangle rect, tModuleType moduleType, bool hovered) {
-    // A TILE IS DRAWN IN THE COLOUR THE MODULE WOULD BE CREATED IN, so picking a swatch previews
-    // itself across the whole row rather than only on the drag ghost. Hover is then a black frame
-    // rather than a paler fill, which would have thrown that colour away exactly when the pointer
-    // is on the tile you are about to take.
+    // notes §6
     tRgb     body = gModuleColourMap[palette_new_module_colour()];
     tRgb     dots[PALETTE_MAX_DOTS];
     uint32_t n    = 0;
@@ -292,10 +266,7 @@ void palette_render(void) {
         set_rgb_colour((g == gGroup) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
         render_rectangle_with_border(mainArea, rect);
         set_rgb_colour((tRgb)RGB_BLACK);
-        // render_text's coord.y is the TOP of the text, not its baseline - draw_button_split() is
-        // the proof, offsetting its text rectangle by the button margin from the button's own top.
-        // Both labels here were first written as though it were a baseline, which drew every group
-        // name below its own button and through the row beneath it.
+        // notes §7
         render_text(mainArea, (tRectangle){
             {rect.coord.x + 4.0, rect.coord.y + 3.5},
             {PALETTE_GROUP_W - 8.0, PALETTE_TILE_TEXT_H}
@@ -367,10 +338,7 @@ void palette_render(void) {
 
     gTileCount = palette_group_modules(gGroup, gTile, PALETTE_MAX_TILES);
 
-    // TILES SHRINK TO FIT BEFORE THEY SCROLL. Osc is the largest group at 19, and nineteen tiles at
-    // the full width run off the right of the default window - so the width is divided by the count
-    // and only FLOORED, not fixed. Below that floor the names stop being readable, and at that point
-    // the row scrolls instead, with arrows at the ends to say so.
+    // notes §8
     {
         double room  = width - (PALETTE_TILE_X * 2.0);
         double pitch = (gTileCount > 0) ? (room / (double)gTileCount) : PALETTE_TILE_W_MAX;
@@ -466,16 +434,7 @@ void palette_render(void) {
         }, ">");
     }
 
-    // THE GHOST IS A REAL MODULE FACE - dials, buttons, connectors and all - not an outline and not
-    // the tile. It is built by module_prototype(), the same defaults create_module_at() lays down,
-    // so what follows the cursor is exactly what the drop will produce, drawn at the canvas's own
-    // zoom in the column and row it would occupy.
-    //
-    // CLICK REGISTRATION IS SUPPRESSED WHILE IT DRAWS. render_module() and every widget under it
-    // register click regions keyed by the module's slot/location/index, and a ghost has none - it
-    // would be registering regions for a module that does not exist, on top of whichever real one
-    // owns that index. An EMPTY click clip is the seam for that: register_click_region() drops
-    // anything that falls outside the clip, so nothing drawn here can be clicked.
+    // notes §9
     if (gDrag.active) {
         int32_t                 pane   = split_view_pane_at(gDrag.coord);
         bool                    onPane = (pane >= 0);
@@ -491,12 +450,7 @@ void palette_render(void) {
             }
         };
 
-        // OVER THE BAND ITSELF - which is where every drag STARTS - there is no pane under the
-        // cursor, and a plain outline was drawn there instead. That left the first moments of every
-        // drag showing a rectangle with none of the module's controls in it (CT, 2026-09-07: "the
-        // components aren't in the module representation"). So the ghost goes straight into the
-        // FOCUSED pane at the top of the cursor's own column and is a full face from the outset;
-        // once the cursor enters a pane it tracks the drop position exactly.
+        // notes §10
         if (!onPane) {
             pane = (int32_t)split_view_focused_pane();
         }
@@ -520,11 +474,7 @@ void palette_render(void) {
         ghost.column       = column;
         ghost.row          = row;
 
-        // CLICK REGISTRATION IS SUPPRESSED WHILE IT DRAWS. render_module() and every widget under
-        // it register regions keyed by the module's slot/location/index, and a ghost has none - it
-        // would be registering regions for a module that does not exist, on top of whichever real
-        // one owns that index. An EMPTY click clip is the seam: register_click_region() drops
-        // anything falling outside the clip, so nothing drawn here can be clicked.
+        // notes §11
         module_pane_clip_begin();
         set_click_region_clip(&none);
         render_module(&ghost);
@@ -612,10 +562,7 @@ bool palette_left_down(tCoord coord) {
             if (within_rectangle(coord, gSwatchRect[c])) {
                 gNewModuleColour = gSwatchColour[c];
 
-                // A swatch does two things, as the instrument's own colour selector does: it sets
-                // the colour NEW modules get, and it recolours whatever is selected right now
-                // (manual p.61). With nothing selected only the first applies, so clicking a swatch
-                // to set up the next few modules never repaints anything by surprise.
+                // notes §12
                 modules_set_colour(c);
                 synthlib_request_redraw();
                 return true;
@@ -637,11 +584,7 @@ bool palette_left_down(tCoord coord) {
     t = tile_at(coord);
 
     if (t >= 0) {
-        // THE GHOST IS UP FROM THE MOMENT THE BUTTON GOES DOWN, with no movement threshold first.
-        // A slop distance was tried and taken out: it exists to stop a click being mistaken for a
-        // drag, but there is nothing else a press on a tile can mean here, and it left the first
-        // few pixels of every drag showing nothing at all. A press that never reaches a module area
-        // is simply abandoned on release, which costs the user one frame of ghost and no more.
+        // notes §13
         gDrag.pressed    = true;
         gDrag.active     = true;
         gDrag.type       = gTile[t];
@@ -716,16 +659,7 @@ bool palette_left_up(tCoord coord) {
         uint32_t       displacedCount = 0;
         int32_t        created        = 0;
 
-        // THE DROP LANDS IN THE PANE UNDER THE CURSOR, not the focused one. Everything downstream -
-        // module_area() inside convert_mouse_coord_to_module_column_row(), the scroll offsets it
-        // adds, and create_module_at()'s own use of gLocation - reads the FOCUSED pane, so focusing
-        // the pane being dropped on is what makes all three agree. Without it every drop landed in
-        // whichever half had focus: dragging onto the Voice Area created the module in the FX Area.
-        // WHETHER THE COORDINATE IS IN A PANE IS split_view_pane_at()'S ANSWER, NOT
-        // split_view_focus_at()'S. focus_at() returns whether the focus MOVED, so dropping into the
-        // pane that already had focus returned false - and this treated that as "outside a pane"
-        // and threw the drop away. Every drop into the already-focused half silently did nothing,
-        // which is most of them (CT, 2026-09-07: "Dropping a new module isn't working").
+        // notes §14
         if (split_view_pane_at(coord) < 0) {
             return true;               // the split bar, the scrollbars, or outside both panes
         }

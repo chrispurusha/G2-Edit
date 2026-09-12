@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/persistence.c.md - "// notes §k" refers there.
 
 // Window/zoom/dial-mode/last-browsed-folder settings persistence — goes through SynthLib's
 // prefs.h (a plain "key=value" text file under a per-OS standard config directory) instead of
@@ -34,14 +35,7 @@
 #include "prefs.h"
 #include "synthlibPersistence.h"
 
-// ── RECENT FILES ──────────────────────────────────────────────────────────────────────────────
-//
-// The File > Open Recent list. Most-recent first, capped at RECENT_FILES_MAX, persisted one prefs
-// key per slot so the list survives a restart the way every other editor's does.
-//
-// PATHS, NOT NAMES. The menu shows each file's basename because that is what a menu of files should
-// read like, but what is stored and what is opened is the full path — two patches called "Lead" in
-// different folders are different files, and a list keyed on the name would conflate them.
+// notes §1
 static char     sRecent[RECENT_FILES_MAX][FILE_PATH_SIZE];
 static uint32_t sRecentCount;
 

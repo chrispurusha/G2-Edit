@@ -157,7 +157,8 @@ EnvADSR "Env" out --> Pulse (Sub range, Time 0) --+--> Reverb --> out 3-4   (wet
   predates the envelope being added first.
 - **Wet goes out 3/4, dry out 1/2** in this build, which lands wet on capture channels 18/19 and dry
   on 4/5 (0-based). Watch channels 26/27: they carry the desk's main mix and were once nearly as hot
-  as the signal.
+  as the signal. **The archived takes were trimmed on 2026-09-12** to exactly those four, as channels 0-1 (dry)
+  and 2-3 (wet) - see capture-inventory.md. Record new takes with `capture --channels 4,5,18,19`.
 - **The Pulse must be up-rated** — its cables turn orange, not yellow. At control rate it cannot make
   a pulse shorter than a control period and the excitation comes out long and ragged.
 - **Reverb DryWet at 127**, so the wet pair carries no dry.

@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/helpPanel.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,11 +47,7 @@ typedef struct {
     const char * text;
 } tHelpRow;
 
-// EVERY ROW HERE IS A CLAIM ABOUT THE CODE. Where each comes from, so the next person changing a
-// binding knows which file to check: the canvas and shortcut rows are mouseHandle.c (key_event,
-// mouse_button, scroll_event) and canvasDrag.c (the gesture table); the note-entry rows are
-// virtualKeyboard.c (note_offset_for_key and handle_note_entry_key); the panel rows are
-// floatingPanel.c; the variation rows are mouseTopbar.c and protocol.c's fan-out.
+// notes §1
 static const tHelpRow kLeftColumn[] = {
     {NULL,                 "CANVAS"                                     },
     {"Click",              "Select module"                              },

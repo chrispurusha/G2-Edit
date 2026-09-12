@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/main.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,20 +78,12 @@ int main(int argc, char ** argv) {
     init_database();
     init_module_resource_cache();
 
-    // Give every slot a default patch (including an activated, source-assigned morph module — see
-    // init_patch()) before the first frame renders, rather than leaving the database's zeroed/
-    // inactive startup state on screen until a G2 connects and sends real patch data. If a
-    // connection succeeds shortly after, send_init_sequence_pull()'s real data simply overwrites
-    // this placeholder per slot, same as loading over a manually-created New Patch would.
+    // notes §1
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         init_patch(slot);
     }
 
-    // BEFORE init_graphics(), and the order is load-bearing. The window is built differently for
-    // each render backend — OpenGL needs a GL context created alongside it, Metal needs none — so
-    // synthlib_window_create() reads the saved choice before it makes the window. prefs_init() also
-    // runs from setup_main_menu() below, where it always did; it clears and re-reads, so calling it
-    // twice is harmless and nothing has written a preference in between.
+    // notes §2
     prefs_init("G2-Edit");
 
     init_graphics();

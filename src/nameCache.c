@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/nameCache.c.md - "// notes §k" refers there.
 
 // See nameCache.h for why this exists and, more importantly, for the one thing it must never be
 // used for.
@@ -33,17 +34,8 @@
 #define NAME_CACHE_KEY         "g2NameTable"
 #define NAME_CACHE_DONE_KEY    "g2NameTableComplete"
 
-// ONE FIXED-WIDTH RECORD PER POPULATED LOCATION, and no separators at all. cache.txt is a
-// key=value file read a line at a time, so a value cannot contain a newline — and a patch name can
-// contain very nearly anything else, which rules out every obvious delimiter. Fixed width sidesteps
-// the question: a name is stored space-padded to its full length and trimmed on the way back.
-//
-//   [0]    'P' patch or 'F' performance
-//   [1..2] bank     (2 hex)
-//   [3..4] location (2 hex)
-//   [5]    category (1 hex, 0-15)
-//   [6..]  name, space-padded to CLAVIA_NAME_SIZE
-#define REC_LEN    (6 + CLAVIA_NAME_SIZE)
+// notes §1
+#define REC_LEN                (6 + CLAVIA_NAME_SIZE)
 
 static void append_table(char * out, size_t outMax, size_t * used, char tag,
                          tNameTableEntry * table, uint32_t banks) {
@@ -54,10 +46,7 @@ static void append_table(char * out, size_t outMax, size_t * used, char tag,
             if (!entry->populated || (*used + REC_LEN + 1 > outMax)) {
                 continue;
             }
-            // A newline in a name would split the value across two lines and take the rest of the
-            // cache with it, since cache.txt is read a line at a time. Nothing else in the file's
-            // format is positional, so every other control character is mapped out too rather than
-            // reasoning about which ones survive a round trip.
+            // notes §2
             char              safe[CLAVIA_NAME_SIZE + 1] = {0};
 
             for (int i = 0; i < CLAVIA_NAME_SIZE; i++) {
