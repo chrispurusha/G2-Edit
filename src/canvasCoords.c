@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/canvasCoords.c.md - "// notes §k" refers there.
 
 // See canvasCoords.h for why this is not in mouseHandle.c any more.
 
@@ -78,15 +79,7 @@ void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row,
     }
 }
 
-// ── Zoom, stepped ───────────────────────────────────────────────────────────────────────────────
-//
-// One Cmd +/- worth of canvas zoom, anchored at the module area's top-left and remembered in prefs.
-// Shared because both shells offer the same shortcut and neither should own the arithmetic: the
-// application had these four lines written out twice in its key handler (once per direction), and the
-// plug-in would have made a third and fourth copy.
-// The ANCHOR is what the two callers disagree about and nothing else: Cmd +/- has no meaningful
-// position so it uses the module area's corner, while Cmd + wheel zooms around the pointer, which is
-// what makes zooming feel like it is aimed at something.
+// notes §1
 void canvas_zoom_step_at(double delta, tCoord anchor) {
     set_zoom_factor(get_zoom_factor() + delta, anchor);
     save_zoom_factor(get_zoom_factor());

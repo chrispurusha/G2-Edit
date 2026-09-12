@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/midiCcList.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,10 +65,7 @@ bool midi_cc_list_active(void) {
     return gMidiCcList.active;
 }
 
-// One row's text. The module and parameter names come from paramPages.h so this panel, the
-// Parameter Pages and the Parameter Overview can never disagree about what a parameter is called —
-// a patch-given name wins over the paramLocationList one, which is the precedence the canvas itself
-// applies.
+// notes §1
 static void row_text(const tController * controller, char * buff, size_t buffSize) {
     tModuleKey  key    = {gMidiCcList.slot, controller->location, controller->moduleIndex};
     tModule *   module = get_module(key);
@@ -108,12 +106,7 @@ void render_midi_cc_list_panel(void) {
     uint32_t            count                 = 0;
     double              renderW               = 0.0;
     double              renderH               = 0.0;
-    // 24.0, as every other panel in the app uses. Derived from the text height it USED to be
-    // (STANDARD_BUTTON_TEXT_HEIGHT + 8.0), which came to 20.0 — and the close button that
-    // draw_panel_close_button() puts in the banner is inset 6.0 from the panel top and is 14.0
-    // square, so it ended exactly ON the bar's bottom edge and hung out of it. The button's geometry
-    // is measured from the PANEL's corner and never sees the title height, so a bar shorter than
-    // 20.0 has nowhere to put it; this was the only panel not using the common value.
+    // notes §2
     double              titleH                = 24.0;
     double              btnH                  = (double)STANDARD_BUTTON_TEXT_HEIGHT;
     double              margin                = 10.0;

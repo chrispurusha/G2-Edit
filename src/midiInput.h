@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/midiInput.h.md - "// notes §k" refers there.
 
 #ifndef __MIDI_INPUT_H__
 #define __MIDI_INPUT_H__
@@ -26,18 +27,7 @@
 extern "C" {
 #endif
 
-// MIDI note input, so a real keyboard can play the local sound engine, the G2 itself, or both at
-// once — which is the point of "both": hearing the engine against the hardware on the same notes is
-// how the two get compared. Like audioOutput.c this is the platform half; CoreMIDI lives here and
-// nowhere else.
-//
-// Deliberately NOT owned by the sound engine. It runs from application startup, because sending MIDI
-// on to the G2 is useful whether or not the engine is switched on.
-//
-// The source and channel are chosen rather than assumed. Listening to everything on every channel is
-// a fine default for one keyboard on a desk, but it is wrong the moment a controller sends on a
-// channel the patch is not using, or a DAW's echo port is also present. The source is remembered by
-// its CoreMIDI unique ID rather than its name, since names repeat across identical interfaces.
+// notes §1
 
 bool midi_input_start(void);
 void midi_input_stop(void);
@@ -48,10 +38,7 @@ uint32_t midi_input_source_count(void);
 const char * midi_input_source_name(uint32_t index);
 bool midi_input_source_is_selected(uint32_t index);
 
-// Pass MIDI_INPUT_NONE to take no input at all, or MIDI_INPUT_ALL to take every source at once —
-// everything currently attached AND anything plugged in later, since the CoreMIDI setup-changed
-// notification reconnects. That state already existed as the startup default (no specific source
-// chosen); what was missing was any way back to it once a single source had been picked.
+// notes §2
 #define MIDI_INPUT_NONE    (-1)
 #define MIDI_INPUT_ALL     (-2)
 void midi_input_select_source(int32_t index);

@@ -16,28 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2Input.c.md - "// notes §k" refers there.
 
-// The plug-in's mouse input, in C. g2View.m turns Cocoa events into calls on this; nothing below
-// knows what an NSEvent is.
-//
-// THE HIT-TESTING IS NOT REIMPLEMENTED HERE, and that is the point. Every clickable thing on the
-// canvas — module bodies, dials, toggles, connectors — registers a click region as it is DRAWN
-// (moduleGraphics.c, renderParams.c), and SynthLib's dispatch_click_region() resolves a coordinate
-// against them. That machinery is already platform-free and the plug-in already runs it, so all the
-// application's hit-testing behaviour, including press-capture and layer priority, comes for free.
-// What was missing was only somebody to say where the mouse is.
-//
-// WHERE A CLICK ENDS UP: the handlers write to the module database and then call msg_send() to tell
-// the G2. In the plug-in msg_send() is a no-op (g2AppStubs.c) because there is no G2 — but the
-// database write still happens, and sound_engine_update_from_patch() reads exactly that. So a dial
-// drag here changes the patch and the sound with no hardware in the path at all, which is the
-// behaviour a plug-in wants rather than a limitation of it.
+// notes §1
 
 #include "sysIncludes.h"
-// defs.h BEFORE synthlibDefs.h — it defines G2_EDIT, and synthlibDefs.h gates TOP_BAR_HEIGHT, the
-// colour palette and several layout constants on it. Included the other way round, TOP_BAR_HEIGHT
-// silently becomes 0.0 (the non-G2 branch), which put the module band 80 units too high, hidden
-// behind the top bar and with the margin between them swallowed.
+// notes §2
 #include "defs.h"
 #include "synthlibDefs.h"
 #include "types.h"
@@ -59,27 +43,17 @@
 #include "topbarResourcesAccess.h"
 #include "palette.h"          // the module palette band, which the topbar opens under itself
 
+#include "synthlibPopups.h"     // synthlib_popups_dispatch_key/_char() - see g2_input_popup_key()
+#define GL_SILENCE_DEPRECATION    1
+#include <GLFW/glfw3.h>         // the key CONSTANTS only, which is what SynthLib's popups speak
+
 #include "g2View.h"      // cursor_is_captured() — the hidden-pointer safety net
 #include "g2Input.h"
 
-// The last position the host told us about, in the canvas's logical units with a top-left origin —
-// the same space get_global_gui_scaled_mouse_coord() produces in the application, so everything
-// downstream is unchanged.
-//
-// STARTS OFF-CANVAS, and {0,0} would be a bug: it is not a neutral "unknown", it is the top-left
-// corner, which is exactly where the menu bar's first item sits. render_menu_bar() highlights
-// whatever the pointer is inside, so a freshly-opened editor drew "File" lit up before the host had
-// said anything about the pointer at all — and it stayed lit, because the view's tracking area is
-// NSTrackingActiveInKeyWindow and delivers no movement until the plug-in window becomes key. The
-// application never had this: GLFW reports a real cursor position from the first frame.
+// notes §3
 static tCoord gMouse = {-1.0, -1.0};
 
-// Takes PHYSICAL PIXELS and stores LOGICAL UNITS — the canvas's own space, which is what every
-// hit-test and every click region is expressed in.
-//
-// This is the same conversion get_global_gui_scaled_mouse_coord() performs in the application, and
-// it has to track gGlobalGuiScale rather than the backing scale: the two were equal only while the
-// plug-in mis-sized its logical canvas.
+// notes §4
 void g2_input_set_mouse(double x, double y) {
     double scale = (gGlobalGuiScale > 0.0) ? gGlobalGuiScale : 1.0;
 
@@ -109,27 +83,9 @@ static bool dispatch_drag(void) {
         }
         handle_split_bar_cursor_pos(gMouse);
 
-        // Dials first: a parameter drag and a module drag can never both be active, but the
-        // parameter one is the common case and reads an absolute angle, so it costs nothing to ask.
-        //
-        // The raw coordinates are the canvas ones, and that is SELF-CONSISTENT rather than a
-        // compromise: cursor_raw_coord() records the drag origin from this same gMouse, so the
-        // incremental dial modes difference two values in one space. All three dial modes therefore
-        // work here — the mode comes from this plug-in's own prefs and its own Controls menu, and
-        // eDialModeRotary is only the fallback default in g2Prefs.c when that pref is absent.
-        //
-        // What is missing without a real cursor_capture() is pointer HIDING and confinement, not the
-        // arithmetic: the pointer visibly travels away from the dial, and a long drag can run out of
-        // screen. An earlier comment here claimed the plug-in "reports eDialModeRotary" and that the
-        // other modes could not work at all, which was simply untrue.
+        // notes §5
         {
-            // All four gestures through the shared table, in the one order that is written down —
-            // see canvasDrag.h.
-            //
-            // ALT IS REAL NOW, so an Alt-drag on a dial adjusts its MORPH OFFSET rather than its value,
-            // as it does in the application. It works in every dial mode: Alt only changes which field
-            // the resulting value is written to, and the incremental modes are sound here for the
-            // reason given above.
+            // notes §6
             tCanvasGesture took = canvas_gesture_motion(&(tCanvasGestureEvent){
                                                             .coord = gMouse, .rawX = gMouse.x, .rawY = gMouse.y,
                                                             .slot = gSlot, .location = gLocation,
@@ -147,14 +103,7 @@ static bool dispatch_drag(void) {
     }
 }
 
-// MOTION FROM DELTAS, for a drag whose pointer is confined. dx/dy are in the same pixel space
-// g2_input_set_mouse() takes, so the conversion to logical units is identical — see there.
-//
-// This is what makes an incremental dial drag unbounded: with the pointer decoupled from the hardware
-// (cursor_capture() in g2View.m), its absolute position is frozen, so differencing absolute positions
-// would report no movement at all. Accumulating the deltas into gMouse gives the same VIRTUAL pointer
-// GLFW's disabled-cursor mode hands the application — see cocoa_window.m in ThirdParty, which adds
-// [event deltaY] to a top-left-origin position exactly as this does, and is where the sign came from.
+// notes §7
 bool g2_input_drag_by(double dxPixels, double dyPixels) {
     double scale = (gGlobalGuiScale > 0.0) ? gGlobalGuiScale : 1.0;
 
@@ -174,17 +123,7 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         return dispatch_drag();
     }
 
-    // A MODAL POPUP OWNS THE CLICK. While one is open nothing behind it may act on a click — the
-    // application makes the same check before anything else in its own press handler.
-    //
-    // Through SynthLib's coordinator rather than by hand. This tested file_browser_active() alone
-    // and called the browser's two handlers directly, which left the OTHER modal popups — the alert
-    // dialog above all — with no way to be clicked, and so no way to be dismissed. The coordinator
-    // knows the layer order and which popups are modal, and dispatches to the frontmost active one.
-    // BOTH PHASES, and the release is not optional: the alert dialog arms its button on the press
-    // and ACTS on the release, so dispatching the press alone drew a pressed OK that never did
-    // anything. The file browser acts on the press, which is why sending only that had looked
-    // sufficient.
+    // notes §8
     if (synthlib_popups_modal_active() == true) {
         // Anything that is not a press is an up here: eClickDrag has already returned above, which
         // leaves eClickRelease and eClickReleaseOutside, and the popups treat both as the release.
@@ -212,12 +151,7 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
             return true;
         }
 
-        // THE TOPBAR. Its controls are NOT click regions — mouseTopbar.c hit-tests them against the
-        // rectangles topbarResourcesAccess.c holds — so nothing reaches them unless they are asked
-        // directly. That is why the morph dials worked (they DO register click regions, in
-        // moduleGraphics.c) while every button and dial beside them did nothing.
-        //
-        // Straight after the menu bar and before the scrollbars, which is the application's order.
+        // notes §9
         if (handle_topbar_left_down(gMouse, gSlot) == true) {
             return true;
         }
@@ -246,37 +180,16 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
             return true;
         }
 
-        // NOTHING WAS UNDER THE POINTER. In the application this is where a click on bare canvas
-        // clears the selection and starts a rubber band; dispatch_click_region() returning false is
-        // the whole of how "empty space" is detected, since every occupied part of the canvas
-        // registers a region. Without this the plug-in could select a module but never deselect one.
-        //
-        // No modifier plumbing yet, so a press always replaces the selection rather than adding to
-        // it — multi_select_modifier_held() is still false in the plug-in.
+        // notes §10
         return canvas_empty_press(gMouse, false);
     }
 
-    // ---- release ---------------------------------------------------------------------------------
-    //
-    // DO NOT RETURN EARLY WHEN dispatch_click_region() CLAIMS THE RELEASE. A press CAPTURES its
-    // region (see clickRegion.h), so the handler that began a module drag owns the matching release
-    // and dispatch always reports it handled. Returning there was a real bug: the drag was never
-    // ended and never re-ordered, so a module dropped on another simply overlapped it, and
-    // gModuleDrag stayed active into the next gesture.
-    //
-    // Both must run: the captured handler needs its release, and the drag needs finishing.
-    // EVERY TOPBAR BUTTON RELEASES, whether or not the release landed on one — the application does
-    // exactly this at the top of its own mouse-up. Without it isPressed stayed set, so buttons kept
-    // their pressed grey after the mouse came up, and that grey also masked the green a slot or a
-    // Hide/Dim toggle had just been given by set_exclusive_button_highlight().
+    // notes §11
     for (int i = 0; i < (int)topbarControlMax; i++) {
         gTopbarControls[i].isPressed = false;
     }
 
-    // BEFORE the topbar and before the canvas: a palette drag RELEASES over the canvas, which is
-    // the whole point of it, so the release cannot be claimed by whatever happens to be under the
-    // cursor. palette_left_up() returns false unless a tile was actually pressed, so it costs
-    // nothing while the palette is idle or closed.
+    // notes §12
     if (palette_left_up(gMouse) == true) {
         handled = true;
     } else if (handle_topbar_left_up(gMouse, gSlot) == true) {
@@ -288,14 +201,7 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
 
     handled = dispatch_click_region(gMouse, phase);
 
-    // EVERY GESTURE'S RELEASE, IN ONE CALL. This was four hand-written blocks in a different order
-    // from the application's four, which is the asymmetry that let this shell quietly miss phases: the
-    // module drag went un-re-ordered and dials stayed held after mouse-up, each until someone noticed.
-    // canvasGestureAll is the simple case — the application passes masks only because it interleaves
-    // dispatch_click_region() partway through. See canvasDrag.h.
-    //
-    // Undo is still the one thing not carried over here: a plug-in has no undo stack, which is exactly
-    // why the application wraps the param release in finish_param_drag() rather than the table doing it.
+    // notes §13
     if (canvas_gesture_release(&(tCanvasGestureEvent){
                                    .coord = gMouse, .rawX = gMouse.x, .rawY = gMouse.y,
                                    .slot = gSlot, .location = gLocation,
@@ -311,10 +217,7 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     return handled;
 }
 
-// Pointer moved with no button down. Updates the position AND advances the hover state: the menu
-// highlight is drawn from the pointer, and a submenu flyout opens on a dwell timer that only ticks
-// when something polls it. The application polls both of these every frame (graphics.c); doing it on
-// movement is enough here, since the plug-in redraws on demand rather than continuously.
+// notes §14
 void g2_input_hover(double x, double y) {
     g2_input_set_mouse(x, y);
 
@@ -333,12 +236,7 @@ void g2_input_hover(double x, double y) {
     update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
 }
 
-// The pointer has left the plug-in's view. Parks it back off-canvas so nothing hit-tests true — the
-// menu bar item and the connector the pointer was last over both stop being highlighted, rather than
-// staying lit until it comes back. Same sentinel the position starts at, and for the same reason.
-//
-// The caller ignores an exit that arrives with a button still down: a drag deliberately continues
-// outside the view, and AppKit keeps delivering its movement.
+// notes §15
 void g2_input_pointer_left(void) {
     gMouse = (tCoord){
         -1.0, -1.0
@@ -375,28 +273,12 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
 
     g2_input_set_mouse(x, y);
 
-    // THE POPUPS GET THE WHEEL FIRST, which is the application's very first line in scroll_event()
-    // and was the one input this function never forwarded. The file browser could be dragged by its
-    // scrollbar thumb but not scrolled, and the notch fell through to the canvas hidden behind it.
-    //
-    // The plug-in registers no popups of its own — synthlib_popups_register() is called only from
-    // the application — but it does not need to: SynthLib's own table carries the file browser, the
-    // bank browser and the alert dialog, so dispatching here covers all three exactly as it does in
-    // the application, rather than hand-rolling a file_browser_active() check that would have to be
-    // extended for every popup added later.
-    //
-    // ROWS, NOT PIXELS. A popup's scroll handler counts LIST ROWS, and the application hands it raw
-    // GLFW notches at one notch per row. What arrives here is pixels, because the canvas panes below
-    // want pixels. Dividing by the same WHEEL_SCROLL_STEP the view multiplied by puts a notch back
-    // on one row instead of inventing a second constant that could drift from it.
+    // notes §16
     if (synthlib_popups_dispatch_scroll(deltaY / WHEEL_SCROLL_STEP)) {
         return;
     }
 
-    // Over the palette band the wheel scrolls the TILES sideways — a group wider than the window is
-    // otherwise unreachable, and the band is above both panes so no pane wants this event anyway.
-    // NOTCHES, not pixels: palette_scroll() advances by one tile per unit, so the same
-    // WHEEL_SCROLL_STEP division the popups get applies here for the same reason.
+    // notes §17
     if (palette_scroll(deltaY / WHEEL_SCROLL_STEP, gMouse) == true) {
         return;
     }
@@ -406,12 +288,7 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
         return;
     }
 
-    // CMD + WHEEL ZOOMS, as it does in the application, around the pointer rather than the corner.
-    //
-    // ONE STEP PER EVENT rather than scaling by the delta: the deltas arriving here are PIXELS (see
-    // the caller in g2View.m, which multiplies by the backing scale), so feeding them to a zoom
-    // factor that moves in 0.1 steps would fling the canvas from one limit to the other on a single
-    // flick. A notch is a step, which is what Cmd +/- does too.
+    // notes §18
     if (cmd_modifier_held() == true) {
         if (deltaY != 0.0) {
             uint32_t prevPane = module_pane();
@@ -425,28 +302,11 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
     pane_scroll_by((uint32_t)pane, -deltaX, -deltaY);
 }
 
-// A drag tick with no new mouse event behind it.
-//
-// Auto-scroll only advances when something asks it to, so holding the pointer still just past a
-// pane's edge would stop the scrolling dead. The application solves this by synthesising a
-// cursor_pos() call from its main loop while a drag is active (graphics.c: "Artificially do
-// cursor_pos call for drag scrolling when cursor not moving"); this is the same trick, driven by a
-// timer in the view.
-//
-// Returns true if anything moved, so the caller only redraws when there is a reason to.
+// notes §19
 bool g2_input_drag_tick(void) {
     bool busy = false;
 
-    // A CAPTURED POINTER KEEPS THIS TICKING, and that is the whole point of the line. cursor_capture()
-    // hides the pointer for the entire HOST process and decouples it from the hardware, so a mouse-up
-    // that never arrives leaves the user with no cursor and a frozen mouse in their DAW. The recovery
-    // that catches that lives in g2View.m (-recoverLostRelease), because the authority on whether the
-    // button is still down is [NSEvent pressedMouseButtons] and not anything visible from here — but it
-    // can only run while this timer is alive, and a parameter drag on its own never made it busy.
-    //
-    // The previous version of this net tested (captured && !gParamDragging.active) and was useless
-    // twice over: the timer had already stopped itself mid-drag, and only the release that went missing
-    // clears gParamDragging, so the condition could never come true in the case it was written for.
+    // notes §20
     if (cursor_is_captured() == true) {
         busy = true;
     }
@@ -459,10 +319,7 @@ bool g2_input_drag_tick(void) {
         busy = true;
     }
 
-    // AN OPEN MENU needs ticking for the same kind of reason: a submenu opens on a DWELL timer, and
-    // that timer only advances when something asks it to. Driving it from pointer movement alone
-    // meant a flyout would not appear unless the mouse was kept jiggling on the parent item. The
-    // application polls this every frame.
+    // notes §21
     if (gContextMenu.active == true) {
         update_context_menu_hover();
         update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
@@ -471,27 +328,7 @@ bool g2_input_drag_tick(void) {
     return busy;
 }
 
-// Called by the canvas when a dial drag begins (moduleGraphics.c). In the application this ALSO
-// hides the cursor and warps it, which is what lets a vertical drag run past the screen edge; here
-// it cannot, so the pointer stays visible and travels.
-//
-// SETTING THE ORIGIN IS NOT OPTIONAL, though, and leaving this empty was a real bug. The vertical and
-// horizontal dial modes compute the new value as
-//
-//     value + (previousY - currentY) * range / 200
-//
-// so with no origin recorded, previousY was still 0 and the very first movement evaluated
-// (0 - currentY), a large negative number that drove every dial straight to zero. Rotary hid it by
-// reading an absolute angle and never touching these.
-// ── The plug-in's half of the drag-begin seam (canvasDrag.h) ────────────────────────────────────
-//
-// This WAS start_cursor_drag(), a per-shell function that had to remember to record the drag origin.
-// It is now two named jobs, and the one the plug-in cannot do is the one it is allowed to decline.
-//
-// The plug-in reports motion in canvas coordinates, so the origin is recorded in those — it is only
-// ever differenced against later positions from this same source, so the space just has to agree with
-// itself. Recording it in raw screen coordinates while reporting motion in canvas ones is precisely
-// the kind of mismatch this seam's comment warns about.
+// notes §22
 void cursor_raw_coord(double * rawX, double * rawY) {
     if (rawX != NULL) {
         *rawX = gMouse.x;
@@ -502,17 +339,7 @@ void cursor_raw_coord(double * rawX, double * rawY) {
     }
 }
 
-// DELIBERATE NO-OPS, and no longer silently damaging. An NSView owned by the host is not ours to
-// confine the pointer inside, and the previous arrangement meant declining that also discarded the
-// drag origin — vertical and horizontal dial drags collapsed to zero while rotary looked perfect,
-// because rotary reads an absolute angle and never touches the origin.
-//
-// WHAT IS LOST IS HIDING, NOT FUNCTION. All three dial modes work — see g2_input_mouse_event() — and
-// what a real implementation would add is NSCursor hide/unhide plus
-// CGAssociateMouseAndMouseCursorPosition (or CGDisplayHideCursor with warping), so that the pointer
-// stays put on the dial instead of travelling away from it and eventually running out of screen.
-// cursor_capture()/cursor_release() are NOT here — they need NSCursor, so they live in g2View.m
-// with the rest of this shell's Cocoa. See there for how the pointer is hidden and put back.
+// notes §23
 
 // The application reads this from GLFW; the plug-in reads it from whatever the host last delivered.
 // This is the function whose absence made every canvas interaction impossible, and it is four lines.
@@ -522,20 +349,7 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     }
 }
 
-// ── Keyboard ────────────────────────────────────────────────────────────────────────────────────
-//
-// The shell decodes, the shared code acts — the same split as the modifier seam. g2View.m hands over
-// a character it took from -charactersIgnoringModifiers (so this sees the key's unshifted meaning, and
-// '+' and '=' are both worth accepting) plus whether Command was down.
-//
-// UNTIL NOW THIS VIEW RECEIVED NO KEY EVENTS AT ALL: NSView's -acceptsFirstResponder is NO by default
-// and nothing had overridden it, so neither -keyDown: nor -flagsChanged: was ever called. Both are
-// live now, which is also what makes a modifier pressed mid-drag — with no mouse movement to carry it
-// — register at all.
-//
-// Returns true if the key was used, so the view can leave it alone otherwise and let the host have it.
-// That matters: a host owns shortcuts like the space bar for transport, and a plug-in that swallowed
-// everything would be worse than one that swallowed nothing.
+// notes §24
 bool g2_input_key(int character, bool cmdHeld) {
     if (cmdHeld == true) {
         // Cmd +/- is the canvas zoom, the same pair and the same step the application uses.
@@ -560,4 +374,68 @@ bool g2_input_key(int character, bool cmdHeld) {
         return canvas_nudge_param_under_cursor(-1);
     }
     return false;
+}
+
+// notes §25
+static int glfw_key_for_mac(unsigned short keyCode) {
+    switch (keyCode) {
+        case 53:  return GLFW_KEY_ESCAPE;
+        case 36:  return GLFW_KEY_ENTER;
+        case 76:  return GLFW_KEY_KP_ENTER;
+        case 51:  return GLFW_KEY_BACKSPACE;
+        case 117: return GLFW_KEY_DELETE;
+        case 48:  return GLFW_KEY_TAB;
+        case 123: return GLFW_KEY_LEFT;
+        case 124: return GLFW_KEY_RIGHT;
+        case 125: return GLFW_KEY_DOWN;
+        case 126: return GLFW_KEY_UP;
+        case 115: return GLFW_KEY_HOME;
+        case 119: return GLFW_KEY_END;
+        case 116: return GLFW_KEY_PAGE_UP;
+        case 121: return GLFW_KEY_PAGE_DOWN;
+        default:  return GLFW_KEY_UNKNOWN;
+    }
+}
+
+// The first code point of a UTF-8 string, or 0. Only what a filename box could be sent.
+static unsigned int first_codepoint(const char * utf8) {
+    const unsigned char * s = (const unsigned char *)utf8;
+
+    if ((s == NULL) || (s[0] == 0u)) {
+        return 0u;
+    }
+
+    if (s[0] < 0x80u) {
+        return s[0];
+    }
+
+    if (((s[0] & 0xE0u) == 0xC0u) && (s[1] != 0u)) {
+        return ((s[0] & 0x1Fu) << 6) | (s[1] & 0x3Fu);
+    }
+
+    if (((s[0] & 0xF0u) == 0xE0u) && (s[1] != 0u) && (s[2] != 0u)) {
+        return ((s[0] & 0x0Fu) << 12) | ((s[1] & 0x3Fu) << 6) | (s[2] & 0x3Fu);
+    }
+    return 0u;
+}
+
+bool g2_input_popup_key(unsigned short macKeyCode, const char * characters, bool isRepeat) {
+    int  key  = glfw_key_for_mac(macKeyCode);
+    bool used = false;
+
+    if (key != GLFW_KEY_UNKNOWN) {
+        used = synthlib_popups_dispatch_key(key, 0, isRepeat ? GLFW_REPEAT : GLFW_PRESS);
+    } else {
+        unsigned int codepoint = first_codepoint(characters);
+
+        // Printable only: a control character here is a key that has no GLFW name above.
+        if ((codepoint >= 0x20u) && (codepoint != 0x7Fu)) {
+            used = synthlib_popups_dispatch_char(codepoint);
+        }
+    }
+
+    if (used) {
+        synthlib_request_redraw();
+    }
+    return used;
 }

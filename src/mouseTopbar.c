@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/mouseTopbar.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,11 +70,7 @@ static void handle_button(tTopbarControlId controlId) {
         {
             uint32_t        variation      = (uint32_t)controlId - (uint32_t)topbarVariation1Id;
 
-            // Shift-click links a variation into the edit group instead of selecting it — see
-            // variation_is_linked() in globalVars.h. It toggles on the SELECTED button too: the
-            // selected variation receives its own edits regardless, but only explicit membership
-            // survives selecting a different one, and that survival is the whole point of the group.
-            // Init is not a real variation, so it is left to select normally.
+            // notes §1
             if (shift_modifier_held() && (variation < VARIATION_INIT)) {
                 variation_toggle_link(slot, variation);
                 synthlib_request_redraw();

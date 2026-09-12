@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/mutator.c.md - "// notes §k" refers there.
 
 #include <math.h>
 #include <stdlib.h>
@@ -47,11 +48,7 @@ bool category_is_locked(tMutatorCategory category, const tMutatorLocks * locks) 
     return locks->locked[category];
 }
 
-// Manual's "PERMANENTLY LOCKED PARAMETERS": signal-type selectors and mute/bypass buttons on
-// oscillators, filters and effects. These map directly onto existing tParamType values - no
-// name-based heuristic needed. paramTypeEnable is deliberately excluded here: it's reused for
-// legitimate per-step/per-channel content (sequencer step-events, mixer channel enables, KeyQuant
-// note toggles - confirmed by grepping moduleResources.h), not a module-level bypass switch.
+// notes §1
 bool mutator_is_permanently_locked(tParamType paramType) {
     switch (paramType) {
         case paramTypeBypass:

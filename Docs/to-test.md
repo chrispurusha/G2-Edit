@@ -3,6 +3,71 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***EQPEAK, EQ2BAND AND EQ3BAND PLAY IN THE ENGINE (2026-09-12)*** - measured laws (§11), fits
+  0.5-0.7 dB; by meter all 16 settings read the same as the G2. STILL TO CHECK: by ear with swept
+  dials, Bypass, and a deep wide cut above 1 kHz (§11.5).
+- ***FLTMULTI PLAYS IN THE ENGINE (2026-09-12)*** - the DSP code's Chamberlin filter with all three
+  outputs (§10); its responses fit the instrument's to 0.5-0.6 dB. By meter, 16 of 19 settings read the
+  same as the G2 and the rest are one value apart, each with mixed readings on both sides. STILL TO
+  CHECK: by ear with a swept Freq and Res near 127, GComp off, and the Freq and Pitch inputs.
+- ***OSCNOISE PLAYS IN THE ENGINE (2026-09-12)*** - two band-passes in series at the pitch, Q from the
+  measured Width law (§8). STILL TO CHECK: the narrow end (Width below 80, extrapolated, not resolved)
+  by ear against the instrument, and the Width input's depth (from the DSP code).
+- ***THE NOISE MODULE PLAYS IN THE ENGINE (2026-09-12)*** - white noise through the Color dial's
+  one-pole, corner and level from a 17-point measurement of the instrument. By meter, 6 of 9 Color
+  settings read the same as the G2; at the brightest the engine reads one value higher (its noise
+  peaks past full scale more often - a crest difference, not level or spectrum). STILL TO CHECK by
+  ear: Color swept on a real patch, engine against instrument.
+- ***OSCC AND OSCD PLAY IN THE ENGINE (2026-09-12)*** - OscA's oscillator with the waveform read as a
+  mode; checked on the G2 as identical to OscA (0.25 dB). STILL TO CHECK by ear in a real patch.
+- ***PAN, X-FADE, FADE1-2, FADE2-1 AND MIXSTEREO PLAY IN THE ENGINE (2026-09-12)*** - each law measured
+  on the G2 at the converter and checked against the instrument's code; the engine's meters then
+  agreed with the G2's on 63 of 63 readings. STILL TO CHECK: the Mod/Ctrl input's depth (taken from
+  the instrument's code as 4x the dial range at full attenuator, not yet measured), and by ear, a
+  patch that pans or crossfades under modulation.
+- ***THE WHOLE MIXER FAMILY PLAYS IN THE ENGINE (2026-09-12)*** - Mix1-1A/S, Mix2-1A/B, Mix4-1A/B,
+  Mix8-1A/B and MixFader join Mix4-1C/S, and every Chain input now sounds (it never did). Checked on
+  the G2: 106 configurations within 0.07 dB. STILL TO CHECK by ear: a real patch that chains mixers
+  or uses Mix8-1B/MixFader, engine against instrument.
+- ***ENGINE METERS FOLLOW THE G2's LAW, AND ITS MIXERS THE MEASURED TAPER (2026-09-12)*** - one meter
+  value per octave of peak (9, 11, 12 above full scale), and Mix4-1C/4-1S levels as cube + 1%.
+  Checked on the instrument: engine and G2 meters agree on 67 of 80 steps of a sweep, the rest one
+  value high at boundaries. STILL TO CHECK by eye: a busy patch with the engine on and off - the
+  module faces' meters should look the same either way.
+- ***G2 ALIKE SAVES ALL FOUR SLOTS, AND PERFORMANCES (2026-09-12)*** - the project now stores each
+  slot's patch path and the selected slot, or the .prf2 path in performance mode, where it stored
+  only slot A. File > Open takes a .prf2 (all four slots, Perf Mode on), and in Perf Mode File > Save
+  writes a .prf2. Projects saved before still open, into slot A. Checked with tools/vst3host
+  --dump-state: old path, .prf2, slots A+C with C selected, and a .prf2 with slot B selected all
+  come back as saved, and the editor shows the right slot lit; File > Save Perf, clicked in the
+  editor, wrote the .prf2 back and it reloads (but see todo.md: the writer changes Morph 8's label
+  and a cable filter, in the app too). STILL TO CHECK in Live: save a set
+  with patches in A and C and C selected, reopen it; open a .prf2 from File, save it under a new name
+  and open that in G2-Edit.
+- ***SMALL DRAWS NO LONGER ALLOCATE A METAL BUFFER EACH (2026-09-11)*** - SynthLib's Metal backend
+  passes any draw of up to 4 KB of vertices (128 vertices) with setVertexBytes, which is most of
+  them, instead of creating a buffer per draw call. All three applications and all three plug-ins
+  draw through it. Checked: the three plug-in editors draw as before in tools/vst3host, and the
+  continuously repainting panels' idle CPU fell (GenBridge 3.5% -> 2.9%, MidiSyncTool 4.8% -> 3.6%).
+  STILL TO CHECK: the three applications look exactly as before - text, cables, meters, menus.
+- ***G2 ALIKE IS MULTI-INSTANCE (2026-09-11)*** - every instance owns a whole document (all four
+  slots, the patch and performance settings) and an engine of its own; nothing is shared but the
+  editor's panels. Checked offline: two engines rendering different patches on two threads at once
+  are sample-identical to each rendered alone (0 of 204,800 samples differ); tools/vst3host
+  --instances 2 loads two connected instances in one process, each editor drawing its own patch;
+  the application's output is bit-identical to before (same checksum). STILL TO CHECK in Live: (1)
+  two tracks of G2 Alike, a different patch in each, both playing - each must sound only its own;
+  (2) both editors open at once, editing each - a dial in one must not move the other; (3) A-D in
+  the editor now switch slots (they used to snap back to A) and the engine plays the selected one;
+  (4) a patch opened from the editor's File menu is the one the project reopens with - it used to
+  be forgotten. Known limits are in todo.md (shared editor panels, no performance playback yet).
+- ***NOTES START AT THEIR OWN SAMPLE (2026-09-11)*** - G2 Alike used to start every note at the
+  start of its block. tools/vst3host --offset-test N: a note at sample 0, 256 and 400 is heard from
+  frame 28, 284 and 428 - the offset plus the engine's fixed 28-frame latency. Worth hearing in
+  Live as tighter timing on fast, quantised parts at large buffer sizes.
+- ***THE PLUG-IN EDITOR'S POPUPS TAKE THE KEYBOARD (2026-09-11)*** - a filename can be typed into
+  File > Save As, and Escape and Enter close dialogs; the plug-in never passed keys to SynthLib's
+  popups. Untested by hand: type a name, backspace, arrows, Enter.
 - ***THE EDITOR NO LONGER SLOWS DOWN THE LONGER IT IS OPEN (2026-09-11)*** - CT's "does not refresh
   as quickly as standalone". do-plugin compiled the Metal backend without ARC, so every vertex buffer
   leaked: in tools/vst3host, forty seconds of pointer movement took the process from 1.7 GB to 12.7 GB

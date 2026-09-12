@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/msgQueue.h.md - "// notes §k" refers there.
 
 #ifndef __MSG_QUEUE_H__
 #define __MSG_QUEUE_H__
@@ -30,10 +31,7 @@ typedef enum {
     eCommandGetPatch
 } eCommand;
 
-// gToGuiThread is the render loop's work queue: tMessageContent.cmd holds an eResponseType, NOT an
-// eMsgCmd (the gToUsbThread and gToGuiThread queues never cross, so their value spaces are independent).
-// Most entries are USB-thread results, but the UI thread also posts to it for its own deferred work
-// (e.g. "open the file browser" from a menu click, handled in the render loop). See reverse-queue-design.md.
+// notes §1
 typedef enum {
     eRspFileLoad,   // fileResultData: result of a file load (eMsgCmdLoadFile)
     eRspFileSave,   // fileResultData: result of a file save (eMsgCmdSavePatchFile / eMsgCmdSavePerfFile)
@@ -287,12 +285,8 @@ typedef struct {
 } tBankLocationPerfData;
 
 typedef struct {
-    char filePath[1024];     // .pch2/.prf2 path; the USB thread opens/reads (load) or writes (save) it
-                             // directly so the whole CRC+sniff+clear+parse+push (load) / DB-read+
-                             // serialise (save) runs on the one thread — no cross-thread DB race. See
-                             // eMsgCmdLoadFile / eMsgCmdSavePatchFile / eMsgCmdSavePerfFile handlers.
-                             // filePath is unused for eMsgCmdNewPatch; slot is unused for the perf
-                             // save and for perf loads (whole-DB, all 4 slots).
+    char     filePath[1024]; // .pch2/.prf2 path; the USB thread opens/reads (load) or writes (save) it
+                             // notes §2
     uint32_t slot;
 } tPatchFileData;
 
@@ -355,9 +349,6 @@ typedef struct {
     };
 } tMessageContent;
 
-// The generic queue mechanism (tMessageQueue / tMessage / eRcv / msg_init / msg_send / msg_receive /
-// msg_count) now lives in SynthLib (synthlibQueue.h) — it's payload-agnostic, so it carries this
-// app's tMessageContent for both queues (gToUsbThread / gToGuiThread) without depending on it. This
-// header defines only the app-specific message content above.
+// notes §3
 
 #endif // __MSG_QUEUE_H__

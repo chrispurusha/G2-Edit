@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/noteStack.c.md - "// notes §k" refers there.
 
 // See noteStack.h for why this is not in midiInput.c any more.
 
@@ -23,8 +24,12 @@
 #include "soundEngine.h"
 #include "noteStack.h"
 
-static uint8_t  gHeld[NOTE_STACK_MAX];
-static uint32_t gHeldCount = 0;
+// One stack per engine, for the reason the engine's own state is banked (soundEngine.c): each plug-in
+// instance plays its own notes, and the stack is what decides which note its engine is sounding.
+static uint8_t  gHeldBank[SOUND_ENGINE_MAX_ENGINES][NOTE_STACK_MAX];
+static uint32_t gHeldCountBank[SOUND_ENGINE_MAX_ENGINES];
+#define gHeld         (gHeldBank[sound_engine_index()])
+#define gHeldCount    (gHeldCountBank[sound_engine_index()])
 
 static void held_remove(uint8_t note) {
     uint32_t i = 0;
@@ -55,23 +60,14 @@ void note_stack_note_on(uint8_t note) {
 void note_stack_note_off(uint8_t note) {
     held_remove(note);
 
-    // POLYPHONIC: release exactly the note that was let go and leave the rest alone. The fallback
-    // below would be actively wrong here — the note it falls back to already has a voice of its own
-    // sounding it, so retriggering it would restart a note the player is still holding, and the note
-    // actually released would never stop.
+    // notes §1
     if (sound_engine_is_polyphonic() == true) {
         sound_engine_note((int32_t)note, false);
         return;
     }
 
     if (gHeldCount > 0) {
-        // THE LEGATO CASE, and it is monophonic by definition. Retrigger the newest note still held
-        // rather than releasing — releasing here is what makes a monophonic synth stop dead when a
-        // passing note is let go.
-        //
-        // Whether that note's envelopes START AGAIN is the voice mode's business, not the stack's:
-        // the engine restarts them in Mono and glides on in Legato (voice_note_on() in soundEngine.c).
-        // So in Mono the note returned to attacks afresh, which is unconfirmed on the hardware.
+        // notes §2
         sound_engine_note((int32_t)gHeld[gHeldCount - 1], true);
     } else {
         sound_engine_note(-1, false);

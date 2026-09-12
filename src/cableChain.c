@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/cableChain.c.md - "// notes §k" refers there.
 
 #ifdef __cplusplus
 extern "C" {
@@ -313,10 +314,7 @@ bool cable_chain_disconnect(uint32_t slot, uint32_t location, tCableNode node) {
     if (!hasParent && (childCount == 0)) {
         return false;  // Nothing is attached here, so there is nothing to splice out
     }
-    // The neighbour that survives as the new parent, and the first child that has to be
-    // reattached to it. With no parent the first child IS the replacement, so the reattach loop
-    // starts one along — that is the original's IsBase() branch, where an output is spliced out
-    // and its inputs are left chained to each other with no source, hence white.
+    // notes §1
     tCableNode replacement = hasParent ? parent : children[0];
     uint32_t   firstChild  = hasParent ? 0 : 1;
 

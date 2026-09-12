@@ -16,22 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/g2Plugin.c.md - "// notes §k" refers there.
 
-// EVERYTHING ABOUT "G2 Alike" THAT A PLUG-IN FORMAT NEEDS TO KNOW, and nothing about any format.
-//
-// This file is the whole of what used to be g2Vst3.cpp's G2-specific half - ten parameters, a patch
-// path, notes, and a canvas to draw. The VST3 plumbing that surrounded it, and the Audio Unit
-// plumbing that would have had to be written a second time beside it, are now in SynthLib's
-// plugin/ folder and are shared. `./do-plugin au` and `./do-plugin vst3` compile this identical file.
-//
-// It is C, and so is SynthLib's descriptor, so nothing here needs C++ or Objective-C: the two
-// places that do - a VST3 vtable and a Cocoa view - are on the other side of the seam.
-//
-// THE ENGINE IS PROCESS-WIDE, AND THAT IS NOW THE ONLY THING STOPPING TWO COPIES. soundEngine.c keeps
-// its state in globals reached through atomics, and the patch lives in the application's global
-// database, so this "instance" is a handle rather than an owner: two copies of the plug-in in one
-// project would fight over the same engine. The wrappers used to assume one instance as well; since
-// 2026-09-11 they do not, so what is left is a property of the engine - see todo.md.
+// notes §1
 
 #include <stdatomic.h>
 #include <stdio.h>
@@ -43,6 +30,8 @@
 
 #include "synthlibPlugin.h"
 
+#include "globalVars.h"             // the document, and the names that are macros onto it
+#include "dataBase.h"               // init_patch(), slot_has_modules()
 #include "soundEngine.h"
 #include "noteStack.h"
 #include "prefs.h"
@@ -54,13 +43,7 @@
 // Identity
 // ------------------------------------------------------------------------------------------------
 
-// THESE BYTES MAY NEVER CHANGE. A host remembers a plug-in by them, so a project saved against this
-// build must find the same numbers next time or it reopens with an empty slot.
-//
-// They are the same two ids g2Vst3.cpp declared as FUIDs, written out as bytes. A VST3 FUID built
-// from four uint32s lays each one out big-endian on every platform except Windows, which is what
-// makes 0x7D14B03C the four bytes 7D 14 B0 3C - so this is the identical plug-in to a host that
-// already knows it, not a new one.
+// notes §2
 static const uint8_t gProcessorUid[16] = {
     0x7D, 0x14, 0xB0, 0x3C, 0x6E, 0x28, 0x4A, 0x97,
     0x8C, 0x5F, 0x1D, 0x62, 0xB9, 0x3A, 0x47, 0xE1
@@ -100,14 +83,7 @@ static const uint8_t gControllerUid[16] = {
 // 0 dB to unity, deliberately, so this is a fader and not a boost into the limiter.
 #define G2_LEVEL_MIN_DB       (-60.0)
 
-// WHICH MORPH GROUP THE G2 WIRES EACH PHYSICAL CONTROL TO (midiInput.c's MORPH_GROUP_*), and
-// therefore which of parameters 0-7 a MIDI control should drive. The G2 hard-wires its wheels and
-// pedals to particular morph groups - morphStrMap in moduleResources.h names them - and those groups
-// are already parameters, so most of the table below maps a control onto a parameter that exists
-// rather than inventing one. Only pitch bend needs a parameter of its own, having no morph group.
-//
-// The wiring is in the table's midiControl column; this one is named because the poly-pressure path
-// does not go through the table - see g2_poly_pressure().
+// notes §3
 #define G2_MORPH_AFTERTOUCH   (3)
 
 static const tSynthLibParam gParams[G2_NUM_PARAMS] = {
@@ -136,13 +112,32 @@ static const tSynthLibParam gParams[G2_NUM_PARAMS] = {
 // The instance
 // ------------------------------------------------------------------------------------------------
 
-#define G2_MAX_BLOCK    (4096)
+#define G2_MAX_BLOCK     (4096)
+#define G2_MAX_EVENTS    (256)
+
+// A note waiting for its sample. Both wrappers hand a block's notes over BEFORE asking for the block,
+// each with its offset into it, so the note is held until the render reaches that offset.
+typedef struct {
+    uint32_t offset;
+    uint8_t  note;
+    bool     on;
+} tG2NoteEvent;
 
 typedef struct {
+    // This instance's G2: its four slots, its settings, and through engineIndex its engine.
+    tG2Document *    doc;
+
     char             patchPath[1024];
     bool             active;
     double           sampleRate;
     double           params[G2_NUM_PARAMS];
+
+    // See the note below.
+    atomic_bool      morphSnapshotDirty;
+
+    // This block's notes, in arrival order - which both wrappers make offset order. Audio thread only.
+    tG2NoteEvent     events[G2_MAX_EVENTS];
+    uint32_t         eventCount;
 
     // sound_engine_render() writes INTERLEAVED frames and both plug-in formats hand over one buffer
     // per channel, so it renders here and is de-interleaved out. Bounded by G2_MAX_BLOCK and looped,
@@ -150,23 +145,17 @@ typedef struct {
     float            scratch[G2_MAX_BLOCK * 2];
 } tG2Plugin;
 
-// A MORPH DOES NOT REACH THE AUDIO THREAD BY ITSELF, and this flag is how the plug-in copes.
-//
-// sound_engine_set_morph() only records the position. Unlike pitch bend, which the audio thread
-// reads directly, a morph is folded into the parameter SNAPSHOT, and that snapshot is only rebuilt
-// by sound_engine_update_from_patch(). The standalone editor rebuilds it on every redraw, which is
-// why moving a morph there requires asking for one - and why its mod wheel response is capped at the
-// frame rate, since a full canvas repaint sits between the wheel and the sound.
-//
-// A plug-in cannot borrow that arrangement: it has to work with the editor window closed. So the
-// rebuild happens in render() instead, once per block, and only when something actually moved.
-//
-// A FLAG RATHER THAN REBUILDING ON THE SPOT, because the snapshot is published through a SEQLOCK
-// (gParamsSeq in soundEngine.c). A seqlock tolerates exactly one writer; the audio thread is already
-// its reader, and a parameter change can arrive on the host's UI thread. Letting both write would
-// corrupt it. So every setter merely sets this, and render() - one thread, once per block - is the
-// only writer.
-static atomic_bool gMorphSnapshotDirty;
+// EVERY ENTRY STARTS HERE. Makes this instance's document - and so its engine - the current one on the
+// calling thread. Cheap (one thread-local store), and it has to be unconditional: a host may call two
+// instances from one thread in turn, and a stale selection would play or edit the other one.
+static tG2Plugin * enter(void * inst) {
+    tG2Plugin * g2 = (tG2Plugin *)inst;
+
+    g2_document_select(g2->doc);
+    return g2;
+}
+
+// notes §4
 
 // ------------------------------------------------------------------------------------------------
 
@@ -174,15 +163,7 @@ static double level_db(double normalized) {
     return G2_LEVEL_MIN_DB + (normalized * (0.0 - G2_LEVEL_MIN_DB));
 }
 
-// Where the patch comes from when the host has not restored one. Checked in order:
-//   1. the path the host restored with the project (g2_set_state below)
-//   2. $G2_PLUGIN_PATCH, then the older $G2_VST3_PATCH
-//   3. ~/Documents/G2-Edit/plugin.pch2
-//
-// The host-stored path is what makes a project reopen sounding as it did; the environment variable
-// is for driving it from a test script - a host launched from the Dock inherits no shell environment,
-// so it only ever applies to a scripted run - and the fixed location is so it does something
-// sensible with neither set.
+// notes §5
 static void default_patch_path(char * out, size_t len) {
     const char * env = getenv("G2_PLUGIN_PATCH");
 
@@ -200,16 +181,10 @@ static void default_patch_path(char * out, size_t len) {
 }
 
 static void load_patch(tG2Plugin * g2) {
-    // THE PATH, not a patch compiled into the binary. The built-in patch was a scaffold from before
-    // the plug-in had an editor: with no way to choose a file, embedding one removed a whole class of
-    // "why is it silent" while the rest was proven. File > Open Patch File... has replaced it, and a
-    // plug-in that quietly plays somebody else's lead patch on load is worse than one that starts
-    // empty.
-    //
-    // Slot 0: a plug-in instance is one patch, and the four-slot performance layout is a hardware
-    // notion with nothing to map onto here. An empty path or a missing file simply leaves the canvas
-    // empty, which is honest.
-    (void)g2_plugin_load_patch(g2->patchPath, 0);
+    // notes §6
+    if ((g2_plugin_open_file(g2->patchPath, 0) == eG2FileFailed) && (g2->patchPath[0] != '\0')) {
+        snprintf(gSavedPatchPath[0], FILE_PATH_SIZE, "%s", g2->patchPath);
+    }
 
     // Only meaningful once the engine is live - see g2_set_active(). Harmless when it is not, and
     // called anyway so that a patch swapped in mid-session takes effect immediately.
@@ -230,6 +205,29 @@ static void * g2_create(const tSynthLibPluginDesc * desc) {
     if (g2 == NULL) {
         return NULL;
     }
+    g2->doc = g2_document_create();
+
+    if (g2->doc == NULL) {
+        free(g2);
+        return NULL;
+    }
+    enter(g2);
+
+    // AN ENGINE OF ITS OWN, or no instance at all. Running out (SOUND_ENGINE_MAX_ENGINES) fails the
+    // load, which a host reports, rather than quietly sharing an engine with another track.
+    if (sound_engine_attach() == false) {
+        g2_document_select(NULL);
+        g2_document_destroy(g2->doc);
+        free(g2);
+        return NULL;
+    }
+    note_stack_all_off();
+
+    // All four slots start as the application's new empty patch, so selecting B, C or D in the editor
+    // shows an empty patch rather than zeroed storage. Slot A is replaced by the patch loaded below.
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        init_patch(slot);
+    }
 
     for (uint32_t i = 0; i < G2_NUM_PARAMS; i++) {
         g2->params[i] = gParams[i].defaultNormalized;
@@ -239,11 +237,17 @@ static void * g2_create(const tSynthLibPluginDesc * desc) {
 }
 
 static void g2_destroy(void * inst) {
-    free(inst);
+    tG2Plugin * g2 = enter(inst);
+
+    sound_engine_stop_hosted();
+    sound_engine_detach();
+    g2_document_select(NULL);
+    g2_document_destroy(g2->doc);
+    free(g2);
 }
 
 static void g2_initialize(void * inst) {
-    tG2Plugin * g2 = (tG2Plugin *)inst;
+    tG2Plugin * g2 = enter(inst);
 
     if (g2->patchPath[0] == '\0') {
         default_patch_path(g2->patchPath, sizeof(g2->patchPath));
@@ -252,28 +256,25 @@ static void g2_initialize(void * inst) {
 }
 
 static void g2_terminate(void * inst) {
-    (void)inst;
+    (void)enter(inst);
     sound_engine_stop_hosted();
 }
 
 static void g2_set_sample_rate(void * inst, double sampleRate) {
-    tG2Plugin * g2 = (tG2Plugin *)inst;
+    tG2Plugin * g2 = enter(inst);
 
     g2->sampleRate = sampleRate;
     sound_engine_set_sample_rate(sampleRate);
 }
 
 static void g2_set_active(void * inst, bool active) {
-    tG2Plugin * g2 = (tG2Plugin *)inst;
+    tG2Plugin * g2 = enter(inst);
 
     if (active == true) {
         sound_engine_start_hosted(g2->sampleRate);
         g2->active = true;
 
-        // THE CHAIN IS RESOLVED HERE, not when the patch was read. sound_engine_update_from_patch()
-        // returns immediately while the engine is inactive, so calling it at initialize() time -
-        // which is the obvious place, and where this used to be - silently did nothing and the
-        // plug-in rendered silence from a perfectly good patch.
+        // notes §7
         sound_engine_update_from_patch();
     } else {
         sound_engine_stop_hosted();
@@ -282,8 +283,38 @@ static void g2_set_active(void * inst, bool active) {
 }
 
 static void g2_reset(void * inst) {
-    (void)inst;
+    tG2Plugin * g2 = enter(inst);
+
+    g2->eventCount = 0;
     note_stack_all_off();
+}
+
+// Renders `frames` into out[0..1] starting at `from`, in chunks the scratch buffer can hold.
+static void render_span(tG2Plugin * g2, float ** out, uint32_t from, uint32_t frames) {
+    uint32_t done = 0;
+
+    while (done < frames) {
+        uint32_t chunk = frames - done;
+
+        if (chunk > (uint32_t)G2_MAX_BLOCK) {
+            chunk = (uint32_t)G2_MAX_BLOCK;
+        }
+        sound_engine_render(g2->scratch, chunk, 2);
+
+        for (uint32_t i = 0; i < chunk; i++) {
+            out[0][from + done + i] = g2->scratch[i * 2];
+            out[1][from + done + i] = g2->scratch[(i * 2) + 1];
+        }
+        done += chunk;
+    }
+}
+
+static void apply_note(const tG2NoteEvent * e) {
+    if (e->on) {
+        note_stack_note_on(e->note);
+    } else {
+        note_stack_note_off(e->note);
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -295,7 +326,7 @@ static void g2_process(void * inst,
                        float ** out, uint32_t numOut,
                        uint32_t frames,
                        const tSynthLibTransport * transport) {
-    tG2Plugin * g2 = (tG2Plugin *)inst;
+    tG2Plugin * g2 = enter(inst);
 
     // An instrument: there is no input, and the transport is not read. The engine free-runs and has
     // nothing to sync to - a patch is a patch whether the host is rolling or not.
@@ -308,26 +339,40 @@ static void g2_process(void * inst,
     }
 
     // Fold any moved morph into the parameter snapshot. Once per block rather than once per change,
-    // and only here - see gMorphSnapshotDirty for why this is the sole writer. Costs a database
+    // and only here - see morphSnapshotDirty for why this is the sole writer. Costs a database
     // walk, which is what the standalone pays on every frame anyway.
-    if (atomic_exchange(&gMorphSnapshotDirty, false) == true) {
+    if (atomic_exchange(&g2->morphSnapshotDirty, false) == true) {
         sound_engine_update_from_patch();
     }
-    uint32_t done = 0;
 
-    while (done < frames) {
-        uint32_t chunk = frames - done;
+    // notes §8
+    uint32_t pos = 0;
 
-        if (chunk > (uint32_t)G2_MAX_BLOCK) {
-            chunk = (uint32_t)G2_MAX_BLOCK;
+    for (uint32_t i = 0; i < g2->eventCount; i++) {
+        uint32_t at = (g2->events[i].offset < frames) ? g2->events[i].offset : frames;
+
+        if (at > pos) {
+            render_span(g2, out, pos, at - pos);
+            pos = at;
         }
-        sound_engine_render(g2->scratch, chunk, 2);
+        apply_note(&g2->events[i]);
+    }
+    g2->eventCount = 0;
 
-        for (uint32_t i = 0; i < chunk; i++) {
-            out[0][done + i] = g2->scratch[i * 2];
-            out[1][done + i] = g2->scratch[(i * 2) + 1];
-        }
-        done += chunk;
+    if (pos < frames) {
+        render_span(g2, out, pos, frames - pos);
+    }
+}
+
+// Held for g2_process(), or applied at once if a host sends more notes in one block than there is
+// room for - a note early is better than a note lost.
+static void queue_note(tG2Plugin * g2, uint8_t note, bool on, uint32_t sampleOffset) {
+    tG2NoteEvent e = {sampleOffset, note, on};
+
+    if (g2->eventCount < (uint32_t)G2_MAX_EVENTS) {
+        g2->events[g2->eventCount++] = e;
+    } else {
+        apply_note(&e);
     }
 }
 
@@ -335,35 +380,29 @@ static void g2_process(void * inst,
 // Events
 // ------------------------------------------------------------------------------------------------
 
-// THROUGH THE SHARED NOTE STACK, NOT STRAIGHT TO THE ENGINE. The engine is monophonic, so releasing
-// a note has to fall back to whatever is still held or legato playing breaks - hold D, play F, let F
-// go, and the D under your finger must come back rather than the sound stopping. noteStack.c is the
-// application's own logic, moved out of midiInput.c so both get it from one place.
-//
-// OMNI, AND AT THE START OF THE BLOCK: the channel and the sample offset are both ignored. The engine
-// has one voice and no way to start a note part-way through a buffer, so a note lands at the start of
-// the block it arrived in - under 12 ms at 44.1 kHz and 512 frames.
+// notes §9
 static void g2_note_on(void * inst, uint8_t channel, uint8_t note, float velocity,
                        uint32_t sampleOffset) {
-    (void)inst;
+    tG2Plugin * g2 = enter(inst);
+
     (void)channel;
     (void)velocity;                             // the engine has no velocity response yet
-    (void)sampleOffset;
-    note_stack_note_on(note);
+    queue_note(g2, note, true, sampleOffset);
 }
 
 static void g2_note_off(void * inst, uint8_t channel, uint8_t note, float velocity,
                         uint32_t sampleOffset) {
-    (void)inst;
+    tG2Plugin * g2 = enter(inst);
+
     (void)channel;
     (void)velocity;
-    (void)sampleOffset;
-    note_stack_note_off(note);
+    queue_note(g2, note, false, sampleOffset);
 }
 
 static void g2_poly_pressure(void * inst, uint8_t channel, uint8_t note, float pressure,
                              uint32_t sampleOffset) {
-    (void)inst;
+    tG2Plugin * g2 = enter(inst);
+
     (void)channel;
     (void)sampleOffset;
 
@@ -374,7 +413,7 @@ static void g2_poly_pressure(void * inst, uint8_t channel, uint8_t note, float p
     }
 
     if (sound_engine_set_morph(G2_MORPH_AFTERTOUCH, (double)pressure) == true) {
-        atomic_store(&gMorphSnapshotDirty, true);
+        atomic_store(&g2->morphSnapshotDirty, true);
     }
 }
 
@@ -385,7 +424,7 @@ static void g2_poly_pressure(void * inst, uint8_t channel, uint8_t note, float p
 // Both a host's generic panel (on its UI thread) and automation (on the audio thread) land here.
 // Every engine entry point it calls stores through an atomic, so there is nothing to guard.
 static void g2_set_param(void * inst, uint32_t id, double normalized) {
-    tG2Plugin * g2 = (tG2Plugin *)inst;
+    tG2Plugin * g2 = enter(inst);
 
     if (id >= G2_NUM_PARAMS) {
         return;
@@ -396,7 +435,7 @@ static void g2_set_param(void * inst, uint32_t id, double normalized) {
         // The return says whether the position actually changed - no point rebuilding a snapshot for
         // a host resending a value it already sent.
         if (sound_engine_set_morph(id, normalized) == true) {
-            atomic_store(&gMorphSnapshotDirty, true);
+            atomic_store(&g2->morphSnapshotDirty, true);
         }
     } else if (id == (uint32_t)G2_PARAM_LEVEL) {
         sound_engine_set_output_level_db(level_db(normalized));
@@ -442,55 +481,169 @@ static bool g2_param_text(const tSynthLibPluginDesc * desc, void * inst, uint32_
 // State
 // ------------------------------------------------------------------------------------------------
 
-// THE PATCH IS IDENTIFIED BY PATH rather than embedded wholesale. A .pch2 is small enough to embed,
-// and doing so would make a project self-contained, but it would also freeze a copy: edit the patch
-// in G2-Edit and the project would go on playing the old one, silently. Storing the path keeps one
-// patch with one meaning.
-//
-// NO TERMINATOR IS WRITTEN. The blob's length is its length - synthlibPluginState.c records it - and
-// this is also exactly what the plug-in's state was before that header existed, so a project saved
-// by an older build still restores its patch.
-static size_t g2_get_state(void * inst, void * out, size_t len) {
-    tG2Plugin * g2   = (tG2Plugin *)inst;
-    size_t      need = strlen(g2->patchPath);
+// notes §10
+#define G2_STATE_HEADER    "G2Alike state 2\n"
 
-    if ((out != NULL) && (len >= need) && (need > 0u)) {
-        memcpy(out, g2->patchPath, need);
+static size_t g2_get_state(void * inst, void * out, size_t len) {
+    tG2Plugin * g2 = enter(inst);
+    char        text[(MAX_SLOTS + 1) * (FILE_PATH_SIZE + 16) + 64];
+    size_t      used = 0;
+
+    used += (size_t)snprintf(text + used, sizeof(text) - used, "%s", G2_STATE_HEADER);
+
+    if ((gGlobalSettings.perfMode == 1) && (gSavedPerfPath[0] != '\0')) {
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "perf=%s\n", gSavedPerfPath);
+    } else {
+        for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+            const char * path = gSavedPatchPath[slot];
+
+            if ((path[0] != '\0') && (used < sizeof(text))) {
+                used += (size_t)snprintf(text + used, sizeof(text) - used, "slot%u=%s\n", (unsigned)slot, path);
+            }
+        }
     }
-    return need;
+
+    if (used < sizeof(text)) {
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "perfmode=%u\nselected=%u\n",
+                                 (unsigned)gGlobalSettings.perfMode, (unsigned)gSlot);
+    }
+
+    if (used > sizeof(text)) {
+        used = sizeof(text);
+    }
+
+    if ((out != NULL) && (len >= used)) {
+        memcpy(out, text, used);
+    }
+    return used;
+}
+
+// A v2 state record, read into this before anything is loaded, so a record that names only some
+// slots can empty the rest (see g2_set_state()).
+typedef struct {
+    char    perf[FILE_PATH_SIZE];
+    char    slot[MAX_SLOTS][FILE_PATH_SIZE];
+    int32_t perfMode;
+    int32_t selected;
+} tG2State;
+
+static void parse_state_line(tG2State * state, char * line) {
+    char * eq = strchr(line, '=');
+
+    if (eq == NULL) {
+        return;     // Not ours; a later version's line, perhaps. Skipped rather than refused
+    }
+    *eq = '\0';
+
+    const char * key   = line;
+    const char * value = eq + 1;
+
+    if (strcmp(key, "perf") == 0) {
+        snprintf(state->perf, sizeof(state->perf), "%s", value);
+    } else if ((strncmp(key, "slot", 4) == 0) && (key[4] >= '0') && (key[4] < (char)('0' + MAX_SLOTS)) && (key[5] == '\0')) {
+        snprintf(state->slot[key[4] - '0'], sizeof(state->slot[0]), "%s", value);
+    } else if (strcmp(key, "perfmode") == 0) {
+        state->perfMode = atoi(value);
+    } else if (strcmp(key, "selected") == 0) {
+        state->selected = atoi(value);
+    }
 }
 
 static void g2_set_state(void * inst, const void * data, size_t len) {
-    tG2Plugin * g2 = (tG2Plugin *)inst;
+    tG2Plugin * g2        = enter(inst);
+    size_t      headerLen = strlen(G2_STATE_HEADER);
 
     if ((data == NULL) || (len == 0u)) {
         return;
     }
 
-    if (len >= sizeof(g2->patchPath)) {
-        len = sizeof(g2->patchPath) - 1u;
+    if ((len < headerLen) || (memcmp(data, G2_STATE_HEADER, headerLen) != 0)) {
+        // The old format: a bare path, into slot A.
+        if (len >= sizeof(g2->patchPath)) {
+            len = sizeof(g2->patchPath) - 1u;
+        }
+        memcpy(g2->patchPath, data, len);
+        g2->patchPath[len] = '\0';
+        load_patch(g2);
+        return;
     }
-    memcpy(g2->patchPath, data, len);
-    g2->patchPath[len] = '\0';
-    load_patch(g2);
+    tG2State * state = (tG2State *)calloc(1, sizeof(tG2State));
+    char *     text  = (char *)malloc(len + 1u);
+    char *     save  = NULL;
+
+    if ((state == NULL) || (text == NULL)) {
+        free(state);
+        free(text);
+        return;
+    }
+    state->perfMode = -1;
+    state->selected = -1;
+    memcpy(text, data, len);
+    text[len] = '\0';
+
+    for (char * line = strtok_r(text + headerLen, "\n", &save); line != NULL; line = strtok_r(NULL, "\n", &save)) {
+        parse_state_line(state, line);
+    }
+    free(text);
+
+    // notes §11
+    gSavedPerfPath[0] = '\0';
+    snprintf(g2->patchPath, sizeof(g2->patchPath), "%s", state->slot[0]);
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        gSavedPatchPath[slot][0] = '\0';
+    }
+
+    if (state->perf[0] != '\0') {
+        if (g2_plugin_open_file(state->perf, 0) == eG2FileFailed) {
+            for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+                clear_slot_data(slot);
+                init_patch(slot);
+            }
+            snprintf(gSavedPerfPath, FILE_PATH_SIZE, "%s", state->perf);
+        }
+    } else {
+        for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+            if ((state->slot[slot][0] != '\0') && (g2_plugin_open_file(state->slot[slot], slot) != eG2FileFailed)) {
+                continue;
+            }
+            // Nothing named, or the file has gone: an empty slot, as the editor's A-D would show it.
+            clear_slot_data(slot);
+            init_patch(slot);
+            snprintf(gSavedPatchPath[slot], FILE_PATH_SIZE, "%s", state->slot[slot]);
+        }
+    }
+
+    // AFTER the files: loading a performance sets both of these from the file itself, and the
+    // record says what they were when the project was saved.
+    if ((state->perfMode == 0) || (state->perfMode == 1)) {
+        gGlobalSettings.perfMode = (uint8_t)state->perfMode;
+    }
+
+    if ((state->selected >= 0) && (state->selected < MAX_SLOTS)) {
+        gSlot = (uint32_t)state->selected;
+    }
+    free(state);
+
+    if (g2->active == true) {
+        sound_engine_update_from_patch();
+    }
+    g2_view_request_redraw();
 }
 
 // ------------------------------------------------------------------------------------------------
 // Editor
 // ------------------------------------------------------------------------------------------------
 
-// THE EDITOR IS THE APPLICATION'S OWN CANVAS, not a second renderer. g2View.m is the NSView, g2Draw.c
-// draws the frame by calling render_modules() / render_cables(), and the menu bar is the
-// application's too - so the editor has File, Settings, Controls, Tools, View and Help.
-//
-// What made that possible was moving the drawing behind a render backend: the application reaches
-// its window through GLFW, which creates and owns one, while a plug-in is handed an NSView the HOST
-// owns and GLFW has no "adopt this existing NSView". gfx_attach_window() takes the host's view,
-// SynthLib's utilsGraphics.c is the only thing that draws, and the same canvas code serves both.
+// notes §12
 static void * g2_create_view(const tSynthLibPluginDesc * desc, void * inst, double width, double height) {
+    tG2Plugin * g2 = enter(inst);
+
     (void)desc;
-    (void)inst;
-    return g2_view_create(width, height);
+
+    // The view is handed its instance's document and selects it itself before every frame and every
+    // event - its callbacks come from AppKit, not through this file.
+    return g2_view_create(g2->doc, width, height);
 }
 
 static void g2_view_resized(void * inst, void * view, double width, double height) {
@@ -560,14 +713,7 @@ static const tSynthLibPluginDesc gDescriptor = {
     .params            = gParams,
     .numParams         = G2_NUM_PARAMS,
 
-    // 900 points wide, and the height follows the ratio the application locks its own window to
-    // (TARGET_FRAME_BUFF_WIDTH : TARGET_FRAME_BUFF_HEIGHT, 2560:1440).
-    //
-    // THE LOCK IS WHAT COMPLETES THE SCALING. gGlobalGuiScale is derived from WIDTH alone, so on its
-    // own a taller window would simply uncover more rows rather than drawing the patch larger. The
-    // application never shows that because its window cannot be made taller without also becoming
-    // wider. Below 640 the module text stops being legible; there is no maximum, since everything
-    // scales.
+    // notes §13
     .editorDefaultWidth = 900.0,
     .editorMinWidth     = 640.0,
     .editorAspect       = (double)TARGET_FRAME_BUFF_WIDTH / (double)TARGET_FRAME_BUFF_HEIGHT,

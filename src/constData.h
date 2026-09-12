@@ -18,13 +18,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/constData.h.md - "// notes §k" refers there.
 
-/*
- * Reference credit on some of the excellent G2 comms protocol work by
- * Bruno Verhue in his Delphi editor application:
- *
- * https://www.bverhue.nl/g2dev/
- */
+// notes §1
 
 #ifndef __CONST_DATA_H__
 #define __CONST_DATA_H__

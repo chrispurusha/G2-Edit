@@ -16,26 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/capture.c.md - "// notes §k" refers there.
 
-// WHY THIS EXISTS RATHER THAN A LINE OF ffmpeg.
-//
-// ffmpeg's avfoundation input REPORTS the interface's real rate and channel count and then delivers
-// something else: an AVCaptureSession converts audio to 48 kHz, so a 192 kHz interface yields a file
-// LABELLED 192000 containing 48 kHz frames — a quarter of the samples, stretched over four times the
-// stated duration. Nothing in the file says so. Measuring a delay line from that is off by 4x, and
-// the only clue is that a 5 second capture claims to be 1.14 seconds long.
-//
-// It also has no working channel selection here: `-channels` is rejected outright by this build, and
-// what arrives is whatever the device presents.
-//
-// So this talks to the HAL through AUHAL, which hands over the device's own format untouched. It
-// prints the rate and channel count it actually got, and writes 32-bit PCM — see write_wav32() for
-// why that width and not 24.
-//
-// Build:  cc -O2 -Wall -o capture capture.c -framework CoreAudio -framework AudioToolbox \
-//                                           -framework CoreFoundation
-// Usage:  ./capture --list
-//         ./capture --device Fireface --seconds 12 --out cap.wav [--rate 192000]
+// notes §1
 
 #include <AudioToolbox/AudioToolbox.h>
 #include <CoreAudio/CoreAudio.h>
@@ -249,39 +232,39 @@ static void put16(FILE * f, uint16_t v) {
     fputc((int)((v >> 8) & 0xFF), f);
 }
 
-// 32-bit PCM, not 24 — not for the dynamic range (the interface has nowhere near it) but because a
-// 4-byte sample is a width Python's `array` module can load in ONE call, so analyse_ir.py can slice
-// a channel out of a 12 million sample capture instantly instead of calling int.from_bytes() per
-// sample. At these sizes that is the difference between a minute and a moment, and it is what keeps
-// the analyser dependency-free.
-//
-// Clamped rather than wrapped: a wrapped sample looks exactly like a transient, and this rig
-// measures transients.
-static bool write_wav32(const char * path, const float * samples, size_t frames, uint32_t channels, double rate) {
+// notes §2
+static bool write_wav32(const char * path, const float * samples, size_t frames, uint32_t channels, double rate,
+                        const uint32_t * keep, uint32_t keepCount, const char * comment) {
     FILE *   f          = fopen(path, "wb");
 
     if (f == NULL) {
         fprintf(stderr, "error: cannot write %s\n", path);
         return false;
     }
-    uint32_t dataBytes  = (uint32_t)(frames * channels * 4);
-    uint32_t byteRate   = (uint32_t)(rate * channels * 4);
+    uint32_t outChannels = (keep != NULL) ? keepCount : channels;
+    uint32_t dataBytes   = (uint32_t)(frames * outChannels * 4);
+    uint32_t byteRate    = (uint32_t)(rate * outChannels * 4);
+    uint32_t textBytes   = (comment != NULL) ? (uint32_t)strlen(comment) + 1 : 0;   // with its NUL
+    uint32_t textPadded  = textBytes + (textBytes & 1u);
+    uint32_t listBytes   = (comment != NULL) ? (4 + 8 + textPadded) : 0;          // "INFO" + ICMT chunk
 
     fwrite("RIFF", 1, 4, f);
-    put32(f, 36 + dataBytes);
+    put32(f, 36 + dataBytes + ((listBytes > 0) ? (8 + listBytes) : 0));
     fwrite("WAVEfmt ", 1, 8, f);
     put32(f, 16);
     put16(f, 1);                        // PCM
-    put16(f, (uint16_t)channels);
+    put16(f, (uint16_t)outChannels);
     put32(f, (uint32_t)rate);
     put32(f, byteRate);
-    put16(f, (uint16_t)(channels * 4)); // block align
+    put16(f, (uint16_t)(outChannels * 4)); // block align
     put16(f, 32);
     fwrite("data", 1, 4, f);
     put32(f, dataBytes);
 
-    for (size_t i = 0; i < (frames * channels); i++) {
-        double  v = (double)samples[i];
+    for (size_t i = 0; i < (frames * outChannels); i++) {
+        size_t  frame  = i / outChannels;
+        size_t  column = (keep != NULL) ? keep[i % outChannels] : (i % outChannels);
+        double  v      = (double)samples[(frame * channels) + column];
 
         if (v > 1.0) {
             v = 1.0;
@@ -294,6 +277,18 @@ static bool write_wav32(const char * path, const float * samples, size_t frames,
 
         put32(f, (uint32_t)s);
     }
+
+    if (listBytes > 0) {
+        fwrite("LIST", 1, 4, f);
+        put32(f, listBytes);
+        fwrite("INFOICMT", 1, 8, f);
+        put32(f, textBytes);
+        fwrite(comment, 1, textBytes, f);
+
+        if (textPadded > textBytes) {
+            fputc(0, f);
+        }
+    }
     fclose(f);
     return true;
 }
@@ -303,6 +298,8 @@ int main(int argc, char ** argv) {
     const char * outPath = NULL;
     double       seconds = 10.0;
     double       askRate = 0.0;
+    uint32_t     keep[64];
+    uint32_t     keepCount = 0;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--list") == 0) {
@@ -316,9 +313,20 @@ int main(int argc, char ** argv) {
             seconds = atof(argv[++i]);
         } else if ((strcmp(argv[i], "--rate") == 0) && ((i + 1) < argc)) {
             askRate = atof(argv[++i]);
+        } else if ((strcmp(argv[i], "--channels") == 0) && ((i + 1) < argc)) {
+            // A comma-separated list of the device's channel numbers, 0-indexed: "4,5".
+            char * list = argv[++i];
+
+            for (char * tok = strtok(list, ","); tok != NULL; tok = strtok(NULL, ",")) {
+                if (keepCount >= (sizeof(keep) / sizeof(keep[0]))) {
+                    fprintf(stderr, "error: too many channels in --channels\n");
+                    return 2;
+                }
+                keep[keepCount++] = (uint32_t)strtoul(tok, NULL, 10);
+            }
         } else {
-            fprintf(stderr, "usage: %s --list\n       %s --device <name> --out <file.wav> [--seconds N] [--rate R]\n",
-                    argv[0], argv[0]);
+            fprintf(stderr, "usage: %s --list\n       %s --device <name> --out <file.wav> [--seconds N] [--rate R]"
+                    " [--channels 4,5]\n", argv[0], argv[0]);
             return 2;
         }
     }
@@ -428,11 +436,7 @@ int main(int argc, char ** argv) {
 
     size_t                        target       = (size_t)(seconds * rate);
 
-    // A STALLED DEVICE MUST NOT BE AN INFINITE WAIT. Unplugging the interface — or swapping a USB
-    // isolator into the chain — stops the callback dead, and a loop that only watches the frame count
-    // then waits forever: a 123 second recording sat at 5 minutes and counting, holding up the rest of
-    // a sweep, with nothing written and nothing said. So progress is what is waited on, not completion,
-    // and a stall ends the recording with what it has plus a warning that says why.
+    // notes §3
     double                        stallLimit   = 2.0;
     size_t                        seen         = 0;
     struct timespec               lastProgress = {0};
@@ -469,10 +473,27 @@ int main(int argc, char ** argv) {
     size_t                        frames       = atomic_load(&capture.writtenFrames);
     size_t                        lost         = atomic_load(&capture.overrunFrames);
 
-    if (!write_wav32(outPath, capture.samples, frames, channels, rate)) {
+    char comment[512] = {0};
+
+    if (keepCount > 0) {
+        size_t used = (size_t)snprintf(comment, sizeof(comment), "channels ");
+
+        for (uint32_t k = 0; (k < keepCount) && (used < sizeof(comment)); k++) {
+            used += (size_t)snprintf(comment + used, sizeof(comment) - used, "%s%u", (k == 0) ? "" : ",", keep[k]);
+        }
+
+        if (used < sizeof(comment)) {
+            snprintf(comment + used, sizeof(comment) - used, " of %u (0-indexed) from %s", channels,
+                     (name != NULL) ? name : "?");
+        }
+    }
+
+    if (!write_wav32(outPath, capture.samples, frames, channels, rate, (keepCount > 0) ? keep : NULL, keepCount,
+                     (keepCount > 0) ? comment : NULL)) {
         return 1;
     }
-    printf("wrote %s: %zu frames (%.2f s), %u channels, %.0f Hz\n", outPath, frames, (double)frames / rate, channels, rate);
+    printf("wrote %s: %zu frames (%.2f s), %u of %u channels, %.0f Hz%s%s\n", outPath, frames, (double)frames / rate,
+           (keepCount > 0) ? keepCount : channels, channels, rate, (keepCount > 0) ? " - " : "", comment);
 
     if (stalled) {
         printf("WARNING: the device stopped delivering audio %.1f s before the end — recording cut short.\n"

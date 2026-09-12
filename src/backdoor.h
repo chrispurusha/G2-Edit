@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/backdoor.h.md - "// notes §k" refers there.
 
 #ifndef __BACKDOOR_H__
 #define __BACKDOOR_H__
@@ -26,13 +27,7 @@
 extern "C" {
 #endif
 
-// The backdoor test-control channel — a file-driven way to drive AND independently verify the
-// running app. The command surface, the gating environment variable and the reason each command
-// exists are all documented at the top of backdoor.c.
-//
-// Only two entry points, both called from the render loop (graphics.c): backdoor_poll() honours one
-// command per tick, and backdoor_enabled() is what tells that loop to tick at all — an unset
-// G2_EDIT_BACKDOOR leaves the channel completely inert and the idle loop asleep in glfwWaitEvents().
+// notes §1
 bool backdoor_enabled(void);
 void backdoor_poll(void);
 

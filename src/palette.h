@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/palette.h.md - "// notes §k" refers there.
 
 #ifndef PALETTE_H
 #define PALETTE_H
@@ -51,10 +52,7 @@ bool palette_scroll(double delta, tCoord coord);
 // Whether a tile is being dragged right now — the canvas asks, so it can show where a drop lands.
 bool palette_drag_active(void);
 
-// Add the selected group's nth module to the patch under the focused module, the way the manual's
-// double-click does. Exposed for the backdoor, which cannot synthesise a drag.
-// The colour new modules are created in, chosen from the band's swatches. The instrument works the
-// same way (manual p.61): the selection persists, so a run of modules can be added in one colour.
+// notes §1
 uint32_t palette_new_module_colour(void);
 
 bool palette_add_module(tModuleType type);
