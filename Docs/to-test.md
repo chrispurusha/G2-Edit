@@ -3,6 +3,12 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***FLTCOMB PLAYS IN THE ENGINE (2026-09-12)*** - all three Types from the measured laws (§13); by
+  meter 10 of 10 settings read the same as the G2. STILL TO CHECK by ear: Freq swept with high FB,
+  Deep at full feedback (approximate, §13.4), Kbt, and the FB Mod input (depth unmeasured).
+- ***OSCDUAL PLAYS IN THE ENGINE (2026-09-12)*** - pulse, phased saw and a shelved sub-octave (§12).
+  By meter one value above the G2 almost everywhere (§12.5). STILL TO CHECK by ear: the sub with Soft
+  off and on against the instrument, PW and Phase modulation (depths unmeasured).
 - ***EQPEAK, EQ2BAND AND EQ3BAND PLAY IN THE ENGINE (2026-09-12)*** - measured laws (§11), fits
   0.5-0.7 dB; by meter all 16 settings read the same as the G2. STILL TO CHECK: by ear with swept
   dials, Bypass, and a deep wide cut above 1 kHz (§11.5).
