@@ -349,11 +349,12 @@ typedef struct {
 
 static const tOscParams kOscParams[] = {
     //  type             tune cent kbt pmod ptype on  wparam wmode shape aWaves
-    {moduleTypeOscB,     0, 1, 2,  3, 4, 9,  8, -1,  6, false},
-    {moduleTypeOscA,     0, 1, 2,  3, 6, 5,  4, -1, -1, true },
-    {moduleTypeOscC,     0, 1, 2,  7, 3, 5, -1,  0, -1, true },               // FmM 4, FM type 6: FM not modelled, as on OscB
-    {moduleTypeOscD,     0, 1, 2, -1, 3, 4, -1,  0, -1, true },
-    {moduleTypeOscNoise, 0, 1, 2,  3, 4, 7, -1, -1, -1, false},
+    {moduleTypeOscB,     0, 1, 2,  3, 4,  9,  8, -1,  6, false},
+    {moduleTypeOscA,     0, 1, 2,  3, 6,  5,  4, -1, -1, true },
+    {moduleTypeOscC,     0, 1, 2,  7, 3,  5, -1,  0, -1, true },              // FmM 4, FM type 6: FM not modelled, as on OscB
+    {moduleTypeOscD,     0, 1, 2, -1, 3,  4, -1,  0, -1, true },
+    {moduleTypeOscNoise, 0, 1, 2,  3, 4,  7, -1, -1, -1, false},
+    {moduleTypeOscDual,  0, 1, 2,  3, 4, 10, -1, -1, -1, false},
 };
 
 static const tOscParams * osc_params(tModuleType type) {
@@ -519,6 +520,7 @@ typedef enum {
     eOscWaveSaw,
     eOscWaveSquare,
     eOscWaveSuper,
+    eOscWaveDual = 100,    // §12 - OscDual's own mix, never a selectable waveform
 } tOscWave;
 
 // notes §16
@@ -589,6 +591,7 @@ typedef enum {
     eNodeOscNoise,       // §8
     eNodeFltMulti,       // §10 - LP, BP and HP from one filter
     eNodeEq,             // §11 - EqPeak, Eq2Band, Eq3band
+    eNodeFltComb,        // §13
     eNodeOut,
 } tNodeKind;
 
@@ -674,6 +677,17 @@ typedef struct {
     double          eqPeakHz;      // 0 = no peak
     double          eqPeakDamping;
     double          eqPeakGain;
+    double          dualSquareLevel;   // §12
+    double          dualSawLevel;
+    double          dualSubLevel;
+    double          dualSawPhase;      // a fraction of a cycle
+    double          dualPwMod;
+    double          dualPhaseMod;
+    bool            dualSoft;
+    double          combFeedback;  // §13.3 - g, -1..1
+    double          combFbMod;
+    uint32_t        combType;      // Notch, Peak, Deep
+    double          combLevel;
     uint32_t        fadeKind;      // tFadeKind
     double          fadeMod;       // the modulation attenuator, 0..1
     bool            fadeLog;       // logStrMap {Log, Lin}: 0 is Log. The two faders have no choice
@@ -935,6 +949,12 @@ static double                      gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOI
 // notes §36
 #define DELAY_LINE_SAMPLES    (134400 * ENGINE_OVERSAMPLE)
 static float                       gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
+#define MAX_COMB_LINES        (2)        // FltCombs per patch that sound; any more pass their input dry
+#define COMB_LINE_SAMPLES     (16384)    // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
+static float                       gCombLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES][COMB_LINE_SAMPLES];
+#define gCombLine             (gCombLineBank[SE])
+static uint32_t                    gCombWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];
+#define gCombWrite            (gCombWriteBank[SE])
 #define gDelayLine            (gDelayLineBank[SE])
 static uint32_t                    gDelayWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
 #define gDelayWrite           (gDelayWriteBank[SE])
@@ -1357,6 +1377,9 @@ static void reset_node_state(void) {
             gPulsePrev[v][i]     = 0.0;
         }
     }
+
+    memset(gCombLine, 0, sizeof(gCombLine));
+    memset(gCombWrite, 0, sizeof(gCombWrite));
 
     for (i = 0; i < MAX_ENGINE_NODES; i++) {
         gSmoothPrimed[i]   = false;
@@ -1904,6 +1927,7 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
         case moduleTypeOscA:
         case moduleTypeOscC:
         case moduleTypeOscD:
+        case moduleTypeOscDual:
         {
             *kind = eNodeOsc;       // see kOscParams
             return true;
@@ -2001,6 +2025,11 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
         case moduleTypeEq3band:
         {
             *kind = eNodeEq;
+            return true;
+        }
+        case moduleTypeFltComb:
+        {
+            *kind = eNodeFltComb;
             return true;
         }
         case moduleTypeStChorus:
@@ -2114,7 +2143,13 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeOscShp:
         {
             // §6.3
-            static const uint32_t oscCIn[] = {3, 0};
+            static const uint32_t oscCIn[]    = {3, 0};
+            static const uint32_t oscDualIn[] = {0, 1, 3, 4};    // §12.1 - Sync is not modelled
+
+            if (moduleType == moduleTypeOscDual) {
+                *connectors = oscDualIn;
+                return 4;
+            }
 
             if (moduleType == moduleTypeOscC) {
                 *connectors = oscCIn;
@@ -2176,6 +2211,12 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeOscNoise:
         {
             uint32_t count = inputs_in_module_order(moduleType, 3u, derived);
+            *connectors = derived;
+            return count;
+        }
+        case eNodeFltComb:
+        {
+            uint32_t count = inputs_in_module_order(moduleType, 4u, derived);    // In, Pitch, PitchVar, FB Mod
             *connectors = derived;
             return count;
         }
@@ -2449,6 +2490,27 @@ static void set_osc_pitch(tEngineNode * node, tModule * module, uint32_t variati
                       ? type_ii_attenuator(param_value(module, variation, (uint32_t)p->pitchMod) / 127.0)
                       : 0.0;
     node->active    = (param_value(module, variation, (uint32_t)p->active) != 0.0);
+}
+
+#define OSCDUAL_PARAM_SQUARE_LEVEL    (5)     // §12.1 - 6 and 11 are the other way round in the module tables
+#define OSCDUAL_PARAM_PW_MOD          (6)
+#define OSCDUAL_PARAM_SAW_LEVEL       (7)
+#define OSCDUAL_PARAM_SAW_PHASE       (8)
+#define OSCDUAL_PARAM_SUB_LEVEL       (9)
+#define OSCDUAL_PARAM_PW              (11)
+#define OSCDUAL_PARAM_PHASE_MOD       (12)
+#define OSCDUAL_PARAM_SOFT            (13)
+
+static void oscdual_build(tEngineNode * node, tModule * module, uint32_t variation) {
+    node->wave            = eOscWaveDual;
+    node->shape           = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_PW));
+    node->dualSquareLevel = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_SQUARE_LEVEL));
+    node->dualSawLevel    = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_SAW_LEVEL));
+    node->dualSubLevel    = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_SUB_LEVEL));
+    node->dualSawPhase    = param_value(module, variation, OSCDUAL_PARAM_SAW_PHASE) / 128.0;
+    node->dualPwMod       = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_PW_MOD));
+    node->dualPhaseMod    = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_PHASE_MOD));
+    node->dualSoft        = (module->param[variation][OSCDUAL_PARAM_SOFT].value != 0);
 }
 
 // notes §76
@@ -2753,6 +2815,19 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             eq_build(node, module, variation);
             break;
         }
+        case eNodeFltComb:
+        {
+            // Freq 0, Pitch 1, Kbt 2, FB 3, FB Mod 4, Type 5, Level 6, On 7 - §13.1
+            node->cutoffParam  = param_value(module, variation, 0);
+            node->modAmount    = dial_fraction(param_value(module, variation, 1));
+            node->fltKbt       = param_value(module, variation, 2) * 0.25;
+            node->combFeedback = (param_value(module, variation, 3) - 64.0) / 64.0;
+            node->combFbMod    = dial_fraction(param_value(module, variation, 4));
+            node->combType     = module->param[variation][5].value;
+            node->combLevel    = mix_level_gain(param_value(module, variation, 6));
+            node->active       = (param_value(module, variation, 7) != 0.0);
+            break;
+        }
         case eNodeOscNoise:
         {
             const tOscParams * p = osc_params(module->type);
@@ -2974,6 +3049,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             }
             set_osc_pitch(node, module, variation, p);
 
+            if (module->type == moduleTypeOscDual) {
+                oscdual_build(node, module, variation);
+                break;
+            }
             // A drop-down is read raw: a mode cannot carry a morph (manual p.20).
             uint32_t           wave = (p->waveMode >= 0) ? module->mode[p->waveMode].value
                             : (uint32_t)param_value(module, variation, (uint32_t)p->waveParam);
@@ -3334,12 +3413,15 @@ void sound_engine_update_from_patch(void) {
         uint32_t i     = 0;
         uint32_t lines = 0;
         uint32_t verbs = 0;
+        uint32_t combs = 0;
 
         for (i = 0; i < snapshot.nodeCount; i++) {
             if (snapshot.node[i].kind == eNodeDelay) {
                 snapshot.node[i].line = lines++;
             } else if (snapshot.node[i].kind == eNodeReverb) {
                 snapshot.node[i].line = verbs++;
+            } else if (snapshot.node[i].kind == eNodeFltComb) {
+                snapshot.node[i].line = combs++;
             }
         }
     }
@@ -4489,6 +4571,59 @@ static double signal_in(const tEngineNode * spec, double value[][NODE_OUTPUTS], 
 }
 
 // notes §151
+#define OSCDUAL_SUB_SHELF_HZ      (190.0)    // §12.3
+#define OSCDUAL_SUB_SHELF_LOW     (0.38)
+#define OSCDUAL_SUB_SHELF_HIGH    (1.12)
+#define OSCDUAL_SOFT_GAIN         (2.0)
+#define OSCDUAL_SOFT_CORNER       (1.5)      // times the oscillator's pitch
+
+// §12.3 - state: sub flip-flop, last phase, last sub square, shelf high-pass, soft low-pass, saw offset.
+static double oscdual_sub(double * state, double phase, double dt, bool soft) {
+    SE_LOCAL;
+
+    double subPhase  = 0.5 * (phase + state[0]);
+    double square    = osc_square(subPhase, 0.5 * dt, 0.5);
+    double shelfPole = exp(-2.0 * M_PI * OSCDUAL_SUB_SHELF_HZ / (gSampleRate * (double)OSC_OVERSAMPLE));
+    double highPass  = shelfPole * (state[3] + square - state[2]);
+    double shelved   = (OSCDUAL_SUB_SHELF_LOW * square) + ((OSCDUAL_SUB_SHELF_HIGH - OSCDUAL_SUB_SHELF_LOW) * highPass);
+
+    state[2]  = square;
+    state[3]  = highPass;
+
+    if (!soft) {
+        return shelved;
+    }
+    state[4] += (1.0 - exp(-2.0 * M_PI * OSCDUAL_SOFT_CORNER * dt)) * (shelved - state[4]);
+    return OSCDUAL_SOFT_GAIN * state[4];
+}
+
+// §12.2
+static double oscdual_wave(uint32_t voice, uint32_t node, const tEngineNode * spec, double phase, double dt, double pulsePosition) {
+    SE_LOCAL;
+
+    double * state = gLadder[voice][node];
+    double   duty  = 0.5 * (1.0 - fmin(fmax(pulsePosition, 0.0), 1.0));
+    double   out   = 0.0;
+
+    if (phase < state[1]) {
+        state[0] = 1.0 - state[0];
+    }
+    state[1] = phase;
+
+    if ((spec->dualSquareLevel > 0.0) && (duty > 0.0)) {
+        out += spec->dualSquareLevel * (osc_square(phase, dt, duty) - ((2.0 * duty) - 1.0));
+    }
+
+    if (spec->dualSawLevel > 0.0) {
+        out += spec->dualSawLevel * osc_saw(fmod(phase + state[5], 1.0), dt);
+    }
+
+    if (spec->dualSubLevel > 0.0) {
+        out += spec->dualSubLevel * oscdual_sub(state, phase, dt, spec->dualSoft);
+    }
+    return out;
+}
+
 static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * spec, double phase, double dt, double shape) {
     SE_LOCAL;
 
@@ -4515,6 +4650,10 @@ static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * sp
         case eOscWaveSquare:
         {
             return osc_square(phase, dt, shape);
+        }
+        case eOscWaveDual:
+        {
+            return oscdual_wave(voice, node, spec, phase, dt, shape);
         }
         case eOscWaveSuper:
         {
@@ -4774,6 +4913,65 @@ static void fltmulti_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     }
 }
 
+#define FLTCOMB_TUNING_SEMITONES    (9.0)        // §13.2 - the comb sits a major sixth below the dial
+#define FLTCOMB_REFERENCE_RATE      (96000.0)    // the engine rate §13's sample offsets were measured at
+
+typedef struct {
+    double feedForward;    // per unit of g
+    double feedback;
+    double extraDelay;     // samples at FLTCOMB_REFERENCE_RATE
+    double gainDbPerG2;
+} tCombShape;
+
+static const tCombShape kCombShapes[] = {    // §13.4 - Notch, Peak, Deep
+    { 1.00, 0.00, 0.0,  0.00},
+    {-0.30, 0.90, 1.1,  2.45},
+    { 0.60, 0.85, 0.5, -4.10},
+};
+
+// Four-point Lagrange read, `delay` samples back from the next write (so at least 2).
+static double comb_read(const float * line, uint32_t write, double delay) {
+    const uint32_t mask  = COMB_LINE_SAMPLES - 1u;
+    double         whole = floor(delay);
+    double         t     = delay - whole;
+    uint32_t       base  = (write - (uint32_t)whole) & mask;
+    double         ym1   = line[(base + 1u) & mask];
+    double         y0    = line[base];
+    double         y1    = line[(base - 1u) & mask];
+    double         y2    = line[(base - 2u) & mask];
+    double         c1    = y1 - (ym1 / 3.0) - (y0 / 2.0) - (y2 / 6.0);
+    double         c2    = ((ym1 + y1) / 2.0) - y0;
+    double         c3    = ((y2 - ym1) / 6.0) + ((y0 - y1) / 2.0);
+
+    return (((c3 * t) + c2) * t + c1) * t + y0;
+}
+
+// §13 - one section, k (1 + b z^-D) / (1 - c z^-D), in direct form II around one line per voice.
+static double fltcomb_step(uint32_t voice, const tEngineNode * spec, double input, double pitchVar, double pitchDirect,
+                           double voicePitch, double cutoffParam, double fbModInput) {
+    SE_LOCAL;
+
+    const tCombShape * shape     = &kCombShapes[(spec->combType < 3u) ? spec->combType : 0u];
+    float *            line      = gCombLine[voice][spec->line];
+    uint32_t *         write     = &gCombWrite[voice][spec->line];
+    double             rateScale = gSampleRate / FLTCOMB_REFERENCE_RATE;
+    double             control   = cutoffParam + ((pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES);
+
+    if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
+        control += (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt;
+    }
+    control      = fmin(fmax(control, FLT_CONTROL_MIN), FLT_CONTROL_MAX);
+
+    double             delay     = (gSampleRate / flt_cutoff_hz(control - FLTCOMB_TUNING_SEMITONES)) - rateScale + (shape->extraDelay * rateScale);
+    double             g         = fmin(fmax(spec->combFeedback + (spec->combFbMod * fbModInput), -1.0), 1.0);
+    double             delayed   = comb_read(line, *write, fmin(fmax(delay, 2.0), (double)(COMB_LINE_SAMPLES - 3)));
+    double             fed       = (input * spec->combLevel) + (shape->feedback * g * delayed);
+
+    line[*write] = (float)fed;
+    *write       = (*write + 1u) & (COMB_LINE_SAMPLES - 1u);
+    return pow(10.0, (shape->gainDbPerG2 * g * g) / 20.0) * (fed + (shape->feedForward * g * delayed));
+}
+
 static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch,
                           double cutoffParam, double resonance) {
     SE_LOCAL;
@@ -4885,9 +5083,16 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             // Connector 0 is the direct Pitch input, connector 1 the knob-attenuated
             // PitchVar — see oscillator_step().
+            double shape = gSmoothedShape[n];
+
+            if ((spec->kind == eNodeOsc) && (spec->wave == eOscWaveDual)) {    // §12.4
+                double sawPhase = spec->dualSawPhase + (spec->dualPhaseMod * signal_in(spec, value, 3));
+
+                shape               += spec->dualPwMod * signal_in(spec, value, 2);
+                gLadder[voice][n][5] = sawPhase - floor(sawPhase);
+            }
             value[n][0] = (spec->active == true)
-                              ? oscillator_step(voice, n, spec, voicePitch, a, signal_in(spec, value, 1),
-                                                gSmoothedShape[n])
+                              ? oscillator_step(voice, n, spec, voicePitch, a, signal_in(spec, value, 1), shape)
                               : 0.0;
             break;
         }
@@ -4945,6 +5150,14 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeEq:
         {
             value[n][0] = (spec->active == true) ? eq_step(voice, n, spec, a) : a;
+            break;
+        }
+        case eNodeFltComb:
+        {
+            value[n][0] = ((spec->active == true) && (spec->line < MAX_COMB_LINES))
+                              ? fltcomb_step(voice, spec, a, signal_in(spec, value, 2), signal_in(spec, value, 1), voicePitch,
+                                             gSmoothedCutoff[n], signal_in(spec, value, 3))
+                              : a;
             break;
         }
         case eNodeOscNoise:
