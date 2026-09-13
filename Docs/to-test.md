@@ -141,6 +141,10 @@ Full detail for each is in findings.md, searchable by the wording below.
   leave the editor open on a playing patch for a few minutes - it should stay as responsive as the
   application, and Activity Monitor should show Live's memory flat. For numbers, `launchctl setenv
   G2_PLUGIN_FRAME_STATS 1` before starting Live, and Console shows a line a second from the editor.
+- ***ENVELOPE AND PULSE TIMES FROM THE INSTRUMENT'S LAWS (2026-09-13)*** - reference §17, §18. STILL TO
+  CHECK by ear against the G2, same patch: (1) an EnvADSR with Decay 64 and Sustain 0 - the tail should
+  now match, where the engine's used to run about 6% long; (2) Attack 127 LinExp takes about 50 s, not
+  45; (3) retriggering a slow Exp attack part-way up reaches the top much sooner than from zero.
 - ***CONSTANT POLARITY AND PITCH-INPUT SCALE CORRECTED (2026-09-13)*** - reference §16. STILL TO
   CHECK, engine against the G2: (1) a Constant set Bipolar at 76 into an OscA's Pitch input, KBT off -
   an octave above E4 (659 Hz), and Unipolar at 76 (38 units) 38 semitones above E4; (2) an
