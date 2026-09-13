@@ -9531,4 +9531,13 @@ switches are Constants 12 units apart) - sound-engine-reference §16:
     whole dial is two samples short of the curve, not the bottom leaving it.
   - Checked: one envelope node stepped at 96 kHz reaches full, and falls 40 dB, at exactly the dial's
     time for every shape (LinLin's straight fall 1% sooner, as it should); voicing unchanged.
-  - Patch GLIDE's time per octave agrees with its display within 3% (not changed).
+  - Patch GLIDE's time per octave agrees with its display within 3% (not changed). The gap is the
+    instrument's pitch tick, 96000/94 = 1021.3 Hz, against a display worked out at 1 kHz.
+  - PATCH VIBRATO (CT: "I did get the impression that the timing was wrong on that one"): the rate is
+    a 16-bit phase stepped by 255 + 256 x dial/127 on that same tick - 3.97 to 7.96 Hz. Ours was a
+    straight 4 to 8 Hz, within 0.7%, and is now exact (reference §15.6). The depth - 1 cent a step at
+    full controller - already agreed within 1%. So if the vibrato still sounds off against the G2,
+    the difference is elsewhere: the controller that drives it, or the shape, not the rate.
+  - DELAY CLK CONFIRMED EXACTLY: the instrument's sync table, read as a divisor of the clock period,
+    gives the same 32-slot sequence as clk_sync_beats() through kClkSyncSlot, 1/24 of a beat to 8
+    beats with the middle ten doubled, and halves past the Range as notes §86 does. No change.

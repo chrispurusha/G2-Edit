@@ -23,6 +23,8 @@ Add to it whenever a law is replaced. Hardware checks for each are in to-test.md
 | 10 | Envelope stages | fixed-length ramps on a progress counter (`gEnvProgress`, `gEnvStart`), each restarting its curve from the level it began at | per-sample recurrences on the current level (§17.3); linear attack time rounded to the instrument's increment (§17.1) | `35c87a7` `src/soundEngine.c` `envelope_step()` |
 | 11 | Pulse width (Sub, in 96 kHz samples) | `exp(2.11883047 + 0.07714113828 d - 0.0000864025056 d^2 + 0.0000004707716063 d^3)`, d = dial | `exp(2.30093 + 8.76455853 x + 0.378462386 x^2 + 0.0289283595 x^3) - 2`, x = dial/127 (§18) | `35c87a7` `src/soundEngine.c` `pulse_time_seconds()` |
 
+| 12 | Patch Vibrato rate | `4.0 + (dial / 127.0) * 4.0` Hz, in the engine snapshot and the Patch Settings display | `vibrato_rate_hz()`: (255 + 256 x dial/127) x (96000/94) / 65536 Hz (§15.6) | `35c87a7` `src/soundEngine.c` `sound_engine_update_from_patch()`, `src/graphics.c` |
+
 API removed along with 1 and 4: `sound_engine_is_polyphonic()` (replaced by `sound_engine_note_sounding()`)
 and `note_stack_top()`, both at `e225d27`.
 
