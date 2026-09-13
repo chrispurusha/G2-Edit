@@ -25,6 +25,13 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Add a dedicated master-clock/tempo panel
 
 MODULES AND GRAPHICS
+- Re-lay out the remaining families by rule (module-layout-rules.md "common face", tools/relayout.py) - Level group done 2026-09-13; next the delays and the pitch/FX group still on port coordinates
+- A drag-and-drop layout mode in the editor that snaps to the grid and writes the rows back - for what the rules cannot settle
+- Draw the jack-to-dial link as a short graphical line instead of the "-"/"--" connector label (CT) - the labels already mark every pair
+- RndPattern's Loop dial reads "11.7" - the percent dial on a 16-step value; it should be a loop count (check the G2's own reading for the offset)
+- Faces touching (not overlapping) a 16-W name at 0.59 (face-shots --name-band) - CT's call, most are his: Automate Ctrl, the sequencers' Cycle/Length, Mix2-1B Chain/Exp, the tall mixers' Curve/Exp, DlyEight Range, RndClkB Char, RndPattern Wave, PitchTrack Threshold, OscShpA Wave
+- Operator: read Coarse's text off the G2 panel in Ratio and Fixed (DX law assumed), and L/R Depth's range (table 8 values, DX 0-99) - L1 and Level are 0-127, confirmed 2026-08-10
+- Sequencer row-chain inputs: try a "Chain" label (value row and trigger row) and keep it only if it fits at zoom 0.59
 - Build the layout comparison: per module, how far each control sits from its transformed .rsrc position
 - Delay draws a bypass button in the original at CodeRef 3 but stores only 3 params - decide if we want it
 - Port the remaining custom graph displays from the original editor - 12 left on modules we have, listed in findings.md (2026-09-13)

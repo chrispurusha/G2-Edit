@@ -620,6 +620,16 @@ typedef struct {
 
     // notes §7
     tRectangle rect;
+
+    // A drag started on a module graph's handle: the value follows the pointer across the graph
+    // (moduleGraphics.c's notes §87). NULL for every other drag - the drag's end clears it.
+    uint32_t (*graphValue)(tModuleKey key, tRectangle graphBox, tCoord pointer, int32_t item);
+    // The handle's other axis, when it moves a second parameter too (an envelope breakpoint's level).
+    uint32_t (*graphValue2)(tModuleKey key, tRectangle graphBox, tCoord pointer, int32_t item);
+    uint32_t   param2;
+    uint32_t   startValue2;      // for its undo
+    int32_t    graphItem;        // which point of its graph the handle is
+    tRectangle graphBox;         // on screen, as the handle was drawn
 } tParamDragging;
 
 // The parameter last clicked on the canvas. The original editor's MIDI Learn is "click a knob, then

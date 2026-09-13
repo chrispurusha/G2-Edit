@@ -1936,6 +1936,29 @@ LED at the bottom and 3 dB at the top - and six points will not settle what curv
 Below the threshold it reads zero, which is what makes first movement a clean threshold
 crossing and is the basis of the level probe in findings.md.
 
+The table lives in paramCurves.c since 2026-09-13 - compress_meter_lit() for this meter and
+compress_meter_reduction_db() back again for the Compress graph's live point - one copy for both.
+
+CORRECTED 2026-09-13, ON THE G2: THE METER SHOWS GAIN REDUCTION, over x (1 - 1/ratio), in whole
+LEDs ROUNDED DOWN. Thr held at -10 dB with a saw a hair under 0 dB and Ratio stepped: 1:1 lit NOTHING,
+2:1 lit 4, 4:1 to 10:1 lit 5, 20:1 and up lit 6. Ratio does not change what goes over the threshold,
+so the meter is not "how far over" as written above - it is how much reduction that excess calls for.
+At 4:1, Thr stepped from +4 to -30 dB lit 0 0 2 3 4 5 6 7 8 8; the table above, fed the reduction and
+rounded down, gives exactly those ten, where fed the plain excess and rounded to nearest it read up
+to two LEDs high. The earlier reading is consistent with this if it was taken at a high ratio, where
+the factor is nearly 1 - and with its constant-gain test, since the static reduction ignores the
+makeup that RefLvl adds. Every reading was steady to the LED across three samples and two runs.
+ALSO SEEN: the G2 keeps lighting this meter with the module BYPASSED; ours goes dark.
+
+REFINED THE SAME DAY: interpolating straight between the table's points was wrong below 3 dB of
+reduction - at Thr -3 dB (reduction 2.25) the G2 lit 3 LEDs where the line gave 2.5, rounded down to
+2. Taking every reading together (Thr -30..+4 dB at 4:1 in steps of 1-6 dB, Ratio 1:1..95:1 at -10 dB,
+and the 2026-09-07 points), each LED lights at a reduction inside a narrow window:
+      LED        1      2          3          4          5          6         7           8
+      lights  >0 dB  0.75-1.5   1.5-2.25   3.75-5.25   5.25-6.0   7.5-9.0   10.5-12.0   13.5-15.0
+The meter is now a list of per-LED thresholds - 0, 1, 2, 4.5, 6, 9, 12 and 15 dB - one inside each
+window, and the count is how many the reduction reaches. That reproduces all 21 of the day's readings.
+
 ## 123. `reverb_step()`
 
 Schroeder reverb — parallel combs for density, allpasses to smear the result.

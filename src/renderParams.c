@@ -56,7 +56,19 @@ void set_param_render_area(tArea area) {
 tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double freq = 0.0;
 
-    freq = round(flt_cutoff_hz(paramValue) * 100.0) / 100.0;
+    if (module->type == moduleTypeOperator) {
+        // paramCurves.c's notes §41: the DX7's own reading of Coarse with Fine, by Ratio/Fixed.
+        tParam * p = module->param[gPatchDescr[module->key.slot].activeVariation];
+
+        if (p[OPERATOR_RATIO_FIXED_PARAM].value == 0) {
+            snprintf(buff, buffSize, "x%.2f", operator_ratio((uint32_t)paramValue, p[OPERATOR_FINE_PARAM].value));
+            return render_dial_with_text(gParamRenderArea, rectangle, label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+        }
+        freq = operator_fixed_hz((uint32_t)paramValue, p[OPERATOR_FINE_PARAM].value);
+    } else {
+        freq = flt_cutoff_hz(paramValue);
+    }
+    freq = round(freq * 100.0) / 100.0;
 
     if (freq < 100) {
         snprintf(buff, buffSize, "%.2fHz", freq);
@@ -869,11 +881,40 @@ tRectangle render_paramType1NoteDial(tModule * module, tRectangle rectangle, cha
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// A parameter's index within its module, from its row: a module's rows are its parameters in order.
+static uint32_t param_row_index(tModuleType moduleType, uint32_t paramRef) {
+    uint32_t index = 0;
+
+    for (uint32_t ref = 0; ref < paramRef; ref++) {
+        if (paramLocationList[ref].moduleType == moduleType) {
+            index++;
+        }
+    }
+
+    return index;
+}
+
 tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // notes §10
     int    raw    = (int)paramValue;
     double maxVal = 100.0;
     double res    = 0.0;
+
+    if (module->type == moduleTypeCompress) {
+        // paramCurves.c's notes §42: Thr, Ratio and RefLvl as the instrument reads them.
+        uint32_t index = param_row_index(module->type, paramRef);
+
+        if (index == COMPRESS_PARAM_RATIO) {
+            double ratio = compress_ratio((uint32_t)raw);
+
+            snprintf(buff, buffSize, (ratio < 10.0) ? "%.1f:1" : "%.0f:1", ratio);
+        } else if ((index == COMPRESS_PARAM_THRESHOLD) && ((uint32_t)raw >= COMPRESS_THRESHOLD_OFF_RAW)) {
+            snprintf(buff, buffSize, "Off");
+        } else {
+            snprintf(buff, buffSize, "%.0fdB", (double)raw - COMPRESS_DB_OFFSET);
+        }
+        return render_dial_with_text(gParamRenderArea, rectangle, label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+    }
 
     if (raw < 127) {
         res = round(((double)paramValue * maxVal * 10.0) / 128.0) / 10.0;

@@ -58,6 +58,7 @@ tCableColour cable_colour_for_connector_type(tConnectorType type);
 tConnectorType effective_connector_type(tConnectorType baseType, bool upRate);
 const tVolumeMeterConfig * find_volume_meter_config(tVolumeType volumeType);
 const tGraphLocation * find_graph_location(tModuleType moduleType);
+const tGraphLocation * find_graph_location_nth(tModuleType moduleType, uint32_t nth);
 uint32_t array_size_module_colour_map(void);
 uint32_t array_size_palette_list(void);
 uint32_t palette_group_modules(tPaletteGroup group, tModuleType * out, uint32_t max);

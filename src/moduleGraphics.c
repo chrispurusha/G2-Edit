@@ -90,6 +90,18 @@ typedef struct {
 
 static tConnectorClickCtx sConnectorClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_CONNECTORS];
 
+// The drag fields every parameter drag starts with - from the widget or from a graph handle.
+static void param_drag_start(tModule * module, uint32_t paramIndex) {
+    tParam * param = &module->param[gPatchDescr[module->key.slot].activeVariation][paramIndex];
+
+    gParamDragging.moduleKey       = module->key;
+    gParamDragging.type3           = paramType3Param;
+    gParamDragging.param           = paramIndex;
+    gParamDragging.startValue      = param->value;
+    gParamDragging.active          = true;
+    gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
+}
+
 // notes §2
 static void param_click_handler(tCoord coord, eClickPhase phase, void * userData) {
     tParamClickCtx * ctx       = (tParamClickCtx *)userData;
@@ -111,14 +123,9 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
            && paramType != paramTypeBypass && paramType != paramTypeEnable
            && paramType != paramTypePush && paramType != paramTypeCustomData
            && paramType != paramTypeRadioEdit) {
-            gParamDragging.moduleKey       = module->key;
-            gParamDragging.type3           = paramType3Param;
-            gParamDragging.param           = ctx->paramIndex;
-            gParamDragging.startValue      = param->value;
-            gParamDragging.active          = true;
+            param_drag_start(module, ctx->paramIndex);
             // notes §4
             click_region_capture_rect(&gParamDragging.rect);
-            gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
 
             if ((synthlib_dial_mode() != eDialModeRotary) || (paramType == paramTypeSlider)) {
                 canvas_drag_begin();
@@ -482,6 +489,13 @@ static void render_param_focus_marks(tRectangle rect) {
     render_line(mainArea, (tCoord){x, y + h}, (tCoord){x, y + h - len}, thickness);
 }
 
+#define KEYQUANT_FIRST_NOTE_PARAM    (2)
+
+// notes §84
+static bool param_drawn_by_graph(uint32_t moduleType, uint32_t paramIndex) {
+    return (moduleType == moduleTypeKeyQuant) && (paramIndex >= KEYQUANT_FIRST_NOTE_PARAM);
+}
+
 tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
     // notes §18
     tRectangle widgetRect                  = {0};
@@ -510,6 +524,9 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
 
     module->param[variation][paramIndex].paramRef = paramRef;
 
+    if (param_drawn_by_graph(module->type, paramIndex)) {
+        return widgetRect;
+    }
     //LOG_DEBUG("param %u\n", paramValue);
 
     switch (paramLocationList[paramRef].type) {
@@ -869,7 +886,23 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
         break;
         case volumeTypeCompress:
         {
+            // The gain-reduction scale the original editor prints beside these LEDs, top to bottom:
+            // each mark's dB and the LED row (from the top, fractional) it sits against.
+            static const char *        kMark[]  = {"1", "4", "9", "15", "24", "30"};
+            static const double        kAtLed[] = {0.0, 1.67, 3.33, 5.17, 6.83, 8.5};
+            const tVolumeMeterConfig * config   = find_volume_meter_config(volumeTypeCompress);
+            double                     pitch    = rectangle.size.h / (double)config->segments;
+            double                     textH    = STANDARD_TEXT_HEIGHT * 0.75;
+
             render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 0));
+            set_rgba_colour((tRgba)RGBA_BLACK_ON_TRANSPARENT);
+
+            for (uint32_t i = 0; i < (sizeof(kMark) / sizeof(kMark[0])); i++) {
+                double width = get_text_width(kMark[i], textH, eNoCache);
+                double y     = rectangle.coord.y + ((kAtLed[i] + 0.5) * pitch) - (textH / 2.0);
+
+                render_text(moduleArea, (tRectangle){{rectangle.coord.x - width - 3.0, y}, {BLANK_SIZE, textH}}, kMark[i]);
+            }
         }
         break;
         default:
@@ -1725,13 +1758,88 @@ static double env_level_to_y(double shape, uint32_t outputType, double zeroY, do
     return zeroY - (actualLevel * fullSwing);
 }
 
-#define ENV_GRAPH_MAX_SEGMENTS     (8)
-#define ENV_GRAPH_SUSTAIN_WIDTH    (0.24)   // a level, not a time - a fixed width just to show the plateau
+#define GRAPH_HANDLE_SIZE    (7.0)          // module units, drawn
+#define GRAPH_HANDLE_HIT     (2.0)          // times the drawn size, for the click region
+#define GRAPH_HANDLES_MAX    (8)            // per module
+
+// A graph handle's pointer-to-value law; item says which point of its graph the handle is.
+typedef uint32_t (*tGraphValueFromPointer)(tModuleKey key, tRectangle graphBox, tCoord pointer, int32_t item);
 
 typedef struct {
-    double width;          // of the box, before any scaling to fit
-    double level;          // where the segment ends, in Pos's own convention
-    bool   sustain;        // held while the gate is: drawn flat and orange
+    tParamClickCtx         param;           // FIRST: to the registry, a menu or a hover this IS the parameter
+    tGraphValueFromPointer value;
+    tGraphValueFromPointer value2;          // the handle's other axis, moving param2 - or NULL
+    uint32_t               param2;
+    int32_t                item;
+    tRectangle             graphBox;        // on screen
+} tGraphHandleCtx;
+
+static tGraphHandleCtx sGraphHandleCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][GRAPH_HANDLES_MAX];
+
+// notes §87: a press on a handle starts the parameter's own drag - focus, undo, links, morph - but
+// without capturing the cursor, which a pointer-following value needs to see.
+static void graph_handle_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    const tGraphHandleCtx * handle = (const tGraphHandleCtx *)userData;
+    tModule *               module = get_module(handle->param.key);
+
+    (void)coord;
+
+    if ((phase != eClickPress) || (module == NULL)) {
+        return;
+    }
+    gParamFocus.valid          = true;
+    gParamFocus.moduleKey      = module->key;
+    gParamFocus.paramIndex     = handle->param.paramIndex;
+    param_drag_start(module, handle->param.paramIndex);
+    gParamDragging.graphValue  = handle->value;
+    gParamDragging.graphValue2 = handle->value2;
+    gParamDragging.param2      = handle->param2;
+    gParamDragging.startValue2 = module->param[gPatchDescr[module->key.slot].activeVariation][handle->param2].value;
+    gParamDragging.graphItem   = handle->item;
+    gParamDragging.graphBox    = handle->graphBox;
+}
+
+// Register a handle's click region: the drawn square, enlarged, mapped from the graph's module
+// rectangle onto the screen rectangle it was drawn at. value2 with param2 is its other axis, or NULL.
+static void graph_handle_register(tModule * module, uint32_t handleIndex, uint32_t paramIndex, tGraphValueFromPointer value,
+                                  uint32_t param2, tGraphValueFromPointer value2, int32_t item,
+                                  tRectangle graphRect, tRectangle screenBox, tCoord centre) {
+    if (handleIndex >= GRAPH_HANDLES_MAX) {
+        return;
+    }
+    tGraphHandleCtx * ctx   = &sGraphHandleCtx[module->key.slot][module->key.location][module->key.index][handleIndex];
+    double            scale = screenBox.size.w / graphRect.size.w;
+    double            hit   = GRAPH_HANDLE_SIZE * GRAPH_HANDLE_HIT * scale;
+    tRectangle        area  = {{
+                                   screenBox.coord.x + ((centre.x - graphRect.coord.x) * scale) - (hit / 2.0),
+                                   screenBox.coord.y + ((centre.y - graphRect.coord.y) * scale) - (hit / 2.0)
+                               },      {hit,hit}};
+
+    *ctx = (tGraphHandleCtx){
+        {
+            eCanvasWidgetParam, module->key, paramIndex
+        }, value, value2, param2, item, screenBox
+    };
+    register_click_region(area, eClickLayerCanvas, graph_handle_click_handler, ctx);
+}
+
+static void graph_handle_draw(tCoord centre, bool live) {
+    tRectangle square = {{centre.x - (GRAPH_HANDLE_SIZE / 2.0), centre.y - (GRAPH_HANDLE_SIZE / 2.0)}, {GRAPH_HANDLE_SIZE, GRAPH_HANDLE_SIZE}};
+
+    set_rgb_colour(live ? (tRgb)RGB_GREY_9 : (tRgb)RGB_GREY_5);
+    render_rectangle(moduleArea, square);
+}
+
+#define ENV_GRAPH_MAX_SEGMENTS     (8)
+#define ENV_GRAPH_SUSTAIN_WIDTH    (0.24)   // a level, not a time - a fixed width just to show the plateau
+#define ENV_NO_PARAM               (-1)
+
+typedef struct {
+    double  width;          // of the box, before any scaling to fit
+    double  level;          // where the segment ends, in Pos's own convention
+    bool    sustain;        // held while the gate is: drawn flat and orange
+    int32_t timeParam;      // the parameter that sets the width - a handle drags it - or ENV_NO_PARAM
+    int32_t levelParam;     // the parameter that sets the end level, or ENV_NO_PARAM
 } tEnvGraphSegment;
 
 typedef struct {
@@ -1744,83 +1852,95 @@ typedef struct {
 } tEnvGraph;
 
 // notes §61
-static double env_graph_time_width(tModule * module, uint32_t variation, uint32_t index) {
-    return 0.04 + (((double)module->param[variation][index].value / 127.0) * 0.20);
+static double env_graph_time_width(const tParam * p, uint32_t index) {
+    return 0.04 + (((double)p[index].value / 127.0) * 0.20);
 }
 
-static double env_graph_level(tModule * module, uint32_t variation, uint32_t index) {
-    return (double)module->param[variation][index].value / 127.0;
+static double env_graph_level(const tParam * p, uint32_t index) {
+    return (double)p[index].value / 127.0;
 }
 
-static void env_graph_add(tEnvGraph * graph, double width, double level, bool sustain) {
+static void env_graph_add(tEnvGraph * graph, double width, double level, bool sustain, int32_t timeParam, int32_t levelParam) {
     if (graph->count < ENV_GRAPH_MAX_SEGMENTS) {
         graph->segment[graph->count++] = (tEnvGraphSegment){
-            width, level, sustain
+            width, level, sustain, timeParam, levelParam
         };
     }
 }
 
-// notes §83
-static bool env_graph_segments(tModule * module, uint32_t variation, tEnvGraph * graph) {
-    tParam * p = module->param[variation];
+#define DX_LEVEL_MAX    (127.0)   // the G2 reads 127 at the top (panel, 2026-08-10) - not the DX's 99
 
+static double operator_env_level(uint32_t value) {
+    return fmin((double)value, DX_LEVEL_MAX) / DX_LEVEL_MAX;
+}
+
+// notes §86
+static double operator_env_width(uint32_t rate, double from, double to) {
+    double slowness = (DX_LEVEL_MAX - fmin((double)rate, DX_LEVEL_MAX)) / DX_LEVEL_MAX;
+
+    return fabs(to - from) * (0.03 + (0.25 * slowness));
+}
+
+// notes §83. Reads a parameter array rather than the module, so a handle can try a value on a copy.
+static bool env_graph_segments(tModuleType type, const tParam * p, tEnvGraph * graph) {
     *graph = (tEnvGraph){
         .shape = eEnvShapeLinExp
     };
 
-    switch (module->type) {
+    switch (type) {
         case moduleTypeEnvADSR:
         case moduleTypeModADSR:
         {
-            bool     mod = (module->type == moduleTypeModADSR);
-            uint32_t a   = mod ? 0u : 1u;        // A, D, S, R run in order from here
+            bool    mod = (type == moduleTypeModADSR);
+            int32_t a   = mod ? 0 : 1;           // A, D, S, R run in order from here
 
             graph->shape      = mod ? (uint32_t)eEnvShapeLinExp : p[0].value;
             graph->outputType = p[mod ? 8 : 5].value;
-            env_graph_add(graph, env_graph_time_width(module, variation, a), 1.0, false);
-            env_graph_add(graph, env_graph_time_width(module, variation, a + 1u), env_graph_level(module, variation, a + 2u), false);
-            env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(module, variation, a + 2u), true);
-            env_graph_add(graph, env_graph_time_width(module, variation, a + 3u), 0.0, false);
+            env_graph_add(graph, env_graph_time_width(p, a), 1.0, false, a, ENV_NO_PARAM);
+            env_graph_add(graph, env_graph_time_width(p, a + 1), env_graph_level(p, a + 2), false, a + 1, a + 2);
+            env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(p, a + 2), true, ENV_NO_PARAM, ENV_NO_PARAM);
+            env_graph_add(graph, env_graph_time_width(p, a + 3), 0.0, false, a + 3, ENV_NO_PARAM);
             break;
         }
         case moduleTypeEnvADR:
         {
             graph->shape      = p[0].value;
             graph->outputType = p[5].value;
-            env_graph_add(graph, env_graph_time_width(module, variation, 1), 1.0, false);
+            env_graph_add(graph, env_graph_time_width(p, 1), 1.0, false, 1, ENV_NO_PARAM);
 
             if ((p[7].value == 1) && (p[4].value == 1)) {   // Release mode, and gated - the manual's ASR
-                env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, 1.0, true);
+                env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, 1.0, true, ENV_NO_PARAM, ENV_NO_PARAM);
             }
-            env_graph_add(graph, env_graph_time_width(module, variation, 3), 0.0, false);
+            env_graph_add(graph, env_graph_time_width(p, 3), 0.0, false, 3, ENV_NO_PARAM);
             break;
         }
         case moduleTypeEnvAHD:
         case moduleTypeModAHD:
         {
-            bool     mod = (module->type == moduleTypeModAHD);
-            uint32_t a   = mod ? 0u : 1u;        // A, H, then D two further on in EnvAHD (Reset sits between)
+            bool    mod = (type == moduleTypeModAHD);
+            int32_t a   = mod ? 0 : 1;           // A, H, then D two further on in EnvAHD (Reset sits between)
+            int32_t d   = mod ? 2 : 4;
 
             graph->shape      = mod ? (uint32_t)eEnvShapeLinExp : p[0].value;
             graph->outputType = p[mod ? 6 : 5].value;
-            env_graph_add(graph, env_graph_time_width(module, variation, a), 1.0, false);
-            env_graph_add(graph, env_graph_time_width(module, variation, a + 1u), 1.0, false);
-            env_graph_add(graph, env_graph_time_width(module, variation, mod ? 2u : 4u), 0.0, false);
+            env_graph_add(graph, env_graph_time_width(p, a), 1.0, false, a, ENV_NO_PARAM);
+            env_graph_add(graph, env_graph_time_width(p, a + 1), 1.0, false, a + 1, ENV_NO_PARAM);
+            env_graph_add(graph, env_graph_time_width(p, d), 0.0, false, d, ENV_NO_PARAM);
             break;
         }
         case moduleTypeEnvD:
         {
             graph->outputType = p[1].value;
-            env_graph_add(graph, 0.0, 1.0, false);
-            env_graph_add(graph, env_graph_time_width(module, variation, 0), 0.0, false);
+            env_graph_add(graph, 0.0, 1.0, false, ENV_NO_PARAM, ENV_NO_PARAM);
+            env_graph_add(graph, env_graph_time_width(p, 0), 0.0, false, 0, ENV_NO_PARAM);
             break;
         }
         case moduleTypeEnvH:
         {
             graph->outputType = p[1].value;
-            env_graph_add(graph, 0.0, 1.0, false);
-            env_graph_add(graph, env_graph_time_width(module, variation, 0), 1.0, false);
-            env_graph_add(graph, 0.0, 0.0, false);
+            env_graph_add(graph, 0.0, 1.0, false, ENV_NO_PARAM, ENV_NO_PARAM);
+            env_graph_add(graph, env_graph_time_width(p, 0), 1.0, false, 0, ENV_NO_PARAM);
+            env_graph_add(graph, 0.0, 0.0, false, ENV_NO_PARAM, ENV_NO_PARAM);
             break;
         }
         case moduleTypeEnvADDSR:
@@ -1829,18 +1949,18 @@ static bool env_graph_segments(tModule * module, uint32_t variation, tEnvGraph *
 
             graph->shape      = p[1].value;
             graph->outputType = p[9].value;
-            env_graph_add(graph, env_graph_time_width(module, variation, 2), 1.0, false);
-            env_graph_add(graph, env_graph_time_width(module, variation, 3), env_graph_level(module, variation, 4), false);
+            env_graph_add(graph, env_graph_time_width(p, 2), 1.0, false, 2, ENV_NO_PARAM);
+            env_graph_add(graph, env_graph_time_width(p, 3), env_graph_level(p, 4), false, 3, 4);
 
             if (sustainAtL1) {
-                env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(module, variation, 4), true);
+                env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(p, 4), true, ENV_NO_PARAM, ENV_NO_PARAM);
             }
-            env_graph_add(graph, env_graph_time_width(module, variation, 5), env_graph_level(module, variation, 6), false);
+            env_graph_add(graph, env_graph_time_width(p, 5), env_graph_level(p, 6), false, 5, 6);
 
             if (sustainAtL1 == false) {
-                env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(module, variation, 6), true);
+                env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(p, 6), true, ENV_NO_PARAM, ENV_NO_PARAM);
             }
-            env_graph_add(graph, env_graph_time_width(module, variation, 7), 0.0, false);
+            env_graph_add(graph, env_graph_time_width(p, 7), 0.0, false, 7, ENV_NO_PARAM);
             break;
         }
         case moduleTypeEnvMulti:
@@ -1852,22 +1972,43 @@ static bool env_graph_segments(tModule * module, uint32_t variation, tEnvGraph *
             graph->outputType    = p[10].value;
             graph->bipolarLevels = bip;
 
-            for (uint32_t stage = 0; stage < 4; stage++) {
-                double level = bip ? (((double)p[stage].value - 64.0) / 64.0) : env_graph_level(module, variation, stage);
+            for (int32_t stage = 0; stage < 4; stage++) {
+                double level = bip ? (((double)p[stage].value - 64.0) / 64.0) : env_graph_level(p, stage);
 
                 if (stage == 0) {
                     graph->startLevel = 0.0;
                 }
-                env_graph_add(graph, env_graph_time_width(module, variation, 4 + stage), level, false);
+                env_graph_add(graph, env_graph_time_width(p, 4 + stage), level, false, 4 + stage, stage);
 
-                if ((stage < 3) && (p[9].value == stage)) {
-                    env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, level, true);
+                if ((stage < 3) && (p[9].value == (uint32_t)stage)) {
+                    env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, level, true, ENV_NO_PARAM, ENV_NO_PARAM);
                 }
             }
 
             if (p[8].value == 0) {             // Normal: a retrigger starts from where L4 left it
                 graph->startLevel = graph->segment[graph->count - 1].level;
             }
+            break;
+        }
+        case moduleTypeOperator:
+        {
+            // notes §86: from L4 through L1, L2 and L3 (held) and back to L4. R1-R4 are params 8, 10,
+            // 12 and 14; L1-L4 are 9, 11, 13 and 15.
+            double from = operator_env_level(p[15].value);
+
+            graph->startLevel = from;
+
+            for (int32_t stage = 0; stage < 4; stage++) {
+                double to = operator_env_level(p[9 + (2 * stage)].value);
+
+                env_graph_add(graph, operator_env_width(p[8 + (2 * stage)].value, from, to), to, false, 8 + (2 * stage), 9 + (2 * stage));
+
+                if (stage == 2) {
+                    env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, to, true, ENV_NO_PARAM, ENV_NO_PARAM);
+                }
+                from = to;
+            }
+
             break;
         }
         default:
@@ -1891,46 +2032,124 @@ static bool env_graph_segments(tModule * module, uint32_t variation, tEnvGraph *
     return true;
 }
 
+// notes §62: where a graph's zero line and full swing sit in its box, and how its widths scale to fit.
+typedef struct {
+    double zeroY;
+    double fullSwing;
+    double scale;
+} tEnvGraphFrame;
+
+static tEnvGraphFrame env_graph_frame(const tEnvGraph * graph, tRectangle box) {
+    bool   isBip       = (graph->outputType == 4) || (graph->outputType == 5);
+    bool   isNegFamily = (graph->outputType == 2) || (graph->outputType == 3);
+    double totalWidth  = 0.0;
+
+    for (uint32_t i = 0; i < graph->count; i++) {
+        totalWidth += graph->segment[i].width;
+    }
+
+    return (tEnvGraphFrame){
+        isBip ? (box.coord.y + (box.size.h * 0.5)) : (isNegFamily ? box.coord.y : (box.coord.y + box.size.h)),
+        isBip ? (box.size.h * 0.5) : box.size.h,
+        (totalWidth > 1.0) ? (1.0 / totalWidth) : 1.0
+    };
+}
+
+// Where a segment ends in the box - shared by the drawing and the handles, so a handle sits on the curve.
+static tCoord env_graph_segment_end(const tEnvGraph * graph, tRectangle box, uint32_t index) {
+    tEnvGraphFrame frame = env_graph_frame(graph, box);
+    double         x     = box.coord.x;
+
+    for (uint32_t i = 0; i <= index; i++) {
+        x += graph->segment[i].width * frame.scale * box.size.w;
+    }
+
+    return (tCoord){
+        x, env_level_to_y(graph->segment[index].level, graph->outputType, frame.zeroY, frame.fullSwing)
+    };
+}
+
+// notes §87: widths are scaled to fit the box, so there is no closed-form inverse. The handle tries
+// every value of its parameter through the same layout, on a copy of the parameters, and keeps the
+// one whose breakpoint lands nearest the pointer - the current value unless another is closer.
+static uint32_t env_handle_value(tModuleKey key, tRectangle graphBox, tCoord pointer, int32_t item, bool vertical) {
+    tModule * module   = get_module(key);
+    tParam    params[MAX_NUM_PARAMETERS];
+    tEnvGraph graph    = {0};
+
+    if (module == NULL) {
+        return 0;
+    }
+    memcpy(params, module->param[gPatchDescr[key.slot].activeVariation], sizeof(params));
+
+    if ((env_graph_segments(module->type, params, &graph) == false) || (item < 0) || ((uint32_t)item >= graph.count)) {
+        return 0;
+    }
+    int32_t   which    = vertical ? graph.segment[item].levelParam : graph.segment[item].timeParam;
+
+    if (which == ENV_NO_PARAM) {
+        return 0;
+    }
+    uint32_t  range    = paramLocationList[params[which].paramRef].range;
+    uint32_t  best     = params[which].value;
+    double    bestMiss = INFINITY;
+
+    for (uint32_t candidate = 0; candidate < range; candidate++) {
+        tCoord end;
+        double miss;
+
+        params[which].value = candidate;
+        env_graph_segments(module->type, params, &graph);
+        end                 = env_graph_segment_end(&graph, graphBox, (uint32_t)item);
+        miss                = vertical ? fabs(end.y - pointer.y) : fabs(end.x - pointer.x);
+
+        if ((miss < bestMiss - 1.0e-9) || ((fabs(miss - bestMiss) <= 1.0e-9) && (candidate == module->param[gPatchDescr[key.slot].activeVariation][which].value))) {
+            best     = candidate;
+            bestMiss = miss;
+        }
+    }
+
+    return best;
+}
+
+static uint32_t env_time_from_pointer(tModuleKey key, tRectangle graphBox, tCoord pointer, int32_t item) {
+    return env_handle_value(key, graphBox, pointer, item, false);
+}
+
+static uint32_t env_level_from_pointer(tModuleKey key, tRectangle graphBox, tCoord pointer, int32_t item) {
+    return env_handle_value(key, graphBox, pointer, item, true);
+}
+
 static void render_envelope_graph(tRectangle rectangle, tModule * module) {
     const tGraphLocation * graphLoc      = find_graph_location(module->type);
     uint32_t               variation     = gPatchDescr[module->key.slot].activeVariation;
     tEnvGraph              graph         = {0};
 
-    if ((graphLoc == NULL) || (env_graph_segments(module, variation, &graph) == false)) {
+    if ((graphLoc == NULL) || (env_graph_segments(module->type, module->param[variation], &graph) == false)) {
         return;
     }
     tRectangle             graphRect     = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
     uint32_t               outputType    = graph.outputType;
-    bool                   isBip         = (outputType == 4) || (outputType == 5);
-    bool                   isNegFamily   = (outputType == 2) || (outputType == 3);
-
-    // notes §62
-    double                 zeroY         = isBip ? (graphRect.coord.y + (graphRect.size.h * 0.5)) : (isNegFamily ? graphRect.coord.y : (graphRect.coord.y + graphRect.size.h));
-    double                 fullSwing     = isBip ? (graphRect.size.h * 0.5) : graphRect.size.h;
-    double                 totalWidth    = 0.0;
+    tEnvGraphFrame         frame         = env_graph_frame(&graph, graphRect);
     const int              numCurveSteps = 12;
     double                 level         = graph.startLevel;
-    tCoord                 prev          = {graphRect.coord.x, env_level_to_y(level, outputType, zeroY, fullSwing)};
-
-    for (uint32_t i = 0; i < graph.count; i++) {
-        totalWidth += graph.segment[i].width;
-    }
-
-    double                 scale         = (totalWidth > 1.0) ? (1.0 / totalWidth) : 1.0;
+    tCoord                 prev          = {graphRect.coord.x, env_level_to_y(level, outputType, frame.zeroY, frame.fullSwing)};
+    tRectangle             screen        = {0};
+    uint32_t               handle        = 0;
 
     set_rgb_colour((tRgb)RGB_GREY_2);
-    render_rectangle(moduleArea, graphRect);
+    screen = render_rectangle(moduleArea, graphRect);
 
     set_rgb_colour((tRgb)RGB_YELLOW_7);
-    render_line(moduleArea, (tCoord){graphRect.coord.x, zeroY}, (tCoord){graphRect.coord.x + graphRect.size.w, zeroY}, 1.0);
+    render_line(moduleArea, (tCoord){graphRect.coord.x, frame.zeroY}, (tCoord){graphRect.coord.x + graphRect.size.w, frame.zeroY}, 1.0);
 
     for (uint32_t i = 0; i < graph.count; i++) {
         const tEnvGraphSegment * segment = &graph.segment[i];
-        double                   width   = segment->width * scale * graphRect.size.w;
+        double                   width   = segment->width * frame.scale * graphRect.size.w;
         double                   startX  = prev.x;
 
         if (segment->sustain || (segment->level == level) || (width <= 0.0)) {
-            tCoord point = {startX + width, env_level_to_y(segment->level, outputType, zeroY, fullSwing)};
+            tCoord point = {startX + width, env_level_to_y(segment->level, outputType, frame.zeroY, frame.fullSwing)};
 
             // The sustain plateau is orange - matches the original editor's own colouring (manual).
             set_rgb_colour(segment->sustain ? (tRgb)RGB_ORANGE_1 : (tRgb)RGB_GREEN_ON);
@@ -1944,13 +2163,30 @@ static void render_envelope_graph(tRectangle rectangle, tModule * module) {
                 double value = (segment->level > level)
                                ? level + ((segment->level - level) * env_attack_level(graph.shape, t))
                                : envadsr_decay_level(t, level, segment->level, graph.shape);
-                tCoord point = {startX + (t * width), env_level_to_y(value, outputType, zeroY, fullSwing)};
+                tCoord point = {startX + (t * width), env_level_to_y(value, outputType, frame.zeroY, frame.fullSwing)};
 
                 render_line(moduleArea, prev, point, 1.5);
                 prev = point;
             }
         }
         level = segment->level;
+    }
+
+    // notes §87: a handle on every breakpoint that has a time - sideways for the time and, where the
+    // level is a parameter too, up and down for that.
+    for (uint32_t i = 0; i < graph.count; i++) {
+        const tEnvGraphSegment * segment = &graph.segment[i];
+        bool                     leveled = (segment->levelParam != ENV_NO_PARAM);
+        tCoord                   end;
+
+        if (segment->timeParam == ENV_NO_PARAM) {
+            continue;
+        }
+        end = env_graph_segment_end(&graph, graphRect, i);
+        graph_handle_draw(end, true);
+        graph_handle_register(module, handle++, (uint32_t)segment->timeParam, env_time_from_pointer,
+                              leveled ? (uint32_t)segment->levelParam : 0u, leveled ? env_level_from_pointer : NULL,
+                              (int32_t)i, graphRect, screen, end);
     }
 }
 
@@ -2320,6 +2556,447 @@ static void render_vocoder_routing_graph(tRectangle rectangle, tModule * module)
     }
 }
 
+#define DX_COLUMNS    (6)
+#define DX_LEVELS     (4)
+
+typedef struct {
+    double   x[DX_OPERATORS];       // in columns
+    uint32_t level[DX_OPERATORS];   // carriers 0
+    uint32_t levels;
+    double   columns;
+} tDxLayout;
+
+static bool dx_single_target(uint8_t target) {
+    return (target != 0) && ((target & (target - 1)) == 0);
+}
+
+static void dx_place(const tDxAlgorithm * alg, const double width[DX_OPERATORS], uint32_t op, double left, tDxLayout * layout) {
+    layout->x[op] = left + (width[op] / 2.0);
+
+    for (uint32_t child = op + 1; child < DX_OPERATORS; child++) {
+        if (alg->target[child] == (1u << op)) {
+            dx_place(alg, width, child, left, layout);
+            left += width[child];
+        }
+    }
+}
+
+// notes §85
+static void dx_layout(const tDxAlgorithm * alg, tDxLayout * layout) {
+    double width[DX_OPERATORS]    = {0};
+    double childSum[DX_OPERATORS] = {0};
+    double left                   = 0.0;
+
+    layout->levels = 1;
+
+    for (uint32_t op = 0; op < DX_OPERATORS; op++) {
+        layout->level[op] = 0;
+
+        for (uint32_t t = 0; t < op; t++) {
+            if (((alg->target[op] & (1u << t)) != 0) && (layout->level[t] >= layout->level[op])) {
+                layout->level[op] = layout->level[t] + 1;
+            }
+        }
+
+        if (layout->level[op] + 1 > layout->levels) {
+            layout->levels = layout->level[op] + 1;
+        }
+    }
+
+    for (int32_t op = DX_OPERATORS - 1; op >= 0; op--) {
+        width[op] = fmax(1.0, childSum[op]);
+
+        if (dx_single_target(alg->target[op])) {
+            childSum[__builtin_ctz(alg->target[op])] += width[op];
+        }
+    }
+
+    for (uint32_t op = 0; op < DX_OPERATORS; op++) {
+        if (alg->target[op] == 0) {
+            dx_place(alg, width, op, left, layout);
+            left += width[op];
+        }
+    }
+
+    layout->columns = left;
+
+    for (uint32_t op = 0; op < DX_OPERATORS; op++) {
+        if ((alg->target[op] != 0) && !dx_single_target(alg->target[op])) {
+            double   sum     = 0.0;
+            uint32_t targets = 0;
+
+            for (uint32_t t = 0; t < op; t++) {
+                if ((alg->target[op] & (1u << t)) != 0) {
+                    sum += layout->x[t];
+                    targets++;
+                }
+            }
+
+            layout->x[op] = sum / (double)targets;
+        }
+    }
+}
+
+static void render_dxrouter_algorithm_graph(tRectangle rectangle, tModule * module) {
+    static const char *    kOpName[DX_OPERATORS] = {"1", "2", "3", "4", "5", "6"};
+    const tGraphLocation * graphLoc              = find_graph_location(module->type);
+
+    if ((module->type != moduleTypeDXRouter) || (graphLoc == NULL)) {
+        return;
+    }
+    uint32_t               variation             = gPatchDescr[module->key.slot].activeVariation;
+    uint32_t               algorithm             = module->param[variation][0].value;
+    uint32_t               feedback              = module->param[variation][1].value;
+    const tDxAlgorithm *   alg                   = dx_algorithm(algorithm);
+    tRectangle             graphRect             = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+    tDxLayout              layout                = {0};
+
+    dx_layout(alg, &layout);
+
+    // A fixed grid, half a level spare at the foot for the output line, and the algorithm centred in
+    // it both ways - so stepping through algorithms moves boxes rather than resizing them.
+    double                 cellW                 = graphRect.size.w / (double)DX_COLUMNS;
+    double                 cellH                 = graphRect.size.h / ((double)DX_LEVELS + 0.5);
+    double                 boxW                  = cellW * 0.5;
+    double                 boxH                  = cellH * 0.55;
+    double                 gap                   = (cellH - boxH) / 2.0;
+    double                 textH                 = boxH * 0.8;
+    double                 originX               = graphRect.coord.x + ((((double)DX_COLUMNS - layout.columns) * cellW) / 2.0);
+    double                 footY                 = graphRect.coord.y + graphRect.size.h - (((double)(DX_LEVELS - layout.levels) * cellH) / 2.0);
+    double                 busY                  = footY - (cellH * 0.3);
+    double                 busLeft               = graphRect.coord.x + graphRect.size.w;
+    double                 busRight              = graphRect.coord.x;
+    tCoord                 centre[DX_OPERATORS];
+
+    for (uint32_t op = 0; op < DX_OPERATORS; op++) {
+        centre[op] = (tCoord){
+            originX + (layout.x[op] * cellW), footY - (cellH * 0.5) - (((double)layout.level[op] + 0.5) * cellH)
+        };
+    }
+
+    set_rgb_colour((tRgb)RGB_GREY_2);
+    render_rectangle(moduleArea, graphRect);
+
+    // Lines first and boxes over them, so a line ends at a box's edge whatever angle it comes in at.
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
+
+    for (uint32_t op = 0; op < DX_OPERATORS; op++) {
+        tCoord bottom = {centre[op].x, centre[op].y + (boxH / 2.0)};
+
+        if (alg->target[op] == 0) {
+            render_line(moduleArea, bottom, (tCoord){bottom.x, busY}, 1.5);
+            busLeft  = fmin(busLeft, bottom.x - (boxW / 2.0));
+            busRight = fmax(busRight, bottom.x + (boxW / 2.0));
+            continue;
+        }
+
+        for (uint32_t t = 0; t < op; t++) {
+            if ((alg->target[op] & (1u << t)) != 0) {
+                render_line(moduleArea, bottom, (tCoord){centre[t].x, centre[t].y - (boxH / 2.0)}, 1.5);
+            }
+        }
+    }
+
+    render_line(moduleArea, (tCoord){busLeft, busY}, (tCoord){busRight, busY}, 1.5);
+
+    // notes §85: out of the bottom of one end, round to the right of both, into the top of the other.
+    uint32_t from       = alg->feedbackFrom - 1u;
+    uint32_t to         = alg->feedbackTo - 1u;
+    double   loopX      = fmax(centre[from].x, centre[to].x) + (boxW / 2.0) + (cellW * 0.18);
+    double   loopBottom = centre[from].y + (boxH / 2.0) + (gap * 0.6);
+    double   loopTop    = centre[to].y - (boxH / 2.0) - (gap * 0.6);
+
+    set_rgb_colour((feedback > 0) ? (tRgb)RGB_ORANGE_1 : (tRgb)RGB_GREY_5);
+    render_line(moduleArea, (tCoord){centre[from].x, centre[from].y + (boxH / 2.0)}, (tCoord){centre[from].x, loopBottom}, 1.5);
+    render_line(moduleArea, (tCoord){centre[from].x, loopBottom}, (tCoord){loopX, loopBottom}, 1.5);
+    render_line(moduleArea, (tCoord){loopX, loopBottom}, (tCoord){loopX, loopTop}, 1.5);
+    render_line(moduleArea, (tCoord){loopX, loopTop}, (tCoord){centre[to].x, loopTop}, 1.5);
+    render_line(moduleArea, (tCoord){centre[to].x, loopTop}, (tCoord){centre[to].x, centre[to].y - (boxH / 2.0)}, 1.5);
+
+    for (uint32_t op = 0; op < DX_OPERATORS; op++) {
+        double textW = get_text_width(kOpName[op], textH, eNoCache);
+
+        set_rgb_colour((tRgb)RGB_GREY_7);
+        render_rectangle(moduleArea, (tRectangle){{centre[op].x - (boxW / 2.0), centre[op].y - (boxH / 2.0)}, {boxW, boxH}});
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(moduleArea, (tRectangle){{centre[op].x - (textW / 2.0), centre[op].y - (textH / 2.0)}, {BLANK_SIZE, textH}}, kOpName[op]);
+    }
+}
+
+#define COMPRESS_AXIS_MIN_DB    (-36.0)
+#define COMPRESS_AXIS_MAX_DB    (12.0)
+#define COMPRESS_GRAPH_STEPS    (48)
+enum {
+    eCompressHandleThreshold,
+    eCompressHandleRatio,
+    eCompressHandleRef
+};
+
+static double compress_db_from_x(tRectangle box, double x) {
+    return COMPRESS_AXIS_MIN_DB + (((x - box.coord.x) / box.size.w) * (COMPRESS_AXIS_MAX_DB - COMPRESS_AXIS_MIN_DB));
+}
+
+static double compress_db_from_y(tRectangle box, double y) {
+    return COMPRESS_AXIS_MAX_DB - (((y - box.coord.y) / box.size.h) * (COMPRESS_AXIS_MAX_DB - COMPRESS_AXIS_MIN_DB));
+}
+
+static tCoord compress_point(tRectangle box, double inDb, double outDb) {
+    double span = COMPRESS_AXIS_MAX_DB - COMPRESS_AXIS_MIN_DB;
+
+    inDb  = fmin(fmax(inDb, COMPRESS_AXIS_MIN_DB), COMPRESS_AXIS_MAX_DB);
+    outDb = fmin(fmax(outDb, COMPRESS_AXIS_MIN_DB), COMPRESS_AXIS_MAX_DB);
+    return (tCoord){
+        box.coord.x + (((inDb - COMPRESS_AXIS_MIN_DB) / span) * box.size.w),
+        box.coord.y + (((COMPRESS_AXIS_MAX_DB - outDb) / span) * box.size.h)
+    };
+}
+
+static uint32_t compress_level_raw(double db, uint32_t maxRaw) {
+    double raw = round(db + COMPRESS_DB_OFFSET);
+
+    return (raw <= 0.0) ? 0u : (((uint32_t)raw > maxRaw) ? maxRaw : (uint32_t)raw);
+}
+
+// The handles' pointer-to-value laws - the inverse of how the graph places them.
+static uint32_t compress_threshold_from_pointer(tModuleKey key, tRectangle graphBox, tCoord pointer, int32_t item) {
+    (void)item;
+    (void)key;
+    return compress_level_raw(compress_db_from_x(graphBox, pointer.x), COMPRESS_THRESHOLD_OFF_RAW);   // past +11 dB: Off
+}
+
+static uint32_t compress_ref_from_pointer(tModuleKey key, tRectangle graphBox, tCoord pointer, int32_t item) {
+    (void)item;
+    (void)key;
+    return compress_level_raw(compress_db_from_y(graphBox, pointer.y), COMPRESS_LEVEL_RAW_MAX);
+}
+
+static uint32_t compress_ratio_from_pointer(tModuleKey key, tRectangle graphBox, tCoord pointer, int32_t item) {
+    (void)item;
+    tModule * module   = get_module(key);
+
+    if (module == NULL) {
+        return 0;
+    }
+    tParam *  p        = module->param[gPatchDescr[key.slot].activeVariation];
+    double    thrDb    = (double)p[COMPRESS_PARAM_THRESHOLD].value - COMPRESS_DB_OFFSET;
+    double    targetDb = fmax((double)p[COMPRESS_PARAM_REFLVL].value - COMPRESS_DB_OFFSET, thrDb);
+    double    headroom = COMPRESS_AXIS_MAX_DB - targetDb;   // how far the right-hand edge input is above the target
+    double    rise     = compress_db_from_y(graphBox, pointer.y) - targetDb;
+
+    if ((p[COMPRESS_PARAM_THRESHOLD].value >= COMPRESS_THRESHOLD_OFF_RAW) || (headroom <= 0.5)) {
+        return p[COMPRESS_PARAM_RATIO].value;   // no slope to take hold of
+    }
+    return compress_ratio_raw((rise >= headroom) ? 1.0 : ((rise <= (headroom / 100.0)) ? 100.0 : (headroom / rise)));
+}
+
+// notes §87
+static void render_compress_graph(tRectangle rectangle, tModule * module) {
+    const tGraphLocation * graphLoc = find_graph_location(module->type);
+
+    if ((module->type != moduleTypeCompress) || (graphLoc == NULL)) {
+        return;
+    }
+    tParam *               p        = module->param[gPatchDescr[module->key.slot].activeVariation];
+    tRectangle             box      = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+    uint32_t               thrRaw   = p[COMPRESS_PARAM_THRESHOLD].value;
+    uint32_t               refRaw   = p[COMPRESS_PARAM_REFLVL].value;
+    uint32_t               ratioRaw = p[COMPRESS_PARAM_RATIO].value;
+    bool                   off      = (thrRaw >= COMPRESS_THRESHOLD_OFF_RAW);
+    double                 thrDb    = off ? COMPRESS_AXIS_MAX_DB : ((double)thrRaw - COMPRESS_DB_OFFSET);
+    double                 refDb    = (double)refRaw - COMPRESS_DB_OFFSET;
+    tCoord                 prev     = compress_point(box, COMPRESS_AXIS_MIN_DB, compress_out_db(COMPRESS_AXIS_MIN_DB, thrRaw, refRaw, ratioRaw));
+    tRectangle             screen   = {0};
+
+    set_rgb_colour((tRgb)RGB_GREY_2);
+    screen = render_rectangle(moduleArea, box);
+
+    set_rgb_colour((tRgb)RGB_GREY_3);   // unity: what no compression would give
+    render_line(moduleArea, compress_point(box, COMPRESS_AXIS_MIN_DB, COMPRESS_AXIS_MIN_DB), compress_point(box, COMPRESS_AXIS_MAX_DB, COMPRESS_AXIS_MAX_DB), 1.0);
+    set_rgb_colour((tRgb)RGB_YELLOW_7); // the level it compresses towards
+    render_line(moduleArea, compress_point(box, COMPRESS_AXIS_MIN_DB, refDb), compress_point(box, COMPRESS_AXIS_MAX_DB, refDb), 1.0);
+
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
+
+    for (int step = 1; step <= COMPRESS_GRAPH_STEPS; step++) {
+        double inDb  = COMPRESS_AXIS_MIN_DB + (((double)step / (double)COMPRESS_GRAPH_STEPS) * (COMPRESS_AXIS_MAX_DB - COMPRESS_AXIS_MIN_DB));
+        tCoord point = compress_point(box, inDb, compress_out_db(inDb, thrRaw, refRaw, ratioRaw));
+
+        render_line(moduleArea, prev, point, 1.5);
+        prev = point;
+    }
+
+    // notes §87: where it is working now, from the gain-reduction LEDs (one bit each).
+    uint32_t lit     = (uint32_t)__builtin_popcount(volume_source(module, 0) & 0xffu);
+
+    if ((lit > 0u) && (off == false) && (compress_ratio(ratioRaw) > 1.0)) {
+        // the meter shows reduction, over x (1 - 1/ratio): back to how far over Thr the input is
+        double inDb = thrDb + (compress_meter_reduction_db(lit) / (1.0 - (1.0 / compress_ratio(ratioRaw))));
+        tCoord live = compress_point(box, inDb, compress_out_db(inDb, thrRaw, refRaw, ratioRaw));
+
+        set_rgb_colour((tRgb)RGB_ORANGE_1);
+        render_rectangle(moduleArea, (tRectangle){{live.x - 2.5, live.y - 2.5}, {5.0, 5.0}});
+    }
+    tCoord   thrAt   = compress_point(box, thrDb, compress_out_db(thrDb, thrRaw, refRaw, ratioRaw));
+    tCoord   ratioAt = compress_point(box, COMPRESS_AXIS_MAX_DB, compress_out_db(COMPRESS_AXIS_MAX_DB, thrRaw, refRaw, ratioRaw));
+    tCoord   refAt   = compress_point(box, COMPRESS_AXIS_MIN_DB + 3.0, refDb);
+
+    graph_handle_draw(refAt, true);
+    graph_handle_draw(ratioAt, off == false);
+    graph_handle_draw(thrAt, off == false);
+    graph_handle_register(module, eCompressHandleRef, COMPRESS_PARAM_REFLVL, compress_ref_from_pointer, 0u, NULL, 0, box, screen, refAt);
+    graph_handle_register(module, eCompressHandleRatio, COMPRESS_PARAM_RATIO, compress_ratio_from_pointer, 0u, NULL, 0, box, screen, ratioAt);
+    graph_handle_register(module, eCompressHandleThreshold, COMPRESS_PARAM_THRESHOLD, compress_threshold_from_pointer, 0u, NULL, 0, box, screen, thrAt);
+}
+
+#define KBSCALE_LOWEST_NOTE    (9.0)      // A-1, the manual's range for BrPt and the graph
+#define KBSCALE_NOTE_SPAN      (99.0)     // to C8
+#define KBSCALE_STEPS          (24)
+#define KBSCALE_FULL_SPAN      (0.5)      // of the axis: a depth reaches its full offset this far from BrPt
+
+// DX level-scaling curves, by the menu: -Lin, -Exp, +Exp, +Lin.
+static double kbscale_offset(uint32_t curve, double depth, double distance) {
+    double sign  = (curve < 2) ? -1.0 : 1.0;
+    bool   isExp = (curve == 1) || (curve == 2);
+    double shape = isExp ? ((exp(4.0 * distance) - 1.0) / (exp(4.0) - 1.0)) : distance;
+
+    return sign * depth * shape;
+}
+
+// notes §86
+static void render_operator_kbscale_graph(tRectangle rectangle, tModule * module) {
+    const tGraphLocation * graphLoc   = find_graph_location_nth(module->type, 1);
+
+    if ((module->type != moduleTypeOperator) || (graphLoc == NULL)) {
+        return;
+    }
+    uint32_t               variation  = gPatchDescr[module->key.slot].activeVariation;
+    tParam *               p          = module->param[variation];
+    tRectangle             graphRect  = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+    double                 zeroY      = graphRect.coord.y + (graphRect.size.h / 2.0);
+    double                 swing      = graphRect.size.h * 0.45;
+    double                 breakAt    = fmin(fmax(((double)p[17].value - KBSCALE_LOWEST_NOTE) / KBSCALE_NOTE_SPAN, 0.0), 1.0);
+    double                 breakX     = graphRect.coord.x + (breakAt * graphRect.size.w);
+    // The depths are menus whose top value is full depth, whatever the table gives as their range.
+    double                 leftMax    = (double)paramLocationList[p[19].paramRef].range - 1.0;
+    double                 rightMax   = (double)paramLocationList[p[21].paramRef].range - 1.0;
+    double                 leftDepth  = (leftMax > 0.0) ? ((double)p[19].value / leftMax) : 0.0;
+    double                 rightDepth = (rightMax > 0.0) ? ((double)p[21].value / rightMax) : 0.0;
+    tCoord                 prev       = {graphRect.coord.x, 0.0};
+
+    set_rgb_colour((tRgb)RGB_GREY_2);
+    render_rectangle(moduleArea, graphRect);
+    set_rgb_colour((tRgb)RGB_YELLOW_7);
+    render_line(moduleArea, (tCoord){graphRect.coord.x, zeroY}, (tCoord){graphRect.coord.x + graphRect.size.w, zeroY}, 1.0);
+    set_rgb_colour((tRgb)RGB_GREY_5);
+    render_line(moduleArea, (tCoord){breakX, graphRect.coord.y}, (tCoord){breakX, graphRect.coord.y + graphRect.size.h}, 1.0);
+
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
+
+    for (int step = 0; step <= (2 * KBSCALE_STEPS); step++) {
+        double x        = (double)step / (double)(2 * KBSCALE_STEPS);
+        bool   left     = (x < breakAt);
+        double distance = fmin((left ? (breakAt - x) : (x - breakAt)) / KBSCALE_FULL_SPAN, 1.0);
+        double offset   = left ? kbscale_offset(p[18].value, leftDepth, distance) : kbscale_offset(p[20].value, rightDepth, distance);
+        tCoord point    = {graphRect.coord.x + (x * graphRect.size.w), zeroY - (fmin(fmax(offset, -1.0), 1.0) * swing)};
+
+        if (step > 0) {
+            render_line(moduleArea, prev, point, 1.5);
+        }
+        prev = point;
+    }
+}
+
+#define KEYBOARD_WHITE_KEYS    (7)
+#define KEYBOARD_BLACK_KEYS    (5)
+
+// notes §84
+static void render_keyquant_keyboard(tRectangle rectangle, tModule * module) {
+    static const uint32_t  kWhiteParam[KEYBOARD_WHITE_KEYS] = {10, 12, 2, 3, 5, 7, 9};   // C D E F G A B
+    static const uint32_t  kBlackParam[KEYBOARD_BLACK_KEYS] = {11, 13, 4, 6, 8};         // C# D# F# G# A#
+    static const double    kBlackAt[KEYBOARD_BLACK_KEYS]    = {1.0, 2.0, 4.0, 5.0, 6.0}; // white-key boundary each sits on
+    const tGraphLocation * graphLoc                         = find_graph_location(module->type);
+
+    if ((module->type != moduleTypeKeyQuant) || (graphLoc == NULL)) {
+        return;
+    }
+    uint32_t               variation                        = gPatchDescr[module->key.slot].activeVariation;
+    tRectangle             box                              = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+    double                 whiteWidth                       = box.size.w / (double)KEYBOARD_WHITE_KEYS;
+    double                 blackWidth                       = whiteWidth * 0.6;
+    double                 blackHeight                      = box.size.h * 0.6;
+    tParamClickCtx *       ctx                              = sParamClickCtx[module->key.slot][module->key.location][module->key.index];
+
+    // White keys first and black keys after, so the black ones are painted - and, because the most
+    // recently registered click region wins, clicked - on top. Each key hands the click to its own
+    // note parameter's context, so it toggles exactly as that parameter's on/off widget does.
+    for (uint32_t key = 0; key < KEYBOARD_WHITE_KEYS; key++) {
+        uint32_t   param = kWhiteParam[key];
+        tRectangle shape = {{box.coord.x + (key * whiteWidth), box.coord.y}, {whiteWidth, box.size.h}};
+
+        ctx[param] = (tParamClickCtx){
+            eCanvasWidgetParam, module->key, param
+        };
+        set_rgb_colour((module->param[variation][param].value != 0) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_GREY_9);
+        register_click_region(render_rectangle(moduleArea, shape), eClickLayerCanvas, param_click_handler, &ctx[param]);
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_line(moduleArea, shape.coord, (tCoord){shape.coord.x, shape.coord.y + shape.size.h}, 1.0);
+    }
+
+    for (uint32_t key = 0; key < KEYBOARD_BLACK_KEYS; key++) {
+        uint32_t   param = kBlackParam[key];
+        tRectangle shape = {{box.coord.x + (kBlackAt[key] * whiteWidth) - (blackWidth / 2.0), box.coord.y}, {blackWidth, blackHeight}};
+
+        ctx[param] = (tParamClickCtx){
+            eCanvasWidgetParam, module->key, param
+        };
+        set_rgb_colour((module->param[variation][param].value != 0) ? (tRgb)RGB_GREEN_3 : (tRgb)RGB_GREY_2);
+        register_click_region(render_rectangle(moduleArea, shape), eClickLayerCanvas, param_click_handler, &ctx[param]);
+    }
+
+    set_rgb_colour((tRgb)RGB_BLACK);
+    render_line(moduleArea, box.coord, (tCoord){box.coord.x + box.size.w, box.coord.y}, 1.0);
+    render_line(moduleArea, (tCoord){box.coord.x, box.coord.y + box.size.h}, (tCoord){box.coord.x + box.size.w, box.coord.y + box.size.h}, 1.0);
+    render_line(moduleArea, (tCoord){box.coord.x + box.size.w, box.coord.y}, (tCoord){box.coord.x + box.size.w, box.coord.y + box.size.h}, 1.0);
+}
+
+static tModuleClickCtx sGraphAreaCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES];
+
+static void graph_area_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    (void)coord;
+    (void)phase;
+    (void)userData;   // swallowed: see guard_graph_areas()
+}
+
+// notes §88: a press on a graph but off its handles does nothing, rather than dragging the module.
+// Registered after the module body and before the graphs' own handles and keys, which therefore win.
+static void guard_graph_areas(tRectangle rectangle, tModule * module) {
+    double                 scale = module->rectangle.size.w / rectangle.size.w;
+    const tGraphLocation * graphLoc;
+
+    sGraphAreaCtx[module->key.slot][module->key.location][module->key.index] = (tModuleClickCtx){
+        eCanvasWidgetNone, module->key
+    };
+
+    for (uint32_t n = 0; (graphLoc = find_graph_location_nth(module->type, n)) != NULL; n++) {
+        tRectangle box    = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+        tRectangle screen = {{
+                                 module->rectangle.coord.x + ((box.coord.x - rectangle.coord.x) * scale),
+                                 module->rectangle.coord.y + ((box.coord.y - rectangle.coord.y) * scale)
+                             },
+                             {box.size.w * scale, box.size.h * scale}};
+
+        register_click_region(screen, eClickLayerCanvas, graph_area_click_handler,
+                              &sGraphAreaCtx[module->key.slot][module->key.location][module->key.index]);
+    }
+}
+
+static bool sShowNameBand = false;
+
+// Backdoor NAMEBAND (backdoor.c's notes §28): a view setting, never saved.
+void set_module_name_band_visible(bool visible) {
+    sShowNameBand = visible;
+}
+
 void render_module_common(tRectangle rectangle, tModule * module) {
     if (module == NULL) {
         return;
@@ -2367,6 +3044,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     }
 
     render_module_connectors(rectangle, module);
+    guard_graph_areas(rectangle, module);
 
     if (  (module->type == moduleTypeOscShpB) || (module->type == moduleTypeOscShpA)
        || (module->type == moduleTypeLfoShpA) || (module->type == moduleTypeLfoB)
@@ -2380,6 +3058,10 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     render_comb_response_graph(rectangle, module);
     render_phaser_response_graph(rectangle, module);
     render_vocoder_routing_graph(rectangle, module);
+    render_dxrouter_algorithm_graph(rectangle, module);
+    render_operator_kbscale_graph(rectangle, module);
+    render_compress_graph(rectangle, module);
+    render_keyquant_keyboard(rectangle, module);
 
     for (uint32_t i = module->volumeIndexCache; i < array_size_volume_location_list(); i++) {
         if (volumeLocationList[i].moduleType == module->type) {
@@ -2530,6 +3212,14 @@ void render_module(tModule * module) {
         render_text(moduleArea, (tRectangle){{nameX, moduleRectangle.coord.y + 5.0},
                                              {BLANK_SIZE, STANDARD_TEXT_HEIGHT}
                     }, buff);
+    }
+
+    if (sShowNameBand) {
+        // Where the widest name a module can carry would go - Docs/module-layout-rules.md, rule 16.
+        set_rgba_colour((tRgba){1.0, 0.2, 0.2, 0.35});
+        render_rectangle(moduleArea, (tRectangle){{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
+                                                  {get_text_width(LONGEST_MODULE_NAME, STANDARD_TEXT_HEIGHT, eNoCache), STANDARD_TEXT_HEIGHT}
+                         });
     }
     // notes §72
 

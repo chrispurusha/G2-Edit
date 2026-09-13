@@ -212,6 +212,43 @@ typedef struct {
 
 bool flt_phase_settings_build(tModule * module, uint32_t variation, tParamReader dial, tPhaserSettings * out); // false: not FltPhase
 double flt_phase_magnitude(const tPhaserSettings * settings, double hz);
+
+// Operator (a DX7 operator): its frequency by the DX7's laws - paramCurves.c's notes §41.
+#define OPERATOR_RATIO_FIXED_PARAM    (2)
+#define OPERATOR_FINE_PARAM           (4)
+#define OPERATOR_COARSE_MAX           (31u)
+#define OPERATOR_FINE_MAX             (99u)
+
+double operator_ratio(uint32_t coarse, uint32_t fine);       // Ratio mode: the multiple of the played pitch
+double operator_fixed_hz(uint32_t coarse, uint32_t fine);    // Fixed mode
+
+// Compress: its dials by the instrument's own readings, and its static curve - paramCurves.c's notes §42.
+#define COMPRESS_PARAM_THRESHOLD      (0)
+#define COMPRESS_PARAM_RATIO          (1)
+#define COMPRESS_PARAM_REFLVL         (4)
+#define COMPRESS_DB_OFFSET            (30.0)   // Thr and RefLvl: dB = raw - this
+#define COMPRESS_THRESHOLD_OFF_RAW    (42u)    // the Thr dial reads "Off" here
+#define COMPRESS_LEVEL_RAW_MAX        (42u)
+#define COMPRESS_RATIO_RAW_MAX        (66u)
+
+double compress_ratio(uint32_t raw);                                                            // 1.0:1 up to about 95:1
+uint32_t compress_ratio_raw(double ratio);                                                      // the nearest dial value
+double compress_out_db(double inDb, uint32_t thresholdRaw, uint32_t refRaw, uint32_t ratioRaw); // after the detector has settled
+uint32_t compress_meter_lit(double reductionDb);                                                // LEDs lit for this much gain reduction (over Thr x (1 - 1/ratio))
+double compress_meter_reduction_db(uint32_t lit);                                               // the least reduction that lights this many, for the graph's live point
+// DXRouter: the 32 DX7 algorithms as who-modulates-whom, shared by the graph and the sound engine -
+// paramCurves.c's notes §43.
+#define DX_OPERATORS     (6)
+#define DX_ALGORITHMS    (32)
+
+typedef struct {
+    uint8_t target[DX_OPERATORS];   // bit k: modulates operator k + 1; no bits: a carrier
+    uint8_t feedbackFrom;           // operator numbers, 1-6
+    uint8_t feedbackTo;
+} tDxAlgorithm;
+
+const tDxAlgorithm * dx_algorithm(uint32_t index);   // 0..31 is algorithm 1..32; out of range reads as 1
+
 #ifdef __cplusplus
 }
 #endif

@@ -26,6 +26,7 @@
 
 void render_module(tModule * module);
 void render_modules(void);
+void set_module_name_band_visible(bool visible);
 
 // notes §1
 bool param_is_under_cursor(const tModule * module, uint32_t paramIndex, tCoord coord);

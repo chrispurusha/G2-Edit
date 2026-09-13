@@ -1,0 +1,89 @@
+#!/bin/zsh
+# Screenshots of module faces, built offline through the editor's backdoor, so a layout change is
+# checked with one command instead of by hand.
+#
+#   ./face-shots [--name-band] <path/to/G2 Editor.app> <out-prefix> Module [Module ...]
+#
+# --name-band tints, on every face, the area the widest possible name - sixteen Ws - would take,
+# so a face can be checked against it while still showing which module it is
+# (Docs/module-layout-rules.md, rule 16).
+#
+# Launches that build with G2_EDIT_BACKDOOR=1 and G2_EDIT_OFFLINE=1, places the named modules eight to
+# a column (names as the palette spells them: LevAmp, Mix4-1C) and writes <out-prefix>-1.0.png and
+# <out-prefix>-0.59.png. 0.59 is the zoom to judge by: below about 0.7 text stops shrinking with the
+# face, so labels are proportionally widest there (Docs/module-layout-rules.md).
+#
+# SAFE WITH A G2 PLUGGED IN: G2_EDIT_OFFLINE keeps the editor off USB, and the script checks the
+# editor reports itself offline before NEWPATCH - which would otherwise clear the instrument's slot -
+# and stops if it does not. Quit any other copy of the editor started with G2_EDIT_BACKDOOR=1 first;
+# both would answer.
+set -u
+
+band=OFF
+if [[ ${1:-} == --name-band ]]; then
+    band=ON
+    shift
+fi
+
+if (( $# < 3 )); then
+    print "usage: $0 [--name-band] <G2 Editor.app> <out-prefix> Module [Module ...]"
+    exit 1
+fi
+app=$1
+prefix=${2:A}
+shift 2
+
+cmd=/tmp/g2edit_cmd.txt
+res=/tmp/g2edit_result.txt
+rm -f $cmd $res
+G2_EDIT_BACKDOOR=1 G2_EDIT_OFFLINE=1 "$app/Contents/MacOS/G2 Editor" >/dev/null 2>&1 &
+pid=$!
+trap 'kill $pid 2>/dev/null' EXIT
+
+nap() { perl -e 'select(undef, undef, undef, 0.1)' }
+
+send() {
+    rm -f $res
+    print -r -- "$1" > $cmd
+    for i in {1..150}; do
+        [[ -e $cmd ]] || break
+        nap
+    done
+    cat $res 2>/dev/null
+}
+
+for i in {1..60}; do
+    [[ -n "$(send DUMP)" ]] && break
+done
+
+# A build older than the offline switch would connect to an attached G2 - refuse rather than clear it.
+if [[ "$(send COMMS)" != *offline* ]]; then
+    print "The editor reports itself ONLINE - is this build older than G2_EDIT_OFFLINE? Stopping, nothing sent."
+    exit 1
+fi
+send NEWPATCH >/dev/null
+send "SPLIT VA" >/dev/null     # the Voice Area full height, so a tall face fits (backdoor notes §27)
+
+col=0
+n=0
+for m in "$@"; do
+    r=$(send "ADDMODULE $m $col")
+    [[ $r == OK* ]] || print "$m: $r"
+    (( ++n % 8 == 0 )) && (( col++ ))
+done
+
+r=$(send "NAMEBAND $band")
+[[ $r == OK* ]] || print "NAMEBAND: $r"
+
+for z in 1.0 0.59; do
+    out="$prefix-$z.png"
+    rm -f "$out"
+    send "ZOOM $z" >/dev/null
+    send "SCROLL 0 0" >/dev/null
+    send "SCREENSHOT $out" >/dev/null
+    for i in {1..50}; do
+        [[ -e $out ]] && break
+        nap
+    done
+    print "$out"
+done

@@ -1024,3 +1024,159 @@ CURRENT state forces: EnvADR's three rows leave a strip 8.5% tall above its sele
 Gate and AM jacks push its box down to 20%. When a face is re-laid out on EnvADSR's pattern, its row
 in graphLocationList should become EnvADSR's {{20, 8}, {60, 16}}. EnvD and EnvH have two rows and no
 band to use; they take the shapers' top-right corner.
+
+## 84. `render_keyquant_keyboard()`
+
+KeyQuant's twelve note parameters as one octave of keyboard (CT asked for it to "look a little more
+like a keyboard"). They stay ordinary on/off parameters in paramLocationList - a new parameter type
+is read in a dozen places, which is what broke the wave-menu attempt (§47's neighbours) - so the
+Parameter Pages, the mutator and the menus still see plain switches. Only the module face changes:
+`param_drawn_by_graph()` stops `render_param_common()` drawing, registering or focus-marking them
+(it still records their paramRef, which other code reads), and the keyboard is their only widget.
+Their rows' positions are therefore never drawn.
+
+WHY IT HAS TO BE ITS OWN DRAWER: black keys sit over white keys, but parameters are drawn in their
+own order (E, F, F#, G ... D, D#), so a white key drawn later would paint over the black key before
+it. Here the whites go down first and the blacks on top.
+
+CLICKS: within a layer the most recently registered click region wins (clickRegion.c), which is
+paint order. So registering the whites and then the blacks puts every black key over the white
+beneath it. Each key fills in and hands the click to its note parameter's own tParamClickCtx - the
+one `render_param_common()` would have filled - so it toggles exactly as an on/off button does,
+focus, undo and the wire command included.
+
+SELECTED NOTES keep their key colour's family: a lit white key goes bright green, a lit black key
+dark green. A single green for both would lose which note is sharp; keeping the whites light and the
+blacks dark keeps the keyboard readable with any selection.
+
+## 85. `render_dxrouter_algorithm_graph()`
+
+The DXRouter's 32 algorithms drawn as the DX7's own algorithm chart: six numbered operator boxes,
+carriers on the bottom row joined by the output line, each modulator above what it modulates, and
+the one feedback loop in orange (G2 manual p.185: "An internal feedback loop is indicated with
+orange lines in the DXRouter graph"; the algorithms "correspond to the factory algorithms of the
+DX7 synthesizer"). The loop is drawn grey while Feedback is 0, so the graph also says whether the
+loop is doing anything.
+
+THE TABLE IS ONLY WHO MODULATES WHOM - one target bitmask per operator and the loop's two ends,
+taken from the published DX7 algorithm chart. The picture is calculated from that rather than
+stored as 32 drawings:
+- level: a carrier is 0, a modulator one above the highest thing it modulates. Every DX7
+  modulation runs from a higher-numbered operator to a lower one, so one ascending pass settles it.
+- width: an operator with one target is that target's child; a subtree is as wide as its
+  children together, at least one column. One descending pass.
+- position: carriers left to right in operator order, each subtree centred over its root, children
+  in operator order. An operator with several targets (6 on algorithm 19, 3 on 20) is not a child
+  of any of them and sits over the middle of its targets.
+That reproduces the familiar chart shapes; the worst case is six columns (algorithm 32) by four
+levels (algorithms 1, 2 and 18).
+
+THE GRID IS FIXED at six columns by four levels whatever the algorithm, with the algorithm centred
+across it, so stepping through the algorithms moves boxes rather than resizing them.
+
+THE FEEDBACK LOOP leaves the bottom of its source operator, runs right past both ends of the loop
+and comes back into the top of its destination. Algorithms 4 and 6 are the two whose loop spans more
+than one operator (4 feeds back from 4 to 6, 6 from 5 to 6); the rest feed an operator back to
+itself.
+
+## 86. Operator's two graphs - `operator_env_width()`, `render_operator_kbscale_graph()`
+
+Operator is a DX7 operator (G2 manual p.184), so its graphs follow the DX7's controls rather than
+the G2 envelopes'. Operator is the one module with TWO graph rows: the envelope's comes first,
+because render_envelope_graph() takes a module's first row, and the level scaling's second, found
+with find_graph_location_nth().
+
+THE ENVELOPE is the rate/level kind: it starts at L4, travels to L1, L2 and L3 at rates R1-R3,
+holds at L3 (the orange plateau, as on every envelope graph) and returns to L4 at R4. It goes
+through env_graph_segments() like the G2 envelopes, as one more case. Two things differ from them:
+- A DX rate runs the other way - 99 is the fastest - so a stage's width falls as its rate rises.
+- A stage's time grows with the distance it travels (manual: "The greater the difference between
+  two adjacent Level settings, the longer it will take"; equal levels make the rate irrelevant).
+  So the width is that distance times a rate term, and a stage between equal levels has no width.
+Levels and rates are read as 0-127. The defaults (90 99 80 99 70 99 70 0) look like DX values, but
+the G2's own panel reads L1 and Level as 127 at raw 127 (read 2026-08-10), so the module is NOT
+capped at the DX's 99 and a graph that clamped there flattened every setting above it. The widths show the shape and which stage is slow;
+they are not measured times.
+
+THE LEVEL SCALING draws the manual's graph: "the two gain slopes and the break point ... The Y-axis
+represents the output level and the X-axis the entire note range (A-1 to C8). The horizontal line
+represents the 0 dB output level." The break point is BrPt read as a note number (the dial's own
+reading, C-1 at 0), placed on an A-1..C8 axis. Each side takes its curve menu (-Lin, -Exp, +Exp,
++Lin) and its depth, the depth as a fraction of that menu's top value. Linear is a straight slope
+from the break point; exponential starts flat and steepens (e^4x, normalised) - the DX7's
+characteristic shapes, not measured gains.
+
+A depth reaches its full offset half the axis (about four octaves) from the break point and holds
+there: measured over the whole keyboard, a side that is only half of it never got near its depth and
+every curve drew nearly flat. It is a display scale, like the rest of this graph.
+
+## 87. `render_compress_graph()` and graph handles
+
+Compress drawn as a compressor's usual static curve - output level against input level, both -36 to
++12 dB - from compress_out_db(), the engine's own gain law with the detector settled (paramCurves.c
+notes §42). The grey diagonal is unity, what no compression would give; the yellow line is RefLvl,
+the level the module pulls towards (it is a leveller). Thr Off draws the unity line and greys the
+two handles that have nothing to hold.
+
+THE HANDLES ARE THE DIALS (CT: "Even better if I could click on key parts of the graph and drag to
+adjust"). Three squares - the threshold knee, the curve at the right-hand edge (the ratio) and the
+RefLvl line's left end - each drags its own parameter:
+- Each registers a click region whose context BEGINS with that parameter's tParamClickCtx, so to the
+  click registry, the right-click menu, MIDI learn and focus a handle simply is the parameter.
+- A press starts the parameter's ordinary drag (param_drag_start(), shared with the widget) plus a
+  pointer-to-value function and the graph's on-screen box in tParamDragging. canvas_param_drag_motion()
+  calls that function instead of the dial laws, so the value follows the pointer: the threshold
+  under it on the input axis (past +11 dB it goes Off), RefLvl on the output axis, and the ratio
+  that would put the curve's right-hand end where the pointer is. Undo, linked variations, the wire
+  command and Alt for morph are all the drag's own, at its end.
+- The press does NOT capture the cursor, as the dials' vertical/horizontal modes do (canvas_drag_begin()):
+  a value that follows the pointer has to see where the pointer is. The drag's end clears
+  tParamDragging whole, so the function never outlives its drag.
+The same mechanism is meant for the envelope graphs later (CT: "Similar could later apply to
+envelopes etc."): a handle per breakpoint, a function per handle.
+
+THE LIVE POINT (CT: "We could also use the compressor LED data"): the gain-reduction meter shows the
+reduction the settings call for, dB over the threshold x (1 - 1/ratio) (sound-engine-notes §122,
+measured on the G2), so its lit LEDs, turned back into reduction by compress_meter_reduction_db() and
+divided by (1 - 1/ratio), give how far over the threshold the input is - an orange dot on the curve at
+that input level. At 1:1 the meter shows nothing and there is no dot - where the
+compressor is working now. Nothing is drawn while no LED is lit, i.e. below the threshold. It follows
+whatever feeds the meter: the G2 when connected, the local engine when that is playing.
+
+THE dB MARKS beside the gain-reduction LEDs (CT: "squeeze the dB indications onto the compressor
+too ... Text indication is on original editor") are the original editor's own: 1, 4, 9, 15, 24 and
+30 dB, top to bottom, each against the LED row it prints them at - drawn in render_volume_common(),
+in a smaller text size, in the gap between the graph and the meter. The original's "Gain Reduction"
+heading does not fit and is left off. The meter's top LED is bit 0 of its value, which is why the
+scale reads downwards.
+
+CHECKED BY A REAL DRAG (2026-09-13, cliclick on an offline instance): the threshold handle dragged
+60 points right took Thr from raw 18 (-12 dB) to 35 (+5 dB), exactly what the pointer mapping
+predicts for that distance across the axis.
+
+THE ENVELOPES HAVE HANDLES TOO (2026-09-13, CT: "Similar could later apply to envelopes"). Every
+segment now records the parameter that sets its width and, where there is one, the parameter that
+sets its end level, and each segment with a time gets a handle at its breakpoint: sideways sets the
+time, and where the level is a parameter too (EnvADSR/ModADSR's D, EnvADDSR's D1 and D2, EnvMulti's
+four stages, Operator's R/L pairs) up and down sets the level in the same drag.
+- NO CLOSED-FORM INVERSE: the widths are scaled to fit the box, so every other segment moves when one
+  changes. env_handle_value() instead runs every value of the parameter through env_graph_segments()
+  on a COPY of the parameters (which is why that function takes a parameter array, not the module)
+  and keeps the one whose breakpoint lands nearest the pointer - the current value on a tie. It is
+  exact whatever the law, which is how Operator's reversed DX rates need nothing special.
+- THE SECOND AXIS is a second parameter in tParamDragging (graphValue2/param2), committed after the
+  first so it is found against the first's new value, with its own undo step at the drag's end. It
+  takes no morph; Alt-drag morphs the time only.
+- Where Bip/BipInv pins the levels (sustain at the centre), the level axis has nothing to move and
+  the search keeps the value.
+
+## 88. `guard_graph_areas()`
+
+A press on a graph but off its handles does NOTHING (CT: "Graphical representation area probably
+shouldn't be recognised for module dragging. Currently too easy to miss the drag buttons and move the
+whole module by accident"). Every graph row of a module registers a click region with a no-op press,
+after the module body - so it wins over the body's drag - and before the graphs' own handles and
+keys - which therefore win over it. Its context is kind None with the module's key, so a right-click
+over a graph still opens the module's menu (canvas_right_click() falls back to it). The screen box is
+mapped from the module's own drawn rectangle, the transform every other region on the face went
+through.

@@ -62,6 +62,8 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "graphics.h"
 #include "splitView.h"
+#include "patchWrite.h"
+#include "moduleGraphics.h"
 #include "backdoor.h"
 
 // notes §1
@@ -1318,6 +1320,13 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             backdoor_write_result("ERROR: expected 'SAVEFILE <path>'\n");
             return;
         }
+
+        // Offline the USB thread never reads its queue, so write here as File > Save does
+        // (on_file_saved()) - nothing else touches the database without a G2.
+        if (!device_ready()) {
+            backdoor_write_result((write_database_to_file(arg, gSlot) == EXIT_SUCCESS) ? "OK\n" : "ERROR: write failed\n");
+            return;
+        }
         msg.cmd                = eMsgCmdSavePatchFile;
         msg.patchFileData.slot = gSlot;
         strncpy(msg.patchFileData.filePath, arg, sizeof(msg.patchFileData.filePath) - 1);
@@ -1365,6 +1374,43 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         // the render size is enough to reach either extreme.
         set_x_scroll_bar(xFraction * (get_render_width() / gGlobalGuiScale));
         set_y_scroll_bar(yFraction * (get_render_height() / gGlobalGuiScale));
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "RENAME") == 0) {
+        // notes §29
+        char            area[8]                    = {0};
+        char            name[CLAVIA_NAME_SIZE + 1] = {0};
+        uint32_t        index                      = 0;
+        int             consumed                   = 0;
+        tModule *       module                     = NULL;
+        tMessageContent msg                        = {0};
+
+        if ((sscanf(arg, "%7s %u %n", area, &index, &consumed) < 2) || (arg[consumed] == '\0')) {
+            backdoor_write_result("ERROR: expected 'RENAME <VA|FX> <index> <name>'\n");
+            return;
+        }
+        snprintf(name, sizeof(name), "%s", &arg[consumed]);
+        module                        = get_module_slot(gSlot, (strcasecmp(area, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa, index);
+
+        if ((module == NULL) || (module->type == 0)) {
+            backdoor_write_result("ERROR: no such module\n");
+            return;
+        }
+        COPY_STRING(module->name, name);
+        msg.cmd                       = eMsgCmdSetModuleLabel;
+        msg.slot                      = module->key.slot;
+        msg.moduleLabelData.moduleKey = module->key;
+        COPY_STRING(msg.moduleLabelData.name, name);
+        msg_send(&gToUsbThread, &msg);
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "NAMEBAND") == 0) {
+        // notes §28
+        if ((strcasecmp(arg, "ON") != 0) && (strcasecmp(arg, "OFF") != 0)) {
+            backdoor_write_result("ERROR: expected 'NAMEBAND ON|OFF'\n");
+            return;
+        }
+        set_module_name_band_visible(strcasecmp(arg, "ON") == 0);
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "ZOOM") == 0) {

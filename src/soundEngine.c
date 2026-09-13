@@ -369,55 +369,29 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define COMP_RELEASE_MIN_S          (0.125)
 #define COMP_RELEASE_MAX_S          (10.2)
 
-// The Ratio dial, in three straight runs that repeat a decade higher above raw 34 — 1.0:1 up to
-// about 95:1. Transcribed from the instrument's own formatter rather than fitted.
-static double compressor_ratio(double rawValue) {
-    int  raw    = (int)rawValue;
-    bool decade = (raw > 34);
-    int  p      = decade ? (raw - 35) : raw;
-    int  tenths = 0;
-
-    if (p < 0) {
-        p = 0;
-    }
-
-    if (p <= 9) {
-        tenths = p + 10;
-    } else if (p < 25) {
-        tenths = p * 2;
-    } else {
-        tenths = (p * 5) - 75;
-    }
-
-    if (decade) {
-        tenths *= 10;
-    }
-    return (double)tenths / 10.0;
-}
-
 // notes §9
-#define DELAY_PARAM_TIME        (0)
-#define DELAY_PARAM_FEEDBACK    (1)
-#define DELAY_PARAM_LP          (2)   // DelayA calls this Filter; both are a damping control
-#define DELAY_PARAM_DRYWET      (3)
-#define DELAY_PARAM_HP          (8)
+#define DELAY_PARAM_TIME            (0)
+#define DELAY_PARAM_FEEDBACK        (1)
+#define DELAY_PARAM_LP              (2) // DelayA calls this Filter; both are a damping control
+#define DELAY_PARAM_DRYWET          (3)
+#define DELAY_PARAM_HP              (8)
 
 // notes §10
-#define DELAY_LP_MIN_HZ         (660.0)
+#define DELAY_LP_MIN_HZ             (660.0)
 
 // notes §11
-#define DELAY_HP_LOG_A          (1.74224)
-#define DELAY_HP_LOG_B          (0.100227)
-#define DELAY_HP_LOG_C          (-0.000377517)
-#define DELAY_LP_MAX_HZ         (20000.0)
-#define DELAYA_PARAM_ACTIVE     (4)
-#define DELAYB_PARAM_ACTIVE     (7)
-#define DELAY_MODE_RANGE        (0)
+#define DELAY_HP_LOG_A              (1.74224)
+#define DELAY_HP_LOG_B              (0.100227)
+#define DELAY_HP_LOG_C              (-0.000377517)
+#define DELAY_LP_MAX_HZ             (20000.0)
+#define DELAYA_PARAM_ACTIVE         (4)
+#define DELAYB_PARAM_ACTIVE         (7)
+#define DELAY_MODE_RANGE            (0)
 
-#define REVERB_PARAM_TIME       (0)
-#define REVERB_PARAM_BRIGHT     (1)
-#define REVERB_PARAM_DRYWET     (2)
-#define REVERB_PARAM_ACTIVE     (3)
+#define REVERB_PARAM_TIME           (0)
+#define REVERB_PARAM_BRIGHT         (1)
+#define REVERB_PARAM_DRYWET         (2)
+#define REVERB_PARAM_ACTIVE         (3)
 
 // notes §12
 typedef struct {
@@ -492,26 +466,39 @@ typedef enum {
 } tOscWave;
 
 // notes §16
-#define OSCB_TUNE_UNITY       (64.0)
-#define MIDI_NOTE_A440        (69.0)
-#define MIDI_NOTE_MIDDLE_C    (60.0)
+#define OSCB_TUNE_UNITY             (64.0)
+#define MIDI_NOTE_A440              (69.0)
+#define MIDI_NOTE_MIDDLE_C          (60.0)
 
 // notes §17
-#define VOICE_GAIN            (0.15)
+#define VOICE_GAIN                  (0.15)
 
 // Where the output starts bending rather than shearing.
-#define OUTPUT_KNEE           (0.80)
-#define ENVELOPE_SECONDS      (0.005)      // the anti-click ramp used when no EnvADSR is in the chain
+#define OUTPUT_KNEE                 (0.80)
+#define ENVELOPE_SECONDS            (0.005) // the anti-click ramp used when no EnvADSR is in the chain
 
 // Every ladder runs its full four poles whatever slope is selected — see ladder_filter().
-#define LADDER_POLES          (6)   // state available: FltLP's 36 dB setting is six poles
-#define LADDER_LOOP_POLES     (4)   // the RESONANCE loop is four long whatever is tapped - measured
+#define LADDER_POLES                (6) // state available: FltLP's 36 dB setting is six poles
+#define LADDER_LOOP_POLES           (4) // the RESONANCE loop is four long whatever is tapped - measured
 
 // notes §18
-#define MAX_ENGINE_NODES      (28)
+#define MAX_ENGINE_NODES            (28)
+#define MAX_DX_OPERATORS            (24) // §14 - six per DXRouter, so four routers
+
+// §14 - Operator and DXRouter. See the reference for what each of these is and how sure it is.
+#define DX_LEVEL_TOP                (99.0)   // Level and L1-L4 at the DX's top value read full scale
+#define DX_LEVEL_DB_PER_STEP        (0.75)
+#define DX_SILENT_DB                (-96.0)
+#define DX_RATE_SLOWEST_SECONDS     (40.0)   // a full 96 dB sweep at rate 0 ...
+#define DX_RATE_OCTAVES_PER_STEP    (0.1544) // ... halving every 6.5 steps, to 1 ms at rate 99
+#define DX_DETUNE_CENTS_PER_STEP    (1.0)
+#define DX_KBSCALE_FULL_DB          (24.0)   // a full depth's offset ...
+#define DX_KBSCALE_SPAN_NOTES       (48.0)   // ... this far from the break point
+#define DX_E4_HZ                    (329.6276)
+#define DX_FM_CYCLES_PER_UNIT       (1.0)    // phase deviation, in cycles, per unit at an FM input
 
 // notes §19
-#define MAX_VOICES            (32)
+#define MAX_VOICES                  (32)
 
 // What counts as an inaudible voice, and how long it has to stay that way before the voice can be
 // handed to another note. -80 dB is below anything that survives the output stage; the window is
@@ -548,6 +535,7 @@ typedef enum {
     eNodeFltMulti,       // §10 - LP, BP and HP from one filter
     eNodeEq,             // §11 - EqPeak, Eq2Band, Eq3band
     eNodeFltComb,        // §13
+    eNodeDx,             // §14 - a DXRouter and the Operators patched into it, as one node
     eNodeOut,
 } tNodeKind;
 
@@ -640,6 +628,10 @@ typedef struct {
     double          timeNorm;      // reverb Time as the dial reads it, 0..1 — drives the diffusion
     uint32_t        reverbType;    // reverb room size: Small/Medium/Large/Hall
 
+    uint32_t        dxBase;        // §14 - where this router's six Operators sit in dxOp[]
+    uint32_t        dxAlgorithm;   // 0..31
+    double          dxFeedback;    // FM units fed back, from the Feedback selector
+
     // Evaluated ONCE per sample, after the voices are summed, rather than once per voice. True for
     // everything in the FX Area, for the three module kinds that own a shared delay buffer wherever
     // they sit, and for anything downstream of one of those. See mark_post_mix_nodes().
@@ -648,6 +640,27 @@ typedef struct {
 
 // notes §22
 #define MAX_ENGINE_TAPS    (4)
+
+// §14 - one Operator patched into a DXRouter, as the router's node plays it.
+typedef struct {
+    bool     present;
+    bool     active;
+    bool     kbt;
+    bool     sync;
+    bool     fixed;
+    double   ratio;
+    double   fixedHz;
+    double   detune;               // a frequency factor
+    double   outputGain;           // Level
+    double   rateDbPerSecond[4];   // R1-R4
+    double   levelDb[4];           // L1-L4
+    double   rateScale;            // 0..1
+    double   bpNote;
+    uint32_t lCurve;
+    uint32_t rCurve;
+    double   lDepth;               // 0..1
+    double   rDepth;
+} tDxOperator;
 
 typedef struct {
     uint32_t    nodeCount;
@@ -659,12 +672,14 @@ typedef struct {
     uint32_t    vibratoSource; // 0 off, 1 aftertouch, 2 wheel
     double      vibratoCents;
     double      vibratoHz;
-    tGlideMode  glideMode;     // patch-wide, not per node
+    tGlideMode  glideMode;              // patch-wide, not per node
     double      glideSeconds;
-    double      bendSemitones; // 0 when the patch has bend switched off
-    uint64_t    topology;      // changes shape => the audio thread resets its per-node state
-    uint32_t    voiceCount;    // how many voices this patch may sound at once, 1 for Mono/Legato
+    double      bendSemitones;          // 0 when the patch has bend switched off
+    uint64_t    topology;               // changes shape => the audio thread resets its per-node state
+    uint32_t    voiceCount;             // how many voices this patch may sound at once, 1 for Mono/Legato
     tEngineNode node[MAX_ENGINE_NODES];
+    tDxOperator dxOp[MAX_DX_OPERATORS]; // §14 - each DXRouter node's six, from its dxBase
+    uint32_t    dxOpCount;
 } tSoundEngineParams;
 
 // notes §23
@@ -1157,6 +1172,30 @@ static uint32_t       gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_EN
 static uint32_t       gEnvTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvTrigger    (gEnvTriggerBank[SE])
 
+// §14 - per voice, per Operator of every DXRouter node: phase, envelope (in dB, and its stage), and
+// the last two outputs for the feedback loop; per voice and node, the gate and trigger last seen.
+typedef enum {
+    eDxRise1 = 0,
+    eDxRise2,
+    eDxRise3,
+    eDxHold,
+    eDxRelease,
+    eDxIdle
+} tDxStage;
+
+static double         gDxPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+#define gDxPhase       (gDxPhaseBank[SE])
+static double         gDxEnvDbBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+#define gDxEnvDb       (gDxEnvDbBank[SE])
+static uint32_t       gDxEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+#define gDxEnvStage    (gDxEnvStageBank[SE])
+static double         gDxOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS][2];
+#define gDxOut         (gDxOutBank[SE])
+static bool           gDxGateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gDxGate        (gDxGateBank[SE])
+static uint32_t       gDxTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gDxTrigger     (gDxTriggerBank[SE])
+
 typedef enum {
     eEnvIdle = 0,
     eEnvAttack,
@@ -1319,6 +1358,22 @@ static void reset_node_state(void) {
             gCompEnv[v][i]       = 0.0;
             gPulseCount[v][i]    = 0;
             gPulsePrev[v][i]     = 0.0;
+        }
+    }
+
+    // §14
+    for (v = 0; v < MAX_VOICES; v++) {
+        for (i = 0; i < MAX_DX_OPERATORS; i++) {
+            gDxPhase[v][i]    = 0.0;
+            gDxEnvDb[v][i]    = DX_SILENT_DB;
+            gDxEnvStage[v][i] = eDxIdle;
+            gDxOut[v][i][0]   = 0.0;
+            gDxOut[v][i][1]   = 0.0;
+        }
+
+        for (i = 0; i < MAX_ENGINE_NODES; i++) {
+            gDxGate[v][i]    = false;
+            gDxTrigger[v][i] = gVoice[v].trigger;
         }
     }
 
@@ -1554,8 +1609,10 @@ const char * sound_engine_debug_text(void) {
     // One entry per tNodeKind, in enum order. Kept in step with it — a short array here is read off
     // the end by the kindName[n->kind] below, which is a stack overflow rather than a wrong label.
     const char * kindName[] = {
-        "Osc",    "OscShp",   "Filter", "LevAmp", "LevMult", "Mix",   "Env",
-        "Chorus", "Compress", "Delay",  "Reverb", "Lfo",     "Const", "FxIn","PassThru","Pulse", "Out"
+        "Osc",      "OscShp",   "Filter",  "LevAmp", "LevMult",   "Mix",   "Env",
+        "Chorus",   "Compress", "Delay",   "Reverb", "Lfo",       "Const", "FxIn",
+        "PassThru", "Pulse",    "Shaper",  "Fade",   "MixStereo", "Noise", "OscNoise",
+        "FltMulti", "Eq",       "FltComb", "Dx",     "Out"
     };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
@@ -2013,6 +2070,11 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeConstant;
             return true;
         }
+        case moduleTypeDXRouter:
+        {
+            *kind = eNodeDx;        // §14 - with the Operators patched into it; an Operator alone is not played
+            return true;
+        }
         case moduleTypeFxtoIn:
         {
             *kind = eNodeFxIn;
@@ -2144,6 +2206,11 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeFxIn:
         {
             *connectors = none;   // filled in by the Voice-area bridge, not by a cable
+            return 0;
+        }
+        case eNodeDx:
+        {
+            *connectors = none;   // §14 - its Operators are gathered by dx_build(), not recursed into
             return 0;
         }
         case eNodeNoise:
@@ -2388,6 +2455,92 @@ static void oscdual_build(tEngineNode * node, tModule * module, uint32_t variati
 }
 
 // notes §76
+// §14 - Operator and DXRouter parameters, in the G2's order.
+#define DXROUTER_PARAM_ALGORITHM    (0)
+#define DXROUTER_PARAM_FEEDBACK     (1)
+#define OP_PARAM_KBT                (0)
+#define OP_PARAM_SYNC               (1)
+#define OP_PARAM_COARSE             (3)
+#define OP_PARAM_DETUNE             (5)
+#define OP_PARAM_RATESCALE          (7)
+#define OP_PARAM_R1                 (8)      // R1 L1 R2 L2 R3 L3 R4 L4 run from here
+#define OP_PARAM_BRPT               (17)
+#define OP_PARAM_LCURVE             (18)
+#define OP_PARAM_LDEPTH             (19)
+#define OP_PARAM_RCURVE             (20)
+#define OP_PARAM_RDEPTH             (21)
+#define OP_PARAM_LEVEL              (22)
+#define OP_PARAM_ACTIVE             (23)
+#define OP_DEPTH_MAX                (7.0)    // the depth menus' top value in the module table
+
+static double dx_level_db(double value) {
+    return (value <= 0.0) ? DX_SILENT_DB : ((fmin(value, DX_LEVEL_TOP) - DX_LEVEL_TOP) * DX_LEVEL_DB_PER_STEP);
+}
+
+static double dx_rate_db_per_second(double value) {
+    return -DX_SILENT_DB / (DX_RATE_SLOWEST_SECONDS * exp2(-fmin(value, DX_LEVEL_TOP) * DX_RATE_OCTAVES_PER_STEP));
+}
+
+// §14.3: Feedback 7 feeds back half a cycle (pi), each step below it half as much.
+static double dx_feedback_gain(double value) {
+    return (value < 1.0) ? 0.0 : exp2(value - 8.0);
+}
+
+// §14.1 - the router and the Operators on its six inputs, gathered into one node: their FM runs
+// through the router in both directions, which a chain of separate nodes cannot evaluate.
+static void dx_build(tSoundEngineParams * params, tEngineNode * node, tModule * router, uint32_t variation) {
+    node->dxAlgorithm  = (uint32_t)param_value(router, variation, DXROUTER_PARAM_ALGORITHM);
+    node->dxFeedback   = dx_feedback_gain(param_value(router, variation, DXROUTER_PARAM_FEEDBACK));
+    node->active       = false;
+
+    if ((params->dxOpCount + DX_OPERATORS) > MAX_DX_OPERATORS) {
+        return;     // more routers than the table holds: this one stays silent
+    }
+    node->dxBase       = params->dxOpCount;
+    params->dxOpCount += DX_OPERATORS;
+
+    for (uint32_t k = 0; k < DX_OPERATORS; k++) {
+        tDxOperator * op           = &params->dxOp[node->dxBase + k];
+        int           connector    = connector_index_for_input(router->type, k, anyConnectorType);
+        uint32_t      sourceOutput = 0;
+        tModule *     source       = (connector >= 0) ? module_feeding(router, (uint32_t)connector, &sourceOutput) : NULL;
+
+        memset(op, 0, sizeof(*op));
+
+        if ((source == NULL) || (source->type != moduleTypeOperator)) {
+            continue;
+        }
+        uint32_t      coarse       = (uint32_t)param_value(source, variation, OP_PARAM_COARSE);
+        uint32_t      fine         = (uint32_t)param_value(source, variation, OPERATOR_FINE_PARAM);
+        double        level        = param_value(source, variation, OP_PARAM_LEVEL);
+
+        op->present    = true;
+        op->active     = (param_value(source, variation, OP_PARAM_ACTIVE) != 0.0);
+        op->kbt        = (param_value(source, variation, OP_PARAM_KBT) != 0.0);
+        op->sync       = (param_value(source, variation, OP_PARAM_SYNC) != 0.0);
+        op->fixed      = (source->param[variation][OPERATOR_RATIO_FIXED_PARAM].value != 0);
+        op->ratio      = operator_ratio(coarse, fine);
+        op->fixedHz    = operator_fixed_hz(coarse, fine);
+        op->detune     = exp2(((param_value(source, variation, OP_PARAM_DETUNE) - 7.0) * DX_DETUNE_CENTS_PER_STEP) / 1200.0);
+        op->outputGain = (level <= 0.0) ? 0.0 : exp2(dx_level_db(level) / 6.0206);
+        op->rateScale  = param_value(source, variation, OP_PARAM_RATESCALE) / 7.0;
+        op->bpNote     = param_value(source, variation, OP_PARAM_BRPT);
+        op->lCurve     = source->param[variation][OP_PARAM_LCURVE].value;
+        op->rCurve     = source->param[variation][OP_PARAM_RCURVE].value;
+        op->lDepth     = param_value(source, variation, OP_PARAM_LDEPTH) / OP_DEPTH_MAX;
+        op->rDepth     = param_value(source, variation, OP_PARAM_RDEPTH) / OP_DEPTH_MAX;
+
+        for (uint32_t s = 0; s < 4; s++) {
+            op->rateDbPerSecond[s] = dx_rate_db_per_second(param_value(source, variation, OP_PARAM_R1 + (2 * s)));
+            op->levelDb[s]         = dx_level_db(param_value(source, variation, OP_PARAM_R1 + (2 * s) + 1));
+        }
+
+        if (op->active) {
+            node->active = true;
+        }
+    }
+}
+
 static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t variation, uint32_t depth) {
     SE_LOCAL;
 
@@ -2552,7 +2705,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             } else {
                 node->threshold = pow(10.0, (thrRaw - COMP_THRESHOLD_OFFSET_DB) / 20.0);
             }
-            node->ratio        = compressor_ratio(param_value(module, variation, COMP_PARAM_RATIO));
+            node->ratio        = compress_ratio((uint32_t)param_value(module, variation, COMP_PARAM_RATIO));   // paramCurves.c's notes §42
 
             // REF LEVEL, which this module ignored entirely until 2026-09-07 - see compress_step().
             // Same dB offset as the threshold, and no "Off" position: the manual gives its range as
@@ -2946,6 +3099,11 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->active    = (param_value(module, variation, (uint32_t)map.active) != 0.0);
             break;
         }
+        case eNodeDx:
+        {
+            dx_build(params, node, module, variation);
+            break;
+        }
         case eNodeEnv:
         {
             // Read raw: Shape is a drop-down, and drop-downs cannot be morphed (manual p.20).
@@ -2997,7 +3155,8 @@ static bool chain_has_source(const tSoundEngineParams * params) {
            || (params->node[i].kind == eNodeOscShp)
            || (params->node[i].kind == eNodePulse)
            || (params->node[i].kind == eNodeNoise)
-           || (params->node[i].kind == eNodeOscNoise)) {
+           || (params->node[i].kind == eNodeOscNoise)
+           || (params->node[i].kind == eNodeDx)) {
             return true;
         }
     }
@@ -3015,7 +3174,8 @@ static bool chain_is_bypassed(const tSoundEngineParams * params) {
               || (params->node[i].kind == eNodeOscShp)
               || (params->node[i].kind == eNodePulse)
               || (params->node[i].kind == eNodeNoise)
-              || (params->node[i].kind == eNodeOscNoise))
+              || (params->node[i].kind == eNodeOscNoise)
+              || (params->node[i].kind == eNodeDx))
            && (params->node[i].active == true)) {
             return false;
         }
@@ -3617,28 +3777,13 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
 
     // notes §122
     if (spec->threshold > 0.0) {
-        static const double   kExcessDb[] = {0.0, 3.0, 6.0, 9.0, 12.0, 15.0};
-        static const uint32_t kLit[]      = {1u, 3u, 5u, 6u, 7u, 8u};
-        uint32_t              lit         = 0u;
+        uint32_t lit    = 0u;
 
         if (gCompEnv[voice][node] > spec->threshold) {
-            double over = 20.0 * log10(gCompEnv[voice][node] / spec->threshold);
-
-            lit = kLit[0];
-
-            for (uint32_t k = 1u; k < (uint32_t)(sizeof(kLit) / sizeof(kLit[0])); k++) {
-                if (over >= kExcessDb[k]) {
-                    lit = kLit[k];
-                } else {
-                    double f = (over - kExcessDb[k - 1u]) / (kExcessDb[k] - kExcessDb[k - 1u]);
-
-                    lit = kLit[k - 1u] + (uint32_t)((f * (double)(kLit[k] - kLit[k - 1u])) + 0.5);
-                    break;
-                }
-            }
+            lit = compress_meter_lit(20.0 * log10(gCompEnv[voice][node] / spec->threshold) * (1.0 - (1.0 / spec->ratio)));   // paramCurves.c
         }
-        uint32_t              packed      = METER_WRITTEN | (((lit == 0u) ? 0u : ((1u << lit) - 1u))
-                                                             & METER_VALUE_MASK);
+        uint32_t packed = METER_WRITTEN | (((lit == 0u) ? 0u : ((1u << lit) - 1u))
+                                           & METER_VALUE_MASK);
 
         if (atomic_exchange_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
                                      packed, memory_order_relaxed) != packed) {
@@ -4143,6 +4288,135 @@ static double ladder_filter(double * state, double input, double g, double k, ui
 }
 
 // notes §149
+// §14.4 - the DX7's keyboard level scaling, as an offset in dB around the break point.
+static double dx_kbscale_db(const tDxOperator * op, double note) {
+    bool     left     = (note < op->bpNote);
+    uint32_t curve    = left ? op->lCurve : op->rCurve;    // -Lin, -Exp, +Exp, +Lin
+    double   depth    = left ? op->lDepth : op->rDepth;
+    double   distance = fmin(fabs(note - op->bpNote) / DX_KBSCALE_SPAN_NOTES, 1.0);
+    double   shape    = ((curve == 1u) || (curve == 2u)) ? ((exp(4.0 * distance) - 1.0) / (exp(4.0) - 1.0)) : distance;
+
+    return ((curve < 2u) ? -1.0 : 1.0) * depth * shape * DX_KBSCALE_FULL_DB;
+}
+
+// §14.2 - the rate/level envelope, in dB: each stage moves at its rate towards its level.
+static double dx_envelope_db(uint32_t voice, uint32_t slot, const tDxOperator * op, double note) {
+    SE_LOCAL;
+
+    uint32_t stage = gDxEnvStage[voice][slot];
+    double   level = gDxEnvDb[voice][slot];
+
+    if ((stage <= (uint32_t)eDxRise3) || (stage == (uint32_t)eDxRelease)) {
+        uint32_t s      = (stage == (uint32_t)eDxRelease) ? 3u : stage;
+        double   target = op->levelDb[s];
+        double   step   = (op->rateDbPerSecond[s] * exp2((op->rateScale * (note - 60.0)) / 24.0)) / gSampleRate;
+
+        if (fabs(target - level) <= step) {
+            level = target;
+            stage = (stage == (uint32_t)eDxRelease) ? (uint32_t)eDxIdle
+                    : ((stage == (uint32_t)eDxRise3) ? (uint32_t)eDxHold : (stage + 1u));
+        } else {
+            level += (target > level) ? step : -step;
+        }
+    } else if (stage == (uint32_t)eDxHold) {
+        level = op->levelDb[2];
+    }
+    gDxEnvDb[voice][slot]    = level;
+    gDxEnvStage[voice][slot] = stage;
+    return level;
+}
+
+// §14 - one sample of a DXRouter and its Operators, for one voice.
+static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, const tSoundEngineParams * params, double voicePitch) {
+    SE_LOCAL;
+
+    const tDxAlgorithm * alg               = dx_algorithm(spec->dxAlgorithm);
+    double               out[DX_OPERATORS] = {0.0};
+    double               mix               = 0.0;
+    uint32_t             carriers          = 0;
+    bool                 gate              = gVoice[voice].gate;
+    bool                 strike            = gate && ((gDxGate[voice][node] == false) || (gDxTrigger[voice][node] != gVoice[voice].trigger));
+    bool                 letGo             = (gate == false) && gDxGate[voice][node];
+    double               note              = (voicePitch >= 0.0) ? voicePitch : 64.0;
+    double               noteHz            = 440.0 * exp2((note - MIDI_NOTE_A440) / 12.0);
+
+    gDxGate[voice][node]    = gate;
+    gDxTrigger[voice][node] = gVoice[voice].trigger;
+
+    // Modulators before what they modulate: every DX7 modulation runs from a higher operator to a lower one.
+    for (int32_t k = DX_OPERATORS - 1; k >= 0; k--) {
+        uint32_t            slot = spec->dxBase + (uint32_t)k;
+        const tDxOperator * op   = &params->dxOp[slot];
+        double              fm   = 0.0;
+        double              hz   = 0.0;
+        double              env  = 0.0;
+        double              y    = 0.0;
+
+        if (op->present == false) {
+            continue;
+        }
+
+        if (strike == true) {
+            gDxEnvStage[voice][slot] = eDxRise1;
+
+            if (op->sync == true) {
+                gDxPhase[voice][slot] = 0.0;
+            }
+        } else if ((letGo == true) && (gDxEnvStage[voice][slot] < (uint32_t)eDxRelease)) {
+            gDxEnvStage[voice][slot] = eDxRelease;
+        }
+
+        for (uint32_t m = (uint32_t)k + 1u; m < DX_OPERATORS; m++) {
+            if ((alg->target[m] & (1u << (uint32_t)k)) != 0) {
+                fm += out[m];
+            }
+        }
+
+        if ((uint32_t)k == (alg->feedbackTo - 1u)) {    // §14.3 - the last two samples, averaged
+            uint32_t from = spec->dxBase + alg->feedbackFrom - 1u;
+
+            fm += spec->dxFeedback * 0.5 * (gDxOut[voice][from][0] + gDxOut[voice][from][1]);
+        }
+        hz                     = op->fixed ? op->fixedHz : ((op->kbt ? noteHz : DX_E4_HZ) * op->ratio);
+        gDxPhase[voice][slot] += (hz * op->detune) / gSampleRate;
+        gDxPhase[voice][slot] -= floor(gDxPhase[voice][slot]);
+        env                    = dx_envelope_db(voice, slot, op, note);
+
+        if ((op->active == true) && (env > DX_SILENT_DB)) {
+            y = sin(2.0 * M_PI * (gDxPhase[voice][slot] + (DX_FM_CYCLES_PER_UNIT * fm)))
+                * op->outputGain * exp2((env + dx_kbscale_db(op, note)) / 6.0206);
+        }
+        gDxOut[voice][slot][1] = gDxOut[voice][slot][0];
+        gDxOut[voice][slot][0] = y;
+        out[k]                 = y;
+    }
+
+    for (uint32_t k = 0; k < DX_OPERATORS; k++) {
+        if ((alg->target[k] == 0) && (params->dxOp[spec->dxBase + k].present == true)) {
+            mix += out[k];
+            carriers++;
+        }
+    }
+
+    return (carriers > 0u) ? (mix / (double)carriers) : 0.0;   // §14.5
+}
+
+// True while any of the router's Operators is still moving or holds a level above silence.
+static bool dx_voice_sounding(const tSoundEngineParams * params, const tEngineNode * spec, uint32_t voice) {
+    SE_LOCAL;
+
+    for (uint32_t k = 0; k < DX_OPERATORS; k++) {
+        uint32_t slot = spec->dxBase + k;
+
+        if (  (params->dxOp[slot].present == true)
+           && ((gDxEnvStage[voice][slot] != (uint32_t)eDxIdle) || (gDxEnvDb[voice][slot] > DX_SILENT_DB))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * spec, bool gate) {
     SE_LOCAL;
 
@@ -4766,6 +5040,12 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                                       gSmoothedCutoff[n], gSmoothedRes[n]) * spec->fltGain;
             break;
         }
+        case eNodeDx:
+        {
+            value[n][0] = (spec->active == true) ? dx_step(voice, n, spec, paramsIn, voicePitch) : 0.0;
+            value[n][1] = value[n][0];
+            break;
+        }
         case eNodeEnv:
         {
             double env = envelope_step(voice, n, spec, gVoice[voice].gate);
@@ -5104,6 +5384,13 @@ static bool voice_is_finished(const tSoundEngineParams * paramsIn, uint32_t v, b
     for (uint32_t n = 0; n < paramsIn->nodeCount; n++) {
         // Per-voice envelopes only. One after the mix is shaping the effect, not the note, and it
         // has no per-voice state to ask.
+        if ((paramsIn->node[n].kind == eNodeDx) && (paramsIn->node[n].postMix == false)) {
+            if (dx_voice_sounding(paramsIn, &paramsIn->node[n], v) == true) {
+                return false;
+            }
+            continue;
+        }
+
         if ((paramsIn->node[n].kind != eNodeEnv) || (paramsIn->node[n].postMix == true)) {
             continue;
         }
@@ -5163,8 +5450,8 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
     // notes §173
     for (n = 0; n < params.nodeCount; n++) {
-        if ((params.node[n].kind == eNodeEnv) && (params.node[n].postMix == false)) {
-            chainHasEnvelope = true;
+        if (((params.node[n].kind == eNodeEnv) || (params.node[n].kind == eNodeDx)) && (params.node[n].postMix == false)) {
+            chainHasEnvelope = true;   // a DXRouter's Operators carry their own envelopes (§14)
             break;
         }
     }

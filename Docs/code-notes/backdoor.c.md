@@ -380,3 +380,20 @@ IT IS PATCH DATA, NOT A VIEW SETTING, and that matters for a measurement run. Th
 lives in gPatchDescr[slot].barPosition, so moving it marks the patch dirty and it travels
 to the G2 and to file like any other edit - unlike SCROLL and ZOOM, which are purely
 local. Frame with SPLIT before building the patch under test, not in the middle of one.
+
+## 28. in `backdoor_dispatch()`
+
+NAMEBAND ON | OFF — tints, on every module face, the area the widest possible module name would
+take: LONGEST_MODULE_NAME (sixteen Ws) at the name's own position and text height. A view
+setting only, like ZOOM: nothing is sent and the patch is untouched. It exists for the layout
+rule that a face must not clash with the widest name it can carry (Docs/module-layout-rules.md,
+rule 16); `tools/face-shots --name-band` sends it. The band is drawn rather than the modules
+renamed to sixteen Ws - CT: "you should probably still display the module name, since
+otherwise I can't tell what I'm looking at".
+
+## 29. in `backdoor_dispatch()`
+
+RENAME <VA|FX> <index> <name> - names a module exactly as the name editor on its face does: the
+local copy, then the same eMsgCmdSetModuleLabel to the G2 (so it is patch data, and saved with the
+patch). Up to 16 characters; the rest of the line is the name, spaces and all. Added 2026-09-13 to
+build a test patch whose six identical Operators needed telling apart.

@@ -1195,7 +1195,7 @@ Operator   [module type 180]
    0. Kbt          Toggle        OK   selector names match the G2 exactly
    1. Sync         Menu          OK   selector names match the G2 exactly
    2. RatioFixes   Menu          OK   selector names match the G2 exactly
-   3. Coarse       Freq          OK   Hz = 13.75 * 2^(v/12)
+   3. Coarse       Freq          --   DX7 law with Fine: Ratio x0.50/x1-x31 * (1+Fine/100), Fixed 10^(v%4) * 10^(Fine/100) Hz (paramCurves.c notes §41) - not yet compared with the G2's own display
    4. Fine         Int           OK   plain 0..127 integer, one-to-one with the value sent
    5. Detune       Menu          --   enumerated selector - name list not yet cross-checked
    6. Vel          Menu          --   enumerated selector - name list not yet cross-checked

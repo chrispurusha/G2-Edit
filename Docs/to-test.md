@@ -3,10 +3,56 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***KEYQUANT KEYBOARD AND DXROUTER ALGORITHM GRAPH (2026-09-13)*** - KeyQuant's twelve notes are
+  one octave of keys (the old on/off buttons are no longer drawn); DXRouter draws the selected DX7
+  algorithm, its feedback loop orange when Feedback is above 0. Eight algorithms screenshot-checked
+  against the DX7 chart. STILL TO CHECK: clicking a key toggles that note on the G2 (and undo), and
+  the DXRouter picture against the original editor's for a few algorithms.
+- ***DX TEST PATCH, AND OPERATOR/DXROUTER IN THE ENGINE (2026-09-13)*** - PatchTestFiles/DXTest.pch2
+  (an E.Piano, algorithm 5) is in Slot A on the G2; the engine plays DXRouter patches (§14). STILL TO
+  CHECK: play it on the G2 and on the engine and compare by ear - brightness (FM depth), the feedback
+  operator's edge, level with several carriers (Main scaling), decay times - then capture both.
+- ***ENVELOPE HANDLES, GRAPH AREAS NO LONGER DRAG THE MODULE (2026-09-13)*** - a handle on each
+  timed breakpoint of every envelope graph (time sideways, level up/down where it is a parameter);
+  a press on a graph off its handles does nothing. Checked by real drags on EnvADSR. STILL TO CHECK:
+  by hand on EnvMulti, EnvADDSR and Operator, undo of a two-axis drag (two steps), and how the handles
+  feel on the small EnvD/EnvH graphs.
+- ***RANDOM CLOCKS, LEVSCALER AND SW2-1 TIDIED (2026-09-13)*** - RndTrig, RndClkA, RndClkB and
+  RndPattern on one face with Seed/Bypass/Out down the right; LevScaler and Sw2-1(M) fixed.
+  Screenshot-checked at 1.0 and 0.59. STILL TO CHECK: CT's eye.
+- ***COMPRESS GRAPH WITH DRAGGABLE HANDLES (2026-09-13)*** - static curve, three handles that drag
+  Thr/Ratio/RefLvl following the pointer, a live dot from the gain-reduction LEDs, the original's dB
+  marks, and the three dials reading dB and :1. One real drag checked offline (Thr -12 -> +5 dB); the
+  live dot followed the G2's own meter, and the engine's meter now matches the G2's step for step.
+  STILL TO CHECK: by hand in every dial mode (rotary, vertical, horizontal), Alt-drag on a handle for
+  morph, undo after a handle drag, and the Ratio/RefLvl handles.
+- ***OPERATOR REWORKED (2026-09-13)*** - face re-laid by rule, envelope and level-scaling graphs,
+  Coarse read the DX7's way (x0.50..x31 with Fine in Ratio, Hz in Fixed). Screenshot-checked with
+  scripted values. STILL TO CHECK: Coarse's reading against the G2's own display at a few settings in
+  both modes, the graphs following the dials by hand, and CT's eye on the face.
+- ***FACES CLEAR OF A 16-W NAME (2026-09-13)*** - NoteQuant, CtrlSend, NoteSend and EnvADR re-laid
+  by rule because their labels or graph ran into a sixteen-W name; KeyQuant given room under its
+  name. Screenshot-checked at 1.0 and 0.59 with --name-band. STILL TO CHECK: CT's eye.
 - ***SHAPER AND EQ GRAPHS (2026-09-13)*** - Clip, Overdrive, Saturate, ShpExp and WaveWrap draw their
   transfer curve, EqPeak, Eq2Band and Eq3band their response. Checked by screenshot at zoom 1.0 and
   0.59 with scripted values. STILL TO CHECK: turn each dial by hand and watch the curve follow, and
   compare against the original editor's graphs side by side.
+- ***LEVEL GROUP RE-LAID OUT BY RULE (2026-09-13)*** - all 16 faces (Constant, ConstSwM/T, CompLev,
+  CompSig, LevAdd, LevAmp, LevConv, LevMod, LevMult, MinMax, ModAmt, NoiseGate, EnvFollow, Red2Blue,
+  Blue2Red) to module-layout-rules.md's "common face": In top-right, Out bottom-right, the 16% grid.
+  Screenshot-checked at 1.0 and 0.59. STILL TO CHECK: CT's eye - especially whether one- and
+  two-dial faces should stay left-aligned or move their controls towards the I/O column.
+- ***DELAYS AND PITCH/FX RE-LAID BY RULE (2026-09-13)*** - DelayDual, DelayQuad, DlyEight,
+  DlyShiftReg, DlyClock and DelayA on DelayB/DlyStereo's template (Range top-left, Time/Clk over the
+  Time dial, columns 19/36/53/70, taps ending bottom-right); PShift, FreqShift, Scratch and Digitizer
+  on the oscillators' pattern. DlySingleA/B, DelayB and DlyStereo untouched. The range selectors now
+  read "Range" on every re-laid face - DlySingleB still says "Slope". Screenshot-checked at 1.0 and
+  0.59. STILL TO CHECK: CT's eye.
+- ***MIXERS: EXP IN ONE SLOT, MIX2-1 CHANNELS CLEAR OF THE OUT (2026-09-13)*** - only what CT asked
+  for, the rest of the approved mixer faces untouched: Exp top-left after the Chain (Mix1-1A/S, and
+  "Curve"/Pad top-left on Mix8-1B); Mix2-1A/B channels 8% left and aligned with each other; Mix8-1A
+  inputs 5% left, off the meter they overlapped; ModAmt's Exp top-left and its Mod jack beside
+  Depth. Screenshot-checked at 1.0 and 0.59. STILL TO CHECK: CT's eye.
 - ***ENVELOPE GRAPHS ON ALL NINE ENVELOPES (2026-09-13)*** - EnvADSR's graph generalised to EnvADR,
   EnvAHD, EnvD, EnvH, ModADSR, ModAHD, EnvADDSR and EnvMulti, stages from the manual. STILL TO CHECK:
   EnvADSR still draws exactly as before; each Output Type, EnvADR's Decay/Release with Trig and Gate,
