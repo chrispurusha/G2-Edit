@@ -64,12 +64,13 @@ Costs the D above the home row's octave; K and O either side of it still play.
 
 ## 8. in `handle_note_entry_key()`
 
-ONLY the key actually sounding releases it. Roll from one key to the next without lifting
-the first and the releases arrive out of order — a release that silenced whatever happened
-to be sounding would cut the note still being held.
+A RELEASE BELONGS TO ITS KEY: it sends the off for the note that key started and nothing else.
+Roll from one key to the next without lifting the first and the releases arrive out of order - a
+release that silenced whatever happened to be sounding would cut the note still being held.
 
-Drone and Repeat hold the note deliberately, as they do for a mouse release, and so does a
-shift latch on this same note.
+Drone and Repeat keep the note deliberately, as they do for a mouse release, and so does a shift
+latch on this same note. It is left as `ringingNote` and released when the next key goes down, as
+a mouse note rings until the next is played.
 
 ## 9. in `set_sounding_note()`
 
@@ -79,19 +80,22 @@ on each change, which is exactly what Legato exists not to do. Overlapping them 
 player's hand does on a real keyboard. Mono and Poly behave the same either way: in Mono the
 late release is for a note already replaced, and in Poly each note has its own voice.
 
-## 10. in `handle_note_entry_key()`
+## 10. `key_note()` and the held-key list
 
-LAST-NOTE PRIORITY WITH RETURN, as the G2 plays its own keyboard in Mono and Legato. Hold A,
-play S over it, let S go: A sounds again, because it is still held. Before this list, the
-release of S silenced everything, and the engine and the G2 both went quiet with A still down.
+THE COMPUTER KEYBOARD IS A KEYBOARD. Each key sends its own note-on and note-off, to the G2 and to
+the engine, and each decides what sounds: a Poly patch plays chords from it, and a Mono or Legato
+patch goes back to the HIGHEST key still held when the sounding one is let go (sound engine reference
+§15.2), exactly as the G2 plays its own keyboard. Until 2026-09-13 note entry had one sounding note,
+so the release of a key silenced everything with another still down; for a few hours after that it
+chose the return itself, the NEWEST key held, which is not the G2's choice.
 
 The list is keyed by the PHYSICAL KEY and stores the note each press started. Z and X move the
 octave while keys are down, so a note recomputed at release time can be a different note from
 the one the key started, and that release would then find nothing to stop.
 
-On the G2 the return is a fresh note-on, which retriggers in Mono and, with §9, glides on in
-Legato. The engine takes it the same way (voice_note_on() in soundEngine.c). A MIDI keyboard
-returns through noteStack.c instead, and this list is not involved.
+The panel highlights the key pressed last, and after a release the highest one still down. The
+mouse keeps its one-note model through set_sounding_note().
 
 A key whose release never arrives would stay in the list. GLFW releases every held key itself
-when the window loses focus, so in the application that cannot happen.
+when the window loses focus, so in the application that cannot happen. Closing the panel releases
+every key in it.

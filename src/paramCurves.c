@@ -586,6 +586,18 @@ double lev_amp_gain(double paramValue) {
     return 2.0 * exp2((value - 96.0) / 31.0);
 }
 
+// notes §44
+double constant_level(double paramValue, bool bipolar) {
+    if (paramValue >= 127.0) {
+        return 1.0;
+    }
+
+    if (bipolar == true) {
+        return (paramValue - 64.0) / 64.0;
+    }
+    return (paramValue <= 0.0) ? 0.0 : (paramValue / 128.0);
+}
+
 // notes §30
 #define CLIP_PARAM_LEVEL_MOD       (0)
 #define CLIP_PARAM_LEVEL           (1)

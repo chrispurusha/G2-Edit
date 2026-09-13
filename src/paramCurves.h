@@ -90,6 +90,7 @@ uint32_t flt_nord_tap(uint32_t dbOctValue);
 double flt_nord_gc_gain(double resParam);
 double flt_kbt_amount(uint32_t kbtValue);                                 // Kbt scroll: 0, 0.25, 0.5, 0.75, 1.0
 double lev_amp_gain(double paramValue);                                   // LevAmp multiplier: 0 (silent) .. 4.0x, unity at 64; measured, piecewise
+double constant_level(double paramValue, bool bipolar);                   // a Constant's output, 1.0 = 64 units - notes §44
 double lfo_rate_hz(uint32_t rangeMode, double paramValue);                // LFO speed in Hz for a Range setting
 
 // These four were read off the hardware at raw 0, 64 and 127 rather than inferred.

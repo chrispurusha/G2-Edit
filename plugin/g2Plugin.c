@@ -406,9 +406,9 @@ static void g2_poly_pressure(void * inst, uint8_t channel, uint8_t note, float p
     (void)channel;
     (void)sampleOffset;
 
-    // The engine has one voice, so as in the application only the note actually SOUNDING may move
-    // the morph; without that test a key still held underneath would fight the one being played.
-    if ((int32_t)note != note_stack_top()) {
+    // As in the application, only a note actually SOUNDING may move the morph; in Mono a key still
+    // held underneath would otherwise fight the one being played.
+    if (sound_engine_note_sounding((int32_t)note) == false) {
         return;
     }
 

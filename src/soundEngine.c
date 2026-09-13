@@ -410,7 +410,7 @@ static const tLfoParams kLfoC    = {0, 3, -1, 2, -1, 4};
 static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4};
 
 #define CONST_PARAM_VALUE      (0)
-#define CONST_PARAM_BIPOLAR    (1)    // 0 = unipolar 0..1, otherwise -1..+1
+#define CONST_PARAM_BIP_UNI    (1)    // bipUniStrMap: 0 is Bipolar, 1 Unipolar - §16.1
 
 #define FXIN_PARAM_ACTIVE      (1)
 #define FXIN_PARAM_PAD         (2)    // db12PadStrMap: +6 dB, 0 dB, -6 dB, -12 dB
@@ -436,7 +436,7 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4};
 #define FULL_MOD_SEMITONES     (64.0)
 
 // notes §14
-#define PITCH_MOD_SEMITONES    (12.0)
+#define PITCH_MOD_SEMITONES    (64.0)
 
 // notes §15
 static double type_ii_attenuator(double knob) {
@@ -842,6 +842,15 @@ static _Atomic uint32_t            gEngineVoicesBank[SOUND_ENGINE_MAX_ENGINES] =
 // voice_note_on() on the audio thread, per note, where copying the snapshot to ask would be absurd.
 static _Atomic bool                gEngineLegatoBank[SOUND_ENGINE_MAX_ENGINES];
 #define gEngineLegato    (gEngineLegatoBank[SE])
+
+// Mono OR Legato: the modes where releasing the sounding key goes back to one still held. §15.2
+static _Atomic bool                gEngineMonoBank[SOUND_ENGINE_MAX_ENGINES];
+#define gEngineMono       (gEngineMonoBank[SE])
+
+// §15.1 - the keys held down, as a count per key. Audio thread only: voice_note_on/off keep it.
+#define MIDI_KEY_COUNT    (128)
+static uint8_t                     gKeyHeldBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_COUNT];
+#define gKeyHeld          (gKeyHeldBank[SE])
 
 // notes §32
 static _Atomic uint32_t            gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
@@ -1681,6 +1690,7 @@ static void reset_voices(void) {
     }
 
     gVoiceClock = 0;
+    memset(gKeyHeld, 0, sizeof(gKeyHeld));
 }
 
 // notes §68
@@ -1697,23 +1707,48 @@ static uint32_t voice_count_for_patch(uint32_t slot) {
     return (count > MAX_VOICES) ? MAX_VOICES : count;
 }
 
-// The voice already holding a note, or -1. Matched whether or not the key is still down: a repeated
-// note-on for something still releasing belongs on the voice that is releasing it, or the release
-// carries on underneath the new note as a duplicate.
-static int32_t voice_holding_note(int32_t note, uint32_t count) {
+// The highest key still held, or -1 when none is. §15.2
+static int32_t highest_key_held(void) {
     SE_LOCAL;
 
-    for (uint32_t v = 0; v < count; v++) {
-        if ((gVoice[v].note == note) && (gVoice[v].sounding || gVoice[v].gate)) {
-            return (int32_t)v;
+    for (int32_t key = MIDI_KEY_COUNT - 1; key >= 0; key--) {
+        if (gKeyHeld[key] > 0) {
+            return key;
         }
     }
 
     return -1;
 }
 
+// §15.3 - every voice is held: the oldest goes, unless it has the lowest note and the new one is higher.
+static uint32_t voice_to_steal(uint32_t count, int32_t note) {
+    SE_LOCAL;
+
+    int32_t lowest   = MIDI_KEY_COUNT;
+    int32_t oldest   = -1;
+    int32_t runnerUp = -1;
+
+    for (uint32_t v = 0; v < count; v++) {
+        if (gVoice[v].note < lowest) {
+            lowest = gVoice[v].note;
+        }
+
+        if ((oldest < 0) || (gVoice[v].age < gVoice[oldest].age)) {
+            runnerUp = oldest;
+            oldest   = (int32_t)v;
+        } else if ((runnerUp < 0) || (gVoice[v].age < gVoice[runnerUp].age)) {
+            runnerUp = (int32_t)v;
+        }
+    }
+
+    if ((oldest >= 0) && (runnerUp >= 0) && (gVoice[oldest].note == lowest) && (note > lowest)) {
+        return (uint32_t)runnerUp;
+    }
+    return (oldest >= 0) ? (uint32_t)oldest : 0;
+}
+
 // notes §69
-static uint32_t voice_to_allocate(uint32_t count) {
+static uint32_t voice_to_allocate(uint32_t count, int32_t note) {
     SE_LOCAL;
 
     uint32_t best    = 0;
@@ -1735,15 +1770,7 @@ static uint32_t voice_to_allocate(uint32_t count) {
     if (bestAge != UINT64_MAX) {
         return best;
     }
-
-    for (uint32_t v = 0; v < count; v++) {   // everything is held: steal the oldest
-        if (gVoice[v].age < bestAge) {
-            bestAge = gVoice[v].age;
-            best    = v;
-        }
-    }
-
-    return best;
+    return voice_to_steal(count, note);
 }
 
 static void voice_note_on(int32_t note) {
@@ -1759,9 +1786,8 @@ static void voice_note_on(int32_t note) {
     } else if (count > MAX_VOICES) {
         count = MAX_VOICES;
     }
-    int32_t  held  = voice_holding_note(note, count);
-    uint32_t v     = (held >= 0) ? (uint32_t)held : voice_to_allocate(count);
-    tVoice * voice = &gVoice[v];
+    tVoice * voice = &gVoice[voice_to_allocate(count, note)];
+
     // notes §70
     voice->glideActive = voice->gate;
 
@@ -1779,17 +1805,57 @@ static void voice_note_on(int32_t note) {
     voice->released    = 0;
     voice->fade        = 1.0;   // a stolen voice may have been fading; this note cancels that
     voice->age         = ++gVoiceClock;
+
+    if ((note < MIDI_KEY_COUNT) && (gKeyHeld[note] < UINT8_MAX)) {
+        gKeyHeld[note]++;
+    }
 }
 
-// A note-off names its note; -1 is all-notes-off. Only the gate closes — the voice keeps its note
-// and goes on sounding its release, at the pitch it was played at.
+// A note-off names its key; -1 is all-notes-off. A released voice keeps its note and goes on
+// sounding its release at the pitch it was played at - unless §15.2 sends it back to a held key.
 static void voice_note_off(int32_t note) {
     SE_LOCAL;
 
-    for (uint32_t v = 0; v < MAX_VOICES; v++) {
-        if ((note < 0) || (gVoice[v].note == note)) {
+    if (note < 0) {
+        memset(gKeyHeld, 0, sizeof(gKeyHeld));
+
+        for (uint32_t v = 0; v < MAX_VOICES; v++) {
             gVoice[v].gate = false;
         }
+
+        return;
+    }
+
+    if (note >= MIDI_KEY_COUNT) {
+        return;
+    }
+    gKeyHeld[note] = 0;
+
+    int32_t highest = highest_key_held();
+    bool    mono    = atomic_load(&gEngineMono);
+    bool    legato  = atomic_load(&gEngineLegato);
+
+    for (uint32_t v = 0; v < MAX_VOICES; v++) {
+        tVoice * voice = &gVoice[v];
+
+        if ((voice->gate == false) || (voice->note != note)) {
+            continue;   // a key that was not sounding changes nothing but the keys held
+        }
+
+        if ((mono == false) || (highest < 0)) {
+            voice->gate = false;
+            continue;
+        }
+        // notes §189
+        voice->glideActive = true;
+
+        if (legato == false) {
+            voice->trigger++;
+        }
+        voice->note        = highest;
+        voice->released    = 0;
+        voice->fade        = 1.0;
+        voice->age         = ++gVoiceClock;
     }
 }
 
@@ -1801,10 +1867,24 @@ uint32_t sound_engine_load_percent(void) {
     return atomic_exchange(&gLoadPercent, 0);
 }
 
-bool sound_engine_is_polyphonic(void) {
+// Unlocked, like sound_engine_voices_sounding() below: a key moving between two reads is one poly
+// pressure message applied or dropped, and the next one settles it.
+bool sound_engine_note_sounding(int32_t note) {
     SE_LOCAL;
 
-    return atomic_load(&gEngineVoices) > 1;
+    uint32_t voices = atomic_load(&gEngineVoices);
+
+    if (voices > MAX_VOICES) {
+        voices = MAX_VOICES;
+    }
+
+    for (uint32_t v = 0; v < voices; v++) {
+        if ((gVoice[v].gate == true) && (gVoice[v].note == note)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 uint32_t sound_engine_voice_count(void) {
@@ -2927,10 +3007,8 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeConstant:
         {
-            double v = param_value(module, variation, CONST_PARAM_VALUE) / 127.0;
-
-            node->constant = (param_value(module, variation, CONST_PARAM_BIPOLAR) != 0.0)
-                             ? ((v * 2.0) - 1.0) : v;
+            node->constant = constant_level(param_value(module, variation, CONST_PARAM_VALUE),
+                                            module->param[variation][CONST_PARAM_BIP_UNI].value == 0);
             break;
         }
         case eNodeFxIn:
@@ -3110,7 +3188,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->wave    = (tOscWave)module->param[variation][ENV_PARAM_SHAPE].value;
             node->attack  = env_time_seconds(param_value(module, variation, ENV_PARAM_ATTACK));
             node->decay   = env_time_seconds(param_value(module, variation, ENV_PARAM_DECAY));
-            node->sustain = param_value(module, variation, ENV_PARAM_SUSTAIN) / 127.0;
+            node->sustain = dial_fraction(param_value(module, variation, ENV_PARAM_SUSTAIN));   // §16.3
             node->release = env_time_seconds(param_value(module, variation, ENV_PARAM_RELEASE));
             break;
         }
@@ -3397,6 +3475,7 @@ void sound_engine_update_from_patch(void) {
     // snapshot to answer it would be absurd.
     atomic_store(&gEngineVoices, snapshot.voiceCount);
     atomic_store(&gEngineLegato, gPatchDescr[engine_slot()].monoPoly == monoPolyLegato);
+    atomic_store(&gEngineMono, gPatchDescr[engine_slot()].monoPoly != monoPolyPoly);
 
     // The snapshot above was built into a local, so only this section needs the writers' mutex.
     pthread_mutex_lock(&gParamsWriteMutex);
@@ -5528,8 +5607,9 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             double smoothCoeff  = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
             // Depends on the patch and the rate, not on the voice, so it is worked out once here
             // rather than once per voice — an exp() per voice per sample is not free at eight of them.
-            double glideCoeff   = (params.glideSeconds > 0.0)
-                                  ? (1.0 - exp(-4.6 / (params.glideSeconds * gSampleRate))) : 1.0;
+            // §15.4 - a constant rate: the time is per octave, so this is semitones per sample.
+            double glideStep    = (params.glideSeconds > 0.0)
+                                  ? (12.0 / (params.glideSeconds * gSampleRate)) : 0.0;
 
             // PARAMETER SMOOTHING IS PER SAMPLE, NOT PER VOICE. It tracks where a knob is, which is
             // one thing however many notes are sounding — and running it inside the voice loop would
@@ -5575,11 +5655,13 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
                 // notes §181
                 if (voice->note >= 0) {
-                    bool sliding = (params.glideMode == eGlideNormal)
-                                   || ((params.glideMode == eGlideAuto) && (voice->glideActive == true));
+                    bool   sliding = (params.glideMode == eGlideNormal)
+                                     || ((params.glideMode == eGlideAuto) && (voice->glideActive == true));
 
-                    if ((sliding == true) && (params.glideSeconds > 0.0)) {
-                        voice->glidePitch += glideCoeff * ((double)voice->note - voice->glidePitch);
+                    double gap     = (double)voice->note - voice->glidePitch;
+
+                    if ((sliding == true) && (glideStep > 0.0) && (fabs(gap) > glideStep)) {
+                        voice->glidePitch += (gap > 0.0) ? glideStep : -glideStep;
                     } else {
                         voice->glidePitch = (double)voice->note;
                     }
@@ -5850,6 +5932,8 @@ static void engine_reset_state(void) {
     memset(&gVoiceClock, 0, sizeof(gVoiceClock));
     memset(&gEngineVoices, 0, sizeof(gEngineVoices));
     memset(&gEngineLegato, 0, sizeof(gEngineLegato));
+    memset(&gEngineMono, 0, sizeof(gEngineMono));
+    memset(&gKeyHeld, 0, sizeof(gKeyHeld));
     memset(&gLoadPercent, 0, sizeof(gLoadPercent));
     memset(&gVibratoPhase, 0, sizeof(gVibratoPhase));
     memset(&gLastGoodParams, 0, sizeof(gLastGoodParams));

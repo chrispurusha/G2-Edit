@@ -327,3 +327,57 @@ six-carrier algorithm is no louder than a one-carrier one. The DX7 sums without 
 DXRouter scales its Main output has not been measured, and this is the first thing to check against a
 capture. Frequencies: Ratio mode is the played note (Kbt on) or E4 (off) times Coarse/Fine by the DX7's
 law (paramCurves.c notes §41); Fixed is 1/10/100/1000 Hz times Fine; Detune is taken as 1 cent a step.
+
+## 15. Voicing: Mono, Legato, stealing and glide
+
+How the G2 decides which voice a key sounds on, and what sounds when a key comes up. The engine does
+this itself: every note-on and note-off reaches it as played, from the MIDI keyboard (noteStack.c), the
+computer keyboard and the plug-in alike, and none of them chooses a note on its behalf. The G2 behaves
+as described here with its own keyboard; NOT YET CHECKED BY EAR against the engine (to-test.md).
+
+**15.1 The keys held.** A count per key (`gKeyHeld`), kept on the audio thread by `voice_note_on()`
+and `voice_note_off()`. A note-off clears its key whatever the count, and all-notes-off clears the lot.
+
+**15.2 Mono and Legato: the newest key sounds, and a release goes back to the HIGHEST key held.** Not
+the most recent: hold G, play C over it, then E, let E go and G sounds, not C. The return happens only
+when the key let go is the one sounding - releasing a key held underneath changes nothing but 15.1.
+Both modes play one voice (notes §68). In Mono every change of note restarts the envelopes: a key
+played over a held one and a return to a held key alike (`trigger`, notes §71 and §189). Legato
+restarts on neither - the note moves, gliding if Auto glide is on - and restarts only for a key played
+with nothing held. A key played with nothing held restarts in both.
+
+**15.3 Poly stealing.** A new note takes a free voice first: one doing nothing, then the longest
+released. With every voice held it steals the oldest, unless that voice has the lowest note held and
+the new note is higher, when the next oldest goes instead - the manual's "it will try to keep the lowest
+note sounding" (Voice allocation and polyphony). A repeated note-on for a key whose voice is still
+releasing takes a fresh voice and lets that release ring on; a note-off closes every voice on its key.
+
+**15.4 Patch glide is CONSTANT RATE.** The manual (Patch Settings, Glide): "the greater the distance
+between two subsequent notes, the longer the glide time", 19 ms to 6.27 s per octave. So the voice moves
+at 12 semitones per glide time, whatever the interval. Normal slides every note from wherever its
+voice was; Auto only when the voice was taken from a held key or sent back to one (`glideActive`,
+notes §70); Off jumps. Until 2026-09-13 this was an exponential approach, which covered a semitone and
+two octaves in the same time.
+
+**15.5 Not modelled.** The sustain pedal holding keys (on the G2 a sustained key stays held until the
+pedal lifts; here sustain is only its morph group), velocity, and the Hi and Lo keys a MonoKey module
+reports (Docs/mini-emulator-engine-plan.md).
+
+## 16. Signal units at the dials and inputs
+
+Corrected 2026-09-13. A signal of 1.0 in the engine is 64 units on the G2.
+
+**16.1 Constant.** Its Bip/Uni switch reads 0 for BIPOLAR (bipUniStrMap), which the engine had the wrong
+way round: every Constant set to Bipolar played as Unipolar and the reverse. Bipolar is (value - 64)
+units and Unipolar value / 2 units, 127 reading exactly 64 in both - the same as the dial's own display
+(renderParams.c `render_paramType1BipLevel()`). The engine's old Bipolar formula, value/127 x 2 - 1,
+was also half a unit high at the centre, which on a Pitch input is half a semitone. paramCurves.c
+`constant_level()`.
+
+**16.2 Pitch inputs are one unit a semitone** (manual, Definitions and Signal types): a full-scale
+signal moves an oscillator 64 semitones, and a Keyboard Note output played through a Pitch input with
+KBT off plays in tune. The engine took full scale as 12 semitones (notes §14). Oscillators' Pitch and
+PitchVar inputs, and FltMulti's and FltComb's, all move five times as far as before for the same signal.
+
+**16.3 EnvADSR Sustain** is the dial over 128, 127 reaching exactly full level (`dial_fraction()`), as
+the other level dials are; it was over 127, a fraction of a percent high everywhere below the top.

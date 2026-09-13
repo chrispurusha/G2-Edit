@@ -87,10 +87,9 @@ void sound_engine_pitch_bend(double bend);
 // notes §5
 void sound_engine_note(int32_t note, bool on);
 
-// Whether the engine will sound more than one note at once, i.e. the patch is Poly with a voice
-// count above 1. The note stack needs this: in Mono, releasing a key falls back to the newest note
-// still held, and in Poly it must not, because that note already has a voice of its own sounding it.
-bool sound_engine_is_polyphonic(void);
+// Whether a voice is sounding this key with its key still down. For poly pressure: in Mono a key
+// held underneath the one playing must not move the morph. Any thread; see §15 of the reference.
+bool sound_engine_note_sounding(int32_t note);
 
 // How many voices the current patch may sound at once, and how many are audible right now. For the
 // status line — the second figure is what tells you whether a chord is being cut short.

@@ -57,21 +57,10 @@ void note_stack_note_on(uint8_t note) {
     sound_engine_note((int32_t)note, true);
 }
 
+// notes §1
 void note_stack_note_off(uint8_t note) {
     held_remove(note);
-
-    // notes §1
-    if (sound_engine_is_polyphonic() == true) {
-        sound_engine_note((int32_t)note, false);
-        return;
-    }
-
-    if (gHeldCount > 0) {
-        // notes §2
-        sound_engine_note((int32_t)gHeld[gHeldCount - 1], true);
-    } else {
-        sound_engine_note(-1, false);
-    }
+    sound_engine_note((int32_t)note, false);
 }
 
 void note_stack_all_off(void) {
@@ -85,8 +74,4 @@ uint32_t note_stack_count(void) {
 
 uint8_t note_stack_at(uint32_t index) {
     return (index < gHeldCount) ? gHeld[index] : 0;
-}
-
-int32_t note_stack_top(void) {
-    return (gHeldCount > 0) ? (int32_t)gHeld[gHeldCount - 1] : -1;
 }
