@@ -514,15 +514,16 @@ as curvature (it did: peak-normalising first pulled every exponent toward 1).
 RECT IS EXACTLY WHAT THE MANUAL SAYS (p207), which is worth recording given how often it is not:
 discard negatives, discard positives, mirror negatives up, mirror positives down.
 
-SHPSTATIC IS y = sign(x).|x|^p, and the two positive powers are exact:
+SHPSTATIC'S ICON DRAWS THE ENGINE'S OWN CURVES since 2026-09-13 (shaper_transfer(), paramCurves.c
+notes §31): x2 and x3 are s^2 and s^3, Inv x2 and Inv x3 are 1 - (1 - s)^2 and 1 - (1 - s)^3. The
+capture above had fitted a pure power law to each:
 ```
     x2      p = 1.98   rms 0.00002      x3      p = 2.97   rms 0.00002
     Inv x2  p = 0.65   rms 0.00079      Inv x3  p = 0.49   rms 0.00122
 ```
-The two inverse curves fit a pure power law FORTY TIMES WORSE than the other two and land well
-above their nominal 1/2 and 1/3, so those exponents are the measured shape rather than the named
-one, and the shape is only approximately a power law. Good enough for a 30-pixel icon; worth a
-second look before anything depends on it more precisely than that.
+and the two Inv curves fitted forty times worse because they are not power laws at all - a power law
+fitted to 1 - (1 - s)^n lands on about those exponents. So the capture and the curves agree; only the
+model fitted to it was wrong.
 
 ## 48. `module_wave_is_transfer()`
 

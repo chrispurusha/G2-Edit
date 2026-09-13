@@ -46,7 +46,7 @@ MODULES AND GRAPHICS
 FILTERS
 - FltNord's LP/BP/HP/BR modes are NOT implemented - fltShape is read but the ladder path ignores it
 - Try FltNord as a state-variable filter (svf_filter already takes a shape); evidence in findings.md
-- FltNord may share FltMulti's filter: the DSP part behind FltMulti (§10.2) has output selections FltMulti does not use (a BR among them) - test that model against FltNord's captures before building another
+- FltNord is FltMulti's filter, not a ladder: the instrument builds it from the same state-variable parts (two sections for 24 dB), its Res reaching them as v/512 - model it that way and test against FltNord's captures before anything else
 - Eq2Band/Eq3band Hi Freq: setting 0 sounds at 8 kHz and 1 at 6 kHz, the reverse of eq2BandHiStrMap's names - check what the G2's own display calls them and fix whichever is wrong (the engine follows the sound)
 - EqPeak/Eq3band deep wide cuts above ~1 kHz: the instrument's Chamberlin form is unstable there - measure what it actually does (§11.5)
 - FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs
