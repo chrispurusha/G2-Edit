@@ -359,6 +359,12 @@ voice was; Auto only when the voice was taken from a held key or sent back to on
 notes §70); Off jumps. Until 2026-09-13 this was an exponential approach, which covered a semitone and
 two octaves in the same time.
 
+**15.6 Patch Vibrato.** A sine shared by every voice, free-running. Rate: 3.97 to 7.96 Hz,
+`vibrato_rate_hz()` (paramCurves.c notes §45). Depth: 1 cent a step of the Amount dial at the peak,
+scaled by the chosen controller (aftertouch or wheel) - 100 is a semitone either way at full
+controller. Checked 2026-09-13 against the instrument's own rate and depth law: the depth agreed
+within 1% already; the rate was a straight 4 to 8 Hz, within 0.7%, and is now exact.
+
 **15.5 Not modelled.** The sustain pedal holding keys (on the G2 a sustained key stays held until the
 pedal lifts; here sustain is only its morph group), velocity, and the Hi and Lo keys a MonoKey module
 reports (Docs/mini-emulator-engine-plan.md).

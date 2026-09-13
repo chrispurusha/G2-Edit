@@ -77,6 +77,7 @@ extern "C" {
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
 #include "soundEngine.h"
+#include "paramCurves.h"
 #include "paramOverlay.h"
 #include <strings.h>
 
@@ -1172,7 +1173,7 @@ static void render_patch_params_panel(void) {
     snprintf(buf, sizeof(buf), "%u cnt", (unsigned)vibratoAmount);
     gPatchParamRects[pPVibratoAmount] = render_dial_with_text(mainArea, (tRectangle){{x, (y - 10.0) + (btnH * 2.0)}, {20.0, dialH}}, "Amount", buf, btnH, vibratoAmount, 100, 0, (tRgb)RGB_BACKGROUND_GREY);
     x                                += get_text_width((char *)"100 cnt", btnH, eCache) + 8.0;
-    snprintf(buf, sizeof(buf), "%.2f Hz", 4.0 + (vibratoRate / 127.0) * 4.0);
+    snprintf(buf, sizeof(buf), "%.2f Hz", vibrato_rate_hz((double)vibratoRate));
     gPatchParamRects[pPVibratoRate]   = render_dial_with_text(mainArea, (tRectangle){{x, (y - 10.0) + (btnH * 2.0)}, {20.0, dialH}}, "Rate", buf, btnH, vibratoRate, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
     y                                += rowH;
 

@@ -3421,10 +3421,10 @@ void sound_engine_update_from_patch(void) {
             tModule * vibrato = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleVibrato);
 
             if (vibrato != NULL) {
-                // Depth is in cents as the dial reads it, and the rate dial spans 4 to 8 Hz.
+                // §15.6 - depth is in cents as the dial reads it; the rate is vibrato_rate_hz().
                 snapshot.vibratoSource = vibrato->param[0][VIBRATO_MOD].value;
                 snapshot.vibratoCents  = (double)vibrato->param[0][VIBRATO_DEPTH].value;
-                snapshot.vibratoHz     = 4.0 + (((double)vibrato->param[0][VIBRATO_RATE].value / 127.0) * 4.0);
+                snapshot.vibratoHz     = vibrato_rate_hz((double)vibrato->param[0][VIBRATO_RATE].value);
             }
         }
 
