@@ -29,6 +29,7 @@
 
 #define VKB_KEYS_VISIBLE    (37)    // three octaves plus the top C, the usual span for a soft keyboard
 #define VKB_MAX_WHITE       (VKB_KEYS_VISIBLE)
+#define VKB_HELD_MAX        (16)    // computer keys held at once for note entry; more are not tracked
 
 typedef struct {
     bool active;
@@ -37,11 +38,14 @@ typedef struct {
     // what stopped it re-centring itself and made it movable.
     tFloatingPanel panel;
 
-    uint32_t       firstNote;         // MIDI note at the left edge, always a C
-    int32_t        noteOn;            // the sounding note, -1 when silent
-    int32_t        lastNote;          // last note played, -1 if none yet — what Repeat re-strikes
-    int32_t        sustainedNote;     // shift-latched note, left ringing after its key is released; -1 = none
-    uint32_t       velocity;          // fixed; the wire format carries no velocity field
+    uint32_t       firstNote;              // MIDI note at the left edge, always a C
+    int32_t        noteOn;                 // the sounding note, -1 when silent
+    int32_t        lastNote;               // last note played, -1 if none yet — what Repeat re-strikes
+    int32_t        sustainedNote;          // shift-latched note, left ringing after its key is released; -1 = none
+    int32_t        heldKey[VKB_HELD_MAX];  // computer keys down for note entry, oldest first
+    int32_t        heldNote[VKB_HELD_MAX]; // the note each of those keys started
+    uint32_t       heldCount;
+    uint32_t       velocity;               // fixed; the wire format carries no velocity field
     bool           drone;
     bool           repeat;
     double         nextRepeatAt;      // glfwGetTime() stamp of the next re-strike

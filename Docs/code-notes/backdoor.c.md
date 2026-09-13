@@ -397,3 +397,11 @@ RENAME <VA|FX> <index> <name> - names a module exactly as the name editor on its
 local copy, then the same eMsgCmdSetModuleLabel to the G2 (so it is patch data, and saved with the
 patch). Up to 16 characters; the rest of the line is the name, spaces and all. Added 2026-09-13 to
 build a test patch whose six identical Operators needed telling apart.
+
+## 30. in `backdoor_dispatch()`
+
+KEYNOTE <letter> DOWN|UP - a computer-keyboard key going down or up, handed to note entry exactly
+as key_callback() would hand it (handle_note_entry_key(), no modifiers). The reply names the note
+now sounding and how many keys are held. Added 2026-09-13 because synthetic key events from
+cliclick never reach GLFW, so holding one key while playing another could not be tested otherwise.
+A is C at the panel's first note; see note_offset_for_key() for the rest.
