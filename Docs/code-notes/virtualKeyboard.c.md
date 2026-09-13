@@ -70,3 +70,28 @@ to be sounding would cut the note still being held.
 
 Drone and Repeat hold the note deliberately, as they do for a mouse release, and so does a
 shift latch on this same note.
+
+## 9. in `set_sounding_note()`
+
+THE NEW NOTE GOES OUT BEFORE THE OLD ONE IS RELEASED. Sent the other way round, the G2 sees a
+moment with no key down between every pair of notes, so a Legato patch retriggers its envelopes
+on each change, which is exactly what Legato exists not to do. Overlapping them is what a
+player's hand does on a real keyboard. Mono and Poly behave the same either way: in Mono the
+late release is for a note already replaced, and in Poly each note has its own voice.
+
+## 10. in `handle_note_entry_key()`
+
+LAST-NOTE PRIORITY WITH RETURN, as the G2 plays its own keyboard in Mono and Legato. Hold A,
+play S over it, let S go: A sounds again, because it is still held. Before this list, the
+release of S silenced everything, and the engine and the G2 both went quiet with A still down.
+
+The list is keyed by the PHYSICAL KEY and stores the note each press started. Z and X move the
+octave while keys are down, so a note recomputed at release time can be a different note from
+the one the key started, and that release would then find nothing to stop.
+
+On the G2 the return is a fresh note-on, which retriggers in Mono and, with §9, glides on in
+Legato. The engine takes it the same way (voice_note_on() in soundEngine.c). A MIDI keyboard
+returns through noteStack.c instead, and this list is not involved.
+
+A key whose release never arrives would stay in the list. GLFW releases every held key itself
+when the window loses focus, so in the application that cannot happen.

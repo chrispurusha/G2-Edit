@@ -38,6 +38,7 @@ extern "C" {
 #include "../SynthLib/ThirdParty/glfw/deps/stb_image_write.h"
 #pragma clang diagnostic pop
 
+#include <ctype.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
@@ -64,6 +65,7 @@ extern "C" {
 #include "splitView.h"
 #include "patchWrite.h"
 #include "moduleGraphics.h"
+#include "virtualKeyboard.h"
 #include "backdoor.h"
 
 // notes §1
@@ -1349,6 +1351,21 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         sound_engine_note(note, true);
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "KEYNOTE") == 0) {
+        // notes §30
+        char letter    = 0;
+        char edge[8]   = {0};
+        char text[128] = {0};
+
+        if (  (sscanf(arg, " %c %7s", &letter, edge) != 2) || !isalpha((unsigned char)letter)
+           || ((strcasecmp(edge, "DOWN") != 0) && (strcasecmp(edge, "UP") != 0))) {
+            backdoor_write_result("ERROR: expected 'KEYNOTE <letter> DOWN|UP'\n");
+            return;
+        }
+        handle_note_entry_key(GLFW_KEY_A + (toupper((unsigned char)letter) - 'A'), 0,
+                              (strcasecmp(edge, "DOWN") == 0) ? GLFW_PRESS : GLFW_RELEASE);
+        snprintf(text, sizeof(text), "OK sounding %d held %u\n", gVirtualKeyboard.noteOn, gVirtualKeyboard.heldCount);
+        backdoor_write_result(text);
     } else if (strcmp(cmd, "SNDDUMP") == 0) {
         char text[8400] = {0};
 
