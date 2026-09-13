@@ -586,6 +586,447 @@ double lev_amp_gain(double paramValue) {
     return 2.0 * exp2((value - 96.0) / 31.0);
 }
 
+// notes §30
+#define CLIP_PARAM_LEVEL_MOD       (0)
+#define CLIP_PARAM_LEVEL           (1)
+#define CLIP_PARAM_SHAPE           (2)
+#define CLIP_PARAM_ACTIVE          (3)
+
+#define OD_PARAM_AMOUNT_MOD        (0)
+#define OD_PARAM_AMOUNT            (1)
+#define OD_PARAM_ACTIVE            (2)
+#define OD_PARAM_TYPE              (3)
+#define OD_PARAM_SHAPE             (4)
+
+#define SAT_PARAM_AMOUNT           (0)
+#define SAT_PARAM_AMOUNT_MOD       (1)
+#define SAT_PARAM_ACTIVE           (2)
+#define SAT_PARAM_CURVE            (3)
+
+#define SHPEXP_PARAM_AMOUNT        (0)
+#define SHPEXP_PARAM_AMOUNT_MOD    (1)
+#define SHPEXP_PARAM_ACTIVE        (2)
+#define SHPEXP_PARAM_CURVE         (3)
+
+#define WRAP_PARAM_AMOUNT_MOD      (0)
+#define WRAP_PARAM_AMOUNT          (1)
+#define WRAP_PARAM_ACTIVE          (2)
+
+#define SHPSTATIC_PARAM_MODE       (0)
+#define SHPSTATIC_PARAM_ACTIVE     (1)
+
+#define RECT_PARAM_MODE            (0)
+#define RECT_PARAM_ACTIVE          (1)
+
+bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader dial, tShaperSettings * out) {
+    // Where a module has no dial at all - ShpStatic and Rect are pure mode selectors - the amount
+    // stays at full and nothing reads it.
+    *out = (tShaperSettings){
+        .kind = eShaperRect, .curve = 0, .sym = true, .amount = 1.0, .mod = 0.0, .signalLeg = 0, .active = true
+    };
+
+    switch (module->type) {
+        case moduleTypeClip:
+        {
+            out->kind   = eShaperClip;
+            out->amount = dial(module, variation, CLIP_PARAM_LEVEL) / 127.0;
+            out->mod    = dial(module, variation, CLIP_PARAM_LEVEL_MOD) / 127.0;
+            out->sym    = (module->param[variation][CLIP_PARAM_SHAPE].value != 0);
+            out->active = (dial(module, variation, CLIP_PARAM_ACTIVE) != 0.0);
+            return true;
+        }
+        case moduleTypeOverdrive:
+        {
+            out->kind   = eShaperOverdrive;
+            out->amount = dial(module, variation, OD_PARAM_AMOUNT) / 127.0;
+            out->mod    = dial(module, variation, OD_PARAM_AMOUNT_MOD) / 127.0;
+            out->curve  = module->param[variation][OD_PARAM_TYPE].value;
+            out->sym    = (module->param[variation][OD_PARAM_SHAPE].value != 0);
+            out->active = (dial(module, variation, OD_PARAM_ACTIVE) != 0.0);
+            return true;
+        }
+        case moduleTypeSaturate:
+        {
+            out->kind   = eShaperSaturate;
+            out->amount = dial(module, variation, SAT_PARAM_AMOUNT) / 127.0;
+            out->mod    = dial(module, variation, SAT_PARAM_AMOUNT_MOD) / 127.0;
+            out->curve  = module->param[variation][SAT_PARAM_CURVE].value;
+            out->active = (dial(module, variation, SAT_PARAM_ACTIVE) != 0.0);
+            return true;
+        }
+        case moduleTypeShpExp:
+        {
+            out->kind   = eShaperShpExp;
+            out->amount = dial(module, variation, SHPEXP_PARAM_AMOUNT) / 127.0;
+            out->mod    = dial(module, variation, SHPEXP_PARAM_AMOUNT_MOD) / 127.0;
+            out->curve  = module->param[variation][SHPEXP_PARAM_CURVE].value;
+            out->active = (dial(module, variation, SHPEXP_PARAM_ACTIVE) != 0.0);
+            return true;
+        }
+        case moduleTypeWaveWrap:
+        {
+            // THE ONLY SHAPER WHOSE MOD JACK COMES FIRST, so its signal is on leg 1.
+            out->kind      = eShaperWaveWrap;
+            out->amount    = dial(module, variation, WRAP_PARAM_AMOUNT) / 127.0;
+            out->mod       = dial(module, variation, WRAP_PARAM_AMOUNT_MOD) / 127.0;
+            out->signalLeg = 1;
+            out->active    = (dial(module, variation, WRAP_PARAM_ACTIVE) != 0.0);
+            return true;
+        }
+        case moduleTypeShpStatic:
+        {
+            out->kind   = eShaperShpStatic;
+            out->curve  = module->param[variation][SHPSTATIC_PARAM_MODE].value;
+            out->active = (dial(module, variation, SHPSTATIC_PARAM_ACTIVE) != 0.0);
+            return true;
+        }
+        case moduleTypeRect:
+        {
+            out->curve  = module->param[variation][RECT_PARAM_MODE].value;
+            out->active = (dial(module, variation, RECT_PARAM_ACTIVE) != 0.0);
+            return true;
+        }
+        default:
+            return false;
+    }
+}
+
+// |x|^p with the sign carried through: an odd-symmetric power curve, which is what a shaper graph
+// that passes through the origin unchanged has to be.
+static double shaper_odd_power(double x, double p) {
+    if (x < 0.0) {
+        return -pow(-x, p);
+    }
+    return pow(x, p);
+}
+
+// Fold rather than clip: a triangle of period 4 that runs straight through [-1, 1] and turns back
+// on itself outside it, so 1.5 comes back as 0.5 and 3.0 as -1.0. This is what makes WaveWrap
+// generate its own overtones instead of the clipped ones a limiter would.
+static double shaper_fold(double x) {
+    double y = fmod(x + 1.0, 4.0);
+
+    if (y < 0.0) {
+        y += 4.0;
+    }
+    return (y <= 2.0) ? (y - 1.0) : (3.0 - y);
+}
+
+static double shaper_clamp(double x) {
+    if (x > 1.0) {
+        return 1.0;
+    }
+
+    if (x < -1.0) {
+        return -1.0;
+    }
+    return x;
+}
+
+double shaper_transfer(const tShaperSettings * settings, double amount, double input) {
+    double x = shaper_clamp(input);
+
+    if (amount < 0.0) {
+        amount = 0.0;
+    } else if (amount > 1.0) {
+        amount = 1.0;
+    }
+
+    switch (settings->kind) {
+        case eShaperRect:
+        {
+            // Exact, from the manual: discard negatives, discard positives, mirror negatives up,
+            // mirror positives down. rectStrMap is {HalfPos, HalfNeg, FullPos, FullNeg}.
+            switch (settings->curve) {
+                case 0:  return (x > 0.0) ? x : 0.0;
+
+                case 1:  return (x < 0.0) ? x : 0.0;
+
+                case 2:  return fabs(x);
+
+                default: return -fabs(x);
+            }
+        }
+        case eShaperShpStatic:
+        {
+            // notes §31
+            static const double kExp[] = {1.0 / 3.0, 0.5, 2.0, 3.0};
+            uint32_t            curve  = (settings->curve < 4) ? settings->curve : 2;
+
+            return shaper_odd_power(x, kExp[curve]);
+        }
+        case eShaperShpExp:
+        {
+            // notes §32
+            static const double kExp[] = {2.0, 3.0, 4.0, 5.0};
+            uint32_t            curve  = (settings->curve < 4) ? settings->curve : 0;
+
+            return shaper_odd_power(x, 1.0 + (amount * (kExp[curve] - 1.0)));
+        }
+        case eShaperSaturate:
+        {
+            // notes §33
+            static const double kCurve[] = {4.0, 16.0, 64.0, 256.0};
+            uint32_t            curve    = (settings->curve < 4) ? settings->curve : 0;
+            double              k        = amount * kCurve[curve];
+
+            if (k < 1e-6) {
+                return x;
+            }
+            double              shaped   = log(1.0 + (k * fabs(x))) / log(1.0 + k);
+
+            return (x < 0.0) ? -shaped : shaped;
+        }
+        case eShaperWaveWrap:
+        {
+            // notes §34
+            return shaper_fold(x * (1.0 + (amount * 8.0)));
+        }
+        case eShaperOverdrive:
+        {
+            // notes §35
+            static const double kKnee[]  = {2.0, 16.0, 3.0, 6.0};
+            static const double kDrive[] = {8.0, 8.0, 24.0, 32.0};
+            uint32_t            type     = (settings->curve < 4) ? settings->curve : 0;
+            double              driven   = x * (1.0 + (amount * kDrive[type]));
+            double              shaped   = driven / pow(1.0 + pow(fabs(driven), kKnee[type]),
+                                                        1.0 / kKnee[type]);
+
+            // Asym shapes only the positive peaks (manual), so the negative half stays linear -
+            // and then meets the headroom, which is where its own harmonics come from.
+            if ((settings->sym == false) && (driven < 0.0)) {
+                shaped = shaper_clamp(driven);
+            }
+            return ((1.0 - amount) * x) + (amount * shaped);
+        }
+        case eShaperClip:
+        default:
+        {
+            // notes §36
+            double t = pow(2.0, -6.0 * amount);
+
+            if (x > t) {
+                return t;
+            }
+
+            if ((settings->sym == true) && (x < -t)) {
+                return -t;
+            }
+            return x;
+        }
+    }
+}
+
+// notes §37
+static const double kEqLowShelfHz[]  = {80.0, 110.0, 160.0};      // §11.2
+static const double kEqHighShelfHz[] = {8000.0, 6000.0, 12000.0}; // measured order, not the names'
+
+#define EQ_MID_OCTAVES    (1.0)    // §11.3
+
+static double eq_dial_gain(double dial) {
+    return pow(10.0, ((dial - 64.0) * (18.0 / 64.0)) / 20.0);    // §11.1
+}
+
+static double eq_peak_damping(double octaves) {
+    double ratio = exp2(octaves);
+
+    return 2.0 * (ratio - 1.0) / sqrt(ratio);
+}
+
+static double eq_shelf_hz(const double * table, uint32_t selector) {
+    return table[(selector > 2u) ? 2u : selector];
+}
+
+// §11.4 - a cut mirrors the boost of the same size.
+static void eq_mirror_cuts(tEqBands * bands) {
+    if ((bands->lowHz > 0.0) && (bands->lowGain < 1.0)) {
+        bands->lowHz /= bands->lowGain;
+    }
+
+    if ((bands->highHz > 0.0) && (bands->highGain < 1.0)) {
+        bands->highHz *= bands->highGain;
+    }
+
+    if ((bands->peakHz > 0.0) && (bands->peakGain < 1.0)) {
+        bands->peakDamping /= bands->peakGain;
+    }
+}
+
+bool eq_bands_build(tModule * module, uint32_t variation, tParamReader dial, tEqBands * out) {
+    *out = (tEqBands){
+        .inputLevel = 1.0, .active = true
+    };
+
+    switch (module->type) {
+        case moduleTypeEqPeak:
+        {
+            out->peakHz      = flt_cutoff_hz(dial(module, variation, 0));
+            out->peakGain    = eq_dial_gain(dial(module, variation, 1));
+            out->peakDamping = eq_peak_damping((128.0 - dial(module, variation, 2)) / 64.0);
+            out->active      = (dial(module, variation, 3) != 0.0);
+            out->inputLevel  = mix_level_gain(dial(module, variation, 4));
+            break;
+        }
+        case moduleTypeEq2Band:
+        {
+            out->lowGain    = eq_dial_gain(dial(module, variation, 0));
+            out->highGain   = eq_dial_gain(dial(module, variation, 1));
+            out->inputLevel = mix_level_gain(dial(module, variation, 2));
+            out->active     = (dial(module, variation, 3) != 0.0);
+            out->lowHz      = eq_shelf_hz(kEqLowShelfHz, module->param[variation][4].value);
+            out->highHz     = eq_shelf_hz(kEqHighShelfHz, module->param[variation][5].value);
+            break;
+        }
+        case moduleTypeEq3band:
+        {
+            out->lowGain     = eq_dial_gain(dial(module, variation, 0));
+            out->peakGain    = eq_dial_gain(dial(module, variation, 1));
+            out->peakHz      = 100.0 * pow(80.0, dial(module, variation, 2) / 127.0);
+            out->peakDamping = eq_peak_damping(EQ_MID_OCTAVES);
+            out->highGain    = eq_dial_gain(dial(module, variation, 3));
+            out->inputLevel  = mix_level_gain(dial(module, variation, 4));
+            out->active      = (dial(module, variation, 5) != 0.0);
+            out->lowHz       = eq_shelf_hz(kEqLowShelfHz, module->param[variation][6].value);
+            out->highHz      = eq_shelf_hz(kEqHighShelfHz, module->param[variation][7].value);
+            break;
+        }
+        default:
+            return false;
+    }
+    eq_mirror_cuts(out);
+    return true;
+}
+
+static void complex_multiply(double * re, double * im, double otherRe, double otherIm) {
+    double real = (*re * otherRe) - (*im * otherIm);
+
+    *im = (*re * otherIm) + (*im * otherRe);
+    *re = real;
+}
+
+// notes §38
+double eq_magnitude(const tEqBands * bands, double hz) {
+    double re = 1.0;
+    double im = 0.0;
+
+    if (bands->lowHz > 0.0) {
+        double r     = hz / bands->lowHz;
+        double denom = 1.0 + (r * r);
+        double boost = bands->lowGain - 1.0;
+
+        complex_multiply(&re, &im, 1.0 + (boost / denom), -(boost * r / denom));
+    }
+
+    if (bands->highHz > 0.0) {
+        double r     = hz / bands->highHz;
+        double denom = 1.0 + (r * r);
+        double boost = bands->highGain - 1.0;
+
+        complex_multiply(&re, &im, 1.0 + (boost * r * r / denom), boost * r / denom);
+    }
+
+    if (bands->peakHz > 0.0) {
+        double r     = hz / bands->peakHz;
+        double q     = bands->peakDamping;
+        double real  = 1.0 - (r * r);
+        double denom = (real * real) + (q * q * r * r);
+        double boost = bands->peakGain - 1.0;
+
+        complex_multiply(&re, &im, 1.0 + (boost * q * q * r * r / denom), boost * q * r * real / denom);
+    }
+    return sqrt((re * re) + (im * im));
+}
+
+// notes §39
+#define FLTCOMB_TUNING_SEMITONES    (9.0)    // §13.2 - the comb sits a major sixth below the dial
+
+static const tCombShape kCombShapes[] = {    // §13.4 - Notch, Peak, Deep
+    { 1.00, 0.00, 0.0,  0.00},
+    {-0.30, 0.90, 1.1,  2.45},
+    { 0.60, 0.85, 0.5, -4.10},
+};
+
+const tCombShape * flt_comb_shape(uint32_t type) {
+    return &kCombShapes[(type < 3u) ? type : 0u];
+}
+
+double flt_comb_feedback(double fbParam) {
+    return (fbParam - 64.0) / 64.0;    // §13.3
+}
+
+double flt_comb_delay_samples(double control, const tCombShape * shape, double sampleRate) {
+    double rateScale = sampleRate / FLTCOMB_REFERENCE_RATE;
+
+    return (sampleRate / flt_cutoff_hz(control - FLTCOMB_TUNING_SEMITONES)) - rateScale + (shape->extraDelay * rateScale);
+}
+
+// k (1 + b.g.z^-D) / (1 - c.g.z^-D), at a frequency given in cycles per sample.
+double flt_comb_magnitude(const tCombShape * shape, double g, double delaySamples, double cyclesPerSample) {
+    double theta = 2.0 * M_PI * cyclesPerSample * delaySamples;
+    double b     = shape->feedForward * g;
+    double c     = shape->feedback * g;
+    double numRe = 1.0 + (b * cos(theta));
+    double numIm = -b * sin(theta);
+    double denRe = 1.0 - (c * cos(theta));
+    double denIm = c * sin(theta);
+    double k     = pow(10.0, (shape->gainDbPerG2 * g * g) / 20.0);
+
+    return k * sqrt(((numRe * numRe) + (numIm * numIm)) / fmax((denRe * denRe) + (denIm * denIm), 1e-12));
+}
+
+// notes §40
+#define FLTPHASE_PARAM_FREQ                 (1)
+#define FLTPHASE_PARAM_FB                   (3)
+#define FLTPHASE_PARAM_NOTCHES              (4)
+#define FLTPHASE_PARAM_SPREAD               (5)
+#define FLTPHASE_PARAM_TYPE                 (9)
+#define FLTPHASE_MAX_SECTIONS               (6)
+#define FLTPHASE_CENTRE_SEMITONES           (12.0) // measured at one Freq only
+#define FLTPHASE_Q                          (1.04) // measured, at Spread 64
+#define FLTPHASE_SPREAD_STEPS_PER_OCTAVE    (32.0) // ASSUMED - Spread is unmeasured
+
+bool flt_phase_settings_build(tModule * module, uint32_t variation, tParamReader dial, tPhaserSettings * out) {
+    uint32_t notches = module->param[variation][FLTPHASE_PARAM_NOTCHES].value;
+    uint32_t type    = module->param[variation][FLTPHASE_PARAM_TYPE].value;
+
+    if (module->type != moduleTypeFltPhase) {
+        return false;
+    }
+    out->centreHz = flt_cutoff_hz(dial(module, variation, FLTPHASE_PARAM_FREQ) + FLTPHASE_CENTRE_SEMITONES);
+    out->q        = FLTPHASE_Q * exp2((64.0 - dial(module, variation, FLTPHASE_PARAM_SPREAD)) / FLTPHASE_SPREAD_STEPS_PER_OCTAVE);
+    out->sections = (notches < FLTPHASE_MAX_SECTIONS) ? (notches + 1u) : FLTPHASE_MAX_SECTIONS;
+    out->g        = (dial(module, variation, FLTPHASE_PARAM_FB) - 64.0) / 64.0;
+    out->type     = (type < 3u) ? type : 0u;
+    return true;
+}
+
+double flt_phase_magnitude(const tPhaserSettings * settings, double hz) {
+    double r     = hz / settings->centreHz;
+    double phase = -2.0 * (double)settings->sections * atan2(r / settings->q, 1.0 - (r * r));
+    double gRe   = settings->g * cos(phase);    // g times the allpass chain, which has unit magnitude
+    double gIm   = settings->g * sin(phase);
+    double numRe = 1.0 + gRe;
+    double numIm = gIm;
+    double denRe = 1.0 - gRe;
+    double denIm = -gIm;
+
+    switch (settings->type) {
+        case 1:     // Peak
+            numRe = 1.0;
+            numIm = 0.0;
+            break;
+
+        case 2:     // Deep
+            break;
+
+        default:    // Notch
+            denRe = 1.0;
+            denIm = 0.0;
+            break;
+    }
+    return sqrt(((numRe * numRe) + (numIm * numIm)) / fmax((denRe * denRe) + (denIm * denIm), 1e-12));
+}
+
 #ifdef __cplusplus
 }
 #endif

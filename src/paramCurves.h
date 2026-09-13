@@ -141,6 +141,77 @@ double delay_range_max_seconds(tModuleType moduleType, uint32_t rangeValue);
 double delay_time_seconds(double maxSeconds, double paramValue);
 uint32_t clk_sync_index(double paramValue);
 double clk_sync_beats(double paramValue);
+
+// Reads one parameter for a *_build() below: the engine passes its morph-following reader, a graph
+// on the module face the raw one.
+typedef double (*tParamReader)(tModule * module, uint32_t variation, uint32_t index);
+
+// The Shaper group: seven memoryless transfer functions, shared by the engine and the graphs.
+typedef enum {
+    eShaperClip = 0,
+    eShaperOverdrive,
+    eShaperSaturate,
+    eShaperShpExp,
+    eShaperWaveWrap,
+    eShaperShpStatic,
+    eShaperRect,
+} tShaperKind;
+
+typedef struct {
+    tShaperKind kind;
+    uint32_t    curve;       // the Type/Curve/Mode drop-down, raw - a drop-down carries no morph
+    bool        sym;         // Clip and Overdrive: Sym shapes both halves, Asym the positive one
+    double      amount;      // the dial, 0..1
+    double      mod;         // the modulation attenuator, 0..1
+    uint32_t    signalLeg;   // input leg carrying the signal; the other one is the modulation
+    bool        active;
+} tShaperSettings;
+
+bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader dial, tShaperSettings * out); // false: not a shaper
+double shaper_transfer(const tShaperSettings * settings, double amount, double input);                      // input and amount clamped
+
+// EqPeak, Eq2Band and Eq3band as the bands they add up to - §11 of the engine reference.
+typedef struct {
+    double inputLevel;
+    bool   active;
+    double lowHz;           // 0 = no low shelf
+    double lowGain;
+    double highHz;          // 0 = no high shelf
+    double highGain;
+    double peakHz;          // 0 = no peak
+    double peakDamping;
+    double peakGain;
+} tEqBands;
+
+bool eq_bands_build(tModule * module, uint32_t variation, tParamReader dial, tEqBands * out);  // false: not an EQ
+double eq_magnitude(const tEqBands * bands, double hz);                                        // the bands' shape; level excluded
+
+// FltComb - §13 of the engine reference.
+typedef struct {
+    double feedForward;    // per unit of g
+    double feedback;
+    double extraDelay;     // samples at FLTCOMB_REFERENCE_RATE
+    double gainDbPerG2;
+} tCombShape;
+
+#define FLTCOMB_REFERENCE_RATE    (96000.0)    // the engine rate §13's sample offsets were measured at
+
+const tCombShape * flt_comb_shape(uint32_t type);                                             // Notch, Peak, Deep
+double flt_comb_feedback(double fbParam);                                                     // g: -1..+1, none at 64
+double flt_comb_delay_samples(double control, const tCombShape * shape, double sampleRate);
+double flt_comb_magnitude(const tCombShape * shape, double g, double delaySamples, double cyclesPerSample);
+
+// FltPhase. NOT played by the engine, and only partly measured - see paramCurves.c before relying on it.
+typedef struct {
+    double   centreHz;
+    double   q;
+    uint32_t sections;     // allpass sections, one notch each
+    double   g;
+    uint32_t type;         // fltPhaseTypeStrMap: Notch, Peak, Deep
+} tPhaserSettings;
+
+bool flt_phase_settings_build(tModule * module, uint32_t variation, tParamReader dial, tPhaserSettings * out); // false: not FltPhase
+double flt_phase_magnitude(const tPhaserSettings * settings, double hz);
 #ifdef __cplusplus
 }
 #endif
