@@ -555,6 +555,21 @@ double patch_volume_db(double paramValue) {
     return -((pow(PATCH_VOLUME_BASE, (127.0 - value) / 127.0) * PATCH_VOLUME_SPAN) - PATCH_VOLUME_SPAN);
 }
 
+// notes §45
+#define VIBRATO_TICK_HZ        (96000.0 / 94.0)   // the instrument's pitch tick; glide steps at it too
+#define VIBRATO_PHASE_STEPS    (65536.0)          // one cycle of the vibrato's phase
+
+double vibrato_rate_hz(double paramValue) {
+    double value = paramValue;
+
+    if (value < 0.0) {
+        value = 0.0;
+    } else if (value > 127.0) {
+        value = 127.0;
+    }
+    return (255.0 + (256.0 * value / 127.0)) * VIBRATO_TICK_HZ / VIBRATO_PHASE_STEPS;
+}
+
 // notes §29
 #define LEV_AMP_LINEAR_TOP    (24.0)       // dial position where the linear bottom segment ends
 #define LEV_AMP_UNITY         (64.0)       // and where the multiplier passes through 1.0

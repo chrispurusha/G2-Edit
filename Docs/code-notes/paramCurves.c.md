@@ -700,3 +700,14 @@ Unipolar value / 2, with 127 reading exactly 64 in both - the top step is the on
 straight line, as on every G2 level dial. The same law the dial displays (renderParams.c
 `render_paramType1BipLevel()`). LevAdd's offset follows it too, when that module is added
 (Docs/mini-emulator-engine-plan.md). Sound engine reference §16.1.
+
+## 45. `vibrato_rate_hz()`
+
+The patch Vibrato's rate, as the instrument makes it: a phase increment of 255 + 256 x dial/127 on a
+16-bit phase, stepped at the instrument's pitch tick of 96000/94 Hz - the tick patch glide steps at
+too, which is why glide's time per octave sits 2% off its own display. That is 3.97 Hz at dial 0,
+5.98 Hz at 64 and 7.96 Hz at 127. Shared by the engine and the Patch Settings dial so the two agree.
+It replaced "4 + dial/127 x 4 Hz", which was within 0.7% everywhere (engine law revert record).
+
+The depth needed no change: the dial reads cents, 1 cent a step, full at full controller - which is
+the instrument's to within 1%.

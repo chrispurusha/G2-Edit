@@ -2739,6 +2739,9 @@ anywhere in it. The chosen controller sets the depth, so at rest there is none.
 ONE PHASE FOR THE WHOLE PATCH, not one per voice: it is a property of the patch rather
 than of a note, so a chord's notes wobble together instead of drifting apart.
 
+Rate and depth are the instrument's (reference §15.6): vibrato_rate_hz() for the rate, and the
+Amount dial in cents at the peak for the depth.
+
 ## 177. in `sound_engine_render()`
 
 Smoothed in DIAL units, not hertz. Smoothing a logarithmic control linearly in

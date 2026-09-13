@@ -92,6 +92,7 @@ double flt_kbt_amount(uint32_t kbtValue);                                 // Kbt
 double lev_amp_gain(double paramValue);                                   // LevAmp multiplier: 0 (silent) .. 4.0x, unity at 64; measured, piecewise
 double constant_level(double paramValue, bool bipolar);                   // a Constant's output, 1.0 = 64 units - notes §44
 double lfo_rate_hz(uint32_t rangeMode, double paramValue);                // LFO speed in Hz for a Range setting
+double vibrato_rate_hz(double paramValue);                                // the patch Vibrato's rate - notes §45
 
 // These four were read off the hardware at raw 0, 64 and 127 rather than inferred.
 double pshift_semitones(double paramValue);                // PShift Semi:  -16.0 .. +15.75, quarter semitones
