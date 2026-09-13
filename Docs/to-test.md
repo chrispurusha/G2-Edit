@@ -3,6 +3,18 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***SHAPER AND EQ GRAPHS (2026-09-13)*** - Clip, Overdrive, Saturate, ShpExp and WaveWrap draw their
+  transfer curve, EqPeak, Eq2Band and Eq3band their response. Checked by screenshot at zoom 1.0 and
+  0.59 with scripted values. STILL TO CHECK: turn each dial by hand and watch the curve follow, and
+  compare against the original editor's graphs side by side.
+- ***ENVELOPE GRAPHS ON ALL NINE ENVELOPES (2026-09-13)*** - EnvADSR's graph generalised to EnvADR,
+  EnvAHD, EnvD, EnvH, ModADSR, ModAHD, EnvADDSR and EnvMulti, stages from the manual. STILL TO CHECK:
+  EnvADSR still draws exactly as before; each Output Type, EnvADR's Decay/Release with Trig and Gate,
+  EnvADDSR's Sustain L1/L2, EnvMulti's Sustain and Reset - against the original editor if possible.
+- ***FLTCOMB, FLTPHASE AND VOCODER GRAPHS (2026-09-13)*** - comb teeth from the engine's law, the
+  phaser from a model fitted to the 2026-08-29 figures (its Spread law is a placeholder), the
+  Vocoder's band routing. Checked by screenshot at zoom 1.0 and 0.59. STILL TO CHECK: by hand, and
+  FltPhase's graph against the original editor's at a few Freq and Spread settings.
 - ***FLTCOMB PLAYS IN THE ENGINE (2026-09-12)*** - all three Types from the measured laws (§13); by
   meter 10 of 10 settings read the same as the G2. STILL TO CHECK by ear: Freq swept with high FB,
   Deep at full feedback (approximate, §13.4), Kbt, and the FB Mod input (depth unmeasured).

@@ -500,3 +500,163 @@ every one within 0.3% of the four segments above.
 ITS Type SELECTOR DOES NOT CHANGE THE GAIN. Lin and dB were swept separately and agree to four
 decimal places at every one of the 33 positions, so this function is right to ignore the
 parameter. Whatever Type does, it is not this.
+
+## 30. `CLIP_PARAM_LEVEL_MOD`
+
+SHAPER GROUP - Clip, Overdrive, Saturate, ShpExp, WaveWrap, ShpStatic and Rect (manual p.204-207).
+Moved here from `soundEngine.c` on 2026-09-13 (its notes §8, §106-§112) so that the graph each
+module draws and the engine that plays it evaluate ONE function: when these laws are measured and
+refitted, the picture follows the sound without a second edit.
+
+Every one of these is MEMORYLESS: the output depends only on the present input sample, through
+what the manual calls a transfer function and draws as a graph. That is why they arrive as one
+node kind carrying a mode rather than as seven, and why they cost nothing to run at audio rate -
+which is exactly what the G2 means by a control module promoted to audio. Full scale is +-1.0
+here, which is the +-64 units the manual quotes for the instrument's headroom.
+
+THE ORDERS ARE NOT UNIFORM AND ARE NOT GUESSES WORTH REPEATING FROM MEMORY. WaveWrap lists its
+modulation depth BEFORE its amount and its Mod jack BEFORE its In jack; Overdrive and Clip list
+the mod dial first but the In jack first; Saturate and ShpExp list the amount first. Every one of
+these came from the layout tables in moduleResources.h, and none is confirmed against the
+instrument yet.
+
+HOW MUCH OF THIS IS KNOWN. Rect is EXACT: the manual states all four operations in words, and
+there is no dial to get wrong. ShpStatic's four labels - Inv x3, Inv x2, x2, x3 - name their own
+curves (but see §31). Everything else here is structurally right and numerically a guess: the
+manual describes the family (a logarithmic curve for Saturate, an exponential one for ShpExp,
+four named overdrive characters, a fold rather than a clip for WaveWrap) but names no constant
+anywhere.
+
+THESE ARE THE CHEAPEST MEASUREMENTS LEFT. A memoryless module gives up its ENTIRE transfer
+function to one capture: send a slow full-scale ramp - or simply a low sine, which sweeps every
+input level twice per cycle - through it and plot output against input. One capture per mode,
+no impulse, no windowing, no decay fitting. See to-test.md.
+
+## 31. in `shaper_transfer()`
+
+shpStaticStrMap is {"Inv x3", "Inv x2", "x2", "x3"}: the inverses are the roots, so
+the four exponents are 1/3, 1/2, 2 and 3. Every one of them leaves full scale at
+full scale and moves only what is between, which is what "amplification/attenuation
+characteristic" means on the module's own buttons.
+
+NOT RECONCILED WITH THE 2026-08-24 CAPTURE. The ShpStatic picker icon draws the exponents
+measured then - 0.49, 0.65, 1.98, 2.97 (`code-notes/moduleGraphics.c.md` §47) - so the two
+inverse curves are drawn noticeably gentler than they are played here. See todo.md.
+
+## 32. in `shaper_transfer()`
+
+shpExpCurveStrMap is {"x2", "x3", "x4", "x5"}, and Amount morphs the EXPONENT from
+linear towards the named curve rather than crossfading between two signals. That
+keeps full scale at full scale at every setting, which is the property the manual
+describes when it warns the module wants a fixed-amplitude input: the output falls
+exponentially only as the INPUT falls.
+
+## 33. in `shaper_transfer()`
+
+"Shapes an input signal in a logarithmic fashion", Curve 1 smooth and Curve 4 hard.
+A log curve normalised to unity at full scale: y = log(1 + k|x|) / log(1 + k), with
+k rising with both the Curve selector and the Amount dial, and k -> 0 giving back a
+straight line. Structure from the manual, k range UNMEASURED.
+
+## 34. in `shaper_transfer()`
+
+Amplify, then fold. Up to 19 dB of drive, which is four folds on a full-scale input -
+the "deep distortion and FM-like characteristics" of the manual.
+
+THE MAXIMUM DRIVE IS ODD ON PURPOSE. shaper_fold() returns exactly zero at every EVEN
+integer, so an even maximum - 16 was the first thing written here - sends full scale
+to silence at the top of the dial, and a full-scale input then vanishes exactly where
+the module should be at its most extreme. Nine folds full scale back to full scale.
+
+## 35. in `shaper_transfer()`
+
+Drive into a soft limiter whose KNEE is what the four type names select:
+y = x / (1 + |x|^n)^(1/n) reaches +-1 asymptotically, gently for a small n and
+almost squarely for a large one. odTypeStrMap is {Soft, Hard, Fat, Heavy}, so Fat
+takes the most drive and Hard the sharpest knee.
+
+AMOUNT BOTH DRIVES AND MIXES, and the mix is what makes zero mean zero. The limiter
+bends the curve at every drive setting, unity included - x/(1+x^2)^(1/2) is already
+3 dB down at full scale with no drive at all - so a dial that only fed the drive
+would leave the module audibly distorting with its depth control shut. Crossfading
+the shaped signal against the dry one by the same dial is the only construction here
+that reaches genuine transparency at 0 and full character at 127. Which of the two
+the instrument actually does is UNMEASURED; that it is transparent at 0 is not in
+doubt, since the module has no separate bypass reading of its own dial.
+
+## 36. in `shaper_transfer()`
+
+"Decreasing the clip level limit below the normal headroom": the dial LOWERS the
+threshold rather than raising a gain, which is why the manual warns the level drops
+as it opens and suggests a feedback loop to get it back. 36 dB of travel is a guess;
+only the direction is from the manual.
+
+## 37. `kEqLowShelfHz`
+
+EqPeak, Eq2Band and Eq3band's laws - every constant here is §11 of the engine reference, where the
+measurements behind them are. Moved from `soundEngine.c` on 2026-09-13 for the same reason as the
+shapers (§30): the response each module draws comes from the same bands the engine plays.
+
+`eq_bands_build()` takes a `tParamReader` so there is ONE list of which parameter is which: the
+engine passes its morph-following reader and the graph the raw dial, and both read the shelf
+selectors raw, as a drop-down carries no morph.
+
+## 38. `eq_magnitude()`
+
+The ANALOGUE PROTOTYPES of the engine's three sections, multiplied: each section adds (G - 1) times
+its filter to what passes through it, so each is 1 + (G - 1).F and the three are in series. Written
+in real arithmetic, as flt_ladder_magnitude() is, since neither caller has complex.h.
+
+WHY NOT THE ENGINE'S DISCRETE FORMS: those depend on the engine's sample rate, which a graph drawn
+on the face has no business knowing, and they match these prototypes closely below a few kHz. The
+peak is a topology-preserving SVF, exact at its centre by construction; the one-pole shelves drift
+from their prototypes only in the top octave, where a box a few dozen pixels wide cannot show it.
+
+THE INPUT LEVEL IS LEFT OUT. It is a broadband gain with its own dial and readout; folded in, a
+Level of 64 (-17.6 dB) would sink the whole curve out of a +-20 dB box and hide the shape the graph
+is there to show.
+
+## 39. `FLTCOMB_TUNING_SEMITONES`
+
+FltComb's laws, moved from `soundEngine.c` on 2026-09-13 so the graph on the module draws what the
+engine plays. Every constant is §13 of the engine reference, where the measurements are.
+
+`flt_comb_delay_samples()` keeps the engine's expression exactly, sample rate and all, so the move
+changed nothing the engine computes; the graph calls it at FLTCOMB_REFERENCE_RATE, the rate the
+extra-delay figures were measured at. `flt_comb_magnitude()` is the section's own transfer function,
+k (1 + b.g.z^-D) / (1 - c.g.z^-D) - frequency-flat, so it cannot show the four-point read's high-end
+loss (§13.4), which a box a few dozen pixels wide would not resolve anyway.
+
+## 40. `FLTPHASE_PARAM_FREQ`
+
+A MODEL OF FltPhase FOR THE GRAPH. The engine does not play this module, and the captures behind
+what follows were not kept - only the figures in findings.md ("FltPhase - A PHASER", 2026-08-29).
+
+WHAT WAS MEASURED, all at Freq 75:
+    first notch for Notch settings 0..5    2098, 1254, 1020, 750, 656, 539 Hz
+    notch depth at FB 96 / 112 / 127       -7, -13, -28 dB; FB 64 exactly flat
+    Notch against Deep                     about 5 dB of notch depth; Peak inverts the sense
+
+THE MODEL, and what each piece rests on:
+  - N IDENTICAL SECOND-ORDER ALLPASS SECTIONS, N the Notch setting plus one - the manual's "six
+    allpass filters which displace the phase 180 degrees each". Their chain A has unit gain and a
+    phase of -2N.atan(r/Q / (1 - r^2)); a notch falls where A = -1. With the centre at
+    flt_cutoff_hz(Freq + 12) - 2093 Hz here - and Q 1.04 this lands all six recorded first notches
+    at 0.27 dB rms, the worst 6% out. ONE free parameter for six points is what makes it credible.
+  - FB IS A MIX, g = (FB - 64)/64, not a feedback: Notch is 1 + g.A. Its notch is 1 - g deep, which
+    is -6.0 and -12.0 dB at FB 96 and 112 against -7 and -13 measured; -36 dB at 127 against -28 is
+    the capture's floor. Its peaks reach 1 + g, +6 dB at full FB - findings.md reports "up to +8 dB
+    of its own gain", close but not checked.
+  - PEAK IS 1 / (1 - g.A), which puts peaks where Notch put notches - "inverts the sense". DEEP IS
+    (1 + g.A) / (1 - g.A), notches and peaks both, deeper than Notch by 20.log(1 + g): 4.9 dB at FB
+    112, the "about 5 dB" measured. The structure is a guess; that both figures fall out of it is
+    the evidence for it.
+
+ASSUMED, NOT MEASURED:
+  - that the centre follows Freq a semitone per step - true of every other G2 filter dial, but seen
+    here at one Freq only;
+  - SPREAD ENTIRELY. The capture was at the default, 64, which is where Q 1.04 belongs. Letting
+    Spread move Q - lower Q spreads the notches apart - by an octave per 32 steps is a placeholder
+    so that the dial does something plausible, with nothing behind the number.
+  - Peak and Deep's exact forms beyond the two figures above.
+What would settle it is in todo.md: a Freq sweep, a Spread sweep, and each Type at three FB values.

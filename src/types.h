@@ -869,7 +869,7 @@ typedef struct {
 } tLabelLocation;
 
 // Placement for the per-module custom preview graphs (render_oscshpb_waveform_graph(),
-// render_envadsr_graph(), render_fltclassic_response_graph(), moduleGraphics.cpp) - each graph's
+// render_envelope_graph(), render_filter_response_graph(), moduleGraphics.c) - each graph's
 // own drawing/curve logic stays in its dedicated function, only the rect+anchor is table-driven.
 typedef struct {
     const tModuleType moduleType;

@@ -754,14 +754,14 @@ Sustain, Sustain down to the release target - where the engine's own segments al
 Attack curve types (envShapeStrMap's first word): 0=Log (default), 1=Lin, 2=Exp, 3=Lin.
 Decay/Release curve types (its second word): 0-2=Exp, 3=Lin - which env_fall_level() applies.
 
-## 61. in `render_envadsr_graph()`
+## 61. `env_graph_time_width()` (was in `render_envadsr_graph()`)
 
 Each segment's width comes from its OWN knob only, independent of the other two - 0.04
 (raw minimum, still clearly visible rather than a zero-width vertical line) up to 0.24
 (raw maximum). Whatever's left of the box after Attack+Decay+Release+the fixed Sustain
 width is just background.
 
-## 62. in `render_envadsr_graph()`
+## 62. in `render_envelope_graph()` (was `render_envadsr_graph()`)
 
 Where "envelope output = 0" sits, and how much of the box height its full swing covers -
 Pos/PosInv only ever go 0..+1 (manual: "0 units...up to +64"), so zero sits at the
@@ -912,3 +912,115 @@ The per-frame "nullify all the rectangles so stale ones cannot be clicked" loop 
 to be here is gone with the array: hit-testing comes from the click-region registry, and
 clear_click_regions() empties that at the top of every frame. A widget that is not drawn
 this frame is not registered this frame, which is the same guarantee without the bookkeeping.
+
+## 78. `render_shaper_transfer_graph()`
+
+The Shaper group's transfer curve: output against input across -1..+1, which is exactly what the
+manual says the original's graph shows (p.204, "The Y-axis represents the output signal values, and
+the X-axis the input signal values"). It evaluates `shaper_transfer()` - the engine's own function,
+see `paramCurves.c.md` §30 - so what is drawn is what the engine plays. That cuts both ways: apart
+from Rect those laws are the manual's shapes with GUESSED depths, and the graph is only as right as
+they are. When the ramp captures refit them, the graph follows with no edit here.
+
+The original draws one on Clip, Overdrive, Saturate, ShpExp and WaveWrap, and NOT on ShpStatic or
+Rect, whose pickers already carry their curves as icons (§47) - so those two get none here either.
+
+The amount drawn is the dial alone: the Mod input adds a live signal the face cannot know. Bypass
+does not flatten the curve, for the same reason the filter graphs ignore it - the graph shows what
+the settings do, and the Bypass button shows whether they are in use.
+
+PLACEMENT. The original's box is 34x22 at XPos 173-174 on a two-row face: through the transform in
+module-layout-rules.md that is 67.8% in and 13.3% wide. The width is kept; the position is not. At
+67.8% the box sat squarely over Saturate's and ShpExp's "Curve" label, and at the 0.59 zoom the owner
+works at - where text stops shrinking with the face - the label covered a third of it. The top-right
+corner is empty on all five faces, so all five boxes sit there, 4% in from the edge, rather than
+two of them being squashed to clear a label. Nor is the height the transform's 17%, which would run
+into the dials and jacks our faces keep along the bottom edge.
+
+## 79. `render_eq_response_graph()`
+
+Gain against frequency, 20 Hz to 20.5 kHz on a log axis and +-20 dB with 0 dB across the middle - the
+gain dials reach +-18. It evaluates `eq_magnitude()` on the bands `eq_bands_build()` builds for the
+engine (`paramCurves.c.md` §37, §38), so a cut is drawn exactly as wide as it is played: a cut mirrors
+the boost of the same size and is therefore far WIDER than it (§11.4 of the engine reference), which
+is the least intuitive thing about these three modules and worth being able to see.
+
+PLACEMENT. The original draws a 52x28 box on all three, at XPos 182 on EqPeak and Eq3band and 173 on
+Eq2Band. EqPeak takes the transformed position outright - 71.4% in and 20.4% wide, the filters' box.
+Eq2Band and Eq3band keep the width but end 15% from the right edge rather than 8%: our faces put their
+level meter at 86-89%, where the original had its input jack.
+
+## 80. `render_comb_response_graph()`
+
+FltComb's response on a LINEAR frequency axis spanning four teeth. A comb is periodic in linear
+frequency, and on the log axis the other filters use its teeth crowd together at the top: at the
+default Freq there are about sixty of them below 20 kHz, several to a pixel. So this graph shows the
+tooth SHAPE - which is what FB and Type change - and does not move with Freq, whose value the dial
+already reads out. Evaluates `flt_comb_magnitude()` (`paramCurves.c.md` §39), the law the engine
+plays; +-24 dB, since Peak at full FB reaches about +22.
+
+PLACEMENT. The original's box (52x28 at XPos 182) is where our face has its level meter, so the box
+is inset 16% from the right, as the EQs' are for the same reason. FltPhase, underneath it in most
+patches, takes the same position so the two line up.
+
+## 81. `render_phaser_response_graph()`
+
+FltPhase's response, 20 Hz to 20 kHz on a log axis, +-24 dB. It evaluates `flt_phase_magnitude()`,
+which is a MODEL the engine does not play (`paramCurves.c.md` §40): read the notch COUNT and the FB
+depth as measured, the notch POSITIONS as a fit made at one Freq, and what Spread does as a
+placeholder. Worth keeping in mind before trusting a fine detail of this graph over the ear.
+
+## 82. `render_vocoder_routing_graph()`
+
+The Vocoder's band routing - what the manual says the original's graph shows. Each synthesis band
+(along the bottom) gets a line up to the analysis band its BandSel names (along the top); Off draws
+none. The default routing is sixteen verticals, as in the original. Nothing is modelled: it is the
+sixteen parameters, drawn.
+
+The box runs from 10% to 90% of the width so its sixteen columns sit exactly over the sixteen BandSel
+buttons below it (each 5% wide, from 10%). The original's second Vocoder graph - a 154x12 strip at the
+height of its band buttons - is not reproduced; what it draws is not established.
+
+## 83. `env_graph_segments()`
+
+Every envelope module as a list of segments - a width, the level it ends at, and whether it is the
+sustain - which `render_envelope_graph()` draws the way the EnvADSR graph always drew itself: a rise
+along the Shape's attack curve, a fall along its decay curve, anything flat as a straight line, the
+sustain orange. EnvADSR became the first case of this on 2026-09-13 and draws exactly as before; the
+widths never add past 0.96 for it, so the scale-to-fit never touches it. The stages are the manual's
+(p.200-203):
+
+    EnvADSR, ModADSR    A to full, D to S, sustain at S, R to zero
+    EnvADR              A, then D to zero - or, in Release mode AND gated, a sustain at full then R.
+                        The manual: "When in [Rel] mode the Gate/Trig button must be set to Gate,
+                        else the module will still work as when in [Dcy] mode"
+    EnvAHD, ModAHD      A to full, held at full for H (green: a timed hold is not a sustain), D
+    EnvD                an instant rise, then D - "the attack time ... is immediate"
+    EnvH                instant on, H, instant off - "immediate attack and decay times"
+    EnvADDSR            A, D1 to L1, D2 to L2, R; the sustain at L1 or L2 as its Sustain button says
+    EnvMulti            T1-T4 to L1-L4, sustaining at L1, L2 or L3 as selected; "Trg" is none
+
+ModADSR and ModAHD have no Shape button: the manual fixes them at "Linear Attack & Exponential
+Decay/Release", which is LinExp. EnvD's decay is exponential for the same reason ("the release is
+exponential"), and EnvH has no curve to draw.
+
+WHERE AN ENVELOPE STARTS. At zero, except EnvMulti in Normal mode, which the manual says restarts
+from the L4 it last ended at; with Reset it restarts from zero. So the graph starts where a retrigger
+would.
+
+BIP AND BIPINV, on the modules that have them, keep the EnvADSR graph's reading of the manual: the
+sustaining level sits at the centre (zero) and the envelope ends at the far extreme. The segment
+leading into the sustain goes to zero too. EnvMulti is the exception the manual names - "full range
+(-64 to 64 units) in Bipolar" - so its levels are read as bipolar and drawn as set.
+
+WHEN THE SEGMENTS DO NOT FIT. EnvADDSR and EnvMulti can reach 1.2 of the box at full dials, so the
+whole envelope is scaled to fit when it overflows. That makes one segment's width depend on the
+others only then, which is the price of five timed segments in one box.
+
+PLACEMENT FOLLOWS EnvADSR, whose face is the one the owner is happy with (2026-09-13: "well spaced,
+roughly common and intuitive locations"); the rest are not finished. So every box starts 20% in, as
+EnvADSR's does, in the empty band across the top, and is only as short or as low as the face in its
+CURRENT state forces: EnvADR's three rows leave a strip 8.5% tall above its selectors, and EnvMulti's
+Gate and AM jacks push its box down to 20%. When a face is re-laid out on EnvADSR's pattern, its row
+in graphLocationList should become EnvADSR's {{20, 8}, {60, 16}}. EnvD and EnvH have two rows and no
+band to use; they take the shapers' top-right corner.

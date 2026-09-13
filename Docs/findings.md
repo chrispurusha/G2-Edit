@@ -9246,3 +9246,60 @@ LEVEL IS THE MIXER TAPER AGAIN: -17.7 dB at 64, -7.3 at 96.
 
 IN THE ENGINE the same day, by meter against the G2 at Level 64: 10 of 10 settings read the same -
 every Type at FB 32, 96 and 127, and no comb at FB 64.
+
+
+2026-09-13  MODULE GRAPHS: THE SHAPERS AND THE EQS
+------------------------------------------------------------------------------------------------------
+Eight more modules draw the graph the original editor draws on them: Clip, Overdrive, Saturate, ShpExp
+and WaveWrap their transfer curve (output against input, manual p.204), EqPeak, Eq2Band and Eq3band
+their gain against frequency. Chosen first because the engine already plays all eight, so each graph
+could draw the engine's own maths rather than a second copy of it.
+
+THE LAWS MOVED TO paramCurves.c, the file that already holds the filter curves for the same reason.
+The shaper transfer functions, the EQ gain/corner/damping laws, and the per-module mapping of which
+parameter is which (`shaper_settings_build()`, `eq_bands_build()`, each taking a parameter reader so
+the engine can pass its morph-following one and the graph the raw dial) now exist once. When the ramp
+captures refit the shapers' guessed depths, the pictures follow the sound with no second edit.
+The move was checked by compiling the HEAD engine code beside the new functions and comparing:
+37.9 million shaper samples across all seven types and random settings, and 60,000 EQ builds -
+bit-identical, 0 differences. So the engine plays exactly what it played before.
+
+THE GRAPH SURVEY, where it stands. Of the 43 modules that carry a graph in the original, 18 now draw
+one (the ten from August - OscShpA/B, LfoShpA, LfoB, EnvADSR and the five filters - plus these eight).
+The 25 left: the envelope family (AR-Env, EnvADR, EnvAHD, EnvD, EnvH, ModADSR, ModAHD, EnvADDSR,
+EnvMulti, EnvDX), Operator (two graphs), DXRouter, DrumSynth, PulseOsc, OscNoise, LfoD, FltComb,
+FltPhase, ShelvEQ, LevScaler, Mux8-1X, RndTrig, SeqA, SeqNote (two) and Vocoder (two). The envelope
+family is the obvious next batch: nine of the ten are ADSR variants that render_envadsr_graph()
+could serve with a per-module segment map.
+
+A DISAGREEMENT FOUND ON THE WAY, not fixed here: the engine plays ShpStatic's inverse curves as the
+exponents their names suggest, 1/3 and 1/2, where the 2026-08-24 capture measured 0.49 and 0.65 - and
+the picker icon draws the measured ones. Logged in todo.md.
+
+THE FILTER GROUP'S LAST THREE, the same day: FltComb, FltPhase and the Vocoder. That leaves 22 of the
+43. ShelvEQ, the one other filter-group graph in the original's resources, is not a module we have.
+  - FLTCOMB: its law moved to paramCurves.c like the shapers' and EQs' - bit-identical again, 10,659
+    delay and feedback values checked against HEAD across five sample rates. Drawn on a LINEAR axis
+    over four teeth, since a comb is periodic in linear frequency.
+  - FLTPHASE IS A MODEL, and the first of this module anywhere in the code - the engine does not play
+    it and the 2026-08-29 captures were not kept. What made it worth building: N identical
+    second-order allpass sections, one free parameter, land all six recorded first-notch positions
+    at 0.27 dB rms, with the centre exactly an octave above the Freq dial. And reading FB as a mix,
+    g = (FB - 64)/64, with the three Types as 1 + gA, 1/(1 - gA) and (1 + gA)/(1 - gA), reproduces
+    both notch depths (-6/-12 against -7/-13 measured) and Deep's "about 5 dB" (4.9). Freq tracking
+    and above all SPREAD are assumed - paramCurves.c notes §40, and the sweep that would settle it is
+    in todo.md.
+  - VOCODER: the band routing, sixteen lines from each synthesis band to the analysis band its
+    BandSel names. Exact - nothing is modelled.
+
+THE ENVELOPES, the same day: all nine now draw, from ONE renderer. EnvADSR's graph was rewritten as the
+first case of a per-module segment list (moduleGraphics.c notes §83) and draws exactly as before; the
+other eight - EnvADR, EnvAHD, EnvD, EnvH, ModADSR, ModAHD, EnvADDSR, EnvMulti - take their stages from
+the manual's module pages. The widths stay what EnvADSR's always were, schematic rather than to time:
+0.5 ms to 45 s will not draw to scale in a box.
+  PLACEMENT FOLLOWS EnvADSR's FACE, the one the owner is happy with; the others are not finished, so
+  each box is as close to EnvADSR's as the face allows today and is one table row to move when the
+  face is re-laid out (todo.md).
+  THE SURVEY NOW: of the original's 43, 29 are drawn. Of the 14 left, two are not modules we have
+  (AR-Env, ShelvEQ) and EnvDX is Operator's own envelope, leaving Operator (two graphs), DXRouter,
+  DrumSynth, PulseOsc, OscNoise, LfoD, LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two).
