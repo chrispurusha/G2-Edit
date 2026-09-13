@@ -9485,3 +9485,34 @@ Op2 at x14 for the tine, 5 voices poly, the Operators named Op1-Op6. Every value
   chain builds ("Playing 2 modules"), a held note peaks at 0.85 raw and falls to 0.005 three seconds
   after release. The laws are the DX7's; FM depth, feedback amount, the Main output's scaling and the
   level-scaling size are NOT measured on the G2 (§14.3-14.5).
+
+2026-09-13 - MONO AND LEGATO NOW VOICE AS THE G2 DOES (sound-engine-reference §15). CT: "on synth,
+patch in mono mode, if I hold a keyboard note, press another, then release the note, the old note
+sounds again. On our sound engine, we don't play the original note." Two separate faults and one
+wrong model:
+  - The computer keyboard's note entry had one sounding note: releasing the key playing silenced
+    everything with another key still down, on the engine and on the G2 alike. A MIDI keyboard was
+    never affected - the note stack fell back to a held key, which an offline harness confirmed.
+  - THE STACK FELL BACK TO THE WRONG KEY. The G2 goes back to the HIGHEST key still held, not the
+    newest: hold G, play C, then E, let E go and G sounds. The return happens only when the key let go
+    was the one sounding.
+  - The decision now lives in the engine, which keeps its own record of the keys held; the note stack
+    and the computer keyboard pass every key through, and the computer keyboard plays chords in Poly.
+    Mono restarts the envelopes on every change of note, the return included; Legato on neither.
+  - Found alongside: a Poly steal spares the voice with the lowest note when the new note is higher
+    (the manual's "keep the lowest note sounding"), a repeated key takes a fresh voice and lets the
+    old release ring, and PATCH GLIDE IS CONSTANT RATE (manual: time per octave) - the engine's was an
+    exponential approach, which covered any interval in the same time.
+  Checked offline only (to-test.md has the list for the instrument).
+
+2026-09-13 - THREE ENGINE LAWS CORRECTED while reading factory patch 01 Mini Emulator (whose octave
+switches are Constants 12 units apart) - sound-engine-reference §16:
+  - CONSTANT BIP/UNI WAS REVERSED. The switch reads 0 for Bipolar; the engine treated 0 as Unipolar,
+    so every Constant played in the other mode. Bipolar is now (value - 64) units and Unipolar value/2,
+    127 reading 64 in both, as the dial displays.
+  - PITCH INPUTS ARE 1 UNIT A SEMITONE (the manual says so outright), not 12 semitones at full scale.
+    Anything patched into an oscillator's or FltMulti's/FltComb's Pitch or PitchVar now moves it five
+    times further - vibrato from an LFO included.
+  - EnvADSR Sustain is dial/128, not dial/127.
+  The mixer, LevAmp and mod-amount laws could not be checked the same way: the dial value reaches the
+  DSP raw and the law lives in its tables. The envelope time table likewise.

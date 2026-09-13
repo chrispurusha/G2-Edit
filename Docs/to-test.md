@@ -141,21 +141,23 @@ Full detail for each is in findings.md, searchable by the wording below.
   leave the editor open on a playing patch for a few minutes - it should stay as responsive as the
   application, and Activity Monitor should show Live's memory flat. For numbers, `launchctl setenv
   G2_PLUGIN_FRAME_STATS 1` before starting Live, and Console shows a line a second from the editor.
-- ***MONO NOW RESTARTS THE ENVELOPES, LEGATO STILL DOES NOT (2026-09-11)*** - a key played over a
-  held one landed on a voice whose gate was already open, so no envelope ever restarted: every mode
-  behaved as Legato, and with no sustain the second key was silent. Checked offline on SimpleLead
-  with attack 0, decay 40, sustain 0: the second key's first 100 ms went from 0.00032 RMS to 0.01087
-  in Mono, and stayed 0.00032 in Legato and 0.01212 in Poly. STILL TO CHECK against the G2, same
-  patch in both: (1) Mono, hold a key, play another - it should sound, as CT reports the hardware
-  does; (2) Legato the same - it should NOT restart; (3) Mono, let the second key go with the first
-  still held - the engine now restarts the envelope on the note it returns to, and whether the
-  hardware does that too is not known.
-- ***COMPUTER-KEYBOARD NOTE ENTRY RETURNS TO A HELD KEY (2026-09-13)*** - hold A, play S, let S go:
-  A sounds again, on the engine and on the G2. Before, the release of S silenced everything. A MIDI
-  keyboard already did this through noteStack.c, which checks offline on SimpleLead and DXTest in
-  Mono and Legato. The new note is now sent to the G2 BEFORE the old one is released, so Legato on
-  the G2 binds rather than retriggering. STILL TO CHECK by hand, both targets, Mono then Legato:
-  the return, then a roll from key to key (Legato should glide on without restarting).
+- ***CONSTANT POLARITY AND PITCH-INPUT SCALE CORRECTED (2026-09-13)*** - reference §16. STILL TO
+  CHECK, engine against the G2: (1) a Constant set Bipolar at 76 into an OscA's Pitch input, KBT off -
+  an octave above E4 (659 Hz), and Unipolar at 76 (38 units) 38 semitones above E4; (2) an
+  LFO at full depth into a Pitch input sweeps about five octaves each way on both; (3) a patch with
+  vibrato from an LFO into PitchVar - the engine's used to be a fifth as deep.
+- ***THE ENGINE VOICES LIKE THE G2 (2026-09-13)*** - reference §15. The engine keeps the keys held
+  itself; Mono and Legato go back to the HIGHEST key still held (not the newest); Mono restarts the
+  envelopes on every change of note including that return, Legato on neither; a Poly steal spares
+  the lowest note; patch glide is constant rate. The computer keyboard now sends every key to both
+  targets, so it plays chords in Poly. Checked offline on SimpleLead with a plucked envelope (attack
+  0, decay 40, sustain 0), first 100 ms after each event: Mono 0.018 RMS on each new key and 0.0105
+  on the return, Legato 0.0008 and below; hold 67, 60, 64, let 64 go -> 67, let 67 go -> 60. Poly, 2
+  voices: 48, 60, 72 keeps 48 and drops 60. STILL TO CHECK, engine against the G2 with the same
+  patch, from the computer keyboard and a MIDI keyboard: (1) Mono, hold G, play C, play E, let E go -
+  G should sound and restart; (2) Legato the same - G without a restart; (3) Poly at 2 voices, hold
+  C3 and C4, play C5 - C3 should survive; (4) glide Normal: an octave should take about twice as
+  long as a fifth; (5) a chord from the computer keyboard in Poly.
 - ***THE PLUG-IN WRAPPERS ARE PER-INSTANCE NOW (2026-09-11)*** - SynthLib's VST3 and AU wrappers were
   reworked so several copies of a plug-in can be loaded at once (a controller finds its own processor
   through the host's connection, not a global), and the saved state moved from "SLP1" to "SLP2".

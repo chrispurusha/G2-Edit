@@ -42,6 +42,7 @@ typedef struct {
     int32_t        noteOn;                 // the sounding note, -1 when silent
     int32_t        lastNote;               // last note played, -1 if none yet — what Repeat re-strikes
     int32_t        sustainedNote;          // shift-latched note, left ringing after its key is released; -1 = none
+    int32_t        ringingNote;            // left sounding after its key came up (latch, Drone, Repeat); -1 = none
     int32_t        heldKey[VKB_HELD_MAX];  // computer keys down for note entry, oldest first
     int32_t        heldNote[VKB_HELD_MAX]; // the note each of those keys started
     uint32_t       heldCount;

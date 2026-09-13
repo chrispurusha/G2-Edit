@@ -703,3 +703,11 @@ The 32 DX7 algorithms as who-modulates-whom: one target bitmask per operator and
 two ends, from the published DX7 algorithm chart. Moved here from moduleGraphics.c on 2026-09-13 so the
 DXRouter graph (moduleGraphics.c notes §85) and the sound engine (sound-engine-reference §14) read the
 same table - the engine cannot include the graph code.
+
+## 44. `constant_level()`
+
+A Constant's output as the engine carries it, 1.0 being 64 units. Bipolar is (value - 64) units and
+Unipolar value / 2, with 127 reading exactly 64 in both - the top step is the one exception to either
+straight line, as on every G2 level dial. The same law the dial displays (renderParams.c
+`render_paramType1BipLevel()`). LevAdd's offset follows it too, when that module is added
+(Docs/mini-emulator-engine-plan.md). Sound engine reference §16.1.
