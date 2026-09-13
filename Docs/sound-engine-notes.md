@@ -68,18 +68,8 @@ same waveform in both and A's fifth is B's seventh - see kShpAWave.
 
 ## 8. `CLIP_PARAM_LEVEL_MOD`
 
-SHAPER GROUP - Clip, Overdrive, Saturate, ShpExp, WaveWrap, ShpStatic and Rect (manual p.204-207).
-
-Every one of these is MEMORYLESS: the output depends only on the present input sample, through
-what the manual calls a transfer function and draws as a graph. That is why they arrive as one
-node kind carrying a mode rather than as seven, and why they cost nothing to run at audio rate -
-which is exactly what the G2 means by a control module promoted to audio.
-
-THE ORDERS ARE NOT UNIFORM AND ARE NOT GUESSES WORTH REPEATING FROM MEMORY. WaveWrap lists its
-modulation depth BEFORE its amount and its Mod jack BEFORE its In jack; Overdrive and Clip list
-the mod dial first but the In jack first; Saturate and ShpExp list the amount first. Every one of
-these came from the layout tables in moduleResources.h, and none is confirmed against the
-instrument yet.
+Moved with the code to `code-notes/paramCurves.c.md` §30 on 2026-09-13, when the Shaper group's
+laws became shared with the graphs drawn on the modules.
 
 ## 9. `DELAY_PARAM_TIME`
 
@@ -1667,7 +1657,7 @@ at dial 24, 1.3905 against 2.7809 at 127), which is what a fold looks like.
 A + B is the widest separation (4.571 ms) and A - B is the centre's swing (0.685 ms); both were
 measured, and the pair reproduces the centre range 2.334..3.020 against a measured 2.341..3.026.
 
-## 106. `shaper_odd_power()`
+## 106. `pulse_step()`
 
 A one-shot gate: a rising edge at the input starts it, and it stays high for the width above.
 
@@ -1676,77 +1666,32 @@ instrument does, and it matters only for an input faster than the width — the 
 fires one edge per note, so nothing there depends on it.
 
 ------------------------------------------------------------------------------------------------
-SHAPER GROUP
-
-Seven memoryless transfer functions, sharing one entry point. Full scale is +-1.0 here, which is
-the +-64 units the manual quotes for the instrument's headroom.
-
-HOW MUCH OF THIS IS KNOWN. Rect is EXACT: the manual states all four operations in words, and
-there is no dial to get wrong. ShpStatic's four labels - Inv x3, Inv x2, x2, x3 - name their own
-curves, so its SHAPE is known and only whether the instrument normalises them is not. Everything
-else here is structurally right and numerically a guess: the manual describes the family (a
-logarithmic curve for Saturate, an exponential one for ShpExp, four named overdrive characters,
-a fold rather than a clip for WaveWrap) but names no constant anywhere.
-
-THESE ARE THE CHEAPEST MEASUREMENTS LEFT. A memoryless module gives up its ENTIRE transfer
-function to one capture: send a slow full-scale ramp - or simply a low sine, which sweeps every
-input level twice per cycle - through it and plot output against input. One capture per mode,
-no impulse, no windowing, no decay fitting. See to-test.md.
+The Shaper group overview that stood here moved with the code to `code-notes/paramCurves.c.md` §30
+on 2026-09-13.
 
 ## 107. in `shaper_step()`
 
-shpStaticStrMap is {"Inv x3", "Inv x2", "x2", "x3"}: the inverses are the roots, so
-the four exponents are 1/3, 1/2, 2 and 3. Every one of them leaves full scale at
-full scale and moves only what is between, which is what "amplification/attenuation
-characteristic" means on the module's own buttons.
+Moved with the code to `code-notes/paramCurves.c.md` §31 (ShpStatic) on 2026-09-13.
 
 ## 108. in `shaper_step()`
 
-shpExpCurveStrMap is {"x2", "x3", "x4", "x5"}, and Amount morphs the EXPONENT from
-linear towards the named curve rather than crossfading between two signals. That
-keeps full scale at full scale at every setting, which is the property the manual
-describes when it warns the module wants a fixed-amplitude input: the output falls
-exponentially only as the INPUT falls.
+Moved to `code-notes/paramCurves.c.md` §32 (ShpExp).
 
 ## 109. in `shaper_step()`
 
-"Shapes an input signal in a logarithmic fashion", Curve 1 smooth and Curve 4 hard.
-A log curve normalised to unity at full scale: y = log(1 + k|x|) / log(1 + k), with
-k rising with both the Curve selector and the Amount dial, and k -> 0 giving back a
-straight line. Structure from the manual, k range UNMEASURED.
+Moved to `code-notes/paramCurves.c.md` §33 (Saturate).
 
 ## 110. in `shaper_step()`
 
-Amplify, then fold. Up to 19 dB of drive, which is four folds on a full-scale input -
-the "deep distortion and FM-like characteristics" of the manual.
-
-THE MAXIMUM DRIVE IS ODD ON PURPOSE. shaper_fold() returns exactly zero at every EVEN
-integer, so an even maximum - 16 was the first thing written here - sends full scale
-to silence at the top of the dial, and a full-scale input then vanishes exactly where
-the module should be at its most extreme. Nine folds full scale back to full scale.
+Moved to `code-notes/paramCurves.c.md` §34 (WaveWrap).
 
 ## 111. in `shaper_step()`
 
-Drive into a soft limiter whose KNEE is what the four type names select:
-y = x / (1 + |x|^n)^(1/n) reaches +-1 asymptotically, gently for a small n and
-almost squarely for a large one. odTypeStrMap is {Soft, Hard, Fat, Heavy}, so Fat
-takes the most drive and Hard the sharpest knee.
-
-AMOUNT BOTH DRIVES AND MIXES, and the mix is what makes zero mean zero. The limiter
-bends the curve at every drive setting, unity included - x/(1+x^2)^(1/2) is already
-3 dB down at full scale with no drive at all - so a dial that only fed the drive
-would leave the module audibly distorting with its depth control shut. Crossfading
-the shaped signal against the dry one by the same dial is the only construction here
-that reaches genuine transparency at 0 and full character at 127. Which of the two
-the instrument actually does is UNMEASURED; that it is transparent at 0 is not in
-doubt, since the module has no separate bypass reading of its own dial.
+Moved to `code-notes/paramCurves.c.md` §35 (Overdrive).
 
 ## 112. in `shaper_step()`
 
-"Decreasing the clip level limit below the normal headroom": the dial LOWERS the
-threshold rather than raising a gain, which is why the manual warns the level drops
-as it opens and suggests a feedback loop to get it back. 36 dB of travel is a guess;
-only the direction is from the manual.
+Moved to `code-notes/paramCurves.c.md` §36 (Clip).
 
 ## 113. `chorus_triangle()`
 

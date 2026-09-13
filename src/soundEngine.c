@@ -186,57 +186,25 @@ typedef enum {
 
 // OscShpB lays its parameters out differently from OscB — Active is 8, not 9, and the waveform is
 // at 10 with eight choices rather than at 8 with five.
-#define SHPB_PARAM_TUNE            (0)
-#define SHPB_PARAM_CENT            (1)
-#define SHPB_PARAM_KBT             (2)
-#define SHPB_PARAM_PITCH_MOD       (3)
-#define SHPB_PARAM_PITCH_TYPE      (4)
-#define SHPB_PARAM_SHAPE           (6)
-#define SHPB_PARAM_ACTIVE          (8)
+#define SHPB_PARAM_TUNE          (0)
+#define SHPB_PARAM_CENT          (1)
+#define SHPB_PARAM_KBT           (2)
+#define SHPB_PARAM_PITCH_MOD     (3)
+#define SHPB_PARAM_PITCH_TYPE    (4)
+#define SHPB_PARAM_SHAPE         (6)
+#define SHPB_PARAM_ACTIVE        (8)
 
 // notes §6
-#define SHPB_MODE_WAVEFORM         (0)
+#define SHPB_MODE_WAVEFORM       (0)
 
 // notes §7
-#define SHPA_PARAM_TUNE            (0)
-#define SHPA_PARAM_CENT            (1)
-#define SHPA_PARAM_KBT             (2)
-#define SHPA_PARAM_PITCH_MOD       (3)
-#define SHPA_PARAM_SHAPE           (7)
-#define SHPA_PARAM_WAVEFORM        (9)
-#define SHPA_PARAM_ACTIVE          (10)
-
-// notes §8
-#define CLIP_PARAM_LEVEL_MOD       (0)
-#define CLIP_PARAM_LEVEL           (1)
-#define CLIP_PARAM_SHAPE           (2)
-#define CLIP_PARAM_ACTIVE          (3)
-
-#define OD_PARAM_AMOUNT_MOD        (0)
-#define OD_PARAM_AMOUNT            (1)
-#define OD_PARAM_ACTIVE            (2)
-#define OD_PARAM_TYPE              (3)
-#define OD_PARAM_SHAPE             (4)
-
-#define SAT_PARAM_AMOUNT           (0)
-#define SAT_PARAM_AMOUNT_MOD       (1)
-#define SAT_PARAM_ACTIVE           (2)
-#define SAT_PARAM_CURVE            (3)
-
-#define SHPEXP_PARAM_AMOUNT        (0)
-#define SHPEXP_PARAM_AMOUNT_MOD    (1)
-#define SHPEXP_PARAM_ACTIVE        (2)
-#define SHPEXP_PARAM_CURVE         (3)
-
-#define WRAP_PARAM_AMOUNT_MOD      (0)
-#define WRAP_PARAM_AMOUNT          (1)
-#define WRAP_PARAM_ACTIVE          (2)
-
-#define SHPSTATIC_PARAM_MODE       (0)
-#define SHPSTATIC_PARAM_ACTIVE     (1)
-
-#define RECT_PARAM_MODE            (0)
-#define RECT_PARAM_ACTIVE          (1)
+#define SHPA_PARAM_TUNE          (0)
+#define SHPA_PARAM_CENT          (1)
+#define SHPA_PARAM_KBT           (2)
+#define SHPA_PARAM_PITCH_MOD     (3)
+#define SHPA_PARAM_SHAPE         (7)
+#define SHPA_PARAM_WAVEFORM      (9)
+#define SHPA_PARAM_ACTIVE        (10)
 
 // Pulse: a one-shot gate fired by a RISING EDGE at its input. Time and Range set how long it stays
 // high; there is no power button, so it is always live.
@@ -555,18 +523,6 @@ typedef enum {
 #define VOICE_MAX_TAIL_SECONDS    (2.0)
 #define VOICE_FADE_SECONDS        (0.03)
 
-// Which of the seven transfer functions a shaper node carries. Stored rather than re-derived from
-// the module type so the render loop never reaches back into the patch database.
-typedef enum {
-    eShaperClip = 0,
-    eShaperOverdrive,
-    eShaperSaturate,
-    eShaperShpExp,
-    eShaperWaveWrap,
-    eShaperShpStatic,
-    eShaperRect,
-} tShaperKind;
-
 typedef enum {
     eNodeOsc = 0,        // OscB
     eNodeOscShp,         // OscShpB — a different parameter layout and waveform set
@@ -652,32 +608,20 @@ typedef struct {
     double          refLevel;     // the level the compressor drives TOWARDS - see compress_step()
     double          attackCoeff;
     double          releaseCoeff;
-    // Shaper group. `shaperIn` is which input leg carries the signal rather than the modulation,
-    // because WaveWrap puts its Mod jack FIRST and every other shaper puts it second.
-    uint32_t        shaperKind;    // tShaperKind
-    uint32_t        shaperCurve;   // the Type/Curve/Mode drop-down, raw - a mode carries no morph
-    bool            shaperSym;     // Clip and Overdrive: Sym shapes both halves, Asym the positive one
-    double          shaperAmount;  // the dial, 0..1
-    double          shaperMod;     // the modulation attenuator, 0..1
-    uint32_t        shaperIn;      // input leg carrying the signal; the other one is the modulation
+    // Shaper group. Stored rather than re-derived from the module type so the render loop never
+    // reaches back into the patch database.
+    tShaperSettings shaper;
 
-    double          constant;      // Constant module's value
+    double          constant;        // Constant module's value
     // Fade family (§4); the position rides on the shape smoother.
-    double          noisePole;     // Noise: the one-pole low-pass's feedback coefficient, from Color
-    double          noiseGain;     // and the gain that keeps its level where the instrument's is
-    double          oscNoiseWidth; // §8.3, as a dial fraction
+    double          noisePole;       // Noise: the one-pole low-pass's feedback coefficient, from Color
+    double          noiseGain;       // and the gain that keeps its level where the instrument's is
+    double          oscNoiseWidth;   // §8.3, as a dial fraction
     double          oscNoiseWidthMod;
-    bool            fltSixDb;      // FltMulti dB/Oct: 0 is 6 dB
-    bool            fltGainComp;   // FltMulti GComp
-    double          eqInputLevel;  // §11
-    double          eqLowHz;       // 0 = no low shelf
-    double          eqLowGain;
-    double          eqHighHz;      // 0 = no high shelf
-    double          eqHighGain;
-    double          eqPeakHz;      // 0 = no peak
-    double          eqPeakDamping;
-    double          eqPeakGain;
-    double          dualSquareLevel;   // §12
+    bool            fltSixDb;        // FltMulti dB/Oct: 0 is 6 dB
+    bool            fltGainComp;     // FltMulti GComp
+    tEqBands        eq;              // §11
+    double          dualSquareLevel; // §12
     double          dualSawLevel;
     double          dualSubLevel;
     double          dualSawPhase;      // a fraction of a cycle
@@ -2363,114 +2307,44 @@ static tModule * voice_area_output_for_fx(uint32_t slot, uint32_t wantedBus) {
     return NULL;
 }
 
-static const double kEqLowShelfHz[]  = {80.0, 110.0, 160.0};      // §11.2
-static const double kEqHighShelfHz[] = {8000.0, 6000.0, 12000.0}; // measured order, not the names'
-
-#define EQ_MID_OCTAVES    (1.0)    // §11.3
-
-static double eq_dial_gain(double dial) {
-    return pow(10.0, ((dial - 64.0) * (18.0 / 64.0)) / 20.0);    // §11.1
-}
-
-static double eq_peak_damping(double octaves) {
-    double ratio = exp2(octaves);
-
-    return 2.0 * (ratio - 1.0) / sqrt(ratio);
-}
-
-// §11.4 - a cut mirrors the boost of the same size.
-static void eq_mirror_cuts(tEngineNode * node) {
-    if ((node->eqLowHz > 0.0) && (node->eqLowGain < 1.0)) {
-        node->eqLowHz /= node->eqLowGain;
-    }
-
-    if ((node->eqHighHz > 0.0) && (node->eqHighGain < 1.0)) {
-        node->eqHighHz *= node->eqHighGain;
-    }
-
-    if ((node->eqPeakHz > 0.0) && (node->eqPeakGain < 1.0)) {
-        node->eqPeakDamping /= node->eqPeakGain;
-    }
-}
-
-static double eq_shelf_hz(const double * table, uint32_t selector) {
-    return table[(selector > 2u) ? 2u : selector];
-}
-
 static void eq_build(tEngineNode * node, tModule * module, uint32_t variation) {
-    node->eqLowHz  = 0.0;
-    node->eqHighHz = 0.0;
-    node->eqPeakHz = 0.0;
-
-    switch (module->type) {
-        case moduleTypeEqPeak:
-        {
-            node->eqPeakHz      = flt_cutoff_hz(param_value(module, variation, 0));
-            node->eqPeakGain    = eq_dial_gain(param_value(module, variation, 1));
-            node->eqPeakDamping = eq_peak_damping((128.0 - param_value(module, variation, 2)) / 64.0);
-            node->active        = (param_value(module, variation, 3) != 0.0);
-            node->eqInputLevel  = mix_level_gain(param_value(module, variation, 4));
-            break;
-        }
-        case moduleTypeEq2Band:
-        {
-            node->eqLowGain    = eq_dial_gain(param_value(module, variation, 0));
-            node->eqHighGain   = eq_dial_gain(param_value(module, variation, 1));
-            node->eqInputLevel = mix_level_gain(param_value(module, variation, 2));
-            node->active       = (param_value(module, variation, 3) != 0.0);
-            node->eqLowHz      = eq_shelf_hz(kEqLowShelfHz, module->param[variation][4].value);
-            node->eqHighHz     = eq_shelf_hz(kEqHighShelfHz, module->param[variation][5].value);
-            break;
-        }
-        default:
-        {
-            node->eqLowGain     = eq_dial_gain(param_value(module, variation, 0));
-            node->eqPeakGain    = eq_dial_gain(param_value(module, variation, 1));
-            node->eqPeakHz      = 100.0 * pow(80.0, param_value(module, variation, 2) / 127.0);
-            node->eqPeakDamping = eq_peak_damping(EQ_MID_OCTAVES);
-            node->eqHighGain    = eq_dial_gain(param_value(module, variation, 3));
-            node->eqInputLevel  = mix_level_gain(param_value(module, variation, 4));
-            node->active        = (param_value(module, variation, 5) != 0.0);
-            node->eqLowHz       = eq_shelf_hz(kEqLowShelfHz, module->param[variation][6].value);
-            node->eqHighHz      = eq_shelf_hz(kEqHighShelfHz, module->param[variation][7].value);
-            break;
-        }
-    }
-    eq_mirror_cuts(node);
+    eq_bands_build(module, variation, param_value, &node->eq);
+    node->active = node->eq.active;
 }
 
 // §11 - the shelves, then the peak; each adds its boost to what passes through.
 static double eq_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input) {
     SE_LOCAL;
 
-    double * state  = gLadder[voice][node];       // low shelf, high shelf, the peak's two
-    double   signal = input * spec->eqInputLevel;
+    const tEqBands * eq     = &spec->eq;
+    double *         state  = gLadder[voice][node];       // low shelf, high shelf, the peak's two
+    double           signal = input * eq->inputLevel;
 
-    if (spec->eqLowHz > 0.0) {
-        double pole = exp(-2.0 * M_PI * spec->eqLowHz / gSampleRate);
+    if (eq->lowHz > 0.0) {
+        double pole = exp(-2.0 * M_PI * eq->lowHz / gSampleRate);
 
         state[0] += (1.0 - pole) * (signal - state[0]);
-        signal   += (spec->eqLowGain - 1.0) * state[0];
+        signal   += (eq->lowGain - 1.0) * state[0];
     }
 
-    if (spec->eqHighHz > 0.0) {
-        double pole = exp(-2.0 * M_PI * spec->eqHighHz / gSampleRate);
+    if (eq->highHz > 0.0) {
+        double pole = exp(-2.0 * M_PI * eq->highHz / gSampleRate);
         double half = 0.5 * (1.0 + pole) * signal;
         double high = state[1] + half;
 
         state[1] = (pole * high) - half;
-        signal  += (spec->eqHighGain - 1.0) * high;
+        signal  += (eq->highGain - 1.0) * high;
     }
 
-    if (spec->eqPeakHz > 0.0) {                               // §11.5
-        double g       = tan(M_PI * fmin(spec->eqPeakHz, gSampleRate * 0.45) / gSampleRate);
-        double damping = spec->eqPeakDamping;
+    if (eq->peakHz > 0.0) {                                   // §11.5
+        double g       = tan(M_PI * fmin(eq->peakHz, gSampleRate * 0.45) / gSampleRate);
+        double damping = eq->peakDamping;
         double high    = (signal - ((damping + g) * state[2]) - state[3]) / (1.0 + (damping * g) + (g * g));
         double band    = (g * high) + state[2];
 
         state[2] = (g * high) + band;
         state[3] = (2.0 * g * band) + state[3];
-        signal  += (spec->eqPeakGain - 1.0) * damping * band;
+        signal  += (eq->peakGain - 1.0) * damping * band;
     }
     return signal;
 }
@@ -2821,7 +2695,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->cutoffParam  = param_value(module, variation, 0);
             node->modAmount    = dial_fraction(param_value(module, variation, 1));
             node->fltKbt       = param_value(module, variation, 2) * 0.25;
-            node->combFeedback = (param_value(module, variation, 3) - 64.0) / 64.0;
+            node->combFeedback = flt_comb_feedback(param_value(module, variation, 3));
             node->combFbMod    = dial_fraction(param_value(module, variation, 4));
             node->combType     = module->param[variation][5].value;
             node->combLevel    = mix_level_gain(param_value(module, variation, 6));
@@ -2893,80 +2767,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeShaper:
         {
-            // Each module names its own dials; the drop-downs are read raw because a drop-down
-            // cannot carry a morph (manual p.20). Where a module has no dial at all - ShpStatic and
-            // Rect are pure mode selectors - the amount stays at full and nothing reads it.
-            node->shaperAmount = 1.0;
-            node->shaperMod    = 0.0;
-            node->shaperCurve  = 0;
-            node->shaperSym    = true;
-            node->shaperIn     = 0;
-            node->active       = true;
-
-            switch (module->type) {
-                case moduleTypeClip:
-                {
-                    node->shaperKind   = eShaperClip;
-                    node->shaperAmount = param_value(module, variation, CLIP_PARAM_LEVEL) / 127.0;
-                    node->shaperMod    = param_value(module, variation, CLIP_PARAM_LEVEL_MOD) / 127.0;
-                    node->shaperSym    = (module->param[variation][CLIP_PARAM_SHAPE].value != 0);
-                    node->active       = (param_value(module, variation, CLIP_PARAM_ACTIVE) != 0.0);
-                    break;
-                }
-                case moduleTypeOverdrive:
-                {
-                    node->shaperKind   = eShaperOverdrive;
-                    node->shaperAmount = param_value(module, variation, OD_PARAM_AMOUNT) / 127.0;
-                    node->shaperMod    = param_value(module, variation, OD_PARAM_AMOUNT_MOD) / 127.0;
-                    node->shaperCurve  = module->param[variation][OD_PARAM_TYPE].value;
-                    node->shaperSym    = (module->param[variation][OD_PARAM_SHAPE].value != 0);
-                    node->active       = (param_value(module, variation, OD_PARAM_ACTIVE) != 0.0);
-                    break;
-                }
-                case moduleTypeSaturate:
-                {
-                    node->shaperKind   = eShaperSaturate;
-                    node->shaperAmount = param_value(module, variation, SAT_PARAM_AMOUNT) / 127.0;
-                    node->shaperMod    = param_value(module, variation, SAT_PARAM_AMOUNT_MOD) / 127.0;
-                    node->shaperCurve  = module->param[variation][SAT_PARAM_CURVE].value;
-                    node->active       = (param_value(module, variation, SAT_PARAM_ACTIVE) != 0.0);
-                    break;
-                }
-                case moduleTypeShpExp:
-                {
-                    node->shaperKind   = eShaperShpExp;
-                    node->shaperAmount = param_value(module, variation, SHPEXP_PARAM_AMOUNT) / 127.0;
-                    node->shaperMod    = param_value(module, variation, SHPEXP_PARAM_AMOUNT_MOD) / 127.0;
-                    node->shaperCurve  = module->param[variation][SHPEXP_PARAM_CURVE].value;
-                    node->active       = (param_value(module, variation, SHPEXP_PARAM_ACTIVE) != 0.0);
-                    break;
-                }
-                case moduleTypeWaveWrap:
-                {
-                    // THE ONLY SHAPER WHOSE MOD JACK COMES FIRST, so its signal is on leg 1.
-                    node->shaperKind   = eShaperWaveWrap;
-                    node->shaperAmount = param_value(module, variation, WRAP_PARAM_AMOUNT) / 127.0;
-                    node->shaperMod    = param_value(module, variation, WRAP_PARAM_AMOUNT_MOD) / 127.0;
-                    node->shaperIn     = 1;
-                    node->active       = (param_value(module, variation, WRAP_PARAM_ACTIVE) != 0.0);
-                    break;
-                }
-                case moduleTypeShpStatic:
-                {
-                    node->shaperKind  = eShaperShpStatic;
-                    node->shaperCurve = module->param[variation][SHPSTATIC_PARAM_MODE].value;
-                    node->active      = (param_value(module, variation, SHPSTATIC_PARAM_ACTIVE) != 0.0);
-                    break;
-                }
-                case moduleTypeRect:
-                default:
-                {
-                    node->shaperKind  = eShaperRect;
-                    node->shaperCurve = module->param[variation][RECT_PARAM_MODE].value;
-                    node->active      = (param_value(module, variation, RECT_PARAM_ACTIVE) != 0.0);
-                    break;
-                }
-            }
+            // The drop-downs are read raw because a drop-down cannot carry a morph (manual p.20).
+            shaper_settings_build(module, variation, param_value, &node->shaper);
+            node->active = node->shaper.active;
             break;
         }
         case eNodeConstant:
@@ -3611,51 +3414,18 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
 }
 
 // notes §105
-#define CHORUS_RATE_MAX_HZ    (1.3905)             // 0.010949 Hz per dial step
-#define CHORUS_CENTRE_S       (0.002677)           // the fixed point both taps pass through
-#define CHORUS_TAP_A_S        (0.002628)           // one tap swings this far...
-#define CHORUS_TAP_B_S        (0.001943)           // ...the other the opposite way by THIS much
-#define MS_SQRT1_2            (0.70710678118654752)
-#define CHORUS_WET_A          (1.4742)             // wet/dry ratio law - see chorus_tap()
-#define CHORUS_WET_B          (0.7744)
-#define CHORUS_BLEND_K        (0.9542)             // overall trim on the pair of blend gains
+#define CHORUS_RATE_MAX_HZ            (1.3905)   // 0.010949 Hz per dial step
+#define CHORUS_CENTRE_S               (0.002677) // the fixed point both taps pass through
+#define CHORUS_TAP_A_S                (0.002628) // one tap swings this far...
+#define CHORUS_TAP_B_S                (0.001943) // ...the other the opposite way by THIS much
+#define MS_SQRT1_2                    (0.70710678118654752)
+#define CHORUS_WET_A                  (1.4742)   // wet/dry ratio law - see chorus_tap()
+#define CHORUS_WET_B                  (0.7744)
+#define CHORUS_BLEND_K                (0.9542)   // overall trim on the pair of blend gains
 
-// notes §106
-static double shaper_odd_power(double x, double p) {
-    // |x|^p with the sign carried through: an odd-symmetric power curve, which is what a shaper
-    // graph that passes through the origin unchanged has to be.
-    if (x < 0.0) {
-        return -pow(-x, p);
-    }
-    return pow(x, p);
-}
-
-// Fold rather than clip: a triangle of period 4 that runs straight through [-1, 1] and turns back
-// on itself outside it, so 1.5 comes back as 0.5 and 3.0 as -1.0. This is what makes WaveWrap
-// generate its own overtones instead of the clipped ones a limiter would.
-static double shaper_fold(double x) {
-    double y = fmod(x + 1.0, 4.0);
-
-    if (y < 0.0) {
-        y += 4.0;
-    }
-    return (y <= 2.0) ? (y - 1.0) : (3.0 - y);
-}
-
-static double shaper_clamp(double x) {
-    if (x > 1.0) {
-        return 1.0;
-    }
-
-    if (x < -1.0) {
-        return -1.0;
-    }
-    return x;
-}
-
-#define OSCNOISE_Q_AT_FULL_WIDTH      (3.34)    // §8.3
+#define OSCNOISE_Q_AT_FULL_WIDTH      (3.34)     // §8.3
 #define OSCNOISE_Q_GROWTH_PER_STEP    (0.032)
-#define OSCNOISE_LEVEL                (0.5957)  // -4.5 dB RMS, §8.4
+#define OSCNOISE_LEVEL                (0.5957)   // -4.5 dB RMS, §8.4
 
 static double white_noise(uint32_t * seed) {
     uint32_t x = *seed;
@@ -3708,106 +3478,15 @@ static void fade_weights(const tEngineNode * spec, double pos, double * wa, doub
 }
 
 static double shaper_step(double input, double modulation, const tEngineNode * spec) {
-    // The mod jack adds to the dial through its own attenuator, and the sum is clamped to the
-    // dial's range - the same treatment the filter's cutoff modulation gets.
-    double amount = spec->shaperAmount + (spec->shaperMod * modulation);
-    double x      = shaper_clamp(input);
-
     if (spec->active == false) {
         return input;                 // Bypass passes the signal through untouched
     }
-
-    if (amount < 0.0) {
-        amount = 0.0;
-    } else if (amount > 1.0) {
-        amount = 1.0;
-    }
-
-    switch ((tShaperKind)spec->shaperKind) {
-        case eShaperRect:
-        {
-            // Exact, from the manual: discard negatives, discard positives, mirror negatives up,
-            // mirror positives down. rectStrMap is {HalfPos, HalfNeg, FullPos, FullNeg}.
-            switch (spec->shaperCurve) {
-                case 0:  return (x > 0.0) ? x : 0.0;
-
-                case 1:  return (x < 0.0) ? x : 0.0;
-
-                case 2:  return fabs(x);
-
-                default: return -fabs(x);
-            }
-        }
-        case eShaperShpStatic:
-        {
-            // notes §107
-            static const double kExp[] = {1.0 / 3.0, 0.5, 2.0, 3.0};
-            uint32_t            curve  = (spec->shaperCurve < 4) ? spec->shaperCurve : 2;
-
-            return shaper_odd_power(x, kExp[curve]);
-        }
-        case eShaperShpExp:
-        {
-            // notes §108
-            static const double kExp[] = {2.0, 3.0, 4.0, 5.0};
-            uint32_t            curve  = (spec->shaperCurve < 4) ? spec->shaperCurve : 0;
-
-            return shaper_odd_power(x, 1.0 + (amount * (kExp[curve] - 1.0)));
-        }
-        case eShaperSaturate:
-        {
-            // notes §109
-            static const double kCurve[] = {4.0, 16.0, 64.0, 256.0};
-            uint32_t            curve    = (spec->shaperCurve < 4) ? spec->shaperCurve : 0;
-            double              k        = amount * kCurve[curve];
-
-            if (k < 1e-6) {
-                return x;
-            }
-            double              shaped   = log(1.0 + (k * fabs(x))) / log(1.0 + k);
-
-            return (x < 0.0) ? -shaped : shaped;
-        }
-        case eShaperWaveWrap:
-        {
-            // notes §110
-            return shaper_fold(x * (1.0 + (amount * 8.0)));
-        }
-        case eShaperOverdrive:
-        {
-            // notes §111
-            static const double kKnee[]  = {2.0, 16.0, 3.0, 6.0};
-            static const double kDrive[] = {8.0, 8.0, 24.0, 32.0};
-            uint32_t            type     = (spec->shaperCurve < 4) ? spec->shaperCurve : 0;
-            double              driven   = x * (1.0 + (amount * kDrive[type]));
-            double              shaped   = driven / pow(1.0 + pow(fabs(driven), kKnee[type]),
-                                                        1.0 / kKnee[type]);
-
-            // Asym shapes only the positive peaks (manual), so the negative half stays linear -
-            // and then meets the headroom, which is where its own harmonics come from.
-            if ((spec->shaperSym == false) && (driven < 0.0)) {
-                shaped = shaper_clamp(driven);
-            }
-            return ((1.0 - amount) * x) + (amount * shaped);
-        }
-        case eShaperClip:
-        default:
-        {
-            // notes §112
-            double t = pow(2.0, -6.0 * amount);
-
-            if (x > t) {
-                return t;
-            }
-
-            if ((spec->shaperSym == true) && (x < -t)) {
-                return -t;
-            }
-            return x;
-        }
-    }
+    // The mod jack adds to the dial through its own attenuator, and the sum is clamped to the
+    // dial's range - the same treatment the filter's cutoff modulation gets.
+    return shaper_transfer(&spec->shaper, spec->shaper.amount + (spec->shaper.mod * modulation), input);
 }
 
+// notes §106
 // TimeMod is NOT implemented: the module has a modulation input for its width and this ignores it,
 // which is honest rather than inventing a law for it. Nothing measured so far uses it.
 static double pulse_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
@@ -4913,22 +4592,6 @@ static void fltmulti_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     }
 }
 
-#define FLTCOMB_TUNING_SEMITONES    (9.0)        // §13.2 - the comb sits a major sixth below the dial
-#define FLTCOMB_REFERENCE_RATE      (96000.0)    // the engine rate §13's sample offsets were measured at
-
-typedef struct {
-    double feedForward;    // per unit of g
-    double feedback;
-    double extraDelay;     // samples at FLTCOMB_REFERENCE_RATE
-    double gainDbPerG2;
-} tCombShape;
-
-static const tCombShape kCombShapes[] = {    // §13.4 - Notch, Peak, Deep
-    { 1.00, 0.00, 0.0,  0.00},
-    {-0.30, 0.90, 1.1,  2.45},
-    { 0.60, 0.85, 0.5, -4.10},
-};
-
 // Four-point Lagrange read, `delay` samples back from the next write (so at least 2).
 static double comb_read(const float * line, uint32_t write, double delay) {
     const uint32_t mask  = COMB_LINE_SAMPLES - 1u;
@@ -4951,21 +4614,20 @@ static double fltcomb_step(uint32_t voice, const tEngineNode * spec, double inpu
                            double voicePitch, double cutoffParam, double fbModInput) {
     SE_LOCAL;
 
-    const tCombShape * shape     = &kCombShapes[(spec->combType < 3u) ? spec->combType : 0u];
-    float *            line      = gCombLine[voice][spec->line];
-    uint32_t *         write     = &gCombWrite[voice][spec->line];
-    double             rateScale = gSampleRate / FLTCOMB_REFERENCE_RATE;
-    double             control   = cutoffParam + ((pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES);
+    const tCombShape * shape   = flt_comb_shape(spec->combType);
+    float *            line    = gCombLine[voice][spec->line];
+    uint32_t *         write   = &gCombWrite[voice][spec->line];
+    double             control = cutoffParam + ((pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES);
 
     if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
         control += (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt;
     }
     control      = fmin(fmax(control, FLT_CONTROL_MIN), FLT_CONTROL_MAX);
 
-    double             delay     = (gSampleRate / flt_cutoff_hz(control - FLTCOMB_TUNING_SEMITONES)) - rateScale + (shape->extraDelay * rateScale);
-    double             g         = fmin(fmax(spec->combFeedback + (spec->combFbMod * fbModInput), -1.0), 1.0);
-    double             delayed   = comb_read(line, *write, fmin(fmax(delay, 2.0), (double)(COMB_LINE_SAMPLES - 3)));
-    double             fed       = (input * spec->combLevel) + (shape->feedback * g * delayed);
+    double             delay   = flt_comb_delay_samples(control, shape, gSampleRate);
+    double             g       = fmin(fmax(spec->combFeedback + (spec->combFbMod * fbModInput), -1.0), 1.0);
+    double             delayed = comb_read(line, *write, fmin(fmax(delay, 2.0), (double)(COMB_LINE_SAMPLES - 3)));
+    double             fed     = (input * spec->combLevel) + (shape->feedback * g * delayed);
 
     line[*write] = (float)fed;
     *write       = (*write + 1u) & (COMB_LINE_SAMPLES - 1u);
@@ -5215,9 +4877,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeShaper:
         {
             // `a` is input leg 0. WaveWrap is the one shaper whose Mod jack comes first, so for it
-            // the signal is on leg 1 and the modulation on leg 0 - spec->shaperIn says which.
-            double sig = (spec->shaperIn == 0) ? a : signal_in(spec, value, 1);
-            double mod = (spec->shaperIn == 0) ? signal_in(spec, value, 1) : a;
+            // the signal is on leg 1 and the modulation on leg 0 - spec->shaper.signalLeg says which.
+            double sig = (spec->shaper.signalLeg == 0) ? a : signal_in(spec, value, 1);
+            double mod = (spec->shaper.signalLeg == 0) ? signal_in(spec, value, 1) : a;
 
             value[n][0] = shaper_step(sig, mod, spec);
             break;
