@@ -1030,3 +1030,131 @@ double flt_phase_magnitude(const tPhaserSettings * settings, double hz) {
 #ifdef __cplusplus
 }
 #endif
+
+// ─── Operator frequency (DX7) ────────────────────────────────────────────────
+
+// notes §41
+double operator_ratio(uint32_t coarse, uint32_t fine) {
+    double base = (coarse == 0) ? 0.5 : (double)((coarse > OPERATOR_COARSE_MAX) ? OPERATOR_COARSE_MAX : coarse);
+
+    return base * (1.0 + ((double)((fine > OPERATOR_FINE_MAX) ? OPERATOR_FINE_MAX : fine) / 100.0));
+}
+
+double operator_fixed_hz(uint32_t coarse, uint32_t fine) {
+    return pow(10.0, (double)(coarse % 4)) * pow(10.0, (double)((fine > OPERATOR_FINE_MAX) ? OPERATOR_FINE_MAX : fine) / 100.0);
+}
+
+// ─── Compress ────────────────────────────────────────────────────────────────
+
+// notes §42
+double compress_ratio(uint32_t raw) {
+    bool     decade = (raw > 34u);
+    uint32_t p      = decade ? (raw - 35u) : raw;
+    uint32_t tenths = 0;
+
+    if (p <= 9u) {
+        tenths = p + 10u;
+    } else if (p < 25u) {
+        tenths = p * 2u;
+    } else {
+        tenths = (p * 5u) - 75u;
+    }
+
+    if (decade) {
+        tenths *= 10u;
+    }
+    return (double)tenths / 10.0;
+}
+
+uint32_t compress_ratio_raw(double ratio) {
+    uint32_t best = 0;
+
+    for (uint32_t raw = 1; raw <= COMPRESS_RATIO_RAW_MAX; raw++) {
+        if (fabs(log(compress_ratio(raw) / ratio)) < fabs(log(compress_ratio(best) / ratio))) {
+            best = raw;
+        }
+    }
+
+    return best;
+}
+
+double compress_out_db(double inDb, uint32_t thresholdRaw, uint32_t refRaw, uint32_t ratioRaw) {
+    if (thresholdRaw >= COMPRESS_THRESHOLD_OFF_RAW) {
+        return inDb;
+    }
+    double thresholdDb = (double)thresholdRaw - COMPRESS_DB_OFFSET;
+    double targetDb    = fmax((double)refRaw - COMPRESS_DB_OFFSET, thresholdDb);
+
+    return inDb + ((1.0 - (1.0 / compress_ratio(ratioRaw))) * (targetDb - fmax(inDb, thresholdDb)));
+}
+
+// The gain-reduction meter shows the reduction the settings call for - dB over Thr x (1 - 1/ratio),
+// so nothing at all at 1:1 - as LEDs that each light at their own reduction (sound-engine-notes §122).
+// One copy for the engine's meter and, inverted, for the Compress graph's live point.
+static const double kCompressMeterStepDb[] = {0.0, 1.0, 2.0, 4.5, 6.0, 9.0, 12.0, 15.0};   // LED 1 .. 8, bottom up
+#define COMPRESS_METER_LEDS    (sizeof(kCompressMeterStepDb) / sizeof(kCompressMeterStepDb[0]))
+
+uint32_t compress_meter_lit(double reductionDb) {
+    uint32_t lit = 0u;
+
+    if (reductionDb <= 0.0) {
+        return 0u;
+    }
+
+    for (uint32_t led = 0u; led < (uint32_t)COMPRESS_METER_LEDS; led++) {
+        if (reductionDb >= kCompressMeterStepDb[led]) {
+            lit = led + 1u;
+        }
+    }
+
+    return lit;
+}
+
+double compress_meter_reduction_db(uint32_t lit) {
+    if (lit == 0u) {
+        return 0.0;
+    }
+    return kCompressMeterStepDb[((lit > COMPRESS_METER_LEDS) ? COMPRESS_METER_LEDS : lit) - 1u];
+}
+
+// ─── DXRouter ────────────────────────────────────────────────────────────────
+
+// notes §43
+static const tDxAlgorithm kDxAlgorithms[DX_ALGORITHMS] = {
+    {{0x00, 0x01, 0x00, 0x04, 0x08, 0x10}, 6, 6},   // 1
+    {{0x00, 0x01, 0x00, 0x04, 0x08, 0x10}, 2, 2},   // 2
+    {{0x00, 0x01, 0x02, 0x00, 0x08, 0x10}, 6, 6},   // 3
+    {{0x00, 0x01, 0x02, 0x00, 0x08, 0x10}, 4, 6},   // 4
+    {{0x00, 0x01, 0x00, 0x04, 0x00, 0x10}, 6, 6},   // 5
+    {{0x00, 0x01, 0x00, 0x04, 0x00, 0x10}, 5, 6},   // 6
+    {{0x00, 0x01, 0x00, 0x04, 0x04, 0x10}, 6, 6},   // 7
+    {{0x00, 0x01, 0x00, 0x04, 0x04, 0x10}, 4, 4},   // 8
+    {{0x00, 0x01, 0x00, 0x04, 0x04, 0x10}, 2, 2},   // 9
+    {{0x00, 0x01, 0x02, 0x00, 0x08, 0x08}, 3, 3},   // 10
+    {{0x00, 0x01, 0x02, 0x00, 0x08, 0x08}, 6, 6},   // 11
+    {{0x00, 0x01, 0x00, 0x04, 0x04, 0x04}, 2, 2},   // 12
+    {{0x00, 0x01, 0x00, 0x04, 0x04, 0x04}, 6, 6},   // 13
+    {{0x00, 0x01, 0x00, 0x04, 0x08, 0x08}, 6, 6},   // 14
+    {{0x00, 0x01, 0x00, 0x04, 0x08, 0x08}, 2, 2},   // 15
+    {{0x00, 0x01, 0x01, 0x04, 0x01, 0x10}, 6, 6},   // 16
+    {{0x00, 0x01, 0x01, 0x04, 0x01, 0x10}, 2, 2},   // 17
+    {{0x00, 0x01, 0x01, 0x01, 0x08, 0x10}, 3, 3},   // 18
+    {{0x00, 0x01, 0x02, 0x00, 0x00, 0x18}, 6, 6},   // 19
+    {{0x00, 0x00, 0x03, 0x00, 0x08, 0x08}, 3, 3},   // 20
+    {{0x00, 0x00, 0x03, 0x00, 0x00, 0x18}, 3, 3},   // 21
+    {{0x00, 0x01, 0x00, 0x00, 0x00, 0x1c}, 6, 6},   // 22
+    {{0x00, 0x00, 0x02, 0x00, 0x00, 0x18}, 6, 6},   // 23
+    {{0x00, 0x00, 0x00, 0x00, 0x00, 0x1c}, 6, 6},   // 24
+    {{0x00, 0x00, 0x00, 0x00, 0x00, 0x18}, 6, 6},   // 25
+    {{0x00, 0x00, 0x02, 0x00, 0x08, 0x08}, 6, 6},   // 26
+    {{0x00, 0x00, 0x02, 0x00, 0x08, 0x08}, 3, 3},   // 27
+    {{0x00, 0x01, 0x00, 0x04, 0x08, 0x00}, 5, 5},   // 28
+    {{0x00, 0x00, 0x00, 0x04, 0x00, 0x10}, 6, 6},   // 29
+    {{0x00, 0x00, 0x00, 0x04, 0x08, 0x00}, 5, 5},   // 30
+    {{0x00, 0x00, 0x00, 0x00, 0x00, 0x10}, 6, 6},   // 31
+    {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 6, 6},   // 32
+};
+
+const tDxAlgorithm * dx_algorithm(uint32_t index) {
+    return &kDxAlgorithms[(index < DX_ALGORITHMS) ? index : 0u];
+}

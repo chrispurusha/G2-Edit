@@ -289,3 +289,41 @@ frequency axis (a comb is periodic in linear frequency): four Freq, feedback acr
 Types, and again at Level 64 so the resonant Types could not clip. Fitted per setting with the delay
 free, then jointly per Type.
 
+
+## 14. Operator and DXRouter
+
+**14.1 One node.** A DXRouter and the Operators patched into its six inputs are played as ONE node
+(`eNodeDx`). Their FM runs through the router in both directions - Operator out to router in, router
+out to Operator FM - which a chain of separate nodes cannot evaluate: `add_node()` would recurse round
+the loop until its depth guard stopped it. `dx_build()` finds the Operator feeding each router input
+and copies its settings into the snapshot's `dxOp[]` (six per router, `MAX_DX_OPERATORS` 24 = four
+routers). Each sample the operators run 6 down to 1: every DX7 modulation goes from a higher-numbered
+operator to a lower one, so each operator's modulators are already computed when it runs. The Main
+output is the carriers' sum. An Operator NOT patched into a router is not played. The algorithm table is
+the published DX7 chart, shared with the DXRouter graph (paramCurves.c `dx_algorithm()`).
+
+What the node reads from the voice rather than from cables: gate and pitch (as `eNodeEnv` does - the
+Keyboard module's outputs ARE the voice). NOT MODELLED: the Freq, Pitch and AMod inputs, Vel (the
+engine has no velocity), KBEnv, and the router's Out1-Out6 as outputs anywhere else.
+
+**14.2 Levels and the envelope - the DX7's laws, NOT MEASURED ON THE G2.** Level and L1-L4 are 0.75 dB
+a step below 99 (99 is full scale; 0 is silence); values above 99, which the G2 accepts and displays,
+are held at 99. The envelope moves in dB, linearly, at each stage's rate towards its level: L4 -> L1 at
+R1, L2 at R2, L3 at R3, held there while the key is down, then L4 at R4. A rate is a full 96 dB sweep
+taking 40 s at 0, halving every 6.5 steps to 1 ms at 99. RateScale speeds the rates up the keyboard,
+by 2^(RateScale/7 x (note - 60)/24). Sync restarts the phase at each note.
+
+**14.3 FM depth and feedback - UNMEASURED.** A full-scale signal at an FM input moves the phase by one
+cycle (`DX_FM_CYCLES_PER_UNIT`). Feedback 1-7 feeds the operator's last two outputs, averaged, back
+into its target at 2^(Feedback - 8) of that, so 7 is half a cycle (pi) - the DX7's arrangement; 0 is
+off. Algorithms 4 and 6 feed back across operators (4 to 6, 5 to 6), the rest into the same operator.
+
+**14.4 Keyboard level scaling - shape from the DX7, size UNMEASURED.** Each side of BrPt (read as a
+note number) takes its curve (-Lin, -Exp, +Exp, +Lin) and depth; a full depth is 24 dB four octaves
+from the break point. Linear is a straight slope, exponential e^4x normalised.
+
+**14.5 Main output - UNMEASURED.** The carriers are summed and divided by how many there are, so a
+six-carrier algorithm is no louder than a one-carrier one. The DX7 sums without dividing; how the G2's
+DXRouter scales its Main output has not been measured, and this is the first thing to check against a
+capture. Frequencies: Ratio mode is the played note (Kbt on) or E4 (off) times Coarse/Fine by the DX7's
+law (paramCurves.c notes §41); Fixed is 1/10/100/1000 Hz times Fine; Detune is taken as 1 cent a step.

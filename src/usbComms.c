@@ -2700,6 +2700,18 @@ static int send_delete_cable(uint32_t slot, tCableData * cableData) {
     return send_and_receive_once(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
+// Read once: G2_EDIT_OFFLINE=1 (anything but "0") keeps the editor off USB for scripted tests.
+static bool comms_forced_offline(void) {
+    static int offline = -1;
+
+    if (offline < 0) {
+        const char * value = getenv("G2_EDIT_OFFLINE");
+
+        offline = ((value != NULL) && (value[0] != '\0') && (value[0] != '0')) ? 1 : 0;
+    }
+    return offline == 1;
+}
+
 static int send_add_module(uint32_t slot, tModuleData * moduleData) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
@@ -4162,6 +4174,12 @@ static void state_handler(void) {
     if (gCommsState == eCommsNeverConnected || gCommsState == eCommsReconnecting) {
         bool opened = false;
 
+        // G2_EDIT_OFFLINE=1 keeps this editor off USB entirely, so a scripted test can build patches
+        // with the owner's G2 plugged in and never touch it (tools/face-shots sets it).
+        if (comms_forced_offline()) {
+            usleep(500000);
+            return;
+        }
         pthread_mutex_lock(&usbStaticMutex);
         opened = open_and_claim_device();
         pthread_mutex_unlock(&usbStaticMutex);

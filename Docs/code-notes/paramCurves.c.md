@@ -660,3 +660,46 @@ ASSUMED, NOT MEASURED:
     so that the dial does something plausible, with nothing behind the number.
   - Peak and Deep's exact forms beyond the two figures above.
 What would settle it is in todo.md: a Freq sweep, a Spread sweep, and each Type at three FB values.
+
+## 41. `operator_ratio()`, `operator_fixed_hz()`
+
+Operator is a DX7 operator and "all the parameters and controls behave like on the DX7" (G2 manual
+p.184), so its frequency follows the DX7's laws rather than a G2 frequency dial's:
+- RATIO: Coarse 0 is 0.50 and 1-31 are themselves; Fine 0-99 adds that many hundredths of it
+  (x1.00 to x1.99 at Coarse 1).
+- FIXED: Coarse picks the decade - 1, 10, 100, 1000 Hz, repeating every four steps - and Fine
+  multiplies it by 10^(Fine/100), so each decade is covered in 100 logarithmic steps.
+Values past the DX ranges (Coarse 31, Fine 99) are clamped. The Coarse dial shows the result, the way
+the DX7 shows one frequency for the two controls. UNCONFIRMED ON THE G2: these are the DX7's laws,
+which the manual says the module copies; the G2's own reading has not been compared.
+
+## 42. `compress_ratio()`, `compress_out_db()`
+
+Compress's three level dials, as the instrument reads them (measured 2026-08-10 from its own dial
+displays; the manual agrees on the ranges): Thr and RefLvl are raw - 30 dB, and Thr's top position
+(raw 42) reads "Off"; Ratio runs in three straight stretches that repeat a decade higher above raw
+34, 1.0:1 to about 95:1 - transcribed from the instrument's formatter, not fitted. compress_ratio()
+was the engine's own compressor_ratio() until 2026-09-13, moved here unchanged so the dial text and
+the graph read the same law the engine plays.
+
+THE STATIC CURVE is the engine's gain law with the detector settled on a steady input: the module is
+a LEVELLER (measured 2026-09-07) - out = in + (1 - 1/ratio) x (target - max(in, Thr)), with target
+the higher of RefLvl and Thr. Above the threshold that pulls the level towards the target by the
+ratio; below it the same makeup is applied as at the threshold. That below-threshold part is the
+engine's choice, NOT yet measured on the instrument (sound-engine-reference, Compress).
+compress_ratio_raw() is the inverse for a graph handle: the dial position whose ratio is nearest,
+by log distance.
+
+The meter table (compress_meter_lit(), compress_meter_reduction_db()) takes GAIN REDUCTION - dB over
+Thr x (1 - 1/ratio) - and lights whole LEDs rounded down: established on the G2 2026-09-13
+(sound-engine-notes §122). Its inverse returns the least reduction that lights a given count.
+The table is per-LED thresholds, not points to interpolate between (refined the same day - see
+§122 for the window each threshold was fitted inside); compress_meter_reduction_db() returns the
+threshold of the highest lit LED.
+
+## 43. `kDxAlgorithms`, `dx_algorithm()`
+
+The 32 DX7 algorithms as who-modulates-whom: one target bitmask per operator and the feedback loop's
+two ends, from the published DX7 algorithm chart. Moved here from moduleGraphics.c on 2026-09-13 so the
+DXRouter graph (moduleGraphics.c notes §85) and the sound engine (sound-engine-reference §14) read the
+same table - the engine cannot include the graph code.
