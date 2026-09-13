@@ -9303,3 +9303,185 @@ the manual's module pages. The widths stay what EnvADSR's always were, schematic
   THE SURVEY NOW: of the original's 43, 29 are drawn. Of the 14 left, two are not modules we have
   (AR-Env, ShelvEQ) and EnvDX is Operator's own envelope, leaving Operator (two graphs), DXRouter,
   DrumSynth, PulseOsc, OscNoise, LfoD, LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two).
+
+LAYOUT TEST PATCHES NOW COVER EVERY MODULE, 2026-09-13. Every patch in PatchTestFiles was loaded
+through the backdoor and its modules listed: the six device-authored reference patches (ioosc,
+LogicMidi, SwitchSeqNote, RndFilter, DelayLevel, EnvFx) hold 166 of the 170 real module types, and
+no other test patch adds any. The four missing are the ones the original editor cannot create -
+Driver, Resonator, Red2Blue, Blue2Red - so no editor-authored patch can hold them.
+PatchTestFiles/SynthOnlyModules.pch2 now does, built offline through the backdoor. IT IS G2-EDIT'S
+OWN FILE, so it proves layout coverage and nothing else: its parameter counts and defaults are our
+table's by construction and must not be read as the instrument's.
+  ON THE WAY: the backdoor's SAVEFILE did nothing offline - it posts to the USB thread, which reads
+  no queue until a G2 has connected - while reporting OK. It now writes directly when no G2 is
+  attached, as File > Save (on_file_saved()) already did; the app's own save was never affected.
+  THEN CONFIRMED ON THE G2, the same day. Adding a module sends the instrument only its type,
+  position, colour, uprate, modes and name (send_add_module()) - never parameter values - so a slot
+  read back after an add holds the G2's OWN parameter count and defaults. The four were added to an
+  empty slot D, the editor reconnected and re-read every slot, and PARAMDUMP gave:
+      Driver     2 params  0 0                          table 2, the same values
+      Resonator 10 params  64 64 1 0 0 0 0 1 0 0       table 10, the same values
+      Red2Blue, Blue2Red   0 params                     table 0
+  so every module type's parameter count and defaults now have hardware behind them. The mode values
+  in that read-back are still ours - the add message carries them. SynthOnlyModules.pch2 was then
+  re-saved from the read-back, and slot D cleared to the empty slot it had been.
+
+KEYQUANT KEYBOARD, THE NAME BAND, AND THE DXROUTER GRAPH, 2026-09-13.
+  KEYQUANT: the twelve note switches are one octave of keys - whites light green when selected,
+  blacks dark green, so a selection reads on either colour. The keys are the notes' ONLY widget on
+  the face: param_drawn_by_graph() stops render_param_common() drawing or registering the old
+  on/off buttons (CT: "you've left the previous note representation mechanism still live" - they
+  had been hidden under the keyboard, still clickable). The parameters stay ordinary switches, so
+  the Parameter Pages, the mutator and the menus are unchanged. Capture and Range moved to the
+  bottom band, and the keyboard centred in the space below the name (moduleGraphics.c notes §84).
+  RULE 16, THE NAME BAND (CT: "make sure a full 16 character name of all Ws, doesn't clash"): sixteen
+  Ws in the name font run from x 1.5% to about 55% of the face and down to y 5%. The backdoor's
+  NAMEBAND ON tints exactly that area (LONGEST_MODULE_NAME at the name's own position and height),
+  and face-shots --name-band sends it. A first version renamed every module to Ws instead; CT
+  pointed out that then nothing says which face is which, so the band is drawn over the real name.
+  A sweep of all 170 faces at 0.59 found four real clashes - NoteQuant's Range, CtrlSend's Ctrl and
+  NoteSend's Vel (port dials at -8.6 whose two text lines reached the name) and the EnvADR graph
+  added earlier the same day - all re-laid by rule (relayout.py "NameBand"; EnvADR now follows
+  EnvADSR's face). Faces that TOUCH the band without crossing it are listed in todo.md for CT; most
+  are his own positions.
+  DXROUTER: the selected algorithm drawn as the DX7's own chart - numbered operators, carriers on the
+  output line, the feedback loop orange when Feedback is above 0 and grey at 0 (G2 manual p.185:
+  the algorithms "correspond to the factory algorithms of the DX7 synthesizer", the loop "is
+  indicated with orange lines"). Only who-modulates-whom is tabulated, from the published DX7
+  chart; the picture is computed (notes §85). Algorithms 1, 4, 16, 18, 19, 20, 22 and 32 were
+  checked by screenshot. That takes the original editor's undrawn graphs to 13: Operator (two),
+  DrumSynth, PulseOsc, OscNoise, LfoD, LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two).
+
+OPERATOR REWORKED, 2026-09-13. The twelve-row face re-laid by rule in three bands and a foot
+(relayout.py "FM"): oscillator (Pitch and Freq jacks, Kbt, Sync, Ratio/Fixed above Coarse, Fine,
+Detune, FM as the main input top-right); envelope (its graph, Gate/Note/Vel down the left,
+KBEnv/Vel/RateScale down the right, R1-L4 in rate/level pairs); keyboard level scaling (its graph
+over left depth, BrPt, right depth - the graph's order); foot (AMod beside its jack, Level, Bypass
+over the Out). The LED went top-left under the name (rule 15).
+  TWO GRAPHS, the manual's (p.184): the rate/level envelope, from L4 through L1-L3 to L4, a stage's
+  width its level distance times a falling function of the DX rate; and the level scaling, BrPt on
+  an A-1..C8 axis with each side's -Lin/-Exp/+Exp/+Lin curve about the 0 dB line. Operator is the
+  first module with two graph rows (find_graph_location_nth()). Both are shapes, not measurements.
+  COARSE was drawn as a G2 frequency dial ("14.57Hz" at the G2's own default of 1). The original's
+  controls for this module give Coarse no text formatter of its own, and the manual says every
+  control behaves as on the DX7 - so it now reads the DX7's way, with Fine: Ratio x0.50/x1-x31
+  times 1+Fine/100, Fixed 1/10/100/1000 Hz times 10^(Fine/100). Checked by screenshot: x0.50 at
+  Coarse 0, 316.2Hz Fixed at Coarse 2 Fine 50. param-validation.md's "Hz = 13.75 * 2^(v/12) OK" for
+  it was a generic type match and is superseded.
+  STILL OPEN: the G2's real ranges for Coarse (DX 0-31), R/L (DX 0-99) and the L/R depths (our
+  table says 8 values, the DX has 0-99) - the table gives 128, 128 and 8.
+DXROUTER'S MAIN OUTPUT is unlabelled in its corner (rule 14) - "Main" above it ran off the right edge
+(CT) - and the six In/Out pairs are at a 14% pitch so it stands apart (rule 10).
+
+COMPRESS GRAPH WITH DRAGGABLE HANDLES, 2026-09-13 (CT: "a graphical representation on the
+compressor. Even better if I could click on key parts of the graph and drag to adjust"). The static
+curve, output against input from -36 to +12 dB, from the engine's own gain law (the module is a
+leveller); unity grey, RefLvl yellow. Three handles - the threshold knee, the curve's right-hand end
+(ratio) and the RefLvl line - each drags its parameter with the value FOLLOWING THE POINTER: a new
+pointer-to-value function in tParamDragging, set by the handle's press and cleared by the drag's end;
+everything else (undo, links, morph, the wire command) is the ordinary drag's. The press does not
+capture the cursor, which the dials' vertical/horizontal modes do. Proven with a real synthetic drag:
+Thr -12 dB -> +5 dB for 60 points, as predicted.
+  THE LIVE POINT (CT: "use the compressor LED data"): the gain-reduction LEDs, counted and turned back
+  into dB over the threshold, put an orange dot on the curve where the compressor is working.
+  THE DIALS READ PROPERLY at last: Thr, Ratio and RefLvl were generic percent dials ("14.1", "15.6",
+  "23.4" at the G2's defaults); they now read -12dB, 4.0:1 and 0dB from the measured laws, now shared
+  in paramCurves.c (compress_ratio() moved from the engine unchanged; the meter table too).
+  The original editor's dB marks, 1 4 9 15 24 30, sit beside the LEDs.
+  DRIVING THE APP: the window's title bar is 32pt here, not the 28 the testing notes assumed - derive
+  it from the window and framebuffer sizes; a 4pt error put the first press on the module body.
+  THE SIDE CHAIN BUTTON went under its jack (CT: "Sidechain button could go under the sidechain input
+  connector, to give more room"), and the graph widened into the space, {24, 6} x {54, 34}.
+
+COMPRESS METER: THE G2 AGAINST OUR ENGINE, SAME PATCH, 2026-09-13 (CT: "Did we essentially check if our
+sound engine's dot hits the same spots as the hardware with the same settings?"). Slot A: OscA saw
+into both Compress inputs, Ratio 4:1, RefLvl 0 dB, Att 0.53 ms, Rel 250 ms, a note held on both. Thr
+swept on the G2 while the local engine played the same patch; LEDDUMP gives both meters (vols= the
+G2's, eng= ours). LEDs lit, counting the bottom-up bit run:
+      Thr      -30  -18  -10   -4    0   +4 dB
+      G2 run 1   8    7    5    3    0    -      (engine off)
+      G2 run 2   7    5    4    2    0    0      (engine on - same settings, minutes later)
+      engine     8    8    5    2    0    0
+NOT A VALID COMPARISON YET: CT was adjusting the module on the G2 during these runs - afterwards
+Compress held Ratio 1.3:1, Att 98, Rel 61, RefLvl +2 dB, not the settings assumed above - so the
+G2's run-to-run difference and the engine's 1-3 LEDs over it at -18/-30 dB are unexplained, not
+evidence of meter instability or an engine error. What does stand: both go dark at the same
+threshold (0 dB with this saw) and read the same 2 LEDs at -4 dB. To be repeated with the settings
+restored and nobody touching the panel. The graph's live dot takes whichever meter is live, through the same table, so
+on the G2 it sits where the G2's LEDs put it and on the engine where ours do. A proper comparison
+wants the capture rig and a steady sine at known levels (todo.md).
+
+ON THE G2, SLOT A, 2026-09-13. The Compress graph's live dot follows the instrument: OscA's saw into
+Compress with a note held, the G2's gain-reduction value is a run of bits from bit 0 - 8, 7, 5 and 3
+LEDs at Thr -30, -18, -10 and -4 dB, none from 0 dB up - and the dot moved along the curve with it.
+KeyQuant: clicking the C key flipped that note's parameter 0 -> 1 through the ordinary parameter send
+(no command re-reads a slot from the G2, so the instrument's copy was not read back).
+THE BYPASS BUTTON has a one-line black edge like the text buttons (CT) - SynthLib's
+draw_power_button(), whose only caller is G2-Edit's bypass; the border is now one helper,
+render_button_border(), shared with draw_button_split(). A SynthLib change: to be pushed by the
+owner and pulled into the siblings.
+
+COMPRESS METER, CLEAN RUN, 2026-09-13 - supersedes the "not a valid comparison" entry above. With the
+settings restored (Ratio 4:1, Att 0.53 ms, Rel 250 ms, RefLvl 0 dB), nobody touching the panel and a
+note held on both, the G2 read the same to the LED over three samples and two runs:
+      Thr      +4    0   -2   -4   -7  -10  -14  -18  -24  -30 dB
+      G2        0    0    2    3    4    5    6    7    8    8
+      engine    0    0    2    3    5    6    8    8    8    8   (before the fix below)
+Stepping Ratio at Thr -10 dB then settled it: 1:1 lit nothing, 2:1 lit 4, 4:1-10:1 lit 5, 20:1+ lit 6.
+THE METER SHOWS GAIN REDUCTION, excess x (1 - 1/ratio), rounded down - not the plain excess the engine
+used. With that, the engine's measured table reproduces every G2 reading; engine and graph both changed
+(paramCurves.c compress_meter_lit(), sound-engine-notes §122). The earlier mismatch was that factor.
+Also seen: the G2 lights this meter even with the module bypassed. The earlier drift between runs was
+CT's own editor instance adjusting the module during the sweeps.
+  REFINED: mid-LED thresholds (-1, -3, -5 dB) showed the straight-line interpolation between table
+  points was wrong below 3 dB of reduction (G2 3 LEDs at -3 dB, engine 2). The meter is now per-LED
+  thresholds, 0 1 2 4.5 6 9 12 15 dB of reduction, each fitted inside the window the readings allow
+  (sound-engine-notes §122); they reproduce every reading.
+  RE-VERIFIED ON THE G2 with the per-LED thresholds: Thr 0 to -24 dB at 4:1 (eleven steps) and Ratio
+  2:1, 10:1 and 20:1 at -10 dB - engine and G2 identical at every step, three samples each (the one
+  exception was the engine's first sample after a threshold change, before its detector settled).
+
+LAYOUT TIDY, 2026-09-13 (relayout.py "Tidy"). The random clocks - RndTrig, RndClkA, RndClkB,
+RndPattern - had Bypass sitting on Seed or input B and the Out on a label; they now share one face:
+Clk/Rst left as on the sequencers, the selectors beside the dials at y -1, Step at 44 with StepM at 60
+fed by its jack at 53, Seed at 76 labelled up; down the right, Bypass at the TOP and the Out
+selector directly over the main Out it sets (CT: "Out (BiP) button could go above main out. Bypass
+could move to top right") - unlabelled on the two-row faces, where "Out" does not fit under Bypass.
+On RndClkA the Out selector sits just LEFT of the Bypass column (under it, it clashed - CT) and its
+Seed moves to 68 to make room. RndPattern's second
+dial row (A -> PatA, B -> PatB) sits right of the name band's reach at -18: two labelled dial rows do
+not fit under a 16-W name on the left of a three-row face. RndClkA's Mode and Dice print bare numbers
+in boxes ~10% wide, so they sit 12% apart. LevScaler: In top-right (it ran off the top edge), dials in
+the bottom band, Kbt over the Note jack. Sw2-1 and Sw2-1M label In 1 to the LEFT like In 2, as Sw4-1
+and Sw8-1 do (CT). PCSend takes CtrlSend's face (it still had port coordinates, its Chan box ran to the edge).
+RandomA and RandomB, which had no overlap, were left alone; OscDual's half-step jacks are deliberate. Checked at 1.0 and 0.59
+with --name-band.
+
+ENVELOPE HANDLES AND THE GRAPH-AREA GUARD, 2026-09-13 (CT: "Then go for envelope param drag";
+"Graphical representation area probably shouldn't be recognised for module dragging"). Every envelope
+graph - the nine G2 envelopes and Operator's - has a handle on each breakpoint that has a time:
+sideways sets the time and, where the level is a parameter too, up and down sets the level in the same
+drag (a second parameter in the drag, with its own undo step). The widths are scaled to fit the box, so
+there is no closed-form inverse; each handle tries every value through the graph's own layout on a copy
+of the parameters and keeps the nearest (moduleGraphics.c notes §87). A press on any graph but off its
+handles now does nothing, so a missed handle no longer drags the module (notes §88); right-click still
+opens the module's menu there. EnvADDSR's graph had run into its name (y 4) and moved to y 6.
+  CHECKED BY REAL DRAGS on an offline instance: EnvADSR's Decay breakpoint dragged right and down took
+  Decay 54 -> 127 (past its furthest reach) and Sustain 100 -> 58 in one gesture; a drag across empty
+  graph left the module where it was. TRAP: the first mouse action after bringing the window forward
+  was used to activate it and never reached the app - the first run looked like a broken handle.
+  Always make a harmless calibration click first.
+
+DX TEST PATCH AND DX IN THE ENGINE, 2026-09-13 (CT: "if you could create me a patch for testing";
+"Implementing in our engine would be good too"). PatchTestFiles/DXTest.pch2 is a six-operator DX7-style
+electric piano built on the G2 in Slot A: the manual's DXRouter wiring (each Operator's Out to the
+router's matching In, each router Out back to that Operator's FM), a Keyboard feeding every Operator's
+Gate, Note and Vel, Main to a 2-Out, algorithm 5 (three modulator/carrier pairs) with Feedback 6,
+Op2 at x14 for the tine, 5 voices poly, the Operators named Op1-Op6. Every value was written to the G2
+(DEVSET) and read back before saving. A backdoor RENAME was added to name them (backdoor.c notes §29).
+  THE ENGINE NOW PLAYS IT (sound-engine-reference §14): a DXRouter and its six Operators are one node,
+  run 6 down to 1 each sample so modulators come first, feedback from the last two samples. The
+  algorithm table moved to paramCurves.c so the graph and the engine share it. Checked offline: the
+  chain builds ("Playing 2 modules"), a held note peaks at 0.85 raw and falls to 0.005 three seconds
+  after release. The laws are the DX7's; FM depth, feedback amount, the Main output's scaling and the
+  level-scaling size are NOT measured on the G2 (§14.3-14.5).

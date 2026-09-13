@@ -80,9 +80,17 @@ const tVolumeMeterConfig * find_volume_meter_config(tVolumeType volumeType) {
 }
 
 const tGraphLocation * find_graph_location(tModuleType moduleType) {
+    return find_graph_location_nth(moduleType, 0);
+}
+
+// A module with more than one graph (Operator) has a row for each, in table order.
+const tGraphLocation * find_graph_location_nth(tModuleType moduleType, uint32_t nth) {
     for (uint32_t i = 0; i < ARRAY_SIZE(graphLocationList); i++) {
         if (graphLocationList[i].moduleType == moduleType) {
-            return &graphLocationList[i];
+            if (nth == 0) {
+                return &graphLocationList[i];
+            }
+            nth--;
         }
     }
 

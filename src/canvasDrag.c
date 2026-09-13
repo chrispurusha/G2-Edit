@@ -361,7 +361,10 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                     }
 
                     // notes §9
-                    if (paramType == paramTypeSlider) {
+                    if (gParamDragging.graphValue != NULL) {
+                        // A graph handle: the value follows the pointer - moduleGraphics.c's notes §87.
+                        value = gParamDragging.graphValue(gParamDragging.moduleKey, gParamDragging.graphBox, (tCoord){x, y}, gParamDragging.graphItem);
+                    } else if (paramType == paramTypeSlider) {
                         double refY   = altHeld ? gDragStartY : gDragPrevY;
                         int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset
                                         + (altHeld ? (int)((refY - yCoord) * (double)range / dial_drag_pixels_for_full_range(range))
@@ -431,6 +434,18 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                             LOG_DEBUG("Write to module %u variation %u\n", module->key.index, variation);
                             send_param_morph(slot, module->key, gParamDragging.param, gMorphGroupFocus, variation,
                                              module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus]);
+                        }
+                    }
+
+                    // A handle that moves a second parameter on its other axis sets that one too - after
+                    // the first, so it is found against the first's new value. No morph for it.
+                    if (gParamDragging.graphValue2 != NULL) {
+                        uint32_t value2 = gParamDragging.graphValue2(gParamDragging.moduleKey, gParamDragging.graphBox, (tCoord){x, y},
+                                                                     gParamDragging.graphItem);
+
+                        if (module->param[variation][gParamDragging.param2].value != value2) {
+                            module->param[variation][gParamDragging.param2].value = value2;
+                            send_param_value(slot, gParamDragging.moduleKey, gParamDragging.param2, variation, value2);
                         }
                     }
                 }
@@ -509,6 +524,16 @@ bool canvas_param_drag_release(void) {
                 // screen during the drag, so there is nothing to keep in step until here.
                 send_param_value_to_links(gParamDragging.moduleKey.slot, gParamDragging.moduleKey,
                                           gParamDragging.param, pdVariation, curVal);
+
+                // A graph handle's second parameter gets its own undo step and its own settled send.
+                if (gParamDragging.graphValue2 != NULL) {
+                    uint32_t curVal2 = pdMod->param[pdVariation][gParamDragging.param2].value;
+
+                    undo_push_param_change(gParamDragging.moduleKey, gParamDragging.param2, pdVariation,
+                                           gParamDragging.startValue2, curVal2);
+                    send_param_value_to_links(gParamDragging.moduleKey.slot, gParamDragging.moduleKey,
+                                              gParamDragging.param2, pdVariation, curVal2);
+                }
             } else {
                 uint32_t curVal = pdMod->mode[gParamDragging.mode].value;
                 undo_push_mode_change(gParamDragging.moduleKey,
