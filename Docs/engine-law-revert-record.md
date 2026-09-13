@@ -25,6 +25,18 @@ Add to it whenever a law is replaced. Hardware checks for each are in to-test.md
 
 | 12 | Patch Vibrato rate | `4.0 + (dial / 127.0) * 4.0` Hz, in the engine snapshot and the Patch Settings display | `vibrato_rate_hz()`: (255 + 256 x dial/127) x (96000/94) / 65536 Hz (§15.6) | `35c87a7` `src/soundEngine.c` `sound_engine_update_from_patch()`, `src/graphics.c` |
 
+| 13 | ShpStatic curves | `{s^(1/3), s^(1/2), s^2, s^3}` odd power | Inv x3 1-(1-s)^3, Inv x2 1-(1-s)^2 (both held at full scale), x2 s^2, x3 s^3 (paramCurves notes §31) | `35c87a7` `src/paramCurves.c` `shaper_transfer()` |
+| 14 | ShpExp | exponent morphed `1 + a(n - 1)`, n = 2..5 | `(1 - a)s + a s^n` (§32) | same |
+| 15 | Saturate | `log(1 + k|x|) / log(1 + k)`, k = a x {4, 16, 64, 256} | `(1 - a)s + a(1 - (1 - s)^n)`, n = 3, 5, 7, 9; slope (1 - a) above full scale (§33) | same |
+| 16 | Clip threshold | `2^(-6a)`, a = Level/127 | `1 - Level/128` (§36) | same |
+| 17 | Shaper headroom and dials | input clamped to full scale; Amount and mod dials over 127 | clamped to 4x full scale (§46); Amount and mod over 128, 127 = 1 (Clip Level over 128 exactly) | `35c87a7` `src/paramCurves.c` `shaper_settings_build()` |
+| 18 | Oscillator PitchMod attenuator (OscA/B/C, ShpA/B, OscDual, OscNoise) | `type_ii_attenuator(dial / 127)`, x squared | the mixer Exp taper, `mix_level_gain(dial)`: 0.01x + 0.99x³ (notes §15) | `35c87a7` `src/soundEngine.c` `type_ii_attenuator()` and its two callers |
+| 19 | FltMulti damping | `fmax(0.02, 1 - Res/127)` | `1 - 0.99 Res/128`, exactly 0.01 at 127 (§10.2) | `35c87a7` `src/soundEngine.c` `fltmulti_damping()` |
+| 20 | FltStatic | `svf_filter()` with f = 2 sin(π g/2), g = 1 - exp(-2π fc/fs), q = 1/`flt_static_q()` = 2(1 - Res/127)²; the filter map left `.shape` and `.gc` at 0, so FilterType and GC were never read | `fltstatic_step()`: FltMulti's filter, F = 2 sin(π fc/fs), d = 1 - Res/128 (floor 0.01), FilterType read, GC drive × d (§10.4) | `35c87a7` `src/soundEngine.c` `filter_step()`, `filter_param_map()`, eNodeFilter in `add_node()` |
+| 21 | FltStatic drawn Q | `flt_static_q()`: d = 1 - v/127 | d = 1 - v/128 | `35c87a7` `src/paramCurves.c` |
+| 22 | EqPeak BW | `eq_peak_damping((128 - BW)/64)`: 2(2^N - 1)/√2^N | `eq_peak_bw_damping()`: 2√2 (1 - BW/128) (§11.3) | `35c87a7` `src/paramCurves.c` `eq_bands_build()` |
+| 23 | EQ gain dials at 127 | (127 - 64) × 18/64 = +17.7 dB | +18 dB (§11.1) | `35c87a7` `src/paramCurves.c` `eq_dial_gain()` |
+
 API removed along with 1 and 4: `sound_engine_is_polyphonic()` (replaced by `sound_engine_note_sounding()`)
 and `note_stack_top()`, both at `e225d27`.
 
@@ -32,4 +44,6 @@ and `note_stack_top()`, both at `e225d27`.
 
 1-4 are behaviour, not constants: put back the old function from its commit (the note stack's fallback
 needs `sound_engine_is_polyphonic()` back as well). 5-11 are a constant or a formula each, quoted
-above; 9 and 10 go together, since the recurrences use the new constants.
+above; 9 and 10 go together, since the recurrences use the new constants. 12-23 are likewise one
+formula each - but reverting 20 also brings back two bugs (the π tuning error and FilterType never
+read), so revert only its damping if that is what is in question.

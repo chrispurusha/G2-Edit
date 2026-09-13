@@ -133,9 +133,10 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
         }
         case moduleTypeFltStatic:
         {
-            // Freq, Res, FilterType, Bypass, GC. No slope: it is two poles, always.
+            // Freq, Res, FilterType, Bypass, GC. No slope: it is two poles, always. Its GC is not
+            // FltNord's, so it is read on its own (FLTSTATIC_PARAM_GC).
             *map = (tFilterParams){
-                .freq = 0, .env = -1, .kbt = -1, .res = 1, .slope = -1, .slopeMode = -1, .active = 3
+                .freq = 0, .env = -1, .kbt = -1, .res = 1, .slope = -1, .slopeMode = -1, .gc = -1, .shape = 2, .active = 3
             };
             return true;
         }
@@ -157,6 +158,7 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define FLT_PARAM_FREQ           (0)
 #define FLT_PARAM_ENV            (1)   // modulation depth for the Env input, 0..200%
 #define FLT_PARAM_KBT            (2)
+#define FLTSTATIC_PARAM_GC       (4)   // §10.4 - drive x damping
 #define FLT_PARAM_RES            (3)
 #define FLT_PARAM_SLOPE          (4)
 #define FLT_PARAM_ACTIVE         (5)
@@ -439,8 +441,8 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4};
 #define PITCH_MOD_SEMITONES    (64.0)
 
 // notes §15
-static double type_ii_attenuator(double knob) {
-    return knob * knob;
+static double type_ii_attenuator(double dial) {
+    return mix_level_gain(dial);
 }
 
 // Aftertouch's morph group. The G2 hard-wires the eight — morphStrMap lists them Wheel, Vel, Keyb,
@@ -2559,7 +2561,7 @@ static void set_osc_pitch(tEngineNode * node, tModule * module, uint32_t variati
     node->oscKbt    = (param_value(module, variation, (uint32_t)p->kbt) != 0.0);
     node->basePitch = tune + (osc_fine_cents(cent) / 100.0);
     node->modAmount = (p->pitchMod >= 0)
-                      ? type_ii_attenuator(param_value(module, variation, (uint32_t)p->pitchMod) / 127.0)
+                      ? type_ii_attenuator(param_value(module, variation, (uint32_t)p->pitchMod))
                       : 0.0;
     node->active    = (param_value(module, variation, (uint32_t)p->active) != 0.0);
 }
@@ -2811,7 +2813,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                                           isShpA ? SHPA_PARAM_SHAPE : SHPB_PARAM_SHAPE) / 127.0;
             node->modAmount = type_ii_attenuator(param_value(module, variation,
                                                              isShpA ? SHPA_PARAM_PITCH_MOD
-                                                             : SHPB_PARAM_PITCH_MOD) / 127.0);
+                                                             : SHPB_PARAM_PITCH_MOD));
             node->active    = (param_value(module, variation,
                                            isShpA ? SHPA_PARAM_ACTIVE : SHPB_PARAM_ACTIVE) != 0.0);
             break;
@@ -3221,11 +3223,13 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             } else {
                 node->fltGain = 1.0;
             }
-            node->fltKbt    = (map.kbt >= 0)
+            node->fltKbt      = (map.kbt >= 0)
                               ? flt_kbt_amount((uint32_t)param_value(module, variation, (uint32_t)map.kbt)) : 0.0;
-            node->modAmount = (map.env >= 0)
+            node->modAmount   = (map.env >= 0)
                               ? (param_value(module, variation, (uint32_t)map.env) * 2.0 / 128.0) : 0.0;
-            node->active    = (param_value(module, variation, (uint32_t)map.active) != 0.0);
+            node->active      = (param_value(module, variation, (uint32_t)map.active) != 0.0);
+            node->fltGainComp = (module->type == moduleTypeFltStatic)
+                                && (param_value(module, variation, FLTSTATIC_PARAM_GC) != 0.0);
             break;
         }
         case eNodeDx:
@@ -4909,13 +4913,19 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec) 
 }
 
 // notes §159
-#define FLT_CONTROL_MIN         (0.0)
-#define FLT_CONTROL_MAX         (127.0)
+#define FLT_CONTROL_MIN          (0.0)
+#define FLT_CONTROL_MAX          (127.0)
 
-#define FLTMULTI_DAMPING_MIN    (0.02)    // §10.3 - keeps Res 127 finite
+#define FLTMULTI_DAMPING_SPAN    (0.99)   // §10.2
+#define FLTMULTI_DAMPING_TOP     (0.01)   // §10.2 - the instrument's own value at Res 127
 
 static double fltmulti_damping(double resDial) {
-    return fmax(FLTMULTI_DAMPING_MIN, 1.0 - (resDial / 127.0));
+    return (resDial >= 127.0) ? FLTMULTI_DAMPING_TOP : (1.0 - (FLTMULTI_DAMPING_SPAN * resDial / 128.0));
+}
+
+// §10.4 - zero at Res 127 on the instrument, which would leave a float loop lossless.
+static double fltstatic_damping(double resDial) {
+    return fmax(FLTMULTI_DAMPING_TOP, 1.0 - (resDial / 128.0));
 }
 
 // §10.2 - LP, BP and HP into the node's three legs.
@@ -4960,6 +4970,46 @@ static void fltmulti_step(uint32_t voice, uint32_t node, const tEngineNode * spe
         legs[0] = lowOut;
         legs[1] = bandOut;
         legs[2] = highOut;
+    }
+}
+
+// §10.4 - FltMulti's filter (§10.2) with FltStatic's damping and drive, one output by FilterType.
+static double fltstatic_step(double * state, double input, double tuning, double resDial, tFilterShape shape,
+                             bool gainComp) {
+    double damping   = fltstatic_damping(resDial);
+    double bandScale = 1.0 - (0.5 * tuning);
+    double feedback  = 2.0 * damping * damping * bandScale;
+    double drive     = gainComp ? damping : 1.0;
+
+    if (shape == eFilterShapeHighPass) {
+        drive *= bandScale - (0.25 * tuning * tuning);
+    } else if ((shape == eFilterShapeBandPass) && ((damping * damping) >= 0.5)) {
+        drive = 2.0 * damping * damping;    // held to a unity peak while the damping is heavy
+    }
+    double lowBefore = state[2];
+    double lowPrev   = state[0];
+    double bandPrev  = state[1];
+    double low       = lowPrev + (tuning * bandPrev);
+    double high      = (drive * input) - low - (feedback * bandPrev);
+    double band      = bandPrev + (tuning * high);
+
+    state[0] = low;
+    state[1] = band;
+    state[2] = lowPrev;
+
+    switch (shape) {
+        case eFilterShapeBandPass:
+        {
+            return 0.5 * bandScale * (band + bandPrev);
+        }
+        case eFilterShapeHighPass:
+        {
+            return high;
+        }
+        default:
+        {
+            return 0.25 * (low + (2.0 * lowPrev) + lowBefore);
+        }
     }
 }
 
@@ -5063,13 +5113,8 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
         case eFilterTopologyBiquad:
         {
             // notes §164
-            double f    = 2.0 * sin(M_PI * 0.5 * g);
-            double damp = 1.0 / flt_static_q(resonance * 127.0);
-
-            if (f > 1.0) {
-                f = 1.0;            // keep the section stable at the top of its range
-            }
-            return svf_filter(gLadder[voice][node], input, f, damp, spec->fltShape);
+            return fltstatic_step(gLadder[voice][node], input, 2.0 * sin(M_PI * cutoff / gSampleRate),
+                                  resonance * 127.0, spec->fltShape, spec->fltGainComp);
         }
         default:
         {
