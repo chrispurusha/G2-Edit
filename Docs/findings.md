@@ -9538,6 +9538,41 @@ switches are Constants 12 units apart) - sound-engine-reference §16:
     straight 4 to 8 Hz, within 0.7%, and is now exact (reference §15.6). The depth - 1 cent a step at
     full controller - already agreed within 1%. So if the vibrato still sounds off against the G2,
     the difference is elsewhere: the controller that drives it, or the shape, not the rate.
+  - SHAPERS (paramCurves notes §31-§36, §46): ShpStatic's Inv curves are 1-(1-s)^3 and 1-(1-s)^2,
+    not roots; ShpExp crossfades dry against s^n rather than bending the exponent; Saturate is
+    (1-a)s + a(1-(1-s)^n), n = 3/5/7/9, straight above full scale; Clip's threshold falls in a straight
+    line, (128-Level)/128 - ours fell 36 dB, clipping four times too hard mid-dial. Signals carry 4x
+    full scale before saturating, and the level dials read over 128. Rect was already exact. Overdrive
+    and WaveWrap are not done yet.
   - DELAY CLK CONFIRMED EXACTLY: the instrument's sync table, read as a divisor of the clock period,
     gives the same 32-slot sequence as clk_sync_beats() through kClkSyncSlot, 1/24 of a beat to 8
     beats with the middle ten doubled, and halves past the Range as notes §86 does. No change.
+
+2026-09-13 - OSCILLATORS, LFOS AND FILTERS AGAINST THE INSTRUMENT'S OWN TABLES. CT: "Any of our
+existing oscillators have constants which might need checking against the tables?"; "Filters too, if
+they also have constants."
+  - CONFIRMED EXACT, no change: oscillator Coarse (12-TET, E4 at 64, one table for Semi, Freq and
+    Factor), Fine ((v-64)/64 × 50 cents), all four LFO ranges (Sub (v+1)/699.05 Hz, Hi 0.2555 ×
+    2^(v/12), Lo = Hi/16, BPM), every filter's cutoff 13.75 × 2^(v/12) Hz (FltClassic's separate
+    table the same law), Eq3band's mid 100 × 80^(v/127), and the EQ Level taper.
+  - OSCILLATOR PITCHMOD IS THE MIXERS' EXP TAPER, 0.01x + 0.99x³ - the same table. Ours was x²: at 64,
+    0.25 against 0.13, nearly twice the vibrato depth at a half-open knob (notes §15). The filters'
+    PitchVar attenuators are linear, dial/128, as ours already were.
+  - FLTSTATIC HAD TWO BUGS, both found while reading its constants. Its tuning was derived from the
+    one-pole coefficient as 2 sin(π g/2), which with g near 2π fc/fs put every FltStatic about π times
+    (1.65 octaves) above its dial. And its filter map left FilterType and GC at index 0, so the engine
+    read the Freq dial as the filter type. It is now FltMulti's filter with the instrument's damping
+    d = 1 - Res/128, FilterType read, BP held to a unity peak at low Res, and GC as drive × d
+    (reference §10.4). Checked against the DSP code's arithmetic run sample by sample: LP and BP within
+    0.1 dB, HP within 0.3 dB below 2 kHz and about 1 dB beyond.
+  - FLTMULTI's damping is 1 - 0.99·Res/128, exactly 0.01 at 127 (ours 1 - Res/127 floored at 0.02):
+    the same to 0.02 through the middle, 1.9 dB less peak at Res 110, and the top now the instrument's.
+  - EQPEAK: BW damping 2√2 (1 - BW/128), which the 2026-09-12 fit matches at 64 and within 4%
+    elsewhere; every EQ gain reaches the full +18 dB at 127 (ours 17.7). ITS FREQ IS OPEN: the
+    instrument's table reads 20 × 800^(Freq/127) Hz, 20 Hz to 16 kHz, against the displayed 13.75 ×
+    2^(Freq/12) the engine and the 2026-09-12 fit use. They meet only near Freq 73, so one check on
+    the G2 settles it (to-test.md).
+  - FLTNORD IS NOT A LADDER on the instrument but FltMulti's filter, doubled for 24 dB. Our ladder
+    model was never measured; todo.md.
+  Old laws in the revert record, rows 18-23.
+

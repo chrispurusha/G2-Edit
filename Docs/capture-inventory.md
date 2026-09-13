@@ -67,7 +67,8 @@ These play in the engine and have never been measured against the instrument.
 
 | module | what is assumed |
 |---|---|
-| **FltLP, FltHP, FltStatic, FltNord** | All four are on `to-test.md` as needing an ear and none is tuned. FltClassic is the only filter with captures. |
+| **FltLP, FltHP, FltNord** | All three are on `to-test.md` as needing an ear and none is tuned. |
+| **FltStatic** | Peak heights only (2026-08, paramCurves.c notes §12). Since 2026-09-13 FltMulti's filter with the instrument's own damping and drive, checked against the DSP code's arithmetic (§10.4); a noise capture per FilterType would confirm it. |
 | **LfoShpA** | Rate Sub, Rate Lo and Rate Hi all MEASURED 2026-09-07 and now agree within 0.013% - Rate Lo's base was 0.43% low and is now derived as Rate Hi over 16. BPM and Clk still unverified (they need a master clock). LfoC untested. |
 | **LevMult** | |
 | **Mix4to1C, Mix4to1S** | SUMS - measured 2026-09-07, +6.02 dB per doubling of identical inputs, and the engine already matches. Its level-dial law and its -6/-12 dB Pad are still unmeasured. |

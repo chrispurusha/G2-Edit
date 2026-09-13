@@ -167,11 +167,12 @@ a factor considerably less than 0.5". Reading the knob linearly, as this did, le
 the modulation at a half-open knob, which on a vibrato patch is the difference between a detune
 and a siren.
 
-SQUARED is the same approximation the mixer's Exp/dB curve already uses (see eNodeMix, which the
-manual confirms is the same Type II scale). Exact at both ends — 0 "shuts off the modulation
-completely", 127 "leaves the incoming signal unaffected" — and convex between them, which is the
-shape described. The exact law is not stated numerically anywhere in the manual, and the knob has
-no value display to read it off, so this is closer rather than right.
+IT IS THE MIXER'S EXP TAPER EXACTLY, 0.01x + 0.99x³ with x = dial/127 - `mix_level_gain()`, reference
+§3.2. The instrument sends the oscillators' PitchMod dials (OscA, OscB, OscC, OscShpA, OscShpB,
+OscDual, OscNoise) through the same table as the mixers' Exp and dB levels, and that taper is measured
+on the hardware (Mix4-1C, 2026-09-12). Adopted 2026-09-13; until then this was x², nearly twice the
+modulation at a half-open knob (0.25 against 0.13 at 64). The filters' PitchVar attenuators are NOT
+this law: they are linear, dial/128.
 
 ## 16. `OSCB_TUNE_UNITY`
 
@@ -2345,10 +2346,9 @@ one topology.
 
 ## 146. `svf_filter()`
 
-FltStatic: A PLAIN RESONANT BIQUAD, and the only filter of the seven that is - its passband does
-not move with resonance, where FltClassic's and FltNord's drop away. A Chamberlin state-variable
-section gives low, band and high from one pair of states, which is what the FilterType selector
-needs; band-reject is low + high.
+A Chamberlin state-variable section: low, band and high from one pair of states; band-reject is
+low + high. OscNoise's resonators use it (§8.2). FltStatic did until 2026-09-13 and now runs
+FltMulti's filter instead (reference §10.4).
 
 state[0] is the low output, state[1] the band. TWO STATES ONLY, so it shares gLadder harmlessly.
 
@@ -2587,10 +2587,10 @@ constant, each measured for what it describes.
 
 ## 164. in `filter_step()`
 
-g is the one-pole coefficient; the SVF wants 2.sin(pi.fc/sr), and for the corners a
-patch actually uses the two agree closely enough that deriving one from the other
-keeps a single cutoff path. Damping is 1/Q from the MEASURED resonance law, not from
-the Q the dial prints - see flt_static_q() in paramCurves.c.
+FltStatic's tuning comes straight from the cutoff, 2 sin(π fc/fs), as FltMulti's does (reference
+§10.4). Until 2026-09-13 it was derived from the one-pole coefficient g as 2 sin(π g/2) - but g is
+about 2π fc/fs, so the argument came out π² fc/fs rather than π fc/fs and every FltStatic sounded
+about π times (1.65 octaves) above its dial.
 
 ## 165. `eval_node()`
 

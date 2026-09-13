@@ -1413,12 +1413,12 @@ static double shaper_transfer_sample(uint32_t moduleType, uint32_t modeValue, do
         }
     }
     {
-        // shpStaticStrMap order is Inv x3, Inv x2, x2, x3 — gentlest inverse first.
-        static const double exponents[] = {0.49, 0.65, 1.98, 2.97};
-        uint32_t            index       = (modeValue < 4) ? modeValue : 0;
-        double              magnitude   = pow(fabs(input), exponents[index]);
+        // The engine's own ShpStatic curves, so the picker cannot drift from what is heard.
+        tShaperSettings shaper = {
+            .kind = eShaperShpStatic, .curve = modeValue, .sym = true, .amount = 1.0, .mod = 0.0, .signalLeg = 0, .active = true
+        };
 
-        return (input < 0.0) ? -magnitude : magnitude;
+        return shaper_transfer(&shaper, 1.0, input);
     }
 }
 

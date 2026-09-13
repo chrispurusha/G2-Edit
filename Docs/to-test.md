@@ -141,6 +141,10 @@ Full detail for each is in findings.md, searchable by the wording below.
   leave the editor open on a playing patch for a few minutes - it should stay as responsive as the
   application, and Activity Monitor should show Live's memory flat. For numbers, `launchctl setenv
   G2_PLUGIN_FRAME_STATS 1` before starting Live, and Console shows a line a second from the editor.
+- ***SHAPER CURVES FROM THE INSTRUMENT'S LAWS (2026-09-13)*** - paramCurves notes §31-§36. STILL TO
+  CHECK by ear against the G2 with a sine at full scale: Clip at Level 64 (clips at half scale, much
+  gentler than before); ShpStatic Inv x3 (a fast rise, not a cube root); Saturate Curve 4 at full Amount;
+  ShpExp x5 at half Amount. And a hot signal (a LevAmp at 4x) into each - it now keeps its level.
 - ***ENVELOPE AND PULSE TIMES FROM THE INSTRUMENT'S LAWS (2026-09-13)*** - reference §17, §18. STILL TO
   CHECK by ear against the G2, same patch: (1) an EnvADSR with Decay 64 and Sustain 0 - the tail should
   now match, where the engine's used to run about 6% long; (2) Attack 127 LinExp takes about 50 s, not
@@ -210,8 +214,16 @@ FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard
   2026-08-31, but it is the thing to listen for if anything sounds unsteady)
 - ValSw1-2/ValSw2-1 Ctrl Value: now a 0-64 dial (top step reads 64). Confirm the range really is 64,
   not 128, against the G2's own panel - the device ACCEPTED a raw 127 when written directly
-- FltHP, FltStatic and FltNord now play in the sound engine - all three need an ear, none is tuned
-- FltStatic's engine damping uses the measured Q, which is far sharper than the dial's printed Q
+- FltHP and FltNord now play in the sound engine - both need an ear, neither is tuned
+- FltStatic (2026-09-13) is now FltMulti's filter with its own damping - it had sounded ~1.65 octaves
+  high and always LP. Check at Freq 64: LP, BP and HP at Res 0 and 96, GC off and on (reference §10.4)
+- Oscillator PitchMod (OscA/B/C, ShpA/B, OscDual, OscNoise) now tapers as the mixers' Exp - 0.13 at
+  64, was 0.25. An LFO into PitchVar at PitchMod 64 should now match the G2's vibrato depth
+- FltMulti's damping at the top: 0.01 at Res 127, and Res 110 peaks ~1.9 dB lower than before
+- EqPeak BW is now 2√2(1 - BW/128) and every EQ gain reaches +18 dB at 127 - small; listen at BW 0 and 127
+- EqPeak FREQ is open: the engine uses the displayed 13.75 × 2^(Freq/12), the instrument's own table
+  20 × 800^(Freq/127). On the G2: EqPeak Gain 127, BW 64, noise in - does the peak sit at 44 Hz or
+  57 Hz at Freq 20, at 8.2 kHz or 6.7 kHz at Freq 110?
 - FltLP slope now reaches the engine (was stuck on 1 pole, read from Bypass) - 6 settings, 1-6 poles
 - FltLP can now be bypassed at all - its active flag read a parameter that does not exist
 - A/B both with G2_FILTER_LEGACY=1, which restores the old behaviour without a rebuild

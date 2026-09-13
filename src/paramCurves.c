@@ -257,7 +257,7 @@ double flt_static_q(double paramValue) {
     } else if (value > 126.0) {
         value = 126.0;      // one step short of zero damping, so the curve stays finite
     }
-    damping = 1.0 - (value / 127.0);
+    damping = 1.0 - (value / 128.0);
     return 0.5 / (damping * damping);
 }
 
@@ -643,6 +643,11 @@ double constant_level(double paramValue, bool bipolar) {
 #define RECT_PARAM_MODE            (0)
 #define RECT_PARAM_ACTIVE          (1)
 
+// A level dial as the instrument reads it: over 128, with its top step reaching exactly 1.
+static double shaper_dial_fraction(double value) {
+    return (value >= 127.0) ? 1.0 : (value / 128.0);
+}
+
 bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader dial, tShaperSettings * out) {
     // Where a module has no dial at all - ShpStatic and Rect are pure mode selectors - the amount
     // stays at full and nothing reads it.
@@ -654,8 +659,8 @@ bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader di
         case moduleTypeClip:
         {
             out->kind   = eShaperClip;
-            out->amount = dial(module, variation, CLIP_PARAM_LEVEL) / 127.0;
-            out->mod    = dial(module, variation, CLIP_PARAM_LEVEL_MOD) / 127.0;
+            out->amount = dial(module, variation, CLIP_PARAM_LEVEL) / 128.0;   // notes §36: 127 leaves 1/128
+            out->mod    = shaper_dial_fraction(dial(module, variation, CLIP_PARAM_LEVEL_MOD));
             out->sym    = (module->param[variation][CLIP_PARAM_SHAPE].value != 0);
             out->active = (dial(module, variation, CLIP_PARAM_ACTIVE) != 0.0);
             return true;
@@ -673,8 +678,8 @@ bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader di
         case moduleTypeSaturate:
         {
             out->kind   = eShaperSaturate;
-            out->amount = dial(module, variation, SAT_PARAM_AMOUNT) / 127.0;
-            out->mod    = dial(module, variation, SAT_PARAM_AMOUNT_MOD) / 127.0;
+            out->amount = shaper_dial_fraction(dial(module, variation, SAT_PARAM_AMOUNT));
+            out->mod    = shaper_dial_fraction(dial(module, variation, SAT_PARAM_AMOUNT_MOD));
             out->curve  = module->param[variation][SAT_PARAM_CURVE].value;
             out->active = (dial(module, variation, SAT_PARAM_ACTIVE) != 0.0);
             return true;
@@ -682,8 +687,8 @@ bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader di
         case moduleTypeShpExp:
         {
             out->kind   = eShaperShpExp;
-            out->amount = dial(module, variation, SHPEXP_PARAM_AMOUNT) / 127.0;
-            out->mod    = dial(module, variation, SHPEXP_PARAM_AMOUNT_MOD) / 127.0;
+            out->amount = shaper_dial_fraction(dial(module, variation, SHPEXP_PARAM_AMOUNT));
+            out->mod    = shaper_dial_fraction(dial(module, variation, SHPEXP_PARAM_AMOUNT_MOD));
             out->curve  = module->param[variation][SHPEXP_PARAM_CURVE].value;
             out->active = (dial(module, variation, SHPEXP_PARAM_ACTIVE) != 0.0);
             return true;
@@ -716,15 +721,6 @@ bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader di
     }
 }
 
-// |x|^p with the sign carried through: an odd-symmetric power curve, which is what a shaper graph
-// that passes through the origin unchanged has to be.
-static double shaper_odd_power(double x, double p) {
-    if (x < 0.0) {
-        return -pow(-x, p);
-    }
-    return pow(x, p);
-}
-
 // Fold rather than clip: a triangle of period 4 that runs straight through [-1, 1] and turns back
 // on itself outside it, so 1.5 comes back as 0.5 and 3.0 as -1.0. This is what makes WaveWrap
 // generate its own overtones instead of the clipped ones a limiter would.
@@ -737,19 +733,23 @@ static double shaper_fold(double x) {
     return (y <= 2.0) ? (y - 1.0) : (3.0 - y);
 }
 
-static double shaper_clamp(double x) {
-    if (x > 1.0) {
-        return 1.0;
+// notes §46 - the instrument's signals saturate at four times full scale, not at it.
+#define SHAPER_HEADROOM    (4.0)
+
+static double shaper_limit(double x, double limit) {
+    if (x > limit) {
+        return limit;
     }
 
-    if (x < -1.0) {
-        return -1.0;
+    if (x < -limit) {
+        return -limit;
     }
     return x;
 }
 
 double shaper_transfer(const tShaperSettings * settings, double amount, double input) {
-    double x = shaper_clamp(input);
+    double x = shaper_limit(input, SHAPER_HEADROOM);
+    double s = fabs(x);
 
     if (amount < 0.0) {
         amount = 0.0;
@@ -775,32 +775,42 @@ double shaper_transfer(const tShaperSettings * settings, double amount, double i
         case eShaperShpStatic:
         {
             // notes §31
-            static const double kExp[] = {1.0 / 3.0, 0.5, 2.0, 3.0};
-            uint32_t            curve  = (settings->curve < 4) ? settings->curve : 2;
+            double y = 0.0;
 
-            return shaper_odd_power(x, kExp[curve]);
+            switch (settings->curve) {
+                case 0:  y = (s >= 1.0) ? 1.0 : (1.0 - ((1.0 - s) * (1.0 - s) * (1.0 - s))); // Inv x3
+                    break;
+
+                case 1:  y = (s >= 1.0) ? 1.0 : (1.0 - ((1.0 - s) * (1.0 - s)));             // Inv x2
+                    break;
+
+                case 3:  y = s * s * s;                                                       // x3
+                    break;
+
+                default: y = s * s;                                                           // x2
+                    break;
+            }
+            return copysign(fmin(y, SHAPER_HEADROOM), x);
         }
         case eShaperShpExp:
         {
             // notes §32
-            static const double kExp[] = {2.0, 3.0, 4.0, 5.0};
-            uint32_t            curve  = (settings->curve < 4) ? settings->curve : 0;
+            static const double kPower[] = {2.0, 3.0, 4.0, 5.0};
+            uint32_t            curve    = (settings->curve < 4) ? settings->curve : 0;
+            double              y        = ((1.0 - amount) * s) + (amount * pow(s, kPower[curve]));
 
-            return shaper_odd_power(x, 1.0 + (amount * (kExp[curve] - 1.0)));
+            return copysign(fmin(y, SHAPER_HEADROOM), x);
         }
         case eShaperSaturate:
         {
             // notes §33
-            static const double kCurve[] = {4.0, 16.0, 64.0, 256.0};
+            static const double kPower[] = {3.0, 5.0, 7.0, 9.0};
             uint32_t            curve    = (settings->curve < 4) ? settings->curve : 0;
-            double              k        = amount * kCurve[curve];
+            double              y        = (s >= 1.0)
+                                           ? (1.0 + ((1.0 - amount) * (s - 1.0)))
+                                           : (((1.0 - amount) * s) + (amount * (1.0 - pow(1.0 - s, kPower[curve]))));
 
-            if (k < 1e-6) {
-                return x;
-            }
-            double              shaped   = log(1.0 + (k * fabs(x))) / log(1.0 + k);
-
-            return (x < 0.0) ? -shaped : shaped;
+            return copysign(fmin(y, SHAPER_HEADROOM), x);
         }
         case eShaperWaveWrap:
         {
@@ -820,7 +830,7 @@ double shaper_transfer(const tShaperSettings * settings, double amount, double i
             // Asym shapes only the positive peaks (manual), so the negative half stays linear -
             // and then meets the headroom, which is where its own harmonics come from.
             if ((settings->sym == false) && (driven < 0.0)) {
-                shaped = shaper_clamp(driven);
+                shaped = shaper_limit(driven, 1.0);
             }
             return ((1.0 - amount) * x) + (amount * shaped);
         }
@@ -828,7 +838,7 @@ double shaper_transfer(const tShaperSettings * settings, double amount, double i
         default:
         {
             // notes §36
-            double t = pow(2.0, -6.0 * amount);
+            double t = 1.0 - amount;
 
             if (x > t) {
                 return t;
@@ -849,7 +859,14 @@ static const double kEqHighShelfHz[] = {8000.0, 6000.0, 12000.0}; // measured or
 #define EQ_MID_OCTAVES    (1.0)    // §11.3
 
 static double eq_dial_gain(double dial) {
-    return pow(10.0, ((dial - 64.0) * (18.0 / 64.0)) / 20.0);    // §11.1
+    double steps = (dial >= 127.0) ? 64.0 : (dial - 64.0);        // §11.1 - 127 is the full +18
+
+    return pow(10.0, (steps * (18.0 / 64.0)) / 20.0);
+}
+
+// §11.3 - EqPeak's BW dial: the damping falls in a straight line, 2 root 2 at the bottom.
+static double eq_peak_bw_damping(double bw) {
+    return 2.0 * M_SQRT2 * (1.0 - (bw / 128.0));
 }
 
 static double eq_peak_damping(double octaves) {
@@ -887,7 +904,7 @@ bool eq_bands_build(tModule * module, uint32_t variation, tParamReader dial, tEq
         {
             out->peakHz      = flt_cutoff_hz(dial(module, variation, 0));
             out->peakGain    = eq_dial_gain(dial(module, variation, 1));
-            out->peakDamping = eq_peak_damping((128.0 - dial(module, variation, 2)) / 64.0);
+            out->peakDamping = eq_peak_bw_damping(dial(module, variation, 2));
             out->active      = (dial(module, variation, 3) != 0.0);
             out->inputLevel  = mix_level_gain(dial(module, variation, 4));
             break;

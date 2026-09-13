@@ -252,8 +252,8 @@ chosen per setting to keep the filter out of saturation and checked against a qu
     Q      ...    1.9    3.2    5.2   11.4   35.5  148
 ```
 Damping falls linearly to zero at the top of the dial, the same shape FltClassic's feedback has,
-so Q = 0.5/d^2 with d = 1 - v/127. That lands the top of the dial on self-oscillation and is
-within about 25% through the middle, which is as much as a 30-pixel curve can show.
+so Q = 0.5/d^2 with d = 1 - v/128, the instrument's own damping (adopted 2026-09-13; was v/127). That
+lands the top of the dial on self-oscillation and is within about 25% of these peaks through the middle, which is as much as a 30-pixel curve can show.
 DO NOT read a Q off a spectrum without checking the resolution: at 2048 points the Res 127 peak
 reads +17 dB and at 8192 it reads +36, because a Q=50 peak at 1 kHz is narrower than one bin.
 
@@ -523,29 +523,28 @@ no impulse, no windowing, no decay fitting. See to-test.md.
 
 ## 31. in `shaper_transfer()`
 
-shpStaticStrMap is {"Inv x3", "Inv x2", "x2", "x3"}: the inverses are the roots, so
-the four exponents are 1/3, 1/2, 2 and 3. Every one of them leaves full scale at
-full scale and moves only what is between, which is what "amplification/attenuation
-characteristic" means on the module's own buttons.
+SHPSTATIC'S FOUR CURVES, the instrument's (2026-09-13), on s = |x| over full scale with the sign
+carried through: Inv x3 is 1 - (1 - s)^3, Inv x2 is 1 - (1 - s)^2, x2 is s^2 and x3 is s^3. "Inv" is
+the curve turned over - a fast rise that flattens into full scale - NOT a root, which is what this
+played until then (s^(1/3) and s^(1/2)). The two Inv curves hold at full scale beyond it; x2 and x3
+carry on up to the headroom (notes §46).
 
-NOT RECONCILED WITH THE 2026-08-24 CAPTURE. The ShpStatic picker icon draws the exponents
-measured then - 0.49, 0.65, 1.98, 2.97 (`code-notes/moduleGraphics.c.md` §47) - so the two
-inverse curves are drawn noticeably gentler than they are played here. See todo.md.
+The 2026-08-24 capture had fitted power laws to these and read 0.49 and 0.65 for the Inv pair: a power
+law cannot follow 1 - (1 - s)^n, and the fit landed wherever the test signal's level put it.
 
 ## 32. in `shaper_transfer()`
 
-shpExpCurveStrMap is {"x2", "x3", "x4", "x5"}, and Amount morphs the EXPONENT from
-linear towards the named curve rather than crossfading between two signals. That
-keeps full scale at full scale at every setting, which is the property the manual
-describes when it warns the module wants a fixed-amplitude input: the output falls
-exponentially only as the INPUT falls.
+SHPEXP CROSSFADES THE DRY SIGNAL AGAINST A POWER CURVE (2026-09-13): y = (1 - a)s + a s^n with the
+sign carried through, n = 2, 3, 4, 5 for shpExpCurveStrMap's x2..x5, a the Amount (plus its mod
+input) over 128. Until then Amount bent the EXPONENT from 1 towards n instead - the same end points,
+a different path between them. Nothing clamps at full scale; a hot input rises as s^n to the headroom.
 
 ## 33. in `shaper_transfer()`
 
-"Shapes an input signal in a logarithmic fashion", Curve 1 smooth and Curve 4 hard.
-A log curve normalised to unity at full scale: y = log(1 + k|x|) / log(1 + k), with
-k rising with both the Curve selector and the Amount dial, and k -> 0 giving back a
-straight line. Structure from the manual, k range UNMEASURED.
+SATURATE (2026-09-13): y = (1 - a)s + a(1 - (1 - s)^n) up to full scale, sign carried through, with
+n = 3, 5, 7, 9 for Curve 1-4 - an odd-order curve that meets full scale flat, blended against the dry
+signal by the Amount. Beyond full scale it carries on straight at slope (1 - a), so at full Amount it
+holds and at none it passes. Until then this was a normalised log curve with an unmeasured k range.
 
 ## 34. in `shaper_transfer()`
 
@@ -575,10 +574,17 @@ doubt, since the module has no separate bypass reading of its own dial.
 
 ## 36. in `shaper_transfer()`
 
-"Decreasing the clip level limit below the normal headroom": the dial LOWERS the
-threshold rather than raising a gain, which is why the manual warns the level drops
-as it opens and suggests a feedback loop to get it back. 36 dB of travel is a guess;
-only the direction is from the manual.
+CLIP'S LEVEL LOWERS THE THRESHOLD IN A STRAIGHT LINE (2026-09-13): t = (128 - Level)/128 of full scale,
+so Level 64 clips at half scale and 127 at 1/128 - it never reaches zero. The mod input lowers it
+further, by its attenuator (over 128) times the input, and it stops at zero. Sym clips both halves,
+Asym only the positive one (asymSymStrMap: 0 is Asym). Until then the threshold fell 36 dB
+exponentially across the dial, so the middle of the dial clipped four times harder than it should.
+
+## 46. `SHAPER_HEADROOM`
+
+The instrument carries a signal of four times full scale before its fixed point saturates - full scale
+is 64 units of a 256-unit range - so a shaper sees a hot input as it is and can pass up to that much.
+This clamped to full scale until 2026-09-13, which flattened every overdriven input to the same thing.
 
 ## 37. `kEqLowShelfHz`
 

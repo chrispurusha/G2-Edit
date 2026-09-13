@@ -162,7 +162,7 @@ LP, BP, HP - the node's three legs (§9.3).
 voice, run at the engine rate:
 
     low  = low' + F·band'          F = 2 sin(π fc / fs),  fc = flt_cutoff_hz(Freq)
-    high = drive - low - q·band'   q = 2d²(1 - F/2),      d  = 1 - Res/127
+    high = drive - low - q·band'   q = 2d²(1 - F/2),      d  = 1 - 0.99·Res/128
     band = band' + F·high          drive = input, × d with GComp on
 
 (' is the previous sample.) The (1 - F/2) in q is what keeps it stable at every cutoff and
@@ -184,17 +184,36 @@ Res 0/64/110 and both slopes, each divided by the unfiltered noise, against 10.2
 - **Shape** within 0.5-0.6 dB mean on every output, 1.1 dB worst - the 6 dB BP included.
 - **Cutoff** is `flt_cutoff_hz()`.
 - **Resonance.** Q = 0.5/d² at low cutoffs. The Q the dial DISPLAYS, `flt_resonance_q()`, is a different
-  number (damping span 0.9): the acoustic Q reaches self-oscillation at Res 127. `fltmulti_damping()`
-  floors d at 0.02 to keep 127 finite.
+  number (damping span 0.9): the acoustic Q reaches self-oscillation at Res 127. `fltmulti_damping()` is
+  the instrument's own: 0.01 exactly at 127 (adopted 2026-09-13; was 1 - Res/127 floored at 0.02 - the
+  same to 0.02 through the middle, 1.9 dB more peak at Res 110).
 - **GComp** is the drive × d. Levels against Res 0: +0.1 dB at Res 64, +1.0 dB at Res 110. GComp off is
   not measured.
 - **6 dB BP** is LP - HP: |1 + ω²| over the two-pole denominator, so it is flat at Res 0 and rises to a
   peak of 2Q at the cutoff - the "strong resonant peak" of the manual.
 
+**10.4 FltStatic (from the DSP code, adopted 2026-09-13).** The filter of 10.2 with one output, chosen by
+FilterType, and its own damping and drive:
+
+- **Damping** d = 1 - Res/128, zero at 127 on the instrument; the engine stops at 0.01, FltMulti's top
+  (`fltstatic_damping()`). The acoustic Q is 0.5/d², as the peaks measured in 2026-08 show (paramCurves.c
+  notes §12).
+- **Outputs** LP and BP are 10.2's 12 dB outputs; HP is `high`. The drive is 1, except BP, which is held to
+  a unity peak while d² >= 1/2 (drive 2d², up to Res 37), and HP, whose drive is × (1 - F/2 - F²/4).
+- **GC** multiplies the drive by d, as FltMulti's GComp does - except BP while d² >= 1/2.
+- **Checked** against the DSP code's arithmetic run sample by sample (Freq 30-100, Res 0-110, GC off and
+  on): LP and BP within 0.1 dB, HP within 0.3 dB below 2 kHz and about 1 dB at Res 110 or 4 kHz - its HP
+  tap has a term the engine does not model. Very low corners differ by the instrument's own fixed-point
+  error, which is not modelled either.
+
+Until 2026-09-13 the engine ran FltStatic as a separate state-variable section, tuned about π times
+(1.65 octaves) above its dial, always low-pass whatever FilterType said, with d = 1 - Res/127 (revert
+record 20).
+
 ## 11. EQs
 
 **11.1 Gain and level.** Every EQ gain dial - EqPeak's Gain, and Lo, MidGn and Hi on Eq2Band and
-Eq3band - is the dB it displays, (dial - 64) × 18/64, to within 0.5 dB. `eq_dial_gain()`. Level is the
+Eq3band - is the dB it displays, (dial - 64) × 18/64 with 127 the full +18, to within 0.5 dB. `eq_dial_gain()`. Level is the
 mixer's Exp taper (§3.2), `mix_level_gain()`: Level 64 is -17.6 dB, not -6.
 
 **11.2 Shelves (from the DSP code, confirmed by 11.6).** Low shelf y = x + (G - 1)·lp, lp a one-pole
@@ -205,8 +224,11 @@ fitted 13.3 kHz, where the capture thins out, and is taken as its name, 12 kHz.
 
 **11.3 Peak.** EqPeak and Eq3band's mid band: y = x + (G - 1)·q·bp, bp a band-pass of damping q
 (peak 1/q). Centre: EqPeak `flt_cutoff_hz(Freq)`, Eq3band 100 × 80^(Freq/127) Hz. For a boost
-q = 2(2^N - 1)/√(2^N) with N = (128 - BW)/64 octaves - twice the damping of a band-pass N octaves wide -
-whatever the gain. Eq3band's mid has no BW dial: it fits q = 1.36, and the engine uses the formula's
+EqPeak's q = 2√2 × (1 - BW/128), whatever the gain - the instrument's own law, adopted 2026-09-13
+(`eq_peak_bw_damping()`). The measured fit it replaced, 2(2^N - 1)/√(2^N) with N = (128 - BW)/64
+octaves (twice the damping of a band-pass N octaves wide), agrees at BW 64 and within 4% elsewhere.
+EqPeak's CENTRE IS OPEN: the instrument's own table reads 20 × 800^(Freq/127) Hz, 20 Hz to 16 kHz,
+against the displayed curve used here; they meet only near Freq 73 (to-test.md). Eq3band's mid has no BW dial: it fits q = 1.36, and the engine uses the formula's
 1 octave, 1.41 (`EQ_MID_OCTAVES`).
 
 **11.4 Cuts mirror boosts.** A cut is the exact inverse of the boost of the same size: the peak's
