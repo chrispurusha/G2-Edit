@@ -120,7 +120,7 @@ static void note_on(uint8_t note, uint8_t velocity) {
 }
 
 static void note_off(uint8_t note) {
-    note_stack_note_off(note);       // falls back to the newest note still held — see noteStack.h
+    note_stack_note_off(note);       // Mono and Legato return to a held key in the engine - see noteStack.h
     send_note_to_synth(note, 0, false);
 }
 
@@ -212,7 +212,7 @@ static void handle_message(uint32_t word) {
         case 0xA0:
         {
             // notes §6
-            if ((int32_t)data1 == note_stack_top()) {
+            if (sound_engine_note_sounding((int32_t)data1) == true) {
                 morph_moved(sound_engine_set_morph(MORPH_GROUP_AFTERTOUCH, (double)data2 / 127.0));
             }
             atomic_fetch_add(&gPressureCount, 1);

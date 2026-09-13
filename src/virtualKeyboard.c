@@ -71,6 +71,7 @@ void open_virtual_keyboard_panel(void) {
     gVirtualKeyboard.closePressed = false;
     gVirtualKeyboard.noteOn       = -1;
     gVirtualKeyboard.lastNote     = -1;
+    gVirtualKeyboard.ringingNote  = -1;
     // Drone and Repeat deliberately do NOT survive a close: both leave the synth making a noise,
     // and reopening the panel to find it immediately droning would be a nasty surprise.
     gVirtualKeyboard.drone        = false;
@@ -114,21 +115,47 @@ static void set_sounding_note(int32_t note) {
     if (gVirtualKeyboard.noteOn >= 0) {
         send_note((uint32_t)gVirtualKeyboard.noteOn, false);
     }
-    gVirtualKeyboard.noteOn = note;
 
-    // The local sound engine plays the same notes, when it is switched on. It sits after the G2
-    // sends rather than before so nothing here can delay the hardware, and it is a no-op while the
-    // engine is off. -1 means silence to both.
-    sound_engine_note(note, note >= 0);
+    // The local sound engine hears the same pair in the same order, after the G2 so nothing here
+    // can delay the hardware. A no-op while the engine is off.
+    if (note >= 0) {
+        sound_engine_note(note, true);
+    }
+
+    if (gVirtualKeyboard.noteOn >= 0) {
+        sound_engine_note(gVirtualKeyboard.noteOn, false);
+    }
+    gVirtualKeyboard.noteOn = note;
+}
+
+// One key of the computer keyboard, to the G2 and to the engine alike. notes §10
+static void key_note(int32_t note, bool on) {
+    send_note((uint32_t)note, on);
+    sound_engine_note(note, on);
+}
+
+// A note left ringing after its key came up, released now that another key has gone down.
+static void release_ringing_note(void) {
+    if (gVirtualKeyboard.ringingNote >= 0) {
+        key_note(gVirtualKeyboard.ringingNote, false);
+        gVirtualKeyboard.ringingNote = -1;
+    }
 }
 
 void close_virtual_keyboard_panel(void) {
     // Order matters: clear the toggles first, or a droning note would survive the silence below in
     // spirit — nothing re-sends it, but reopening would inherit an engaged Drone.
-    gVirtualKeyboard.drone  = false;
-    gVirtualKeyboard.repeat = false;
+    gVirtualKeyboard.drone     = false;
+    gVirtualKeyboard.repeat    = false;
+
+    for (uint32_t i = 0; i < gVirtualKeyboard.heldCount; i++) {
+        key_note(gVirtualKeyboard.heldNote[i], false);
+    }
+
+    gVirtualKeyboard.heldCount = 0;
+    release_ringing_note();
     set_sounding_note(-1);
-    gVirtualKeyboard.active = false;
+    gVirtualKeyboard.active    = false;
 }
 
 // Repeat re-strikes the last played note on a timer. Note-off then note-on rather than a bare
@@ -525,8 +552,18 @@ static void held_key_add(int key, int32_t note) {
     }
 }
 
-static int32_t held_key_newest_note(void) {
-    return (gVirtualKeyboard.heldCount > 0) ? gVirtualKeyboard.heldNote[gVirtualKeyboard.heldCount - 1] : -1;
+// The highest note of the keys still down, or -1 - what the panel shows as sounding after a release,
+// since that is the key a Mono patch returns to (§15.2 of the sound engine reference).
+static int32_t held_key_highest_note(void) {
+    int32_t highest = -1;
+
+    for (uint32_t i = 0; i < gVirtualKeyboard.heldCount; i++) {
+        if (gVirtualKeyboard.heldNote[i] > highest) {
+            highest = gVirtualKeyboard.heldNote[i];
+        }
+    }
+
+    return highest;
 }
 
 // Note entry works whether or not the panel is open: the panel shows this state, it does not own it.
@@ -553,16 +590,19 @@ bool handle_note_entry_key(int key, int mods, int action) {
     if (action == GLFW_RELEASE) {
         int32_t released = held_key_remove(key);
 
-        // notes §8
-        if (  (released >= 0)
-           && (gVirtualKeyboard.noteOn == released)
-           && (gVirtualKeyboard.sustainedNote != released)
-           && !gVirtualKeyboard.drone
-           && !gVirtualKeyboard.repeat) {
-            set_sounding_note(held_key_newest_note());
-        }
-
         if (released >= 0) {
+            // notes §8
+            if (  (gVirtualKeyboard.sustainedNote == released)
+               || gVirtualKeyboard.drone
+               || gVirtualKeyboard.repeat) {
+                gVirtualKeyboard.ringingNote = released;
+            } else {
+                key_note(released, false);
+
+                if (gVirtualKeyboard.noteOn == released) {
+                    gVirtualKeyboard.noteOn = held_key_highest_note();
+                }
+            }
             synthlib_request_redraw();
             return true;
         }
@@ -594,8 +634,10 @@ bool handle_note_entry_key(int key, int mods, int action) {
         gVirtualKeyboard.sustainedNote = ((mods & GLFW_MOD_SHIFT) != 0) ? note : -1;
         gVirtualKeyboard.lastNote      = note;
         gVirtualKeyboard.nextRepeatAt  = ((get_time_ms() / 1000.0) * 1000.0) + VKB_REPEAT_MS;
+        release_ringing_note();
         held_key_add(key, note);
-        set_sounding_note(note);
+        key_note(note, true);
+        gVirtualKeyboard.noteOn        = note;
     }
     synthlib_request_redraw();
     return true;

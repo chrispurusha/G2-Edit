@@ -146,10 +146,17 @@ module's OUTPUT connector, which broke the filter outright.
 
 ## 14. `PITCH_MOD_SEMITONES`
 
-A full-scale bipolar signal on an oscillator's Pitch input sweeps one octave either way: the
-manual's own worked example (p.78) is an A4 modulated "up and down by one octave", and it stays an
-octave whatever note is played, because a Pitch input modulates on the note scale rather than
-linearly in frequency. That is a much smaller range than the filter's Env input above.
+ONE UNIT IS ONE SEMITONE on a Pitch input, so a full-scale signal (64 units, 1.0 here) moves the
+pitch 64 semitones. The manual says so twice: "+1 unit corresponds to a half note upwards
+transposition on a Pitch input on a module" (Definitions), and "as +1 unit on the Pitch input of an
+Oscillator will transpose the Oscillator by one semitone, ... a bipolar LFO signal can sweep the
+oscillator over five octaves up and five octaves down". It is also what makes the Keyboard's Note
+output (E4 = 0, 1 unit a key) play in tune through a Pitch input with KBT off.
+
+This was 12 until 2026-09-13, read from the manual's Pitch modulation figure (p.78) - an A4 swept
+"up and down by one octave" - which illustrates the note scale with some signal smaller than full
+scale, not the input's range. Filters' Pitch inputs (FltMulti, FltComb) use the same constant: their
+Freq dials are one semitone a step, so one unit is one step there too.
 
 ## 15. `type_ii_attenuator()`
 
@@ -365,10 +372,10 @@ something else.
 
 ## 31. `gEngineVoicesBank`
 
-Published for the note stack, which has to know whether to release the note it was given or to
-fall back to the newest one still held. An atomic rather than a look into the parameter snapshot:
-it is read from the MIDI thread, and copying the whole snapshot to answer one question would be
-absurd. See sound_engine_is_polyphonic().
+How many voices the patch may use, published as an atomic because it is read off the audio thread:
+sound_engine_note_sounding() asks it from the MIDI thread for poly pressure, and the status line from
+the UI. Copying the whole snapshot to answer one question would be absurd. (It used to tell the note
+stack whether to fall back to a held key itself; the engine does that now - reference §15.)
 
 ## 32. `gLoadPercentBank`
 
@@ -1098,15 +1105,21 @@ playing a different number of notes from the one on screen.
 ## 69. `voice_to_allocate()`
 
 Which voice a new note should take, out of the `count` the patch allows. In preference order: one
-that is doing nothing, then the longest-released, then the oldest still held. Only the last of
-those is a steal — cutting a note off — and it is what a polyphonic instrument does when it runs
-out, so it is worth being sure the two cheaper cases are exhausted first.
+that is doing nothing, then the longest-released, then a steal of a held voice (voice_to_steal(),
+reference §15.3 - the oldest, sparing the lowest note). Only the last is a steal - cutting a note off -
+and it is what a polyphonic instrument does when it runs out, so the two cheaper cases come first.
+
+A REPEATED KEY TAKES A FRESH VOICE. Until 2026-09-13 a note-on went back to a voice already holding
+that key, even one only releasing, so the release would not ring on underneath as a duplicate. The G2
+does let it ring on, and a note-off closes every voice on its key, so the two cannot drift apart.
 
 ## 70. in `voice_note_on()`
 
 Auto glide only slides between overlapping notes, which is the point of it: a phrase played
 legato slides, a detached note starts where it means to. Whether THIS VOICE'S gate is already
-open is that test — and it is why the check has to happen before the gate is opened below.
+open - it is being taken from a key still held - is that test, and it is why the check has to
+happen before the gate is opened below. A return to a held key (notes §189) slides too. That is
+the G2's rule (reference §15.4).
 
 Per voice rather than patch-wide: in Poly each note lands on a voice of its own, which was not
 playing anything, so nothing slides. That is correct. A glide in Poly only happens when a
@@ -1124,6 +1137,10 @@ with no sustain the second key sounded nothing at all once the decay had run out
 the envelope compares against rather than a flag it could miss.
 
 Poly gains from it too: a note that STEALS a held voice is a new note, and now starts like one.
+
+A RETURN TO A HELD KEY IS COUNTED THE SAME WAY in Mono and not in Legato (notes §189, reference
+§15.2): on the G2 the key let go drops the voice's gate and the return raises it again, unless the
+patch is Legato, where the gate is left alone.
 
 ## 72. in `take_next_note_event()`
 
@@ -2856,3 +2873,11 @@ and its processed signal on the other — asks for four and gets them.
 
 Choosing WHICH pair a stereo device should monitor, rather than always summing, wants
 a menu item; see the todo. Summing is the answer that changes nothing until then.
+
+## 189. in `voice_note_off()`
+
+THE RETURN TO A HELD KEY (reference §15.2). Mono or Legato, the key let go was the one sounding,
+and another is still down: the voice stays open and moves to the HIGHEST key held - not the newest,
+which is what the note stack chose until 2026-09-13. Mono counts it as a new note and the envelopes
+restart (notes §71); Legato does not, and the pitch simply moves, gliding if Auto glide is on (notes
+§70). A key let go that was NOT the one sounding changes only the record of keys held.

@@ -27,8 +27,8 @@
 
 #define NOTE_STACK_MAX    (16)
 
-// Note on/off, driving the sound engine as a side effect. note_stack_note_off() is where legato
-// happens: it falls back to the newest note still held, or releases if there is none.
+// Note on/off, passed to the sound engine as played. What sounds after a release in Mono or Legato
+// is the engine's decision, not the stack's - see §15 of the sound engine reference.
 void note_stack_note_on(uint8_t note);
 void note_stack_note_off(uint8_t note);
 
@@ -38,9 +38,5 @@ void note_stack_all_off(void);
 
 uint32_t note_stack_count(void);
 uint8_t note_stack_at(uint32_t index);
-
-// The note currently sounding, or -1 if none. Used to decide whether a polyphonic key pressure
-// message applies to the note being played rather than one still held underneath it.
-int32_t note_stack_top(void);
 
 #endif // __NOTE_STACK_H__
