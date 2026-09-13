@@ -150,6 +150,12 @@ Full detail for each is in findings.md, searchable by the wording below.
   does; (2) Legato the same - it should NOT restart; (3) Mono, let the second key go with the first
   still held - the engine now restarts the envelope on the note it returns to, and whether the
   hardware does that too is not known.
+- ***COMPUTER-KEYBOARD NOTE ENTRY RETURNS TO A HELD KEY (2026-09-13)*** - hold A, play S, let S go:
+  A sounds again, on the engine and on the G2. Before, the release of S silenced everything. A MIDI
+  keyboard already did this through noteStack.c, which checks offline on SimpleLead and DXTest in
+  Mono and Legato. The new note is now sent to the G2 BEFORE the old one is released, so Legato on
+  the G2 binds rather than retriggering. STILL TO CHECK by hand, both targets, Mono then Legato:
+  the return, then a roll from key to key (Legato should glide on without restarting).
 - ***THE PLUG-IN WRAPPERS ARE PER-INSTANCE NOW (2026-09-11)*** - SynthLib's VST3 and AU wrappers were
   reworked so several copies of a plug-in can be loaded at once (a controller finds its own processor
   through the host's connection, not a global), and the saved state moved from "SLP1" to "SLP2".

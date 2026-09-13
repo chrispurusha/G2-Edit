@@ -106,12 +106,13 @@ static void set_sounding_note(int32_t note) {
         return;
     }
 
-    if (gVirtualKeyboard.noteOn >= 0) {
-        send_note((uint32_t)gVirtualKeyboard.noteOn, false);
-    }
-
+    // notes §9
     if (note >= 0) {
         send_note((uint32_t)note, true);
+    }
+
+    if (gVirtualKeyboard.noteOn >= 0) {
+        send_note((uint32_t)gVirtualKeyboard.noteOn, false);
     }
     gVirtualKeyboard.noteOn = note;
 
@@ -495,6 +496,39 @@ static int32_t note_offset_for_key(int key) {
     }
 }
 
+// The note a held key started, or -1 if that key was not held. Removes it from the list.
+static int32_t held_key_remove(int key) {
+    for (uint32_t i = 0; i < gVirtualKeyboard.heldCount; i++) {
+        if (gVirtualKeyboard.heldKey[i] == key) {
+            int32_t note = gVirtualKeyboard.heldNote[i];
+
+            for (uint32_t j = i + 1; j < gVirtualKeyboard.heldCount; j++) {
+                gVirtualKeyboard.heldKey[j - 1]  = gVirtualKeyboard.heldKey[j];
+                gVirtualKeyboard.heldNote[j - 1] = gVirtualKeyboard.heldNote[j];
+            }
+
+            gVirtualKeyboard.heldCount--;
+            return note;
+        }
+    }
+
+    return -1;
+}
+
+static void held_key_add(int key, int32_t note) {
+    held_key_remove(key);   // a press without its release must not occupy two slots
+
+    if (gVirtualKeyboard.heldCount < VKB_HELD_MAX) {
+        gVirtualKeyboard.heldKey[gVirtualKeyboard.heldCount]  = key;
+        gVirtualKeyboard.heldNote[gVirtualKeyboard.heldCount] = note;
+        gVirtualKeyboard.heldCount++;
+    }
+}
+
+static int32_t held_key_newest_note(void) {
+    return (gVirtualKeyboard.heldCount > 0) ? gVirtualKeyboard.heldNote[gVirtualKeyboard.heldCount - 1] : -1;
+}
+
 // Note entry works whether or not the panel is open: the panel shows this state, it does not own it.
 // Split out of handle_virtual_keyboard_key() for exactly that reason, and routed separately from
 // key_event().
@@ -515,6 +549,25 @@ bool handle_note_entry_key(int key, int mods, int action) {
         return false;
     }
 
+    // notes §10
+    if (action == GLFW_RELEASE) {
+        int32_t released = held_key_remove(key);
+
+        // notes §8
+        if (  (released >= 0)
+           && (gVirtualKeyboard.noteOn == released)
+           && (gVirtualKeyboard.sustainedNote != released)
+           && !gVirtualKeyboard.drone
+           && !gVirtualKeyboard.repeat) {
+            set_sounding_note(held_key_newest_note());
+        }
+
+        if (released >= 0) {
+            synthlib_request_redraw();
+            return true;
+        }
+    }
+
     // Cmd/Ctrl/Alt suppress note entry so a shortcut on one of these letters can never also play.
     // SHIFT deliberately does not: it is the sustain latch below, and it does not change which
     // physical key GLFW reports.
@@ -527,7 +580,7 @@ bool handle_note_entry_key(int key, int mods, int action) {
         gVirtualKeyboard.velocity  = 100;
         gVirtualKeyboard.firstNote = 48;   // C3
     }
-    int32_t note   = (int32_t)gVirtualKeyboard.firstNote + offset;
+    int32_t note = (int32_t)gVirtualKeyboard.firstNote + offset;
 
     if (note > VKB_NOTE_MAX) {
         return true;   // off the top of the MIDI range: swallowed rather than passed on as a shortcut
@@ -541,15 +594,8 @@ bool handle_note_entry_key(int key, int mods, int action) {
         gVirtualKeyboard.sustainedNote = ((mods & GLFW_MOD_SHIFT) != 0) ? note : -1;
         gVirtualKeyboard.lastNote      = note;
         gVirtualKeyboard.nextRepeatAt  = ((get_time_ms() / 1000.0) * 1000.0) + VKB_REPEAT_MS;
+        held_key_add(key, note);
         set_sounding_note(note);
-    } else if (action == GLFW_RELEASE) {
-        // notes §8
-        if (  (gVirtualKeyboard.noteOn == note)
-           && (gVirtualKeyboard.sustainedNote != note)
-           && !gVirtualKeyboard.drone
-           && !gVirtualKeyboard.repeat) {
-            set_sounding_note(-1);
-        }
     }
     synthlib_request_redraw();
     return true;
