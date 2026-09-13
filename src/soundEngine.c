@@ -570,17 +570,23 @@ typedef struct {
     double          cutoffParam; // filter
     double          resonance;
     uint32_t        extraPoles;
-    uint32_t        tapStage;  // which pole is tapped: 0-based, so N poles is tapStage N-1
+    uint32_t        tapStage;    // which pole is tapped: 0-based, so N poles is tapStage N-1
     tFilterTopology topology;
-    tFilterShape    fltShape;  // multi-mode filters only; low-pass for the rest
-    double          fltGain;   // FltNord's GC attenuation; 1.0 for every other filter
+    tFilterShape    fltShape;    // multi-mode filters only; low-pass for the rest
+    double          fltGain;     // FltNord's GC attenuation; 1.0 for every other filter
     double          fltKbt;
-    double          modAmount; // how far the Env input moves the cutoff, 0..2 (the dial's 0..200%)
+    double          modAmount;   // how far the Env input moves the cutoff, 0..2 (the dial's 0..200%)
 
-    double          attack;    // envelope, in seconds
+    double          attack;      // envelope, in seconds
     double          decay;
-    double          sustain;   // 0..1
+    double          sustain;     // 0..1
     double          release;
+    double          envRiseMul;  // §17 - each attack sample: level = level * mul + add
+    double          envRiseAdd;
+    double          envFallMul;  // decay towards sustain and release towards 0, per sample...
+    double          envReleaseMul;
+    double          envFallStep; // ...or, for LinLin, a straight fall of full scale per dial time
+    double          envReleaseStep;
 
     double          gain;         // LevAmp
     double          pulseSeconds; // Pulse gate width
@@ -1169,10 +1175,6 @@ static double         gSmoothedLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NO
 static bool           gSmoothPrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothPrimed    (gSmoothPrimedBank[SE])
 
-static double         gEnvProgressBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gEnvProgress     (gEnvProgressBank[SE])
-static double         gEnvStartBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gEnvStart        (gEnvStartBank[SE])
 static uint32_t       gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvStage        (gEnvStageBank[SE])
 
@@ -1360,8 +1362,6 @@ static void reset_node_state(void) {
             gLadder[v][i][4]     = 0.0;
             gLadder[v][i][5]     = 0.0;
             gEnvLevel[v][i]      = 0.0;
-            gEnvProgress[v][i]   = 0.0;
-            gEnvStart[v][i]      = 0.0;
             gEnvStage[v][i]      = eEnvIdle;
             gEnvTrigger[v][i]    = gVoice[v].trigger;   // nothing pending: idle already attacks on a gate
             gCompEnv[v][i]       = 0.0;
@@ -1955,13 +1955,13 @@ static bool take_next_note_event(void) {
 
 // notes §73
 static double pulse_time_seconds(double value, uint32_t range) {
-    // ln(width in 96 kHz samples) = k0 + k1*d + k2*d^2 + k3*d^3
-    const double k0      = 2.11883047;
-    const double k1      = 0.07714113828;
-    const double k2      = -0.0000864025056;
-    const double k3      = 0.0000004707716063;
-    double       samples = exp(k0 + (k1 * value) + (k2 * value * value)
-                               + (k3 * value * value * value));
+    // §18 - ln(Sub width + 2, in 96 kHz samples) = k0 + k1*x + k2*x^2 + k3*x^3, x = dial / 127
+    const double k0      = 2.30093;
+    const double k1      = 8.76455853;
+    const double k2      = 0.378462386;
+    const double k3      = 0.0289283595;
+    double       x       = value / 127.0;
+    double       samples = exp(k0 + (k1 * x) + (k2 * x * x) + (k3 * x * x * x)) - 2.0;
     double       seconds = samples / 96000.0;
 
     if (range == 1) {
@@ -1974,6 +1974,57 @@ static double pulse_time_seconds(double value, uint32_t range) {
 
 static double env_time_seconds(double paramValue) {
     return adr_time_seconds(paramValue);
+}
+
+// §17.1 - a linear attack steps full scale in whole increments at ENV_TICK_HZ, so its time is the
+// dial's time rounded to the increment below; the Log and Exp attacks keep the dial's time.
+#define ENV_TICK_HZ             (24000.0)
+#define ENV_FULL_SCALE_STEPS    (8388608.0)  // full scale in the tick's fixed-point increments
+#define ENV_IDLE_LEVEL          (1.0e-5)     // -100 dB: a release this far down has finished
+
+static double env_attack_seconds(double paramValue, uint32_t shape) {
+    double seconds = adr_time_seconds(paramValue);
+
+    if ((shape == (uint32_t)eEnvShapeLinExp) || (shape == (uint32_t)eEnvShapeLinLin)) {
+        double increment = floor(ENV_FULL_SCALE_STEPS / (seconds * ENV_TICK_HZ));
+
+        seconds = ENV_FULL_SCALE_STEPS / (fmax(increment, 1.0) * ENV_TICK_HZ);
+    }
+    return seconds;
+}
+
+// §17.2 - the four stages as per-sample recurrences at the engine's rate.
+static void env_rates_build(tEngineNode * node) {
+    SE_LOCAL;
+
+    double attackSamples  = fmax(node->attack * gSampleRate, 1.0);
+    double decaySamples   = fmax(node->decay * gSampleRate, 1.0);
+    double releaseSamples = fmax(node->release * gSampleRate, 1.0);
+
+    switch ((uint32_t)node->wave) {
+        case eEnvShapeLogExp:
+        {
+            node->envRiseMul = exp(-ENV_RISE_SHARPNESS / attackSamples);
+            node->envRiseAdd = ENV_LOG_RISE_TARGET * (1.0 - node->envRiseMul);
+            break;
+        }
+        case eEnvShapeExpExp:
+        {
+            node->envRiseMul = exp(ENV_RISE_SHARPNESS / attackSamples);
+            node->envRiseAdd = (node->envRiseMul - 1.0) / (exp(ENV_RISE_SHARPNESS) - 1.0);
+            break;
+        }
+        default:
+        {
+            node->envRiseMul = 1.0;
+            node->envRiseAdd = 1.0 / attackSamples;
+            break;
+        }
+    }
+    node->envFallMul     = exp(-ENV_FALL_SHARPNESS / decaySamples);
+    node->envReleaseMul  = exp(-ENV_FALL_SHARPNESS / releaseSamples);
+    node->envFallStep    = 1.0 / decaySamples;
+    node->envReleaseStep = 1.0 / releaseSamples;
 }
 
 static const tLfoParams * lfo_params(tModuleType type) {
@@ -3186,10 +3237,11 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         {
             // Read raw: Shape is a drop-down, and drop-downs cannot be morphed (manual p.20).
             node->wave    = (tOscWave)module->param[variation][ENV_PARAM_SHAPE].value;
-            node->attack  = env_time_seconds(param_value(module, variation, ENV_PARAM_ATTACK));
+            node->attack  = env_attack_seconds(param_value(module, variation, ENV_PARAM_ATTACK), (uint32_t)node->wave);
             node->decay   = env_time_seconds(param_value(module, variation, ENV_PARAM_DECAY));
             node->sustain = dial_fraction(param_value(module, variation, ENV_PARAM_SUSTAIN));   // §16.3
             node->release = env_time_seconds(param_value(module, variation, ENV_PARAM_RELEASE));
+            env_rates_build(node);
             break;
         }
         case eNodePulse:
@@ -4499,84 +4551,50 @@ static bool dx_voice_sounding(const tSoundEngineParams * params, const tEngineNo
 static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * spec, bool gate) {
     SE_LOCAL;
 
-    double level = gEnvLevel[voice][node];
-    double step  = 0.0;
+    double level  = gEnvLevel[voice][node];
+    bool   linear = ((uint32_t)spec->wave == (uint32_t)eEnvShapeLinLin);
 
     if (gate == true) {
         // notes §150
         if (  (gEnvStage[voice][node] == eEnvIdle)
            || (gEnvStage[voice][node] == eEnvRelease)
            || (gEnvTrigger[voice][node] != gVoice[voice].trigger)) {
-            gEnvStage[voice][node]    = eEnvAttack;
-            gEnvProgress[voice][node] = 0.0;
-            gEnvStart[voice][node]    = level;   // rise from wherever a fast retrigger caught it
-            gEnvTrigger[voice][node]  = gVoice[voice].trigger;
+            gEnvStage[voice][node]   = eEnvAttack;   // from the level it is at - §17.3
+            gEnvTrigger[voice][node] = gVoice[voice].trigger;
         }
     } else if (gEnvStage[voice][node] != eEnvIdle) {
-        if (gEnvStage[voice][node] != eEnvRelease) {
-            gEnvProgress[voice][node] = 0.0;
-            gEnvStart[voice][node]    = level;   // fall from the level the key was let go at
-        }
         gEnvStage[voice][node] = eEnvRelease;
     }
 
     switch (gEnvStage[voice][node]) {
         case eEnvAttack:
         {
-            step                       = 1.0 / (spec->attack * gSampleRate);
-            gEnvProgress[voice][node] += step;
+            level = (level * spec->envRiseMul) + spec->envRiseAdd;
 
-            if (gEnvProgress[voice][node] >= 1.0) {
-                gEnvProgress[voice][node] = 0.0;
-                level                     = 1.0;
-                gEnvStage[voice][node]    = eEnvDecay;
-            } else {
-                // From wherever the stage began, so a note struck during release still rises
-                // smoothly from the level it had rather than jumping.
-                level = gEnvStart[voice][node]
-                        + ((1.0 - gEnvStart[voice][node]) * env_attack_level((uint32_t)spec->wave, gEnvProgress[voice][node]));
+            if (level >= 1.0) {
+                level                  = 1.0;
+                gEnvStage[voice][node] = eEnvDecay;
             }
             break;
         }
         case eEnvDecay:
-        {
-            step                       = 1.0 / (spec->decay * gSampleRate);
-            gEnvProgress[voice][node] += step;
-
-            if (gEnvProgress[voice][node] >= 1.0) {
-                gEnvProgress[voice][node] = 0.0;
-                level                     = spec->sustain;
-                gEnvStage[voice][node]    = eEnvSustain;
-            } else {
-                level = spec->sustain
-                        + ((1.0 - spec->sustain) * env_fall_level((uint32_t)spec->wave, gEnvProgress[voice][node]));
-            }
-
-            if (level <= spec->sustain) {
-                level                  = spec->sustain;
-                gEnvStage[voice][node] = eEnvSustain;
-            }
-            break;
-        }
         case eEnvSustain:
         {
-            level = spec->sustain;
+            // §17.4 - towards the sustain level, which may move while the key is held
+            if (linear == false) {
+                level = spec->sustain + ((level - spec->sustain) * spec->envFallMul);
+            } else if (level > spec->sustain) {
+                level = fmax(spec->sustain, level - spec->envFallStep);
+            } else {
+                level = fmin(spec->sustain, level + spec->envFallStep);
+            }
             break;
         }
         case eEnvRelease:
         {
-            step                       = 1.0 / (spec->release * gSampleRate);
-            gEnvProgress[voice][node] += step;
+            level = (linear == true) ? (level - spec->envReleaseStep) : (level * spec->envReleaseMul);
 
-            if (gEnvProgress[voice][node] >= 1.0) {
-                gEnvProgress[voice][node] = 0.0;
-                level                     = 0.0;
-                gEnvStage[voice][node]    = eEnvIdle;
-            } else {
-                level = gEnvStart[voice][node] * env_fall_level((uint32_t)spec->wave, gEnvProgress[voice][node]);
-            }
-
-            if (level <= 0.0) {
+            if (level <= ENV_IDLE_LEVEL) {
                 level                  = 0.0;
                 gEnvStage[voice][node] = eEnvIdle;
             }
@@ -5984,8 +6002,6 @@ static void engine_reset_state(void) {
     memset(&gSmoothedGain, 0, sizeof(gSmoothedGain));
     memset(&gSmoothedLevel, 0, sizeof(gSmoothedLevel));
     memset(&gSmoothPrimed, 0, sizeof(gSmoothPrimed));
-    memset(&gEnvProgress, 0, sizeof(gEnvProgress));
-    memset(&gEnvStart, 0, sizeof(gEnvStart));
     memset(&gEnvStage, 0, sizeof(gEnvStage));
     memset(&gEnvTrigger, 0, sizeof(gEnvTrigger));
     pthread_mutex_init(&gParamsWriteMutex, NULL);

@@ -140,20 +140,18 @@ double adr_time_seconds(double paramValue) {
 }
 
 // notes §5
-#define ENV_ATTACK_SHARPNESS    (2.83)
-#define ENV_FALL_SHARPNESS      (4.32)
 
 double env_attack_level(uint32_t envShape, double progress) {
     switch (envShape) {
         case eEnvShapeLogExp:
         {
             // Log - rises fast, then flattens towards the peak.
-            return (1.0 - exp(-ENV_ATTACK_SHARPNESS * progress)) / (1.0 - exp(-ENV_ATTACK_SHARPNESS));
+            return (1.0 - exp(-ENV_RISE_SHARPNESS * progress)) / (1.0 - exp(-ENV_RISE_SHARPNESS));
         }
         case eEnvShapeExpExp:
         {
             // Exp - starts slowly, then accelerates into the peak.
-            return (exp(ENV_ATTACK_SHARPNESS * progress) - 1.0) / (exp(ENV_ATTACK_SHARPNESS) - 1.0);
+            return (exp(ENV_RISE_SHARPNESS * progress) - 1.0) / (exp(ENV_RISE_SHARPNESS) - 1.0);
         }
         default:
         {

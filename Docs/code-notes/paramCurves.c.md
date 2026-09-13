@@ -72,41 +72,30 @@ Supersedes two earlier fits of the same shape: offset 39.55 with exponent 7.9421
 40.150, which reproduced 108 of the 128 printed entries — every miss being the last digit low
 by one, which is what said the constant was fractionally small rather than the shape wrong.
 
-## 5. `ENV_ATTACK_SHARPNESS`
+## 5. `env_attack_level()`, `env_fall_level()`
 
-How sharply the exponential envelope segments curve. MEASURED ON THE HARDWARE 2026-08-24, and it
-takes TWO constants, not one: the rise and the fall are not equally curved.
-
-```
-    shape    dial   attack k   decay k
-    LogExp    80      2.90       4.25
-    ExpExp    80      2.81       4.51
-    ExpExp    64      2.78       4.20
+The shapes of the envelope segments as the instrument makes them (sound engine reference §17). The
+constants are in paramCurves.h because the engine's recurrences use them too:
 
 ```
-Method: an EnvADSR modulating a LevMod on a steady 523 Hz OscB into 2-Out, captured off the
-instrument's own outputs and fitted. The envelope output is NOT measured directly - it is a slow
-control signal and the audio output is AC coupled, which would bend the very curve being measured -
-so what is fitted is the amplitude of a tone the envelope opens.
-
-TWO THINGS THE CONTROL SETTING PROVED, and neither was assumed:
+    ENV_RISE_SHARPNESS   ln 16  = 2.7726   the Log and Exp attacks cover a factor of 16 (24 dB)
+    ENV_FALL_SHARPNESS   ln 100 = 4.6052   decay and release fall 40 dB in the dial's time
+    ENV_LOG_RISE_TARGET  16/15             the Log attack is a one-pole aimed here, reaching 1 on time
 ```
-  - LinLin fits a straight line to rms 0.014, so the VCA and the capture chain are linear and the
-    tone's amplitude really does track the envelope. Without that, every k here would be the
-    product of the envelope and whatever the VCA does.
-  - the fitted segment length came out 3.20 s against adr_time_seconds(80)'s 3.208 s, which checks
-    the time law at the same time.
-```
-k CAME OUT THE SAME AT TWO DIFFERENT TIME DIALS (2.78 at 1.02 s segments, 2.81 at 3.20 s), which is
-what says the shape is applied to a NORMALISED progress rather than being a fixed time constant.
-Fit the segment length freely and it trades against k - an asymptotic tail sitting in the noise
-looks equally like a longer, shallower curve - so the length is pinned to what the control measured.
 
-Both figures replace guesses: the engine used 5.0 for both and the drawn envelope used 4.0 for both.
-The fall was nearly right at 4.0; the rise was wrong in both copies, and noticeably so.
+With those, the normalised forms below ARE the instrument's attacks from zero: (1 - e^-kp)/(1 - e^-k)
+is a one-pole aimed at 16/15 that arrives at 1 at p = 1, and (e^kp - 1)/(e^k - 1) grows sixteen-fold
+over the segment. The FALL is a pure exponential on the instrument - it never reaches zero on time,
+it is 40 dB down - so the normalised fall here is for DRAWING only, closing the last 1% so a drawn
+segment lands on its end point. The engine does not use these any more; it runs the stages as
+recurrences (soundEngine.c `envelope_step()`).
 
-Normalised at both ends below, because exp() is asymptotic: a raw exponential would neither leave
-0 nor arrive at 1 within the segment, so the segment would not land on its own endpoints.
+THE 2026-08-24 CAPTURE AGREES, read correctly. It fitted k = 2.78-2.90 for the rise and 4.20-4.51
+for the fall to the amplitude of a tone an EnvADSR opened (LogExp and ExpExp at dials 64 and 80),
+with the segment length pinned to the time law. The rise is ln 16 within the fit's spread. The fall
+reads low because the fit used the NORMALISED form, which forces the curve to zero at the dial time;
+fitted to a pure exponential that is 1% at that point, it has to be shallower to follow it. That
+capture also confirmed LinLin is straight and the time law itself (3.20 s against 3.208 s at 80).
 
 ## 6. `FLT_RESONANCE_DAMPING_SPAN`
 

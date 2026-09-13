@@ -1152,41 +1152,24 @@ is not, and wedging is what made rapid playing fall apart.
 
 ## 73. `pulse_time_seconds()`
 
-The exact scale the dial prints, rather than the power-law fit this used to be — see
-adr_time_seconds() in renderParams.c. Shared so the envelope that is heard cannot take a
-different time from the one shown.
-THE PULSE'S WIDTH IN SECONDS, as a closed form rather than a copy of the dial's 128 readings.
-Written this way deliberately: a 128-entry table truncates the FRACTIONAL dial values a morph or a
-smoothed knob produces, and would disagree with the dial's own text between steps.
+THE PULSE'S WIDTH, as a closed form rather than a copy of the dial's 128 readings - a table would
+truncate the fractional dial values a morph or a smoothed knob produces. Reference §18.
 
-MEASURED ON HARDWARE 2026-09-07 - 17 dial values in the Sub range, captured at 192 kHz so the
-shortest gate is resolved (at 48 kHz it is four samples and cannot be). EVERY width came back an
-integer count of 96 kHz samples: 8, 16, 28, 52, 92, 160, 288, 512, 912, 1628, 2916, 5244, 9460,
-17116, 31076, 56660, 96083 at dials 0, 8, 16 ... 120, 127. That is also independent confirmation
-of the 96 kHz engine rate, arrived at from a different module and a different rig than the reverb.
+THE INSTRUMENT'S OWN TIME LAW, with the 2026-09-07 measurement as its check. The Sub width is the
+dial's displayed Lo time over ten, less TWO SAMPLES at 96 kHz; the display law itself is a cubic in
+log over x = dial/127, which reproduces it to 0.045% across the dial. Against the 17 widths measured
+on hardware at 192 kHz (8, 16, 28, 52, 92.5, 160, 288, 512, 912, 1628, 2916, 5244, 9460, 17116,
+31076, 56659.5, 96083 samples at dials 0, 8 ... 120, 127) it lands within two samples at every one,
+dial 0 included. The measured widths are integer counts of 96 kHz samples, which is also independent
+confirmation of the 96 kHz engine rate.
 
-IT IS NOT A CONSTANT-RATIO PROGRESSION, which is what this used to assume. The per-step ratio
-drifts smoothly from about 1.0748 low on the dial to 1.0768 at the top - small, but compounded over
-127 steps it is the curvature the polynomial below carries, and without it a straight line in log
-runs about 11% LONG
-across the whole middle of the dial (+24.8% at dial 0, +11.3% at 64, converging only at 127 because
-that endpoint was pinned). The old two-endpoint form fitted the ends and missed everything between.
+THE OLD OPEN QUESTION IS ANSWERED. The earlier cubic, fitted to those 17 points alone, was 4.1% out
+at worst, and a curve through the top of the dial predicted 9.9 samples at dial 0 where both
+measurement methods returned 8. The bottom of the dial does not leave the curve: the whole dial is
+two samples short of it, which is invisible from dial 48 up and a fifth of the width at dial 0.
 
-A CUBIC IN LOG, over all 17 points, because nothing simpler covers the whole dial. A quadratic
-fitted only where the measurement is sharpest (dial >= 48, where the gate is hundreds of samples
-and edge placement is worth a fraction of a percent) lands inside 0.12% from there to the top - but
-extrapolates to 9.9 samples at dial 0 where BOTH measurement methods, a 50% crossing and an
-edge-slope, independently returned 8. Something in the bottom two dial steps is not on the curve
-the top follows. Rather than be exact over most of the range and 24% out at one end, this fits
-everything: worst case 4.1%, and 1.8% rms.
-
-THAT REMAINS THE OPEN QUESTION on this module. Either the very bottom of the dial genuinely departs
-from the curve, or an 8-sample gate defeats both measures - at 192 kHz it is 16 samples with the
-reconstruction filter's ringing across its edges, so a two-sample bias is not impossible. Settling
-it needs either a higher capture rate or the instrument's own readout via DEVKNOB.
-
-Range shifts it by a decade either way (pulseRangeStrMap order: Sub, Lo, Hi). Sub is the base here
-because Sub is what was measured; the old code based it on Lo.
+Range shifts it by a decade either way (pulseRangeStrMap order: Sub, Lo, Hi), as the manual states
+(Sub 0.10 ms to 1.00 s, Lo 1.04 ms to 10 s, Hi 10.4 ms to 100 s).
 
 ## 74. `connector_index_for_input()`
 
@@ -2409,6 +2392,11 @@ zeroed, so a fast retrigger rises from where it was rather than clicking to noth
 
 And from ANY stage when the voice's trigger count has moved: a Mono key played over a held
 one, which keeps the gate open throughout - see voice_note_on().
+
+Since 2026-09-13 each stage is a recurrence on the level (reference §17.3), so a retrigger from
+part-way up carries on the same curve and ARRIVES SOONER, as the instrument's does: from half level
+at dial 64 a linear attack takes half its time, an Exp attack about a quarter, a Log one three
+quarters. The old stages ran a fixed-length ramp from wherever they began.
 
 ## 151. `osc_waveform()`
 
