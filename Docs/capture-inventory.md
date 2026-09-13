@@ -48,7 +48,7 @@ impulse is what this rig gives.
 | **Reverb** | 19 files: four rooms × Time, decay, stereo; Brightness in Hall, Small and Medium | The most complete. Room scale, decay law, pre-delay, wet level, input filtering, stereo tap sets and the Brightness law are all measured. |
 | **OscShpB** | `G2Captures/oscshpb/`, 8 files | Harmonic spectra per waveform at two Shape settings. |
 | **OscA** | `G2Captures/osca/`, 6 files | |
-| **Pulse** | `pulse192b.wav`, 17 dial values at 192 kHz | Time dial measured across the whole range in Sub. Every width is an integer count of 96 kHz samples. Our closed form is ~11% long and needs refitting - see `findings.md`. Amplitude still uncalibrated. |
+| **Pulse** | `pulse192b.wav`, 17 dial values at 192 kHz | Time dial measured across the whole range in Sub. Every width is an integer count of 96 kHz samples. The engine's law (reference §18) lands within two samples of all 17, dial 0 included. Amplitude calibrated: logic high is 1.0 (findings.md). |
 | **FltClassic** | `G2Captures/fltclassic/`, 18 files | Bypass, resonance and spectra. Ladder topology and K range settled from it. |
 
 ## Partly covered — measured, but the captures are thin or gone
@@ -58,7 +58,7 @@ impulse is what this rig gives.
 | **StChorus** | 3 files in `G2 Captures/`, two Detune settings at two tone frequencies | Rate, centre delay and the triangle LFO shape are settled. There is no systematic sweep of either dial, and the STEREO behaviour has never been measured — it is on `to-test.md` as needing an ear. |
 | **DelayA / DelayB** | 3 files, feedback at 64/96/127 | **More complete than this row used to claim.** Feedback is linear to exactly unity (measured at 64/96/127; the hardware does not decay at all at 127). LP measured at five settings and HP at four, both by the BURST method - a short saw burst separates the repeats so repeat[n+1]/repeat[n] is the per-pass response - with the HP fit then validated at three settings that were NOT used to fit it. Dry/wet measured and found to be the same non-crossfade the reverb uses, needing no wet attenuation. Time and its Clk mapping hardware-confirmed separately. The audio is not retained; the numbers and the method are in `findings.md`. |
 | **Compress** | none retained | Threshold, ratio, attack and release were all measured and corrected — the numbers are in `findings.md`, the audio is not. Re-deriving anything means re-capturing. |
-| **EnvADSR** | none retained | Curve sharpness measured 2026-08-24; the attack FORM re-measured 2026-09-07 and our law confirmed against a one-pole. Both from captures that were not kept. |
+| **EnvADSR** | none retained | Curve sharpness measured 2026-08-24; the attack FORM re-measured 2026-09-07. Both from captures that were not kept. Since 2026-09-13 the engine runs the instrument's own law (reference §17), which both captures agree with; nothing new captured. |
 | **LevAmp** | none retained | Gain law measured at 33 dial positions 2026-08-30, four segments. |
 
 ## Not captured at all — implemented on the manual, a datasheet reading, or an assumption

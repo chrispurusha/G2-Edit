@@ -127,6 +127,12 @@ typedef enum {
 double env_attack_level(uint32_t envShape, double progress);   // rises 0 -> 1 across the segment
 double env_fall_level(uint32_t envShape, double progress);     // falls 1 -> 0 across the segment
 
+// Sound engine reference §17.2 - the instrument's envelope curves: the Log and Exp attacks cover a factor of 16
+// (24 dB) in the attack time, and decay and release fall 40 dB in theirs.
+#define ENV_RISE_SHARPNESS     (2.772588722239781)    // ln 16
+#define ENV_FALL_SHARPNESS     (4.605170185988091)    // ln 100
+#define ENV_LOG_RISE_TARGET    (16.0 / 15.0)          // the Log attack's one-pole aims here, arriving at 1
+
 // A delay's Time/Clk selector index, which differs per module type; -1 if it has none.
 int delay_time_clk_param_index(tModuleType moduleType);
 

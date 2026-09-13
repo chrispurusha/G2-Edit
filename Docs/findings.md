@@ -9516,3 +9516,19 @@ switches are Constants 12 units apart) - sound-engine-reference §16:
   - EnvADSR Sustain is dial/128, not dial/127.
   The mixer, LevAmp and mod-amount laws could not be checked the same way: the dial value reaches the
   DSP raw and the law lives in its tables. The envelope time table likewise.
+
+2026-09-13 - ENVELOPE AND PULSE NOW FOLLOW THE INSTRUMENT'S OWN TIME LAWS (reference §17, §18):
+  - The envelope steps at 24 kHz. The time law we measured is right to 0.002% for every dial value;
+    a LINEAR attack adds whole increments, which makes its top settings long (49.9 s at 127, not 45).
+  - Decay and release are pure exponentials falling 40 dB in the dial's time (sharpness ln 100 =
+    4.605); ours used 4.32 normalised to reach zero, which ran a constant 6% slow. The Log and Exp
+    attacks both use ln 16 (Log aims at 16/15 of full, Exp grows sixteen-fold), against our 2.83.
+    The 2026-08-24 capture's numbers agree once read against the right curve (paramCurves notes §5).
+  - Each stage is now a recurrence on the current level, so a retrigger arrives sooner, as on the
+    instrument.
+  - PULSE: the Sub width is the displayed time over ten less two 96 kHz samples, within two samples
+    of all 17 hardware widths. That answers the open question at dial 0 (8 samples, not 9.9): the
+    whole dial is two samples short of the curve, not the bottom leaving it.
+  - Checked: one envelope node stepped at 96 kHz reaches full, and falls 40 dB, at exactly the dial's
+    time for every shape (LinLin's straight fall 1% sooner, as it should); voicing unchanged.
+  - Patch GLIDE's time per octave agrees with its display within 3% (not changed).

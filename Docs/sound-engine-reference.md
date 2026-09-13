@@ -381,3 +381,34 @@ PitchVar inputs, and FltMulti's and FltComb's, all move five times as far as bef
 
 **16.3 EnvADSR Sustain** is the dial over 128, 127 reaching exactly full level (`dial_fraction()`), as
 the other level dials are; it was over 127, a fraction of a percent high everywhere below the top.
+
+## 17. Envelopes (EnvADSR)
+
+The instrument's law, adopted 2026-09-13; the time law and the curve constants agree with the
+2026-08-24 capture (paramCurves.c notes §5). Each stage runs on the level it is at.
+
+**17.1 Times.** One law for all three dials, adr_time_seconds() (0.5 ms to 45 s). The instrument steps
+its envelopes at 24 kHz and a LINEAR attack adds a whole increment of full scale per step, so its time
+is the dial's rounded to the increment below: exact to 0.002% up the dial, and long at the top (1.025 s
+at 64, 34.95 s at 120, 49.9 s at 127). The Log and Exp attacks keep the dial's time.
+
+**17.2 Shapes.** LinExp and LinLin attacks rise in a straight line, full scale in the attack time.
+LogExp's is a one-pole aimed at 16/15 of full, arriving at full on time; ExpExp's grows sixteen-fold
+over it - both ENV_RISE_SHARPNESS, ln 16. Decay and release (all but LinLin) are pure exponentials,
+40 dB in the dial's time (ENV_FALL_SHARPNESS, ln 100): decay towards Sustain, release towards zero.
+LinLin falls in a straight line at full scale per dial time, so a decay to a high Sustain is quick.
+
+**17.3 From where it is.** Every stage is a recurrence on the current level, not a ramp of fixed length:
+a retrigger during a release rises from there and arrives sooner (notes §150), and Sustain can move
+while a key is held and the level follows it. The engine runs them at its own rate with the same
+curves; a release is over below -100 dB (`ENV_IDLE_LEVEL`).
+
+Until 2026-09-13 the stages were fixed-length ramps with a fall sharpness of 4.32, normalised to reach
+zero at the dial's time - decay and release came out a constant 6% slow at every setting.
+
+## 18. Pulse
+
+**18.1 Width.** The Sub range's width in 96 kHz samples is the dial's displayed time (the Lo display,
+over ten) less two samples: a cubic in ln over dial/127 (`pulse_time_seconds()`, notes §73). Within two
+samples of all 17 widths measured on the instrument (8 at dial 0 to 96083 at 127). Lo and Hi are ten
+and a hundred times Sub (manual). The old fit was 4% out at worst and could not reach dial 0.
