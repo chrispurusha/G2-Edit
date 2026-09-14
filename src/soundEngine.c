@@ -2248,6 +2248,17 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
 
             derived[0]  = (audioIn >= 0) ? (uint32_t)audioIn : CONNECTOR_IN_A;
             derived[1]  = (controlIn >= 0) ? (uint32_t)controlIn : FLT_CONNECTOR_ENV_IN;
+
+            // §21.3 - FltClassic's second control input, Pitch, has no knob
+            if (moduleType == moduleTypeFltClassic) {
+                int pitchIn = connector_index_for_input(moduleType, 2, anyConnectorType);
+
+                if (pitchIn >= 0) {
+                    derived[2]  = (uint32_t)pitchIn;
+                    *connectors = derived;
+                    return 3;
+                }
+            }
             *connectors = derived;
             return 2;
         }
@@ -3157,13 +3168,15 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             }
 
             switch (module->type) {
-                case moduleTypeFltHP:     node->topology = eFilterTopologyCascadeHP;
+                case moduleTypeFltHP:     node->topology  = eFilterTopologyCascadeHP;
                     break;
-                case moduleTypeFltLP:     node->topology = eFilterTopologyCascadeLP;
+                case moduleTypeFltLP:     node->topology  = eFilterTopologyCascadeLP;
                     break;
-                case moduleTypeFltStatic: node->topology = eFilterTopologyBiquad;
+                case moduleTypeFltStatic: node->topology  = eFilterTopologyBiquad;
                     break;
-                default:                  node->topology = eFilterTopologyLadder;
+                case moduleTypeFltClassic: node->topology = eFilterTopologyClassic;
+                    break;
+                default:                  node->topology  = eFilterTopologyLadder;
                     break;
             }
             node->fltShape = (map.shape >= 0)
@@ -4238,6 +4251,40 @@ static double oscnoise_step(uint32_t voice, uint32_t node, double hz, double wid
     return second * gain;
 }
 
+#define FLTCLASSIC_A_MAX         (0.69)                              // §21.2 - pi f/fs at most: 21.1 kHz
+#define FLTCLASSIC_DRIVE         (25.0 / 64.0)                       // §21.1
+#define FLTCLASSIC_ZERO_BASE     (0.47)                              // §21.2
+#define FLTCLASSIC_ZERO_SLOPE    (0.13)
+#define FLTCLASSIC_K_PER_DIAL    ((8.0 * 256.0 * 137.0) / 8388608.0) // §21.2 - 4.25 at 127
+
+static double fltclassic_clip(double v) {
+    return fmin(4.0, fmax(-4.0, v));
+}
+
+// §21.1 - a clipped cubic into four one-pole stages, the middle two with a zero; the resonance
+// comes from the fourth whatever the slope taps.
+static double classic_filter(double * state, double input, double cutoff, double resDial, uint32_t tapStage) {
+    SE_LOCAL;
+
+    double a  = fmin((M_PI * cutoff) / gSampleRate, FLTCLASSIC_A_MAX);
+    double p  = fmax(0.0, 1.0 - (2.0 * a) + (2.0 * a * a) - ((4.0 / 3.0) * a * a * a));
+    double z  = FLTCLASSIC_ZERO_BASE + (FLTCLASSIC_ZERO_SLOPE * fmin(1.0, 2.0 * p));
+    double x  = fltclassic_clip(input - (FLTCLASSIC_K_PER_DIAL * resDial * state[3])) / 4.0;
+    double u  = 4.0 * FLTCLASSIC_DRIVE * (x - ((x * x * x) / 3.0));
+    double s1 = state[0];
+    double s2 = state[1];
+
+    state[0] = fltclassic_clip((p * s1) + ((1.0 - p) * u));
+    double t1 = fltclassic_clip(state[0] + (z * s1));
+
+    state[1] = fltclassic_clip((p * s2) + ((1.0 - p) * t1));
+    double t2 = fltclassic_clip(state[1] + (z * s2));
+
+    state[2] = fltclassic_clip((p * state[2]) + ((1.0 - p) * t2));
+    state[3] = fltclassic_clip((p * state[3]) + ((1.0 - p) * state[2]));
+    return (tapStage >= 3u) ? state[3] : ((tapStage == 2u) ? state[2] : t2);
+}
+
 static double ladder_filter(double * state, double input, double g, double k, uint32_t tapStage) {
     // The feedback tap is pinned to the FOURTH pole and must stay there. LADDER_POLES grew to six
     // for FltLP's 36 dB setting, which has no resonance at all; taking the loop from the new last
@@ -4905,7 +4952,7 @@ static double fltcomb_step(uint32_t voice, const tEngineNode * spec, double inpu
     return pow(10.0, (shape->gainDbPerG2 * g * g) / 20.0) * (fed + (shape->feedForward * g * delayed));
 }
 
-static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch,
+static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input, double mod, double pitchDirect, double voicePitch,
                           double cutoffParam, double resonance) {
     SE_LOCAL;
 
@@ -4926,6 +4973,7 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
         control += (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt;
     }
+    control += pitchDirect * PITCH_MOD_SEMITONES;    // §21.3 - zero for every filter but FltClassic
 
     if (control < FLT_CONTROL_MIN) {
         control = FLT_CONTROL_MIN;
@@ -4934,7 +4982,7 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     if (control > FLT_CONTROL_MAX) {
         control = FLT_CONTROL_MAX;
     }
-    cutoff = flt_cutoff_hz(control);
+    cutoff   = flt_cutoff_hz(control);
 
     // Nyquist guard. With the control clamp above this cannot bite at any normal device rate — the
     // top of the dial is 21.1 kHz against an engine running at 96 kHz — so it is a guard against an
@@ -4946,7 +4994,7 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     if (cutoff < 1.0) {
         cutoff = 1.0;
     }
-    g      = 1.0 - exp(-2.0 * M_PI * cutoff / gSampleRate);
+    g        = 1.0 - exp(-2.0 * M_PI * cutoff / gSampleRate);
 
     // notes §162
     if (g > LADDER_MAX_G) {
@@ -4959,6 +5007,10 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
         case eFilterTopologyCascadeHP:
         {
             return cascade_hp_filter(gLadder[voice][node], input, g, spec->tapStage + 1u);
+        }
+        case eFilterTopologyClassic:
+        {
+            return classic_filter(gLadder[voice][node], input, cutoff, resonance * 127.0, spec->tapStage);
         }
         case eFilterTopologyBiquad:
         {
@@ -5028,7 +5080,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             // spec->fltGain is FltNord's GC and is 1.0 for every other filter, so this costs a
             // multiply and changes nothing where the module has no such control.
-            value[n][0] = filter_step(voice, n, spec, a, signal_in(spec, value, 1), voicePitch,
+            value[n][0] = filter_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch,
                                       gSmoothedCutoff[n], gSmoothedRes[n]) * spec->fltGain;
             break;
         }

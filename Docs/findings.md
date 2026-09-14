@@ -9645,3 +9645,15 @@ Reverb!", then "Let's continue with reverb, until it's nailed."
   - AGAINST THE CAPTURES the Time law is linear and the room ratios are exact, and onsets agree; the
     captured decay times read 6-12% long throughout, which is their early-decay fits.
   Old model in the revert record, row 29; notes sections 38-60, 123-139 and 141 retired with it.
+
+2026-09-14 - FLTCLASSIC IS THE INSTRUMENT'S OWN LOOP (reference §21). CT: "Classic Filter seems to now sound
+slightly brighter on engine, but may be down to how we're dealing with modulation amount from EnvADSR?"
+  - NOT THE MODULATION AMOUNT: the instrument adds v semitones per unit of modulation, exactly as we did
+    (127 counts as 128 there).
+  - THE LOOP DIFFERED: the instrument's two middle stages carry a zero (0.6 x the previous sample) that the
+    engine's one-pole cascade lacked, so the engine ran up to 4 dB hot in the top octave at high cutoffs;
+    and its input stage is a clip at 4x full scale then a clean cubic, where ours had a knee at 0.7 that
+    compressed a full-scale oscillator. Resonance 8k = Res x 0.03345 (4.25 at 127; ours 4.3).
+  - THE PITCH INPUT WAS IGNORED by the engine; it adds 64 semitones per unit with no knob.
+  Old ladder in the revert record, row 30; FltNord and FltLP still run it until their own review.
+
