@@ -75,6 +75,7 @@ SOUND ENGINE
 - FM is not modelled on any oscillator: OscB's and OscC's FmMod input, FM amount and FM Lin/Trk are ignored by the engine
 - OscDual's PW (param 11) and its mod amount (param 6) are SWAPPED in G2-Edit's tables: the face labels 6 as PW and 11 as SqrM - fix the face; the engine reads the instrument's order (§12.1)
 - OscDual's PW and Phase input depths are unmeasured (scale 1 in the engine) and Sync is not modelled
+- LFO KBT (LfoA, LfoB, LfoShpA have the control) is not implemented in the engine: the rate ignores the key. The instrument feeds the same key-tracking values the filters use (pivot E4, reference §21.3)
 - OscNoise's Width and WidthMod are SWAPPED in G2-Edit's tables: on the instrument parameter 6 is Width (it widens the band) and 5 is the Width modulation amount - the module tables (and so the face) call them 5 Width, 6 WidthMod. Fix the face and any engine read; measured 2026-09-12
 - OscD's face draws a "Pitch" dial at parameter 3, where the module tables have Tune Md (a Semi/Freq/Factor/Partial drop-down) - check against the instrument and fix the face
 - OscB's DualSaw renders as eOscWaveSuper in the engine; hardware says it is DblSaw (detune 0.5*Shape)

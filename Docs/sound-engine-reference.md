@@ -630,4 +630,16 @@ zeros are what keep the top octave below the plain one-pole cascade the engine r
 - the modulated input, × the Env amount's v (127 counts 128 on the instrument; the engine uses 127);
 - the Pitch input, × 64, with no knob. The engine ignored this input before.
 
-KBT is unchanged: the measured law.
+**KBT** adds (note − 64) × the KBT fraction (0, ¼, ½, ¾ or 1) in semitones. Note 64, E4, is the
+instrument's pitch zero: each voice's pitch is counted from it, which is also why Coarse 64 plays the
+key pressed. The engine pivoted on middle C until 2026-09-14, so at 100% every note was 4 semitones
+bright, with its self-oscillation 4 semitones high. This applies to every filter with a KBT control.
+
+**21.4 Arithmetic.** The engine runs the loop in the instrument's own numbers:
+- one unit is a quarter of the engine's range;
+- the coefficients are the instrument's words;
+- the sum runs unbroken through all four stages, as the DSP's does, and each value it stores is
+  rounded down to 23 bits.
+
+A decaying tail therefore reaches exact silence. A filter at full Res with no input stays quiet until
+something rings it, as on the hardware, rather than growing its own residue into oscillation.
