@@ -700,3 +700,47 @@ Nyquist, a small built-in lift of the top.
 peak stays level rather than the passband (−40 dB at Res 127).
 
 Not modelled: the FM-lin and Res-mod inputs.
+
+## 24. DelayA and DelayB
+
+The instrument's own delay, adopted 2026-09-14 (from the DSP code, run sample by sample). The engine
+reproduces that code word for word: every output sample is identical for a click and a noise burst,
+over Time 0-127 in two ranges, FB 0-127, and LP, HP and DryWet across their dials.
+
+**24.1 Loop.** Each sample:
+1. Memory takes input/2 plus the previous sample's feedback.
+2. The tap reads Time × step samples back. The step is 378, 756, 1512 or 2041 for the 500 ms, 1 s, 2 s
+   and 2.7 s ranges, so 127 steps land a hair over the range. Time 0 is no delay at all.
+3. The tap goes through the LP and the HP.
+4. That filtered signal is both the wet output and, × FB, the next feedback.
+
+So even the first repeat is filtered, and repeat n has been through the filters n times. FB is v/128
+with 127 = 1, so the loop does not decay at all at the top. The Time readout's extra sample (0.01 ms
+at raw 0) belongs to the display, not the audio.
+
+**24.2 Filters.** Both sets of words come from the host's own 16-bit-half arithmetic.
+- **LP:** a one-pole, y += c(x − y), with c = (0.1473 + 0.8527 v/127)³. That is about 50 Hz at LP 0,
+  3.3 kHz at 64, and wide open (c = 1) at 127.
+- **HP (DelayB only):** two states A and B, with F = (v/256)³:
+  - t = B + F·A
+  - high = x − 3B + F(B − A)
+  - then A ← t, B ← B + F·high
+  - out = (1 − F − F²)·high
+
+  F = 0 passes the signal unchanged.
+
+**24.3 Memory.** 16-bit: each 24-bit word's low byte is masked on the read. The loop runs at half
+scale, so the memory resolves steps of 2^-12 of full scale.
+
+**24.4 Mix.** wet = min(1, 2x)² and dry = min(1, 2(1 − x))², with x = DryWet/128 and 127 = 1. Both are
+full at 64. The fitted law it replaces cubed both ramps.
+
+**24.5 Arithmetic.** The engine runs the tap in the instrument's integer arithmetic, on half-scale
+24-bit words. Every sum of products is rounded down once, as the DSP's accumulator does, and that
+rounding is what sets the lowest HP settings and the long tails at high FB.
+
+**24.6 Against the earlier measurements.**
+- FB, measured at 0.497 / 0.741 / 1.000 for 64 / 96 / 127, is v/128.
+- The repeat level is identical at DryWet 64 and 127.
+- The LP knee near 3.5 kHz at 64 is this one-pole.
+- "Only two repeats survive at LP 0" is the 50 Hz bottom, which the fitted law had at 660 Hz.

@@ -344,6 +344,10 @@ CROSS-PROJECT
   24 dB, GC on and off at high Res, and the resonance character against the G2
 - FltNord's face graph now draws each FilterType (CT: non-LP types drew as LP) and GC as the drive -
   eyeball all four types at 12/24 dB against the sound
+- ***DELAYA/DELAYB NOW THE INSTRUMENT'S OWN TAP (2026-09-14, reference §24) - NEEDS AN EAR.*** Word-exact
+  against its code. Audible: the bottom of LP much darker (LP 0 ~50 Hz, was 660 Hz) and LP 127 fully
+  open; the first repeat is now filtered too; DryWet squared (the edges of the dial move); HP a
+  different two-state filter; 16-bit memory. A/B against the G2 across LP and HP, and with FB near 127
 - ***COMPRESSOR REWRITTEN AS A LEVELLER (2026-09-07) - THE BIGGEST BEHAVIOUR CHANGE OF THE DAY.*** It
   was a downward compressor that ignored Ref Level; the instrument drives the signal TOWARDS Ref Level
   and will BOOST when Ref Level is above it, which the old code could never do. Verified against
