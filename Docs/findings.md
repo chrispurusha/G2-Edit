@@ -9671,3 +9671,20 @@ With KBT as 0, self-res freq is the same on engine and G2."
     instrument but is not implemented in the engine - added to todo.
   Old reference in the revert record, row 31.
 
+2026-09-14 - FLTLP AND FLTHP ARE THE INSTRUMENT'S OWN (reference §22), run natively against the engine. Plain
+cascades of identical one-poles, as we had, but on a different coefficient: 2 sin(pi f/fs) (from the
+Chamberlin table) where we had 1 - e^(-w), so our corners sat low and fell further as the cutoff rose -
+10 dB short at 4x a 7.9 kHz corner at 24 dB/oct. FltHP's stage is unity at Nyquist (d = 1 - h), ours
+had gain p there. FltLP had also been going through the ladder's soft knee. Now 0.01 dB. Old laws:
+revert record row 32.
+
+2026-09-14 - FLTNORD IS A CHAMBERLIN PAIR, NOW THE INSTRUMENT'S OWN (reference §23). CT: "Nord filter is quite
+important too", then "FltNord's gain control seems harsh" and "FltNord's HP is coming through as low pass."
+  - The engine had it as FltClassic's ladder, tapped for 12/24 dB, and never read FilterType: every type
+    played as low-pass. GC was an output gain compensation, where the instrument's is the drive x d.
+  - The instrument runs FltMulti's state-variable filter on a two-sample mean of its input, twice for
+    24 dB (with the damping floored at 0.7071 d). The four outputs were read off by fitting the running
+    code's impulse responses to the filter's own signals: LP (low + low')/2, BP (1 - h) band, and HP and
+    BR each feeding back -0.9 of their last output. Now within 0.1 dB of that code.
+  Old model: revert record row 33.
+

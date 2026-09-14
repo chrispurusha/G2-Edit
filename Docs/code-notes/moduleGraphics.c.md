@@ -822,6 +822,11 @@ switch only moves the output tap.
 
 ## 67. in `render_filter_response_graph()`
 
+UPDATED 2026-09-14: FltNord now draws the instrument's own filter (reference §23) - a Chamberlin
+stage at Q = 0.5/qb, squared for 24 dB (band-reject stays one stage), its band-pass peaking at Q, and
+GC as the drive x d. The ladder curve and the GC gain below are what it drew before; FilterType was
+read but the ladder has only a low-pass, so every type drew as LP.
+
 FLTNORD IS NOT FLTCLASSIC'S LADDER. Measured 2026-08-30: FltClassic's passband droops with
 resonance, from -1.3 dB to -12.7 dB, which is the feedback the comment above describes and
 which this curve draws correctly. FltNord's does NOT - with its GC off the passband stays flat

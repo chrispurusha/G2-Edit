@@ -643,3 +643,60 @@ bright, with its self-oscillation 4 semitones high. This applies to every filter
 
 A decaying tail therefore reaches exact silence. A filter at full Res with no input stays quiet until
 something rings it, as on the hardware, rather than growing its own residue into oscillation.
+
+## 22. FltLP and FltHP
+
+The instrument's own filters, adopted 2026-09-14 (from the DSP code, run sample by sample). The engine
+matches that code to 0.01 dB across every slope and cutoff tried.
+
+**22.1 Coefficient.** h = sin(π f/fs) at the Freq dial, which is the Chamberlin half-coefficient table,
+× 2^(modulation/12), held at 1. Modulation and KBT scale the dial's coefficient rather than moving the
+dial, so at the top of the range they carry on past it until the coefficient saturates.
+
+**22.2 FltLP.** One to six identical one-poles, y += 2h(x − y), with 2h held below 1. Near the top of the
+dial the stages pass everything. There is no saturation short of the word (±4).
+
+**22.3 FltHP.** One to six identical one-poles, y = p y′ + d(x − x′), with p = 1 − 2h and d = 1 − h. This
+is unity at Nyquist.
+
+**22.4 Against the old law.** The engine had g = 1 − e^(−ω), which put the corners low: 1.3 dB at the
+cutoff for 12 dB/oct at 4.4 kHz, and 4.8 dB at 24 dB/oct at 7.9 kHz, where it was 10 dB low at 4× the
+cutoff. Its FltLP also went through the ladder's soft knee, compressing a full-scale input.
+
+## 23. FltNord
+
+The instrument's own filter, adopted 2026-09-14 (from the DSP code, run sample by sample). It is not a
+ladder. It is FltMulti's Chamberlin state-variable filter (§10.2): one stage for 12 dB, and two of the
+same type for 24 dB. The engine matches that code to 0.1 dB over every type, both slopes, GC on and
+off, and Res 0-116, from Freq 70 up. Below that, the instrument's own fixed-point noise is what differs.
+
+**23.1 Stage.** x is the mean of this and the previous input sample:
+
+    low = low′ + F·band′        high = x − low − q·band′        band = band′ + F·high,    F = 2h
+
+The outputs:
+
+| Type | Output |
+|---|---|
+| LP | (low + low′)/2 |
+| BP | (1 − h)·band |
+| HP | y = 2(1 − h)·high − 0.9·y′ |
+| BR | y = 2(x − q·band′) − 0.9·y′ |
+
+At 24 dB a second stage of the same type follows. Band-reject stays a single stage. The type order is
+LP, BP, HP, BR.
+
+**23.2 Coefficients.**
+- h = sin(π f/fs) × 2^(modulation/12) (§22.1), held at 0.6368, i.e. 20.8 kHz.
+- d = 1 − 0.99 × Res/128, with 127 counting as 1, so d = 0.01 at the top. Band-reject uses
+  1 − 0.5 × Res/128.
+- q = 2·qb·(1 − h), where qb = d² at 12 dB and max(d², 0.7071·d) at 24 dB. That floor keeps the
+  cascaded pair from ringing twice as hard.
+
+**23.3 The 0.9 on HP and BR.** Their output is 2(…)/(1 + 0.9 z⁻¹): 1.053 at DC and rising towards
+Nyquist, a small built-in lift of the top.
+
+**23.4 GC** is the drive × d, as FltMulti's GComp. As Res rises it lowers what goes in, so the resonant
+peak stays level rather than the passband (−40 dB at Res 127).
+
+Not modelled: the FM-lin and Res-mod inputs.

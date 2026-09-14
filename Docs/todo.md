@@ -25,6 +25,7 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Add a dedicated master-clock/tempo panel
 
 MODULES AND GRAPHICS
+- The VA area sometimes scrolls horizontally by itself - possibly on a mouse move with no button pressed, possibly while sounding notes from the Mac keyboard (CT, 2026-09-14). Cause not narrowed down
 - Re-lay out the remaining families by rule (module-layout-rules.md "common face", tools/relayout.py) - Level group done 2026-09-13; next the delays and the pitch/FX group still on port coordinates
 - A drag-and-drop layout mode in the editor that snaps to the grid and writes the rows back - for what the rules cannot settle
 - Draw the jack-to-dial link as a short graphical line instead of the "-"/"--" connector label (CT) - the labels already mark every pair
@@ -44,14 +45,10 @@ MODULES AND GRAPHICS
 - Fill the 39 Unknown slots in gModuleProperties (of 209) by sweeping factory banks for type numbers
 
 FILTERS
-- FltNord's LP/BP/HP/BR modes are NOT implemented - fltShape is read but the ladder path ignores it
-- Try FltNord as a state-variable filter (svf_filter already takes a shape); evidence in findings.md
-- FltNord is FltMulti's filter, not a ladder: the instrument builds it from the same state-variable parts (two sections for 24 dB), its Res reaching them as v/512 - model it that way and test against FltNord's captures before anything else
+- FltNord's FM-lin and Res-mod inputs are not modelled in the engine (its filter is the instrument's since 2026-09-14, reference §23)
 - Eq2Band/Eq3band Hi Freq: setting 0 sounds at 8 kHz and 1 at 6 kHz, the reverse of eq2BandHiStrMap's names - check what the G2's own display calls them and fix whichever is wrong (the engine follows the sound)
 - EqPeak/Eq3band deep wide cuts above ~1 kHz: the instrument's Chamberlin form is unstable there - measure what it actually does (§11.5)
 - FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs
-- FltNord's PEAK shape still borrows FltClassic's k law; its LEVEL behaviour is now measured and fixed
-- Whether FltNord's GC follows the same law on the 12dB slope and on BP/HP/BR is not established
 - Measure FltPhase against the Freq dial - notch positions are not yet tied to it
 - FltComb Deep fits only to |g| 0.5 with one section (5 dB rms at full feedback) - find its real structure (§13.4)
 - FltComb: only two per patch sound in the engine (MAX_COMB_LINES), and at a 192 kHz engine rate the lowest octave of Freq is clamped (COMB_LINE_SAMPLES); FB Mod depth unmeasured
