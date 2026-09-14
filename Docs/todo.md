@@ -5,11 +5,11 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Add a menu option for drone mode enable/disable, so that we can free bandwidth. In non-drone mode, oscillators can hold for a period of time and then ramp down with a linear release, releasing CPU bandwidth.
+- Add a menu option to enable/disable drone mode for plugins (drone enabled by default). Needs to be recalled from host by plugin, so plugin can release oscillator processors after a period of time if non-drone (using a ramp down afer holding for a period). Standalone should always drone.
 - We don't need the host to remember which the last file we opened was. We need to remember and restore the patch/performace/settings.
-- Fix current modules using the recent methods.
+- Fix current modules in sound engine using the recent methods.
 - Bug where we see a sudden/random scroll VA area right about half a module's width.
-- Implement more modules using the recent methods.
+- Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter.
 - Fix or add various module oscillator style graphics. Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth etc.
 - Can we verify what keyboard track and normal/reset do on EnvADSR?
 - Press V to toggle split position vs Voice-Area-only (manual p64)
