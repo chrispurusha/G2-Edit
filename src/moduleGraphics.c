@@ -2215,7 +2215,7 @@ static bool filter_graph_map(uint32_t moduleType, tFilterGraph * out) {
             // dB/Oct is param 5 and FilterType param 8 - see param-validation.md.
             *out = (tFilterGraph){
                 .freq     = 0, .res = 4, .slope = 5, .slopeMode = -1, .shape = 8, .gc = 3,
-                .topology = eFilterTopologyLadder
+                .topology = eFilterTopologyNord
             };
             return true;
 
@@ -2278,11 +2278,19 @@ static void render_filter_response_graph(tRectangle rectangle, tModule * module)
 
     // notes §67
     double                 nordGain       = 1.0;
+    double                 nordQ          = 0.5;
+    uint32_t               nordStages     = 1;
 
     if (module->type == moduleTypeFltNord) {
-        bool gcOn = (map.gc >= 0) && (module->param[variation][map.gc].value != 0);
+        bool   gcOn    = (map.gc >= 0) && (module->param[variation][map.gc].value != 0);
+        bool   slope24 = (slopeIndex != 0u);
+        double r       = (resKnob >= 127.0) ? 1.0 : (resKnob / 128.0);
+        double d       = 1.0 - (((shape == eFilterShapeBandReject) ? 0.5 : 0.99) * r);
+        double qb      = slope24 ? fmax(d * d, M_SQRT1_2 * d) : (d * d);
 
-        nordGain = (1.0 + feedback) * (gcOn ? flt_nord_gc_gain(resKnob) : 1.0);
+        nordQ      = 0.5 / qb;
+        nordStages = (slope24 && (shape != eFilterShapeBandReject)) ? 2u : 1u;
+        nordGain   = gcOn ? d : 1.0;
     }
     const tGraphLocation * graphLoc       = find_graph_location(module->type);
 
@@ -2322,18 +2330,27 @@ static void render_filter_response_graph(tRectangle rectangle, tModule * module)
                 magnitude = flt_biquad_magnitude(ratio, staticQ, shape);
                 break;
 
+            case eFilterTopologyNord:
+            {
+                // reference §23: the instrument's band-pass peaks at Q rather than at one
+                double stage = flt_biquad_magnitude(ratio, nordQ, shape) * ((shape == eFilterShapeBandPass) ? nordQ : 1.0);
+
+                magnitude = ((nordStages == 2u) ? (stage * stage) : stage) * nordGain;
+                break;
+            }
+
             default:
                 magnitude = flt_ladder_magnitude(ratio, feedback, tap) * nordGain;
                 break;
         }
-        double levelDb   = 20.0 * log10(fmax(magnitude, 1e-4));
-        double level     = fmax(-1.0, fmin(1.0, levelDb / 24.0)); // +-24dB fills the box vertically
+        double levelDb = 20.0 * log10(fmax(magnitude, 1e-4));
+        double level   = fmax(-1.0, fmin(1.0, levelDb / 24.0));   // +-24dB fills the box vertically
 
         // notes §68
-        tCoord point     = {graphRect.coord.x + (x * graphRect.size.w), baseY - (level * graphRect.size.h * 0.38)};
+        tCoord point   = {graphRect.coord.x + (x * graphRect.size.w), baseY - (level * graphRect.size.h * 0.38)};
 
         // notes §69
-        bool   onPage    = (level > -1.0);
+        bool   onPage  = (level > -1.0);
 
         if (onPage) {
             started = true;
