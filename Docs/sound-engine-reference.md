@@ -598,3 +598,36 @@ rate/96000, rounded, which is close but not identical.
 **20.7 Against the captures.** The Time law is linear and the room ratios are exact. The onsets
 agree (Small L 1237 samples measured, 12.89 ms). The captured decay times run 6-12% longer
 throughout, which comes from their early-decay fits over about 15 dB of tail, not from the module.
+
+## 21. FltClassic
+
+The instrument's own filter, adopted 2026-09-14 (from the DSP code, run sample by sample). The engine
+agrees with that code to 75-114 dB on a full-scale saw at every slope and resonance below
+self-oscillation. It replaces the shared ladder (revert record row 30), which put the pole in the
+right place but lacked the zeros, the clean input stage and the Pitch input.
+
+**21.1 Loop.** Each sample at 96 kHz, with the pole p and the zero z from 21.2:
+1. x = in − 8k × s4, clipped to ±4 (four times full scale).
+2. u = (25/64)(x − x³/48), a clean cubic below a few times full scale.
+3. The four stages:
+   - s1 ← p s1 + (1 − p) u
+   - s2 ← p s2 + (1 − p)(s1 + z × the previous s1)
+   - s3 ← p s3 + (1 − p)(s2 + z × the previous s2)
+   - s4 ← p s4 + (1 − p) s3
+
+The resonance always comes from s4, and the slope picks the output: 24 dB s4, 18 dB s3, and 12 dB
+s2 + z × the previous s2. The gain is unity at DC, since (25/64)(1 + z)² = 1 at z = 0.6. The two
+zeros are what keep the top octave below the plain one-pole cascade the engine ran before.
+
+**21.2 Coefficients.**
+- a = π f/fs, held at 0.69 (21.1 kHz), where f is the dial's 13.75 × 2^(v/12) plus modulation.
+- p = 1 − 2a + 2a² − (4/3)a³, a third-order e^(−2a).
+- z = 0.47 + 0.13 × min(1, 2p). That is 0.6 up to about 10.6 kHz, then falls, so the passband dips by
+  up to 1.5 dB at the very top.
+- 8k = Res × 0.03345, which is 4.25 at 127 and self-oscillating near the top of the dial.
+
+**21.3 Modulation.** Each input adds semitones to the Freq dial:
+- the modulated input, × the Env amount's v (127 counts 128 on the instrument; the engine uses 127);
+- the Pitch input, × 64, with no knob. The engine ignored this input before.
+
+KBT is unchanged: the measured law.

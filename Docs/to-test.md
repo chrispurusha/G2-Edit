@@ -323,6 +323,10 @@ CROSS-PROJECT
   - a STEREO source: the dry path now keeps L and R apart (it was the mono average on both sides), and
     a source into L only now has its dry on the left only - as the instrument's code has it
   - Reverb bypassed: each input now passes to its own output (it passed the average to both)
+- ***FLTCLASSIC NOW THE INSTRUMENT'S OWN LOOP (2026-09-14, reference §21) - NEEDS AN EAR.*** CT heard the
+  engine slightly brighter. Now within 75+ dB of the instrument's code on a saw. Compare at high Freq
+  (the top octave is where the old one-pole cascade was brightest), with the EnvADSR sweeping it, and at
+  high Res with a loud input (the old knee saturated early). Its Pitch input now works (64 semitones/unit)
 - ***COMPRESSOR REWRITTEN AS A LEVELLER (2026-09-07) - THE BIGGEST BEHAVIOUR CHANGE OF THE DAY.*** It
   was a downward compressor that ignored Ref Level; the instrument drives the signal TOWARDS Ref Level
   and will BOOST when Ref Level is above it, which the old code could never do. Verified against
