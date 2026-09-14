@@ -111,10 +111,11 @@ double wave_sine_by_index(uint32_t waveform, double phase, double shape) {
 // -- The four that step ------------------------------------------------------
 // Parameters only. See waveModels.h for why.
 
-// TriSaw: Shape skews the breakpoint from a symmetric triangle towards a sawtooth. Shape 0
-// (displayed 50%) gives 0.5, a triangle; Shape 1 gives 0.97, near-sawtooth.
+// TriSaw: Shape skews the breakpoint from a symmetric triangle towards a sawtooth - the instrument's
+// symmetry is raw/128, so Shape 0 (displayed 50%) gives 0.5 and Shape 1 gives 0.996. The engine also
+// holds the fall to at least two samples at the note's pitch, as the instrument does (notes §8).
 double wave_trisaw_peak(double shape) {
-    return 0.5 + (shape * 0.47);
+    return 0.5 + (shape * (127.0 / 256.0));
 }
 
 // DblSaw: "Double Saw signal. At 50% Shape setting, the signal consists of two saws in phase". The

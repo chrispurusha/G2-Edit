@@ -9592,3 +9592,35 @@ across both dials, the remainder the instrument's fixed-point rounding.
     bypassed and at Amount 0 (CT: "I think it's identical bypassed or not. G2Demo seems to be correct.
     Possible transients spoiled the test previously." - a first reading had shown +1.8 dB).
   Old laws in the revert record, rows 24-26.
+
+2026-09-14 - ENVADSR DECAY: THE INSTRUMENT ROUNDS ITS MULTIPLIERS DOWN (reference §17.2a). CT: "Comparing
+the 2 engines, I'm fairly sure that hardware's decay on at least EnvADSR is slightly faster than our engine."
+  - The envelope's own code steps each segment at 24 kHz as level' = target + m·(level - target), with m
+    from the decay table - the same law as ours, and the engine steps it at the right rate.
+  - THE DIFFERENCE IS FIXED-POINT. The table's multipliers are our time law rounded DOWN to 24 bits
+    (exact at every entry above 117, 100 of 128 overall), and the host halves each one for the DSP to
+    double. A multiplier a few dozen steps short of 1.0 loses a real fraction of its distance: 0.04%
+    quicker at Decay 64, 1.1% at 100, 3.1% at 120. Short decays are untouched, so if the difference was
+    heard on a short Decay, this is not it and the cause is elsewhere in the patch.
+  Old law in the revert record, row 27.
+  UPDATE, same day - THE WHOLE ENVELOPE NOW RUNS THE INSTRUMENT'S INTEGERS (reference §17.3). CT: "Decay now
+  sounds OK. I guess attack needs checking too"; "After that, check release times and env amplitude too."
+  The envelope's own code run tick by tick, and the engine rebuilt to match it exactly:
+  - ROUNDING DOWN ON EVERY TICK is what the multiplier alone missed: a long decay or release loses most of
+    each step to it near zero, reaching -40 dB in 37.0 s at 127 against the dial's 45 (8.2 s against 8.7
+    at 96). The quantised multiplier of the entry above was the smaller half of it.
+  - ATTACKS GO THE OTHER WAY: the tables' add terms, rounded down, lengthen long attacks (LogExp 9.6 s at
+    96 against 8.7, 26 s at 112 against 21; ExpExp 63 s at 127), and a LogExp attack from about 118 up
+    settles at 0.96-0.97 of full scale and never starts its decay.
+  - RELEASE is the decay's own law and table; AMPLITUDE matches - full scale 64 units, Sustain v/128.
+  - The gate is read at each 24 kHz tick and takes effect from the next one, as on the instrument.
+
+2026-09-14 - OSCSHPB TRISAW: THE INSTRUMENT'S SAW IS STEEPER THAN WE HAD IT (waveModels.c notes §8). CT: "hardware's
+OscShpB's saw at 99% is brighter than on our engine."
+  - THE SYMMETRY IS RAW/128. The DSP code puts the TriSaw peak at (1 + raw/128)/2 - 0.996 at Shape 127
+    and 0.75 at 64. Ours was 0.5 + 0.47 x raw/127: 0.97 at the top, 0.737 mid-dial.
+  - AND IT HOLDS THE FALL TO TWO SAMPLES AT THE NOTE'S PITCH (symmetry clamped to 1 - 4f/fs), which is
+    why our capture read 0.97: near C6 that clamp is what shows. Lower down the instrument's fall is
+    0.4% of the cycle (C2) against our 3% - a saw an order of magnitude brighter in its upper harmonics.
+    The engine now applies both; the drawn wave takes the unclamped peak.
+  Old law in the revert record, row 28.

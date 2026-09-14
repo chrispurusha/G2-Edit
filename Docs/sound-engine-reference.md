@@ -418,7 +418,7 @@ The instrument's law, adopted 2026-09-13; the time law and the curve constants a
 **17.1 Times.** One law for all three dials, adr_time_seconds() (0.5 ms to 45 s). The instrument steps
 its envelopes at 24 kHz and a LINEAR attack adds a whole increment of full scale per step, so its time
 is the dial's rounded to the increment below: exact to 0.002% up the dial, and long at the top (1.025 s
-at 64, 34.95 s at 120, 49.9 s at 127). The Log and Exp attacks keep the dial's time.
+at 64, 34.95 s at 120, 49.9 s at 127). The other stages stretch or shrink at long settings too - 17.3.
 
 **17.2 Shapes.** LinExp and LinLin attacks rise in a straight line, full scale in the attack time.
 LogExp's is a one-pole aimed at 16/15 of full, arriving at full on time; ExpExp's grows sixteen-fold
@@ -426,13 +426,40 @@ over it - both ENV_RISE_SHARPNESS, ln 16. Decay and release (all but LinLin) are
 40 dB in the dial's time (ENV_FALL_SHARPNESS, ln 100): decay towards Sustain, release towards zero.
 LinLin falls in a straight line at full scale per dial time, so a decay to a high Sustain is quick.
 
-**17.3 From where it is.** Every stage is a recurrence on the current level, not a ramp of fixed length:
-a retrigger during a release rises from there and arrives sooner (notes §150), and Sustain can move
-while a key is held and the level follows it. The engine runs them at its own rate with the same
-curves; a release is over below -100 dB (`ENV_IDLE_LEVEL`).
+**17.3 Integer steps, from where it is (adopted 2026-09-14, from the DSP code, run tick by tick).**
+Each stage is one recurrence on the current level, in the instrument's own integers, once per 24 kHz
+tick, the level holding between ticks:
+
+    level' = target + max(0, add + floor(2 · half · (level - target) / 2^23))
+
+with half, add and target 24-bit words from its tables - each our time law rounded DOWN. The attack
+aims at 0 with add the table's step (Log: half = e^(-ln16/n)/2, add = (16/15)(1 - e^(-ln16/n)); Exp:
+e^(+ln16/n)/2 and (e^(ln16/n) - 1)/15; linear: 1/2 and 1/n, n = time × 24000) and ends when it passes
+full scale. Decay aims at Sustain and release at zero, with half = floor(e^(-ln100/n))/2, or for LinLin
+a whole-increment fall. `env_rates_build()`, `env_segment()`. The engine reproduces the instrument's
+code exactly at every tick (the shortest settings to 1e-5 of full scale, where our closed form and its
+table differ by a few steps).
+
+The rounding is audible only at long settings, and in both directions:
+
+| Dial | 64 | 96 | 112 | 120 | 127 |
+|---|---|---|---|---|---|
+| LogExp attack | 1.032 s | 9.55 s | 26.1 s | stops at 0.969 | stops at 0.955 |
+| ExpExp attack | 1.028 s | 9.17 s | 23.2 s | 35.3 s | 62.9 s |
+| Decay / release to -40 dB | 1.014 s | 8.22 s | 19.1 s | 27.0 s | 37.0 s |
+| the dial's time | 1.023 s | 8.72 s | 21.2 s | 32.0 s | 45.0 s |
+
+A LogExp attack from about 118 up never reaches full scale, so its decay never starts while the key
+is held; long falls speed up as they near zero, where rounding down is most of each step.
+
+Every stage runs from the level it is at: a retrigger during a release rises from there and arrives
+sooner (notes §150), and Sustain can move while a key is held and the level follows it. The gate is
+read at the tick and takes effect from the next one. The output is the level itself: full scale is 64
+units (1.0 here) and Sustain v/128 of it - checked against the instrument's code.
 
 Until 2026-09-13 the stages were fixed-length ramps with a fall sharpness of 4.32, normalised to reach
-zero at the dial's time - decay and release came out a constant 6% slow at every setting.
+zero at the dial's time - decay and release came out a constant 6% slow at every setting. From then
+until 2026-09-14 they were floating-point recurrences with the exact law (revert record 27).
 
 ## 18. Pulse
 

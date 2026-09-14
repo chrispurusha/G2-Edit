@@ -104,3 +104,16 @@ per cycle is exactly what strong odd harmonics look like.)
 
 The same kernel as Sine3 but in 2*theta, which is what makes the series odd-only, normalised by
 its own peak so the amplitude does not run away as ratio approaches 1.
+
+## 8. `wave_trisaw_peak()`
+
+THE INSTRUMENT'S SYMMETRY IS RAW/128, adopted 2026-09-14 from the DSP code: the peak sits at
+(1 + raw/128)/2 - 0.5 at Shape 0, 0.75 at 64, 0.996 at 127. It was 0.5 + 0.47 x raw/127, fitted to a
+capture that read 0.97 at the top: that was the instrument's OTHER rule showing, not its peak.
+
+THE FALL NEVER SHORTENS PAST TWO SAMPLES AT THE NOTE'S PITCH (the instrument clamps its symmetry to
+1 - 4f/fs), so at Shape 127 the peak is 0.996 up to about 200 Hz, 0.978 at C6 and 0.956 at C7 - a
+capture near C6 reads close to 0.97, which is where the old fit came from. Below that the instrument's
+saw is far brighter than 0.97 made it: at C2 its fall is 0.4% of the cycle, where ours was 3%. The
+drawn wave uses the unclamped peak; the engine applies the clamp in `osc_shp_wave()`. The mid-dial
+gap the 2026-08-23 check left (about 2 dB, "the largest thing left") is the 0.47 against 0.496 slope.
