@@ -394,6 +394,8 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define REVERB_PARAM_BRIGHT         (1)
 #define REVERB_PARAM_DRYWET         (2)
 #define REVERB_PARAM_ACTIVE         (3)
+#define RV_POSITIONS                (36)    // §20.2 - kRvPlace
+#define RV_COEFFS                   (10)    // §20.3
 
 // notes §12
 typedef struct {
@@ -625,17 +627,19 @@ typedef struct {
     double          dualPwMod;
     double          dualPhaseMod;
     bool            dualSoft;
-    double          combFeedback;  // §13.3 - g, -1..1
+    double          combFeedback;        // §13.3 - g, -1..1
     double          combFbMod;
-    uint32_t        combType;      // Notch, Peak, Deep
+    uint32_t        combType;            // Notch, Peak, Deep
     double          combLevel;
-    uint32_t        fadeKind;      // tFadeKind
-    double          fadeMod;       // the modulation attenuator, 0..1
-    bool            fadeLog;       // logStrMap {Log, Lin}: 0 is Log. The two faders have no choice
-    uint32_t        line;          // which shared delay line this node owns, if it needs one
-    double          brightness;    // reverb, 0..1 as the dial reads it — HIGH IS BRIGHT
-    double          timeNorm;      // reverb Time as the dial reads it, 0..1 — drives the diffusion
-    uint32_t        reverbType;    // reverb room size: Small/Medium/Large/Hall
+    uint32_t        fadeKind;            // tFadeKind
+    double          fadeMod;             // the modulation attenuator, 0..1
+    bool            fadeLog;             // logStrMap {Log, Lin}: 0 is Log. The two faders have no choice
+    uint32_t        line;                // which shared delay line this node owns, if it needs one
+    uint32_t        reverbType;          // reverb room size: Small/Medium/Large/Hall
+    int32_t         rvPos[RV_POSITIONS]; // §20.2 - ring positions, samples ahead of the cursor
+    double          rvY[RV_COEFFS];      // §20.3
+    double          rvDry;               // §20.5
+    double          rvWet;
 
     uint32_t        dxBase;        // §14 - where this router's six Operators sit in dxOp[]
     uint32_t        dxAlgorithm;   // 0..31
@@ -965,233 +969,180 @@ static double                      gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_
 
 // Compressor gain-reduction state, one per node.
 static double                      gCompEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gCompEnv               (gCompEnvBank[SE])
+#define gCompEnv             (gCompEnvBank[SE])
 
-// notes §38
-#define REVERB_COMBS           (16)
-#define REVERB_ALLPASS         (3)
+// §20 - the reverb: the instrument's own network, run on one ring of delay memory.
+#define REVERB_MODE_TYPE     (0)
+#define REVERB_TYPE_COUNT    (4)
+#define REVERB_CHANNELS      (2)
+#define RV_BASE_RATE         (96000.0)               // the network's own rate: every position counts its samples
+#define RV_RING_BITS         (17)
+#define RV_RING              (1u << RV_RING_BITS)    // four times the instrument's 32768 words
+#define RV_TAP_BASE          (1200.0)                // §20.2 - each tap is room size x K + 1200 ...
+#define RV_CURSOR_LEAD       (144.0)                 // ... counted from a cursor 0x90 into the buffer
+#define RV_LFO_STEP          (174.0)                 // §20.4 - per base-rate sample, on a 24-bit phase
+#define RV_LFO_HALF          (8388608.0)
+#define RV_LFO_DEPTH         (76.0)                  // samples of travel, end to end
+#define RV_LONGEST_K         (22599.0)               // §20.3 - the tap whose length the decay is set against
+#define RV_WORD              (2097152.0)             // §20.6 - full scale in the instrument's 24-bit words
+#define RV_COEF              (8388608.0)             // its coefficients' grid
+#define RV_TOP               (4.0 - (1.0 / RV_WORD)) // the largest word: four times full scale
 
-// notes §39
-#define REVERB_MODE_TYPE       (0)
-#define REVERB_TYPE_COUNT      (4)
+static const float                 kRvRoomSize[REVERB_TYPE_COUNT] = {0.78f, 0.98f, 1.19f, 1.31f};
 
-// notes §40
-#define REVERB_DAMP_MAX        (0.8370)
-#define REVERB_BRIGHT_K        (57.799)
-#define REVERB_DAMP_CEILING    (0.9000)
-// notes §41
-
-static const double                kReverbDecayBase[REVERB_TYPE_COUNT]  = {0.045, 0.29, 0.39, 0.32};
-static const double                kReverbDecaySlope[REVERB_TYPE_COUNT] = {0.02238, 0.04094, 0.06082, 0.08212};
-
-// notes §42
-#define REVERB_DIFFUSE_SLOPE    (0.75)
-#define REVERB_DIFFUSE_BASE     (0.40)
-#define REVERB_DIFFUSE_MIN      (0.45)
-#define REVERB_DIFFUSE_MAX      (0.62)
-
-// notes §43
-static const double                kReverbTypeScale[REVERB_TYPE_COUNT]  = {1.0, 1.2690, 1.5255, 1.6795};
-#define REVERB_SCALE_MAX           (1.6795)
-
-// notes §44
-#define REVERB_COMB_BASE           (1667 * ENGINE_OVERSAMPLE) // the LONGEST comb of EITHER channel; buffers are sized from it
-#define REVERB_ALLPASS_BASE        (225 * ENGINE_OVERSAMPLE)
-// notes §45
-#define REVERB_SPREAD              (110)
-#define REVERB_CHANNELS            (2)
-
-#define REVERB_COMB_MAX            (((REVERB_COMB_BASE * 18) / 10) + REVERB_SPREAD + 1)
-#define REVERB_ALLPASS_MAX         (((REVERB_ALLPASS_BASE * 18) / 10) + REVERB_SPREAD + 1)
-
-// notes §46
-#define REVERB_PREDELAY_MAXSAMP    (641 * ENGINE_OVERSAMPLE)   // the largest below, Hall left
-#define REVERB_PREDELAY_MAX        (((REVERB_PREDELAY_MAXSAMP * 11) / 10) + 1)
-// notes §47
-#define RV_OUTTAPS                 (7)
-// THE ALLPASS COEFFICIENTS ARE THE INSTRUMENT'S, read straight out of its mixing gains: the two it
-// pairs 0.4820 with 0.7676 and 0.3102 with 0.9038, and 1 - g*g for those g values is exactly those
-// two numbers. The input diffuser's own gains come out heavier, at 0.75/0.5.
-#define RV_DIFFUSE    (0.5000)
-#define RV_TANK_A     (0.4820)
-#define RV_TANK_B     (0.3102)
-
-// Sixteen taps summed with alternating signs add up like a random walk, so the sum grows as the
-// square root of the count and this is 1/sqrt(16). REVERB_WET_GAIN sets the level; this only keeps
-// the tap count from changing it.
-#define RV_TAP_SCALE    (0.37796447300922720)
-
-// 1/sqrt(8) -- what makes the 8-point Hadamard butterfly orthogonal rather than a gain of 8.
-#define RV_HADAMARD     (0.35355339059327373)
-
-// notes §48
-
-// notes §49
+// §20.2 - the named positions of the network: a tap constant, and a fixed step from its tap.
 typedef enum {
     eRvPre = 0,
-    eRvDf1,
-    eRvDf2,
-    eRvDf3,
-    eRvDf4,
-    eRvDf5,
-    eRvDf6,
-    eRvLn0,
-    eRvLn1,
-    eRvLn2,
-    eRvLn3,
-    eRvLn4,
-    eRvLn5,
-    eRvLn6,
-    eRvLn7,
-    eRvSpanCount
-} tRvSpan;
+    eRvAp1Out,
+    eRvAp2In,
+    eRvAp2Out,
+    eRvAp3Out,
+    eRvAp4In,
+    eRvAp4Out,
+    eRvTankInA,
+    eRvApAIn,
+    eRvApAOut,
+    eRvModA,
+    eRvApA2In,
+    eRvApA2Out,
+    eRvDampA,
+    eRvTankInB,
+    eRvApBIn,
+    eRvApBOut,
+    eRvModB,
+    eRvApB2In,
+    eRvApB2Out,
+    eRvDampB,
+    eRvTankOutB,
+    eRvTapL,
+    eRvTapR       = eRvTapL + 7,
+    eRvPlaceCount = eRvTapR + 7
+} tRvPlace;
 
-#define RV_LINES        (8)
+typedef struct {
+    double k;
+    int    step;
+} tRvTap;
 
-// notes §50
-#define RV_MOD_DEPTH    (28)
-
-// notes §51
-#define RV_MOD_LOSS     (1.0000)
-
-static const double   kRvModHz[RV_LINES]                      = {
-    0.61, 0.73, 0.89, 1.03, 1.19, 1.31, 1.47, 1.61
+static const tRvTap kRvPlace[eRvPlaceCount]        = {
+    {    0.0,  3}, {  110.0, -1}, {  110.0,  0}, {  255.0,    0}, {  532.0, -1}, {  532.0,  0}, {  921.0,  0},
+    { 1000.0, -1}, { 1004.0,  0}, { 1677.0, -1}, { 1677.0, -127}, { 4425.0,  0}, { 6726.0, -1}, { 7300.0,  0},
+    {11651.0,  0}, {11655.0,  0}, {12393.0,  0}, {12393.0, -127}, {15080.0,  0}, {17536.0,  0}, {18600.0,  0},
+    {22599.0,  0},
+    { 3589.0,  0}, { 6307.0,  0}, { 8992.0,  0}, {12398.0,  110}, {15537.0,  0}, {18693.0,  0}, {21432.0,  0},
+    { 1680.0,  0}, { 5403.0,  0}, { 7347.0,  0}, {10589.0,    0}, {14470.0, -1}, {17021.0, -1}, {19561.0, -1}
 };
 
-static double         gRvLfoBank[SOUND_ENGINE_MAX_ENGINES][RV_LINES];
-#define gRvLfo          (gRvLfoBank[SE])
-#define RV_DIFFUSERS    (6)
-
-// notes §52
-static const uint32_t kRvLen[eRvSpanCount]                    = {
-    1060,                            // pre-delay
-    43,     73,  107, 145, 277, 389, // the input diffuser
-    661,   673,  739, 811,           // the four short lines
-    2297, 2459, 4001, 5323           // and the four long ones
+// §20.2 - the output taps' signs; the one marked 2 carries the first-tap gain, the rest the decay's.
+static const int    kRvTapSign[REVERB_CHANNELS][7] = {
+    {-1, 1, -1, 2,  1, -1,  1},
+    { 2, 1, -1, 1, -1,  1, -1}
 };
 
-static const uint32_t kRvDiffuser[RV_DIFFUSERS]               = {
-    eRvDf1, eRvDf2, eRvDf3, eRvDf4, eRvDf5, eRvDf6
-};
-static const uint32_t kRvLineDl[RV_LINES]                     = {
-    eRvLn0, eRvLn1, eRvLn2, eRvLn3, eRvLn4, eRvLn5, eRvLn6, eRvLn7
-};
+static float        gRvRingBank[SOUND_ENGINE_MAX_ENGINES][RV_RING];
+#define gRvRing     (gRvRingBank[SE])
+static uint32_t     gRvCurBank[SOUND_ENGINE_MAX_ENGINES];
+#define gRvCur      (gRvCurBank[SE])
+static double       gRvPhaseBank[SOUND_ENGINE_MAX_ENGINES];
+#define gRvPhase    (gRvPhaseBank[SE])      // §20.4 - the LFO, -2^23..2^23 as the instrument counts
 
-// notes §53
-static const uint32_t kRvTapLine[REVERB_CHANNELS][RV_OUTTAPS] = {
-    {eRvLn4, eRvLn4, eRvLn5, eRvLn6, eRvLn6, eRvLn7, eRvLn7},     // left
-    {eRvLn4, eRvLn4, eRvLn5, eRvLn6, eRvLn6, eRvLn7, eRvLn7}      // right
-};
-static const double   kRvTapFrac[REVERB_CHANNELS][RV_OUTTAPS] = {
-    {   // left  — earliest is 0.1301 on Ln4 = 299 samples, which is what kRvTankLead measures
-        0.1301, 0.6935, 0.6339, 0.5312, 0.8379, 0.4515, 0.8550
-    },
-    {   // right — earliest is 0.0823 on Ln4 = 189 samples, 110 ahead of the left set
-        0.0823, 0.3000, 0.2000, 0.1200, 0.4200, 0.1000, 0.4963
+// §20.2, §20.3, §20.5 - positions, coefficients and mix, as the instrument's host sets them.
+static void reverb_build(tEngineNode * node, uint32_t type, double timeDial, double brightDial, double mixDial) {
+    SE_LOCAL;
+
+    uint32_t room    = (type < REVERB_TYPE_COUNT) ? type : 0u;
+    float    roomF   = kRvRoomSize[room];
+    double   rate    = gSampleRate / RV_BASE_RATE;
+
+    for (uint32_t i = 0; i < (uint32_t)eRvPlaceCount; i++) {
+        double at = floor(((double)roomF * kRvPlace[i].k) + RV_TAP_BASE) - RV_CURSOR_LEAD + (double)kRvPlace[i].step;
+
+        node->rvPos[i] = (int32_t)lround(at * rate);
     }
-};
-static const double   kRvTapSign[RV_OUTTAPS]                  = {1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0};
 
-// notes §54
+    // §20.3 - the instrument's arithmetic, single-precision roundings included: each moves a
+    // coefficient by a step of its grid, which a tail at Brightness 0 turns into more than that.
+    double   longest = (double)((int32_t)((roomF * (float)RV_LONGEST_K) + (float)RV_TAP_BASE)
+                                - (int32_t)RV_TAP_BASE);
+    float    d8      = (float)(1.0 + ((99.0 * (brightDial * 256.0)) / 32512.0));
+    float    scaled  = (float)(3.0 * (double)(room + 1u));
 
-static uint32_t       gRvAddrBank[SOUND_ENGINE_MAX_ENGINES][eRvSpanCount + 1];
-#define gRvAddr    (gRvAddrBank[SE])
+    scaled      = scaled * (float)(timeDial * 256.0);
+    scaled      = (float)((double)scaled / 32512.0);
 
-// notes §55
-#define RV_RATE    (gSampleRate / 96000.0)
+    float    decay   = (timeDial > 0.0)
+                      ? (float)pow(10.0, (-3.0 / (6.0 * (double)scaled * RV_BASE_RATE)) * longest) : 0.0f;
+    float    d6      = (float)((double)d8 * 0.01);
+    float    inGain  = (float)((double)d8 * 0.01 * 0.7);
+    double * y       = node->rvY;
 
-// notes §56
+    y[0]        = (double)inGain;
+    y[1]        = 1.0 - (double)inGain;
+    y[2]        = 0.3;
+    y[3]        = (double)(float)((double)decay * 0.3);
+    y[4]        = (double)(float)((double)decay * (double)decay);
+    y[5]        = (double)(float)((double)d6 * (double)decay);
+    y[6]        = (double)(float)(1.0 - (double)d6);
+    y[7]        = 0.63;
+    y[8]        = (double)(float)fmin(0.62, fmax(0.45, ((double)decay * 0.75) + 0.4));
+    y[9]        = (double)(float)fmin(0.48, fmax(0.30, ((double)decay * 0.55) + 0.25));
 
+    for (uint32_t i = 0; i < RV_COEFFS; i++) {
+        y[i] = trunc(y[i] * RV_COEF) / RV_COEF;    // §20.6 - truncated to the coefficient grid
+    }
 
-// notes §57
-#define RV_MEM_SHIFT    (17)
-#define RV_MEM          (1u << RV_MEM_SHIFT)
+    double   mix     = dial_fraction(mixDial);
+    double   dry     = fmin(1.0, 2.0 * (1.0 - mix));
+    double   wet     = fmin(1.0, 2.0 * mix);
 
-static float          gRvMemBank[SOUND_ENGINE_MAX_ENGINES][RV_MEM];
-#define gRvMem          (gRvMemBank[SE])
-static uint32_t       gRvCurBank[SOUND_ENGINE_MAX_ENGINES];
-#define gRvCur          (gRvCurBank[SE])
-static double         gRvDampBank[SOUND_ENGINE_MAX_ENGINES][RV_LINES];
-#define gRvDamp         (gRvDampBank[SE])
+    node->rvDry = dry * dry;
+    node->rvWet = wet * wet;
+}
 
-
-// The two input poles. MEASURED, not chosen: the instrument's reverb is far darker than what goes
-// into it, and this is the filter that makes it so -- see the fit by REVERB_INPUT_LP_HZ.
-static double         gRevInLpBank[SOUND_ENGINE_MAX_ENGINES];
-#define gRevInLp     (gRevInLpBank[SE])
-static double         gRevInLp2Bank[SOUND_ENGINE_MAX_ENGINES];
-#define gRevInLp2    (gRevInLp2Bank[SE])
-static double         gRevInLp3Bank[SOUND_ENGINE_MAX_ENGINES];
-#define gRevInLp3    (gRevInLp3Bank[SE])
-static double         gRevInLp4Bank[SOUND_ENGINE_MAX_ENGINES];
-#define gRevInLp4    (gRevInLp4Bank[SE])
-static double         gRvLoopBank[SOUND_ENGINE_MAX_ENGINES][RV_LINES];
-#define gRvLoop      (gRvLoopBank[SE])
-
-// [room type][channel], in samples at the base rate. NOT scaled by kReverbTypeScale — see above.
-static const uint32_t kReverbPreDelay[REVERB_TYPE_COUNT][REVERB_CHANNELS] = {
-    {619 * ENGINE_OVERSAMPLE, 564 * ENGINE_OVERSAMPLE},    // Small   12.89 / 11.75 ms
-    {626 * ENGINE_OVERSAMPLE, 571 * ENGINE_OVERSAMPLE},    // Medium  13.05 / 11.90 ms
-    {638 * ENGINE_OVERSAMPLE, 583 * ENGINE_OVERSAMPLE},    // Large   13.30 / 12.14 ms
-    {641 * ENGINE_OVERSAMPLE, 586 * ENGINE_OVERSAMPLE}     // Hall    13.36 / 12.20 ms
-};
-// notes §58
-#define REVERB_INPUT_LP_HZ      (4600.0)
-#define REVERB_INPUT_LP2_HZ     (4600.0)
-
-// notes §59
-#define REVERB_INPUT_LP_TIME    (0.7)
-
-// notes §60
-#define REVERB_INPUT_LP4_HZ     (12000.0)
-static float          gPreDelayBank[SOUND_ENGINE_MAX_ENGINES][REVERB_CHANNELS][REVERB_PREDELAY_MAX];
-#define gPreDelay               (gPreDelayBank[SE])
-static uint32_t       gPreDelayPosBank[SOUND_ENGINE_MAX_ENGINES][REVERB_CHANNELS];
-#define gPreDelayPos            (gPreDelayPosBank[SE])
-static double         gEnvLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double   gEnvLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvLevel               (gEnvLevelBank[SE])
-static int32_t        gEnvQBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static int32_t  gEnvQBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvQ                   (gEnvQBank[SE])       // §17.3 - the level in the instrument's integers
-static double         gEnvTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double   gEnvTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvTick                (gEnvTickBank[SE])
 // notes §61
 #define PARAM_SMOOTH_SECONDS    (0.008)
 
-static double         gSmoothShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double   gSmoothShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothShape            (gSmoothShapeBank[SE])
-static double         gSmoothCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double   gSmoothCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothCutoff           (gSmoothCutoffBank[SE])
-static double         gSmoothResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double   gSmoothResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothRes              (gSmoothResBank[SE])
-static double         gSmoothGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double   gSmoothGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothGain             (gSmoothGainBank[SE])
-static double         gSmoothLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
+static double   gSmoothLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
 #define gSmoothLevel            (gSmoothLevelBank[SE])
 
 // Where the per-sample smoothing pass leaves its results, for the voice passes to read. Not per
 // voice: a knob is in one place however many notes are sounding, and smoothing it inside the voice
 // loop would advance the filter once per voice — so a sweep would speed up as more keys went down.
-static double         gSmoothedShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double   gSmoothedShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothedShape     (gSmoothedShapeBank[SE])
-static double         gSmoothedCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double   gSmoothedCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothedCutoff    (gSmoothedCutoffBank[SE])
-static double         gSmoothedResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double   gSmoothedResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothedRes       (gSmoothedResBank[SE])
-static double         gSmoothedGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double   gSmoothedGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothedGain      (gSmoothedGainBank[SE])
-static double         gSmoothedLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
+static double   gSmoothedLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
 #define gSmoothedLevel     (gSmoothedLevelBank[SE])
 // Until a node has been seen once there is nothing to interpolate FROM, so the first sample snaps.
 // Also what stops a patch load sweeping every parameter up from whatever the last patch left.
-static bool           gSmoothPrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static bool     gSmoothPrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothPrimed    (gSmoothPrimedBank[SE])
 
-static uint32_t       gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvStage        (gEnvStageBank[SE])
 
 // The voice's trigger count this envelope last started an attack for. When the voice's count moves
 // past it, a note-on has asked for a restart that the gate alone cannot show - see envelope_step().
-static uint32_t       gEnvTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t gEnvTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvTrigger    (gEnvTriggerBank[SE])
 
 // §14 - per voice, per Operator of every DXRouter node: phase, envelope (in dB, and its stage), and
@@ -1205,17 +1156,17 @@ typedef enum {
     eDxIdle
 } tDxStage;
 
-static double         gDxPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+static double   gDxPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
 #define gDxPhase       (gDxPhaseBank[SE])
-static double         gDxEnvDbBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+static double   gDxEnvDbBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
 #define gDxEnvDb       (gDxEnvDbBank[SE])
-static uint32_t       gDxEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+static uint32_t gDxEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
 #define gDxEnvStage    (gDxEnvStageBank[SE])
-static double         gDxOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS][2];
+static double   gDxOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS][2];
 #define gDxOut         (gDxOutBank[SE])
-static bool           gDxGateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static bool     gDxGateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gDxGate        (gDxGateBank[SE])
-static uint32_t       gDxTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t gDxTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gDxTrigger     (gDxTriggerBank[SE])
 
 typedef enum {
@@ -1411,15 +1362,12 @@ static void reset_node_state(void) {
     memset(gDelayWrite, 0, sizeof(gDelayWrite));
     memset(gDelayDamp, 0, sizeof(gDelayDamp));
     memset(gDelayHp, 0, sizeof(gDelayHp));
-    memset(gPreDelay, 0, sizeof(gPreDelay));
-    memset(gRvMem, 0, sizeof(gRvMem));
-    gRvCur = 0;
+    memset(gRvRing, 0, sizeof(gRvRing));
+    gRvCur   = 0;
+    gRvPhase = 0.0;
     memset((void *)gModuleMeter, 0, sizeof(gModuleMeter));   // no stale meters after a stop or reload
     memset((void *)gModuleLed, 0, sizeof(gModuleLed));
     memset(gMeterEnv, 0, sizeof(gMeterEnv));
-    memset(gRvDamp, 0, sizeof(gRvDamp));
-    memset(gRvLoop, 0, sizeof(gRvLoop));
-    memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
 }
 
 // notes §64
@@ -2943,25 +2891,16 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeReverb:
         {
-            // notes §89
-            node->timeNorm   = param_value(module, variation, REVERB_PARAM_TIME) / 127.0;
-            {
-                uint32_t reverbType = module->mode[REVERB_MODE_TYPE].value;
-
-                if (reverbType >= REVERB_TYPE_COUNT) {
-                    reverbType = 0;
-                }
-                node->timeSeconds = kReverbDecayBase[reverbType]
-                                    + (kReverbDecaySlope[reverbType]
-                                       * param_value(module, variation, REVERB_PARAM_TIME));
-            }
-            // Named for the dial, not for the filter coefficient it used to be assigned straight to
-            // — see reverb_step(), which now does the inversion itself.
-            node->brightness = param_value(module, variation, REVERB_PARAM_BRIGHT) / 127.0;
-            node->amount     = param_value(module, variation, REVERB_PARAM_DRYWET) / 127.0;
-            node->active     = (param_value(module, variation, REVERB_PARAM_ACTIVE) != 0.0);
             // Raw, like every other drop-down: a mode cannot carry a morph (manual p.20).
             node->reverbType = module->mode[REVERB_MODE_TYPE].value;
+
+            if (node->reverbType >= REVERB_TYPE_COUNT) {
+                node->reverbType = 0;
+            }
+            node->active     = (param_value(module, variation, REVERB_PARAM_ACTIVE) != 0.0);
+            reverb_build(node, node->reverbType, param_value(module, variation, REVERB_PARAM_TIME),
+                         param_value(module, variation, REVERB_PARAM_BRIGHT),
+                         param_value(module, variation, REVERB_PARAM_DRYWET));
             break;
         }
         case eNodeLfo:
@@ -3964,250 +3903,122 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
     return input * gain;
 }
 
-// notes §123
-static void reverb_step(double input, double timeSeconds, double timeNorm, double brightness,
-                        double mix, uint32_t type, double * outLeft, double * outRight) {
+// §20.6 - a stored word: rounded down to the 24-bit grid, and clamped to the word's range.
+static double rv_word(double v) {
+    return fmin(RV_TOP, fmax(-4.0, floor(v * RV_WORD) / RV_WORD));
+}
+
+// §20 - one sample of the instrument's reverb network: every read first, then every write.
+static void reverb_step(double input, const tEngineNode * spec, double * outLeft, double * outRight) {
     SE_LOCAL;
 
-    double   sum[REVERB_CHANNELS] = {0.0, 0.0};
-    uint32_t ch                   = 0;
-    uint32_t i                    = 0;
-    double   lfo[RV_LINES];
-    // notes §124
-    double   dial                 = brightness * 127.0;
+    input     = rv_word(input);
 
-    // notes §125
-    double   damp                 = REVERB_DAMP_MAX * exp(-dial / REVERB_BRIGHT_K);
-
-    if (damp > REVERB_DAMP_CEILING) {
-        damp = REVERB_DAMP_CEILING;
+    if (spec->reverbType != sLastTypeBank[SE]) {
+        memset(gRvRing, 0, sizeof(gRvRing));
+        gRvCur            = 0;
+        gRvPhase          = 0.0;
+        sLastTypeBank[SE] = spec->reverbType;
     }
-    double   scale                = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
+    const int32_t * p                    = spec->rvPos;
+    const double *  y                    = spec->rvY;
+    double          rate                 = gSampleRate / RV_BASE_RATE;
+    uint32_t        cur                  = gRvCur;
 
-    // ONE TRIP ROUND THE LOOP, and the gain that costs. The sections either side of it are
-    // lossless, so this single number is the whole decay: 60 dB in the requested time, three
-    // decades over however many trips fit into it.
-    double   gRvGain[RV_LINES];
-    // Per engine (sLastTypeBank, at file scope so engine_reset_state() can reach it): two instances
-    // on different reverb types must each notice their own change.
-#define sLastType    (sLastTypeBank[SE])
+#define RVR(o)       ((double)gRvRing[(cur + (uint32_t)(o)) & (RV_RING - 1u)])
+#define RVW(o, v)    (gRvRing[(cur + (uint32_t)(o)) & (RV_RING - 1u)] = (float)rv_word(v))
 
-    // notes §126
-    if (type != sLastType) {
-        memset(gPreDelay, 0, sizeof(gPreDelay));
-        memset(gRvMem, 0, sizeof(gRvMem));
-        gRvCur     = 0;
-        memset(gRvDamp, 0, sizeof(gRvDamp));
-        memset(gRvLfo, 0, sizeof(gRvLfo));
-        gRevInLp   = 0.0;
-        gRevInLp2  = 0.0;
-        gRevInLp3  = 0.0;
-        gRevInLp4  = 0.0;
-        memset(gRvLoop, 0, sizeof(gRvLoop));
-        memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
-        sLastType  = type;
+    // §20.4 - the triangle both modulated taps follow
+    gRvPhase += RV_LFO_STEP / rate;
 
-        // Lay the spans out end to end. Each one starts where the last finished, so a section
-        // writing at its own base and reading at the next gets exactly its own length of delay and
-        // no two sections can ever share a cell.
-        gRvAddr[0] = 16;
-
-        for (i = 0; i < eRvSpanCount; i++) {
-            // notes §127
-            static const uint32_t kRvTankLead[REVERB_TYPE_COUNT] = {303, 382, 459, 505};
-
-            uint32_t              lead                           = (uint32_t)((double)kRvTankLead[(type < REVERB_TYPE_COUNT) ? type : 0] * RV_RATE);
-            uint32_t              meas                           = kReverbPreDelay[(type < REVERB_TYPE_COUNT) ? type : 0][0];
-            uint32_t              len;
-
-            len            = (i == (uint32_t)eRvPre)
-                  ? ((meas > lead) ? (meas - lead) : 2)
-                  : (uint32_t)((double)kRvLen[i] * scale * RV_RATE);
-
-            gRvAddr[i + 1] = gRvAddr[i] + ((len < 2) ? 2 : len);
-        }
+    if (gRvPhase >= RV_LFO_HALF) {
+        gRvPhase -= 2.0 * RV_LFO_HALF;
     }
+    double          span                 = RV_LFO_DEPTH * rate * fabs(gRvPhase) / RV_LFO_HALF;
+    double          modA, modB;
 
-    // notes §128
-    for (i = 0; i < RV_LINES; i++) {
-        // THE LINE ALONE, not the allpass in front of it. An allpass passes a fraction of its input
-        // straight through -- that is what the -g feedforward term is -- so only some of the energy
-        // ever takes its delay, and charging the decay for the whole of it ran a Hall 30% fast.
-        double len = (double)(gRvAddr[kRvLineDl[i] + 1] - gRvAddr[kRvLineDl[i]]);
-
-        gRvGain[i] = (timeSeconds > 0.01)
-                     ? (pow(10.0, (-3.0 * len) / (gSampleRate * timeSeconds)) / RV_MOD_LOSS)
-                     : 0.0;
-    }
-
-    // notes §129
-    for (i = 0; i < RV_LINES; i++) {
-        lfo[i]    = gRvLfo[i];
-        gRvLfo[i] = gRvLfo[i] + (kRvModHz[i] / gSampleRate);
-
-        if (gRvLfo[i] >= 1.0) {
-            gRvLfo[i] -= 1.0;
-        }
-    }
-
-    // ONE TANK, RUN ONCE. It used to run twice, once per channel, over two buffers holding the same
-    // state — see kRvTapFrac for the measurement that showed the second copy was earning nothing.
     {
-        double diffused = input;
+        double  at    = (double)p[eRvModA] - span;
+        double  whole = floor(at);
+        double  f     = at - whole;
+        int32_t i     = (int32_t)whole;
 
-        // notes §130
+        modA  = ((1.0 - f) * RVR(i)) + (f * RVR(i + 1));
+        at    = (double)p[eRvModB] - span;
+        whole = floor(at);
+        f     = at - whole;
+        i     = (int32_t)whole;
+        modB  = ((1.0 - f) * RVR(i)) + (f * RVR(i + 1));
+    }
 
-        // notes §131
-        {
-            double   v      = diffused;
-            uint32_t modMax = (uint32_t)(RV_MOD_DEPTH * RV_RATE);
-            uint32_t i      = 0;
-            double   line[RV_LINES];
+    double          g = y[7], h = y[8], k = y[9];
 
-#define RVR(a)       ((double)gRvMem[(gRvCur + (a)) & (RV_MEM - 1)])
-#define RVW(a, x)    (gRvMem[(gRvCur + (a)) & (RV_MEM - 1)] = (float)(x))
+    // §20.1 - the input: four allpasses
+    double          x0                   = RVR(p[eRvPre]);
+    double          a1                   = rv_word(RVR(p[eRvAp1Out]) - (g * x0));
+    double          a2                   = rv_word(RVR(p[eRvAp2Out]) + (g * a1));
+    double          a3                   = rv_word(RVR(p[eRvAp3Out]) - (g * a2));
+    double          a4                   = rv_word(RVR(p[eRvAp4Out]) + (h * a3));
 
-            // A plain line: hand `v` in, get it back L samples later.
-#define RVDLY(n)                         \
-   do {                                  \
-       double d = RVR(gRvAddr[(n) + 1]); \
-       RVW(gRvAddr[n], v);               \
-       v = d;                            \
-   }                                     \
-   while (0)
+    // §20.1 - the tank's two halves, each feeding the other
+    double          tankIn               = RVR(p[eRvTankInA]);
+    double          xa = RVR(p[eRvApAIn]), da = RVR(p[eRvApAOut]);
+    double          xa2 = RVR(p[eRvApA2In]), da2 = RVR(p[eRvApA2Out]);
+    double          la = RVR(p[eRvDampA]), la1 = RVR(p[eRvDampA] + 1);
+    double          fbA                  = RVR(p[eRvTankOutB]);
+    double          inB                  = RVR(p[eRvTankInB]);
+    double          xb = RVR(p[eRvApBIn]), db = RVR(p[eRvApBOut]);
+    double          xb2 = RVR(p[eRvApB2In]), db2 = RVR(p[eRvApB2Out]);
+    double          lb = RVR(p[eRvDampB]), lb1 = RVR(p[eRvDampB] + 1);
+    double          inLp                 = RVR(0);
+    double          wet[REVERB_CHANNELS] = {0.0, 0.0};
 
-            // notes §132
-#define RVDLYM(n, off)                                                   \
-   do {                                                                  \
-       double   rd = (double)(gRvAddr[(n) + 1] - modMax - 3) + (off);    \
-       uint32_t ri = (uint32_t)rd;                                       \
-       double   fr = rd - (double)ri;                                    \
-       double   y0 = RVR(ri - 1);                                        \
-       double   y1 = RVR(ri);                                            \
-       double   y2 = RVR(ri + 1);                                        \
-       double   y3 = RVR(ri + 2);                                        \
-       double   d  = y1 + (0.5 * fr * ((y2 - y0)                         \
-                                       + fr * ((2.0 * y0) - (5.0 * y1)   \
-                                               + (4.0 * y2) - y3         \
-                                               + fr * ((3.0 * (y1 - y2)) \
-                                                       + y3 - y0))));    \
-       RVW(gRvAddr[n], v);                                               \
-       v = d;                                                            \
-   } while (0)
+    for (uint32_t ch = 0; ch < REVERB_CHANNELS; ch++) {
+        for (uint32_t t = 0; t < 7; t++) {
+            int    sign = kRvTapSign[ch][t];
+            double gain = (sign == 2) ? y[2] : ((double)sign * y[3]);
 
-#define RVAP(n, g)                       \
-   do {                                  \
-       double d = RVR(gRvAddr[(n) + 1]); \
-       double w = v + ((g) * d);         \
-       RVW(gRvAddr[n], w);               \
-       v = d - ((g) * w);                \
-   } while (0)
+            wet[ch] += gain * RVR(p[((ch == 0) ? eRvTapL : eRvTapR) + t]);
+        }
+    }
 
-            // notes §133
-            {
-                double a1 = exp(-2.0 * M_PI * REVERB_INPUT_LP_HZ / gSampleRate);
-                double a2 = exp(-2.0 * M_PI * REVERB_INPUT_LP2_HZ / gSampleRate);
+    RVW(p[eRvPre], x0 + (g * a1));
+    RVW(p[eRvAp2In], a1 - (g * a2));
+    RVW(p[eRvAp2Out], a2 + (g * a3));
+    RVW(p[eRvAp4In], a3 - (h * a4));
+    RVW(p[eRvAp4Out], a4);
 
-                gRevInLp  = ((1.0 - a1) * v) + (a1 * gRevInLp);
-                double a3 = REVERB_INPUT_LP_TIME * timeNorm;
+    RVW(p[eRvTankInA], tankIn + (y[4] * fbA));
+    double          ya                   = rv_word(da - (h * xa)); // §20.6 - an allpass's output is a word before it is reused
 
-                gRevInLp2 = ((1.0 - a2) * gRevInLp) + (a2 * gRevInLp2);
-                double a4 = exp(-2.0 * M_PI * REVERB_INPUT_LP4_HZ / gSampleRate);
+    RVW(p[eRvApAIn], xa + (h * ya));
+    RVW(p[eRvApAOut], ya);
+    RVW(p[eRvModA], modA);
+    double          ya2                  = rv_word(da2 + (k * xa2));
 
-                gRevInLp3 = ((1.0 - a3) * gRevInLp2) + (a3 * gRevInLp3);
-                gRevInLp4 = ((1.0 - a4) * gRevInLp3) + (a4 * gRevInLp4);
-                v         = gRevInLp4;
-            }
+    RVW(p[eRvApA2In], xa2 - (k * ya2));
+    RVW(p[eRvApA2Out], ya2);
+    RVW(p[eRvDampA], (y[5] * la) + (y[6] * la1));
 
-            // The input stage: pre-delay, then four short allpasses that smear the attack before
-            // the tank ever sees it, so no single early tap stands out as an echo.
-            RVDLY(eRvPre);
+    RVW(p[eRvTankInB], tankIn + (y[4] * inB));
+    double          yb                   = rv_word(db - (h * xb));
 
-            for (i = 0; i < RV_DIFFUSERS; i++) {
-                RVAP(kRvDiffuser[i], RV_DIFFUSE);
-            }
+    RVW(p[eRvApBIn], xb + (h * yb));
+    RVW(p[eRvApBOut], yb);
+    RVW(p[eRvModB], modB);
+    double          yb2                  = rv_word(db2 + (k * xb2));
 
-            diffused = v;
+    RVW(p[eRvApB2In], xb2 - (k * yb2));
+    RVW(p[eRvApB2Out], yb2);
+    RVW(p[eRvDampB], (y[5] * lb) + (y[6] * lb1));
 
-            // notes §134
-            for (i = 0; i < RV_LINES; i++) {
-                v          = ((i & 1) ? -diffused : diffused) + gRvLoop[i];
-
-                RVDLYM(kRvLineDl[i], (0.5 - (0.5 * cos(2.0 * M_PI * lfo[i]))) * (double)modMax);
-
-                // notes §135
-                gRvDamp[i] = ((1.0 - damp) * v) + (damp * gRvDamp[i]);
-                line[i]    = gRvDamp[i];
-            }
-
-            // notes §136
-            {
-                double a0 = line[0] + line[4], a4 = line[0] - line[4];
-                double a1 = line[1] + line[5], a5 = line[1] - line[5];
-                double a2 = line[2] + line[6], a6 = line[2] - line[6];
-                double a3 = line[3] + line[7], a7 = line[3] - line[7];
-                double b0 = a0 + a2, b2 = a0 - a2;
-                double b1 = a1 + a3, b3 = a1 - a3;
-                double b4 = a4 + a6, b6 = a4 - a6;
-                double b5 = a5 + a7, b7 = a5 - a7;
-
-                // PER-LINE DECAY GAIN, each line losing 60 dB in the requested time over ITS OWN
-                // length. One gain shared by all eight would decay the short lines faster than the
-                // long ones and leave the tail's colour drifting as it faded.
-                gRvLoop[0] = (b0 + b1) * RV_HADAMARD * gRvGain[0];
-                gRvLoop[1] = (b0 - b1) * RV_HADAMARD * gRvGain[1];
-                gRvLoop[2] = (b2 + b3) * RV_HADAMARD * gRvGain[2];
-                gRvLoop[3] = (b2 - b3) * RV_HADAMARD * gRvGain[3];
-                gRvLoop[4] = (b4 + b5) * RV_HADAMARD * gRvGain[4];
-                gRvLoop[5] = (b4 - b5) * RV_HADAMARD * gRvGain[5];
-                gRvLoop[6] = (b6 + b7) * RV_HADAMARD * gRvGain[6];
-                gRvLoop[7] = (b6 - b7) * RV_HADAMARD * gRvGain[7];
-            }
-
-            // notes §137
-            for (ch = 0; ch < REVERB_CHANNELS; ch++) {
-                double tapSum = 0.0;
-
-                for (i = 0; i < RV_OUTTAPS; i++) {
-                    uint32_t n   = kRvTapLine[ch][i];
-                    uint32_t len = gRvAddr[n + 1] - gRvAddr[n];
-                    uint32_t at  = gRvAddr[n] + (uint32_t)(kRvTapFrac[ch][i] * (double)len);
-
-                    tapSum += kRvTapSign[i] * RVR(at);
-                }
-
-                sum[ch] = tapSum * RV_TAP_SCALE;
-            }
-
-            gRvCur = (gRvCur - 1u) & (RV_MEM - 1);
-
-#undef RVAP
-#undef RVDLYM
-#undef RVDLY
+    RVW(-1, (y[1] * inLp) + (y[0] * input));    // §20.1 - Brightness's input filter
 #undef RVR
 #undef RVW
-        }
-    }
+    gRvCur    = (cur - 1u) & (RV_RING - 1u);
 
-    // notes §138
-#define REVERB_WET_GAIN    (0.5002)
-
-    sum[0] *= REVERB_WET_GAIN;
-    sum[1] *= REVERB_WET_GAIN;
-
-    // notes §139
-    {
-        double wetRamp = (mix >= 0.5) ? 1.0 : (mix * 2.0);
-        double dryRamp = (mix <= 0.5) ? 1.0 : ((1.0 - mix) * 2.0);
-        double dry     = input * dryRamp * dryRamp * dryRamp;
-        double wet     = wetRamp * wetRamp * wetRamp;
-
-        // THE DRY SIDE IS THE SAME IN BOTH CHANNELS. It is the module's mono input; only the tail is
-        // a pair, which is exactly what the instrument's correlation of +0.03 describes — two tails,
-        // one source.
-        *outLeft  = dry + (sum[0] * wet);
-        *outRight = dry + (sum[1] * wet);
-    }
+    *outLeft  = (spec->rvDry * input) + (spec->rvWet * wet[0]);
+    *outRight = (spec->rvDry * input) + (spec->rvWet * wet[1]);
 }
 
 // notes §140
@@ -4222,29 +4033,23 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
     if (type >= REVERB_TYPE_COUNT) {
         type = 0;
     }
-    gSampleRate = deviceRate * (double)ENGINE_OVERSAMPLE;
+    gSampleRate       = deviceRate * (double)ENGINE_OVERSAMPLE;
 
-    // notes §141
-    memset(gPreDelay, 0, sizeof(gPreDelay));
-    memset(gRvMem, 0, sizeof(gRvMem));
-    gRvCur      = 0;
-    memset(gRvDamp, 0, sizeof(gRvDamp));
-    memset(gRvLoop, 0, sizeof(gRvLoop));
-    memset(gPreDelayPos, 0, sizeof(gPreDelayPos));
+    tEngineNode node;
 
-    double timeSeconds = kReverbDecayBase[type] + (kReverbDecaySlope[type] * (double)timeValue);
-    double timeNorm    = (double)timeValue / 127.0;
-    double brightness  = (double)brightValue / 127.0;
+    memset(&node, 0, sizeof(node));
+    node.reverbType   = type;
+    reverb_build(&node, type, (double)timeValue, (double)brightValue, 127.0);   // fully wet
+    memset(gRvRing, 0, sizeof(gRvRing));
+    gRvCur            = 0;
+    gRvPhase          = 0.0;
+    sLastTypeBank[SE] = type;
 
     for (uint32_t i = 0; i < frames; i++) {
-        double in   = (i == 0) ? 1.0 : 0.0;
         double wetL = 0.0;
         double wetR = 0.0;
 
-        // mix at 1.0 is fully wet, matching DryWet 127 on the hardware — and with the dry/wet law
-        // above that means the dry ramp is zero, so nothing of the click itself is in the output.
-        reverb_step(in, timeSeconds, timeNorm, brightness, 1.0, type, &wetL, &wetR);
-
+        reverb_step((i == 0) ? 1.0 : 0.0, &node, &wetL, &wetR);
         out[(i * 2) + 0] = (float)wetL;
         out[(i * 2) + 1] = (float)wetR;
     }
@@ -5392,8 +5197,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             double in = (a + signal_in(spec, value, 1)) * 0.5;
 
             if ((spec->active == true) && (spec->line == 0)) {
-                reverb_step(in, spec->timeSeconds, spec->timeNorm, spec->brightness,
-                            spec->amount, spec->reverbType, &value[n][0], &value[n][1]);
+                reverb_step(in, spec, &value[n][0], &value[n][1]);
             } else {
                 value[n][0] = in;
                 value[n][1] = in;
@@ -6065,18 +5869,10 @@ static void engine_reset_state(void) {
     memset(&gPulseCount, 0, sizeof(gPulseCount));
     memset(&gPulsePrev, 0, sizeof(gPulsePrev));
     memset(&gCompEnv, 0, sizeof(gCompEnv));
-    memset(&gRvLfo, 0, sizeof(gRvLfo));
     memset(&gRvAddr, 0, sizeof(gRvAddr));
-    memset(&gRvMem, 0, sizeof(gRvMem));
+    memset(&gRvRing, 0, sizeof(gRvRing));
     memset(&gRvCur, 0, sizeof(gRvCur));
-    memset(&gRvDamp, 0, sizeof(gRvDamp));
-    memset(&gRevInLp, 0, sizeof(gRevInLp));
-    memset(&gRevInLp2, 0, sizeof(gRevInLp2));
-    memset(&gRevInLp3, 0, sizeof(gRevInLp3));
-    memset(&gRevInLp4, 0, sizeof(gRevInLp4));
-    memset(&gRvLoop, 0, sizeof(gRvLoop));
-    memset(&gPreDelay, 0, sizeof(gPreDelay));
-    memset(&gPreDelayPos, 0, sizeof(gPreDelayPos));
+    memset(&gRvPhase, 0, sizeof(gRvPhase));
     memset(&gEnvLevel, 0, sizeof(gEnvLevel));
     memset(&gEnvQ, 0, sizeof(gEnvQ));
     memset(&gEnvTick, 0, sizeof(gEnvTick));
