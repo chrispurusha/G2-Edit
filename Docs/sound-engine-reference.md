@@ -744,3 +744,13 @@ rounding is what sets the lowest HP settings and the long tails at high FB.
 - The repeat level is identical at DryWet 64 and 127.
 - The LP knee near 3.5 kHz at 64 is this one-pole.
 - "Only two repeats survive at LP 0" is the 50 Hz bottom, which the fitted law had at 660 Hz.
+
+**24.6 DelayB's modulation inputs.** With either control input patched, the instrument adds a
+modulation part and routes FB and DryWet through it:
+- **FB** = max(0, FB + 4 × FB-mod input × FB-mod amount).
+- **DryWet** = max(0, DryWet + 4 × input × amount), mixed LINEARLY: wet = min(1, 2x) and
+  dry = min(1, 2(1 − x)), not the squared ramps of 24.4.
+
+Both are worked out after each tap and take effect on the next sample. In the engine they are exact
+word for word, including a Constant held against the FB-mod input, which can take the feedback to
+nothing.

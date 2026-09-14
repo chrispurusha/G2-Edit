@@ -348,6 +348,9 @@ CROSS-PROJECT
   against its code. Audible: the bottom of LP much darker (LP 0 ~50 Hz, was 660 Hz) and LP 127 fully
   open; the first repeat is now filtered too; DryWet squared (the edges of the dial move); HP a
   different two-state filter; 16-bit memory. A/B against the G2 across LP and HP, and with FB near 127
+- DELAYB'S FB-MOD AND DRYWET-MOD INPUTS NOW WORK (reference §24.6) - they were ignored. In 03 Chris' Lead a
+  Constant on both delays' FB mod takes their feedback to zero on the G2, and now in the engine: one repeat
+  each, where the engine played several. With a mod input patched, DryWet is linear, not squared
 - ***COMPRESSOR REWRITTEN AS A LEVELLER (2026-09-07) - THE BIGGEST BEHAVIOUR CHANGE OF THE DAY.*** It
   was a downward compressor that ignored Ref Level; the instrument drives the signal TOWARDS Ref Level
   and will BOOST when Ref Level is above it, which the old code could never do. Verified against

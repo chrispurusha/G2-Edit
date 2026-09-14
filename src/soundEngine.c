@@ -377,6 +377,8 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define DELAY_PARAM_LP              (2) // DelayA calls this Filter; both are a damping control
 #define DELAY_PARAM_DRYWET          (3)
 #define DELAY_PARAM_HP              (8)
+#define DELAYB_PARAM_FBMOD          (5) // §24.6
+#define DELAYB_PARAM_MIXMOD         (6)
 
 // notes §10
 
@@ -626,6 +628,8 @@ typedef struct {
     bool            dualSoft;
     double          combFeedback;        // §13.3 - g, -1..1
     double          combFbMod;
+    double          delayFbMod;          // §24.6 - DelayB's modulation amounts, as words
+    double          delayMixMod;
     uint32_t        combType;            // Notch, Peak, Deep
     double          combLevel;
     uint32_t        fadeKind;            // tFadeKind
@@ -938,12 +942,14 @@ static uint32_t                    gDelayWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX
 #define gDelayWrite           (gDelayWriteBank[SE])
 static double                      gDelayDampBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
 #define gDelayDamp            (gDelayDampBank[SE])
-static double                      gDelayHpBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];  // the HP's lowpass half; the filter is x - this
+static double                      gDelayHpBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];     // the HP's lowpass half; the filter is x - this
 #define gDelayHp              (gDelayHpBank[SE])
-static double                      gDelayHpBBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES]; // §24.2 - the HP's second state
+static double                      gDelayHpBBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];    // §24.2 - the HP's second state
 #define gDelayHpB             (gDelayHpBBank[SE])
-static double                      gDelayFbBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];  // §24.1 - last sample's feedback, written with this one
+static double                      gDelayFbBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];     // §24.1 - last sample's feedback, written with this one
 #define gDelayFb              (gDelayFbBank[SE])
+static double                      gDelayModBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][3]; // §24.6 - FB, wet, dry, from last sample
+#define gDelayMod             (gDelayModBank[SE])
 
 // notes §37
 
@@ -1362,6 +1368,7 @@ static void reset_node_state(void) {
     memset(gDelayHp, 0, sizeof(gDelayHp));
     memset(gDelayHpB, 0, sizeof(gDelayHpB));
     memset(gDelayFb, 0, sizeof(gDelayFb));
+    memset(gDelayMod, 0, sizeof(gDelayMod));
     memset(gRvRing, 0, sizeof(gRvRing));
     gRvCur   = 0;
     gRvPhase = 0.0;
@@ -2026,7 +2033,7 @@ static uint32_t node_output_legs(tNodeKind kind) {
     return (kind == eNodeFltMulti) ? 3u : 2u;
 }
 
-static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial);    // §24.2
+static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial, double fbModDial, double mixModDial);    // §24.2
 
 static bool module_kind(tModule * module, tNodeKind * kind) {
     switch (module->type) {
@@ -2313,6 +2320,21 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeChorus:
         case eNodeDelay:
+        {
+            // §24.6 - DelayB's two control inputs: FB modulation, then DryWet modulation
+            if (moduleType == moduleTypeDelayB) {
+                for (uint32_t k = 0; k < 3u; k++) {
+                    int found = connector_index_for_input(moduleType, k, (k == 0u) ? connectorTypeAudio : anyConnectorType);
+
+                    derived[k] = (found >= 0) ? (uint32_t)found : CONNECTOR_IN_A;
+                }
+
+                *connectors = derived;
+                return 3;
+            }
+            *connectors = oneIn;
+            return 1;
+        }
         case eNodeCompress:
         {
             *connectors = oneIn;
@@ -2878,7 +2900,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // notes §87; §24.2 - the words the instrument's host sets (DelayA has no HP)
             delay_words(node, param_value(module, variation, DELAY_PARAM_LP),
                         (module->type == moduleTypeDelayB) ? param_value(module, variation, DELAY_PARAM_HP) : 0.0,
-                        param_value(module, variation, DELAY_PARAM_FEEDBACK), param_value(module, variation, DELAY_PARAM_DRYWET));
+                        param_value(module, variation, DELAY_PARAM_FEEDBACK), param_value(module, variation, DELAY_PARAM_DRYWET),
+                        (module->type == moduleTypeDelayB) ? param_value(module, variation, DELAYB_PARAM_FBMOD) : 0.0,
+                        (module->type == moduleTypeDelayB) ? param_value(module, variation, DELAYB_PARAM_MIXMOD) : 0.0);
             node->active = (param_value(module, variation,
                                         (module->type == moduleTypeDelayA)
                                              ? DELAYA_PARAM_ACTIVE : DELAYB_PARAM_ACTIVE) != 0.0);
@@ -3647,14 +3671,17 @@ static int32_t dly_dial_word(double dial) {
 }
 
 // §24.2 - DelayA/DelayB's words, as the instrument's host sets them.
-static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial) {
+static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial,
+                        double fbModDial, double mixModDial) {
     int32_t lp = ((int32_t)floor(lpDial * 256.0) * 0xdc) + 0x12dbff;
     int32_t hp = (int32_t)floor(hpDial * 256.0) << 7;
 
-    node->damping = dly_host_mul(lp, dly_host_mul(lp, lp));    // the LP's coefficient
-    node->hpCoeff = dly_host_mul(hp, dly_host_mul(hp, hp));    // the HP's; 0 passes
-    node->depth   = dly_dial_word(fbDial);
-    node->amount  = dly_dial_word(dryWetDial);
+    node->damping     = dly_host_mul(lp, dly_host_mul(lp, lp)); // the LP's coefficient
+    node->hpCoeff     = dly_host_mul(hp, dly_host_mul(hp, hp)); // the HP's; 0 passes
+    node->depth       = dly_dial_word(fbDial);
+    node->amount      = dly_dial_word(dryWetDial);
+    node->delayFbMod  = dly_dial_word(fbModDial);
+    node->delayMixMod = dly_dial_word(mixModDial);
 }
 
 static int32_t dly_sat(int64_t v) {
@@ -3664,23 +3691,23 @@ static int32_t dly_sat(int64_t v) {
 // §24 - DelayA/DelayB: the instrument's tap in its own integer arithmetic, on half-scale 24-bit words.
 // The input and the last sample's feedback go into memory; the tap comes out through the LP and the
 // HP, and that filtered signal is both the wet output and what feeds back.
-static double delay_step(uint32_t line, double input, double timeSeconds, double feedback,
-                         double lpCoeff, double hpCoeff, double mix) {
+static double delay_step(uint32_t line, double input, double fbModIn, double mixModIn, bool modLinked,
+                         const tEngineNode * spec) {
     SE_LOCAL;
 
     if (line >= MAX_DELAY_LINES) {
         return input;
     }
-    double   exact   = timeSeconds * gSampleRate;
+    double   exact   = spec->timeSeconds * gSampleRate;
     uint32_t samples = (exact < 0.5) ? 0u : (uint32_t)lround(exact);
 
     if (samples >= DELAY_LINE_SAMPLES) {
         samples = DELAY_LINE_SAMPLES - 1;
     }
-    int32_t  c       = (int32_t)lpCoeff;
-    int32_t  f       = (int32_t)hpCoeff;
-    int32_t  fb      = (int32_t)feedback;
-    int32_t  mixWord = (int32_t)mix;
+    int32_t  c       = (int32_t)spec->damping;
+    int32_t  f       = (int32_t)spec->hpCoeff;
+    int32_t  fb      = modLinked ? (int32_t)gDelayMod[line][0] : (int32_t)spec->depth;
+    int32_t  mixWord = (int32_t)spec->amount;
     int32_t  half    = dly_sat(((int64_t)dly_sat((int64_t)floor(input * 2097152.0)) * 0x400000) >> 23);
     uint32_t write   = gDelayWrite[line];
 
@@ -3700,13 +3727,36 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
     int32_t  wet     = dly_host_mul((xw < 0x400000) ? (xw << 1) : 0x7fffff, (xw < 0x400000) ? (xw << 1) : 0x7fffff);    // §24.4
     int32_t  dryRamp = (xw > 0x400000) ? ((0x7fffff - xw) * 2) : 0x7fffff;
     int32_t  dry     = dly_host_mul(dryRamp, dryRamp);
+
+    if (modLinked) {
+        wet = (int32_t)gDelayMod[line][1];    // §24.6 - the modulation part's words, not squared
+        dry = (int32_t)gDelayMod[line][2];
+    }
     int32_t  out     = dly_sat((((int64_t)y * wet) + ((int64_t)half * dry)) >> 22);
 
-    gDelayDamp[line]        = lp;
-    gDelayHp[line]          = dly_sat(t);
-    gDelayHpB[line]         = dly_sat((int64_t)b + (((int64_t)f * high) >> 23));
-    gDelayFb[line]          = dly_sat(((int64_t)y * fb) >> 23);
-    gDelayWrite[line]       = (write + 1) % DELAY_LINE_SAMPLES;
+    gDelayDamp[line]  = lp;
+    gDelayHp[line]    = dly_sat(t);
+    gDelayHpB[line]   = dly_sat((int64_t)b + (((int64_t)f * high) >> 23));
+    gDelayFb[line]    = dly_sat(((int64_t)y * fb) >> 23);
+    gDelayWrite[line] = (write + 1) % DELAY_LINE_SAMPLES;
+
+    // §24.6 - DelayB's modulation part, after the tap: FB and DryWet plus four times input x amount,
+    // floored at zero, for the next sample.
+    if (modLinked) {
+        int64_t top  = (int64_t)0x7fffff << 21;
+        int64_t fbv  = (((int64_t)dly_sat((int64_t)floor(fbModIn * 2097152.0)) * (int32_t)spec->delayFbMod) >> 21) + (int32_t)spec->depth;
+        int64_t mixv = ((int64_t)dly_sat((int64_t)floor(mixModIn * 2097152.0)) * (int32_t)spec->delayMixMod)
+                       + ((int64_t)(int32_t)spec->amount << 21);
+
+        if (mixv < 0) {
+            mixv = 0;
+        } else if ((mixv >> 21) > 0x7fffff) {
+            mixv = top;
+        }
+        gDelayMod[line][0] = dly_sat((fbv < 0) ? 0 : fbv);
+        gDelayMod[line][1] = dly_sat(mixv >> 20);
+        gDelayMod[line][2] = dly_sat((top - mixv) >> 20);
+    }
     return (double)out / 2097152.0;
 }
 
@@ -5381,8 +5431,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeDelay:
         {
             value[n][0] = (spec->active == true)
-                              ? delay_step(spec->line, a, spec->timeSeconds, spec->depth,
-                                           spec->damping, spec->hpCoeff, spec->amount) : a;
+                              ? delay_step(spec->line, a, signal_in(spec, value, 1), signal_in(spec, value, 2),
+                                           (spec->inCount > 1u) && ((spec->in[1] >= 0) || ((spec->inCount > 2u) && (spec->in[2] >= 0))), spec) : a;
             value[n][1] = value[n][0];
             break;
         }
@@ -6058,6 +6108,7 @@ static void engine_reset_state(void) {
     memset(&gDelayHp, 0, sizeof(gDelayHp));
     memset(&gDelayHpB, 0, sizeof(gDelayHpB));
     memset(&gDelayFb, 0, sizeof(gDelayFb));
+    memset(&gDelayMod, 0, sizeof(gDelayMod));
     memset(&gChorusLine, 0, sizeof(gChorusLine));
     memset(&gChorusWrite, 0, sizeof(gChorusWrite));
     memset(&gChorusPhase, 0, sizeof(gChorusPhase));
