@@ -348,8 +348,6 @@ CROSS-PROJECT
   against its code. Audible: the bottom of LP much darker (LP 0 ~50 Hz, was 660 Hz) and LP 127 fully
   open; the first repeat is now filtered too; DryWet squared (the edges of the dial move); HP a
   different two-state filter; 16-bit memory. A/B against the G2 across LP and HP, and with FB near 127
-- ***PLUG-IN RECALLS MOUSE MODE (2026-09-14) - NEEDS A HOST.*** Save a project in Vertical mode and reopen it; the mode should
-  come back (process-wide, so the last instance loaded wins). The VA/FX split comes from each patch as it loads
 - ***DRONES NO LONGER CUT OFF (2026-09-14, notes §20) - NEEDS AN EAR.*** A voice still sounding after its key is up used to
   fade out after 2 s; it now plays until stolen, as on the hardware. Check a drone patch holds, and that ordinary notes
   still free their voices when they go quiet. Voice 0 also now plays at rest in every patch (notes §179): an Osc
