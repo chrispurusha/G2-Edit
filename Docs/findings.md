@@ -9700,4 +9700,9 @@ filters and timing etc. will need checking", then "I'm actually more interested 
   - 16-BIT MEMORY: the tap masks each word's low byte, the loop at half scale.
   - Ported as integer arithmetic on the instrument's words; every output sample now equals its code.
   Old law: revert record row 34; notes 10, 11, 88, 103 and 104 retired.
+  UPDATE, same day - DELAYB'S MODULATION INPUTS (§24.6). Checking 03 Chris' Lead for full coverage (CT) found both
+  DelayBs' FB-mod inputs driven by a Constant: on the instrument FB = max(0, 32/128 + 4 x (-25/64) x 83/128)
+  = 0, so each delay repeats once; the engine read only the audio input and played FB 32. With either mod
+  input patched the instrument adds its DlyMod part, which also switches DryWet to linear ramps. Ported;
+  exact word for word against that part.
 
