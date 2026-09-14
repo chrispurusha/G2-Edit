@@ -9624,3 +9624,24 @@ OscShpB's saw at 99% is brighter than on our engine."
     0.4% of the cycle (C2) against our 3% - a saw an order of magnitude brighter in its upper harmonics.
     The engine now applies both; the drawn wave takes the unclamped peak.
   Old law in the revert record, row 28.
+
+2026-09-14 - THE REVERB IS THE INSTRUMENT'S OWN NETWORK, WORD FOR WORD (reference §20). CT: "the big one?
+Reverb!", then "Let's continue with reverb, until it's nailed."
+  - THE NETWORK was recovered by probing: set one word of the delay memory, run one sample, and read which
+    words move and by how much. That gives every position (int(room x K + 1200) - 144 + step), the
+    allpass forms, the figure-8 tank and the seven output taps a side.
+  - OUTPUT METRICS HID FOUR ROUNDINGS. At 58-66 dB of agreement, with every reverb metric identical, the
+    engine still differed from the instrument; only comparing the delay memory word by word, stopping at
+    the first differing word, found them:
+    - the host's coefficient maths is SINGLE PRECISION, then truncated to 23 bits - one grid step low
+      on y0 was 40 dB of tail error at Brightness 0;
+    - y1 = 1 - y0 is subtracted in float - invisible to an impulse, which never puts both input-filter
+      products into one sum; a noise burst found it at Brightness 90;
+    - the LFO triangle is taken from the phase BEFORE it wraps and held at full scale, so on the wrap
+      sample it does not jump;
+    - the outputs are floored once over the seven taps and once after the mix.
+  - THE DRY PATH IS PER CHANNEL. The network hears (L + R)/2, but each output mixes its own input as
+    the dry; the engine used the average on both sides, and passed the average when bypassed.
+  - AGAINST THE CAPTURES the Time law is linear and the room ratios are exact, and onsets agree; the
+    captured decay times read 6-12% long throughout, which is their early-decay fits.
+  Old model in the revert record, row 29; notes sections 38-60, 123-139 and 141 retired with it.
