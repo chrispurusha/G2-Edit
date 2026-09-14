@@ -348,6 +348,14 @@ CROSS-PROJECT
   against its code. Audible: the bottom of LP much darker (LP 0 ~50 Hz, was 660 Hz) and LP 127 fully
   open; the first repeat is now filtered too; DryWet squared (the edges of the dial move); HP a
   different two-state filter; 16-bit memory. A/B against the G2 across LP and HP, and with FB near 127
+- ***COMPRESSOR NOW THE INSTRUMENT'S OWN (2026-09-14, reference §25) - NEEDS AN EAR.*** Word-exact against its
+  code. At 03 Chris' Lead's settings the old one did not compress at all (it smoothed the signal and never
+  saw a peak); now it lifts by the make-up and holds louder notes down as the G2 does. Check the attack and
+  release feel, the Level limiter, and the meter
+- ***STEREO IN THE FX AREA (2026-09-14) - NEEDS AN EAR.*** CT: Mix4-1S summed to mono, and so did 2-Out and FX
+  In. FX In's right leg was being overwritten with its left, and stereo mixers averaged each pair into one
+  mono leg. Now L and R stay apart through FX In, Mix4-1S/Mix1-1S and on to 2-Out. Check 03 Chris' Lead's
+  chorus/delay/reverb image, and that a mono source into a stereo mixer's L alone stays on the left
 - DELAYB'S FB-MOD AND DRYWET-MOD INPUTS NOW WORK (reference §24.6) - they were ignored. In 03 Chris' Lead a
   Constant on both delays' FB mod takes their feedback to zero on the G2, and now in the engine: one repeat
   each, where the engine played several. With a mod input patched, DryWet is linear, not squared

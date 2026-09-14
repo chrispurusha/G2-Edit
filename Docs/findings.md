@@ -9706,3 +9706,17 @@ filters and timing etc. will need checking", then "I'm actually more interested 
   input patched the instrument adds its DlyMod part, which also switches DryWet to linear ramps. Ported;
   exact word for word against that part.
 
+2026-09-14 - THE FX AREA WAS MONO (notes §166, §168). CT, listening to 03 Chris' Lead: "Mix4-1S isn't working in
+stereo! Seems to be summing to mono", "Similar for 2-Out", "FX-In also not stereo." Two faults: FX In wrote both
+legs but was missing from the list of nodes allowed to, so a later pass copied its left over its right; and the
+stereo mixers averaged each L/R pair into leg 0 (a mono downmix from when the engine was mono) and were then
+copied to both legs. 2-Out was fine - it only received mono. Now each pair's sides stay apart.
+
+2026-09-14 - THE COMPRESSOR IS THE INSTRUMENT'S OWN, WORD FOR WORD (reference §25). Found while checking 03 Chris'
+Lead: at its settings (-4 dB, 4:1, Attack 104, Release 0, Level 0 dB) the engine did not compress at all. The
+instrument detects with an instant peak that only releases slowly, takes a piecewise-linear log2, and smooths the
+GAIN REDUCTION (attack up, release down) beside a limiter against Level; the fitted model smoothed the signal, so
+a slow attack with a fast release never let it see a peak. Its dB laws, ratio table and make-up (the
+"leveller") were right. Ported as integer arithmetic; every output sample now equals the instrument's code.
+Old law: revert record row 35.
+
