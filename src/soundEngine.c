@@ -1077,7 +1077,7 @@ static void reverb_build(tEngineNode * node, uint32_t type, double timeDial, dou
     double * y       = node->rvY;
 
     y[0]        = (double)inGain;
-    y[1]        = 1.0 - (double)inGain;
+    y[1]        = (double)(1.0f - inGain);
     y[2]        = 0.3;
     y[3]        = (double)(float)((double)decay * 0.3);
     y[4]        = (double)(float)((double)decay * (double)decay);
@@ -1091,12 +1091,14 @@ static void reverb_build(tEngineNode * node, uint32_t type, double timeDial, dou
         y[i] = trunc(y[i] * RV_COEF) / RV_COEF;    // §20.6 - truncated to the coefficient grid
     }
 
-    double   mix     = dial_fraction(mixDial);
-    double   dry     = fmin(1.0, 2.0 * (1.0 - mix));
-    double   wet     = fmin(1.0, 2.0 * mix);
+    // §20.5 - the instrument's mix words: 127 is its full scale, each law squared and held below 1
+    double   top     = RV_COEF - 1.0;
+    double   x       = (mixDial >= 127.0) ? top : floor(mixDial * 65536.0);
+    double   wet     = (x < (RV_COEF / 2.0)) ? ((2.0 * x) / RV_COEF) : 1.0;
+    double   dry     = (x > (RV_COEF / 2.0)) ? ((2.0 * (top - x)) / RV_COEF) : 1.0;
 
-    node->rvDry = dry * dry;
-    node->rvWet = wet * wet;
+    node->rvDry = fmin(top, trunc(dry * dry * RV_COEF)) / RV_COEF;
+    node->rvWet = fmin(top, trunc(wet * wet * RV_COEF)) / RV_COEF;
 }
 
 static double   gEnvLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
@@ -3912,7 +3914,7 @@ static double rv_word(double v) {
 static void reverb_step(double input, const tEngineNode * spec, double * outLeft, double * outRight) {
     SE_LOCAL;
 
-    input     = rv_word(input);
+    input    = rv_word(input);
 
     if (spec->reverbType != sLastTypeBank[SE]) {
         memset(gRvRing, 0, sizeof(gRvRing));
@@ -3929,12 +3931,11 @@ static void reverb_step(double input, const tEngineNode * spec, double * outLeft
 #define RVW(o, v)    (gRvRing[(cur + (uint32_t)(o)) & (RV_RING - 1u)] = (float)rv_word(v))
 
     // §20.4 - the triangle both modulated taps follow
-    gRvPhase += RV_LFO_STEP / rate;
+    double          sum                  = gRvPhase + (RV_LFO_STEP / rate);
 
-    if (gRvPhase >= RV_LFO_HALF) {
-        gRvPhase -= 2.0 * RV_LFO_HALF;
-    }
-    double          span                 = RV_LFO_DEPTH * rate * fabs(gRvPhase) / RV_LFO_HALF;
+    gRvPhase = (sum >= RV_LFO_HALF) ? (sum - (2.0 * RV_LFO_HALF)) : sum;
+    // §20.4 - the triangle is the unwrapped sum's size, held at full scale on the sample it wraps
+    double          span                 = RV_LFO_DEPTH * rate * fmin(fabs(sum), RV_LFO_HALF - 1.0) / RV_LFO_HALF;
     double          modA, modB;
 
     {
@@ -3980,6 +3981,8 @@ static void reverb_step(double input, const tEngineNode * spec, double * outLeft
 
             wet[ch] += gain * RVR(p[((ch == 0) ? eRvTapL : eRvTapR) + t]);
         }
+
+        wet[ch] = rv_word(wet[ch]);    // §20.6 - the seven taps summed whole, then rounded once
     }
 
     RVW(p[eRvPre], x0 + (g * a1));
@@ -4017,8 +4020,8 @@ static void reverb_step(double input, const tEngineNode * spec, double * outLeft
 #undef RVW
     gRvCur    = (cur - 1u) & (RV_RING - 1u);
 
-    *outLeft  = (spec->rvDry * input) + (spec->rvWet * wet[0]);
-    *outRight = (spec->rvDry * input) + (spec->rvWet * wet[1]);
+    *outLeft  = rv_word((spec->rvDry * input) + (spec->rvWet * wet[0]));
+    *outRight = rv_word((spec->rvDry * input) + (spec->rvWet * wet[1]));
 }
 
 // notes §140
@@ -5869,7 +5872,6 @@ static void engine_reset_state(void) {
     memset(&gPulseCount, 0, sizeof(gPulseCount));
     memset(&gPulsePrev, 0, sizeof(gPulsePrev));
     memset(&gCompEnv, 0, sizeof(gCompEnv));
-    memset(&gRvAddr, 0, sizeof(gRvAddr));
     memset(&gRvRing, 0, sizeof(gRvRing));
     memset(&gRvCur, 0, sizeof(gRvCur));
     memset(&gRvPhase, 0, sizeof(gRvPhase));

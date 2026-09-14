@@ -41,6 +41,7 @@ Add to it whenever a law is replaced. Hardware checks for each are in to-test.md
 | 26 | StChorus mix | dry 0.9542 × (1.4742 - 0.7744x), each tap 0.9542 × 0.7071x, x = Amount/127 (+3 dB at Amount 0) | dry 1 - a/2, each tap a/2, a = Amount/128 (§19.3) | `5e40732` `chorus_tap()` |
 | 27 | EnvADSR stages | floating-point recurrences every engine sample with the exact law: attack `level * mul + add` (Log mul = exp(-ln16/N), add = 16/15 (1 - mul); Exp mul = exp(ln16/N), add = (mul - 1)/15; linear 1/N), decay/release `S + (level - S) exp(-ln100/N)`, LinLin `1/N` steps, N = time × fs; the gate acting at once | the instrument's integer recurrence at 24 kHz with table words rounded down; the gate acting from the next tick (§17.3) | `5e40732` `src/soundEngine.c` `env_rates_build()`, `envelope_step()` |
 | 28 | OscShpB TriSaw peak | `0.5 + 0.47 x Shape`, Shape = raw/127 (0.97 at the top), at every pitch | `0.5 + Shape x 127/256` (raw/256: 0.996 at the top), and in the engine never closer to the end of the cycle than two samples at the note's pitch (waveModels.c notes §8) | `5e40732` `src/waveModels.c` `wave_trisaw_peak()`, `src/soundEngine.c` `osc_shp_wave()` |
+| 29 | Reverb, the whole module | a fitted model: an eight-line feedback tank with Hadamard mixing and six diffusers (`RV_LINES`, `RV_HADAMARD`, `kRvLen`, `kRvDiffuser`), modulated lines (`RV_MOD_DEPTH` 28, `kRvModHz`), `RV_OUTTAPS` 7 output taps per channel on that tank, room scale `kReverbTypeScale` {1, 1.269, 1.5255, 1.6795}, decay in seconds `kReverbDecayBase` {0.045, 0.29, 0.39, 0.32} + `kReverbDecaySlope` {0.02238, 0.04094, 0.06082, 0.08212} × Time, Brightness damping `REVERB_DAMP_MAX` 0.837 / `REVERB_BRIGHT_K` 57.799, wet × `REVERB_WET_GAIN` 0.5002, DryWet as dry and wet ramps each CUBED | the instrument's own network on one ring of delay memory, exact word for word at 96 kHz: positions, coefficients, LFO, the squared DryWet law and every rounding (§20) | `5e40732` `src/soundEngine.c`: the `REVERB_*`/`RV_*` block, `reverb_step()`, `sound_engine_render_reverb_ir()` and the eNodeReverb case in `add_node()` |
 
 API removed along with 1 and 4: `sound_engine_is_polyphonic()` (replaced by `sound_engine_note_sounding()`)
 and `note_stack_top()`, both at `e225d27`.
@@ -51,4 +52,5 @@ and `note_stack_top()`, both at `e225d27`.
 needs `sound_engine_is_polyphonic()` back as well). 5-11 are a constant or a formula each, quoted
 above; 9 and 10 go together, since the recurrences use the new constants. 12-23 are likewise one
 formula each - but reverting 20 also brings back two bugs (the π tuning error and FilterType never
-read), so revert only its damping if that is what is in question.
+read), so revert only its damping if that is what is in question. 29 is a whole module, not a
+constant: restore the block, `reverb_step()`, the IR renderer and the node fields together.

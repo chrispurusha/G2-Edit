@@ -16,8 +16,11 @@ period, repeats and the setting list — **read the sidecar, never infer the lay
 | `g_{small,medium,large,hall}_time` | Time 0–127 in five, per room | period 3 s — tails overlap badly above Time 64 |
 | `g_{small,medium,large,hall}_decay` | Time 0 / 42 / 85 / 127, per room | period 20 s, 3 repeats. This is the clean one for decay |
 
-**The Brightness sweep already exists.** `REVERB_DAMP_MAX` and `REVERB_BRIGHT_CURVE` are still a
-guess, but that is an analysis job against `g_hall_bright9`, not a capture job.
+**Nothing below is needed by the engine any more (2026-09-14).** The Reverb now runs the
+instrument's own network (reference §20), exact against its DSP code, so these captures are its
+check rather than its source, and the fitted constants this recipe names (`REVERB_DAMP_MAX`,
+`REVERB_BRIGHT_CURVE` and the rest) are gone - revert record row 29. The traps still apply to
+any module measured this way.
 
 ## What is actually missing
 
