@@ -484,6 +484,7 @@ typedef enum {
 
 // Every ladder runs its full four poles whatever slope is selected — see ladder_filter().
 #define LADDER_POLES                (6) // state available: FltLP's 36 dB setting is six poles
+#define FILTER_STATE_SLOTS          (8) // per filter node: FltNord's two stages need eight (§23.1)
 #define LADDER_LOOP_POLES           (4) // the RESONANCE loop is four long whatever is tapped - measured
 
 // notes §18
@@ -921,7 +922,7 @@ static double                      gLfoHeldBank[SOUND_ENGINE_MAX_ENGINES][MAX_VO
 #define gLfoHeld         (gLfoHeldBank[SE])
 static double                      gSuperPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][2];
 #define gSuperPhase      (gSuperPhaseBank[SE])
-static double                      gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][LADDER_POLES];
+static double                      gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][FILTER_STATE_SLOTS];
 #define gLadder          (gLadderBank[SE])
 
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
@@ -1320,12 +1321,7 @@ static void reset_node_state(void) {
             gSuperPhase[v][i][1] = 0.0;
             gNoiseSeed[v][i]     = 0x9E3779B9u ^ ((v + 1u) * 0x85EBCA6Bu) ^ ((i + 1u) * 0xC2B2AE35u);
             gNoiseLp[v][i]       = 0.0;
-            gLadder[v][i][0]     = 0.0;
-            gLadder[v][i][1]     = 0.0;
-            gLadder[v][i][2]     = 0.0;
-            gLadder[v][i][3]     = 0.0;
-            gLadder[v][i][4]     = 0.0;
-            gLadder[v][i][5]     = 0.0;
+            memset(gLadder[v][i], 0, sizeof(gLadder[v][i]));
             gEnvLevel[v][i]      = 0.0;
             gEnvQ[v][i]          = 0;
             gEnvTick[v][i]       = 0.0;
@@ -3185,6 +3181,8 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                     break;
                 case moduleTypeFltClassic: node->topology = eFilterTopologyClassic;
                     break;
+                case moduleTypeFltNord:    node->topology = engine_filter_legacy() ? eFilterTopologyLadder : eFilterTopologyNord;
+                    break;
                 default:                  node->topology  = eFilterTopologyLadder;
                     break;
             }
@@ -3205,7 +3203,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 double gc  = (param_value(module, variation, (uint32_t)map.gc) != 0.0)
                              ? flt_nord_gc_gain(res) : 1.0;
 
-                node->fltGain = (1.0 + flt_ladder_feedback(res)) * gc;
+                node->fltGain = engine_filter_legacy() ? ((1.0 + flt_ladder_feedback(res)) * gc) : 1.0;    // §23.4 - GC is the drive now
             } else {
                 node->fltGain = 1.0;
             }
@@ -3214,8 +3212,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->modAmount   = (map.env >= 0)
                               ? (param_value(module, variation, (uint32_t)map.env) * 2.0 / 128.0) : 0.0;
             node->active      = (param_value(module, variation, (uint32_t)map.active) != 0.0);
-            node->fltGainComp = (module->type == moduleTypeFltStatic)
-                                && (param_value(module, variation, FLTSTATIC_PARAM_GC) != 0.0);
+            node->fltGainComp = (  (module->type == moduleTypeFltStatic)
+                                && (param_value(module, variation, FLTSTATIC_PARAM_GC) != 0.0))
+                                || (  (module->type == moduleTypeFltNord) && (map.gc >= 0)
+                                   && (param_value(module, variation, (uint32_t)map.gc) != 0.0));
             break;
         }
         case eNodeDx:
@@ -4198,6 +4198,93 @@ static double ladder_saturate(double x) {
     return (x < 0.0) ? -magnitude : magnitude;
 }
 
+static double flt_clip4(double v) {
+    return fmin(4.0, fmax(-4.0, v));    // the instrument's word: four times full scale
+}
+
+// §22.1 - FltLP's and FltHP's coefficient: the dial's sin(pi f/fs), times what the modulation adds.
+static double flt_stage_half(double dial, double shiftSemitones) {
+    SE_LOCAL;
+
+    return fmin(1.0, sin((M_PI * flt_cutoff_hz(dial)) / gSampleRate) * exp2(shiftSemitones / 12.0));
+}
+
+// §22.2 - FltLP: identical one-poles, y += 2h (x - y), the coefficient held below one.
+static double flt_lp_stages(double * state, double input, double half, uint32_t poles) {
+    double g = fmin(1.0, 2.0 * half);
+    double x = input;
+
+    for (uint32_t i = 0; i < poles; i++) {
+        state[i] = flt_clip4(state[i] + (g * (x - state[i])));
+        x        = state[i];
+    }
+
+    return x;
+}
+
+// §22.3 - FltHP: identical one-poles y = p y' + d (x - x'), p = 1 - 2h, d = 1 - h: unity at Nyquist.
+static double flt_hp_stages(double * state, double input, double half, uint32_t poles) {
+    double p = fmax(-1.0, 1.0 - (2.0 * half));
+    double d = 1.0 - half;
+    double x = input;
+
+    for (uint32_t i = 0; i < poles; i++) {
+        double y = flt_clip4(state[i] + (d * x));
+
+        state[i] = flt_clip4((p * y) - (d * x));
+        x        = y;
+    }
+
+    return x;
+}
+
+#define FLTNORD_H_MAX        (0x518368 / 8388608.0)    // §23.2 - h at most: 20.8 kHz
+#define FLTNORD_RES_SCALE    (0x7eb852 / 8388608.0)    // 0.99; band-reject takes half
+#define FLTNORD_LEAK         (0.9)                     // §23.3 - HP and BR take back 0.9 of their last output
+
+// §23.1 - one stage: FltMulti's Chamberlin on the mean of two input samples, with the instrument's taps.
+static double nord_stage(double * s, double input, double h, double q, tFilterShape shape) {
+    double F       = 2.0 * h;
+    double x       = 0.5 * (input + s[2]);
+    double lowOld  = s[0];
+    double bandOld = s[1];
+    double low     = fmin(8.0, fmax(-8.0, lowOld + (F * bandOld)));
+    double high    = x - low - (q * bandOld);
+    double band    = flt_clip4(bandOld + (F * high));
+    double y       = 0.0;
+
+    switch (shape) {
+        case eFilterShapeBandPass:   y = (1.0 - h) * band;
+            break;
+        case eFilterShapeHighPass:   y = (2.0 * (1.0 - h) * high) - (FLTNORD_LEAK * s[3]);
+            break;
+        case eFilterShapeBandReject: y = (2.0 * (x - (q * bandOld))) - (FLTNORD_LEAK * s[3]);
+            break;
+        default:                     y = 0.5 * (low + lowOld);
+            break;
+    }
+    s[0] = low;
+    s[1] = band;
+    s[2] = input;
+    s[3] = y;
+    return flt_clip4(y);
+}
+
+// §23 - FltNord: one stage, or two of the same type for 24 dB (band-reject stays one).
+static double nord_filter(double * state, double input, double half, double resDial, tFilterShape shape, bool slope24, bool gainComp) {
+    double h  = fmin(half, FLTNORD_H_MAX);
+    double r  = (resDial >= 127.0) ? 1.0 : (resDial / 128.0);
+    double d  = 1.0 - (((shape == eFilterShapeBandReject) ? 0.5 : FLTNORD_RES_SCALE) * r);
+    double qb = slope24 ? fmax(d * d, M_SQRT1_2 * d) : (d * d);
+    double q  = 2.0 * qb * (1.0 - h);
+    double y  = nord_stage(&state[0], flt_clip4(input * (gainComp ? d : 1.0)), h, q, shape);
+
+    if (slope24 && (shape != eFilterShapeBandReject)) {
+        y = nord_stage(&state[4], y, h, q, shape);
+    }
+    return y;
+}
+
 // notes §145
 static double cascade_hp_filter(double * state, double input, double g, uint32_t poles) {
     double   x = input;
@@ -4996,6 +5083,7 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
         control += (voicePitch - KBT_REFERENCE_NOTE) * spec->fltKbt;
     }
     control += pitchDirect * PITCH_MOD_SEMITONES;    // §21.3 - zero for every filter but FltClassic
+    double shift   = control - cutoffParam;          // §22.1 - what the modulation adds, before the clamp
 
     if (control < FLT_CONTROL_MIN) {
         control = FLT_CONTROL_MIN;
@@ -5028,7 +5116,22 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     switch (spec->topology) {
         case eFilterTopologyCascadeHP:
         {
-            return cascade_hp_filter(gLadder[voice][node], input, g, spec->tapStage + 1u);
+            if (engine_filter_legacy()) {
+                return cascade_hp_filter(gLadder[voice][node], input, g, spec->tapStage + 1u);
+            }
+            return flt_hp_stages(gLadder[voice][node], input, flt_stage_half(cutoffParam, shift), spec->tapStage + 1u);
+        }
+        case eFilterTopologyCascadeLP:
+        {
+            if (engine_filter_legacy()) {
+                return ladder_filter(gLadder[voice][node], input, g, 0.0, spec->tapStage);
+            }
+            return flt_lp_stages(gLadder[voice][node], input, flt_stage_half(cutoffParam, shift), spec->tapStage + 1u);
+        }
+        case eFilterTopologyNord:
+        {
+            return nord_filter(gLadder[voice][node], input, flt_stage_half(cutoffParam, shift), resonance * 127.0,
+                               spec->fltShape, spec->tapStage >= 2u, spec->fltGainComp);
         }
         case eFilterTopologyClassic:
         {

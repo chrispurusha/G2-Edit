@@ -59,11 +59,12 @@ double flt_ladder_magnitude(double ratio, double feedback, uint32_t tap); // |G^
 
 // notes §2
 typedef enum {
-    eFilterTopologyLadder = 0,     // FltNord (FltClassic until §21): four-pole loop, the dB switch moves the tap
+    eFilterTopologyLadder = 0,     // G2_FILTER_LEGACY only now (FltClassic until §21, FltNord until §23): four-pole loop, the dB switch moves the tap
     eFilterTopologyCascadeLP,      // FltLP:  N identical one-poles, no resonance
     eFilterTopologyCascadeHP,      // FltHP:  the same, high-pass
     eFilterTopologyBiquad,         // FltStatic: two poles, flat passband, resonance as Q
     eFilterTopologyClassic,        // FltClassic: the instrument's own loop (reference §21)
+    eFilterTopologyNord,           // FltNord: the instrument's Chamberlin pair (reference §23)
 } tFilterTopology;
 
 typedef enum {

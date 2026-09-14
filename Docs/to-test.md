@@ -335,6 +335,15 @@ CROSS-PROJECT
 - MODULES THE ENGINE DOES NOT PLAY ARE GREYED OUT while it runs (always in the plug-in). Toggle the engine
   in the app and check the veil appears and goes at once, that greyed modules still edit and drag, and
   that Operators (played via a DXRouter) and Name labels are NOT greyed
+- FLTLP AND FLTHP NOW THE INSTRUMENT'S OWN (2026-09-14, reference §22): brighter at high cutoffs than
+  before (corners were low, up to 10 dB at 4x the cutoff), and FltLP no longer compresses a loud input.
+  A/B at Freq above 100 with a full-scale saw; G2_FILTER_LEGACY=1 brings the old ones back
+- ***FLTNORD NOW THE INSTRUMENT'S OWN FILTER (2026-09-14, reference §23) - NEEDS AN EAR.*** A Chamberlin
+  pair, not a ladder. FilterType now works (CT: HP came out as low-pass - every type did). GC is now the
+  drive x d rather than the old compensation gain (CT found it harsh). Check all four types at 12 and
+  24 dB, GC on and off at high Res, and the resonance character against the G2
+- FltNord's face graph now draws each FilterType (CT: non-LP types drew as LP) and GC as the drive -
+  eyeball all four types at 12/24 dB against the sound
 - ***COMPRESSOR REWRITTEN AS A LEVELLER (2026-09-07) - THE BIGGEST BEHAVIOUR CHANGE OF THE DAY.*** It
   was a downward compressor that ignored Ref Level; the instrument drives the signal TOWARDS Ref Level
   and will BOOST when Ref Level is above it, which the old code could never do. Verified against
