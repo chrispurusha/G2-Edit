@@ -7,14 +7,12 @@ Built-but-unchecked work goes in to-test.md.
 CT (Priority)
 - Oscillators should sound constantly for drones etc. Currently, they cut off after a period of time. We might ultimately need a drone mode enable/disable, so that we can free bandwidth. Hardware will always drone.
 - Plugin isn't remembering the global settings like rotary/vertical mouse
-  mode, nor VA/FX split position etc. It will also need to recall patches in full on load.
+  mode, nor VA/FX split position etc. It will also need to recall patches in full on load eventually.
+- Implement more modules in sound engine and fix current ones.
 - Bug where we suddenly/randomly scroll VA area right about half a module's width.
-
+- Fix or add various module oscillator style graphics. Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth etc.
 
 CT
-- Fix various module presentation and make module presentation have a common approach (dial and button positions etc.).
-- Implement more modules in sound engine.
-- Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth
 - Press V to toggle split position vs Voice-Area-only (manual p64) - NOTE <ctrl>V should Paste
 - Zoom to Fit from a right click, fitting the area under the cursor
 - Separate zoom for VA and FX.
