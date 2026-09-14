@@ -318,6 +318,13 @@ CROSS-PROJECT
 - Reverb Brightness constants are NOT yet refitted against the new dial 8-64 measurements in
   findings.md - the engine is unchanged. Nothing to test yet; listed so the data is not mistaken
   for a fix.
+- OscShpB TriSaw (2026-09-14): the peak is now the instrument's (1 + raw/128)/2, held two samples from
+  the end at the note's pitch - at Shape 127 a saw with a 0.4% fall on low notes where ours had 3%.
+  CT heard the G2's 99% saw as brighter: A/B on a low and a mid note, and at Shape 64 (0.75, was 0.737)
+- EnvADSR now runs the instrument's own integer envelope (2026-09-14, reference §17.3). Short and mid
+  settings are unchanged. Listen at LONG ones: attacks are slower (LogExp 26 s at 112 where the dial
+  says 21, and from ~118 it stops at 0.96 and never decays while held; ExpExp 63 s at 127), and
+  decays and releases faster near their end (-40 dB in 37 s at 127). Decay already sounded right to CT
 - ***STCHORUS NOW THE INSTRUMENT'S OWN CHORUS (2026-09-14, reference §19) - NEEDS AN EAR.*** Replaces
   the three 2026-09-07 rounds. Same shape as before (two opposed taps, triangle, quarter-cycle stereo),
   now exact, with two audible differences:
