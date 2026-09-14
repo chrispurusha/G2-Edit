@@ -41,6 +41,9 @@ extern "C" {
 // Whether the engine is running and holding the audio device.
 bool sound_engine_active(void);
 
+// Whether the engine models this module (the canvas greys out the rest while it runs).
+bool sound_engine_models_module(tModule * module);
+
 // One line saying what the engine is doing, or why it is silent — "Playing OscB", "Select an OscB
 // to play", and so on. The Experimental menu shows this under the toggle, because an engine that is
 // on but silent otherwise gives no clue which of the several reasons applies. UI thread only.

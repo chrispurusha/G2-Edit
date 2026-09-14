@@ -1181,3 +1181,13 @@ keys - which therefore win over it. Its context is kind None with the module's k
 over a graph still opens the module's menu (canvas_right_click() falls back to it). The screen box is
 mapped from the module's own drawn rectangle, the transform every other region on the face went
 through.
+
+## 89. in `render_module()`
+
+While the sound engine runs, a module it does not play is drawn under a grey veil, last, so the whole
+face - name, dials, jacks - dims. The test is `sound_engine_models_module()`: the engine's own list of
+node kinds, plus Operator (played through the DXRouter it is patched into) and Name (no sound at all).
+The veil registers no click region, so the module still edits and drags as before; a patch that uses
+one of these still loads and plays, with that module silent. In the plug-in the engine always runs, so
+the veil is always there; in the application only while Experimental > Enable Sound Engine is on.
+

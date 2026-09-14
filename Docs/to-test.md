@@ -332,6 +332,9 @@ CROSS-PROJECT
   filter. Re-run the self-oscillation comparison at KBT 25/50/100% on a few keys
 - FltClassic at full Res with no input should now stay silent until pinged, as on the G2 (a float tail
   used to grow into oscillation by itself)
+- MODULES THE ENGINE DOES NOT PLAY ARE GREYED OUT while it runs (always in the plug-in). Toggle the engine
+  in the app and check the veil appears and goes at once, that greyed modules still edit and drag, and
+  that Operators (played via a DXRouter) and Name labels are NOT greyed
 - ***COMPRESSOR REWRITTEN AS A LEVELLER (2026-09-07) - THE BIGGEST BEHAVIOUR CHANGE OF THE DAY.*** It
   was a downward compressor that ignored Ref Level; the instrument drives the signal TOWARDS Ref Level
   and will BOOST when Ref Level is above it, which the old code could never do. Verified against

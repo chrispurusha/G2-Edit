@@ -2200,6 +2200,14 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
     }
 }
 
+// Whether the engine plays this module at all - the canvas greys out the rest while the engine runs.
+// An Operator counts: it is played through the DXRouter it is patched into. A Name has no sound.
+bool sound_engine_models_module(tModule * module) {
+    tNodeKind kind = eNodeOsc;
+
+    return (module_kind(module, &kind) == true) || (module->type == moduleTypeOperator) || (module->type == moduleTypeName);
+}
+
 // Which connectors each kind draws its signal from, in the order the node stores them.
 #define anyConnectorType    ((tConnectorType) - 1)
 static int connector_index_for_input(tModuleType moduleType, uint32_t nth, tConnectorType wantedType);
