@@ -121,6 +121,11 @@ until g2_process() reaches its offset (2026-09-11; it used to land at the start 
 
 ## 10. `G2_STATE_HEADER`
 
+UPDATED 2026-09-14: the record also carries the editor's mouse mode - `dialmode=` (Rotary 0, Vertical 1,
+Horizontal 2). Same header: an older build skips the new key. The Voice/FX split is NOT in the record: it is
+the patch's own (the descriptor's barPosition), so loading a patch sets it as that patch has it (CT). A
+per-slot override was tried the same day and taken out for that reason.
+
 THE PATCHES ARE IDENTIFIED BY PATH rather than embedded wholesale. A .pch2 is small enough to embed,
 and doing so would make a project self-contained, but it would also freeze a copy: edit the patch
 in G2-Edit and the project would go on playing the old one, silently. Storing the path keeps one
