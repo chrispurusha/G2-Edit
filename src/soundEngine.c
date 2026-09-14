@@ -379,23 +379,18 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define DELAY_PARAM_HP              (8)
 
 // notes §10
-#define DELAY_LP_MIN_HZ             (660.0)
 
 // notes §11
-#define DELAY_HP_LOG_A              (1.74224)
-#define DELAY_HP_LOG_B              (0.100227)
-#define DELAY_HP_LOG_C              (-0.000377517)
-#define DELAY_LP_MAX_HZ             (20000.0)
-#define DELAYA_PARAM_ACTIVE         (4)
-#define DELAYB_PARAM_ACTIVE         (7)
-#define DELAY_MODE_RANGE            (0)
+#define DELAYA_PARAM_ACTIVE    (4)
+#define DELAYB_PARAM_ACTIVE    (7)
+#define DELAY_MODE_RANGE       (0)
 
-#define REVERB_PARAM_TIME           (0)
-#define REVERB_PARAM_BRIGHT         (1)
-#define REVERB_PARAM_DRYWET         (2)
-#define REVERB_PARAM_ACTIVE         (3)
-#define RV_POSITIONS                (36)    // §20.2 - kRvPlace
-#define RV_COEFFS                   (10)    // §20.3
+#define REVERB_PARAM_TIME      (0)
+#define REVERB_PARAM_BRIGHT    (1)
+#define REVERB_PARAM_DRYWET    (2)
+#define REVERB_PARAM_ACTIVE    (3)
+#define RV_POSITIONS           (36)         // §20.2 - kRvPlace
+#define RV_COEFFS              (10)         // §20.3
 
 // notes §12
 typedef struct {
@@ -943,8 +938,12 @@ static uint32_t                    gDelayWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX
 #define gDelayWrite           (gDelayWriteBank[SE])
 static double                      gDelayDampBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
 #define gDelayDamp            (gDelayDampBank[SE])
-static double                      gDelayHpBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES]; // the HP's lowpass half; the filter is x - this
+static double                      gDelayHpBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];  // the HP's lowpass half; the filter is x - this
 #define gDelayHp              (gDelayHpBank[SE])
+static double                      gDelayHpBBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES]; // §24.2 - the HP's second state
+#define gDelayHpB             (gDelayHpBBank[SE])
+static double                      gDelayFbBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];  // §24.1 - last sample's feedback, written with this one
+#define gDelayFb              (gDelayFbBank[SE])
 
 // notes §37
 
@@ -1361,6 +1360,8 @@ static void reset_node_state(void) {
     memset(gDelayWrite, 0, sizeof(gDelayWrite));
     memset(gDelayDamp, 0, sizeof(gDelayDamp));
     memset(gDelayHp, 0, sizeof(gDelayHp));
+    memset(gDelayHpB, 0, sizeof(gDelayHpB));
+    memset(gDelayFb, 0, sizeof(gDelayFb));
     memset(gRvRing, 0, sizeof(gRvRing));
     gRvCur   = 0;
     gRvPhase = 0.0;
@@ -2024,6 +2025,8 @@ static const tLfoParams * lfo_params(tModuleType type) {
 static uint32_t node_output_legs(tNodeKind kind) {
     return (kind == eNodeFltMulti) ? 3u : 2u;
 }
+
+static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial);    // §24.2
 
 static bool module_kind(tModule * module, tNodeKind * kind) {
     switch (module->type) {
@@ -2868,40 +2871,14 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 } else {
                     // Shared with the readout so the two cannot disagree — see delay_time_seconds()
                     // in renderParams.c for the derivation and its hardware confirmation.
-                    node->timeSeconds = delay_time_seconds(maxTime,
-                                                           param_value(module, variation, DELAY_PARAM_TIME));
+                    node->timeSeconds = fmax(0.0, delay_time_seconds(maxTime, param_value(module, variation, DELAY_PARAM_TIME))
+                                             - (1.0 / G2_ENGINE_SAMPLE_RATE));    // §24.1 - Time x step samples; the readout adds one
                 }
             }
-            // notes §87
-            node->depth = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0;
-            // notes §88
-            {
-                double lp    = param_value(module, variation, DELAY_PARAM_LP) / 127.0;
-                double fc    = DELAY_LP_MIN_HZ * pow(DELAY_LP_MAX_HZ / DELAY_LP_MIN_HZ, lp);
-                double coeff = 1.0 - exp(-2.0 * M_PI * fc / gSampleRate);
-
-                if (coeff > 1.0) {
-                    coeff = 1.0;
-                }
-                node->damping = 1.0 - coeff;
-            }
-            {
-                // HP 0 is the filter switched out, not merely its lowest cutoff — measured flat.
-                double hp = param_value(module, variation, DELAY_PARAM_HP);
-
-                if (hp <= 0.0) {
-                    node->hpCoeff = 0.0;
-                } else {
-                    double fc = exp(DELAY_HP_LOG_A + (DELAY_HP_LOG_B * hp) + (DELAY_HP_LOG_C * hp * hp));
-
-                    node->hpCoeff = 1.0 - exp(-2.0 * M_PI * fc / gSampleRate);
-
-                    if (node->hpCoeff > 1.0) {
-                        node->hpCoeff = 1.0;
-                    }
-                }
-            }
-            node->amount = param_value(module, variation, DELAY_PARAM_DRYWET) / 127.0;
+            // notes §87; §24.2 - the words the instrument's host sets (DelayA has no HP)
+            delay_words(node, param_value(module, variation, DELAY_PARAM_LP),
+                        (module->type == moduleTypeDelayB) ? param_value(module, variation, DELAY_PARAM_HP) : 0.0,
+                        param_value(module, variation, DELAY_PARAM_FEEDBACK), param_value(module, variation, DELAY_PARAM_DRYWET));
             node->active = (param_value(module, variation,
                                         (module->type == moduleTypeDelayA)
                                              ? DELAYA_PARAM_ACTIVE : DELAYB_PARAM_ACTIVE) != 0.0);
@@ -3653,48 +3630,84 @@ static double osc_shp_wave(uint32_t waveform, double phase, double dt, double sh
     }
 }
 
-// A delay line with feedback and a one-pole damping filter in the loop — the usual arrangement, and
-// what the LP knob on the module controls.
-static double delay_step(uint32_t line, double input, double timeSeconds, double feedback,
-                         double damping, double hpCoeff, double mix) {
-    SE_LOCAL;
+// §24.2 - the host's own arithmetic for a dial word: a 24-bit fraction multiplied as two 16-bit halves.
+static int32_t dly_host_mul(int32_t a, int32_t b) {
+    int32_t  ah = a >> 16;
+    int32_t  bh = b >> 16;
+    uint32_t al = (uint32_t)a & 0xffffu;
+    uint32_t bl = (uint32_t)b & 0xffffu;
 
-    uint32_t samples = (uint32_t)(timeSeconds * gSampleRate);
-    uint32_t readPos = 0;
-    double   wet     = 0.0;
+    return ((int32_t)((ah * (int32_t)bl) + (int32_t)((al * bl) >> 16) + ((int32_t)al * bh)) >> 7) + (ah * bh * 0x200);
+}
+
+static int32_t dly_dial_word(double dial) {
+    int32_t v16 = (int32_t)floor(dial * 256.0);
+
+    return (v16 >= 0x7f00) ? 0x7fffff : (v16 << 8);    // v/128, with 127 the word's top
+}
+
+// §24.2 - DelayA/DelayB's words, as the instrument's host sets them.
+static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial) {
+    int32_t lp = ((int32_t)floor(lpDial * 256.0) * 0xdc) + 0x12dbff;
+    int32_t hp = (int32_t)floor(hpDial * 256.0) << 7;
+
+    node->damping = dly_host_mul(lp, dly_host_mul(lp, lp));    // the LP's coefficient
+    node->hpCoeff = dly_host_mul(hp, dly_host_mul(hp, hp));    // the HP's; 0 passes
+    node->depth   = dly_dial_word(fbDial);
+    node->amount  = dly_dial_word(dryWetDial);
+}
+
+static int32_t dly_sat(int64_t v) {
+    return (int32_t)((v > 0x7fffff) ? 0x7fffff : ((v < -0x800000) ? -0x800000 : v));
+}
+
+// §24 - DelayA/DelayB: the instrument's tap in its own integer arithmetic, on half-scale 24-bit words.
+// The input and the last sample's feedback go into memory; the tap comes out through the LP and the
+// HP, and that filtered signal is both the wet output and what feeds back.
+static double delay_step(uint32_t line, double input, double timeSeconds, double feedback,
+                         double lpCoeff, double hpCoeff, double mix) {
+    SE_LOCAL;
 
     if (line >= MAX_DELAY_LINES) {
         return input;
     }
+    double   exact   = timeSeconds * gSampleRate;
+    uint32_t samples = (exact < 0.5) ? 0u : (uint32_t)lround(exact);
 
-    if (samples < 1) {
-        samples = 1;
-    } else if (samples >= DELAY_LINE_SAMPLES) {
+    if (samples >= DELAY_LINE_SAMPLES) {
         samples = DELAY_LINE_SAMPLES - 1;
     }
-    readPos                             = (gDelayWrite[line] + DELAY_LINE_SAMPLES - samples) % DELAY_LINE_SAMPLES;
-    wet                                 = (double)gDelayLine[line][readPos];
+    int32_t  c       = (int32_t)lpCoeff;
+    int32_t  f       = (int32_t)hpCoeff;
+    int32_t  fb      = (int32_t)feedback;
+    int32_t  mixWord = (int32_t)mix;
+    int32_t  half    = dly_sat(((int64_t)dly_sat((int64_t)floor(input * 2097152.0)) * 0x400000) >> 23);
+    uint32_t write   = gDelayWrite[line];
 
-    // Damping in the feedback path, so each repeat is duller than the last rather than the dry
-    // signal being filtered once.
-    gDelayDamp[line]                   += (1.0 - damping) * (wet - gDelayDamp[line]);
-    double   fed     = gDelayDamp[line];
+    gDelayLine[line][write] = (float)dly_sat((int64_t)half + (int64_t)gDelayFb[line]);
 
-    // notes §103
-    if (hpCoeff > 0.0) {
-        gDelayHp[line] += hpCoeff * (fed - gDelayHp[line]);
-        fed             = fed - gDelayHp[line];
-    }
-    gDelayLine[line][gDelayWrite[line]] = (float)(input + (fed * feedback));
-    gDelayWrite[line]                   = (gDelayWrite[line] + 1) % DELAY_LINE_SAMPLES;
+    uint32_t readPos = (write + DELAY_LINE_SAMPLES - samples) % DELAY_LINE_SAMPLES;
+    int32_t  tap     = (int32_t)gDelayLine[line][readPos] & ~0xff;    // §24.3 - 16-bit memory
+    int32_t  x2      = (int32_t)gDelayDamp[line];
+    int32_t  lp      = dly_sat((int64_t)x2 + ((((int64_t)c * tap) - ((int64_t)c * x2)) >> 23));
+    int32_t  a       = (int32_t)gDelayHp[line];
+    int32_t  b       = (int32_t)gDelayHpB[line];
+    int32_t  t       = b + (int32_t)(((int64_t)f * a) >> 23);
+    int32_t  high    = dly_sat((int64_t)lp - (3 * (int64_t)b) + ((((int64_t)f * b) - ((int64_t)f * a)) >> 23));
+    int32_t  gain    = dly_sat(0x800000 - (int64_t)f + ((-(int64_t)f * f) >> 23));
+    int32_t  y       = dly_sat(((int64_t)high * gain) >> 23);
+    int32_t  xw      = mixWord;
+    int32_t  wet     = dly_host_mul((xw < 0x400000) ? (xw << 1) : 0x7fffff, (xw < 0x400000) ? (xw << 1) : 0x7fffff);    // §24.4
+    int32_t  dryRamp = (xw > 0x400000) ? ((0x7fffff - xw) * 2) : 0x7fffff;
+    int32_t  dry     = dly_host_mul(dryRamp, dryRamp);
+    int32_t  out     = dly_sat((((int64_t)y * wet) + ((int64_t)half * dry)) >> 22);
 
-    // notes §104
-    {
-        double wetRamp = (mix >= 0.5) ? 1.0 : (mix * 2.0);
-        double dryRamp = (mix <= 0.5) ? 1.0 : ((1.0 - mix) * 2.0);
-
-        return (input * dryRamp * dryRamp * dryRamp) + (wet * wetRamp * wetRamp * wetRamp);
-    }
+    gDelayDamp[line]        = lp;
+    gDelayHp[line]          = dly_sat(t);
+    gDelayHpB[line]         = dly_sat((int64_t)b + (((int64_t)f * high) >> 23));
+    gDelayFb[line]          = dly_sat(((int64_t)y * fb) >> 23);
+    gDelayWrite[line]       = (write + 1) % DELAY_LINE_SAMPLES;
+    return (double)out / 2097152.0;
 }
 
 // §19 - StChorus. Tap positions count samples at CHORUS_TAP_RATE_HZ.
@@ -6043,6 +6056,8 @@ static void engine_reset_state(void) {
     memset(&gDelayWrite, 0, sizeof(gDelayWrite));
     memset(&gDelayDamp, 0, sizeof(gDelayDamp));
     memset(&gDelayHp, 0, sizeof(gDelayHp));
+    memset(&gDelayHpB, 0, sizeof(gDelayHpB));
+    memset(&gDelayFb, 0, sizeof(gDelayFb));
     memset(&gChorusLine, 0, sizeof(gChorusLine));
     memset(&gChorusWrite, 0, sizeof(gChorusWrite));
     memset(&gChorusPhase, 0, sizeof(gChorusPhase));

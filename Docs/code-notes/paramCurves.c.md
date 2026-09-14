@@ -370,7 +370,9 @@ nine agree. Only that one Range is confirmed; the rest derive their step the sam
 lerp between DELAY_TIME_MIN and the range maximum that this replaced was close but not equal - it
 gave 7.87m where the synth says 7.89m.
 
-Shared with the sound engine so the delay that is heard cannot drift from the one displayed.
+Shared with the sound engine so the delay that is heard cannot drift from the one displayed. The
+engine takes the +1 back off (2026-09-14): the instrument's audio delay is exactly raw x step, and the
+extra sample is its readout's (reference §24.1).
 
 ## 21. `kClkSyncSlot`
 

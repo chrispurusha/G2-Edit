@@ -9688,3 +9688,16 @@ important too", then "FltNord's gain control seems harsh" and "FltNord's HP is c
     BR each feeding back -0.9 of their last output. Now within 0.1 dB of that code.
   Old model: revert record row 33.
 
+2026-09-14 - DELAYB (AND DELAYA) ARE THE INSTRUMENT'S OWN TAP, WORD FOR WORD (reference §24). CT: "...and DelayB. Its
+filters and timing etc. will need checking", then "I'm actually more interested in getting DelayB validated".
+  - TIMING was right: Time x step samples, the step 378/756/1512/2041 by range - the engine had one sample
+    more, which the G2's readout shows but its audio does not.
+  - THE FILTERS SIT ON THE TAP, NOT JUST IN THE LOOP: the wet output is the filtered tap, so the first
+    repeat is filtered too. LP is a one-pole on a cubic of the dial - ~50 Hz at LP 0 where the fitted law
+    had 660 Hz, and fully open at 127 where ours still lost 2.4 dB a pass at 20 kHz (2.7 dB of every
+    repeat's peak at FB 127, so our repeats died away where the G2's hold). HP is a two-state filter on
+    another cubic. DryWet is squared, not cubed. FB is v/128.
+  - 16-BIT MEMORY: the tap masks each word's low byte, the loop at half scale.
+  - Ported as integer arithmetic on the instrument's words; every output sample now equals its code.
+  Old law: revert record row 34; notes 10, 11, 88, 103 and 104 retired.
+

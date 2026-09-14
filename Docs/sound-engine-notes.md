@@ -80,6 +80,9 @@ on a DelayA lands past the end of its parameter list, reads zero, and silently b
 
 ## 10. `DELAY_LP_MIN_HZ`
 
+RETIRED 2026-09-14 with the code it described: DelayA/DelayB now run the instrument's own tap, word
+for word (reference §24; the old law is revert record row 34). Kept for the measurements.
+
 The LP dial's cutoff, swept exponentially across its travel — see where node->damping is set.
 
 FITTED TO A BURST MEASUREMENT, which is how to measure anything inside a feedback loop: a short
@@ -98,6 +101,9 @@ this: the repeats overlap, and at high feedback the loop regenerates and the rat
 anything — measured per-pass "gains" came out above unity at FB 100.
 
 ## 11. `DELAY_HP_LOG_A`
+
+RETIRED 2026-09-14 with the code it described: DelayA/DelayB now run the instrument's own tap, word
+for word (reference §24; the old law is revert record row 34). Kept for the measurements.
 
 The HP dial's cutoff, as a QUADRATIC IN THE DIAL VALUE — log fc = a + b*hp + c*hp^2, not the
 exponential the LP uses. That is not a preference, it is what the instrument does: an exponential
@@ -1366,6 +1372,9 @@ chose, which is what the hardware shows too.
 
 ## 87. in `add_node()`
 
+UPDATED 2026-09-14: now v/128 with 127 = 1, the instrument's own word (reference §24.1) - the
+measurement below agrees with it.
+
 FEEDBACK IS LINEAR TO EXACTLY UNITY, MEASURED ON THE INSTRUMENT 2026-08-15. This was
 scaled by 0.95, which is why the engine's repeats died away where the hardware's hold.
 
@@ -1385,6 +1394,9 @@ gone inside thirty. The measured values sit ~0.7% under value/127 at the two low
 settings, which is the residual loss of the LP even at its widest, not a different law.
 
 ## 88. in `add_node()`
+
+RETIRED 2026-09-14 with the code it described: DelayA/DelayB now run the instrument's own tap, word
+for word (reference §24; the old law is revert record row 34). Kept for the measurements.
 
 LP IS A CUTOFF, AND 127 IS WIDE OPEN. This read the dial as an amount of damping and
 had it the wrong way round, with a fatal end point: delay_step() uses (1 - damping) as
@@ -1607,12 +1619,18 @@ built from osc_saw/osc_square/osc_triangle, which take dt and limit accordingly.
 
 ## 103. in `delay_step()`
 
+RETIRED 2026-09-14 with the code it described: DelayA/DelayB now run the instrument's own tap, word
+for word (reference §24; the old law is revert record row 34). Kept for the measurements.
+
 Then the high-pass, also in the loop, so each repeat loses more low end than the last — the
 counterpart to the LP above. Built as a one-pole lowpass subtracted from the signal, which is
 the cheapest honest one-pole high-pass there is. A coefficient of zero is the dial at 0,
 where the filter measures flat and is simply switched out.
 
 ## 104. in `delay_step()`
+
+RETIRED 2026-09-14 with the code it described: DelayA/DelayB now run the instrument's own tap, word
+for word (reference §24; the old law is revert record row 34). Kept for the measurements.
 
 DRY/WET IS THE SAME NON-CROSSFADE THE REVERB USES, and this was a plain linear blend. The two
 gains are independent, each a ramp cubed, and they overlap: dry holds full scale until the
