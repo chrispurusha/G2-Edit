@@ -3911,10 +3911,12 @@ static double rv_word(double v) {
 }
 
 // §20 - one sample of the instrument's reverb network: every read first, then every write.
-static void reverb_step(double input, const tEngineNode * spec, double * outLeft, double * outRight) {
+static void reverb_step(double inLeft, double inRight, const tEngineNode * spec, double * outLeft, double * outRight) {
     SE_LOCAL;
 
-    input    = rv_word(input);
+    inLeft   = rv_word(inLeft);
+    inRight  = rv_word(inRight);
+    double          input                = rv_word((inLeft + inRight) / 2.0); // §20.1 - the network hears the two averaged
 
     if (spec->reverbType != sLastTypeBank[SE]) {
         memset(gRvRing, 0, sizeof(gRvRing));
@@ -4020,8 +4022,8 @@ static void reverb_step(double input, const tEngineNode * spec, double * outLeft
 #undef RVW
     gRvCur    = (cur - 1u) & (RV_RING - 1u);
 
-    *outLeft  = rv_word((spec->rvDry * input) + (spec->rvWet * wet[0]));
-    *outRight = rv_word((spec->rvDry * input) + (spec->rvWet * wet[1]));
+    *outLeft  = rv_word((spec->rvDry * inLeft) + (spec->rvWet * wet[0]));
+    *outRight = rv_word((spec->rvDry * inRight) + (spec->rvWet * wet[1]));
 }
 
 // notes §140
@@ -4052,7 +4054,7 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
         double wetL = 0.0;
         double wetR = 0.0;
 
-        reverb_step((i == 0) ? 1.0 : 0.0, &node, &wetL, &wetR);
+        reverb_step((i == 0) ? 1.0 : 0.0, (i == 0) ? 1.0 : 0.0, &node, &wetL, &wetR);
         out[(i * 2) + 0] = (float)wetL;
         out[(i * 2) + 1] = (float)wetR;
     }
@@ -5197,13 +5199,13 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeReverb:
         {
             // Only the first reverb in a chain is modelled; see the DSP note above.
-            double in = (a + signal_in(spec, value, 1)) * 0.5;
+            double inRight = signal_in(spec, value, 1);
 
             if ((spec->active == true) && (spec->line == 0)) {
-                reverb_step(in, spec, &value[n][0], &value[n][1]);
+                reverb_step(a, inRight, spec, &value[n][0], &value[n][1]);
             } else {
-                value[n][0] = in;
-                value[n][1] = in;
+                value[n][0] = a;    // §20.5 - bypassed, each input passes to its own output
+                value[n][1] = inRight;
             }
             break;
         }

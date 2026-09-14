@@ -495,3 +495,106 @@ within 1-4% of 19.3 at every Amount measured. The one disagreement was the overa
 law it replaced sat +3 dB above the input at Amount 0, where 19.3 is exactly unity. CONFIRMED ON THE G2
 2026-09-14: the level is the same with the module bypassed and at Amount 0 (CT; a first reading of
 +1.8 dB was spoiled by transients), so the fitted level was the capture rig's reference.
+
+## 20. Reverb
+
+The instrument's own network, adopted 2026-09-14 (from the DSP code, run sample by sample). At the
+engine's 96 kHz (a 48 kHz device) the engine is exact: every word of its delay memory and every output
+word equals the instrument's, over every value of Time, Brightness and DryWet in all four rooms,
+driven by an impulse and by a stereo noise burst. It replaces the fitted model (revert record row 29),
+which matched the captures' decay and colour but could not match their stereo structure.
+
+**20.1 Network.** One ring of 32768 words at 96 kHz. A cursor moves one word per sample, and every
+read in a sample happens before any write. In order:
+- **Input.** The network hears (L + R)/2, through Brightness's one-pole lowpass,
+  out = y0 × in + y1 × previous out, which has unity gain at DC.
+- **Pre-delay.** 1060 samples.
+- **Diffusion.** Four allpasses in series, with gains 0.63, 0.63, 0.63 and y8 and alternating signs.
+  Each allpass's output is a stored word before it is reused.
+- **Tank.** A figure-8 of two halves. Each half starts with the diffused input plus y4 × what arrives
+  from the other half. It then runs through:
+  - an allpass (y8);
+  - a delay read through a moving tap (20.4);
+  - a second allpass (y9, opposite sign);
+  - the damping one-pole, out = y5 × in + y6 × previous out. Its gain at DC is the decay gain d5, and
+    Brightness sets its corner.
+- **Outputs.** Seven taps per channel, at positions not shared between the channels. Each channel
+  has one tap at y2 = 0.3 and six at ±y3 = ±0.3 d5. In tap order the signs are:
+  - L: − + − (y2) + − +
+  - R: (y2) + − + − + −
+
+**20.2 Positions.** Each place in the network sits int(room × K + 1200) − 144 + step words ahead of
+the cursor. The room factor is Small 0.78, Medium 0.98, Large 1.19 and Hall 1.31. `kRvPlace` in the
+code holds the K and step values:
+
+| place | K, step | place | K, step | place | K, step |
+|---|---|---|---|---|---|
+| pre-delay out | 0, +3 | tank A in | 1000, −1 | tank B in | 11651, 0 |
+| AP1 out | 110, −1 | AP-A in | 1004, 0 | AP-B in | 11655, 0 |
+| AP2 in | 110, 0 | AP-A out | 1677, −1 | AP-B out | 12393, 0 |
+| AP2 out | 255, 0 | moving tap A | 1677, −127 | moving tap B | 12393, −127 |
+| AP3 out | 532, −1 | AP-A2 in | 4425, 0 | AP-B2 in | 15080, 0 |
+| AP4 in | 532, 0 | AP-A2 out | 6726, −1 | AP-B2 out | 17536, 0 |
+| AP4 out | 921, 0 | damping A | 7300, 0 | damping B | 18600, 0 |
+| | | | | tank B out | 22599, 0 |
+
+The output taps have step 0 unless noted:
+- L: K = 3589, 6307, 8992, 12398 (step +110), 15537, 18693, 21432.
+- R: K = 1680, 5403, 7347, 10589, then 14470, 17021 and 19561 (each step −1).
+
+The first output reaches R before L (Small: 11.75 against 12.89 ms), because R's taps sit earlier.
+
+**20.3 Coefficients.** Time and Brightness enter as v/127.
+- L = int(room × 22599 + 1200) − 1200 is the longest tap's length.
+- t = 3 (room index + 1) × Time/127.
+- d5 = 10^(−3 L / (6 t × 96000)), and 0 at Time 0.
+- d8 = 1 + 99 × Brightness/127, and d6 = d8/100.
+
+The coefficients are:
+
+| | value | | value |
+|---|---|---|---|
+| y0 | 0.7 d6 | y5 | d6 × d5 |
+| y1 | 1 − y0 | y6 | 1 − d6 |
+| y2 | 0.3 | y7 | 0.63 |
+| y3 | 0.3 d5 | y8 | 0.75 d5 + 0.4, clamped to 0.45-0.62 |
+| y4 | d5² | y9 | 0.55 d5 + 0.25, clamped to 0.30-0.48 |
+
+The arithmetic is single precision as the instrument does it: d8, t, d5, d6 and each coefficient
+are rounded to a float, and y1 is subtracted in float. Each coefficient is then truncated to 23
+fractional bits. Each of those roundings is one step of the coefficient grid, and each one mattered
+(20.6).
+
+**20.4 The moving taps.** A signed 24-bit phase gains 174 every sample, so one cycle is
+2^24/174 = 96420 samples (0.996 Hz).
+- The triangle is the size of the phase plus 174, taken before the phase wraps and held at 2^23 − 1.
+  On the one sample where the phase wraps, the triangle stays at full scale rather than reading the
+  wrapped value.
+- Both taps read 76 × triangle/2^23 samples behind their place (up to 0.79 ms). They take the
+  whole and 23-bit fractional parts of that, and interpolate linearly between the two neighbouring
+  words.
+- The two halves' taps move together, in phase.
+
+**20.5 Mix.** x = DryWet × 65536, with 127 giving 2^23 − 1.
+- wet = min(1, 2x)² and dry = min(1, 2(1 − x))², with x as a fraction of 2^23. Each is truncated to
+  23 bits and held below 1.
+- Both are full at 64; at 0 there is dry alone, and at 127 wet alone. The fitted law cubed both ramps.
+- Each output is dry × that channel's own input + wet × that channel's tap sum. The network hears the
+  average of the inputs, but the dry path does not.
+- Bypassed, each input passes to its own output.
+- The engine models the first Reverb in a chain only; a second one passes its inputs straight through.
+
+**20.6 Quantisation.** A word is 24 bits: engine value v is stored as floor(v × 2^21)/2^21, held to
+[−4, 4 − 2^−21] (full scale 1.0, headroom ×4).
+- The inputs are words on arrival.
+- Every ring store is a whole multiply-accumulate, rounded down once.
+- The seven output taps are summed whole and rounded down once, and so is each output.
+
+At Brightness 0 the tail is a few tens of words RMS, so a difference of one word is already 40 dB
+down. An error of one coefficient step, or one rounding done the other way, spreads through the whole
+tail. The engine is exact only at 96 kHz. At other rates the positions and the LFO step scale by
+rate/96000, rounded, which is close but not identical.
+
+**20.7 Against the captures.** The Time law is linear and the room ratios are exact. The onsets
+agree (Small L 1237 samples measured, 12.89 ms). The captured decay times run 6-12% longer
+throughout, which comes from their early-decay fits over about 15 dB of tail, not from the module.

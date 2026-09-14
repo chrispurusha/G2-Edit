@@ -231,15 +231,6 @@ FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard
 - soundEngine.c LADDER_K_MAX (4.3) was chosen while the drawn constant was wrongly 3.914 - needs an ear
 - LevAmp gain law rewritten from measurement 2026-08-30: silent at dial 0, four segments, 0-4x
 - Super-saw ("sup") phase fix - needs an ear
-- Reverb modulation now interpolates with a Hermite cubic instead of linearly, which took a lowpass
-  out of the feedback loop. The tail should be BRIGHTER and the difference should be clearest at high
-  Brightness and long Time; listen for any new roughness on the modulation too
-- Reverb Brightness rebuilt as high-frequency damping across the whole dial (it used to damp the BASS
-  above 64, by 16x). Sweep the dial end to end and listen: the low end should stay put throughout and
-  only the top should move
-- Reverb Brightness detent fix: the dial's neutral 64 was applying a small in-loop low-frequency loss
-  that halved the bass decay time. Listen for the tail being FULLER, and sweep Brightness end to end
-  to confirm nothing at the extremes changed - the fix only moves the region around the detent
 - The envelope attack is the wrong FORM (fixed-duration shaped ramp against the instrument's one-pole
   approach to a target) - not yet changed. Owner reports the G2's attack as softer; confirm by ear
   against a short-attack patch before and after any fix
@@ -256,10 +247,6 @@ FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard
   own canvas rather than one painting into the other
 - The app was checked against the SynthLib hardening and renders normally (NSWindow path); the
   plug-in's view path has not been exercised in a host from here
-- Reverb stereo rebuilt 2026-09-06: ONE tank read by two tap sets, replacing two tanks and a fixed
-  read offset. Needs an ear for image width and for any flutter the new tap positions introduce
-- Reverb wet level re-derived (0.3956 -> 0.3016) after the dead-tap fix doubled the live tap count -
-  renders at -11.30 dB against the hardware's -11.3, but confirm it sits right in a patch by ear
 - Filter resonance, raspiness and whole-graph oversampling changes - need an ear
 - Sound engine parameter smoothing (zipper noise on Shape sweeps) - needs an ear
 - EnvADSR + mixer Channel Mute in the engine
@@ -315,9 +302,6 @@ CROSS-PROJECT
   in log rather than two endpoints and a constant ratio, and is up to 11% SHORTER than before across
   the middle of the dial. Anything whose timing depends on a Pulse gate will have moved. Needs an ear
   on a patch that uses one, and ideally a re-check of the two shortest dial settings.
-- Reverb Brightness constants are NOT yet refitted against the new dial 8-64 measurements in
-  findings.md - the engine is unchanged. Nothing to test yet; listed so the data is not mistaken
-  for a fix.
 - OscShpB TriSaw (2026-09-14): the peak is now the instrument's (1 + raw/128)/2, held two samples from
   the end at the note's pitch - at Shape 127 a saw with a 0.4% fall on low notes where ours had 3%.
   CT heard the G2's 99% saw as brighter: A/B on a low and a mid note, and at Shape 64 (0.75, was 0.737)
@@ -331,11 +315,14 @@ CROSS-PROJECT
   - LEVEL: about 2.5-3 dB lower across the dial than the fitted version (unity at Amount 0, confirmed)
   - RATE: nominally 1.453 Hz at Detune 127, and each StChorus now runs at its own rate, up to 25% off
     nominal, as on the instrument - two in one patch should drift against each other.
-- ***REVERB BRIGHTNESS REFITTED (2026-09-07) - NEEDS AN EAR.*** DAMP_MAX 1.6 -> 0.837, BRIGHT_K
-  32 -> 57.8, fitted against all four rooms. Predicted error is 7.5x lower. The dial should now be
-  much less savage in its lower half - the old curve hit its ceiling below dial 19 - and slightly
-  darker at the top. Listen at Brightness 24-48 especially, which is where the old law was worst,
-  and check a Small room does not now sound under-damped.
+- ***REVERB NOW THE INSTRUMENT'S OWN NETWORK (2026-09-14, reference §20) - NEEDS AN EAR.*** Replaces
+  every fitted round (the 2026-09-06 stereo rebuild, the 2026-09-07 Brightness refit). Exact word for
+  word against the instrument's DSP code, so what is left is whether that sounds like the G2:
+  - all four rooms across Time and Brightness, and Brightness below 48 especially (never measured cleanly)
+  - DryWet end to end: the law is now squared, where the fitted one was cubed
+  - a STEREO source: the dry path now keeps L and R apart (it was the mono average on both sides), and
+    a source into L only now has its dry on the left only - as the instrument's code has it
+  - Reverb bypassed: each input now passes to its own output (it passed the average to both)
 - ***COMPRESSOR REWRITTEN AS A LEVELLER (2026-09-07) - THE BIGGEST BEHAVIOUR CHANGE OF THE DAY.*** It
   was a downward compressor that ignored Ref Level; the instrument drives the signal TOWARDS Ref Level
   and will BOOST when Ref Level is above it, which the old code could never do. Verified against
