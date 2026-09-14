@@ -473,6 +473,7 @@ typedef enum {
 #define OSCB_TUNE_UNITY             (64.0)
 #define MIDI_NOTE_A440              (69.0)
 #define MIDI_NOTE_MIDDLE_C          (60.0)
+#define KBT_REFERENCE_NOTE          (64.0)    // §21.3 - the instrument's pitch zero, E4: where KBT moves nothing
 
 // notes §17
 #define VOICE_GAIN                  (0.15)
@@ -4251,38 +4252,51 @@ static double oscnoise_step(uint32_t voice, uint32_t node, double hz, double wid
     return second * gain;
 }
 
-#define FLTCLASSIC_A_MAX         (0.69)                              // §21.2 - pi f/fs at most: 21.1 kHz
-#define FLTCLASSIC_DRIVE         (25.0 / 64.0)                       // §21.1
-#define FLTCLASSIC_ZERO_BASE     (0.47)                              // §21.2
-#define FLTCLASSIC_ZERO_SLOPE    (0.13)
-#define FLTCLASSIC_K_PER_DIAL    ((8.0 * 256.0 * 137.0) / 8388608.0) // §21.2 - 4.25 at 127
+#define FLTCLASSIC_Q23           (8388608.0)                         // §21.4 - one is a quarter of the engine's range
+#define FLTCLASSIC_A_MAX         (0x5851ec / FLTCLASSIC_Q23)         // §21.2 - pi f/fs at most: 21.1 kHz
+#define FLTCLASSIC_DRIVE         (0x320000 / FLTCLASSIC_Q23)         // §21.1 - 25/64
+#define FLTCLASSIC_CUBIC         (0x10aaaa / FLTCLASSIC_Q23)         // a third of it
+#define FLTCLASSIC_ZERO_BASE     (0x3c28f6 / FLTCLASSIC_Q23)         // §21.2 - 0.47
+#define FLTCLASSIC_ZERO_SLOPE    (0x10a3d7 / FLTCLASSIC_Q23)         // 0.13
 
-static double fltclassic_clip(double v) {
-    return fmin(4.0, fmax(-4.0, v));
+// §21.4 - a stored value: rounded down to 23 bits and held inside the word.
+static double fltclassic_q(double v) {
+    return fmin(1.0 - (1.0 / FLTCLASSIC_Q23), fmax(-1.0, floor(v * FLTCLASSIC_Q23) / FLTCLASSIC_Q23));
 }
 
 // §21.1 - a clipped cubic into four one-pole stages, the middle two with a zero; the resonance
-// comes from the fourth whatever the slope taps.
+// comes from the fourth whatever the slope taps. §21.4 - in the instrument's arithmetic: one running
+// sum, each stored value rounded down, so a silent filter stays silent until something rings it.
 static double classic_filter(double * state, double input, double cutoff, double resDial, uint32_t tapStage) {
     SE_LOCAL;
 
-    double a  = fmin((M_PI * cutoff) / gSampleRate, FLTCLASSIC_A_MAX);
-    double p  = fmax(0.0, 1.0 - (2.0 * a) + (2.0 * a * a) - ((4.0 / 3.0) * a * a * a));
-    double z  = FLTCLASSIC_ZERO_BASE + (FLTCLASSIC_ZERO_SLOPE * fmin(1.0, 2.0 * p));
-    double x  = fltclassic_clip(input - (FLTCLASSIC_K_PER_DIAL * resDial * state[3])) / 4.0;
-    double u  = 4.0 * FLTCLASSIC_DRIVE * (x - ((x * x * x) / 3.0));
-    double s1 = state[0];
-    double s2 = state[1];
+    double a   = fmin((M_PI * cutoff) / gSampleRate, FLTCLASSIC_A_MAX);
+    double p   = fltclassic_q(fmax(0.0, 1.0 - (2.0 * a) + (2.0 * a * a) - ((4.0 / 3.0) * a * a * a)));
+    double z   = FLTCLASSIC_ZERO_BASE + fltclassic_q(FLTCLASSIC_ZERO_SLOPE * fmin(1.0 - (1.0 / FLTCLASSIC_Q23), 2.0 * p));
+    double k8  = 8.0 * (floor(resDial * 256.0) * 137.0) / FLTCLASSIC_Q23;
+    double fb  = ceil(k8 * state[3] * FLTCLASSIC_Q23) / FLTCLASSIC_Q23;
+    double x   = fltclassic_q(fltclassic_q(input / 4.0) - fb);
+    double x2  = fltclassic_q(x * x);
+    double x3  = fltclassic_q(x2 * x);
+    double acc = (FLTCLASSIC_DRIVE * x) - (FLTCLASSIC_CUBIC * x3);
+    double s1  = state[0];
+    double s2  = state[1];
 
-    state[0] = fltclassic_clip((p * s1) + ((1.0 - p) * u));
-    double t1 = fltclassic_clip(state[0] + (z * s1));
+    acc     += p * (s1 - fltclassic_q(acc));
+    state[0] = fltclassic_q(acc);
+    acc     += z * s1;
+    double t1  = fltclassic_q(acc);
 
-    state[1] = fltclassic_clip((p * s2) + ((1.0 - p) * t1));
-    double t2 = fltclassic_clip(state[1] + (z * s2));
+    acc     += p * (s2 - t1);
+    state[1] = fltclassic_q(acc);
+    acc     += z * s2;
+    double t2  = fltclassic_q(acc);
 
-    state[2] = fltclassic_clip((p * state[2]) + ((1.0 - p) * t2));
-    state[3] = fltclassic_clip((p * state[3]) + ((1.0 - p) * state[2]));
-    return (tapStage >= 3u) ? state[3] : ((tapStage == 2u) ? state[2] : t2);
+    acc     += p * (state[2] - t2);
+    state[2] = fltclassic_q(acc);
+    acc     += p * (state[3] - state[2]);
+    state[3] = fltclassic_q(acc);
+    return 4.0 * ((tapStage >= 3u) ? state[3] : ((tapStage == 2u) ? state[2] : t2));
 }
 
 static double ladder_filter(double * state, double input, double g, double k, uint32_t tapStage) {
@@ -4833,7 +4847,7 @@ static void fltmulti_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     double   control   = cutoffParam + ((pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES);
 
     if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
-        control += (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt;
+        control += (voicePitch - KBT_REFERENCE_NOTE) * spec->fltKbt;
     }
     control  = fmin(fmax(control, FLT_CONTROL_MIN), FLT_CONTROL_MAX);
 
@@ -4938,7 +4952,7 @@ static double fltcomb_step(uint32_t voice, const tEngineNode * spec, double inpu
     double             control = cutoffParam + ((pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES);
 
     if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
-        control += (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt;
+        control += (voicePitch - KBT_REFERENCE_NOTE) * spec->fltKbt;
     }
     control      = fmin(fmax(control, FLT_CONTROL_MIN), FLT_CONTROL_MAX);
 
@@ -4971,7 +4985,7 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
 
     // notes §161
     if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
-        control += (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt;
+        control += (voicePitch - KBT_REFERENCE_NOTE) * spec->fltKbt;
     }
     control += pitchDirect * PITCH_MOD_SEMITONES;    // §21.3 - zero for every filter but FltClassic
 

@@ -2615,8 +2615,9 @@ than some value fitted to make the old unclamped arithmetic sound reasonable.
 
 ## 161. in `filter_step()`
 
-Kbt moves the cutoff with the note, relative to middle C, at the percentage the scroll button
-selects (manual p.196). One semitone of note is one unit of dial, which is what makes 100% Kbt
+Kbt moves the cutoff with the note, relative to E4 (note 64, the instrument's pitch zero - reference
+§21.3; it was middle C until 2026-09-14, four semitones bright at 100%), at the percentage the scroll
+button selects (manual p.196). One semitone of note is one unit of dial, which is what makes 100% Kbt
 track the keyboard exactly.
 Tracks the SOUNDING pitch, so a glide carries the cutoff with it rather than snapping.
 
