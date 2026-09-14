@@ -1321,6 +1321,9 @@ waveModels.c exists to make impossible.
 
 ## 83. in `add_node()`
 
+RETIRED 2026-09-14 with the code it described: the Compressor is now the instrument's own, word for
+word (reference §25; the old law is revert record row 35). Kept for the measurements.
+
 ALL FOUR OF THESE WERE WRONG, and none of it needed the hardware: the instrument's own
 dial readings settle every one. The note that used to sit here called the curve "an
 approximation, not a reading of it", which was honest and is now unnecessary.
@@ -1942,6 +1945,9 @@ instant rather than one being a sample ahead of the other.
 
 ## 121. `compress_step()`
 
+RETIRED 2026-09-14 with the code it described: the Compressor is now the instrument's own, word for
+word (reference §25; the old law is revert record row 35). Kept for the measurements.
+
 A LEVELLER, NOT A DOWNWARD COMPRESSOR - and that is a difference in kind, not in tuning. This used
 to divide the excess over the threshold by the ratio, the textbook arrangement, and it ignored Ref
 Level completely. The manual says what the module actually does: "With the Ref Level knob you set
@@ -2013,6 +2019,9 @@ enough. What is NOT in doubt is that the instrument does not step 9 dB at the th
 that did would be notorious.
 
 ## 122. in `compress_step()`
+
+UPDATED 2026-09-14: the meter now shows the actual gain reduction (the larger of the ratio's and the
+limiter's, reference §25.2), in dB, through the same lighting law.
 
 THE PANEL METER SHOWS SOMETHING DIFFERENT FROM THE GAIN ABOVE - measured 2026-09-07. Holding Ref
 Level over the signal so the gain is constant, the instrument's meter still climbs as the
@@ -2734,17 +2743,11 @@ the only voice the shared delay/chorus/reverb buffers ever see.
 
 ## 166. in `eval_node()`
 
-A stereo mixer reads eight legs but has only four level knobs, so both legs
-of a channel share one — and each CHANNEL contributes the average of its
-two legs, not their sum.
-
-That halving matters because the engine is mono. Where a stereo pair is
-fed from one mono-collapsed module — an Fx-In's L and R, or a reverb's two
-outputs — both legs carry the SAME value, so summing them counted that
-channel twice. A patch mixing dry (one stereo source) against two separate
-mono delays (a pair of different modules) therefore heard the dry and the
-reverb 6 dB hot against the delays. Averaging is also the right mono
-downmix for a genuinely stereo pair, so it is correct in both cases.
+A stereo mixer's inputs alternate L and R, pair by pair, and each pair keeps its sides apart:
+the even inputs sum into leg 0, the odd into leg 1, each at its channel's level. (Rewritten
+2026-09-14. Until then the engine was mono here: it took the average of each pair and copied the
+result to both legs, so Mix4-1S - and everything after it, 2-Out included - played in mono. The
+halving existed only because two identical legs had been summed into one.)
 
 ## 167. in `eval_node()`
 
@@ -2773,8 +2776,10 @@ It stopped being invisible the moment the Out module began keeping them apart.
 PatchTestFiles/SimpleLead.pch2 cables one module's output 0 to Out L and its output 1 to Out R
 — an entirely ordinary thing for a patch to do — and the right channel fell silent.
 
-The three exceptions fill both legs themselves and must NOT be flattened here: an envelope
-keeps its SHAPED AUDIO in leg 1, and the chorus and the Out module are genuinely stereo.
+The exceptions fill both legs themselves and must NOT be flattened here: an envelope keeps its
+SHAPED AUDIO in leg 1; the chorus, reverb, fades, MixStereo, FltMulti and the Out module write both;
+and since 2026-09-14 FX In (the bus's two legs) and a STEREO mixer (§166) do too. FX In had been left
+out of this list, so its right leg was overwritten with its left and the whole FX area started mono.
 
 ## 169. `tap_pair()`
 

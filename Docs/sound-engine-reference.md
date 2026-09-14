@@ -754,3 +754,38 @@ modulation part and routes FB and DryWet through it:
 Both are worked out after each tap and take effect on the next sample. In the engine they are exact
 word for word, including a Constant held against the FB-mod input, which can take the feedback to
 nothing.
+
+## 25. Compressor
+
+The instrument's own compressor, adopted 2026-09-14 (from the DSP code, run sample by sample). The
+engine reproduces its output word for word across Threshold, Ratio, Attack, Release and Level.
+
+**25.1 Words.**
+- Threshold t and Level l are in dB, dial − 30.
+- The ratio comes from the dial in four runs:
+  - 1.0 to 1.9 in tenths;
+  - 2.0 to 4.8 in fifths;
+  - 5.0 to 9.5 in halves;
+  - above dial 34, the same again × 10.
+- The make-up gain is (l − t)(1 − 1/r) dB when l is above t, at most 42 dB.
+- Attack and Release are per-sample coefficients from the instrument's own tables, interpolated
+  between dial steps. Attack 0 is instant.
+
+**25.2 Each sample.**
+1. **Level.** The larger of |L| and |R| (the engine's is mono). It follows a peak at once and releases
+   at the release coefficient, and it never falls below −84 dB.
+2. **Log.** A piecewise-linear log2 of that level: the exponent, then the mantissa taken as linear.
+3. **Ratio's reduction.** (level − t)(1 − 1/r), rising at the attack coefficient and falling at the
+   release.
+4. **Level limiter.** Beside it, the excess over Level, rising at once and releasing at the release
+   rate.
+5. **Gain.** The larger of the two becomes a gain through a 2^(−k/4) table, interpolated, and then the
+   make-up gain is applied.
+
+So the module levels: below the threshold everything is lifted by the make-up, and above it the
+output rises at 1/r.
+
+**25.3 Against the old law.** The engine smoothed the signal rather than the gain, so with a slow attack
+and a fast release it never saw a peak. In 03 Chris' Lead (−4 dB, 4:1, Attack 104, Release 0, Level 0 dB)
+it did not compress at all. The instrument takes a 0 dB input down by 3 dB and a +6 dB input by 7.4 dB,
+after lifting everything by 3 dB.

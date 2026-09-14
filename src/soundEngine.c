@@ -347,38 +347,31 @@ static const tMixSpec * mix_spec(tModuleType type) {
     return NULL;
 }
 
-#define MIX_CURVE_LIN               (1) // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
+#define MIX_CURVE_LIN           (1)     // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
 
 // StChorus: a detune depth and an amount, then its power button.
-#define CHORUS_PARAM_DETUNE         (0)
-#define CHORUS_PARAM_AMOUNT         (1)
-#define CHORUS_PARAM_ACTIVE         (2)
+#define CHORUS_PARAM_DETUNE     (0)
+#define CHORUS_PARAM_AMOUNT     (1)
+#define CHORUS_PARAM_ACTIVE     (2)
 
 // Compress: threshold and reference level run 0..42, ratio 0..66.
-#define COMP_PARAM_THRESHOLD        (0)
-#define COMP_PARAM_RATIO            (1)
-#define COMP_PARAM_ATTACK           (2)
-#define COMP_PARAM_RELEASE          (3)
-#define COMP_PARAM_REFLVL           (4)
-#define COMP_PARAM_ACTIVE           (6)
+#define COMP_PARAM_THRESHOLD    (0)
+#define COMP_PARAM_RATIO        (1)
+#define COMP_PARAM_ATTACK       (2)
+#define COMP_PARAM_RELEASE      (3)
+#define COMP_PARAM_REFLVL       (4)
+#define COMP_PARAM_ACTIVE       (6)
 
 // Read off the instrument's own dial displays, not guessed. See where they are used.
-#define COMP_THRESHOLD_OFFSET_DB    (30.0)      // displayed dB = raw - this
-#define COMP_THRESHOLD_OFF          (42.0)      // the dial reads "Off" here
-#define COMP_THRESHOLD_NONE         (1.0e9)     // an amplitude nothing reaches
-#define COMP_ATTACK_MIN_S           (0.00053)   // raw 1; raw 0 is "Fast", i.e. instant
-#define COMP_ATTACK_MAX_S           (0.767)
-#define COMP_RELEASE_MIN_S          (0.125)
-#define COMP_RELEASE_MAX_S          (10.2)
 
 // notes §9
-#define DELAY_PARAM_TIME            (0)
-#define DELAY_PARAM_FEEDBACK        (1)
-#define DELAY_PARAM_LP              (2) // DelayA calls this Filter; both are a damping control
-#define DELAY_PARAM_DRYWET          (3)
-#define DELAY_PARAM_HP              (8)
-#define DELAYB_PARAM_FBMOD          (5) // §24.6
-#define DELAYB_PARAM_MIXMOD         (6)
+#define DELAY_PARAM_TIME        (0)
+#define DELAY_PARAM_FEEDBACK    (1)
+#define DELAY_PARAM_LP          (2)     // DelayA calls this Filter; both are a damping control
+#define DELAY_PARAM_DRYWET      (3)
+#define DELAY_PARAM_HP          (8)
+#define DELAYB_PARAM_FBMOD      (5)     // §24.6
+#define DELAYB_PARAM_MIXMOD     (6)
 
 // notes §10
 
@@ -630,6 +623,7 @@ typedef struct {
     double          combFbMod;
     double          delayFbMod;          // §24.6 - DelayB's modulation amounts, as words
     double          delayMixMod;
+    double          compMakeup;          // §25.1 - the Compressor's make-up gain word
     uint32_t        combType;            // Notch, Peak, Deep
     double          combLevel;
     uint32_t        fadeKind;            // tFadeKind
@@ -977,6 +971,10 @@ static double                      gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_
 // Compressor gain-reduction state, one per node.
 static double                      gCompEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gCompEnv             (gCompEnvBank[SE])
+static double                      gCompGrBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];  // §25.2 - the smoothed gain reduction
+#define gCompGr              (gCompGrBank[SE])
+static double                      gCompLimBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES]; // §25.2 - the Level limiter
+#define gCompLim             (gCompLimBank[SE])
 
 // §20 - the reverb: the instrument's own network, run on one ring of delay memory.
 #define REVERB_MODE_TYPE     (0)
@@ -2033,7 +2031,8 @@ static uint32_t node_output_legs(tNodeKind kind) {
     return (kind == eNodeFltMulti) ? 3u : 2u;
 }
 
-static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial, double fbModDial, double mixModDial);    // §24.2
+static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial, double fbModDial, double mixModDial); // §24.2
+static void comp_words(tEngineNode * node, double thrDial, double ratioDial, double atkDial, double relDial, double lvlDial);                     // §25.1
 
 static bool module_kind(tModule * module, tNodeKind * kind) {
     switch (module->type) {
@@ -2842,32 +2841,11 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeCompress:
         {
-            // notes §83
-            double thrRaw = param_value(module, variation, COMP_PARAM_THRESHOLD);
-            double att    = param_value(module, variation, COMP_PARAM_ATTACK);
-            double rel    = param_value(module, variation, COMP_PARAM_RELEASE) / 127.0;
-
-            if (thrRaw >= COMP_THRESHOLD_OFF) {
-                node->threshold = COMP_THRESHOLD_NONE;   // "Off": nothing ever reaches it
-            } else {
-                node->threshold = pow(10.0, (thrRaw - COMP_THRESHOLD_OFFSET_DB) / 20.0);
-            }
-            node->ratio        = compress_ratio((uint32_t)param_value(module, variation, COMP_PARAM_RATIO));   // paramCurves.c's notes §42
-
-            // REF LEVEL, which this module ignored entirely until 2026-09-07 - see compress_step().
-            // Same dB offset as the threshold, and no "Off" position: the manual gives its range as
-            // -30 to +12 dB, and the dial is 43 steps, so raw 0..42 maps straight onto that.
-            node->refLevel     = pow(10.0, (param_value(module, variation, COMP_PARAM_REFLVL)
-                                            - COMP_THRESHOLD_OFFSET_DB) / 20.0);
-
-            // Raw 0 is "Fast" — a coefficient of 1 follows the input with no lag at all.
-            node->attackCoeff  = (att <= 0.0) ? 1.0
-                                 : (1.0 - exp(-1.0 / (gSampleRate * (COMP_ATTACK_MIN_S
-                                                                     * pow(COMP_ATTACK_MAX_S / COMP_ATTACK_MIN_S,
-                                                                           (att - 1.0) / 126.0)))));
-            node->releaseCoeff = 1.0 - exp(-1.0 / (gSampleRate * (COMP_RELEASE_MIN_S
-                                                                  * pow(COMP_RELEASE_MAX_S / COMP_RELEASE_MIN_S, rel))));
-            node->active       = (param_value(module, variation, COMP_PARAM_ACTIVE) != 0.0);
+            // notes §83; §25.1 - the words the instrument's host sets
+            comp_words(node, param_value(module, variation, COMP_PARAM_THRESHOLD), param_value(module, variation, COMP_PARAM_RATIO),
+                       param_value(module, variation, COMP_PARAM_ATTACK), param_value(module, variation, COMP_PARAM_RELEASE),
+                       param_value(module, variation, COMP_PARAM_REFLVL));
+            node->active = (param_value(module, variation, COMP_PARAM_ACTIVE) != 0.0);
             break;
         }
         case eNodeDelay:
@@ -3948,46 +3926,177 @@ static void chorus_step(uint32_t node, double input, double detune, double amoun
     gChorusTick[node] -= CHORUS_TICK_HZ / gSampleRate;
 }
 
-// notes §121
+// §25.1 - the instrument's own attack and release coefficients, one per dial step; the host interpolates.
+static const int32_t kCompAttack[128]  = {
+    8388607, 726261, 687218, 650184, 615064, 581770, 550213, 520311, 491982, 465150,
+    439740,  415682, 392907, 371350, 350950, 331648, 313386, 296111, 279772, 264320,
+    249708,  235892, 222830, 210481, 198809, 187777, 177350, 167496, 158184, 149386,
+    141072,  133218, 125797, 118787, 112165, 105909, 100001,  94420,  89149,  84170,
+    79469,    75028,  70835,  66875,  63136,  59605,  56271,  53123,  50150,  47343,
+    44693,    42191,  39829,  37598,  35493,  33505,  31628,  29856,  28183,  26604,
+    25113,    23705,  22377,  21122,  19938,  18820,  17765,  16769,  15829,  14941,
+    14103,    13312,  12566,  11861,  11196,  10568,   9975,   9415,   8887,   8389,
+    7918,      7474,   7055,   6659,   6285,   5933,   5600,   5286,   4989,   4709,
+    4445,      4195,   3960,   3738,   3528,   3330,   3143,   2967,   2800,   2643,
+    2495,      2355,   2223,   2098,   1980,   1869,   1764,   1665,   1572,   1484,
+    1400,      1322,   1248,   1178,   1111,   1049,    990,    935,    882,    833,
+    786,        742,    700,    661,    624,    589,    556, 525
+};
+static const int32_t kCompRelease[128] = {
+    3219, 3109, 3003, 2901, 2802, 2707, 2614, 2525, 2439, 2356,
+    2276, 2199, 2124, 2051, 1981, 1914, 1849, 1786, 1725, 1666,
+    1609, 1555, 1502, 1451, 1401, 1353, 1307, 1263, 1220, 1178,
+    1138, 1099, 1062, 1026,  991,  957,  924,  893,  863,  833,
+    805,   777,  751,  725,  701,  677,  654,  631,  610,  589,
+    569,   550,  531,  513,  495,  479,  462,  446,  431,  417,
+    402,   389,  375,  363,  350,  338,  327,  316,  305,  295,
+    285,   275,  265,  256,  248,  239,  231,  223,  216,  208,
+    201,   194,  188,  181,  175,  169,  163,  158,  152,  147,
+    142,   137,  133,  128,  124,  120,  116,  112,  108,  104,
+    101,    97,   94,   91,   88,   85,   82,   79,   76,   74,
+    71,     69,   66,   64,   62,   60,   58,   56,   54,   52,
+    50,     49,   47,   45,   44,   42,   41, 39
+};
+
+static int32_t       kCompGain[128]; // §25.2 - 2^(-k/4) and the step to the next, built by comp_words()
+
+static int32_t comp_table_word(const int32_t * table, double dial) {
+    int32_t v16 = (int32_t)floor(dial * 256.0);
+    int32_t i   = v16 >> 8;
+    int32_t f   = v16 & 0xff;
+
+    if (i >= 127) {
+        return table[127];
+    }
+    return table[i] + (((table[i + 1] - table[i]) * f) >> 8);
+}
+
+// §25.1 - the host's words for Threshold, Ratio and Level, the make-up gain between them, and the
+// attack and release coefficients.
+static void comp_words(tEngineNode * node, double thrDial, double ratioDial, double atkDial, double relDial, double lvlDial) {
+    int32_t ratio   = (int32_t)lround(ratioDial);
+    bool    tenfold = (ratio > 34);
+    int32_t step    = tenfold ? (ratio - 35) : ratio;
+    int32_t r10     = (step < 10) ? (step + 10) : ((step < 25) ? (((step - 10) * 2) + 20) : (((step - 25) * 5) + 50));
+    int32_t thr10   = ((int32_t)lround(thrDial) - 30) * 10;
+    int32_t lvl10   = ((int32_t)lround(lvlDial) - 30) * 10;
+    int32_t makeup  = 0;
+
+    if (tenfold) {
+        r10 *= 10;
+    }
+
+    if (thr10 < lvl10) {
+        int32_t up = lvl10 - thr10;
+
+        makeup = up - ((up * 10) / r10);
+        makeup = (makeup > 420) ? 420 : makeup;
+    }
+    int32_t down    = 420 - makeup;
+    int32_t pow60   = (int32_t)lround(1073741824.0 * exp2(-(double)(down % 60) / 60.0)) >> (down / 60);
+
+    pow60              = (pow60 == 0x40000000) ? 0x3fffffff : pow60;
+
+    node->threshold    = (double)fmin(0x7fffff, (double)(((int64_t)(thr10 + 840) * 0x80000) / 60));
+    node->ratio        = (double)(0x800000 - (0x5000000 / r10));
+    node->refLevel     = (double)fmin(0x7fffff, (double)(((int64_t)(1990 - makeup) * 0x80000) / 60));
+    node->compMakeup   = (double)(pow60 >> 7);
+    node->attackCoeff  = (double)comp_table_word(kCompAttack, atkDial);
+    node->releaseCoeff = (double)comp_table_word(kCompRelease, relDial);
+
+    for (int32_t k = 0; k < 64; k++) {
+        int32_t v    = (int32_t)fmin(0x7fffff, lround(8388608.0 * exp2(-(double)k / 4.0)));
+        int32_t next = (k < 63) ? (int32_t)fmin(0x7fffff, lround(8388608.0 * exp2(-(double)(k + 1) / 4.0))) : 0;
+
+        kCompGain[2 * k]       = v;
+        kCompGain[(2 * k) + 1] = v - next;
+    }
+}
+
+// §25.2 - one sample, in the instrument's integer arithmetic: an instant peak with an exponential
+// release, a piecewise-linear log2, the ratio's gain reduction and the Level limiter each smoothed,
+// and the larger of the two back through the gain table, then the make-up gain.
 static double compress_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
     SE_LOCAL;
 
-    double level = fabs(input);
-    double gain  = 1.0;
+    int32_t  in     = dly_sat((int64_t)floor(input * 2097152.0));
+    int64_t  det    = (in < 0) ? -(int64_t)in : (int64_t)in;
+    int32_t  env    = (int32_t)gCompEnv[voice][node];
+    int32_t  atk    = (int32_t)spec->attackCoeff;
+    int32_t  rls    = (int32_t)spec->releaseCoeff;
+    int64_t  diff   = det - env;
+    int64_t  acc    = (int64_t)env << 32;
 
-    if (level > gCompEnv[voice][node]) {
-        gCompEnv[voice][node] += spec->attackCoeff * (level - gCompEnv[voice][node]);
-    } else {
-        gCompEnv[voice][node] += spec->releaseCoeff * (level - gCompEnv[voice][node]);
+    if (diff > 0) {
+        acc = (int64_t)(env + dly_sat(diff)) << 32;
+    } else if (diff < 0) {
+        acc += ((int64_t)rls * dly_sat(diff)) * 512;
+    }
+    gCompEnv[voice][node] = dly_sat(acc >> 32);
+
+    if ((acc >> 32) < 0x80) {
+        acc = (int64_t)0x80 << 32;                           // the detector's floor
+    }
+    int32_t  hi     = (int32_t)(acc >> 32);
+    int32_t  e      = 31 - __builtin_clz((uint32_t)hi);
+    uint32_t m      = (uint32_t)((uint64_t)acc >> e);
+    int32_t  logHi  = ((e - 7) << 19) | (int32_t)(m >> 13);
+    uint32_t logSub = (m & 0x1f00u) << 19;
+    int32_t  over   = logHi - (int32_t)spec->threshold;
+    int32_t  lvlHi  = logHi - (int32_t)spec->refLevel;
+    uint32_t lvlSub = logSub;
+
+    over                  = (over < 0) ? 0 : over;
+
+    if ((lvlHi < 0) || ((lvlHi == 0) && (lvlSub == 0u))) {
+        lvlHi  = 0;
+        lvlSub = 0u;
+    }
+    int32_t  lim    = (int32_t)gCompLim[voice][node];     // the Level limiter: instant rise, release rate
+    int32_t  dl     = lvlHi - lim;
+    int64_t  limAcc = (int64_t)lim << 32;
+
+    if ((dl > 0) || ((dl == 0) && (lvlSub != 0u))) {
+        limAcc = (int64_t)(lim + dly_sat(dl)) << 32;
+    } else if (dl < 0) {
+        limAcc += ((int64_t)rls * dly_sat(dl)) * 512;
+    }
+    gCompLim[voice][node] = dly_sat(limAcc >> 32);
+
+    int64_t  prod   = (int64_t)dly_sat(over) * (int32_t)spec->ratio; // the ratio's reduction: attack up, release down
+    int32_t  gr     = (int32_t)gCompGr[voice][node];
+    int32_t  dg     = (int32_t)(prod >> 23) - gr;
+    int64_t  grAcc  = (int64_t)gr << 32;
+
+    if ((dg > 0) || ((dg == 0) && ((prod & 0x7fffff) != 0))) {
+        grAcc += ((int64_t)atk * dly_sat(dg)) * 512;
     }
 
-    // COMP_THRESHOLD_NONE is the dial's "Off", an amplitude nothing reaches. The clamp below would
-    // give a gain of exactly 1 for it anyway - env and target both pin to the same huge number - but
-    // only after a pow() per sample to arrive at what the branch already knows.
-    if ((spec->threshold > 0.0) && (spec->threshold < COMP_THRESHOLD_NONE)) {
-        double target = (spec->refLevel > spec->threshold) ? spec->refLevel : spec->threshold;
-        double env    = (gCompEnv[voice][node] > spec->threshold) ? gCompEnv[voice][node]
-                        : spec->threshold;
-
-        gain = pow(target / env, 1.0 - (1.0 / spec->ratio));
+    if (dg < 0) {
+        grAcc += ((int64_t)rls * dly_sat(dg)) * 512;
     }
+    gCompGr[voice][node]  = dly_sat(grAcc >> 32);
 
-    // notes §122
-    if (spec->threshold > 0.0) {
-        uint32_t lit    = 0u;
+    int64_t  total  = (limAcc < grAcc) ? grAcc : limAcc;
+    int32_t  tHi    = (int32_t)(total >> 32);
+    int32_t  k      = (tHi >> 17) > 63 ? 63 : (tHi >> 17);
+    int32_t  frac   = (int32_t)((((uint32_t)tHi & 0x1ffffu) << 6) | ((uint32_t)total >> 26));
+    int32_t  gain   = dly_sat((int64_t)kCompGain[2 * k] + ((-(int64_t)dly_sat(frac) * kCompGain[(2 * k) + 1]) >> 23));
+    int32_t  level  = dly_sat(((int64_t)gain * (int32_t)spec->compMakeup) >> 23);
+    int32_t  out    = dly_sat(((int64_t)level * in) >> 16);
 
-        if (gCompEnv[voice][node] > spec->threshold) {
-            lit = compress_meter_lit(20.0 * log10(gCompEnv[voice][node] / spec->threshold) * (1.0 - (1.0 / spec->ratio)));   // paramCurves.c
-        }
-        uint32_t packed = METER_WRITTEN | (((lit == 0u) ? 0u : ((1u << lit) - 1u))
-                                           & METER_VALUE_MASK);
+    // notes §122 - the meter shows the gain reduction
+    {
+        double   reductionDb = ((double)tHi / 524288.0) * 6.0206;
+        uint32_t lit         = (reductionDb > 0.0) ? compress_meter_lit(reductionDb) : 0u;   // paramCurves.c
+        uint32_t packed      = METER_WRITTEN | (((lit == 0u) ? 0u : ((1u << lit) - 1u)) & METER_VALUE_MASK);
 
         if (atomic_exchange_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
                                      packed, memory_order_relaxed) != packed) {
             atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
         }
     }
-    return input * gain;
+    return (double)out / 2097152.0;
 }
 
 // §20.6 - a stored word: rounded down to the 24-bit grid, and clamped to the word's range.
@@ -5400,14 +5509,14 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             uint32_t c           = 0;
 
-            // notes §166
+            // notes §166 - a stereo mixer's inputs alternate L, R: each pair keeps its sides apart
             bool     stereoPairs = spec->mixStereo;
-            double   legScale    = stereoPairs ? 0.5 : 1.0;
 
             for (c = 0; c < spec->inCount; c++) {
                 uint32_t channel = stereoPairs ? (c / 2) : c;
+                uint32_t leg     = stereoPairs ? (c % 2) : 0u;
 
-                value[n][0] += signal_in(spec, value, c) * legScale * gSmoothedLevel[n][channel];
+                value[n][leg] += signal_in(spec, value, c) * gSmoothedLevel[n][channel];
             }
 
             break;
@@ -5505,8 +5614,16 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeFade:         // writes both legs itself: Pan and Fade1-2 have two outputs
         case eNodeMixStereo:    // a genuine stereo pair
         case eNodeFltMulti:     // three outputs of its own
+        case eNodeFxIn:         // the FX bus's two legs
         case eNodeOut:
         {
+            break;
+        }
+        case eNodeMix:
+        {
+            if (spec->mixStereo == false) {
+                value[n][1] = value[n][0];
+            }
             break;
         }
         default:
@@ -6117,6 +6234,8 @@ static void engine_reset_state(void) {
     memset(&gPulseCount, 0, sizeof(gPulseCount));
     memset(&gPulsePrev, 0, sizeof(gPulsePrev));
     memset(&gCompEnv, 0, sizeof(gCompEnv));
+    memset(&gCompGr, 0, sizeof(gCompGr));
+    memset(&gCompLim, 0, sizeof(gCompLim));
     memset(&gRvRing, 0, sizeof(gRvRing));
     memset(&gRvCur, 0, sizeof(gRvCur));
     memset(&gRvPhase, 0, sizeof(gRvPhase));
