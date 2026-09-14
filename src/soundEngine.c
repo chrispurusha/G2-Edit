@@ -89,6 +89,23 @@ static bool engine_no_free_run(void) {
     return cached == 1;
 }
 
+// notes §20 - a released voice that is still sounding goes on until it is stolen, as on the instrument.
+static bool engine_drone_mode(void) {
+    static int cached = -1;
+
+    if (cached < 0) {
+        const char * v = getenv("G2_ENGINE_NO_DRONE");
+        cached = ((v != NULL) && (v[0] != '\0')) ? 0 : 1;
+    }
+    return cached == 1;
+}
+
+// notes §179 - voice 0 runs with no key held. Drone mode does it for every patch, as the instrument does;
+// without it only a patch with no envelope, which is the only kind audible at rest.
+static bool free_voice_runs(uint32_t v, bool chainHasEnvelope) {
+    return (v == 0) && (engine_no_free_run() == false) && ((engine_drone_mode() == true) || (chainHasEnvelope == false));
+}
+
 bool engine_filter_legacy(void) {
     static int cached = -1;
 
@@ -5810,8 +5827,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
         for (uint32_t v = 0; v < params.voiceCount; v++) {
             // notes §175
-            bool rendered = (gVoice[v].sounding == true)
-                            || ((v == 0) && (chainHasEnvelope == false) && (engine_no_free_run() == false));
+            bool rendered = (gVoice[v].sounding == true) || (free_voice_runs(v, chainHasEnvelope) == true);
 
             if (rendered == true) {
                 continue;
@@ -5908,8 +5924,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 tVoice * voice     = &gVoice[v];
 
                 // notes §179
-                bool     freeVoice = (v == 0) && (chainHasEnvelope == false)
-                                     && (engine_no_free_run() == false);
+                bool     freeVoice = free_voice_runs(v, chainHasEnvelope);
                 bool     freeRun   = (voice->sounding == false) && (freeVoice == true);
 
                 if ((voice->sounding == false) && (freeRun == false)) {
@@ -5917,7 +5932,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 }
 
                 // notes §180
-                if ((freeVoice == true) && (voice->gate == false) && (chainHasEnvelope == false)) {
+                if ((freeVoice == true) && (voice->gate == false)) {
                     voice->sounding = false;
                     freeRun         = true;
                 }
@@ -5960,6 +5975,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 // zero is what retires it below.
                 if (  (voice->gate == false)
                    && (freeRun == false)
+                   && (engine_drone_mode() == false)
                    && (voice->released > (uint32_t)(VOICE_MAX_TAIL_SECONDS * gSampleRate))) {
                     voice->fade -= 1.0 / (VOICE_FADE_SECONDS * gSampleRate);
 
