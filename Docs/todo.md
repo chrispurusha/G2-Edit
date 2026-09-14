@@ -4,6 +4,13 @@ Things to do. ONE LINE PER ITEM - keep it that way.
 Measurements, reasoning and completed-work narrative go in findings.md, NOT here.
 Built-but-unchecked work goes in to-test.md.
 
+CT (Priority)
+- Oscillators should sound constantly for drones etc. Currently, they cut off after a period of time. We might ultimately need a drone mode enable/disable, so that we can free bandwidth. Hardware will always drone.
+- Plugin isn't remembering the global settings like rotary/vertical mouse
+  mode, nor VA/FX split position etc. It will also need to recall patches in full on load.
+- Bug where we suddenly/randomly scroll VA area right about half a module's width.
+
+
 CT
 - Fix various module presentation and make module presentation have a common approach (dial and button positions etc.).
 - Implement more modules in sound engine.
