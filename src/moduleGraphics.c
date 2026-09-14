@@ -3221,6 +3221,12 @@ void render_module(tModule * module) {
                                                   {get_text_width(LONGEST_MODULE_NAME, STANDARD_TEXT_HEIGHT, eNoCache), STANDARD_TEXT_HEIGHT}
                          });
     }
+
+    // notes §89
+    if (sound_engine_active() && (sound_engine_models_module(module) == false)) {
+        set_rgba_colour((tRgba){0.5, 0.5, 0.5, 0.6});
+        render_rectangle(moduleArea, moduleRectangle);
+    }
     // notes §72
 
     // Mode count — debug only, and the one of these three that says nothing a user would want:

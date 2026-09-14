@@ -674,6 +674,7 @@ static void action_toggle_sound_engine(int index) {
         sound_engine_update_from_patch();    // don't wait for the next redraw to pick up the selection
         database_read_unlock();
     }
+    synthlib_request_redraw();    // the canvas greys out what the engine does not play (moduleGraphics notes §89)
 }
 
 static void action_assign_midi_cc_all(int index) {
