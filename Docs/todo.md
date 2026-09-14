@@ -68,7 +68,6 @@ SOUND ENGINE
 - 01 Mini Emulator (Bank 1:10, PatchTestFiles/MiniEmulator.pch2) plays nothing in the engine: ten missing module types and a node budget a third of its size - see Docs/mini-emulator-engine-plan.md
 - The sustain pedal does not hold keys in the engine (only its morph group moves); the G2 keeps a sustained key held until the pedal lifts (reference §15.5)
 - ShpStatic Inv x3/Inv x2: the engine plays exponents 1/3 and 1/2, the 2026-08-24 capture measured 0.49 and 0.65 (the picker icon draws those) - reconcile
-- Reverb L/R peak-correlation LAG cannot be matched in an 8-line tank and no tap placement fixes it; only a single shared buffer would - do not tune the taps further
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.md)
 - Extend engine module coverage; recount the supported types, 23 predates the filter work
 - Run the engine-vs-hardware diff: both sides can produce the file, the comparison has not been run
@@ -90,7 +89,6 @@ SOUND ENGINE
 
 MEASUREMENT PROGRAMME
 - Finish the EnvADSR oracle at ~/Documents/G2EnvTrace: it compiles and runs but outputs zero until the state-block layout and ENV_TIME_TABLES contents are worked out
-- Reverb Brightness below dial 48 over-damps the top and is extrapolated, not fitted - both sides stop measuring there, so it needs a quieter capture of the dial's lower third
 - Measure the rest of the instrument the way the reverb was: EQs, the remaining envelopes
 - Shaper group is IMPLEMENTED but only Rect and ShpStatic are known; capture a transfer curve for Clip, Overdrive, Saturate, ShpExp and WaveWrap - one slow full-scale ramp (or a low sine) per mode gives the ENTIRE curve, since all seven are memoryless
 - Confirm the shaper parameter and connector ORDER on the instrument: it was read off the layout tables, and WaveWrap's mod dial and Mod jack both come before its signal ones

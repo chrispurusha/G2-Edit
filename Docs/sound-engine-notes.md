@@ -476,6 +476,10 @@ it together, so the quarter-cycle L/R relationship is untouched.
 
 ## 38. `REVERB_COMBS`
 
+RETIRED 2026-09-14 with the code it described. The Reverb now runs the instrument's own network
+(reference §20), which reproduces its arithmetic word for word; the fitted model these sections
+explain is gone (revert record row 29). Kept for the measurements and the traps.
+
 A Schroeder reverb: eight combs into three allpasses. One reverb is modelled; any further ones pass
 their input through, which is what a patch with two of them would mostly sound like anyway.
 
@@ -503,12 +507,16 @@ but it is now dense enough that the flutter does not survive the measurement.
 
 ## 39. `REVERB_MODE_TYPE`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 The Reverb's TYPE selector — Small, Medium, Large, Hall (reverbTypeStrMap) — is what sets the size
 of the room, and it was not read at all: all four types sounded identical, which is most of why
 this reverb does not sound like the instrument's. It is a MODE, not a parameter, so it comes from
 module->mode[] like OscShpB's waveform does.
 
 ## 40. `REVERB_DAMP_MAX`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 Decay time against the Time dial, MEASURED per room type 2026-08-09: seconds = base + slope * value,
 with value the raw 0..127. See the long note at the point of use for the measurements, for why the
@@ -626,6 +634,8 @@ invert each measurement against the filter absolutely.
 
 ## 41. `kReverbDecayBase`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 RE-FITTED 2026-08-18 FOR THE NEW STRUCTURE. The old 0.15 was fitted against a comb bank, where
 the damping sat inside every comb's own loop and bit hard. In a feedback network the signal passes
 the damping once per circuit instead, so the same exponent barely moved the tail at all: the
@@ -636,6 +646,8 @@ dial's shape is not a pure power law on this structure.
 
 ## 42. `REVERB_DIFFUSE_SLOPE`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 The allpass diffusion coefficient rises with the reverb time and is held between two limits. The
 slope and the limits are the instrument's; what drives them is normalised Time here, which is the
 part that is inferred rather than known — but the limits are close enough together that the whole
@@ -643,6 +655,8 @@ range is only 0.45..0.62, so being wrong about the position within it is a small
 outside it would not be.
 
 ## 43. `kReverbTypeScale`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 How much bigger each type's room is than the base set below. THE SHAPE OF THIS IS RIGHT: the
 instrument really does scale every one of its delay lines by a single factor per type, so one
@@ -670,6 +684,8 @@ completely — the base table below is Small's. See [[project_g2_reverb_measurem
 
 ## 44. `REVERB_COMB_BASE`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 Mutually prime lengths, so the combs do not reinforce each other into a ringing tone. The buffers
 are sized from the longest of each set rather than a hand-written number — getting those out of
 step is a buffer overrun, and it is the kind that only shows up as a crash much later. The base
@@ -689,6 +705,8 @@ The scale fix stands on its own, though: it is a ratio, so it is right whatever 
 it moves Small from half the room to the whole of it.
 
 ## 45. `REVERB_SPREAD`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 INTEGER ARITHMETIC, NOT A CAST OF A FLOAT PRODUCT. These size static arrays, and an array bound has
 to be an integer constant expression — `(uint32_t)(base * 1.6)` is not one, so clang accepted it only
@@ -719,6 +737,8 @@ offsets. 110 samples is that gap at 96 kHz. It used to be added, which put the r
 the wrong side of the left; no amount of correcting the magnitude would have found that.
 
 ## 46. `REVERB_PREDELAY_MAXSAMP`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 PER-CHANNEL PRE-DELAY, MEASURED PER ROOM ON THE HARDWARE 2026-08-18. The instrument's two outputs
 do not start together, and this engine had no pre-delay at all, so both tails began at the input.
@@ -752,6 +772,8 @@ float cast is what produced the -Wgnu-folding-constant pair recorded in Docs/tod
 
 ## 47. `RV_OUTTAPS`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 ─── THE INSTRUMENT'S OWN REVERB STRUCTURE ──────────────────────────────────────────────────────
 
 Recovered 2026-08-18 and rebuilt here. It is NOT a bank of parallel combs, which is what this used
@@ -769,6 +791,8 @@ other — the tap set, the stage pairings and the coefficients are all recovered
 
 ## 48. `tRvSpan`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 ONE TRIP IS BOTH BRANCHES, since each feeds the other: the two branch lengths added. In samples
 at 96 kHz, and NOT scaled by the room — every span scales together, so the trip scales with it,
 which is why a Hall rings longer than a Small room at the same Time setting.
@@ -778,12 +802,16 @@ one.
 
 ## 49. `tRvSpan`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 THE LAYOUT. Spans laid end to end, each one a line; a section writes at its own base and reads at
 the next, so these lengths ARE the delays. Every length is the instrument's, recovered from the
 spacing of its tap addresses: the allpasses at 672, 738, 666 and 812, the lines at 2300, 2456,
 3999 and 5326.
 
 ## 50. `RV_MOD_DEPTH`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 MODULATION DEPTH, in samples at 96 kHz, and the rate each line sweeps it at.
 
@@ -806,6 +834,8 @@ THE RATES SHARE NO SIMPLE RATIO, for the same reason the line lengths do not -- 
 realign every cycle would put their own period into the tail, which is the fault being fixed.
 
 ## 51. `RV_MOD_LOSS`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 WHAT THE SWEEP COSTS THE DECAY -- WHICH TURNS OUT TO BE NOTHING MEASURABLE.
 
@@ -836,6 +866,8 @@ depth or the interpolator makes the loss real, this is where it goes and this is
 
 ## 52. `kRvLen`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 EIGHT LINES IN PARALLEL, EACH WITH AN ALLPASS IN FRONT OF IT, MIXED INTO ONE ANOTHER.
 
 THE INPUT DIFFUSER IS WHAT MAKES IT DENSE, and density is a separate question from anything the
@@ -864,6 +896,8 @@ and a shared period is a ring. The recovered figures -- 666, 672, 738, 812, 2300
 5326 -- are every one of them even and three share a 3, so these are the nearest prime to each.
 
 ## 53. `kRvTapLine`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 WHICH LINE EACH OUTPUT TAP READS, AND HOW FAR ALONG IT — ONE SET PER CHANNEL.
 
@@ -916,6 +950,8 @@ channels identically.
 
 ## 54. `gRvAddrBank`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 ─── THE OUTPUT TAP SETS ARE THE INSTRUMENT'S OWN ────────────────────────────────────────────────
 
 Its output stage sums SEVEN taps into each wet slot, and the two sets are DISJOINT: seven PAIRS,
@@ -964,6 +1000,8 @@ Docs/findings.md for the full specification of the instrument's tank, which is w
 
 ## 55. `RV_RATE`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 THE RECOVERED LENGTHS ARE ALREADY IN 96 kHz SAMPLES — that is the rate the instrument's tank runs
 at and the rate every recovered figure is quoted in. They must NOT be multiplied by
 ENGINE_OVERSAMPLE the way the old Freeverb constants were: those were 44.1 kHz numbers that needed
@@ -973,6 +1011,8 @@ apart. Converting by the engine's ACTUAL rate keeps the times right at any devic
 
 ## 56. `RV_MEM_SHIFT`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 The sixteen recovered tap ADDRESSES are gone from here. They were positions in the instrument's
 own memory map, and this tank lays its spans out differently, so an address off that map means
 nothing against this one; kRvTapLine/kRvTapFrac say which line and how far along instead. What
@@ -980,12 +1020,16 @@ carried over is the count and the spread — sixteen taps scattered across every
 
 ## 57. `RV_MEM_SHIFT`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 ONE SHARED MEMORY FOR THE WHOLE TANK, big enough for the largest room's highest address
 (21432 * 1.6795 + 1200, about 37200) with room to spare. The instrument uses 32768 words and
 wraps; the next power of two above what the addresses need costs 256 kB a channel and removes
 any question of a site aliasing onto another.
 
 ## 58. `REVERB_INPUT_LP_HZ`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 THE TANK IS FED THROUGH A LOWPASS, because the instrument's tail STARTS darker than ours did.
 
@@ -1011,6 +1055,8 @@ The second pole sits an octave up so it barely touches the region the first one 
 
 ## 59. `REVERB_INPUT_LP_TIME`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 A THIRD POLE, AND THIS ONE IS THE INSTRUMENT'S OWN, not a fit. Its coefficient comes straight off
 the Time dial as 0.7 * time, so the filter closes as the room gets longer -- and the hardware does
 exactly that. Measured at Brightness 64, Hall, relative to 1 kHz:
@@ -1027,6 +1073,8 @@ wide open, yet the instrument is still 12.9 dB down at 8 kHz, so most of the dar
 move with the dial and cannot be this.
 
 ## 60. `REVERB_INPUT_LP4_HZ`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 A FOURTH POLE, well above the other three, and this one IS a fit. With the three above it the
 engine still ran 2 to 3 dB bright from 8 kHz up at both ends of the Time dial -- a fixed shortfall
@@ -1983,6 +2031,8 @@ window, and the count is how many the reduction reaches. That reproduces all 21 
 
 ## 123. `reverb_step()`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 Schroeder reverb — parallel combs for density, allpasses to smear the result.
 
 brightness is the dial as it reads: HIGH IS BRIGHT. It used to be handed straight to the damping
@@ -1991,6 +2041,8 @@ opened, and the manual's advice that "the most natural range is between 25 and 5
 on the dullest part of the travel instead of the liveliest.
 
 ## 124. in `reverb_step()`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 A one-pole lowpass inside each comb, so every pass round the loop loses more high end — which
 is what makes a tail decay into a thump rather than ringing on with the same tone.
@@ -2040,6 +2092,8 @@ under one amplifies that: pow(0.0079, 0.70) is 0.034, so a supposedly neutral de
 
 ## 125. in `reverb_step()`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 BRIGHTNESS IS HIGH-FREQUENCY DAMPING ACROSS THE WHOLE DIAL, AND NOTHING ELSE. It never damps
 the low end at any setting. MEASURED on a nine-point sweep of the dial (Hall, Time 127): the
 125-500 Hz bands sit flat at about -5.0 dB/s from Brightness 16 to 112 while 8 kHz sweeps
@@ -2058,12 +2112,16 @@ bottom. The dial was fitted over 16..112, where every band is above the floor.
 
 ## 126. in `reverb_step()`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 Changing type resizes every delay line, so the positions into them are meaningless and the
 contents are a room that no longer exists. Cleared rather than carried over — which is also
 what the instrument does: "changing reverb type will force the Sound Engine to recalculate and
 thus cause a brief moment of silence" (p.251).
 
 ## 127. in `reverb_step()`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 THE PRE-DELAY IS MEASURED, NOT SCALED. Every other span is a length recovered from
 the instrument's tap spacing and grows with the room; this one was read off the
@@ -2093,6 +2151,8 @@ which is the same kind of table for the same kind of reason.
 
 ## 128. in `reverb_step()`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 Diffusion first: three short allpasses smear the input within a few milliseconds, so there is
 something there before the combs respond and no single tap stands out as an echo.
 
@@ -2108,6 +2168,8 @@ render.
 
 ## 129. in `reverb_step()`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 ONE BANK PER CHANNEL. The two run the same structure and decorrelate through their tap
 phases, which is what the instrument does — its own outputs correlate at only +0.0044.
 THE SWEEP PHASES, read once and used by both channels. The right channel runs a quarter cycle
@@ -2115,6 +2177,8 @@ behind, so the two never move their modes the same way at the same moment -- one
 keeping them uncorrelated, on top of the tap offset.
 
 ## 130. in `reverb_step()`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 THE PRE-DELAY IS A SPAN OF THE TANK'S OWN MEMORY, the first one, and it does not
 scale quite like the rest: the instrument's addresses are roomSize * k + 1200 and that
@@ -2124,6 +2188,8 @@ was a structure to explain it — 12.89 ms in the Small room against 13.36 in th
 while every line inside the room gets 68% longer.
 
 ## 131. in `reverb_step()`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 ── THE TANK ──────────────────────────────────────────────────────────────────────────
 
@@ -2150,6 +2216,8 @@ there is no single path back to the start and so no one period for the tail to r
 
 ## 132. `RVDLYM`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 An allpass section, the form the recovered gains describe.
 A MODULATED LINE. The read position sweeps across the slack at the end of the span,
 interpolating between the two samples it falls between -- without that the delay would
@@ -2168,6 +2236,8 @@ a line of thousands, and reading a neighbour's span would mix two lines together
 
 ## 133. in `reverb_step()`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 BAND-LIMIT THE FEED. The instrument's reverb is MUCH darker than its input, and this
 is where that comes from. Measured as the wet energy per band against the dry impulse
 in the same capture -- which divides the excitation out, so a hardware pulse and a
@@ -2185,12 +2255,16 @@ treble the instrument does not have.
 
 ## 134. in `reverb_step()`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 THE FOUR LINES. Each gets the input with its own sign and its own share of the
 previous sample's mix. Injecting in phase into every line drives the tank's common
 mode -- the one where all four hold the same thing -- and that mode has a period of
 its own, so it beats. In phase it put a 12.2 dB lobe at 6.8 Hz into the tail.
 
 ## 135. in `reverb_step()`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 Brightness, one filter per line and inside the loop, so it accumulates with every
 pass rather than colouring the output once on the way out.
@@ -2199,6 +2273,8 @@ colouring the output once on the way out. There is no second path taking the low
 end out: the instrument does not do that at any dial setting.
 
 ## 136. in `reverb_step()`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 THE MIXING MATRIX, a 4-point Hadamard as two butterfly stages. Orthogonal, so it moves
 energy between the lines without creating or destroying any -- which is what lets the
@@ -2210,6 +2286,8 @@ spread again a few milliseconds later, and the echo count squares instead of
 repeating. Without it, four parallel lines are just four combs.
 
 ## 137. in `reverb_step()`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 THE OUTPUT TAPS read INSIDE the four lines, never at a section's own write address.
 Every cell in this buffer holds delay state, and the state at a write address is a
@@ -2223,6 +2301,8 @@ fractions, never the same positions offset by a constant. That is the whole of t
 stereo; see kRvTapFrac.
 
 ## 138. `REVERB_WET_GAIN`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 THE WET PATH IS QUIETER THAN THE DRY ONE, by about 11 dB, and this engine had it at almost
 unity — which is why its reverb sat so much more prominently in a patch than the instrument's
@@ -2271,6 +2351,8 @@ which is the 2.36 dB this takes back out. Measured the same way as every figure 
 
 ## 139. in `reverb_step()`
 
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
+
 DRY/WET IS NOT A CROSSFADE, and this was the largest single difference from the instrument.
 The two gains are independent, each a ramp CUBED, and the ramps overlap: the dry side holds
 full scale until the knob passes the middle and only then falls, while the wet side reaches
@@ -2282,6 +2364,10 @@ The cube makes the taper steep at the quiet end: a quarter-open knob passes an e
 wet signal, where a linear reading would pass a quarter.
 
 ## 140. `sound_engine_render_reverb_ir()`
+
+UPDATED 2026-09-14: the network rendered here is now the instrument's own (reference §20), exact
+against its DSP code, so a render and a capture now differ only by the capture. The tap-set
+scoring below is history, kept because the lag-zero trap applies to any stereo comparison.
 
 Renders the Reverb's impulse response on its own — no patch, no voice, no audio device.
 
@@ -2310,6 +2396,8 @@ match to the instrument, while being a bit-exact copy of the left channel delaye
 (peak +1.0000 at lag 110 with the line modulation switched off, in all four rooms).
 
 ## 141. in `sound_engine_render_reverb_ir()`
+
+RETIRED 2026-09-14 with the code it described - see §38 and reference §20.
 
 Cleared explicitly rather than relying on reverb_step()'s own type-change reset: a second render
 at the SAME type in one process would otherwise start inside the first one's tail, and the
