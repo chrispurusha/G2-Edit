@@ -231,7 +231,6 @@ FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard
 - soundEngine.c LADDER_K_MAX (4.3) was chosen while the drawn constant was wrongly 3.914 - needs an ear
 - LevAmp gain law rewritten from measurement 2026-08-30: silent at dial 0, four segments, 0-4x
 - Super-saw ("sup") phase fix - needs an ear
-- Stereo chorus - needs an ear
 - Reverb modulation now interpolates with a Hermite cubic instead of linearly, which took a lowpass
   out of the feedback loop. The tail should be BRIGHTER and the difference should be clearest at high
   Brightness and long Time; listen for any new roughness on the modulation too
@@ -261,7 +260,6 @@ FROM THE 2026-08-30/31 MEASUREMENT SESSION - engine changes, none of these heard
   read offset. Needs an ear for image width and for any flutter the new tap positions introduce
 - Reverb wet level re-derived (0.3956 -> 0.3016) after the dead-tap fix doubled the live tap count -
   renders at -11.30 dB against the hardware's -11.3, but confirm it sits right in a patch by ear
-- Chorus LFO shape and depth - needs an ear
 - Filter resonance, raspiness and whole-graph oversampling changes - need an ear
 - Sound engine parameter smoothing (zipper noise on Shape sweeps) - needs an ear
 - EnvADSR + mixer Channel Mute in the engine
@@ -320,32 +318,12 @@ CROSS-PROJECT
 - Reverb Brightness constants are NOT yet refitted against the new dial 8-64 measurements in
   findings.md - the engine is unchanged. Nothing to test yet; listed so the data is not mistaken
   for a fix.
-- ***STCHORUS REBUILT AS TWO TAPS (2026-09-07) - THIS ONE NEEDS AN EAR.*** It ran one delay line per
-  channel; the instrument runs two, sweeping in opposite directions about a 2.71 ms centre and MEETING
-  when the sweep is at zero. Also CHORUS_RATE_MAX_HZ 3.334 -> 2.777 (it was 20% fast) and the wet is
-  now split half to each tap. Arithmetic reproduces the hardware to 0.3% across the dial, but nothing
-  has been heard in part - CT reported it "very close" after the interpolation fix, then that the G2
-  was still more pronounced, which led to the wet-level corrections below. Expect a fuller, more doubled chorus and a slower sweep at the same
-  Detune. ALSO in the same round: chorus_read() now interpolates (four-point Catmull-Rom) where the
-  module had always read whole samples - at Detune 127 that was a ~1.2 kHz click train instead of
-  +/-21.8 cents of detune, which is what CT heard as the instrument being "much more pronounced".
-  The maximum-Detune end is the place to listen first, since that is where it was worst.
-- Chorus wet level, second round (2026-09-07): the wet is now split by POWER not amplitude (1/sqrt2
-  per tap, +3 dB) and the wet/dry ratio reaches 1.19 at Amount 127 rather than 1.0. Stereo width now
-  measures 0.1473 against the instrument's 0.1495. Needs an ear: it should now sound as wide and as
-  pronounced as the G2 at high Detune. KNOWN REMAINING: our output is still about 1 dB below the
-  instrument's, more at low frequency than high - see findings.md, it needs an Amount sweep to fix.
-- ***CHORUS, THIRD ROUND (2026-09-07) - NEEDS AN EAR.*** The taps are now ASYMMETRIC (2.628 and
-  1.943 ms about a 2.677 ms centre), so the pair's centre moves and the comb slides - that is the
-  "wah at around 1 second intervals" CT heard on the instrument against our "metallic". The LFO rate
-  halved to 1.3905 Hz at Detune 127 (the old figure was an analysis fold, not a reading), and the
-  constant-power blend is gone: dry and wet are now fixed gains whose ratio is x/(1.4742-0.7744x).
-  Stereo width and level both match the hardware across the whole Amount dial. Listen for the wah at
-  max Detune and Amount, and check nothing has gone thin at LOW Amount, which is the end that moved
-  most (+2.46 dB on the dry at Amount 16).
-- Chorus at DETUNE 0 specifically (2026-09-07): the LFO now rests at a measured phase rather than at
-  zero, so the static comb is 2.44 ms wide instead of 4.57. Worth an A/B at Detune 0 with Amount up -
-  it is the one setting where the change is a different sound rather than a refinement.
+- ***STCHORUS NOW THE INSTRUMENT'S OWN CHORUS (2026-09-14, reference §19) - NEEDS AN EAR.*** Replaces
+  the three 2026-09-07 rounds. Same shape as before (two opposed taps, triangle, quarter-cycle stereo),
+  now exact, with two audible differences:
+  - LEVEL: about 2.5-3 dB lower across the dial than the fitted version (unity at Amount 0, confirmed)
+  - RATE: nominally 1.453 Hz at Detune 127, and each StChorus now runs at its own rate, up to 25% off
+    nominal, as on the instrument - two in one patch should drift against each other.
 - ***REVERB BRIGHTNESS REFITTED (2026-09-07) - NEEDS AN EAR.*** DAMP_MAX 1.6 -> 0.837, BRIGHT_K
   32 -> 57.8, fitted against all four rooms. Predicted error is 7.5x lower. The dial should now be
   much less savage in its lower half - the old curve hit its ceiling below dial 19 - and slightly

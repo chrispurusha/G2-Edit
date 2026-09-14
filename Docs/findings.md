@@ -9576,3 +9576,19 @@ they also have constants."
     model was never measured; todo.md.
   Old laws in the revert record, rows 18-23.
 
+2026-09-14 - STCHORUS NOW FOLLOWS THE INSTRUMENT'S OWN CHORUS (reference §19). CT: "Continue with chorus
+first." Its DSP code run sample by sample, and the engine rebuilt to match it - 64-76 dB below the signal
+across both dials, the remainder the instrument's fixed-point rounding.
+  - EVERY EARLIER MEASUREMENT AGREES with it: two taps sweeping in opposite directions (0.01-5.26 and
+    4.61-0.68 ms; measured 0.049-5.305 and 0.734-4.620), the second moving three quarters as far, one
+    triangle, the right channel a quarter cycle on, and the wet/dry ratio within 1-4% at every Amount.
+  - THE RATE IS RANDOM PER MODULE. Each StChorus draws a rate trim of up to ±25% and a starting phase
+    when the patch loads: nominally Detune × 0.01144 Hz (1.453 Hz at 127), and the 1.3905 Hz we measured
+    is simply that module's draw (× 0.957) - both our Detune settings came out at the same factor.
+  - The LFO steps at 24 kHz, and the taps resolve to 1/32 sample with Lagrange interpolation (ours
+    was Catmull-Rom at any position).
+  - THE LEVEL IS UNITY AT AMOUNT 0: dry × (1 - a/2), each tap × a/2. The fitted law put the whole module
+    +3 dB above its input there, which would make Bypass drop 3 dB. CHECKED ON THE G2: the same level
+    bypassed and at Amount 0 (CT: "I think it's identical bypassed or not. G2Demo seems to be correct.
+    Possible transients spoiled the test previously." - a first reading had shown +1.8 dB).
+  Old laws in the revert record, rows 24-26.

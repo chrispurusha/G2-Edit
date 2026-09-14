@@ -1580,6 +1580,11 @@ against fully dry, where the reverb needed -11.3. REVERB_WET_GAIN does not belon
 
 ## 105. `CHORUS_RATE_MAX_HZ`
 
+RETIRED 2026-09-14 with the code it described. StChorus now follows the instrument's own law
+(reference §19), which every measurement below agrees with - the rate here is one instance's random
+trim, the two asymmetric taps and the triangle are exactly its geometry, and the wet/dry law is its
+mix to within a few percent. Kept for the measurements.
+
 A short delay whose length is swept by a slow LFO — detune sets the sweep depth, amount how much
 of it is mixed in. Stereo on the hardware; mono here, since the engine sums to mono anyway.
 
@@ -1696,6 +1701,8 @@ Moved to `code-notes/paramCurves.c.md` §36 (Clip).
 
 ## 113. `chorus_triangle()`
 
+RETIRED 2026-09-14 with the code it described - see §105 and reference §19.
+
 The LFO shape: a symmetric triangle in [-1, 1], phase in [0, 1). Measured, not assumed — see above.
 
 IT IS THE SHAPE, NOT THE DEPTH, THAT MAKES THIS SOUND LIKE A CHORUS. Pitch shift through a swept
@@ -1705,6 +1712,8 @@ through zero to a peak and back, which is the textbook definition of vibrato. Wi
 Amount 127 came out sounding like a slow vibrato rather than a chorus.
 
 ## 114. `chorus_read()`
+
+RETIRED 2026-09-14 with the code it described - see §105 and reference §19.
 
 ONE CHANNEL of the sweep, read at the LFO phase it is given. The two channels differ ONLY in that
 phase, which is why this is one function called twice rather than two structures — measured, see
@@ -1729,6 +1738,8 @@ here so it cannot read outside the buffer if a constant is ever changed.
 
 ## 115. in `chorus_tap()`
 
+RETIRED 2026-09-14 with the code it described - see §105 and reference §19.
+
 TWO TAPS PER CHANNEL, MOVING IN OPPOSITE DIRECTIONS about a common centre. This is the shape of
 the module and it is what a single sweeping tap cannot reproduce: two taps crossing put a pair
 of comb notches through each other, which is the sound, where one tap gives a single moving
@@ -1746,6 +1757,8 @@ and the flanks are straight to a few parts in a hundred. See chorus_triangle().
 
 ## 116. in `chorus_tap()`
 
+RETIRED 2026-09-14 with the code it described - see §105 and reference §19.
+
 1/sqrt(2) EACH, NOT A HALF. The blend below was fitted from notch depth on a static delay, which
 measures the SUM of the two taps without being able to see that there are two, so the pair has
 to carry that same total - but the taps are at DIFFERENT delays and are therefore largely
@@ -1755,6 +1768,8 @@ UNIFORMLY from 200 Hz to 14 kHz - flat, so a level error and not the filtering i
 for. The residual after this correction is the taps not being perfectly decorrelated.
 
 ## 117. in `chorus_tap()`
+
+RETIRED 2026-09-14 with the code it described - see §105 and reference §19.
 
 A CONSTANT-POWER BLEND whose wet/dry ratio IS the dial, measured on the instrument.
 
@@ -1790,6 +1805,8 @@ notch is unambiguous. So the law is linear in the dial and only its endpoint was
 
 ## 118. in `chorus_tap()`
 
+RETIRED 2026-09-14 with the code it described - see §105 and reference §19.
+
 THE WET/DRY RATIO IS NOT LINEAR IN THE DIAL. Measured 2026-09-07 across the whole Amount
 dial by STEREO WIDTH - the L/R correlation of the wet output falls as the wet leg grows,
 because what the two channels share is the direct, and unlike a notch depth it cannot
@@ -1821,12 +1838,16 @@ model reproduces all eight measured levels to +/-0.05 dB, dip included.
 
 ## 119. `chorus_step()`
 
+RETIRED 2026-09-14 with the code it described - see §105 and reference §19.
+
 STEREO, from one LFO: the right channel reads it HALF A CYCLE along. Measured 2026-08-15 and
 re-confirmed from the retained captures the same day — L/R phase at the AM fundamental of 180.0,
 179.9 and 180.1 degrees across three files, so antiphase and not the quarter cycle that was the
 other candidate.
 
 ## 120. in `chorus_step()`
+
+RETIRED 2026-09-14 with the code it described - see §105 and reference §19.
 
 DETUNE SETS THE RATE, NOT THE DEPTH — this had it the other way round, with the rate fixed at
 0.7 Hz and the sweep scaled by the dial.

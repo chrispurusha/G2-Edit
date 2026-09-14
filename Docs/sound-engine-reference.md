@@ -440,3 +440,31 @@ zero at the dial's time - decay and release came out a constant 6% slow at every
 over ten) less two samples: a cubic in ln over dial/127 (`pulse_time_seconds()`, notes §73). Within two
 samples of all 17 widths measured on the instrument (8 at dial 0 to 96083 at 127). Lo and Hi are ten
 and a hundred times Sub (manual). The old fit was 4% out at worst and could not reach dial 0.
+
+## 19. StChorus
+
+The instrument's own law, adopted 2026-09-14 (from the DSP code, run sample by sample). The engine
+reproduces that code to 64-76 dB below the signal across the whole of both dials - the rest is the
+instrument's fixed-point rounding - and it agrees with every earlier measurement of the module.
+
+**19.1 Taps.** Two per channel, swept in opposite directions by one triangle u (0 to 1 and back):
+tap 1 = 505 - 504u and tap 2 = 65 + 378u, counted in 96 kHz samples (5.26 down to 0.01 ms, and 0.68
+up to 4.61 ms) - tap 2 moves three quarters as far as tap 1. Each position resolves to 1/32 sample and
+is read by 4-point Lagrange interpolation, the sample just written counting as 0 samples ago. The
+right channel reads the LFO a quarter cycle on.
+
+**19.2 Rate.** The LFO is a signed 24-bit phase (one cycle is 2^24) stepped at 24 kHz by
+Detune × 8 × (1 + trim/4): 0.01144 Hz a step, 1.453 Hz at 127. trim is a random fraction in [-1, 1)
+drawn for each instance when the patch loads, along with the starting phase, so two StChorus modules
+in one patch run at different rates, up to 25% apart. The engine draws both from the node index
+(`chorus_reset()`), so a render repeats.
+
+**19.3 Mix.** Dry × (1 - a/2) plus each tap × a/2, a = Amount/128 with 127 = 1: unity at Amount 0,
+dry and the two taps equal at the top.
+
+**19.4 Against the measurements.** Tap spans measured 0.049-5.305 and 0.734-4.620 ms (within 1%); rate
+1.3905 Hz at Detune 127, which is one instance's trim (× 0.957 of 19.2); the per-tap wet/dry ratio
+within 1-4% of 19.3 at every Amount measured. The one disagreement was the overall level: the fitted
+law it replaced sat +3 dB above the input at Amount 0, where 19.3 is exactly unity. CONFIRMED ON THE G2
+2026-09-14: the level is the same with the module bypassed and at Amount 0 (CT; a first reading of
++1.8 dB was spoiled by transients), so the fitted level was the capture rig's reference.

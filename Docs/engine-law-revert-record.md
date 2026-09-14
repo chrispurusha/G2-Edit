@@ -36,6 +36,9 @@ Add to it whenever a law is replaced. Hardware checks for each are in to-test.md
 | 21 | FltStatic drawn Q | `flt_static_q()`: d = 1 - v/127 | d = 1 - v/128 | `35c87a7` `src/paramCurves.c` |
 | 22 | EqPeak BW | `eq_peak_damping((128 - BW)/64)`: 2(2^N - 1)/√2^N | `eq_peak_bw_damping()`: 2√2 (1 - BW/128) (§11.3) | `35c87a7` `src/paramCurves.c` `eq_bands_build()` |
 | 23 | EQ gain dials at 127 | (127 - 64) × 18/64 = +17.7 dB | +18 dB (§11.1) | `35c87a7` `src/paramCurves.c` `eq_dial_gain()` |
+| 24 | StChorus taps | two taps about a 2.677 ms centre, ±2.628 and ∓1.943 ms × a triangle, Catmull-Rom reads, moved every sample | tap 1 = 505 - 504u, tap 2 = 65 + 378u in 96 kHz samples, 1/32-sample positions, 4-point Lagrange, moved at 24 kHz (§19.1) | `5e40732` `src/soundEngine.c` `chorus_tap()`, `chorus_read()` |
+| 25 | StChorus rate | `CHORUS_RATE_MAX_HZ` 1.3905 × Detune/127; every instance started at phase 0.3836 (`CHORUS_PHASE0`) | Detune × 8 × (1 + trim/4) on a 24-bit phase at 24 kHz, 1.453 Hz at 127 nominal; start phase and trim drawn per instance (§19.2) | `5e40732` `chorus_step()` |
+| 26 | StChorus mix | dry 0.9542 × (1.4742 - 0.7744x), each tap 0.9542 × 0.7071x, x = Amount/127 (+3 dB at Amount 0) | dry 1 - a/2, each tap a/2, a = Amount/128 (§19.3) | `5e40732` `chorus_tap()` |
 
 API removed along with 1 and 4: `sound_engine_is_polyphonic()` (replaced by `sound_engine_note_sounding()`)
 and `note_stack_top()`, both at `e225d27`.

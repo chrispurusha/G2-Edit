@@ -55,7 +55,7 @@ impulse is what this rig gives.
 
 | module | what exists | what is missing |
 |---|---|---|
-| **StChorus** | 3 files in `G2 Captures/`, two Detune settings at two tone frequencies | Rate, centre delay and the triangle LFO shape are settled. There is no systematic sweep of either dial, and the STEREO behaviour has never been measured — it is on `to-test.md` as needing an ear. |
+| **StChorus** | 3 files in `G2 Captures/`, two Detune settings at two tone frequencies, plus the 2026-09-07 impulse and width measurements (`findings.md`) | Since 2026-09-14 the engine follows the instrument's own law (reference §19), reproduced to 64-76 dB; every measurement agrees with it, and the unity level at Amount 0 is confirmed on the G2 (2026-09-14). |
 | **DelayA / DelayB** | 3 files, feedback at 64/96/127 | **More complete than this row used to claim.** Feedback is linear to exactly unity (measured at 64/96/127; the hardware does not decay at all at 127). LP measured at five settings and HP at four, both by the BURST method - a short saw burst separates the repeats so repeat[n+1]/repeat[n] is the per-pass response - with the HP fit then validated at three settings that were NOT used to fit it. Dry/wet measured and found to be the same non-crossfade the reverb uses, needing no wet attenuation. Time and its Clk mapping hardware-confirmed separately. The audio is not retained; the numbers and the method are in `findings.md`. |
 | **Compress** | none retained | Threshold, ratio, attack and release were all measured and corrected — the numbers are in `findings.md`, the audio is not. Re-deriving anything means re-capturing. |
 | **EnvADSR** | none retained | Curve sharpness measured 2026-08-24; the attack FORM re-measured 2026-09-07. Both from captures that were not kept. Since 2026-09-13 the engine runs the instrument's own law (reference §17), which both captures agree with; nothing new captured. |
@@ -92,8 +92,7 @@ These play in the engine and have never been measured against the instrument.
 The rig is now general — `PatchTestFiles/FxMeasure.pch2` measures any FX-area module by swapping one
 module, and the engine can render the same patch for comparison. So the FX modules are cheap:
 
-1. **StChorus** — already partly done, the stereo question is open, and it is the last unmeasured
-   effect anyone will hear.
+1. **StChorus** — done 2026-09-14 (reference §19).
 2. **Compress** — needs a different stimulus (a level ramp, not an impulse), so it wants thought.
 3. **The shaper group** — and the ramp Compress wants is the SAME stimulus these need, so capture it
    once and run it through all eight. A memoryless module plotted output-against-input from a single

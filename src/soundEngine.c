@@ -940,16 +940,20 @@ static double                      gDelayHpBank[SOUND_ENGINE_MAX_ENGINES][MAX_DE
 #define gDelayHp              (gDelayHpBank[SE])
 
 // notes §37
-#define CHORUS_PHASE0         (0.3836)             // chorus_triangle(0.3836) = +0.5343
 
-#define CHORUS_SAMPLES        (2048 * ENGINE_OVERSAMPLE)
-#define CHORUS_CHANNELS       (2)
+#define CHORUS_SAMPLES     (2048 * ENGINE_OVERSAMPLE)
+#define CHORUS_CHANNELS    (2)
 static float                       gChorusLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS][CHORUS_SAMPLES];
-#define gChorusLine           (gChorusLineBank[SE])
+#define gChorusLine        (gChorusLineBank[SE])
 static uint32_t                    gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS];
-#define gChorusWrite          (gChorusWriteBank[SE])
-static double                      gChorusLfoBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
-#define gChorusLfo            (gChorusLfoBank[SE])
+#define gChorusWrite       (gChorusWriteBank[SE])
+static int32_t                     gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gChorusPhase       (gChorusPhaseBank[SE])         // §19.2 - a signed 24-bit LFO phase
+static int32_t                     gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gChorusTrim        (gChorusTrimBank[SE])          // §19.2 - this instance's rate trim
+static double                      gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gChorusTick        (gChorusTickBank[SE])
+static void chorus_reset(uint32_t node);
 
 // Pulse: the countdown still to run, and the previous input, so a rising edge can be seen. Per voice,
 // because the gate is fired by that voice's own envelope.
@@ -1392,11 +1396,8 @@ static void reset_node_state(void) {
     memset(gCombWrite, 0, sizeof(gCombWrite));
 
     for (i = 0; i < MAX_ENGINE_NODES; i++) {
-        gSmoothPrimed[i]   = false;
-        gChorusWrite[i][0] = 0;
-        gChorusWrite[i][1] = 0;
-        gChorusLfo[i]      = CHORUS_PHASE0;
-        memset(gChorusLine[i], 0, sizeof(gChorusLine[i]));
+        gSmoothPrimed[i] = false;
+        chorus_reset(i);
     }
 
     memset(gDelayLine, 0, sizeof(gDelayLine));
@@ -2821,8 +2822,8 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeChorus:
         {
             // Detune sets how far the delay is swept, Amount how much of the wet signal is heard.
-            node->depth  = param_value(module, variation, CHORUS_PARAM_DETUNE) / 127.0;
-            node->amount = param_value(module, variation, CHORUS_PARAM_AMOUNT) / 127.0;
+            node->depth  = param_value(module, variation, CHORUS_PARAM_DETUNE);    // §19.2 - the raw dial
+            node->amount = dial_fraction(param_value(module, variation, CHORUS_PARAM_AMOUNT));
             node->active = (param_value(module, variation, CHORUS_PARAM_ACTIVE) != 0.0);
             break;
         }
@@ -3708,15 +3709,16 @@ static double delay_step(uint32_t line, double input, double timeSeconds, double
     }
 }
 
-// notes §105
-#define CHORUS_RATE_MAX_HZ            (1.3905)   // 0.010949 Hz per dial step
-#define CHORUS_CENTRE_S               (0.002677) // the fixed point both taps pass through
-#define CHORUS_TAP_A_S                (0.002628) // one tap swings this far...
-#define CHORUS_TAP_B_S                (0.001943) // ...the other the opposite way by THIS much
-#define MS_SQRT1_2                    (0.70710678118654752)
-#define CHORUS_WET_A                  (1.4742)   // wet/dry ratio law - see chorus_tap()
-#define CHORUS_WET_B                  (0.7744)
-#define CHORUS_BLEND_K                (0.9542)   // overall trim on the pair of blend gains
+// §19 - StChorus. Tap positions count samples at CHORUS_TAP_RATE_HZ.
+#define CHORUS_TICK_HZ                (24000.0)  // the LFO steps at the control rate
+#define CHORUS_PHASE_HALF             (8388608)  // a signed 24-bit phase: -1..1 is one LFO cycle
+#define CHORUS_DETUNE_STEP            (8.0)      // phase step per tick per Detune step
+#define CHORUS_TAP_RATE_HZ            (96000.0)
+#define CHORUS_TAP1_MAX               (505.0)
+#define CHORUS_TAP1_SPAN              (504.0)
+#define CHORUS_TAP2_MIN               (65.0)
+#define CHORUS_TAP2_SPAN              (378.0)    // three quarters of tap 1's, the other way
+#define CHORUS_FRACTION_STEPS         (32.0)     // a tap position resolves to 1/32 sample
 
 #define OSCNOISE_Q_AT_FULL_WIDTH      (3.34)     // §8.3
 #define OSCNOISE_Q_GROWTH_PER_STEP    (0.032)
@@ -3804,86 +3806,95 @@ static double pulse_step(uint32_t voice, uint32_t node, double input, const tEng
     return 0.0;
 }
 
-// notes §113
-static double chorus_triangle(double phase) {
-    double p = phase - floor(phase);
-
-    return (p < 0.5) ? (-1.0 + (4.0 * p)) : (3.0 - (4.0 * p));
+static int32_t chorus_sign24(uint32_t word) {
+    word &= 0xFFFFFFu;
+    return (word >= 0x800000u) ? ((int32_t)word - 0x1000000) : (int32_t)word;
 }
 
-// notes §114
-static double chorus_read(uint32_t node, uint32_t ch, double delaySeconds) {
+static uint32_t chorus_scramble(uint32_t x) {
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    return x;
+}
+
+// §19.2 - each instance draws its own start phase and rate trim, as the instrument does at load;
+// drawn from the node index here so that a render repeats.
+static void chorus_reset(uint32_t node) {
     SE_LOCAL;
 
-    double   want  = delaySeconds * gSampleRate;
-    uint32_t w     = gChorusWrite[node][ch];
+    uint32_t h = chorus_scramble(0x9E3779B9u ^ ((node + 1u) * 0x85EBCA6Bu));
 
-    if (want < 2.0) {
-        want = 2.0;
-    } else if (want > (double)(CHORUS_SAMPLES - 3)) {
-        want = (double)(CHORUS_SAMPLES - 3);
-    }
-    uint32_t whole = (uint32_t)want;
-    double   fr    = want - (double)whole;
+    gChorusPhase[node]    = chorus_sign24(h);
+    gChorusTrim[node]     = chorus_sign24(chorus_scramble(h));
+    gChorusTick[node]     = 0.0;
+    gChorusWrite[node][0] = 0;
+    gChorusWrite[node][1] = 0;
+    memset(gChorusLine[node], 0, sizeof(gChorusLine[node]));
+}
 
-    // y0..y3 are whole-1, whole, whole+1 and whole+2 samples ago; the answer sits between y1 and y2.
-#define CHR(ago)    ((double)gChorusLine[node][ch][(w + CHORUS_SAMPLES - (ago)) % CHORUS_SAMPLES])
-    double   y0    = CHR(whole - 1);
-    double   y1    = CHR(whole);
-    double   y2    = CHR(whole + 1);
-    double   y3    = CHR(whole + 2);
+// §19.1 - 4-point Lagrange; the sample just written is 0 ago, so the shortest delay is 1.
+static double chorus_read(uint32_t node, uint32_t ch, double delay) {
+    SE_LOCAL;
+
+    double   whole = fmin(fmax(floor(delay), 1.0), (double)(CHORUS_SAMPLES - 3));
+    double   t     = fmin(fmax(delay - whole, 0.0), 1.0);
+    uint32_t base  = gChorusWrite[node][ch] + CHORUS_SAMPLES - (uint32_t)whole;
+
+#define CHR(offset)    ((double)gChorusLine[node][ch][(base + 1u - (offset)) % CHORUS_SAMPLES])
+    double   ym1   = CHR(0u);
+    double   y0    = CHR(1u);
+    double   y1    = CHR(2u);
+    double   y2    = CHR(3u);
 #undef CHR
 
-    return y1 + (0.5 * fr * ((y2 - y0)
-                             + fr * ((2.0 * y0) - (5.0 * y1) + (4.0 * y2) - y3
-                                     + fr * ((3.0 * (y1 - y2)) + y3 - y0))));
+    return (ym1 * (-t * (t - 1.0) * (t - 2.0) / 6.0)) + (y0 * ((t + 1.0) * (t - 1.0) * (t - 2.0) / 2.0))
+           + (y1 * (-(t + 1.0) * t * (t - 2.0) / 2.0)) + (y2 * ((t + 1.0) * t * (t - 1.0) / 6.0));
 }
 
-static double chorus_tap(uint32_t node, uint32_t ch, double input, double phase, double amount) {
+static double chorus_quantise(double samples) {
+    double whole = floor(samples);
+
+    return whole + (floor((samples - whole) * CHORUS_FRACTION_STEPS) / CHORUS_FRACTION_STEPS);
+}
+
+// §19.1, §19.3 - one channel: two taps either side of the triangle, then the mix.
+static double chorus_tap(uint32_t node, uint32_t ch, double input, int32_t phase, double amount) {
     SE_LOCAL;
 
-    double wet = 0.0;
-
-    // notes §115
-    double tri = chorus_triangle(phase);                   // [-1, 1]
-
-    // notes §116
-    wet                                           = MS_SQRT1_2
-                                                    * (chorus_read(node, ch, CHORUS_CENTRE_S + (CHORUS_TAP_A_S * tri))
-                                                       + chorus_read(node, ch, CHORUS_CENTRE_S - (CHORUS_TAP_B_S * tri)));
+    double u     = fabs((double)phase / (double)CHORUS_PHASE_HALF);
+    double scale = gSampleRate / CHORUS_TAP_RATE_HZ;
+    double tap1  = chorus_quantise(CHORUS_TAP1_MAX - (CHORUS_TAP1_SPAN * u)) * scale;
+    double tap2  = chorus_quantise(CHORUS_TAP2_MIN + (CHORUS_TAP2_SPAN * u)) * scale;
 
     gChorusLine[node][ch][gChorusWrite[node][ch]] = (float)input;
-    gChorusWrite[node][ch]                        = (gChorusWrite[node][ch] + 1) % CHORUS_SAMPLES;
 
-    // notes §117
-    {
-        // notes §118
-        double dryGain = CHORUS_BLEND_K * (CHORUS_WET_A - (CHORUS_WET_B * amount));
-        double wetGain = CHORUS_BLEND_K * amount;
+    double wet   = chorus_read(node, ch, tap1) + chorus_read(node, ch, tap2);
 
-        return (input * dryGain) + (wet * wetGain);
-    }
+    gChorusWrite[node][ch]                        = (gChorusWrite[node][ch] + 1u) % CHORUS_SAMPLES;
+    return (input * (1.0 - (0.5 * amount))) + (wet * 0.5 * amount);
 }
 
-// notes §119
-static void chorus_step(uint32_t node, double input, double depth, double amount,
+// §19.2 - the right channel reads the LFO a quarter cycle on; the LFO steps at CHORUS_TICK_HZ.
+static void chorus_step(uint32_t node, double input, double detune, double amount,
                         double * outLeft, double * outRight) {
     SE_LOCAL;
 
-    double phase = gChorusLfo[node];
+    int32_t phase = gChorusPhase[node];
 
-    // notes §120
-    *outLeft          = chorus_tap(node, 0, input, phase, amount);
-    // A QUARTER CYCLE, not a half - of the TRUE LFO. The measured antiphase was in the FOLDED
-    // separation, which runs at twice the LFO, so half a cycle there is a quarter of one here. What
-    // reaches the wire is unchanged; only its description is.
-    *outRight         = chorus_tap(node, 1, input, phase + 0.25, amount);
+    *outLeft           = chorus_tap(node, 0, input, phase, amount);
+    *outRight          = chorus_tap(node, 1, input, chorus_sign24((uint32_t)phase + (CHORUS_PHASE_HALF / 2)), amount);
 
-    gChorusLfo[node] += (CHORUS_RATE_MAX_HZ * depth) / gSampleRate;
+    // The instrument steps it after the taps, on the first sample and every fourth after.
 
-    if (gChorusLfo[node] >= 1.0) {
-        gChorusLfo[node] -= 1.0;
+    if (gChorusTick[node] <= 0.0) {
+        int32_t step = (int32_t)floor(detune * CHORUS_DETUNE_STEP);
+
+        step              += (int32_t)(((int64_t)step * gChorusTrim[node]) >> 25);     // x (1 + trim/4)
+        gChorusTick[node] += 1.0;
+        gChorusPhase[node] = chorus_sign24((uint32_t)(phase + step));
     }
+    gChorusTick[node] -= CHORUS_TICK_HZ / gSampleRate;
 }
 
 // notes §121
@@ -4274,16 +4285,12 @@ void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_
 
     // A second render in one process would otherwise start with the previous one's line and LFO
     // phase - the same trap the reverb IR clears for.
-    memset(gChorusLine, 0, sizeof(gChorusLine));
-    memset(gChorusWrite, 0, sizeof(gChorusWrite));
-    memset(gChorusLfo, 0, sizeof(gChorusLfo));
-
     for (uint32_t i = 0; i < MAX_ENGINE_NODES; i++) {
-        gChorusLfo[i] = CHORUS_PHASE0;
+        chorus_reset(i);
     }
 
-    double depth  = (double)detuneValue / 127.0;
-    double amount = (double)amountValue / 127.0;
+    double depth  = (double)detuneValue;
+    double amount = dial_fraction((double)amountValue);
 
     for (uint32_t i = 0; i < frames; i++) {
         double l = 0.0;
@@ -6019,7 +6026,9 @@ static void engine_reset_state(void) {
     memset(&gDelayHp, 0, sizeof(gDelayHp));
     memset(&gChorusLine, 0, sizeof(gChorusLine));
     memset(&gChorusWrite, 0, sizeof(gChorusWrite));
-    memset(&gChorusLfo, 0, sizeof(gChorusLfo));
+    memset(&gChorusPhase, 0, sizeof(gChorusPhase));
+    memset(&gChorusTrim, 0, sizeof(gChorusTrim));
+    memset(&gChorusTick, 0, sizeof(gChorusTick));
     memset(&gPulseCount, 0, sizeof(gPulseCount));
     memset(&gPulsePrev, 0, sizeof(gPulsePrev));
     memset(&gCompEnv, 0, sizeof(gCompEnv));
