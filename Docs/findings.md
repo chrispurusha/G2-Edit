@@ -9657,3 +9657,17 @@ slightly brighter on engine, but may be down to how we're dealing with modulatio
   - THE PITCH INPUT WAS IGNORED by the engine; it adds 64 semitones per unit with no knob.
   Old ladder in the revert record, row 30; FltNord and FltLP still run it until their own review.
 
+2026-09-14 - FILTER KBT PIVOTED ON THE WRONG NOTE (reference §21.3). CT: "Engine is sounding brighter when KBT set to
+100%. The smoking gun - if I turn resonance up full for self resonance ... engine self res is higher frequency.
+With KBT as 0, self-res freq is the same on engine and G2."
+  - The instrument counts each voice's pitch from note 64 (E4), and its KBT values are 2^(that pitch x 1,
+    3/4, 1/2 or 1/4 / 12). The engine pivoted on note 60, so at 100% every note's cutoff was 4 semitones
+    high - on every filter, not only FltClassic. Now 64 everywhere.
+  - "Hardware needs a ping to self-oscillate": the G2's fixed-point filter decays to exact zero, a float one
+    never does, so turning Res up grew the residue into oscillation. FltClassic now runs in the
+    instrument's arithmetic (§21.4), and a decayed filter stays silent at full Res until rung. CT then
+    suspected the engine filter had simply been pinged already - either way it now behaves like the G2.
+  - Envelopes have no key tracking on the G2 (EnvADSR's KB is the keyboard GATE). LFO KBT exists on the
+    instrument but is not implemented in the engine - added to todo.
+  Old reference in the revert record, row 31.
+

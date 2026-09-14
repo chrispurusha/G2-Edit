@@ -327,6 +327,11 @@ CROSS-PROJECT
   engine slightly brighter. Now within 75+ dB of the instrument's code on a saw. Compare at high Freq
   (the top octave is where the old one-pole cascade was brightest), with the EnvADSR sweeping it, and at
   high Res with a loud input (the old knee saturated early). Its Pitch input now works (64 semitones/unit)
+- FILTER KBT NOW PIVOTS ON E4, note 64 (2026-09-14, reference §21.3). CT found the engine brighter at KBT
+  100% with self-oscillation higher than the G2's; at 100% it was 4 semitones high on every note, on every
+  filter. Re-run the self-oscillation comparison at KBT 25/50/100% on a few keys
+- FltClassic at full Res with no input should now stay silent until pinged, as on the G2 (a float tail
+  used to grow into oscillation by itself)
 - ***COMPRESSOR REWRITTEN AS A LEVELLER (2026-09-07) - THE BIGGEST BEHAVIOUR CHANGE OF THE DAY.*** It
   was a downward compressor that ignored Ref Level; the instrument drives the signal TOWARDS Ref Level
   and will BOOST when Ref Level is above it, which the old code could never do. Verified against
