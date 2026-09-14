@@ -2419,6 +2419,9 @@ part-way up carries on the same curve and ARRIVES SOONER, as the instrument's do
 at dial 64 a linear attack takes half its time, an Exp attack about a quarter, a Log one three
 quarters. The old stages ran a fixed-length ramp from wherever they began.
 
+Since 2026-09-14 the gate is read at the envelope tick and a new stage starts from the next tick,
+as the instrument's envelope does - a gate change is up to two ticks (83 us) late, on both.
+
 ## 151. `osc_waveform()`
 
 One sample of the raw waveform, at whatever rate the caller is stepping the phase.
