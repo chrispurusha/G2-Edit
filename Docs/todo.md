@@ -215,3 +215,15 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - write_perf_to_file() does not round-trip a .prf2: ArpTrance.prf2 (Version=22, 8456 bytes) saved by it (Version=23, 8108 bytes) reloads with Morph 8's source label "Group 8" shown as "Knob" and the yellow cable-filter button changed - shared by the app and G2 Alike; diff the two files section by section (morph labels, cable visibility) to find what is dropped
 - The G2 and the editor DIVERGE on cable deletes (2026-09-12): after ~80 scripted cable edits in one patch, DELCABLE of X-Fade Out -> 2-Out L and R updated the editor but not the G2 - the patch read back from the G2 held both deleted cables plus the new ones into the same inputs, and the G2 went silent while the engine played; repro in findings.md, cause not isolated (edit count, deleting a fanned-out output's cables, or both)
 - tools/vst3host crashed once on EXIT (2026-09-09, CT saw it too): EXC_BAD_ACCESS in objc_release, from objc_autoreleasePoolPop in main - an over-release of something the harness holds, at teardown only. Three clean runs since, so intermittent; the plug-in had already returned from every teardown call by then, but rule out the editor view before blaming the harness
+
+## Sound engine - open at 2026-09-14 (session cut short; see findings.md 2026-09-14 OSCSHPB entry)
+
+- DRONES: the 2 s forced fade after key-up is now off by default (G2_ENGINE_NO_DRONE=1 restores it, notes §20). Voice 0 now also runs at rest in patches with an envelope (notes §179). Still to do: only ONE voice drones at rest where the hardware runs every voice
+- Drone mode as a menu toggle (Settings), replacing the G2_ENGINE_NO_DRONE variable, so idle and droning voices can be dropped to save CPU
+- OscShpB: port the instrument's eight wave parts into the engine (harness built and checked against captures, see findings); replaces waveModels.c laws for the engine
+- OscShpB: Sine3/Sine4 level in the harness is 1/4 of the hardware at Shape 0 and ~0.38 at Shape 64 - find the missing gain before porting those two
+- OscShpB: Pulse is DC-compensated on the instrument (+1.5/-0.5 at 25%), the engine's is not; DblSaw is two unit saws summed (peak 2), the engine halves it
+- OscShpB: SymMod (Shape mod input) and the Sync part not yet compared with the engine
+- Compressor: new §25 port needs an ear (to-test)
+- 03 Chris' Lead coverage left: OscShpB waves (above), native check of Mix4-1C/Mix4-1S, clock-synced DelayB uses a fixed 120 BPM
+

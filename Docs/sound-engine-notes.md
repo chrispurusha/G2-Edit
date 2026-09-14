@@ -221,6 +221,12 @@ own — correct, and what the hardware does, but on a soft synth it means every 
 stays in the render for ever, and the cost of that is permanent rather than while you are playing.
 The fade is what makes taking it back inaudible; without one this would be a click.
 
+UPDATED 2026-09-14: NOW OFF BY DEFAULT (`engine_drone_mode()`). The limit cut every drone off two seconds
+after the key came up - reported by CT ("oscillators should sound constantly for drones"). The instrument
+never does that: a voice that is still sounding stays until a new note steals it, and a voice that has
+gone quiet is still retired by the silence check (notes §182). Set G2_ENGINE_NO_DRONE=1 to get the two-second
+limit back, which frees voices and CPU at the cost of cutting drones. A menu toggle is in todo.md.
+
 ## 21. in `type_ii_attenuator()`
 
 What feeds each input: the node index, and WHICH of that node's outputs the cable came from.
@@ -2895,6 +2901,13 @@ NOT in here: it is one shared instance fed by the sum of the voices, which is wh
 lets a chord share one reverb instead of running 8 of them.
 
 ## 179. in `sound_engine_render()`
+
+UPDATED 2026-09-14: IN DRONE MODE (the default, notes §20) VOICE 0 RUNS AT REST FOR EVERY PATCH, not only one
+with no envelope - CT: "Osc should be playing without hitting a key to begin with for drone". A voice whose
+amp is an EnvADSR stays silent at rest anyway, because the envelope is idle, exactly as on the instrument; an
+oscillator wired past it to an Out now drones from the moment the patch loads. `free_voice_runs()` is the one
+test, used by the render, by the key-up hand-back and by the idle-phase advance, which must agree (§175).
+Still one voice, where the instrument runs them all.
 
 FREE-RUNNING. The instrument's Voice Area runs whether or not a key is down: an
 oscillator patched to an output sounds on its own, an LFO keeps its phase, and a

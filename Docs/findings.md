@@ -9720,3 +9720,27 @@ a slow attack with a fast release never let it see a peak. Its dB laws, ratio ta
 "leveller") were right. Ported as integer arithmetic; every output sample now equals the instrument's code.
 Old law: revert record row 35.
 
+2026-09-14 - OSCSHPB, THE INSTRUMENT'S OWN WAVE CODE RUN NATIVELY (work in progress, NOT in the engine yet).
+Structure (from the DSP code): a phase part (24-bit phase, one cycle = 2^24, Shape word = dial<<16 as
+the second operand), an optional Sync part, ONE part per waveform, and a Shape-mod part that writes the
+modulated Shape into the phase part's word. Waves: Sine1/Sine2 = "SineSym" parts (a triangle core with
+breakpoint = Shape, through a 5th-order sine polynomial), Sine3 = DSF sum of all harmonics
+sin/(1 - 2r cos + r^2), Sine4 = the odd-harmonic DSF, TriSaw = triangle core with a polynomial corner
+correction, DblSaw = two saws, Pulse = band-limited edges, SymPulse. Shape is capped so a fall is never
+shorter than about two samples (1 - 2 x increment). Active switches the output between x1/4 and zero, so
+full scale is the engine's 1.0.
+CHECKED AGAINST THE HARDWARE CAPTURES (G2Captures/oscshpb, Sine1-4 at Shape 0/64): harmonics 2-8 agree to
+0.1-0.2 dB and their relative phases agree. Sine1/Sine2 levels agree (Sine2 1.31 x Sine1 fundamental at 64
+on both). Sine3/Sine4 LEVEL does NOT: 0.25 of the hardware at Shape 0, ~0.38 at 64 - a missing gain,
+under investigation.
+TRAPS HIT: frame images are 24-bit words and must be sign-extended; the triangle core's division must be
+the DSP's (a positive dividend over a negative divisor yields the magnitude) - a plain signed divide gave
+TriSaw a +2.0 DC offset; one unsigned comparison broke Pulse.
+Differences from the engine found so far: Pulse is DC-compensated (+1.5/-0.5 at 25% duty), DblSaw sums to
+peak 2 (engine halves it), Sine1-4 and TriSaw shapes now known exactly. Next: find the Sine3/4 gain, then
+port all eight into soundEngine.c and compare with the engine (plan in todo.md).
+
+2026-09-14 - DRONES WERE CUT OFF BY THE ENGINE'S OWN TAIL LIMIT (notes §20). Any voice still sounding two seconds
+after its key came up was faded out (VOICE_MAX_TAIL_SECONDS), which the instrument never does. Now off by default;
+G2_ENGINE_NO_DRONE=1 restores it. Quiet voices are still retired by the silence check.
+

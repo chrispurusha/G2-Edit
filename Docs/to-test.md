@@ -348,6 +348,10 @@ CROSS-PROJECT
   against its code. Audible: the bottom of LP much darker (LP 0 ~50 Hz, was 660 Hz) and LP 127 fully
   open; the first repeat is now filtered too; DryWet squared (the edges of the dial move); HP a
   different two-state filter; 16-bit memory. A/B against the G2 across LP and HP, and with FB near 127
+- ***DRONES NO LONGER CUT OFF (2026-09-14, notes §20) - NEEDS AN EAR.*** A voice still sounding after its key is up used to
+  fade out after 2 s; it now plays until stolen, as on the hardware. Check a drone patch holds, and that ordinary notes
+  still free their voices when they go quiet. Voice 0 also now plays at rest in every patch (notes §179): an Osc
+  wired past the envelope to an Out should sound on load with no key; enveloped sounds must stay silent at rest
 - ***COMPRESSOR NOW THE INSTRUMENT'S OWN (2026-09-14, reference §25) - NEEDS AN EAR.*** Word-exact against its
   code. At 03 Chris' Lead's settings the old one did not compress at all (it smoothed the signal and never
   saw a peak); now it lifts by the make-up and holds louder notes down as the G2 does. Check the attack and
