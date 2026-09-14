@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "synthlibGlobals.h"
 #include "sysIncludes.h"
 #include "defs.h"                   // TARGET_FRAME_BUFF_WIDTH / _HEIGHT - the locked canvas ratio
 
@@ -508,6 +509,11 @@ static size_t g2_get_state(void * inst, void * out, size_t len) {
                                  (unsigned)gGlobalSettings.perfMode, (unsigned)gSlot);
     }
 
+    // notes §10 - the editor's mouse mode too. The Voice/FX split is the patch's own and comes with it.
+    if (used < sizeof(text)) {
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\n", (int)synthlib_dial_mode());
+    }
+
     if (used > sizeof(text)) {
         used = sizeof(text);
     }
@@ -525,6 +531,7 @@ typedef struct {
     char    slot[MAX_SLOTS][FILE_PATH_SIZE];
     int32_t perfMode;
     int32_t selected;
+    int32_t dialMode;
 } tG2State;
 
 static void parse_state_line(tG2State * state, char * line) {
@@ -546,6 +553,8 @@ static void parse_state_line(tG2State * state, char * line) {
         state->perfMode = atoi(value);
     } else if (strcmp(key, "selected") == 0) {
         state->selected = atoi(value);
+    } else if (strcmp(key, "dialmode") == 0) {
+        state->dialMode = atoi(value);
     }
 }
 
@@ -578,6 +587,7 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     }
     state->perfMode = -1;
     state->selected = -1;
+    state->dialMode = -1;
     memcpy(text, data, len);
     text[len] = '\0';
 
@@ -622,6 +632,10 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
 
     if ((state->selected >= 0) && (state->selected < MAX_SLOTS)) {
         gSlot = (uint32_t)state->selected;
+    }
+
+    if ((state->dialMode >= (int32_t)eDialModeRotary) && (state->dialMode <= (int32_t)eDialModeHorizontal)) {
+        synthlib_set_dial_mode((tDialMode)state->dialMode);
     }
     free(state);
 
