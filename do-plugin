@@ -365,6 +365,13 @@ sign_bundle() {
 # Installed over whatever was there, then unquarantined. A FAILURE HERE IS A WARNING, NOT AN ERROR:
 # the bundle in build/ is correct and complete either way, and a machine whose plug-in folders are
 # not writable should still get a build rather than an aborted one.
+# THE ONE-OFF FIX for a plug-in folder we cannot write: root:admin 775, as VST3 already is. A macOS
+# upgrade resets Components to root:wheel 755.
+print_permission_fix() {
+    print -u2 "         to fix, run once:  sudo chgrp admin '$1' && sudo chmod g+w '$1'"
+    print -u2 "         then run ./do-plugin again"
+}
+
 install_bundle() {
     local bundle=$1
     local dest=$2
@@ -379,15 +386,26 @@ install_bundle() {
         return
     fi
 
+    # CHECKED BEFORE THE rm: the bundle inside is ours, so rm empties it and only then fails on the
+    # folder itself, leaving a hollow bundle a host still lists. A macOS upgrade resets Components to
+    # root:wheel 755 (macOS 27 did, 2026-09-15).
+    if [[ ! -w $dest ]]; then
+        print -u2 "warning: $dest is not writable - not installing $name (left in $OUT_DIR)"
+        print_permission_fix "$dest"
+        return
+    fi
+
     # REMOVED FIRST, not copied over. cp -R onto an existing bundle MERGES, so a file that a build
     # no longer produces would survive inside the installed copy indefinitely.
     if ! rm -rf "$dest/$name" 2>/dev/null; then
         print -u2 "warning: could not remove $dest/$name - not installing"
+        print_permission_fix "$dest"
         return
     fi
 
     if ! cp -R "$bundle" "$dest/" 2>/dev/null; then
         print -u2 "warning: could not install into $dest (permission?) - $name left in $OUT_DIR"
+        print_permission_fix "$dest"
         return
     fi
     xattr -dr com.apple.quarantine "$dest/$name" 2>/dev/null || true
