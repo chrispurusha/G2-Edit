@@ -276,6 +276,15 @@ static void action_open_notes(int index) {
     settings_menu_open_notes();
 }
 
+#ifdef SYNTHLIB_PLUGIN_BUILD
+
+// notes §12
+static void action_toggle_drone(int index) {
+    (void)index;
+    sound_engine_set_drone_mode(sound_engine_drone_mode() == false);
+}
+#endif
+
 void open_settings_menu(tCoord anchor) {
     static tMenuItem items[] = {
         {"Synth",                (tRgb)RGB_GREY_3, action_open_synth,          0, NULL, 0, 0.0},
@@ -287,9 +296,19 @@ void open_settings_menu(tCoord anchor) {
         // The original reaches this from a right-click menu and the M key; menu-only here, matching
         // the standing decision for this family of panels.
         {"MIDI Controller List", (tRgb)RGB_GREY_3, action_open_midi_cc_list,   0, NULL, 0, 0.0},
+#ifdef SYNTHLIB_PLUGIN_BUILD
+        {"Drone Mode",           (tRgb)RGB_GREY_3, action_toggle_drone,        0, NULL, 0, 0.0},
+#endif
         {NULL,                   (tRgb)RGB_BLACK,  NULL,                       0, NULL, 0, 0.0},
     };
 
+#ifdef SYNTHLIB_PLUGIN_BUILD
+    tMenuItem *      drone   = &items[(sizeof(items) / sizeof(items[0])) - 2];
+    bool             on      = sound_engine_drone_mode();
+
+    drone->label  = on ? "* Drone Mode" : "  Drone Mode";
+    drone->colour = on ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
+#endif
     open_context_menu(anchor, items, 0, 0.0);
 }
 

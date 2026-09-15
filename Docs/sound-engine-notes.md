@@ -224,8 +224,22 @@ The fade is what makes taking it back inaudible; without one this would be a cli
 UPDATED 2026-09-14: NOW OFF BY DEFAULT (`engine_drone_mode()`). The limit cut every drone off two seconds
 after the key came up - reported by CT ("oscillators should sound constantly for drones"). The instrument
 never does that: a voice that is still sounding stays until a new note steals it, and a voice that has
-gone quiet is still retired by the silence check (notes §182). Set G2_ENGINE_NO_DRONE=1 to get the two-second
-limit back, which frees voices and CPU at the cost of cutting drones. A menu toggle is in todo.md.
+gone quiet is still retired by the silence check (notes §182). Turning drone mode off brings the two-second
+limit back, which frees voices and CPU at the cost of cutting drones.
+
+UPDATED 2026-09-15: PER ENGINE, AND A PLUG-IN MENU ITEM. The G2_ENGINE_NO_DRONE variable is gone; `gDroneMode`
+holds the mode per engine, on by default, and `engine_reset_state()` puts it back on when a plug-in instance
+claims an engine. The application never changes it (CT: standalone always drones). G2 Alike's Settings > Drone
+Mode turns it off for one instance, and the host's project remembers it (g2Plugin.c notes §10). Off, the limit
+applies again and voice 0 stops running at rest in a patch with an envelope (§179), handed back rather than
+cut (§190).
+
+UPDATED 2026-09-15 (later): THE LIMIT NOW COUNTS FROM THE ENVELOPES FINISHING, as the first paragraph always
+said, not from key-up. Counted from key-up it cut any release longer than two seconds short in non-drone mode -
+a pad with an 8 s release faded out at 2 s. `released` now counts samples since `voice_is_finished()` came true,
+so a release plays out in full, and only sound that outlives its envelopes (an oscillator wired past them) is
+held for VOICE_MAX_TAIL_SECONDS and then faded. The fade retires the voice outright (§182): nothing of it is
+left in the output, whatever the meters said before §191.
 
 ## 21. in `type_ii_attenuator()`
 
@@ -3021,3 +3035,30 @@ and another is still down: the voice stays open and moves to the HIGHEST key hel
 which is what the note stack chose until 2026-09-13. Mono counts it as a new note and the envelopes
 restart (notes §71); Legato does not, and the pitch simply moves, gliding if Auto glide is on (notes
 §70). A key let go that was NOT the one sounding changes only the record of keys held.
+
+## 190. in `sound_engine_render()`
+
+DRONE MODE TURNED OFF WHILE VOICE 0 RUNS AT REST (2026-09-15). In drone mode voice 0 renders with no
+key held in every patch; with it off, only in a patch with no envelope (§179). Turning it off in a
+patch with an envelope would drop voice 0 out of the render between two samples - a click whenever
+an oscillator reaches an Out past the envelope. Instead it is handed back as a voice whose key has
+just come up: it holds for VOICE_MAX_TAIL_SECONDS and fades over VOICE_FADE_SECONDS (§20), or the
+silence check retires it sooner if it is already quiet (§182). `gDroneSeen` is the mode the render
+saw last block, audio thread only. Turning drone mode back on needs nothing: voice 0 starts at once,
+as it does when a patch loads.
+
+## 191. `meter_node()`
+
+THE VOICE AREA'S METERS READ THE SUM OF THE VOICES (2026-09-15). They used to be fed from inside
+`eval_node()`, for voice 0 only and before its fade and anti-click ramp were applied. Once voice 0
+stopped rendering - its note retired, or a drone faded out in non-drone mode (§20) - nothing fed
+them again and they held their last reading indefinitely: a drone that had stopped still showed
+(CT). Now `sound_engine_render()` meters every Voice Area module from the voice sum, after each
+voice's `level`, once per sample whether or not a voice is sounding, so they fall with the sound
+and read zero when nothing plays. One note reads as it did. A chord now reads the sum where it read
+voice 0 alone; what the G2 shows for a chord is not measured. FX Area modules are still metered from
+`eval_node()`, which evaluates them once per sample.
+
+METER_FLOOR. A follower decaying toward zero never gets there, and after a few minutes of silence it
+sinks into denormals, which are slow on Intel. Below 2^-7 the law reads 0 anyway (reference §1.1),
+so the follower is zeroed there and the display is unchanged.

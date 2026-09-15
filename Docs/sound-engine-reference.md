@@ -18,7 +18,9 @@ Boundaries within 0.6 dB of -6.02 dB × n; sine, saw and square agree to 0.3 dB.
 
 **1.2 Engine.** A 200 ms peak follower per metered module, then the law above via `frexp`. Engine and
 G2 agree on 67 of 80 steps of a saw sweep; the rest are one value high at boundaries, where the
-engine's band-limited saw peaks a fraction of a dB higher.
+engine's band-limited saw peaks a fraction of a dB higher. A Voice Area module is metered from the sum
+of the voices after their fades, an FX Area one from its own output (notes §191) - for one note the two
+are the same; what the G2 shows for a chord is not measured.
 
 **1.3 Rendering.** Low nibble = level; 1-7 green, 8-11 yellow, red above 11 or with bit 0x40.
 

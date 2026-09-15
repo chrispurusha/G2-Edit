@@ -91,3 +91,11 @@ ALL SOURCES AT ONCE, which is what a desk with a keyboard, a control surface and
 on it actually wants, and it takes anything plugged in LATER too — the setup-changed
 notification reconnects. It was already the startup state, with no way back to it once a
 single source had been chosen.
+
+## 12. `action_toggle_drone()`
+
+PLUG-IN ONLY (2026-09-15, CT). The application always drones, as the instrument does. G2 Alike
+offers the choice because every instance on an idle track pays for the voices drone mode keeps
+running (sound-engine-notes §20). It acts on the engine of the instance whose editor the menu
+was opened from, and is saved with the host's project (g2Plugin.c notes §10). The tick follows
+the View menu's pattern: a "*" and the green.

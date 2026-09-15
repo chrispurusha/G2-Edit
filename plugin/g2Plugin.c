@@ -509,9 +509,11 @@ static size_t g2_get_state(void * inst, void * out, size_t len) {
                                  (unsigned)gGlobalSettings.perfMode, (unsigned)gSlot);
     }
 
-    // notes §10 - the editor's mouse mode too. The Voice/FX split is the patch's own and comes with it.
+    // notes §10 - the editor's mouse mode and the engine's drone mode too. The Voice/FX split is the
+    // patch's own and comes with it.
     if (used < sizeof(text)) {
-        used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\n", (int)synthlib_dial_mode());
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndrone=%d\n",
+                                 (int)synthlib_dial_mode(), (sound_engine_drone_mode() == true) ? 1 : 0);
     }
 
     if (used > sizeof(text)) {
@@ -532,6 +534,7 @@ typedef struct {
     int32_t perfMode;
     int32_t selected;
     int32_t dialMode;
+    int32_t drone;
 } tG2State;
 
 static void parse_state_line(tG2State * state, char * line) {
@@ -555,6 +558,8 @@ static void parse_state_line(tG2State * state, char * line) {
         state->selected = atoi(value);
     } else if (strcmp(key, "dialmode") == 0) {
         state->dialMode = atoi(value);
+    } else if (strcmp(key, "drone") == 0) {
+        state->drone = atoi(value);
     }
 }
 
@@ -588,6 +593,7 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     state->perfMode = -1;
     state->selected = -1;
     state->dialMode = -1;
+    state->drone    = -1;
     memcpy(text, data, len);
     text[len] = '\0';
 
@@ -637,6 +643,7 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     if ((state->dialMode >= (int32_t)eDialModeRotary) && (state->dialMode <= (int32_t)eDialModeHorizontal)) {
         synthlib_set_dial_mode((tDialMode)state->dialMode);
     }
+    sound_engine_set_drone_mode(state->drone != 0);     // notes §10 - absent (-1) is the default, on
     free(state);
 
     if (g2->active == true) {
