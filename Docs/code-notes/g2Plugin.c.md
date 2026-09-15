@@ -126,6 +126,10 @@ Horizontal 2). Same header: an older build skips the new key. The Voice/FX split
 the patch's own (the descriptor's barPosition), so loading a patch sets it as that patch has it (CT). A
 per-slot override was tried the same day and taken out for that reason.
 
+UPDATED 2026-09-15: and the engine's drone mode - `drone=0|1`, Settings > Drone Mode (sound-engine-notes §20).
+Per instance, unlike the mouse mode. A record without it, from a project saved before it existed, gets the
+default, on: the record replaces what the instance holds (§11).
+
 THE PATCHES ARE IDENTIFIED BY PATH rather than embedded wholesale. A .pch2 is small enough to embed,
 and doing so would make a project self-contained, but it would also freeze a copy: edit the patch
 in G2-Edit and the project would go on playing the old one, silently. Storing the path keeps one
