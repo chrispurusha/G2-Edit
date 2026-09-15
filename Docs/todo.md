@@ -5,6 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
+- Most of the plugin menu options aren't working. Setings etc.
 - When selecting an option of the top menu, buttons underneath are triggering.
 - VA/FX divider position isn't being restored.
 - We don't need the host to remember which the last file we opened was. We need to remember and restore the patch/performace/settings.
