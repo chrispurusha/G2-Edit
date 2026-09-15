@@ -78,6 +78,11 @@ bool sound_engine_module_led(uint32_t location, uint32_t moduleIndex, uint32_t l
 
 void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_t amountValue, const float * in, float * out, uint32_t frames);
 
+// Drone mode: on by default, and never changed by the application. Off, sound outliving its envelopes is
+// faded out after two seconds and voice 0 stops running at rest - the plug-in's way to save CPU. Any thread.
+void sound_engine_set_drone_mode(bool on);
+bool sound_engine_drone_mode(void);
+
 // notes §4
 void sound_engine_set_output_level_db(double db);
 

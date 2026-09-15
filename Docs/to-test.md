@@ -352,6 +352,15 @@ CROSS-PROJECT
   fade out after 2 s; it now plays until stolen, as on the hardware. Check a drone patch holds, and that ordinary notes
   still free their voices when they go quiet. Voice 0 also now plays at rest in every patch (notes §179): an Osc
   wired past the envelope to an Out should sound on load with no key; enveloped sounds must stay silent at rest
+- ***PLUG-IN DRONE MODE TOGGLE (2026-09-15, notes §20/§190) - NEEDS A HOST.*** Settings > Drone Mode, ticked by default.
+  Unticked: a note sounding past its envelope stops 2 s after the envelope ends with a short fade, and an Osc droning
+  past the envelope at rest holds 2 s then fades - no click. A long release (EnvADSR R of several seconds) must play
+  out in full. Save the project unticked and reopen: still unticked. Two instances keep their own setting. The
+  standalone app has no such item and always drones
+- ***VOICE AREA METERS FALL WHEN THE SOUND STOPS (2026-09-15, notes §191) - NEEDS EYES.*** They froze at their last
+  reading once voice 0 stopped, so a drone that had faded out still showed. They now read the sum of the voices and
+  fall to zero with the sound. Check one note reads as before against the G2, and compare a chord: the engine now
+  shows the sum, and what the G2 shows for a chord is unmeasured
 - ***COMPRESSOR NOW THE INSTRUMENT'S OWN (2026-09-14, reference §25) - NEEDS AN EAR.*** Word-exact against its
   code. At 03 Chris' Lead's settings the old one did not compress at all (it smoothed the signal and never
   saw a peak); now it lifts by the make-up and holds louder notes down as the G2 does. Check the attack and

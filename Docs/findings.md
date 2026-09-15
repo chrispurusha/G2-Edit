@@ -9744,3 +9744,13 @@ port all eight into soundEngine.c and compare with the engine (plan in todo.md).
 after its key came up was faded out (VOICE_MAX_TAIL_SECONDS), which the instrument never does. Now off by default;
 G2_ENGINE_NO_DRONE=1 restores it. Quiet voices are still retired by the silence check.
 
+2026-09-15 - DRONE MODE IS PER ENGINE AND A PLUG-IN MENU ITEM (notes §20, §190). G2_ENGINE_NO_DRONE is gone. The
+application always drones; G2 Alike has Settings > Drone Mode, on by default, saved as `drone=` in its state record.
+Off restores the two-second tail limit and stops voice 0 running at rest in an enveloped patch - handed back as a
+released voice, so it holds and fades rather than clicking out.
+
+2026-09-15 - METERS STILL SHOWED A DRONE THAT HAD STOPPED (CT). The sound had stopped - the fade retires the voice -
+but Voice Area meters were fed only while voice 0 rendered, before its fade, so they froze at their last reading.
+Now metered from the voice sum every sample (notes §191). Found alongside: the non-drone tail limit counted from
+key-up, so it also cut long releases at 2 s; it now counts from the envelopes finishing (notes §20).
+

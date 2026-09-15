@@ -89,21 +89,10 @@ static bool engine_no_free_run(void) {
     return cached == 1;
 }
 
-// notes §20 - a released voice that is still sounding goes on until it is stolen, as on the instrument.
-static bool engine_drone_mode(void) {
-    static int cached = -1;
-
-    if (cached < 0) {
-        const char * v = getenv("G2_ENGINE_NO_DRONE");
-        cached = ((v != NULL) && (v[0] != '\0')) ? 0 : 1;
-    }
-    return cached == 1;
-}
-
 // notes §179 - voice 0 runs with no key held. Drone mode does it for every patch, as the instrument does;
 // without it only a patch with no envelope, which is the only kind audible at rest.
-static bool free_voice_runs(uint32_t v, bool chainHasEnvelope) {
-    return (v == 0) && (engine_no_free_run() == false) && ((engine_drone_mode() == true) || (chainHasEnvelope == false));
+static bool free_voice_runs(uint32_t v, bool chainHasEnvelope, bool droneMode) {
+    return (v == 0) && (engine_no_free_run() == false) && ((droneMode == true) || (chainHasEnvelope == false));
 }
 
 bool engine_filter_legacy(void) {
@@ -788,6 +777,7 @@ static _Atomic uint32_t            gModuleLedBank[SOUND_ENGINE_MAX_ENGINES][loca
 // The follower behind the level meters. Per NODE, not per voice: the face has one meter however many
 // voices are sounding, and only voice 0 writes it. About 200 ms of release at 96 kHz.
 #define METER_DECAY         (0.00005)
+#define METER_FLOOR         (0.0078125)    // 2^-7, below which the meter law reads 0 (§1.1)
 static double                      gMeterEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
 #define gMeterEnv           (gMeterEnvBank[SE])
 
@@ -796,6 +786,12 @@ static _Atomic int32_t             gOutputGainMilliBank[SOUND_ENGINE_MAX_ENGINES
 
 static _Atomic int32_t             gBendMilliBank[SOUND_ENGINE_MAX_ENGINES];
 #define gBendMilli          (gBendMilliBank[SE])
+
+// notes §20 - a released voice that is still sounding goes on until it is stolen, as on the instrument.
+static _Atomic bool                gDroneModeBank[SOUND_ENGINE_MAX_ENGINES]       = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = true};
+#define gDroneMode    (gDroneModeBank[SE])
+static bool                        gDroneSeenBank[SOUND_ENGINE_MAX_ENGINES]       = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = true}; // audio thread only
+#define gDroneSeen    (gDroneSeenBank[SE])
 
 // Highest absolute sample the audio thread has produced since this was last read. Purely a
 // diagnostic — it is what lets a test say "sound is coming out" without a pair of ears.
@@ -848,7 +844,7 @@ typedef struct {
     double   envelope;     // the anti-click ramp, used only when the patch has no EnvADSR
     uint64_t age;          // allocation order, so the oldest can be identified for stealing
     uint32_t quiet;        // consecutive samples this voice's output has been inaudible
-    uint32_t released;     // samples since the key came up, 0 while it is held
+    uint32_t released;     // samples since its envelopes finished with the key up, 0 until then (notes §20)
     double   fade;         // 1.0 normally; driven to 0 to retire a voice that will not stop on its own
     uint32_t trigger;      // counts note-ons that restart the envelopes - see voice_note_on()
 } tVoice;
@@ -1221,6 +1217,18 @@ void sound_engine_set_output_level_db(double db) {
         gain = 1.0;    // attenuation only: this is a trim, not a boost into the limiter
     }
     atomic_store(&gOutputGainMilli, (int32_t)((gain * 1000.0) + 0.5));
+}
+
+void sound_engine_set_drone_mode(bool on) {
+    SE_LOCAL;
+
+    atomic_store(&gDroneMode, on);
+}
+
+bool sound_engine_drone_mode(void) {
+    SE_LOCAL;
+
+    return atomic_load(&gDroneMode);
 }
 
 bool sound_engine_set_morph(uint32_t group, double amount) {
@@ -5342,6 +5350,72 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
 }
 
 // notes §165
+// §1.1 - one module's two legs through its peak follower, published for the canvas. notes §191
+static void meter_node(const tEngineNode * spec, uint32_t n, double left, double right) {
+    switch (spec->kind) {
+        case eNodeMix:
+        case eNodeMixStereo:
+        case eNodeFxIn:
+        case eNodeOut:
+        {
+            break;
+        }
+        default:
+        {
+            return;     // before SE_LOCAL: this is called for every Voice Area module, every sample
+        }
+    }
+    SE_LOCAL;
+
+    // BOTH LEGS, because a stereo module draws two meters and feeding only the left would
+    // leave the right showing whatever the instrument last sent - which is worse than
+    // showing nothing, because it looks live and is not.
+    const double legs[2] = {left, right};
+    uint32_t     packed  = METER_WRITTEN;
+
+    for (uint32_t leg = 0u; leg < 2u; leg++) {
+        double peak  = fabs(legs[leg]);
+        int    level = 0;
+
+        if (peak > gMeterEnv[n][leg]) {
+            gMeterEnv[n][leg] = peak;
+        } else {
+            gMeterEnv[n][leg] += METER_DECAY * (peak - gMeterEnv[n][leg]);
+        }
+
+        if (gMeterEnv[n][leg] < METER_FLOOR) {
+            gMeterEnv[n][leg] = 0.0;
+        }
+
+        if (gMeterEnv[n][leg] > 0.0) {
+            int exponent = 0;
+
+            // peak = f x 2^exponent with f in [0.5, 1), so 0.5..1 gives exponent 0.
+            (void)frexp(gMeterEnv[n][leg], &exponent);
+
+            if (exponent <= 0) {
+                level = 7 + exponent;
+            } else if (exponent == 1) {
+                level = 9;
+            } else if (exponent == 2) {
+                level = 11;
+            } else {
+                level = 12 | 0x40;      // the instrument's clip bit, alongside its top value
+            }
+        }
+
+        if (level < 0) {
+            level = 0;
+        }
+        packed |= ((uint32_t)level << (leg * METER_LEG_SHIFT));
+    }
+
+    if (atomic_exchange_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
+                                 packed, memory_order_relaxed) != packed) {
+        atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
+    }
+}
+
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
                       double value[][NODE_OUTPUTS], double voicePitch) {
     SE_LOCAL;
@@ -5650,63 +5724,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
     }
 
-    // §1.1
-    switch (spec->kind) {
-        case eNodeMix:
-        case eNodeMixStereo:
-        case eNodeFxIn:
-        case eNodeOut:
-        {
-            if (voice == 0u) {
-                // BOTH LEGS, because a stereo module draws two meters and feeding only the left would
-                // leave the right showing whatever the instrument last sent - which is worse than
-                // showing nothing, because it looks live and is not.
-                uint32_t packed = METER_WRITTEN;
-
-                for (uint32_t leg = 0u; leg < 2u; leg++) {
-                    double peak  = fabs(value[n][leg]);
-                    int    level = 0;
-
-                    if (peak > gMeterEnv[n][leg]) {
-                        gMeterEnv[n][leg] = peak;
-                    } else {
-                        gMeterEnv[n][leg] += METER_DECAY * (peak - gMeterEnv[n][leg]);
-                    }
-
-                    if (gMeterEnv[n][leg] > 0.0) {
-                        int exponent = 0;
-
-                        // peak = f x 2^exponent with f in [0.5, 1), so 0.5..1 gives exponent 0.
-                        (void)frexp(gMeterEnv[n][leg], &exponent);
-
-                        if (exponent <= 0) {
-                            level = 7 + exponent;
-                        } else if (exponent == 1) {
-                            level = 9;
-                        } else if (exponent == 2) {
-                            level = 11;
-                        } else {
-                            level = 12 | 0x40;      // the instrument's clip bit, alongside its top value
-                        }
-                    }
-
-                    if (level < 0) {
-                        level = 0;
-                    }
-                    packed |= ((uint32_t)level << (leg * METER_LEG_SHIFT));
-                }
-
-                if (atomic_exchange_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
-                                             packed, memory_order_relaxed) != packed) {
-                    atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
-                }
-            }
-            break;
-        }
-        default:
-        {
-            break;
-        }
+    // The Voice Area's meters are fed from the voice sum instead - notes §191
+    if (spec->postMix == true) {
+        meter_node(spec, n, value[n][0], value[n][1]);
     }
 }
 
@@ -5821,13 +5841,26 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         }
     }
 
+    bool droneMode = atomic_load(&gDroneMode);
+
+    // notes §190
+    if (  (droneMode == false) && (gDroneSeen == true)
+       && (free_voice_runs(0, chainHasEnvelope, true) == true) && (free_voice_runs(0, chainHasEnvelope, false) == false)
+       && (gVoice[0].sounding == false)) {
+        gVoice[0].sounding = true;
+        gVoice[0].released = 0;
+        gVoice[0].quiet    = 0;
+        gVoice[0].fade     = 1.0;
+    }
+    gDroneSeen = droneMode;
+
     // notes §174
     if (engine_no_free_run() == false) {
         double idleSamples = (double)frameCount * (double)ENGINE_OVERSAMPLE;
 
         for (uint32_t v = 0; v < params.voiceCount; v++) {
             // notes §175
-            bool rendered = (gVoice[v].sounding == true) || (free_voice_runs(v, chainHasEnvelope) == true);
+            bool rendered = (gVoice[v].sounding == true) || (free_voice_runs(v, chainHasEnvelope, droneMode) == true);
 
             if (rendered == true) {
                 continue;
@@ -5924,7 +5957,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 tVoice * voice     = &gVoice[v];
 
                 // notes §179
-                bool     freeVoice = free_voice_runs(v, chainHasEnvelope);
+                bool     freeVoice = free_voice_runs(v, chainHasEnvelope, droneMode);
                 bool     freeRun   = (voice->sounding == false) && (freeVoice == true);
 
                 if ((voice->sounding == false) && (freeRun == false)) {
@@ -5969,13 +6002,12 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                         voice->envelope = rampTarget;
                     }
                 }
-                voice->released = ((voice->gate == true) || (freeRun == true)) ? 0 : (voice->released + 1);
 
-                // Past the limit, wind the voice down rather than cutting it. voice->fade reaching
-                // zero is what retires it below.
+                // Past the limit (counted from its envelopes finishing, below), wind the voice down
+                // rather than cutting it. voice->fade reaching zero is what retires it.
                 if (  (voice->gate == false)
                    && (freeRun == false)
-                   && (engine_drone_mode() == false)
+                   && (droneMode == false)
                    && (voice->released > (uint32_t)(VOICE_MAX_TAIL_SECONDS * gSampleRate))) {
                     voice->fade -= 1.0 / (VOICE_FADE_SECONDS * gSampleRate);
 
@@ -6016,13 +6048,16 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     }
                 }
 
-                voice->quiet = (leaving < VOICE_SILENCE) ? (voice->quiet + 1) : 0;
+                voice->quiet    = (leaving < VOICE_SILENCE) ? (voice->quiet + 1) : 0;
+
+                bool finished = (freeRun == false) && (voice_is_finished(&params, v, chainHasEnvelope) == true);
+
+                // notes §20
+                voice->released = (finished == true) ? (voice->released + 1) : 0;
 
                 // notes §182
-                if (  (freeRun == false)
-                   && (  (  (voice_is_finished(&params, v, chainHasEnvelope) == true)
-                         && (voice->quiet > (uint32_t)(VOICE_SILENCE_SECONDS * gSampleRate)))
-                      || (voice->fade <= 0.0))) {
+                if (  ((finished == true) && (voice->quiet > (uint32_t)(VOICE_SILENCE_SECONDS * gSampleRate)))
+                   || ((freeRun == false) && (voice->fade <= 0.0))) {
                     voice->sounding = false;
                     voice->quiet    = 0;
                     voice->released = 0;
@@ -6030,12 +6065,13 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 }
             }
 
-            // What everything after the mix sees of the voices is their SUM.
+            // What everything after the mix sees of the voices is their SUM, and so do their meters (notes §191).
             for (n = 0; n < params.nodeCount; n++) {
                 if (params.node[n].postMix == false) {
                     value[n][0] = voiceSum[n][0];
                     value[n][1] = voiceSum[n][1];
                     value[n][2] = voiceSum[n][2];
+                    meter_node(&params.node[n], n, value[n][0], value[n][1]);
                 }
             }
 
@@ -6279,6 +6315,8 @@ static void engine_reset_state(void) {
     gEngineVoices     = 1;
     sLastTypeBank[SE] = UINT32_MAX;    // no layout yet: the first call resets
     gPatchSlot        = -1;
+    gDroneMode        = true;
+    gDroneSeen        = true;
 }
 #endif
 

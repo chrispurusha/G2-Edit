@@ -5,7 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Add a menu option to enable/disable drone mode for plugins (drone enabled by default). Needs to be recalled from host by plugin, so plugin can release oscillator processors after a period of time if non-drone (using a ramp down afer holding for a period). Standalone should always drone.
+- When selecting an option of the top menu, buttons underneath are triggering.
 - We don't need the host to remember which the last file we opened was. We need to remember and restore the patch/performace/settings.
 - Fix current modules in sound engine using the recent methods.
 - Bug where we see a sudden/random scroll VA area right about half a module's width.
@@ -217,8 +217,7 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 
 ## Sound engine - open at 2026-09-14 (session cut short; see findings.md 2026-09-14 OSCSHPB entry)
 
-- DRONES: the 2 s forced fade after key-up is now off by default (G2_ENGINE_NO_DRONE=1 restores it, notes §20). Voice 0 now also runs at rest in patches with an envelope (notes §179). Still to do: only ONE voice drones at rest where the hardware runs every voice
-- Drone mode as a menu toggle (Settings), replacing the G2_ENGINE_NO_DRONE variable, so idle and droning voices can be dropped to save CPU
+- DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
 - OscShpB: port the instrument's eight wave parts into the engine (harness built and checked against captures, see findings); replaces waveModels.c laws for the engine
 - OscShpB: Sine3/Sine4 level in the harness is 1/4 of the hardware at Shape 0 and ~0.38 at Shape 64 - find the missing gain before porting those two
 - OscShpB: Pulse is DC-compensated on the instrument (+1.5/-0.5 at 25%), the engine's is not; DblSaw is two unit saws summed (peak 2), the engine halves it
