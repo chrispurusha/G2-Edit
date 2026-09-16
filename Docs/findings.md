@@ -9764,3 +9764,24 @@ paramTypeBypass, drawn above the output. The preset values are in moduleResource
 of all 30. Choosing one writes params 0-14 of the active variation as ordinary param changes and records
 them as one undo step (undo_push_param_block). Checked offline: Snare 2 set the table's values exactly,
 undo and redo each restored all 15, and moving one dial showed "none".
+
+2026-09-16 - SHARPER INITIAL TRANSIENT: THE ENVELOPE IS NOT THE CAUSE (CT priority list). Checked in turn:
+(1) the attack's level sequence already matches the instrument's own envelope arithmetic tick for tick
+(reference §17.3), at every shape; (2) the instrument's envelope VCA is a plain product of the envelope
+word and the audio, updated between 24 kHz ticks exactly as the engine holds it - no smoothing; (3) the
+instrument's note-on writes pitch, velocity and the gate and nothing else - there is no "clamp to zero"
+before an attack, and the attack starts from the level it is at (Normal mode), which the engine does and
+which was measured over MIDI on 2026-09-07; (4) the engine does not reset oscillator phase at note-on.
+What IS different: the engine has no velocity anywhere (sound_engine_note() takes none, and the
+EnvADSR's AM input - where a patch normally sends Keyboard Vel - is not read), so every note plays as if
+struck at full velocity. It also ignores the EnvADSR's Output Type, KB, Gate input and Normal/Reset
+switch (Reset restarts the attack from zero on every trigger). The KB button is the keyboard GATE
+(manual p.197), not key tracking.
+The patch compared was 03 Chris' Lead, which has no Keyboard module and nothing in either envelope's AM
+input, so velocity cannot be the cause there. Checked offline against it: its oscillators are OscShpB
+TriSaw at Shape 127, and the engine's TriSaw matches the instrument's own wave part to 0.0-0.2 dB up to
+10 kHz at 187.5, 375 and 750 Hz, and is at most 0.7-1.2 dB bright above that. Its Mix4-1C is one of the
+106 hardware-checked mixer settings (§3.6), and its Compressor (Att 104) is the §25.3 case, word-exact.
+A slow-attack compressor passes each onset before it acts, so a level difference ahead of it would
+show as an exaggerated transient - the next check is the owner's A/B with the Compressor bypassed.
+
