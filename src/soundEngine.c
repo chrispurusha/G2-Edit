@@ -174,6 +174,8 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define ENV_PARAM_DECAY          (2)
 #define ENV_PARAM_SUSTAIN        (3)
 #define ENV_PARAM_RELEASE        (4)
+#define ENV_PARAM_KB             (6)   // the keyboard gate, not key tracking (manual p.197)
+#define ENV_INPUT_GATE           (1)   // node input: 0 is the audio, 1 the Gate jack
 
 #define LEVAMP_PARAM_GAIN        (0)
 #define LEVAMP_PARAM_TYPE        (1)   // 0 = lin, 1 = exp
@@ -590,6 +592,7 @@ typedef struct {
     int32_t         envRelHalf;
     int32_t         envRelAdd;
     int32_t         envSustainQ;
+    bool            envKeyGate;   // §17.4 - the keys gate it: KB on, or a Gate jack fed by a module not played
 
     double          gain;         // LevAmp
     double          pulseSeconds; // Pulse gate width
@@ -2269,7 +2272,6 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
     // In1L, In1R .. In4L, In4R as RAW CONNECTOR indices: Mix4to1S's connector list really does run
     // Out, Out, then ten inputs, so the first eight input legs are connectors 2..9.
     static const uint32_t         mixStereoIn[] = {2, 3, 4, 5, 6, 7, 8, 9};
-    static const uint32_t         envIn[]       = {0};              // connector 0 is the audio the envelope shapes
     // OscB has "two pitch modulation inputs, one frequency modulation input, one sync modulation
     // input and a Shape modulation input" (manual, OscB). The two pitch inputs are the control-rate
     // pair at 0 and 1; both are summed and scaled by the one Pitch knob the module carries.
@@ -2371,8 +2373,9 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeEnv:
         {
-            *connectors = envIn;
-            return 1;
+            uint32_t count = inputs_in_module_order(moduleType, 2u, derived);    // In, Gate
+            *connectors = derived;
+            return count;
         }
         case eNodeFxIn:
         {
@@ -3236,6 +3239,16 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->sustain = dial_fraction(param_value(module, variation, ENV_PARAM_SUSTAIN));   // §16.3
             node->release = env_time_seconds(param_value(module, variation, ENV_PARAM_RELEASE));
             env_rates_build(node);
+
+            // §17.4
+            {
+                int       gateJack   = connector_index_for_input(module->type, ENV_INPUT_GATE, anyConnectorType);
+                uint32_t  sourceLeg  = 0;
+                tModule * gateSource = (gateJack >= 0) ? module_feeding(module, (uint32_t)gateJack, &sourceLeg) : NULL;
+                bool      unplayed   = (gateSource != NULL) && (node->in[ENV_INPUT_GATE] < 0);
+
+                node->envKeyGate = (module->param[variation][ENV_PARAM_KB].value != 0) || unplayed;
+            }
             break;
         }
         case eNodePulse:
@@ -4805,7 +4818,7 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
             // notes §150
             if (  (gEnvStage[voice][node] == eEnvIdle)
                || (gEnvStage[voice][node] == eEnvRelease)
-               || (gEnvTrigger[voice][node] != gVoice[voice].trigger)) {
+               || ((spec->envKeyGate == true) && (gEnvTrigger[voice][node] != gVoice[voice].trigger))) {
                 gEnvStage[voice][node]   = eEnvAttack;   // from the level it is at - §17.3
                 gEnvTrigger[voice][node] = gVoice[voice].trigger;
             }
@@ -5480,7 +5493,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeEnv:
         {
-            double env = envelope_step(voice, n, spec, gVoice[voice].gate);
+            // §17.4
+            bool   gate = ((spec->envKeyGate == true) && (gVoice[voice].gate == true)) || (signal_in(spec, value, ENV_INPUT_GATE) > 0.0);
+            double env  = envelope_step(voice, n, spec, gate);
 
             // Output 0 is the envelope itself, for patching at a modulation input. Output 1
             // is whatever audio is patched into the module, shaped by that envelope — the
