@@ -3311,12 +3311,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMetNoise,    connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },    // 29 Out
     // 30 Device
     {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Wheel",         labelLocUp   },    // 30 Wheel
-    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 18,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AftTouch",      labelLocUp   },    // 30 AfterTouch
-    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 33,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "CtrlPedal",     labelLocUp   },    // 30 ControlPedal
-    {moduleTypeDevice,      connectorDirOut, connectorTypeLogic,   {{ 50,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sustain",       labelLocUp   },    // 30 SustainPedal
-    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 63,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Stick",         labelLocUp   },    // 30 PitchStick
-    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 76,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "GWh1",          labelLocUp   },    // 30 Global Wheel 1
-    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 88,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "GWh2",          labelLocUp   },    // 30 Global Wheel 2
+    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "ATouch",      labelLocUp   },    // 30 AfterTouch
+    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 31,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "CPedal",     labelLocUp   },    // 30 ControlPedal
+    {moduleTypeDevice,      connectorDirOut, connectorTypeLogic,   {{ 45,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sustain",       labelLocUp   },    // 30 SustainPedal
+    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 59,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Stick",         labelLocUp   },    // 30 PitchStick
+    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 73,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "GWh1",          labelLocUp   },    // 30 Global Wheel 1
+    {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 87,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "GWh2",          labelLocUp   },    // 30 Global Wheel 2
     // 31 Noise
     {moduleTypeNoise,       connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },    // 31 Out
     // 32 Eq2Band
