@@ -36,6 +36,7 @@
 #include "soundEngine.h"
 #include "noteStack.h"
 #include "prefs.h"
+#include "splitView.h"              // SPLIT_POS_MAX - the divider the record carries
 #include "g2Patch.h"
 #include "g2Prefs.h"
 #include "g2View.h"
@@ -128,7 +129,6 @@ typedef struct {
     // This instance's G2: its four slots, its settings, and through engineIndex its engine.
     tG2Document *    doc;
 
-    char             patchPath[1024];
     bool             active;
     double           sampleRate;
     double           params[G2_NUM_PARAMS];
@@ -164,35 +164,11 @@ static double level_db(double normalized) {
     return G2_LEVEL_MIN_DB + (normalized * (0.0 - G2_LEVEL_MIN_DB));
 }
 
-// notes §5
-static void default_patch_path(char * out, size_t len) {
-    const char * env = getenv("G2_PLUGIN_PATCH");
-
-    if ((env == NULL) || (env[0] == '\0')) {
-        env = getenv("G2_VST3_PATCH");      // the name this had before there were two formats
-    }
-
-    if ((env != NULL) && (env[0] != '\0')) {
-        snprintf(out, len, "%s", env);
-        return;
-    }
-    const char * home = getenv("HOME");
-
-    snprintf(out, len, "%s/Documents/G2-Edit/plugin.pch2", (home != NULL) ? home : ".");
-}
-
-static void load_patch(tG2Plugin * g2) {
-    // notes §6
-    if ((g2_plugin_open_file(g2->patchPath, 0) == eG2FileFailed) && (g2->patchPath[0] != '\0')) {
-        snprintf(gSavedPatchPath[0], FILE_PATH_SIZE, "%s", g2->patchPath);
-    }
-
-    // Only meaningful once the engine is live - see g2_set_active(). Harmless when it is not, and
-    // called anyway so that a patch swapped in mid-session takes effect immediately.
-    if (g2->active == true) {
-        sound_engine_update_from_patch();
-    }
-}
+// NOTHING LOADS A PATCH BY ITSELF ANY MORE (2026-09-16, CT). default_patch_path() and load_patch()
+// went with the decision: no host-restored path, no $G2_PLUGIN_PATCH, no ~/Documents/G2-Edit/
+// plugin.pch2. An instance comes up on the empty patch g2_create() makes, and a patch arrives only
+// through File > Open Patch File... - until the host holds the patch DATA, which is the next piece
+// of work. See g2Plugin.c.md §5-§6 for what was here and why it went.
 
 // ------------------------------------------------------------------------------------------------
 // Lifecycle
@@ -225,7 +201,8 @@ static void * g2_create(const tSynthLibPluginDesc * desc) {
     note_stack_all_off();
 
     // All four slots start as the application's new empty patch, so selecting B, C or D in the editor
-    // shows an empty patch rather than zeroed storage. Slot A is replaced by the patch loaded below.
+    // shows an empty patch rather than zeroed storage. Nothing replaces slot A any more: no patch is
+    // loaded until the File menu opens one (2026-09-16).
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         init_patch(slot);
     }
@@ -248,12 +225,10 @@ static void g2_destroy(void * inst) {
 }
 
 static void g2_initialize(void * inst) {
-    tG2Plugin * g2 = enter(inst);
-
-    if (g2->patchPath[0] == '\0') {
-        default_patch_path(g2->patchPath, sizeof(g2->patchPath));
-    }
-    load_patch(g2);
+    // Nothing to load: g2_create() has already made every slot an empty patch, and a file arrives
+    // only through the File menu. The call still has to happen - every entry point selects this
+    // instance's document before touching anything.
+    (void)enter(inst);
 }
 
 static void g2_terminate(void * inst) {
@@ -487,33 +462,37 @@ static bool g2_param_text(const tSynthLibPluginDesc * desc, void * inst, uint32_
 
 static size_t g2_get_state(void * inst, void * out, size_t len) {
     tG2Plugin * g2 = enter(inst);
-    char        text[(MAX_SLOTS + 1) * (FILE_PATH_SIZE + 16) + 64];
+    // NO FILE NAMES IN HERE since 2026-09-16, so the record is a handful of short lines rather than
+    // four paths' worth. What a project names, it would have to reload, and it no longer does.
+    char        text[256];
     size_t      used = 0;
 
     used += (size_t)snprintf(text + used, sizeof(text) - used, "%s", G2_STATE_HEADER);
-
-    if ((gGlobalSettings.perfMode == 1) && (gSavedPerfPath[0] != '\0')) {
-        used += (size_t)snprintf(text + used, sizeof(text) - used, "perf=%s\n", gSavedPerfPath);
-    } else {
-        for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-            const char * path = gSavedPatchPath[slot];
-
-            if ((path[0] != '\0') && (used < sizeof(text))) {
-                used += (size_t)snprintf(text + used, sizeof(text) - used, "slot%u=%s\n", (unsigned)slot, path);
-            }
-        }
-    }
 
     if (used < sizeof(text)) {
         used += (size_t)snprintf(text + used, sizeof(text) - used, "perfmode=%u\nselected=%u\n",
                                  (unsigned)gGlobalSettings.perfMode, (unsigned)gSlot);
     }
 
-    // notes §10 - the editor's mouse mode and the engine's drone mode too. The Voice/FX split is the
-    // patch's own and comes with it.
+    // notes §10 - the editor's mouse mode and the engine's drone mode too.
     if (used < sizeof(text)) {
         used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndrone=%d\n",
                                  (int)synthlib_dial_mode(), (sound_engine_drone_mode() == true) ? 1 : 0);
+    }
+
+    // notes §10 - and each slot's Voice/FX divider, which nothing else can restore: it is patch
+    // data, so reopening the project would otherwise put it back where the .pch2 says (CT).
+    if (used < sizeof(text)) {
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "split=");
+
+        for (uint32_t slot = 0; (slot < MAX_SLOTS) && (used < sizeof(text)); slot++) {
+            used += (size_t)snprintf(text + used, sizeof(text) - used, "%s%u",
+                                     (slot > 0) ? "," : "", (unsigned)gPatchDescr[slot].barPosition);
+        }
+
+        if (used < sizeof(text)) {
+            used += (size_t)snprintf(text + used, sizeof(text) - used, "\n");
+        }
     }
 
     if (used > sizeof(text)) {
@@ -529,12 +508,17 @@ static size_t g2_get_state(void * inst, void * out, size_t len) {
 // A v2 state record, read into this before anything is loaded, so a record that names only some
 // slots can empty the rest (see g2_set_state()).
 typedef struct {
-    char    perf[FILE_PATH_SIZE];
-    char    slot[MAX_SLOTS][FILE_PATH_SIZE];
+    // No file names. A record written before 2026-09-16 still carries perf= and slot0..3=, and they
+    // are skipped now like any other key this build does not know - which is exactly the intent:
+    // reopening a project must not reload the file it was last pointed at.
     int32_t perfMode;
     int32_t selected;
     int32_t dialMode;
     int32_t drone;
+
+    // Per slot, like the paths above and for the same reason: each slot holds its own patch and so
+    // its own divider. -1 is "the record did not say", which leaves the patch's own alone.
+    int32_t split[MAX_SLOTS];
 } tG2State;
 
 static void parse_state_line(tG2State * state, char * line) {
@@ -548,11 +532,7 @@ static void parse_state_line(tG2State * state, char * line) {
     const char * key   = line;
     const char * value = eq + 1;
 
-    if (strcmp(key, "perf") == 0) {
-        snprintf(state->perf, sizeof(state->perf), "%s", value);
-    } else if ((strncmp(key, "slot", 4) == 0) && (key[4] >= '0') && (key[4] < (char)('0' + MAX_SLOTS)) && (key[5] == '\0')) {
-        snprintf(state->slot[key[4] - '0'], sizeof(state->slot[0]), "%s", value);
-    } else if (strcmp(key, "perfmode") == 0) {
+    if (strcmp(key, "perfmode") == 0) {
         state->perfMode = atoi(value);
     } else if (strcmp(key, "selected") == 0) {
         state->selected = atoi(value);
@@ -560,6 +540,19 @@ static void parse_state_line(tG2State * state, char * line) {
         state->dialMode = atoi(value);
     } else if (strcmp(key, "drone") == 0) {
         state->drone = atoi(value);
+    } else if (strcmp(key, "split") == 0) {
+        // One position per slot, comma separated. A short list leaves the rest at -1, so a record
+        // written by a build that knew fewer slots still says what it knew.
+        const char * p = value;
+
+        for (uint32_t slot = 0; (slot < MAX_SLOTS) && (p != NULL) && (*p != '\0'); slot++) {
+            state->split[slot] = atoi(p);
+            p                  = strchr(p, ',');
+
+            if (p != NULL) {
+                p++;
+            }
+        }
     }
 }
 
@@ -572,13 +565,9 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     }
 
     if ((len < headerLen) || (memcmp(data, G2_STATE_HEADER, headerLen) != 0)) {
-        // The old format: a bare path, into slot A.
-        if (len >= sizeof(g2->patchPath)) {
-            len = sizeof(g2->patchPath) - 1u;
-        }
-        memcpy(g2->patchPath, data, len);
-        g2->patchPath[len] = '\0';
-        load_patch(g2);
+        // The oldest format was a bare path, and this build does not open one: nothing loads a patch
+        // by itself any more. Such a record holds nothing else, so it restores nothing and the
+        // instance keeps the empty patch g2_create() made.
         return;
     }
     tG2State * state = (tG2State *)calloc(1, sizeof(tG2State));
@@ -594,6 +583,10 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     state->selected = -1;
     state->dialMode = -1;
     state->drone    = -1;
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        state->split[slot] = -1;
+    }
     memcpy(text, data, len);
     text[len] = '\0';
 
@@ -603,35 +596,21 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     free(text);
 
     // notes §11
+    //
+    // EVERY SLOT BACK TO AN EMPTY PATCH. The record names no file and nothing here opens one, so a
+    // reopened project starts empty and waits for File > Open - or, once it exists, for the patch
+    // data the host will hold. The remembered paths are cleared with them, so that File > Save
+    // cannot point at a file whose contents were never loaded.
     gSavedPerfPath[0] = '\0';
-    snprintf(g2->patchPath, sizeof(g2->patchPath), "%s", state->slot[0]);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         gSavedPatchPath[slot][0] = '\0';
+        clear_slot_data(slot);
+        init_patch(slot);
     }
 
-    if (state->perf[0] != '\0') {
-        if (g2_plugin_open_file(state->perf, 0) == eG2FileFailed) {
-            for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-                clear_slot_data(slot);
-                init_patch(slot);
-            }
-            snprintf(gSavedPerfPath, FILE_PATH_SIZE, "%s", state->perf);
-        }
-    } else {
-        for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-            if ((state->slot[slot][0] != '\0') && (g2_plugin_open_file(state->slot[slot], slot) != eG2FileFailed)) {
-                continue;
-            }
-            // Nothing named, or the file has gone: an empty slot, as the editor's A-D would show it.
-            clear_slot_data(slot);
-            init_patch(slot);
-            snprintf(gSavedPatchPath[slot], FILE_PATH_SIZE, "%s", state->slot[slot]);
-        }
-    }
-
-    // AFTER the files: loading a performance sets both of these from the file itself, and the
-    // record says what they were when the project was saved.
+    // AFTER the slots, which is what the record is for: it says what these were when the project was
+    // saved, and the empty patches above carry the defaults.
     if ((state->perfMode == 0) || (state->perfMode == 1)) {
         gGlobalSettings.perfMode = (uint8_t)state->perfMode;
     }
@@ -642,6 +621,16 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
 
     if ((state->dialMode >= (int32_t)eDialModeRotary) && (state->dialMode <= (int32_t)eDialModeHorizontal)) {
         synthlib_set_dial_mode((tDialMode)state->dialMode);
+    }
+
+    // LAST, and the order still matters even with no file in it: init_patch() above sets
+    // barPosition to SPLIT_POS_MAX (Voice Area full), so a divider applied any earlier would be
+    // overwritten by the empty patch a moment later.
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        if (state->split[slot] >= 0) {
+            gPatchDescr[slot].barPosition = (uint16_t)((state->split[slot] > SPLIT_POS_MAX)
+                                                       ? SPLIT_POS_MAX : state->split[slot]);
+        }
     }
     sound_engine_set_drone_mode(state->drone != 0);     // notes §10 - absent (-1) is the default, on
     free(state);

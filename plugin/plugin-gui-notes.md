@@ -521,8 +521,15 @@ against the running application: background band now 384-396, matching the appli
 **The built-in patch is gone.** It was scaffolding from before the plug-in had an editor: with no way
 to choose a file, embedding one removed a whole class of "why is it silent". `File > Open Patch
 File...` replaced it, and a plug-in that quietly plays somebody else's lead patch is worse than one
-that starts empty. `load_patch()` now uses the path chain that was always in `g2Patch.c`, and
-`do-vst3` no longer generates `g2BuiltInPatch.h`.
+that starts empty. `do-vst3` no longer generates `g2BuiltInPatch.h`.
+
+**AND SINCE 2026-09-16, NOTHING LOADS A PATCH BY ITSELF AT ALL** (CT). `load_patch()` and
+`default_patch_path()` are gone, and with them the path chain: no host-restored path, no
+`$G2_PLUGIN_PATCH`, no `~/Documents/G2-Edit/plugin.pch2`. Every slot starts on `init_patch()`'s empty
+patch and a file arrives only through the File menu, so a reopened host project comes back empty
+rather than reloading whatever now sits at a remembered path. The host storing the patch DATA is the
+replacement, and is the next piece of work; the Voice/FX divider folds into it when it lands, since
+`barPosition` is patch data — the `split=` key now in the state record is interim.
 
 **Empty-plug-in defaults**, 2026-08-08. `init_patch()` moved from `mouseHandle.c` to `dataBase.c` —
 its own comment asked where it really belonged, nothing in it touches a window, and `clear_slot_data()`

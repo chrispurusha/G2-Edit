@@ -66,18 +66,11 @@ void device_op_end(void);
 void resize_window(int w, int h);
 void reposition_window(int x, int y);
 
-int note_editor_cursor_move_line(int cursorPos, int delta);
-int note_editor_cursor_line_home(int cursorPos);
-int note_editor_cursor_line_end(int cursorPos);
-int note_editor_cursor_from_click(double logicalX, double logicalY);
-
-// Shared popup-panel chrome (bordered box, inset title bar, Close button) — see graphics.cpp.
-
-// notes §2
-bool floating_panel_is_frontmost(const tFloatingPanel * panel);
-
-bool floating_panels_under(tCoord coord);
-bool floating_panels_drag(tCoord coord);
+// The notes editor's cursor arithmetic moved to settingsPanels.h on 2026-09-16, with the four
+// settings-family panels themselves; the floating-panel coordinator (floating_panel_is_frontmost(),
+// floating_panels_under(), floating_panels_drag() and the four popup callbacks) moved to
+// floatingPanels.h at the same time. Both so the plug-in, which does not compile graphics.c, gets
+// them — see the note at the top of floatingPanels.c.
 
 #ifdef __cplusplus
 }

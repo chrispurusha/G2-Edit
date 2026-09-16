@@ -60,6 +60,7 @@
 #include "misc.h"         // recent_files_add()
 #include "alertDialog.h"       // show_alert() on a failed write
 #include "synthlibPopups.h"    // synthlib_popups_render() — draws the alert dialog and the browsers
+#include "floatingPanels.h"    // the panel coordinator this build registers, moved out of graphics.c
 #include "g2AppStubs.h"
 #include "g2Patch.h"
 #include "g2Draw.h"
@@ -190,6 +191,22 @@ void g2_draw_init(void) {
 
     // notes §7
     g2_menu_init();
+
+    // THE PANELS AND THE MENU BAR, INTO SYNTHLIB'S ORDERING - the registration graphics.c makes for
+    // the application (register_app_popups), which this build does not compile. Without it no
+    // floating panel was drawn here and none received a click, so every Settings and Tools entry
+    // opened something invisible; and the menu bar was handled by hand in g2Input.c on the PRESS,
+    // which let the release fall through to whatever button lay underneath (CT, both).
+    static const tSynthLibPopup pluginPopups[] = {
+        {
+            "floatingPanels", SYNTHLIB_POPUP_LAYER_CONTEXT_MENU - 10, false, NULL,
+            floating_panels_render, NULL, floating_panels_mouse, floating_panels_key,
+            floating_panels_scroll, NULL
+        },
+    };
+
+    synthlib_popups_register(pluginPopups, (uint32_t)(sizeof(pluginPopups) / sizeof(pluginPopups[0])));
+    synthlib_popups_set_menu_bar(gPluginMenuBar, g2_plugin_menu_bar_rect);
 
     // ONLY IF NOTHING IS LOADED. This runs when the editor view is first created, which is AFTER the
     // processor has loaded its patch — so calling it unconditionally WIPED that patch the moment the

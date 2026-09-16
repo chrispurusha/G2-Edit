@@ -5,13 +5,10 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Most of the plugin menu options aren't working. Setings etc.
-- When selecting an option of the top menu, buttons underneath are triggering. Possible plugin only.
-- VA/FX divider position isn't being restored.
 - Drum synth presets to be gotten from decompiled editor or resources. Preset selection to implement.
 - Engine has sharper initial transient. Possibly EnvADSR attack timing or not clamping down before attack starts?
 - Need a save patch back to same slot it was loaded from. If we didn't load the patch from a slot, then needs to be greyed-out.
-- We don't need the host to remember which the last file we opened was. We need to remember and restore the patch/performace/settings.
+- Store the PATCH CONTENT in the host project - the rest of "remember and restore the patch/performance/settings" (path-loading removed 2026-09-16, so a reopened project is empty until this lands; the Voice/FX divider folds into it then, since barPosition IS patch data, and the interim split= key in the state record goes)
 - Fix current modules in sound engine using the recent methods.
 - Bug where we see a sudden/random scroll VA area right about half a module's width.
 - Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter.

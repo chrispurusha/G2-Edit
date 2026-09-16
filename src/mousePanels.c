@@ -44,6 +44,7 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
 #include "graphics.h"
+#include "settingsPanels.h"    // note_editor_cursor_from_click(), moved out of graphics.c 2026-09-16
 #include "globalVars.h"
 #include "protocol.h"
 #include "menus.h"

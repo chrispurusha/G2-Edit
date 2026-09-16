@@ -135,6 +135,9 @@ bool cable_touches_connector(const tCable * cable, uint32_t moduleIndex, uint32_
 void cable_far_end(const tCable * cable, uint32_t moduleIndex, uint32_t ioCount, uint32_t * farModuleIndex, uint32_t * farIoCount, tConnectorDir * farDir);
 bool find_cable_at_connector(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t ioCount, tConnectorDir dir, tCableKey * key, uint32_t * otherModuleIndex, uint32_t * otherIoCount, tConnectorDir * otherDir);
 
+// notes §27
+void stop_dragging(void);
+
 // Cable-key helpers, used by the connect and by the cable popup commands.
 void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex);
 bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex);

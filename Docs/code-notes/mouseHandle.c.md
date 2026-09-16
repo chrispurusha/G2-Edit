@@ -131,15 +131,11 @@ Through the table like the other three, so the param gesture is not the one exce
 reaches its release by a private path. The undo push inside canvas_param_drag_release() and the
 cursor restore in stop_dragging() are what keep this wrapper application-side.
 
-## 11. in `stop_dragging()`
+## 11. moved to canvasDrag.c on 2026-09-16
 
-No explicit glfwSetCursorPos(gDragStartX, gDragStartY) here — GLFW's
-cocoa backend already restores the cursor to wherever it was when
-CURSOR_DISABLED was entered, as soon as we switch back to NORMAL (see
-updateCursorMode() in cocoa_window.m). An extra explicit warp on top
-of that was redundant, and two independent warps in a row can land a
-pixel or two off from each other — enough, in SynthEdit's tightly
-packed filter dials, to spill onto a neighbouring control.
+`stop_dragging()` left this file with the drag state it clears, so that the settings panels - which
+are in the plug-in's build now, while mouseHandle.c is not - could go on calling it. The note is
+canvasDrag.c.md §27, verbatim. The number is left as a gap so the remaining markers here resolve.
 
 ## 12. in `mouse_button()`
 

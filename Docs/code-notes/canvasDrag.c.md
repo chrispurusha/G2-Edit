@@ -314,3 +314,17 @@ PRESS IS NOT A COLUMN HERE, and that is not an oversight. A press is a hit test,
 registry already owns hit testing for the whole canvas (moduleGraphics.c registers every widget as it
 draws it); a press column would mean a second, competing answer to "what is under the pointer". What
 the press does have to do is call canvas_drag_begin(), and that is the one line each handler shares.
+
+## 27. in `stop_dragging()`
+
+Moved here from mouseHandle.c on 2026-09-16, with its text, when the settings panels joined the
+plug-in's build: they call it to cancel a drag, and mouseHandle.c is the application's alone. It was
+mouseHandle.c.md §11.
+
+No explicit glfwSetCursorPos(gDragStartX, gDragStartY) here — GLFW's
+cocoa backend already restores the cursor to wherever it was when
+CURSOR_DISABLED was entered, as soon as we switch back to NORMAL (see
+updateCursorMode() in cocoa_window.m). An extra explicit warp on top
+of that was redundant, and two independent warps in a row can land a
+pixel or two off from each other — enough, in SynthEdit's tightly
+packed filter dials, to spill onto a neighbouring control.

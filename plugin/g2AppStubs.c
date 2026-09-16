@@ -116,6 +116,15 @@ void undo_push_patch_descr(uint32_t slot, uint8_t which, uint8_t oldValue, uint8
     (void)newValue;
 }
 
+// The Performance Settings panel's edits. It joined this build on 2026-09-16 with the rest of the
+// settings-family panels, and undo.c is still the application's alone.
+void undo_push_perf_setting(uint8_t which, int32_t slot, uint8_t oldValue, uint8_t newValue) {
+    (void)which;
+    (void)slot;
+    (void)oldValue;
+    (void)newValue;
+}
+
 void undo_push_knob(uint32_t slot, uint32_t idx1, const tKnob * before1, const tKnob * after1,
                     int32_t idx2, const tKnob * before2, const tKnob * after2) {
     (void)slot;

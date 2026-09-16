@@ -113,7 +113,7 @@ SOURCES=(
     # application's render loop and is not in this build, but File > Save needs the writer.
     "$HERE/src/patchWrite.c"
     "$HERE/src/patchParamsResources.c"
-    # WHAT G2 ALIKE IS, said once and in C: ten parameters, a patch path, notes and a canvas. Both
+    # WHAT G2 ALIKE IS, said once and in C: ten parameters, notes and a canvas. Both
     # wrappers below are driven entirely by the descriptor this file returns.
     "$HERE/plugin/g2Plugin.c"
     "$HERE/plugin/g2Patch.c"
@@ -133,6 +133,16 @@ SOURCES=(
     "$HERE/src/menus.c"
     "$HERE/src/appMenuBar.c"
     "$HERE/src/menuActions.c"
+    # THE PANELS THE MENUS OPEN, AND THE COORDINATOR OVER THEM. Both files were split out of
+    # graphics.c on 2026-09-16 precisely so this build could have them: the coordinator lived in the
+    # application's render loop, so here every Settings and Tools entry opened a panel that was never
+    # drawn and never saw a click (CT: "Most of the plugin menu options aren't working"). mousePanels.c
+    # is their mouse and key half, and the two resources files are the tables they draw from.
+    "$HERE/src/settingsPanels.c"
+    "$HERE/src/floatingPanels.c"
+    "$HERE/src/mousePanels.c"
+    "$HERE/src/synthSettingsResources.c"
+    "$HERE/src/perfSettingsResources.c"
     # The panels the Settings and Tools menus open. Each was checked for real GLFW CALLS first:
     # only mutatorUI.c had one (glfwGetKey, now the shared modifier seam) and virtualKeyboard.c
     # (glfwGetTime, now get_time_ms). The rest only use GLFW's key CONSTANTS, which need the header
@@ -588,5 +598,4 @@ else
     print "Not installed (--no-install)."
 fi
 print ""
-print "Patch source, in order: host-saved path, then \$G2_PLUGIN_PATCH,"
-print "then ~/Documents/G2-Edit/plugin.pch2"
+print "The plug-in loads no patch by itself: open one from its File menu."

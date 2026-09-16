@@ -64,36 +64,22 @@ its reader, and a parameter change can arrive on the host's UI thread. Letting b
 corrupt it. So every setter merely sets this, and render() - one thread, once per block - is the
 only writer. Per instance, since each has its own snapshot.
 
-## 5. `default_patch_path()`
+## 5-6. `default_patch_path()` and `load_patch()`, removed 2026-09-16
 
-Where the patch comes from when the host has not restored one. Checked in order:
-```
-  1. the path the host restored with the project (g2_set_state below)
-  2. $G2_PLUGIN_PATCH, then the older $G2_VST3_PATCH
-  3. ~/Documents/G2-Edit/plugin.pch2
+NOTHING LOADS A PATCH BY ITSELF ANY MORE (CT: "We shouldn't be loading the last loaded patch
+file"). Both functions are gone, and with them the whole startup chain: the path the host had
+restored with the project, `$G2_PLUGIN_PATCH` and the older `$G2_VST3_PATCH`, and the fixed
+`~/Documents/G2-Edit/plugin.pch2`. An instance comes up on the empty patch g2_create() makes, in
+all four slots, and a patch arrives only through File > Open Patch File...
 
-```
-The host-stored path is what makes a project reopen sounding as it did; the environment variable
-is for driving it from a test script - a host launched from the Dock inherits no shell environment,
-so it only ever applies to a scripted run - and the fixed location is so it does something
-sensible with neither set.
+WHY, AND WHAT REPLACES IT. Storing a path made a project's sound depend on a file that could move,
+change or vanish underneath it - and reopening a project silently reloaded whatever was at that
+path now, which is not the same thing as restoring what was saved. The replacement is for the host
+to store the patch DATA, which is the next piece of work; until it lands, a reopened project is
+honestly empty rather than wrong. The numbers are left as a gap so the remaining markers resolve.
 
-## 6. in `load_patch()`
-
-THE PATH, not a patch compiled into the binary. The built-in patch was a scaffold from before
-the plug-in had an editor: with no way to choose a file, embedding one removed a whole class of
-"why is it silent" while the rest was proven. File > Open Patch File... has replaced it, and a
-plug-in that quietly plays somebody else's lead patch on load is worse than one that starts
-empty.
-
-An empty path or a missing file simply leaves the canvas empty, which is honest.
-
-A patch into slot A, or a whole performance. g2_plugin_open_file() also records the path as
-what File > Save writes back to and what the project stores (g2_get_state()) - the same fields
-the editor sets when it opens or saves a file, so the two cannot disagree.
-
-A FILE THAT IS NOT THERE IS STILL REMEMBERED, so a project whose patch sits on an unmounted
-drive keeps naming it rather than forgetting it on the next save.
+What was here, for the record: the chain above in priority order, and a note that the built-in
+compiled-in patch it replaced had itself been a scaffold from before the plug-in had an editor.
 
 ## 7. in `g2_set_active()`
 
@@ -122,46 +108,63 @@ until g2_process() reaches its offset (2026-09-11; it used to land at the start 
 ## 10. `G2_STATE_HEADER`
 
 UPDATED 2026-09-14: the record also carries the editor's mouse mode - `dialmode=` (Rotary 0, Vertical 1,
-Horizontal 2). Same header: an older build skips the new key. The Voice/FX split is NOT in the record: it is
-the patch's own (the descriptor's barPosition), so loading a patch sets it as that patch has it (CT). A
-per-slot override was tried the same day and taken out for that reason.
+Horizontal 2). Same header: an older build skips the new key.
+
+UPDATED 2026-09-16: AND THE VOICE/FX SPLIT - `split=`, one barPosition per slot, comma separated. This
+REVERSES the 09-14 decision that used to stand here ("the split is NOT in the record: it is the patch's
+own"), on CT's call: the divider is patch data, so a project reopened in the host came back with the
+divider where the FILE said rather than where it was left. It is applied LAST in g2_set_state() (§11). A
+missing key, or a slot the list does not reach, is -1 and leaves the slot's own alone, so a project saved
+before this change opens as it always did.
+
+`split=` IS INTERIM, and knowing that should stop it growing roots (CT, 2026-09-16): barPosition is part
+of the patch, so once the host stores the patch DATA the divider is restored with it and this key goes.
+It exists because the patch data is not stored yet and the divider was being lost in the meantime.
 
 UPDATED 2026-09-15: and the engine's drone mode - `drone=0|1`, Settings > Drone Mode (sound-engine-notes §20).
 Per instance, unlike the mouse mode. A record without it, from a project saved before it existed, gets the
 default, on: the record replaces what the instance holds (§11).
 
-THE PATCHES ARE IDENTIFIED BY PATH rather than embedded wholesale. A .pch2 is small enough to embed,
-and doing so would make a project self-contained, but it would also freeze a copy: edit the patch
-in G2-Edit and the project would go on playing the old one, silently. Storing the path keeps one
-patch with one meaning. The same holds for a performance.
-
-ALL FOUR SLOTS SINCE 2026-09-12. An instance holds a whole performance, so the state is a short
-text record: the performance's path when the instance is in performance mode and has one,
-otherwise each slot's patch path, and in both cases the selected slot:
+NO FILE NAMES AT ALL SINCE 2026-09-16 (CT). The record used to identify each slot's patch by PATH -
+`perf=` in performance mode, otherwise `slot0=`..`slot3=` - and g2_set_state() reopened them, so a
+project came back playing whatever was at those paths now. That is gone. The record carries editor
+state only:
 
 ```
     G2Alike state 2
-    perf=/path/to/set.prf2          or   slot0=/path/a.pch2 ... slot3=/path/d.pch2
     perfmode=0|1
     selected=0..3
+    dialmode=0|1|2
+    drone=0|1
+    split=<slot0>,<slot1>,<slot2>,<slot3>
 
 ```
-A slot with nothing loaded from a file is simply absent. EDITS NOT SAVED TO A FILE ARE NOT STORED,
-as before - the project holds paths, not patches.
+The header stays at 2. A record written before the change still carries `perf=`/`slot0..3=`, and
+parse_state_line() simply does not know those keys any more, so they are skipped exactly as a
+future key would be by an older build - which is precisely the wanted behaviour: an old project
+opens empty rather than reloading its file.
 
-THE OLD FORMAT IS STILL READ: a blob without the header is a bare patch path, which is what every
-project saved before this held, and it goes into slot A. NO TERMINATOR IS WRITTEN in either form:
-the blob's length is its length.
+EDITS NOT SAVED TO A FILE ARE STILL NOT STORED, and now neither is anything else about the patch.
+Storing the patch DATA is the next piece of work; the point of doing the removal first is that a
+reopened project is honestly empty instead of confidently wrong.
+
+THE OLD BARE-PATH FORMAT IS READ AND IGNORED: a blob without the header held nothing but a path, so
+there is nothing left in it to restore. NO TERMINATOR IS WRITTEN: the blob's length is its length.
 
 ## 11. in `g2_set_state()`
 
 THE RECORD REPLACES WHAT THE INSTANCE HOLDS. A host restores state into a fresh instance, but
-also into a live one when a preset is recalled, and a slot the record does not name must not
-keep whatever was there. A performance names all four; otherwise an unnamed slot becomes the
-application's new empty patch.
+also into a live one when a preset is recalled, so what was there before must not survive: every
+slot goes back to the application's new empty patch before anything in the record is applied.
 
-A FILE THAT HAS GONE leaves its slot (or, for a performance, all four) empty but is still
-remembered, as load_patch() does, so the project goes on naming it.
+THE REMEMBERED PATHS ARE CLEARED WITH THEM (2026-09-16). gSavedPatchPath/gSavedPerfPath are what
+File > Save writes back to, so leaving a restored path in place while loading nothing would aim
+Save at a file whose contents were never read - one keystroke from overwriting a real patch with
+an empty one.
+
+ORDER STILL MATTERS, for a different reason than it used to. init_patch() sets barPosition to
+SPLIT_POS_MAX, so `split=` has to be applied after the slots are made or the empty patch overwrites
+it a moment later. It is no longer a race against the .pch2, because no .pch2 is opened here.
 
 ## 12. `g2_create_view()`
 

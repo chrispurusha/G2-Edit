@@ -49,6 +49,8 @@ extern "C" {
 #include "mouseHandle.h"
 #include "canvasDrag.h"
 #include "graphics.h"
+#include "floatingPanels.h"    // the panel coordinator, moved out of graphics.c 2026-09-16
+#include "settingsPanels.h"    // note_editor_*(), which moved with the panels
 #include "splitView.h"
 #include "globalVars.h"
 #include "protocol.h"
@@ -155,6 +157,11 @@ void cursor_capture(void) {
 // pointer that is already visible costs nothing; failing to restore a hidden one costs the user their
 // pointer, which is why every restore funnels through here rather than calling GLFW directly.
 void cursor_release(void) {
+    // Paired with cursor_capture()'s 3, and here rather than in stop_dragging() because the counter
+    // exists only because CURSOR_DISABLED delivers stale events - so it belongs beside the GLFW call
+    // that causes them. stop_dragging() moved to canvasDrag.c on 2026-09-16, which has no GLFW in it.
+    gDragSkipCount = 0;
+
     if (sCursorHidden == true) {
         glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         sCursorHidden = false;
@@ -217,24 +224,9 @@ void finish_param_drag(void) {
     stop_dragging();
 }
 
-void stop_dragging(void) {
-    gScrollState.yBarDragging = false;
-    gScrollState.xBarDragging = false;
-    pane_scrollbar_release();
-    memset(&gModuleDrag, 0, sizeof(gModuleDrag));
-    memset(&gParamDragging, 0, sizeof(gParamDragging));
-    memset(&gCableDrag, 0, sizeof(gCableDrag));
-    gTempoDragging            = false;
-    gPerfTempoDragging        = false;
-    gVibRateDragging          = false;
-    gVibAmountDragging        = false;
-    gGlideTimeDragging        = false;
-    gRubberBand.active        = false;
-    gDragSkipCount            = 0;
-
-    // notes §11
-    cursor_release();
-}
+// stop_dragging() moved to canvasDrag.c on 2026-09-16 - the settings panels call it to cancel a
+// drag, and they are in the plug-in's build now while this file is not. Nothing about it was ever
+// GLFW's; see canvasDrag.c.md §27.
 
 tMouseButton convert_to_mouse_button(int button, int action) {
     return synthlib_mouse_button(button, action);   // pure decode, shared — see synthlibWindow.h
