@@ -463,6 +463,14 @@ Until 2026-09-13 the stages were fixed-length ramps with a fall sharpness of 4.3
 zero at the dial's time - decay and release came out a constant 6% slow at every setting. From then
 until 2026-09-14 they were floating-point recurrences with the exact law (revert record 27).
 
+**17.4 Gate (2026-09-16).** The envelope is gated when KB is on and the voice's key is held, or when
+its Gate jack is above 0 (manual p.197). KB is the keyboard gate, not key tracking. Only a keyboard
+gate restarts the attack on a new note while the gate is already high; the jack restarts it on its own
+rising edge. With KB off and nothing in the jack the envelope never fires, as on the instrument. The
+one departure: a jack fed by a module the engine does not play yet (the Keyboard module's Gate, most
+often) counts as the keys, so those patches keep sounding. The Gate jack reads its source per voice,
+so an LFO gating it sounds only on a voice that is running - voice 0 at rest in drone mode.
+
 ## 18. Pulse
 
 **18.1 Width.** The Sub range's width in 96 kHz samples is the dial's displayed time (the Lo display,

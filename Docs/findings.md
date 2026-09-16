@@ -9785,3 +9785,12 @@ TriSaw at Shape 127, and the engine's TriSaw matches the instrument's own wave p
 A slow-attack compressor passes each onset before it acts, so a level difference ahead of it would
 show as an exaggerated transient - the next check is the owner's A/B with the Compressor bypassed.
 
+
+2026-09-16 - ENVADSR KB AND GATE JACK IN THE ENGINE (CT). Until now every EnvADSR was gated by the voice's key
+whatever its KB button said, and its Gate jack was never read. It now follows the manual (p.197): KB on and a
+key held, or the Gate jack above 0 (reference §17.4, revert record 36). A Gate jack fed by a module the engine
+does not model counts as the keys, so patches that gate from a Keyboard module keep playing. Checked offline on
+03 Chris' Lead through the Inject IO device (no speakers): KB on peak 0.84, KB off on both envelopes 0.002 (the
+reverb tail), KB on again 0.76; KB off with the Keyboard module's Gate cabled in 1.22; KB off with an LfoC in
+the jacks 1.29 with no key held (voice 0 runs at rest in drone mode) - the FX loops make peaks vary run to run.
+
