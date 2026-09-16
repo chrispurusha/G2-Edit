@@ -10,6 +10,7 @@ CT (Priority order)
 - VA/FX divider position isn't being restored.
 - Drum synth presets to be gotten from decompiled editor or resources. Preset selection to implement.
 - Engine has sharper initial transient. Possibly EnvADSR attack timing?
+- Need a save patch back to same slot it was loaded from. If we didn't load the patch from a slot, then needs to be greyed-out.
 - We don't need the host to remember which the last file we opened was. We need to remember and restore the patch/performace/settings.
 - Fix current modules in sound engine using the recent methods.
 - Bug where we see a sudden/random scroll VA area right about half a module's width.
