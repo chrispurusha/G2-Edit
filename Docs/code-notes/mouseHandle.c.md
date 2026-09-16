@@ -437,3 +437,24 @@ guard: on a US board '+' is Shift-'=', and holding Shift must not stop the step.
 The other two guards are both needed: mods covers the real keyboard, gCommandKeyPressed is
 the flag the Cmd branch below runs on, and Cmd -/+ (canvas zoom) must keep reaching it.
 GLFW_REPEAT is honoured so holding a key walks the range instead of one press per unit.
+
+## 36. in `key_callback()`
+
+THE V KEY, AND THE SECOND BARE-KEY SHORTCUT. Manual p64: "Press V on the computer keyboard to
+toggle between the current split position and viewing only the Voice Area." The work itself is
+split_view_toggle_voice_area_only() (splitView.c §13), not here, because the PLUG-IN binds the same
+key and neither editor should own the behaviour.
+
+BARE V IS FREE, AND CMD V IS PASTE. The two are kept apart by this branch's guards rather than by
+luck: it requires gCommandKeyPressed false AND no Super/Control/Alt in mods, so a Cmd V falls
+through to the Command-modified branch below where paste_clipboard() lives.
+
+IT SITS BESIDE THE L BRANCH ON PURPOSE. By this point in the chain every name-edit case has already
+been taken by an earlier `else if`, so a V typed into a patch, module, parameter, synth or
+performance name never reaches here - the same reason a bare L is safe. That is the whole guard, and
+it is why the branch does not repeat the test.
+
+F IS NOT BOUND, THOUGH THE MANUAL DEFINES IT. The same sentence gives "Press F ... to toggle between
+the current split position and viewing only the FX Area", but F is a white key in the computer
+keyboard's note entry (A S D F G H J K, help panel), so binding it would cost a note to gain a view
+toggle. Left for the owner to settle rather than decided here - see todo.md.

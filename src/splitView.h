@@ -79,6 +79,10 @@ bool split_view_is_full(uint32_t location);
 // the patch arrived with one collapsed.
 void split_view_restore_balance(void);
 
+// The V key: Voice-Area-only, and back to the split position it came from (manual p64). Here rather
+// than in either key handler because the application and the plug-in both bind it.
+void split_view_toggle_voice_area_only(void);
+
 // Put the divider at an explicit Voice Area height in pixels, clamped as a drag would be.
 void split_view_set_position(double pixels);
 

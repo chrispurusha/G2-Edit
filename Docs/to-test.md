@@ -14,6 +14,15 @@ Full detail for each is in findings.md, searchable by the wording below.
   that draws, drags by its title bar, closes by its button and by Escape; that a menu click no longer
   fires the control beneath it; that panels stack and raise on click; and that the application is
   unchanged by the move.
+- ***V TOGGLES VOICE-AREA-ONLY (2026-09-16)*** - manual p64, in both the application and the plug-in
+  through one shared split_view_toggle_voice_area_only(); the return leg is the same remembered
+  position the split bar's double-arrow uses. Added to the Help panel's VIEW section. STILL TO CHECK:
+  V collapses the FX area and V again comes back to where the divider was, in both editors; that it
+  does NOTHING while typing a patch/module/parameter/synth/perf name; that Cmd V still pastes; that
+  it survives a slot change (the divider is per slot); and that the move lands on the G2 as a patch
+  edit. NOT DONE, and deliberately: the manual's twin F for FX-Area-only. F is a white key in the
+  computer keyboard's note entry, and CT's call on 2026-09-16 was not to bind it for now - the
+  reasoning is kept in mouseHandle.c.md §36 rather than on todo.md.
 - ***THE PLUG-IN NO LONGER LOADS A PATCH BY ITSELF (2026-09-16)*** - CT: "We shouldn't be loading the
   last loaded patch file." g2_get_state() names no file, g2_set_state() opens none and puts every slot
   back to an empty patch, and default_patch_path()/load_patch() are gone - so $G2_PLUGIN_PATCH,

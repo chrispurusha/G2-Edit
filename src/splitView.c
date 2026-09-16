@@ -240,6 +240,18 @@ void split_view_show_full(uint32_t location) {
     gLocation = (tLocation)location;
 }
 
+// notes §13
+void split_view_toggle_voice_area_only(void) {
+    if (split_view_is_full((uint32_t)locationVa) == true) {
+        split_view_restore_balance();
+    } else {
+        split_view_show_full((uint32_t)locationVa);
+    }
+    // Both branches went through set_bar_position(), which has already applied the split and asked
+    // for a redraw; this is the end of the gesture, so the divider goes to the G2 here.
+    split_view_flush_position();
+}
+
 // ─── Rendering ───────────────────────────────────────────────────────────────
 
 // notes §4
