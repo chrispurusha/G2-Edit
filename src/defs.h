@@ -94,6 +94,8 @@
 
 #define RADIO_WIDEST_CAPTION                 "WWWWWWW"   // W, not X: the widest glyph the font has
 #define RADIO_BUTTON_PADDING                 (4.0)       // Breathing room either side of a Channel Select caption
+#define DRUM_SYNTH_MAX_PRESETS               (32)        // room in the preset menu, not the preset count
+#define DRUM_SYNTH_PRESET_PARAMS             (15)        // DrumSynth params a preset sets; 15 is On, not preset data
 #define SWITCH_CTRL_STEP                     (4)         // Ctrl output units per Switch state — manual p221
 #define DISPLAY_BOX_PADDING                  (6.0)       // Breathing room either side of a readout's digits
 #define LED_STREAM_SIZE                      (40)        // 2-bit LEDs the G2 reports per slot, VA and FX together — see parse_led_data()

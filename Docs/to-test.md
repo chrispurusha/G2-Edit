@@ -3,6 +3,11 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***DRUMSYNTH PRESETS AND ITS ON BUTTON (2026-09-16)*** - the Preset box shows which of the 30 factory
+  presets the dials match ("none" if none do), and clicking it offers all 30; choosing one sets params
+  0-14 as one undo step. Param 15 is now the On button. Checked offline in the editor (values, undo,
+  redo, "none"). STILL TO CHECK ON THE G2: a chosen preset sounds and reads the same on the
+  instrument, the G2 shows the same name, and the On button mutes the module.
 - ***THE PLUG-IN'S MENUS OPEN THEIR PANELS, AND MENU CLICKS NO LONGER FALL THROUGH (2026-09-16)*** -
   two CT reports, one cause: register_app_popups() lived in graphics.c, which do-plugin does not
   compile, so in G2 Alike no floating panel was ever drawn or clicked (Settings > Synth/Patch/Perf/

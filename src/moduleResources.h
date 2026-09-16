@@ -127,7 +127,7 @@ const char *        vowelStrMap[]                           = {"A", "E", "I", "O
 const char *        nordFilterTypeStrMap[]                  = {"LP", "BP", "HP", "BR", NULL};
 const char *        staticFilterTypeStrMap[]                = {"LP", "BP", "HP", NULL};
 const char *        multiEnvSustainStrMap[]                 = {"L1", "L2", "L3", "Trg", NULL};
-const char *        drSynthPresetStrMap[]                   = {"Kick 1", "Kick 2", "Kick 3", "Kick 4", "Kick 5", "Snare 1", "Snare 2", "Snare 3", "Snare 4", "Snare 5", "Tom1 1", "Tom1 2", "Tom1 3", "Tom2 1", "Tom2 2", "Tom2 3", "Tom3 1", "Tom3 2", "Tom3 3", "Cymb 1", "Cymb 2", "Cymb 3", "Cymb 4", "Cymb 5", "Perc 1", "Perc 2", "Perc 3", "Perc 4", "Perc 5", "Perc 6", NULL};      // *** Don't have the list
+const char *        drumSynthPresetNames[]                  = {"Kick 1", "Kick 2", "Kick 3", "Kick 4", "Kick 5", "Snare 1", "Snare 2", "Snare 3", "Snare 4", "Snare 5", "Tom1 1", "Tom1 2", "Tom1 3", "Tom2 1", "Tom2 2", "Tom2 3", "Tom3 1", "Tom3 2", "Tom3 3", "Cymb 1", "Cymb 2", "Cymb 3", "Cymb 4", "Cymb 5", "Perc 1", "Perc 2", "Perc 3", "Perc 4", "Perc 5", "Perc 6", NULL};
 const char *        asymSymStrMap[]                         = {"Asym", "Sym", NULL};
 const char *        odTypeStrMap[]                          = {"Soft", "Hard", "Fat", "Heavy", NULL};
 const char *        delayStrMap[]                           = {"12.5ms", "25ms", "50ms", "100ms", NULL};
@@ -2308,14 +2308,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeDrumSynth,  paramTypeADRTime,        {{ 33,  -3}, { 7,  7}}, anchorBottomLeft,  "BDcy",         128,  61, NULL,                                  NULL          },              // 58 BendDecay
     {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 48,  -3}, { 7,  7}}, anchorBottomLeft,  "BClick",       128,  79, NULL,                                  NULL          },              // 58 Click Amount
     {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 63,  -3}, { 7,  7}}, anchorBottomLeft,  "BNoise",       128, 115, NULL,                                  NULL          },              // 58 Noise Amount
-    // No Bypass row: DrumSynth is a sound source (Trig/Pitch/Vel in, audio out
-    // only per the manual's own module reference), not an audio processor —
-    // unlike filters/effects, there's no incoming signal to bypass. A Bypass
-    // row was previously here, which — combined with Preset below — put the
-    // module at 17 params against the G2's own reported count of 16; removing
-    // it (rather than Preset, which the manual explicitly documents as a real
-    // control with up/down buttons and a name display) resolves that.
-    {moduleTypeDrumSynth,  paramTypeMenu,           {{-10,   5}, { 7,  7}}, anchorTopRight,    "Preset",        30,   1, drSynthPresetStrMap,                   NULL          },                       // 58 Preset
+    {moduleTypeDrumSynth,  paramTypeBypass,         {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },              // 58 On
 
     // 59 CompLev
     {moduleTypeCompLev,    paramTypeBipLevel,       {{ 28,  -3}, { 7,  7}}, anchorBottomLeft,  "C",            128,  64, NULL,                                  NULL          },     // 59 Compare Level
@@ -4226,16 +4219,17 @@ const tVolumeMeterConfig volumeMeterConfigList[] = {
 // connector sits at {3, -3} on all ten faces, so the box sits in the same place on all ten too,
 // clear of the connector's own "Ctrl"/"Control" label.
 const tDisplayLocation   displayLocationList[]   = {
-    {moduleTypeSw1to2,   displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  90 Sw1-2
-    {moduleTypeSw2to1,   displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      // 100 Sw2-1
-    {moduleTypeSw1to4,   displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  88 Sw1-4
-    {moduleTypeSw4to1,   displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  79 Sw4-1
-    {moduleTypeSw1to8,   displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  78 Sw1-8
-    {moduleTypeSw8to1,   displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  15 Sw8-1
-    {moduleTypeSwOnOffM, displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  36 SwOnOffM
-    {moduleTypeSwOnOffT, displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      //  76 SwOnOffT
-    {moduleTypeSw1to2M,  displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      // 186 Sw1-2M
-    {moduleTypeSw2to1M,  displayTypeSwitchCtrl, 0, {{10, 0}, {10, 7}}, anchorBottomLeft, NULL, labelLocRight},      // 187 Sw2-1M
+    {moduleTypeSw1to2,    displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, //  90 Sw1-2
+    {moduleTypeSw2to1,    displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, // 100 Sw2-1
+    {moduleTypeSw1to4,    displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, //  88 Sw1-4
+    {moduleTypeSw4to1,    displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, //  79 Sw4-1
+    {moduleTypeSw1to8,    displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, //  78 Sw1-8
+    {moduleTypeSw8to1,    displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, //  15 Sw8-1
+    {moduleTypeSwOnOffM,  displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, //  36 SwOnOffM
+    {moduleTypeSwOnOffT,  displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, //  76 SwOnOffT
+    {moduleTypeSw1to2M,   displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, // 186 Sw1-2M
+    {moduleTypeSw2to1M,   displayTypeSwitchCtrl, 0, {{ 10, 0}, {10, 7}}, anchorBottomLeft, NULL,     labelLocRight}, // 187 Sw2-1M
+    {moduleTypeDrumSynth, displayTypeDrumPreset, 0, {{-10, 5}, { 7, 7}}, anchorTopRight,   "Preset", labelLocUp   }, //  58 DrumSynth
 };
 
 // Section headings. See tLabelLocation in types.h for why these are not paramLocationList rows.
@@ -4409,5 +4403,39 @@ const tGraphLocation     graphLocationList[] = {
     {moduleTypeOperator,   {{   12,  92}, {  62, 16}}, anchorTopLeft   },
     // Compress's static curve, with handles that drag Thr, Ratio and RefLvl - moduleGraphics.c's notes §87.
     {moduleTypeCompress,   {{   24,   6}, {  54, 34}}, anchorTopLeft   }, };
+
+// The G2's factory drum presets: DrumSynth parameters 0-14 for each name in drumSynthPresetNames, in parameter order.
+const uint8_t            drumSynthPresetValues[][DRUM_SYNTH_PRESET_PARAMS] = {
+    { 42,  15, 46, 50, 120, 102,  57,  32, 39, 49, 1,  68,  61,  79, 115},         // Kick 1
+    { 43,  26, 55, 53, 105,  94,  63,  18, 78, 36, 1,  76,  44,  25, 123},         // Kick 2
+    { 31,  71, 45, 35, 127,   0,  90,  24, 71, 27, 0,  84,  42,  81, 112},         // Kick 3
+    { 32,  61, 58, 42, 113, 110,  90,   0,  0, 27, 1,  37,  55,  90, 127},         // Kick 4
+    { 36,  39, 50, 52, 104,  92, 111,   0, 40, 32, 0,  34,  68,  79,  69},         // Kick 5
+    { 79,  55, 35, 43, 127,  42, 102,  46,  0, 37, 2,   2,   0, 127, 127},         // Snare 1
+    { 68,   3, 48, 42,  84, 127,  55,  66, 63, 40, 2,  63,  37, 126, 122},         // Snare 2
+    { 64,  23, 36, 44, 120,  84,  26,   0, 19, 44, 2,  24,  44, 127,  98},         // Snare 3
+    { 68,  57, 47, 33, 105,   0,  91,  28, 42, 42, 0,  81,  44, 112, 127},         // Snare 4
+    { 85, 107, 32, 23, 127,  94,   0,   0, 63, 45, 2,  39,  55, 102,  98},         // Snare 5
+    { 80,  38, 56, 47, 102,  58,  98,  26, 27, 50, 0,  33,  69, 105,  97},         // Tom1 1
+    { 69,  38, 57, 52, 102,  58,  96,  26, 27, 51, 0,  33,  69, 105,  89},         // Tom1 2
+    { 56,  38, 58, 52, 102,  58,  93,  26, 27, 53, 0,  33,  69, 105,  89},         // Tom1 3
+    { 86,   2, 55, 44,  99,   0,  67,   0, 56, 56, 0,  86,  65,  81, 117},         // Tom2 1
+    { 69,   2, 56, 45,  99,   0,  67,   0, 56, 56, 0,  86,  65,  81, 117},         // Tom2 2
+    { 55,   2, 58, 49,  99,   0,  67,   0, 56, 57, 0,  86,  65,  81, 117},         // Tom2 3
+    { 70,  28, 45, 51, 113,  81, 102,   4, 12, 47, 0,  44,  46,  96,  97},         // Tom3 1
+    { 58,  28, 46, 53, 113,  81, 102,   4, 12, 47, 0,  44,  57,  93,  97},         // Tom3 2
+    { 48,  28, 52, 54, 108,  81, 102,   4, 12, 47, 0,  44,  66,  96, 103},         // Tom3 3
+    {127,  93,  0,  0,   0, 102,  91,   0, 26, 46, 2, 127,   0,   0, 127},         // Cymb 1
+    {127,  93,  0,  0,   0, 102,  91,  50, 16, 55, 2, 127,   0,   0, 127},         // Cymb 2
+    {127, 127, 19,  0,  28,  58, 112,  60,  0, 50, 2,   0,   0,  81, 107},         // Cymb 3
+    {127, 127,  0,  0,   0, 127, 102, 107,  0, 53, 2, 127,   0,   0, 127},         // Cymb 4
+    { 28, 111, 42, 64,  73,  28,  83,  57, 37, 71, 0,  83,  50, 109, 123},         // Cymb 5
+    { 77,  32, 31, 45, 117,  93,  32,  32, 40, 45, 2, 110, 126, 116,  30},         // Perc 1
+    {127,  99, 52, 48,  86,  71, 110, 120,  0, 45, 2,  47,  16,  49, 114},         // Perc 2
+    { 96,  60, 36, 42, 127,  72,  32,  32, 40, 45, 2,  46,  24,  89,  46},         // Perc 3
+    { 87,  60, 36, 42, 127,  72,  32,  32, 40, 45, 2,  46,  24,  89,  46},         // Perc 4
+    {110,  93, 58, 66,  92,  79,  92, 127,  0, 58, 0,   0,   0, 127,  89},         // Perc 5
+    { 30,  45, 62, 46, 127, 127,  55, 127, 28, 41, 2,  81,  55,  80,  97},         // Perc 6
+};
 
 #endif // __MODULE_RESOURCES_H__
