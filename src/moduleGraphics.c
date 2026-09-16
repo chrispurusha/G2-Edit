@@ -915,6 +915,14 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
 // A read-only readout — see tDisplayLocation. No click region is registered for it: it is not a
 // control, and giving it one would put a dead target over the module body where a right-click should
 // still reach the module's own menu.
+static tModuleClickCtx sDrumPresetClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES];
+
+static void drum_preset_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    if (phase == eClickRelease) {
+        open_drum_preset_menu(coord, ((tModuleClickCtx *)userData)->key);
+    }
+}
+
 void render_display_common(tRectangle rectangle, tModule * module, uint32_t displayRef) {
     uint32_t     slot       = module->key.slot;
     uint32_t     variation  = gPatchDescr[slot].activeVariation;
@@ -937,14 +945,41 @@ void render_display_common(tRectangle rectangle, tModule * module, uint32_t disp
             break;
         }
 
+        case displayTypeDrumPreset:
+        {
+            tModuleClickCtx * ctx    = &sDrumPresetClickCtx[slot][module->key.location][module->key.index];
+            double            width  = 0.0;
+
+            // As wide as the widest name, so the button does not change size as the dials move.
+            for (int32_t preset = -1; preset < (int32_t)drum_synth_preset_count(); preset++) {
+                double w = get_text_width(drum_synth_preset_name((uint32_t)preset), STANDARD_BUTTON_TEXT_HEIGHT, eCache);
+
+                width = (w > width) ? w : width;
+            }
+
+            tRectangle        button = draw_button(moduleArea,
+                                                   (tRectangle){{rectangle.coord.x, rectangle.coord.y}, {width, STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                   drum_synth_preset_name((uint32_t)drum_synth_preset_matching(module->param[variation])),
+                                                   (tRgb)RGB_BACKGROUND_GREY);
+
+            *ctx = (tModuleClickCtx){
+                eCanvasWidgetModule, module->key
+            };
+            register_click_region(button, eClickLayerCanvas, drum_preset_click_handler, ctx);
+            break;
+        }
+
         default:
             return;
     }
-    // PLAIN TEXT ON THE FACE, not a button. It is a readout — nothing here can be clicked — and
-    // drawing it as a button invited the eye to try. No click region is registered either, so a
-    // right-click over it still reaches the module's own menu.
+    // A readout is PLAIN TEXT ON THE FACE, not a button - drawing it as a button invited the eye to
+    // try, and with no click region a right-click over it still reaches the module's own menu. The
+    // drum preset is the exception: it is a button because it can be clicked.
     set_rgb_colour((tRgb)RGB_BLACK);
-    render_text(moduleArea, (tRectangle){{rectangle.coord.x, rectangle.coord.y}, {BLANK_SIZE, textHeight}}, buff);
+
+    if (buff[0] != '\0') {
+        render_text(moduleArea, (tRectangle){{rectangle.coord.x, rectangle.coord.y}, {BLANK_SIZE, textHeight}}, buff);
+    }
 
     if (label == NULL) {
         return;

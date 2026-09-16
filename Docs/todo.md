@@ -5,7 +5,6 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Drum synth presets to be gotten from decompiled editor or resources. Preset selection to implement.
 - Engine has sharper initial transient. Possibly EnvADSR attack timing or not clamping down before attack starts?
 - Need a save patch back to same slot it was loaded from. If we didn't load the patch from a slot, then needs to be greyed-out.
 - Store the PATCH CONTENT in the host project - the rest of "remember and restore the patch/performance/settings" (path-loading removed 2026-09-16, so a reopened project is empty until this lands; the Voice/FX divider folds into it then, since barPosition IS patch data, and the interim split= key in the state record goes)

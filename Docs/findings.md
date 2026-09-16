@@ -9754,3 +9754,13 @@ but Voice Area meters were fed only while voice 0 rendered, before its fade, so 
 Now metered from the voice sum every sample (notes §191). Found alongside: the non-drone tail limit counted from
 key-up, so it also cut long releases at 2 s; it now counts from the envelopes finishing (notes §20).
 
+2026-09-16 - DRUMSYNTH PRESETS, AND PARAM 15 WAS NEVER THE PRESET (CT priority list). The G2's DrumSynth
+preset is not a parameter. It is a set of values for params 0-14, and the name shown is whichever of the
+30 factory presets matches the dials, or "none". Parameter 15, which the table had as a 30-entry "Preset"
+menu, is the module's On/Off button (default On). Its old comment said a Bypass row had been removed in
+favour of Preset to make the count 16. The count was already right; the row's type was wrong. It is now
+paramTypeBypass, drawn above the output. The preset values are in moduleResources.h
+(drumSynthPresetValues, Kick 1 = the module's defaults). A Preset box (displayTypeDrumPreset) opens a menu
+of all 30. Choosing one writes params 0-14 of the active variation as ordinary param changes and records
+them as one undo step (undo_push_param_block). Checked offline: Snare 2 set the table's values exactly,
+undo and redo each restored all 15, and moving one dial showed "none".

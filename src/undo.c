@@ -124,6 +124,14 @@ typedef struct {
 } tUndoParamPayload;
 
 typedef struct {
+    tModuleKey key;
+    uint32_t   variation;
+    uint32_t   count;    // params 0..count-1
+    uint8_t    oldValue[MAX_NUM_PARAMETERS];
+    uint8_t    newValue[MAX_NUM_PARAMETERS];
+} tUndoParamBlockPayload;
+
+typedef struct {
     uint32_t slot;
     uint32_t count;       // 1 or 2
     uint32_t index[2];
@@ -227,6 +235,7 @@ typedef enum {
     eUndoCmdMidiCc,
     eUndoCmdGlobalKnob,
     eUndoCmdModuleReplace,
+    eUndoCmdParamBlock,
 } tUndoCmdType;
 
 typedef struct {
@@ -293,6 +302,7 @@ static void free_command(tUndoCommand * cmd) {
         case eUndoCmdMidiCc:
         case eUndoCmdGlobalKnob:
         case eUndoCmdModuleReplace:
+        case eUndoCmdParamBlock:
             free(cmd->payload);
             break;
     }
@@ -1356,6 +1366,42 @@ static void apply_param(tUndoParamPayload * p, bool isUndo) {
     synthlib_request_redraw();
 }
 
+void undo_push_param_block(tModuleKey key, uint32_t variation, uint32_t count,
+                           const uint8_t * oldValues, const uint8_t * newValues) {
+    if ((count > MAX_NUM_PARAMETERS) || (memcmp(oldValues, newValues, count) == 0)) {
+        return;
+    }
+    tUndoParamBlockPayload * p = malloc(sizeof(tUndoParamBlockPayload));
+
+    if (!p) {
+        return;
+    }
+    p->key       = key;
+    p->variation = variation;
+    p->count     = count;
+    memcpy(p->oldValue, oldValues, count);
+    memcpy(p->newValue, newValues, count);
+    stack_push(eUndoCmdParamBlock, p);
+}
+
+static void apply_param_block(tUndoParamBlockPayload * p, bool isUndo) {
+    tModule *       mod    = get_module(p->key);
+    const uint8_t * values = isUndo ? p->oldValue : p->newValue;
+
+    if (!mod || (p->variation >= NUM_VARIATIONS_USB)) {
+        return;
+    }
+
+    for (uint32_t i = 0; i < p->count; i++) {
+        if (mod->param[p->variation][i].value != values[i]) {
+            mod->param[p->variation][i].value = values[i];
+            send_param_value(p->key.slot, p->key, i, p->variation, values[i]);
+        }
+    }
+
+    synthlib_request_redraw();
+}
+
 static void apply_knob_entry(uint32_t slot, uint32_t idx, const tKnob * k) {
     gKnobArray[slot].knob[idx] = *k;
 
@@ -1683,6 +1729,10 @@ void undo_undo(void) {
             apply_param(cmd->payload, true);
             break;
 
+        case eUndoCmdParamBlock:
+            apply_param_block(cmd->payload, true);
+            break;
+
         case eUndoCmdKnob:
             apply_knob(cmd->payload, true);
             break;
@@ -1763,6 +1813,10 @@ void undo_redo(void) {
 
         case eUndoCmdParam:
             apply_param(cmd->payload, false);
+            break;
+
+        case eUndoCmdParamBlock:
+            apply_param_block(cmd->payload, false);
             break;
 
         case eUndoCmdKnob:

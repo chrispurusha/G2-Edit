@@ -77,6 +77,14 @@ void undo_push_mode_change(tModuleKey key, uint32_t modeIndex, uint32_t oldValue
     (void)newValue;
 }
 
+void undo_push_param_block(tModuleKey key, uint32_t variation, uint32_t count, const uint8_t * oldValues, const uint8_t * newValues) {
+    (void)key;
+    (void)variation;
+    (void)count;
+    (void)oldValues;
+    (void)newValues;
+}
+
 void undo_push_delete_selection(void) {
 }
 

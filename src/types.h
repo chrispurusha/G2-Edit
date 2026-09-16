@@ -393,6 +393,7 @@ typedef enum {
     displayTypeNone,
     // notes §4
     displayTypeSwitchCtrl,
+    displayTypeDrumPreset,  // clickable: the preset the DrumSynth's dials match, and a menu of them
 } tDisplayType;
 
 typedef struct {

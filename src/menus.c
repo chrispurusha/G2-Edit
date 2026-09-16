@@ -1498,6 +1498,55 @@ void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, u
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
+static void action_set_drum_preset(int index) {
+    uint32_t  slot      = gMenuContext.moduleKey.slot;
+    uint32_t  variation = gPatchDescr[slot].activeVariation;
+    uint32_t  preset    = (uint32_t)gContextMenu.items[index].param;
+    tModule * module    = get_module(gMenuContext.moduleKey);
+    uint8_t   before[DRUM_SYNTH_PRESET_PARAMS];
+    uint8_t   after[DRUM_SYNTH_PRESET_PARAMS];
+
+    if (module != NULL) {
+        for (uint32_t p = 0; p < DRUM_SYNTH_PRESET_PARAMS; p++) {
+            before[p]                         = module->param[variation][p].value;
+            after[p]                          = drum_synth_preset_value(preset, p);
+            module->param[variation][p].value = after[p];
+
+            if (after[p] != before[p]) {
+                send_param_value(slot, module->key, p, variation, after[p]);
+                send_param_value_to_links(slot, module->key, p, variation, after[p]);
+            }
+        }
+
+        undo_push_param_block(module->key, variation, DRUM_SYNTH_PRESET_PARAMS, before, after);
+    }
+    gContextMenu.active = false;
+    synthlib_request_redraw();
+}
+
+void open_drum_preset_menu(tCoord coord, tModuleKey moduleKey) {
+    static tMenuItem menuItems[DRUM_SYNTH_MAX_PRESETS + 1];
+    uint32_t         count = drum_synth_preset_count();
+
+    if (count > DRUM_SYNTH_MAX_PRESETS) {
+        count = DRUM_SYNTH_MAX_PRESETS;
+    }
+
+    for (uint32_t preset = 0; preset < count; preset++) {
+        menuItems[preset] = (tMenuItem){
+            drum_synth_preset_name(preset), RGB_GREY_3, action_set_drum_preset, preset, NULL
+        };
+    }
+
+    menuItems[count]        = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+
+    gMenuContext.moduleKey  = moduleKey;
+    gMenuContext.paramIndex = 0;
+    open_context_menu(coord, menuItems, 0, 0.0);
+}
+
 static void action_set_mode_value(int index) {
     uint32_t  slot   = gSlot;
     tModule * module = get_module(gMenuContext.moduleKey);
