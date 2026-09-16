@@ -7,7 +7,11 @@ Built-but-unchecked work goes in to-test.md.
 CT (Priority order)
 - Engine has sharper initial transient on 03 Chris' Lead (mono, 3 OscShpB TriSaw > Mix4-1C > FltClassic, filter env A0, amp env LogExp A25; FX Compressor Att 104 first) - envelope, VCA, note-on, TriSaw (within 0.2 dB to 10 kHz) and mixer levels ruled out, and the patch routes no velocity (findings.md 2026-09-16). NEXT: CT A/B with the Compressor bypassed on both
 - Velocity: the engine has none - sound_engine_note() takes no velocity, and the Keyboard module (Vel/Lin outputs), the Vel morph and the EnvADSR AM input are not modelled, so every note plays at full velocity
-- EnvADSR in the engine ignores its AM input, Output Type, KB (keyboard gate), Gate input and Normal/Reset - it always runs Pos, keyboard-gated, Normal
+- EnvADSR in the engine: AM input not read (a patch's velocity usually arrives there)
+- EnvADSR in the engine: Output Type not read - always Pos (posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv)
+- EnvADSR in the engine: Normal/Reset not read - always Normal; Reset restarts every attack from zero (manual p.197)
+- EnvADSR in the engine: model the Keyboard module, so a Gate jack fed by its Gate stops standing in for the keys (reference §17.4)
+- The other envelopes (EnvH, EnvD, EnvADR, EnvAHD, EnvADDSR, EnvMulti, ModADSR, ModAHD) are not in the engine at all
 - Need a save patch back to same slot it was loaded from. If we didn't load the patch from a slot, then needs to be greyed-out.
 - Store the PATCH CONTENT in the host project - the rest of "remember and restore the patch/performance/settings" (path-loading removed 2026-09-16, so a reopened project is empty until this lands; the Voice/FX divider folds into it then, since barPosition IS patch data, and the interim split= key in the state record goes)
 - Fix current modules in sound engine using the recent methods.

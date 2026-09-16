@@ -3,6 +3,10 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***ENVADSR KB AND GATE JACK (2026-09-16)*** - the engine now honours KB (the keyboard gate) and the
+  Gate jack (reference §17.4). Checked offline on 03 Chris' Lead: KB off on both envelopes silences it,
+  KB on restores it, a Keyboard module's Gate in the jacks still plays, an LFO in the jacks gates it.
+  STILL TO CHECK BY EAR: that patches with KB off and a gate patched sound as on the G2.
 - ***DRUMSYNTH PRESETS AND ITS ON BUTTON (2026-09-16)*** - the Preset box shows which of the 30 factory
   presets the dials match ("none" if none do), and clicking it offers all 30; choosing one sets params
   0-14 as one undo step. Param 15 is now the On button. Checked offline in the editor (values, undo,
