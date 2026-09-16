@@ -2867,7 +2867,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqCtr,     paramTypePush,           {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          },                      // 154 Clear
     // 155 Unknown
     // 156 NoteDet
-    {moduleTypeNoteDet,    paramTypeNoteDial,       {{ 23,  -3}, { 7,  7}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          },        // 156 Note
+    {moduleTypeNoteDet,    paramTypeNoteDial,       {{ 54,  -3}, { 7,  7}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          },        // 156 Note
     // 157 LevConv
     {moduleTypeLevConv,    paramTypeMenu,           {{ 44,  -1}, { 7,  7}}, anchorBottomLeft,  "Out",            6,   4, posStrMap,                             NULL          },        // 157 OutType
     {moduleTypeLevConv,    paramTypeMenu,           {{ 28,  -1}, { 7,  7}}, anchorBottomLeft,  "In",             3,   0, levConvStrMap,                         NULL          },        // 157 In Signal Type
@@ -3114,7 +3114,7 @@ const tParamLocation     paramLocationList[] = {
     // 198 PitchTrack
     {moduleTypePitchTrack, paramTypeThresholdDb,    {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  "Threshold",    128,  20, NULL,                                  NULL          },                      // 198 Threshold
     // 199 MonoKey
-    {moduleTypeMonoKey,    paramTypeMenu,           {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, monoKeyStrMap,                         NULL          },                      // 199 Priority
+    {moduleTypeMonoKey,    paramTypeMenu,           {{ 54,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, monoKeyStrMap,                         NULL          },                      // 199 Priority
     // 200 RandomA
     {moduleTypeRandomA,    paramTypeFreq,           {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                      // 200 Rate
     {moduleTypeRandomA,    paramTypeMenu,           {{ 30,   0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                      // 200 Poly/Mono mode
@@ -3168,12 +3168,12 @@ const tParamLocation     paramLocationList[] = {
 const tConnectorLocation connectorLocationList[] = {
     //  0 Unknown
     //  1 Keyboard
-    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 10,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Pitch",         labelLocLeft },        // 1
-    {moduleTypeKeyboard,    connectorDirOut, connectorTypeLogic,   {{ 43,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",          labelLocLeft },
-    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 58,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Lin",           labelLocLeft },
-    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 93,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Release",       labelLocLeft },
-    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 25,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",          labelLocLeft },
-    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 72,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Exp",           labelLocLeft },
+    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Pitch",         labelLocUp },        // 1
+    {moduleTypeKeyboard,    connectorDirOut, connectorTypeLogic,   {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",          labelLocUp },
+    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 37,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Lin",           labelLocUp },
+    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 54,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Release",       labelLocUp },
+    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 71,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",          labelLocUp },
+    {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 88,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Exp",           labelLocUp },
     // 2 Unknown
     // 3 4-Out
     {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-24,    3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",             labelLocDown },         // 3 4-out
@@ -3870,9 +3870,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqCtr,      connectorDirOut, connectorTypeLogic,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocLeft },    // 154 Trig
     // 155 Unknown
     // 156 NoteDet
-    {moduleTypeNoteDet,     connectorDirOut, connectorTypeLogic,   {{ 70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",          labelLocUp   },    // 156 Gate
-    {moduleTypeNoteDet,     connectorDirOut, connectorTypeControl, {{ 80,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",           labelLocUp   },    // 156 Vel
-    {moduleTypeNoteDet,     connectorDirOut, connectorTypeControl, {{ 90,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "RVel",          labelLocUp   },    // 156 Release vel
+    {moduleTypeNoteDet,     connectorDirOut, connectorTypeLogic,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",          labelLocUp   },    // 156 Gate
+    {moduleTypeNoteDet,     connectorDirOut, connectorTypeControl, {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",           labelLocUp   },    // 156 Vel
+    {moduleTypeNoteDet,     connectorDirOut, connectorTypeControl, {{ 37,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "RVel",          labelLocUp   },    // 156 Release vel
     // 157 LevConv
     {moduleTypeLevConv,     connectorDirIn,  connectorTypeControl, {{ -3,    3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocUp   },    // 157 In
     {moduleTypeLevConv,     connectorDirOut, connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },    // 157 Out
@@ -4092,8 +4092,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscPerc,     connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },      // 196 Out
 
     // 197 Status
-    {moduleTypeStatus,      connectorDirOut, connectorTypeLogic,   {{-60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Patch Active",  labelLocUp   }, // 197 Patch Active
-    {moduleTypeStatus,      connectorDirOut, connectorTypeLogic,   {{-40,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Var. Active",   labelLocUp   }, // 197 Var Active
+    {moduleTypeStatus,      connectorDirOut, connectorTypeLogic,   {{-70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Patch Active",  labelLocUp   }, // 197 Patch Active
+    {moduleTypeStatus,      connectorDirOut, connectorTypeLogic,   {{-45,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Var. Active",   labelLocUp   }, // 197 Var Active
     {moduleTypeStatus,      connectorDirOut, connectorTypeControl, {{-20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Voice No.",     labelLocUp   }, // 197 Voice No.
     // 198 PitchTrack
     {moduleTypePitchTrack,  connectorDirIn,  connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Input",         labelLocRight}, // 198 Input
@@ -4101,9 +4101,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypePitchTrack,  connectorDirOut, connectorTypeControl, {{-19,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Gate",          labelLocUp   }, // 198 Gate
     {moduleTypePitchTrack,  connectorDirOut, connectorTypeLogic,   {{ -8,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Pitch",         labelLocUp   }, // 198 Pitch
     // 199 MonoKey
-    {moduleTypeMonoKey,     connectorDirOut, connectorTypeControl, {{-30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Pitch",         labelLocUp   }, // 199 Pitch
-    {moduleTypeMonoKey,     connectorDirOut, connectorTypeLogic,   {{-19,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Gate",          labelLocUp   }, // 198 Gate
-    {moduleTypeMonoKey,     connectorDirOut, connectorTypeControl, {{ -8,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Vel",           labelLocUp   }, // 199 Vel
+    {moduleTypeMonoKey,     connectorDirOut, connectorTypeControl, {{3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Pitch",         labelLocUp   }, // 199 Pitch
+    {moduleTypeMonoKey,     connectorDirOut, connectorTypeLogic,   {{20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Gate",          labelLocUp   }, // 198 Gate
+    {moduleTypeMonoKey,     connectorDirOut, connectorTypeControl, {{ 37,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Vel",           labelLocUp   }, // 199 Vel
     // 200 RandomA
     {moduleTypeRandomA,     connectorDirIn,  connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   }, // 200 Pitch
     {moduleTypeRandomA,     connectorDirOut, connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   }, // 200 Vel
