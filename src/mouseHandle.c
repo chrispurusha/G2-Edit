@@ -125,16 +125,9 @@ void cursor_raw_coord(double * rawX, double * rawY) {
     }
 }
 
-// Is any in-window text field taking keystrokes? Note entry and any other bare-letter shortcut has
-// to stand aside while one is: the letter belongs to the name being typed.
-// The NAME fields only — every one of them entered deliberately, by clicking the field itself.
-static bool any_name_edit_active(void) {
-    return gPatchNameEdit.active
-           || gModuleNameEdit.active
-           || gParamNameEdit.active
-           || gSynthNameEdit.active
-           || gPerfNameEdit.active;
-}
+// any_name_edit_active() moved to globalVars.c on 2026-09-16, beside the state it reads, so the
+// plug-in's V shortcut can ask the same question. The NAME fields only — every one of them entered
+// deliberately, by clicking the field itself.
 
 static bool any_text_edit_active(void) {
     return any_name_edit_active() || gPatchNotesEdit.active;
@@ -1215,11 +1208,17 @@ void key_callback(int key, int scancode, int action, int mods) {
         gCommandKeyPressed = false;
     } else if (  (action == GLFW_PRESS) && (key == GLFW_KEY_L)
               && ((mods & (GLFW_MOD_SUPER | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0)) {
-        // MIDI Learn, and the original editor's only BARE-key shortcut — everything else here is
-        // Command-modified. Deliberately silent when it cannot act: it is a fast alternative to the
-        // right-click assign menu, and a dialog every time a stray L is typed would defeat that.
+        // MIDI Learn. One of the original editor's two BARE-key shortcuts — V below is the other,
+        // and everything else here is Command-modified. Deliberately silent when it cannot act: it
+        // is a fast alternative to the right-click assign menu, and a dialog every time a stray L is
+        // typed would defeat that.
         LOG_INFO("L pressed - MIDI Learn\n");
         midi_learn_focused_param();
+    } else if (  (action == GLFW_PRESS) && (key == GLFW_KEY_V)
+              && (gCommandKeyPressed == false)
+              && ((mods & (GLFW_MOD_SUPER | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0)) {
+        // notes §36
+        split_view_toggle_voice_area_only();
     } else if (  (  (key == GLFW_KEY_UP) || (key == GLFW_KEY_DOWN)
                  || (key == GLFW_KEY_LEFT) || (key == GLFW_KEY_RIGHT))
               && ((action == GLFW_PRESS) || (action == GLFW_REPEAT))

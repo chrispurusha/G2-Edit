@@ -356,6 +356,9 @@ void variation_clear_links(uint32_t slot);
 #endif
 
 
+// True while any name field is taking keystrokes, so a bare-letter shortcut can stand aside.
+bool any_name_edit_active(void);
+
 // Cancel an in-progress name edit — see globalVars.c.
 void stop_patch_name_editing(void);
 void stop_module_name_editing(void);

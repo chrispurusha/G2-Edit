@@ -122,3 +122,18 @@ Each pane goes to ITS OWN content, the two areas being laid out independently of
 MUST BE CALLED AFTER THE ZOOM IS SET. Scroll positions are held as a percentage of the travel, and
 the travel is the canvas extent AT THE CURRENT ZOOM less the pane — so the same percentage means a
 different place before and after a zoom change.
+
+## 13. `split_view_toggle_voice_area_only()`
+
+THE V KEY'S WHOLE BEHAVIOUR, in one place because both editors bind it - the application in
+key_callback() (mouseHandle.c §36) and the plug-in in g2_input_key() (g2Input.c). Manual p64.
+
+"BACK TO THE SPLIT POSITION IT CAME FROM", not to a fixed one: the return leg is
+split_view_restore_balance(), which is the same remembered position the bar's double-arrow button
+uses, so the key and the button cannot disagree about where "back" is. A patch that arrived already
+Voice-Area-only has nothing remembered, and restore_balance() gives it an even split.
+
+THE SEND IS AT THE END, ONCE. Both legs go through set_bar_position(), which applies the split and
+asks for a redraw but deliberately does not transmit - barPosition is patch data, so a drag would
+otherwise write a patch descriptor per frame. A keypress is a whole gesture in itself, so the flush
+belongs here. In the plug-in the send is a no-op stub, which costs nothing.

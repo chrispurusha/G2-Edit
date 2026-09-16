@@ -367,6 +367,15 @@ bool g2_input_key(int character, bool cmdHeld) {
         return false;
     }
 
+    // V toggles Voice-Area-only, the application's shortcut and the same implementation (manual
+    // p64). It stands aside while a name is being typed, as every bare-letter shortcut must — the
+    // application gets that from where its branch sits in key_callback()'s chain, and this one has
+    // to ask outright.
+    if (((character == 'v') || (character == 'V')) && (any_name_edit_active() == false)) {
+        split_view_toggle_voice_area_only();
+        return true;
+    }
+
     // Bare +/- steps the parameter under the pointer by one raw unit.
     if ((character == '=') || (character == '+')) {
         return canvas_nudge_param_under_cursor(1);
