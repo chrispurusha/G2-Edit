@@ -49,6 +49,11 @@ void g2_menu_set_loaded_patch_name(const char * name);
 
 tRectangle g2_menu_bar_rect(double pointWidth);
 
+// The same rectangle with no argument, which is the shape SynthLib's popup table wants - the bar
+// moves with the window, so it asks for it rather than being told once. The application registers
+// app_menu_bar_rect() in the same slot.
+tRectangle g2_plugin_menu_bar_rect(void);
+
 // Reserved band below the menu bar. Currently drawn as an empty strip.
 tRectangle g2_topbar_rect(double pointWidth);
 

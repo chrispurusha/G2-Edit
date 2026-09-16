@@ -221,15 +221,14 @@ quit the host and open it again.
 ### Which patch it plays
 
 The plug-in has a **File** menu of its own, which opens a `.pch2` through the same code the
-application uses. What it loads on startup is chosen in this order:
+application uses — and since 2026-09-16 that is the only way a patch gets in. It starts **empty**,
+in all four slots, and loads nothing by itself.
 
-1. the path saved into the host project — a *path*, not the patch bytes, so edits you make in
-   G2-Edit are picked up rather than frozen into the project
-2. `$G2_PLUGIN_PATCH`
-3. `~/Documents/G2-Edit/plugin.pch2`
-
-A host launched from the Dock does not inherit shell environment variables, so the middle option
-only ever applies to a scripted run.
+Reopening a host project does **not** bring the patch back. The project stores what the editor was
+showing — performance mode, selected slot, dial mode, drone mode and the per-slot Voice/FX divider —
+and names no file at all, so nothing is reloaded from disk behind your back. Storing the patch
+*itself* in the project, so that a reopened project sounds as it did, is the next piece of work;
+until then, open it again from the File menu.
 
 Watch for the sandbox trap: a host may deny the plug-in access to `~/Documents`, in which case a
 perfectly correct path still produces silence — and silence looks the same whatever caused it.

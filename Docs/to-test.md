@@ -3,6 +3,27 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***THE PLUG-IN'S MENUS OPEN THEIR PANELS, AND MENU CLICKS NO LONGER FALL THROUGH (2026-09-16)*** -
+  two CT reports, one cause: register_app_popups() lived in graphics.c, which do-plugin does not
+  compile, so in G2 Alike no floating panel was ever drawn or clicked (Settings > Synth/Patch/Perf/
+  Notes, Parameter Pages/Overview, MIDI Controller List, Tools > Mutator/Virtual Keyboard/Patch
+  Adjuster, Help) and the menu bar was handled by hand on the PRESS, leaving the release to trigger
+  whatever button lay underneath. The panels and the coordinator are now src/settingsPanels.c and
+  src/floatingPanels.c, in both builds, and g2Input.c dispatches through synthlib_popups_dispatch_click()
+  exactly as mouseHandle.c does. STILL TO CHECK IN A REAL HOST: each of those entries opens a panel
+  that draws, drags by its title bar, closes by its button and by Escape; that a menu click no longer
+  fires the control beneath it; that panels stack and raise on click; and that the application is
+  unchanged by the move.
+- ***THE PLUG-IN NO LONGER LOADS A PATCH BY ITSELF (2026-09-16)*** - CT: "We shouldn't be loading the
+  last loaded patch file." g2_get_state() names no file, g2_set_state() opens none and puts every slot
+  back to an empty patch, and default_patch_path()/load_patch() are gone - so $G2_PLUGIN_PATCH,
+  $G2_VST3_PATCH and ~/Documents/G2-Edit/plugin.pch2 no longer do anything. The remembered Save paths
+  are cleared with them, so Save cannot aim at a file that was never loaded. STILL TO CHECK IN A REAL
+  HOST: a new instance comes up empty and silent; reopening a project comes back empty rather than
+  reloading the old patch; File > Open still works and File > Save then targets the right file; and a
+  project saved by the PREVIOUS build (which has slot0=/perf= in its record) opens empty without
+  complaint. The divider (`split=`) still restores - CT confirmed it storing before this change, and
+  it is applied after the empty patches for that reason, so it is worth re-checking alongside.
 - ***KEYQUANT KEYBOARD AND DXROUTER ALGORITHM GRAPH (2026-09-13)*** - KeyQuant's twelve notes are
   one octave of keys (the old on/off buttons are no longer drawn); DXRouter draws the selected DX7
   algorithm, its feedback loop orange when Feedback is above 0. Eight algorithms screenshot-checked

@@ -1479,3 +1479,25 @@ tCanvasGesture canvas_gesture_release(const tCanvasGestureEvent * event, tCanvas
 
     return (tCanvasGesture)acted;
 }
+
+// EVERY DRAG OFF AT ONCE, and the one place that knows what "a drag" can mean here. It lived in
+// mouseHandle.c until 2026-09-16, which the plug-in does not compile - and the settings panels,
+// which do compile there now, call it to cancel a drag when a panel takes the press. An empty stub
+// would have left the drag running with no release ever coming.
+void stop_dragging(void) {
+    gScrollState.yBarDragging = false;
+    gScrollState.xBarDragging = false;
+    pane_scrollbar_release();
+    memset(&gModuleDrag, 0, sizeof(gModuleDrag));
+    memset(&gParamDragging, 0, sizeof(gParamDragging));
+    memset(&gCableDrag, 0, sizeof(gCableDrag));
+    gTempoDragging            = false;
+    gPerfTempoDragging        = false;
+    gVibRateDragging          = false;
+    gVibAmountDragging        = false;
+    gGlideTimeDragging        = false;
+    gRubberBand.active        = false;
+
+    // notes §27
+    cursor_release();
+}

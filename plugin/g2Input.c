@@ -124,11 +124,18 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     }
 
     // notes §8
-    if (synthlib_popups_modal_active() == true) {
-        // Anything that is not a press is an up here: eClickDrag has already returned above, which
-        // leaves eClickRelease and eClickReleaseOutside, and the popups treat both as the release.
-        (void)synthlib_popups_dispatch_click(gMouse, (phase == eClickPress) ? mouseButtonLeftDown
-                                                                           : mouseButtonLeftUp);
+    //
+    // EVERY POPUP FIRST, not only a modal one — exactly how mouseHandle.c opens mouse_button(). The
+    // menu bar, an open menu, the two browsers, the alert and the floating panels are all in
+    // SynthLib's layer ordering now (g2_draw_init() registers them), so whichever is in front takes
+    // the click. It is also what moves a menu item's action onto the RELEASE: handling it on the
+    // press here left the matching release to fall through to the button underneath (CT).
+    //
+    // Anything that is not a press is an up: eClickDrag has already returned above, which leaves
+    // eClickRelease and eClickReleaseOutside, and the popups treat both as the release.
+    if (synthlib_popups_dispatch_click(gMouse, (phase == eClickPress) ? mouseButtonLeftDown
+                                                                     : mouseButtonLeftUp) == true) {
+        synthlib_request_redraw();
         return true;
     }
 
@@ -141,15 +148,8 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         stop_param_name_editing();
         stop_perf_name_editing();
 
-        // MENUS FIRST, exactly as mouseHandle.c orders it. An open popup must swallow the click that
-        // dismisses it, and the menu bar must win over whatever the canvas has drawn underneath.
-        if (handle_context_menu_click(gMouse) == true) {
-            return true;
-        }
-
-            if (handle_menu_bar_click(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale), gMouse) == true) {
-            return true;
-        }
+        // The menus are not tested here any more: the dispatch above covers the menu bar and any
+        // open menu, in the application's order and on the application's edges.
 
         // notes §9
         if (handle_topbar_left_down(gMouse, gSlot) == true) {
@@ -232,8 +232,11 @@ void g2_input_hover(double x, double y) {
     // Which connector the pointer is over. The canvas dims every cable not touching it, so without
     // this the plug-in never dimmed anything.
     canvas_hover_update(gMouse);
-    update_context_menu_hover();
-    update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
+
+    // The hover and dwell update for every registered popup, the menu bar's included — so a menu
+    // still follows the pointer along the bar, and a submenu still opens on dwell. One call, as the
+    // application makes it.
+    synthlib_popups_tick();
 }
 
 // notes §15
@@ -321,8 +324,7 @@ bool g2_input_drag_tick(void) {
 
     // notes §21
     if (gContextMenu.active == true) {
-        update_context_menu_hover();
-        update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
+        synthlib_popups_tick();
         busy = true;
     }
     return busy;
