@@ -152,6 +152,17 @@ void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId las
 
 // notes §3
 
+// Is any name field taking keystrokes? A bare-letter shortcut has to stand aside while one is: the
+// letter belongs to the name being typed. Here, beside the state it reads, because both editors ask
+// — mouseHandle.c for the application's V and L, g2Input.c for the plug-in's V.
+bool any_name_edit_active(void) {
+    return gPatchNameEdit.active
+           || gModuleNameEdit.active
+           || gParamNameEdit.active
+           || gSynthNameEdit.active
+           || gPerfNameEdit.active;
+}
+
 // Cancelling an in-progress name edit. One memset each, on state defined in this file — they were
 // in mouseHandle.c, which meant a GUI-less build could not dismiss an edit it could start.
 void stop_patch_name_editing(void) {

@@ -14,7 +14,6 @@ CT (Priority order)
 - Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter.
 - Fix or add various module oscillator style graphics. Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth etc.
 - Can we verify what keyboard track and normal/reset do on EnvADSR?
-- Press V to toggle split position vs Voice-Area-only (manual p64)
 - Zoom to Fit from a right click, fitting the area under the cursor
 - Separate zoom for VA and FX.
 

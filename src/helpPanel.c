@@ -82,6 +82,8 @@ static const tHelpRow kLeftColumn[] = {
     {"Wheel",              "Scroll the pane under the pointer"          },
     {"Cmd wheel",          "Zoom"                                       },
     {"Cmd + / -",          "Zoom in / out"                              },
+    {"V",                  "Voice Area only, and back to the split"     },
+    {"Drag the split bar", "Resize the Voice and FX Areas"              },
     {NULL,                 NULL                                         },
 };
 
