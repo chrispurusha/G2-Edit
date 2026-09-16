@@ -4092,9 +4092,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscPerc,     connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },      // 196 Out
 
     // 197 Status
-    {moduleTypeStatus,      connectorDirOut, connectorTypeLogic,   {{-70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Patch Active",  labelLocUp   }, // 197 Patch Active
-    {moduleTypeStatus,      connectorDirOut, connectorTypeLogic,   {{-45,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Var. Active",   labelLocUp   }, // 197 Var Active
-    {moduleTypeStatus,      connectorDirOut, connectorTypeControl, {{-20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Voice No.",     labelLocUp   }, // 197 Voice No.
+    {moduleTypeStatus,      connectorDirOut, connectorTypeLogic,   {{3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Patch Active",  labelLocUp   }, // 197 Patch Active
+    {moduleTypeStatus,      connectorDirOut, connectorTypeLogic,   {{37,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Var. Active",   labelLocUp   }, // 197 Var Active
+    {moduleTypeStatus,      connectorDirOut, connectorTypeControl, {{71,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Voice No.",     labelLocUp   }, // 197 Voice No.
     // 198 PitchTrack
     {moduleTypePitchTrack,  connectorDirIn,  connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Input",         labelLocRight}, // 198 Input
     {moduleTypePitchTrack,  connectorDirOut, connectorTypeLogic,   {{-30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Period",        labelLocUp   }, // 198 Period
