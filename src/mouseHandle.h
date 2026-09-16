@@ -45,7 +45,9 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord);
 
 // start_cursor_drag() is gone: call canvas_drag_begin() (canvasDrag.h). The application's own
 // cursor_raw_coord()/cursor_capture()/cursor_release() are implemented in mouseHandle.c.
-void stop_dragging(void);
+//
+// stop_dragging() is declared in canvasDrag.h since 2026-09-16, having moved to canvasDrag.c with
+// the rest of the drag state it clears.
 
 // stop_dragging() preceded by the undo push for a param/mode dial drag. Anything that starts a
 // drag by filling in gParamDragging must end it through here, not through stop_dragging(), or

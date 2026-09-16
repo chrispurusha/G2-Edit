@@ -103,6 +103,10 @@ tRectangle g2_menu_bar_rect(double pointWidth) {
     return (tRectangle){{0.0, 0.0}, {pointWidth, MENU_BAR_HEIGHT}};
 }
 
+tRectangle g2_plugin_menu_bar_rect(void) {
+    return g2_menu_bar_rect(get_render_width() / gGlobalGuiScale);
+}
+
 tRectangle g2_topbar_rect(double pointWidth) {
     // notes §6
     return (tRectangle){{0.0, MENU_BAR_HEIGHT}, {pointWidth, G2_PLUGIN_TOPBAR_HEIGHT}};
