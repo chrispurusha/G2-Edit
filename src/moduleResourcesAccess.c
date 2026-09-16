@@ -109,6 +109,34 @@ uint32_t array_size_display_location_list(void) {
     return ARRAY_SIZE(displayLocationList);
 }
 
+uint32_t drum_synth_preset_count(void) {
+    return ARRAY_SIZE(drumSynthPresetValues);
+}
+
+const char * drum_synth_preset_name(uint32_t preset) {
+    return (preset < drum_synth_preset_count()) ? drumSynthPresetNames[preset] : "none";
+}
+
+uint8_t drum_synth_preset_value(uint32_t preset, uint32_t paramIndex) {
+    return drumSynthPresetValues[preset][paramIndex];
+}
+
+int32_t drum_synth_preset_matching(const tParam * params) {
+    for (uint32_t preset = 0; preset < drum_synth_preset_count(); preset++) {
+        uint32_t p = 0;
+
+        while ((p < DRUM_SYNTH_PRESET_PARAMS) && (params[p].value == drumSynthPresetValues[preset][p])) {
+            p++;
+        }
+
+        if (p == DRUM_SYNTH_PRESET_PARAMS) {
+            return (int32_t)preset;
+        }
+    }
+
+    return -1;
+}
+
 uint32_t array_size_str_map(const char ** strMap) {
     uint32_t i = 0;
 

@@ -78,6 +78,13 @@ uint32_t array_size_volume_location_list(void);
 uint32_t array_size_led_location_list(void);
 uint32_t array_size_display_location_list(void);
 uint32_t array_size_str_map(const char ** strMap);
+
+// The DrumSynth's factory presets. A preset is only values for params 0-14, so which one a module
+// is on is worked out from its dials: drum_synth_preset_matching() gives -1 when none match.
+uint32_t drum_synth_preset_count(void);
+const char * drum_synth_preset_name(uint32_t preset);
+uint8_t drum_synth_preset_value(uint32_t preset, uint32_t paramIndex);
+int32_t drum_synth_preset_matching(const tParam * params);
 uint32_t module_param_count(tModuleType moduleType);
 
 // The subset of those the DEVICE actually sends — paramTypeCustomData rows excluded, they are local

@@ -69,6 +69,9 @@ void undo_commit_global_knob_edit(void);
 void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variation, uint32_t oldValue, uint32_t newValue);
 void undo_push_mode_change(tModuleKey key, uint32_t modeIndex, uint32_t oldValue, uint32_t newValue);
 
+// Record params 0..count-1 of one variation changing together (a DrumSynth preset), as one step.
+void undo_push_param_block(tModuleKey key, uint32_t variation, uint32_t count, const uint8_t * oldValues, const uint8_t * newValues);
+
 // Record knob assignment change. idx2 == -1 if only one knob changed.
 void undo_push_knob(uint32_t slot, uint32_t idx1, const tKnob * before1, const tKnob * after1, int32_t idx2, const tKnob * before2, const tKnob * after2);
 

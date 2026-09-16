@@ -62,6 +62,8 @@ void midi_cc_deassign_selection(void);
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex);
 void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef);
 void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef);
+// The DrumSynth's factory presets; choosing one sets params 0-14 of the active variation, as one undo step.
+void open_drum_preset_menu(tCoord coord, tModuleKey moduleKey);
 
 // Module / cable / morph menus
 void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex);

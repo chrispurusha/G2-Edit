@@ -421,7 +421,7 @@ Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Ben
   12. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
   13. Click             CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
   14. Noise             CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
-  15. Preset            Menu          --   enumerated selector - name list not yet cross-checked
+  15. On                Bypass        --   an On/Off button (default On), NOT the preset - the preset is not a parameter [2026-09-16]
 
 CompLev   [module type 59]
 --------------------------
