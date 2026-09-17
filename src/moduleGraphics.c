@@ -2282,6 +2282,9 @@ static bool filter_graph_map(uint32_t moduleType, tFilterGraph * out) {
     }
 }
 
+#define FILTER_GRAPH_FINE_SPAN     (2.0)     // grid steps either side of the cutoff
+#define FILTER_GRAPH_FINE_STEPS    (16.0)
+
 static void render_filter_response_graph(tRectangle rectangle, tModule * module) {
     tFilterGraph           map            = {0};
 
@@ -2337,8 +2340,9 @@ static void render_filter_response_graph(tRectangle rectangle, tModule * module)
     double                 baseY          = graphRect.coord.y + (graphRect.size.h * 0.6);  // 0dB reference, leaving
                                                                                            // headroom above for the
                                                                                            // resonance peak to rise into
-    const int              numSamples     = 100;
+    const double           step           = 1.0 / 100.0;
     tCoord                 prev           = {0};
+    double                 x              = 0.0;
     bool                   started        = false;   // has the curve been inside the box yet?
     bool                   wasOnPage      = false;
 
@@ -2350,8 +2354,7 @@ static void render_filter_response_graph(tRectangle rectangle, tModule * module)
 
     set_rgb_colour((tRgb)RGB_GREEN_ON);
 
-    for (int i = 0; i <= numSamples; i++) {
-        double x         = (double)i / (double)numSamples;
+    for (int i = 0; ; i++) {
         double octaves   = (x - cutoffX) * 10.0;   // ~10 octaves span the box, matching Freq's own real range
         double ratio     = pow(2.0, octaves);      // f/fc
         double magnitude = 0.0;
@@ -2396,11 +2399,16 @@ static void render_filter_response_graph(tRectangle rectangle, tModule * module)
             render_line(moduleArea, prev, point, 1.5);
         }
 
-        if (started && !onPage) {
+        if ((started && !onPage) || (x >= 1.0)) {
             break;   // came down and left the box - nothing further is worth drawing
         }
         wasOnPage = onPage;
         prev      = point;
+
+        // notes §68a - on a grid through the cutoff, finer around it, so a sharp peak is always sampled
+        double here    = (fabs(x - cutoffX) < (FILTER_GRAPH_FINE_SPAN * step)) ? (step / FILTER_GRAPH_FINE_STEPS) : step;
+
+        x         = fmin(cutoffX + ((floor(((x - cutoffX) / here) + 1e-9) + 1.0) * here), 1.0);
     }
 }
 
