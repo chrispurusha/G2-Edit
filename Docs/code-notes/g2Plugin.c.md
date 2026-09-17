@@ -148,6 +148,16 @@ EDITS NOT SAVED TO A FILE ARE STILL NOT STORED, and now neither is anything else
 Storing the patch DATA is the next piece of work; the point of doing the removal first is that a
 reopened project is honestly empty instead of confidently wrong.
 
+THE PATCHES ARE IN THE RECORD SINCE 2026-09-17 (CT). After the settings lines come `perfname=` (the
+performance's name, which its image lacks) and a last line `data=<n>`, followed by exactly n bytes: the
+whole instance as a .prf2 image (write_perf_to_memory()) - all four slots with their dividers, the
+performance settings and global knobs. So a reopened project sounds as it was left, edits included, and
+`split=` is no longer written (it is still read, and applied only to a record with no data). The record
+is built when a host asks its size and the same bytes are handed over by the write that follows
+(`stateRecord`), so the performance is serialised once per save. Header still 2: an older build reads the
+settings lines and stops at `data=`, which it does not know, and its strtok simply meets binary it
+ignores - it opens the project empty, as it did before.
+
 THE OLD BARE-PATH FORMAT IS READ AND IGNORED: a blob without the header held nothing but a path, so
 there is nothing left in it to restore. NO TERMINATOR IS WRITTEN: the blob's length is its length.
 
@@ -161,6 +171,10 @@ THE REMEMBERED PATHS ARE CLEARED WITH THEM (2026-09-16). gSavedPatchPath/gSavedP
 File > Save writes back to, so leaving a restored path in place while loading nothing would aim
 Save at a file whose contents were never read - one keystroke from overwriting a real patch with
 an empty one.
+
+THEN THE SAVED PATCHES (2026-09-17): the record's .prf2 image is parsed into all four slots
+(g2_plugin_parse_perf_image()), and `perfname=` restores the name. perfmode/selected are applied after
+it, since parsing a performance sets performance mode.
 
 ORDER STILL MATTERS, for a different reason than it used to. init_patch() sets barPosition to
 SPLIT_POS_MAX, so `split=` has to be applied after the slots are made or the empty patch overwrites

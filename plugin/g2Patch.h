@@ -43,6 +43,9 @@ tG2FileKind g2_plugin_open_file(const char * filepath, uint32_t slot);
 // Parse a .pch2 image already in memory into `slot`.
 bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot);
 
+// Parse a whole .prf2 image already in memory: every slot and the performance settings.
+bool g2_plugin_parse_perf_image(const uint8_t * buff, int64_t size);
+
 
 #ifdef __cplusplus
 }

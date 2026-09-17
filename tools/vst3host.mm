@@ -239,6 +239,7 @@ static void usage(void) {
     fprintf(stderr,
             "usage: vst3host <plugin.vst3> [--seconds N] [--shot out.png] [--size WxH]\n"
             "                [--instances N] [--patch PATH]... [--offset-test N] [--reopen N] [--dump-state]\n"
+            "                [--state-file F]... [--save-state F]\n"
             "  --seconds N    quit after N seconds (default: run until the windows are closed)\n"
             "  --shot PATH    screenshot each window just before quitting; with more than one\n"
             "                 instance, instance i goes to PATH with -i before the extension\n"
@@ -249,7 +250,9 @@ static void usage(void) {
             "                 starts - use a patch that is silent without a note, and compare with N=0\n"
             "  --reopen N     close and re-create the first editor N times, as a host does when the\n"
             "                 user opens and shuts it - for leaks and exhausted window slots\n"
-            "  --dump-state   print the state each instance saves, after --patch has been applied\n");
+            "  --dump-state   print the state each instance saves, after --patch has been applied\n"
+            "  --state-file F hand the next instance the state saved in F (see --save-state)\n"
+            "  --save-state F write the first instance's state to F\n");
 }
 
 // Renders a few silent blocks, then one with a note-on at `offset`, and returns the first frame of
@@ -314,6 +317,7 @@ int main(int argc, const char ** argv) {
     int                        reopen     = 0;
     bool                       dumpState  = false;
     std::vector<std::string>   patches;
+    const char *               savePath   = nullptr;
 
     for (int i = 2; i < argc; i++) {
         if ((strcmp(argv[i], "--seconds") == 0) && ((i + 1) < argc)) {
@@ -331,6 +335,25 @@ int main(int argc, const char ** argv) {
             count = (count < 1) ? 1 : ((count > 8) ? 8 : count);
         } else if ((strcmp(argv[i], "--patch") == 0) && ((i + 1) < argc)) {
             patches.push_back(argv[++i]);
+        } else if ((strcmp(argv[i], "--state-file") == 0) && ((i + 1) < argc)) {
+            // A whole saved state, bytes and all, as a project would hand it back
+            FILE * f = fopen(argv[++i], "rb");
+
+            if (f == nullptr) {
+                fprintf(stderr, "cannot read %s\n", argv[i]);
+                return 2;
+            }
+            std::string bytes;
+            char        chunk[65536];
+            size_t      got;
+
+            while ((got = fread(chunk, 1, sizeof(chunk), f)) > 0) {
+                bytes.append(chunk, got);
+            }
+            fclose(f);
+            patches.push_back(bytes);
+        } else if ((strcmp(argv[i], "--save-state") == 0) && ((i + 1) < argc)) {
+            savePath = argv[++i];
         } else if (strcmp(argv[i], "--dump-state") == 0) {
             dumpState = true;
         } else if ((strcmp(argv[i], "--reopen") == 0) && ((i + 1) < argc)) {
@@ -470,6 +493,15 @@ int main(int argc, const char ** argv) {
                 MemStream state;
 
                 if (in.component->getState(&state) == kResultTrue) {
+                    if ((savePath != nullptr) && (n == 0)) {
+                        FILE * f = fopen(savePath, "wb");
+
+                        if (f != nullptr) {
+                            fwrite(state.buf.data(), 1, state.buf.size(), f);
+                            fclose(f);
+                        }
+                    }
+
                     if (dumpState) {
                         // Printable as it stands; anything else - a wrapper header, a count, a
                         // binary value - as a dot, so the plug-in's own text can be read.

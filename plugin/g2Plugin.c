@@ -39,6 +39,7 @@
 #include "prefs.h"
 #include "splitView.h"              // SPLIT_POS_MAX - the divider the record carries
 #include "g2Patch.h"
+#include "patchWrite.h"             // the instance as a .prf2 image, for the host's project
 #include "g2Prefs.h"
 #include "g2View.h"
 
@@ -148,6 +149,11 @@ typedef struct {
     // per channel, so it renders here and is de-interleaved out. Bounded by G2_MAX_BLOCK and looped,
     // so an unusually large host buffer cannot overrun it.
     float            scratch[G2_MAX_BLOCK * 2];
+
+    // The state record, built when a host asks its size and handed over by the call that follows -
+    // so the two agree, and the performance is written once per save, not twice.
+    uint8_t *        stateRecord;
+    size_t           stateRecordLen;
 } tG2Plugin;
 
 // EVERY ENTRY STARTS HERE. Makes this instance's document - and so its engine - the current one on the
@@ -225,6 +231,7 @@ static void g2_destroy(void * inst) {
     sound_engine_detach();
     g2_document_select(NULL);
     g2_document_destroy(g2->doc);
+    free(g2->stateRecord);
     free(g2);
 }
 
@@ -470,49 +477,71 @@ static bool g2_param_text(const tSynthLibPluginDesc * desc, void * inst, uint32_
 // notes §10
 #define G2_STATE_HEADER    "G2Alike state 2\n"
 
-static size_t g2_get_state(void * inst, void * out, size_t len) {
-    tG2Plugin * g2 = enter(inst);
-    // NO FILE NAMES IN HERE since 2026-09-16, so the record is a handful of short lines rather than
-    // four paths' worth. What a project names, it would have to reload, and it no longer does.
-    char        text[256];
-    size_t      used = 0;
+// The key the patch data follows: "data=<bytes>\n", then that many bytes of .prf2 image, then nothing.
+#define G2_STATE_DATA_KEY    "data="
+
+static void build_state_record(tG2Plugin * g2) {
+    // Settings as text, as before; no file names (notes §10). The instance itself follows as a
+    // performance image - all four slots, their dividers, the performance settings and global knobs.
+    char      text[256 + CLAVIA_NAME_SIZE];
+    size_t    used      = 0;
+    size_t    imageLen  = 0;
+    uint8_t * image     = NULL;
 
     used += (size_t)snprintf(text + used, sizeof(text) - used, "%s", G2_STATE_HEADER);
-
-    if (used < sizeof(text)) {
-        used += (size_t)snprintf(text + used, sizeof(text) - used, "perfmode=%u\nselected=%u\n",
-                                 (unsigned)gGlobalSettings.perfMode, (unsigned)gSlot);
-    }
-
+    used += (size_t)snprintf(text + used, sizeof(text) - used, "perfmode=%u\nselected=%u\n",
+                             (unsigned)gGlobalSettings.perfMode, (unsigned)gSlot);
     // notes §10 - the editor's mouse mode and the engine's drone mode too.
-    if (used < sizeof(text)) {
-        used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndrone=%d\n",
-                                 (int)synthlib_dial_mode(), (sound_engine_drone_mode() == true) ? 1 : 0);
-    }
+    used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndrone=%d\n",
+                             (int)synthlib_dial_mode(), (sound_engine_drone_mode() == true) ? 1 : 0);
+    // notes §10 - the performance's name, which its image does not carry
+    used += (size_t)snprintf(text + used, sizeof(text) - used, "perfname=%s\n", gGlobalSettings.perfName);
 
-    // notes §10 - and each slot's Voice/FX divider, which nothing else can restore: it is patch
-    // data, so reopening the project would otherwise put it back where the .pch2 says (CT).
-    if (used < sizeof(text)) {
-        used += (size_t)snprintf(text + used, sizeof(text) - used, "split=");
+    database_read_lock();
+    image = write_perf_to_memory(&imageLen);
+    database_read_unlock();
 
-        for (uint32_t slot = 0; (slot < MAX_SLOTS) && (used < sizeof(text)); slot++) {
-            used += (size_t)snprintf(text + used, sizeof(text) - used, "%s%u",
-                                     (slot > 0) ? "," : "", (unsigned)gPatchDescr[slot].barPosition);
-        }
-
-        if (used < sizeof(text)) {
-            used += (size_t)snprintf(text + used, sizeof(text) - used, "\n");
-        }
+    if (image != NULL) {
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "%s%zu\n", G2_STATE_DATA_KEY, imageLen);
     }
 
     if (used > sizeof(text)) {
         used = sizeof(text);
     }
+    free(g2->stateRecord);
+    g2->stateRecordLen = 0;
+    g2->stateRecord    = (uint8_t *)malloc(used + imageLen);
 
-    if ((out != NULL) && (len >= used)) {
-        memcpy(out, text, used);
+    if (g2->stateRecord != NULL) {
+        memcpy(g2->stateRecord, text, used);
+
+        if (image != NULL) {
+            memcpy(g2->stateRecord + used, image, imageLen);
+        }
+        g2->stateRecordLen = used + imageLen;
     }
-    return used;
+    free(image);
+}
+
+static size_t g2_get_state(void * inst, void * out, size_t len) {
+    tG2Plugin * g2 = enter(inst);
+
+    // The size question builds the record; the write that follows hands over that same one.
+    if ((out == NULL) || (g2->stateRecord == NULL)) {
+        build_state_record(g2);
+    }
+
+    if (out == NULL) {
+        return g2->stateRecordLen;
+    }
+    size_t      take = (len < g2->stateRecordLen) ? len : g2->stateRecordLen;
+
+    if (g2->stateRecord != NULL) {
+        memcpy(out, g2->stateRecord, take);
+    }
+    free(g2->stateRecord);
+    g2->stateRecord = NULL;
+    return take;
 }
 
 // A v2 state record, read into this before anything is loaded, so a record that names only some
@@ -526,9 +555,12 @@ typedef struct {
     int32_t dialMode;
     int32_t drone;
 
-    // Per slot, like the paths above and for the same reason: each slot holds its own patch and so
-    // its own divider. -1 is "the record did not say", which leaves the patch's own alone.
+    // Per slot: each slot holds its own patch and so its own divider. -1 is "the record did not say".
+    // Written 2026-09-16 only; a record with patch data carries the dividers in that instead.
     int32_t split[MAX_SLOTS];
+
+    bool    havePerfName;
+    char    perfName[CLAVIA_NAME_SIZE + 1];
 } tG2State;
 
 static void parse_state_line(tG2State * state, char * line) {
@@ -550,6 +582,9 @@ static void parse_state_line(tG2State * state, char * line) {
         state->dialMode = atoi(value);
     } else if (strcmp(key, "drone") == 0) {
         state->drone = atoi(value);
+    } else if (strcmp(key, "perfname") == 0) {
+        state->havePerfName = true;
+        snprintf(state->perfName, sizeof(state->perfName), "%s", value);
     } else if (strcmp(key, "split") == 0) {
         // One position per slot, comma separated. A short list leaves the rest at -1, so a record
         // written by a build that knew fewer slots still says what it knew.
@@ -600,10 +635,29 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     memcpy(text, data, len);
     text[len] = '\0';
 
+    // The patch data, if the record has any: everything after the data= line, which is the last
+    const uint8_t * image    = NULL;
+    size_t          imageLen = 0;
+    char *          dataKey  = strstr(text + headerLen, "\n" G2_STATE_DATA_KEY);
+
+    if (dataKey != NULL) {
+        char * lineEnd = strchr(dataKey + 1, '\n');
+
+        if (lineEnd != NULL) {
+            size_t declared = (size_t)strtoul(dataKey + 1 + strlen(G2_STATE_DATA_KEY), NULL, 10);
+            size_t at       = (size_t)(lineEnd + 1 - text);
+
+            if ((at <= len) && (declared <= (len - at))) {
+                image    = (const uint8_t *)data + at;
+                imageLen = declared;
+            }
+            dataKey[1] = '\0';    // the settings text ends at the data= line
+        }
+    }
+
     for (char * line = strtok_r(text + headerLen, "\n", &save); line != NULL; line = strtok_r(NULL, "\n", &save)) {
         parse_state_line(state, line);
     }
-    free(text);
 
     // notes §11
     //
@@ -617,6 +671,15 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
         gSavedPatchPath[slot][0] = '\0';
         clear_slot_data(slot);
         init_patch(slot);
+    }
+
+    // notes §11 - and then the patches the project saved, if it did
+    bool restored = (image != NULL) && g2_plugin_parse_perf_image(image, (int64_t)imageLen);
+
+    free(text);
+
+    if (state->havePerfName == true) {
+        snprintf(gGlobalSettings.perfName, sizeof(gGlobalSettings.perfName), "%s", state->perfName);
     }
 
     // AFTER the slots, which is what the record is for: it says what these were when the project was
@@ -636,7 +699,7 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     // LAST, and the order still matters even with no file in it: init_patch() above sets
     // barPosition to SPLIT_POS_MAX (Voice Area full), so a divider applied any earlier would be
     // overwritten by the empty patch a moment later.
-    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+    for (uint32_t slot = 0; (slot < MAX_SLOTS) && (restored == false); slot++) {
         if (state->split[slot] >= 0) {
             gPatchDescr[slot].barPosition = (uint16_t)((state->split[slot] > SPLIT_POS_MAX)
                                                        ? SPLIT_POS_MAX : state->split[slot]);
