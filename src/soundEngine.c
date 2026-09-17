@@ -462,6 +462,7 @@ static double type_ii_attenuator(double dial) {
 // Aft.Tch, ... — so aftertouch is group 3. midiInput.c has the same constant for the same reason.
 #define MORPH_GROUP_WHEEL         (0)
 #define MORPH_GROUP_VELOCITY      (1)    // §26.2 - per voice, not from gMorphMilli
+#define MORPH_GROUP_KEYBOARD      (2)    // §26.2 - per voice, from its note
 #define MORPH_GROUP_AFTERTOUCH    (3)
 #define MORPH_GROUP_SUSTAIN       (4)    // §26.3 - the sustain pedal, which also holds the notes
 
@@ -752,42 +753,56 @@ static pthread_mutex_t             gParamsWriteMutexBank[SOUND_ENGINE_MAX_ENGINE
 
 #define PARAMS_READ_ATTEMPTS    (4)   // then keep last good — a retry loop must not spin in audio
 
-// §26.2 - the nodes a Vel morph moves, built at VEL_MORPH_LEVELS velocities. Written under
-// gParamsWriteMutex behind its own sequence, and copied by the audio thread only when that changes.
-#define VEL_MORPH_LEVELS    (32)
-#define MAX_VEL_NODES       (8)
+// §26.2 - the nodes a per-voice morph moves (Vel, Keyb), built along that morph's axis. Written under
+// gParamsWriteMutex behind their own sequence, and copied by the audio thread only when that changes.
+typedef enum {
+    eAxisVelocity = 0,
+    eAxisKey,
+    eAxisCount
+} tMorphAxis;
+
+#define VEL_MORPH_LEVELS       (32)   // velocity 0..127 in 31 steps
+#define KEY_MORPH_LEVELS       (64)   // every other note, 0..126
+#define KEY_MORPH_ZERO_NOTE    (36.0) // §26.2 - the Keyb morph is 0 at C1 (note 36) and full five octaves up
+#define KEY_MORPH_SPAN         (60.0)
+#define MAX_AXIS_LEVELS        (64)
+#define MAX_VOICE_NODES        (8)
 
 typedef struct {
-    uint64_t    build;                     // tSoundEngineParams.build this belongs to
-    uint32_t    count;                     // nodes in the table; 0 when nothing is velocity-morphed
+    uint32_t    count;                     // nodes in the table; 0 when nothing is morphed on this axis
     int8_t      column[MAX_ENGINE_NODES];  // a node's column, or -1
-    tEngineNode node[VEL_MORPH_LEVELS][MAX_VEL_NODES];
-} tVelocityNodes;
+    tEngineNode node[MAX_AXIS_LEVELS][MAX_VOICE_NODES];
+} tMorphTable;
 
-static tVelocityNodes              gVelNodesBank[SOUND_ENGINE_MAX_ENGINES];
-#define gVelNodes         (gVelNodesBank[SE])
-static _Atomic uint32_t            gVelNodesSeqBank[SOUND_ENGINE_MAX_ENGINES];
-#define gVelNodesSeq      (gVelNodesSeqBank[SE])
-static tVelocityNodes              gVelNodesAudioBank[SOUND_ENGINE_MAX_ENGINES];   // audio thread only
-#define gVelNodesAudio    (gVelNodesAudioBank[SE])
-static uint32_t                    gVelNodesSeenBank[SOUND_ENGINE_MAX_ENGINES];    // audio thread only
-#define gVelNodesSeen     (gVelNodesSeenBank[SE])
-static bool                        gVelUsableBank[SOUND_ENGINE_MAX_ENGINES];       // audio thread only
-#define gVelUsable        (gVelUsableBank[SE])
-static uint8_t                     gLastVelLevelBank[SOUND_ENGINE_MAX_ENGINES];    // audio thread only
-#define gLastVelLevel     (gLastVelLevelBank[SE])
-static uint64_t                    gBuildSerialBank[SOUND_ENGINE_MAX_ENGINES];     // under gParamsWriteMutex
-#define gBuildSerial      (gBuildSerialBank[SE])
-// The last full-velocity build, under gParamsWriteMutex: a changed Vel morph range shows only here.
-static tSoundEngineParams          gVelProbeBank[SOUND_ENGINE_MAX_ENGINES];
-#define gVelProbe         (gVelProbeBank[SE])
-// The Vel morph position a build uses, 0..1. Per thread: two instances build at once on different threads.
-static _Thread_local double        sBuildVelocity;
+typedef struct {
+    uint64_t    build;                     // tSoundEngineParams.build these belong to
+    tMorphTable axis[eAxisCount];
+} tVoiceMorphs;
+
+static tVoiceMorphs         gVoiceMorphsBank[SOUND_ENGINE_MAX_ENGINES];
+#define gVoiceMorphs          (gVoiceMorphsBank[SE])
+static _Atomic uint32_t     gVoiceMorphsSeqBank[SOUND_ENGINE_MAX_ENGINES];
+#define gVoiceMorphsSeq       (gVoiceMorphsSeqBank[SE])
+static tVoiceMorphs         gVoiceMorphsAudioBank[SOUND_ENGINE_MAX_ENGINES];          // audio thread only
+#define gVoiceMorphsAudio     (gVoiceMorphsAudioBank[SE])
+static uint32_t             gVoiceMorphsSeenBank[SOUND_ENGINE_MAX_ENGINES];           // audio thread only
+#define gVoiceMorphsSeen      (gVoiceMorphsSeenBank[SE])
+static bool                 gVoiceMorphsUsableBank[SOUND_ENGINE_MAX_ENGINES];         // audio thread only
+#define gVoiceMorphsUsable    (gVoiceMorphsUsableBank[SE])
+static uint8_t              gLastRowBank[SOUND_ENGINE_MAX_ENGINES][eAxisCount];       // audio thread only
+#define gLastRow              (gLastRowBank[SE])
+static uint64_t             gBuildSerialBank[SOUND_ENGINE_MAX_ENGINES];               // under gParamsWriteMutex
+#define gBuildSerial          (gBuildSerialBank[SE])
+// The last build at each axis's full amount, under gParamsWriteMutex: a changed morph range shows only here.
+static tSoundEngineParams   gAxisProbeBank[SOUND_ENGINE_MAX_ENGINES][eAxisCount];
+#define gAxisProbe            (gAxisProbeBank[SE])
+// The Vel and Keyb morph amounts a build uses. Per thread: two instances build at once on different threads.
+static _Thread_local double sBuildAxis[eAxisCount];
 
 // §26.3
-static _Atomic bool                gSustainPedalBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic bool         gSustainPedalBank[SOUND_ENGINE_MAX_ENGINES];
 #define gSustainPedal      (gSustainPedalBank[SE])
-static bool                        gSustainSeenBank[SOUND_ENGINE_MAX_ENGINES];     // audio thread only
+static bool                 gSustainSeenBank[SOUND_ENGINE_MAX_ENGINES];            // audio thread only
 #define gSustainSeen       (gSustainSeenBank[SE])
 
 // notes §25
@@ -800,24 +815,24 @@ typedef struct {
     _Atomic uint32_t sequence;   // claim index + 1 once written; 0 means never used
 } tNoteEvent;
 
-static tNoteEvent                  gNoteQueueBank[SOUND_ENGINE_MAX_ENGINES][NOTE_QUEUE_SIZE];
+static tNoteEvent           gNoteQueueBank[SOUND_ENGINE_MAX_ENGINES][NOTE_QUEUE_SIZE];
 #define gNoteQueue    (gNoteQueueBank[SE])
-static _Atomic uint32_t            gNoteWriteBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic uint32_t     gNoteWriteBank[SOUND_ENGINE_MAX_ENGINES];
 #define gNoteWrite    (gNoteWriteBank[SE])
-static uint32_t                    gNoteReadBank[SOUND_ENGINE_MAX_ENGINES]; // audio thread only
+static uint32_t             gNoteReadBank[SOUND_ENGINE_MAX_ENGINES];        // audio thread only
 #define gNoteRead     (gNoteReadBank[SE])
 
-static _Atomic bool                gActiveBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic bool         gActiveBank[SOUND_ENGINE_MAX_ENGINES];
 #define gActive       (gActiveBank[SE])
 
 // Morph positions, 0..1, one per group. Written by the MIDI thread as controllers move, read by the
 // UI thread when it builds a snapshot. Plain atomics: each is independent and a torn read is not
 // possible on a value this size.
-static _Atomic uint32_t            gMorphMilliBank[SOUND_ENGINE_MAX_ENGINES][NUM_MORPHS];
+static _Atomic uint32_t     gMorphMilliBank[SOUND_ENGINE_MAX_ENGINES][NUM_MORPHS];
 #define gMorphMilli    (gMorphMilliBank[SE])
 // The highest each morph has reached. The live value is useless as a diagnostic — by the time you
 // have let go of the key and opened a menu to look at it, it has fallen back to zero.
-static _Atomic uint32_t            gMorphPeakMilliBank[SOUND_ENGINE_MAX_ENGINES][NUM_MORPHS];
+static _Atomic uint32_t     gMorphPeakMilliBank[SOUND_ENGINE_MAX_ENGINES][NUM_MORPHS];
 #define gMorphPeakMilli     (gMorphPeakMilliBank[SE])
 
 // notes §26
@@ -826,42 +841,42 @@ static _Atomic uint32_t            gMorphPeakMilliBank[SOUND_ENGINE_MAX_ENGINES]
 #define METER_LEG_SHIFT     (16u)   // leg 1 above the flag; leg 0 occupies METER_VALUE_MASK
 
 // notes §27
-static _Atomic bool                gMetersDirtyBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic bool         gMetersDirtyBank[SOUND_ENGINE_MAX_ENGINES];
 #define gMetersDirty    (gMetersDirtyBank[SE])
-static _Atomic uint32_t            gModuleMeterBank[SOUND_ENGINE_MAX_ENGINES][locationMax][MAX_NUM_MODULES];
+static _Atomic uint32_t     gModuleMeterBank[SOUND_ENGINE_MAX_ENGINES][locationMax][MAX_NUM_MODULES];
 #define gModuleMeter    (gModuleMeterBank[SE])
 
 // notes §28
-static _Atomic uint32_t            gModuleLedBank[SOUND_ENGINE_MAX_ENGINES][locationMax][MAX_NUM_MODULES];
+static _Atomic uint32_t     gModuleLedBank[SOUND_ENGINE_MAX_ENGINES][locationMax][MAX_NUM_MODULES];
 #define gModuleLed    (gModuleLedBank[SE])
 
 // The follower behind the level meters. Per NODE, not per voice: the face has one meter however many
 // voices are sounding, and only voice 0 writes it. About 200 ms of release at 96 kHz.
 #define METER_DECAY         (0.00005)
 #define METER_FLOOR         (0.0078125)    // 2^-7, below which the meter law reads 0 (§1.1)
-static double                      gMeterEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
+static double               gMeterEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
 #define gMeterEnv           (gMeterEnvBank[SE])
 
-static _Atomic int32_t             gOutputGainMilliBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1000};
+static _Atomic int32_t      gOutputGainMilliBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1000};
 #define gOutputGainMilli    (gOutputGainMilliBank[SE])
 
-static _Atomic int32_t             gBendMilliBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic int32_t      gBendMilliBank[SOUND_ENGINE_MAX_ENGINES];
 #define gBendMilli          (gBendMilliBank[SE])
 
 // notes §20 - a released voice that is still sounding goes on until it is stolen, as on the instrument.
-static _Atomic bool                gDroneModeBank[SOUND_ENGINE_MAX_ENGINES]       = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = true};
+static _Atomic bool         gDroneModeBank[SOUND_ENGINE_MAX_ENGINES]       = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = true};
 #define gDroneMode    (gDroneModeBank[SE])
-static bool                        gDroneSeenBank[SOUND_ENGINE_MAX_ENGINES]       = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = true}; // audio thread only
+static bool                 gDroneSeenBank[SOUND_ENGINE_MAX_ENGINES]       = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = true};        // audio thread only
 #define gDroneSeen    (gDroneSeenBank[SE])
 
 // Highest absolute sample the audio thread has produced since this was last read. Purely a
 // diagnostic — it is what lets a test say "sound is coming out" without a pair of ears.
-static _Atomic uint32_t            gPeakMilliBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic uint32_t     gPeakMilliBank[SOUND_ENGINE_MAX_ENGINES];
 #define gPeakMilli    (gPeakMilliBank[SE])
 
 // The peak BEFORE the output gain, so the real headroom a patch needs is visible rather than being
 // hidden by whatever the guard clamped it to.
-static _Atomic uint32_t            gRawPeakMilliBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic uint32_t     gRawPeakMilliBank[SOUND_ENGINE_MAX_ENGINES];
 #define gRawPeakMilli    (gRawPeakMilliBank[SE])
 
 // Why the engine is or is not making a sound. UI thread only — written while building the snapshot,
@@ -877,9 +892,9 @@ typedef enum {
     eStatusPlaying,
 } tSoundEngineStatus;
 
-static tSoundEngineStatus          gStatusBank[SOUND_ENGINE_MAX_ENGINES]     = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = eStatusOff};
+static tSoundEngineStatus   gStatusBank[SOUND_ENGINE_MAX_ENGINES]     = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = eStatusOff};
 #define gStatus              (gStatusBank[SE])
-static uint32_t                    gPlayingCountBank[SOUND_ENGINE_MAX_ENGINES]; // how many modules are in the rendered chain
+static uint32_t             gPlayingCountBank[SOUND_ENGINE_MAX_ENGINES];        // how many modules are in the rendered chain
 #define gPlayingCount        (gPlayingCountBank[SE])
 
 // notes §29
@@ -890,28 +905,28 @@ static uint32_t                    gPlayingCountBank[SOUND_ENGINE_MAX_ENGINES]; 
 // second. See the delay's Clk branch — this is a stand-in, not the hardware's tempo.
 #define ENGINE_REFERENCE_BPM    (120.0)
 
-static double                      gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
+static double               gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
 #define gDeviceRate             (gDeviceRateBank[SE])
-static double                      gSampleRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
+static double               gSampleRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
 #define gSampleRate             (gSampleRateBank[SE])
 
 // notes §30
 typedef struct {
-    int32_t  note;         // MIDI note this voice holds, -1 for none
-    bool     gate;         // key still down
-    bool     sounding;     // rendered this block: gate open, or still releasing
-    double   glidePitch;   // chases `note`; fractional, since a glide is mostly between two notes
-    bool     glideActive;  // this note began while another was still held — see the Auto glide mode
-    double   envelope;     // the anti-click ramp, used only when the patch has no EnvADSR
-    uint64_t age;          // allocation order, so the oldest can be identified for stealing
-    uint32_t quiet;        // consecutive samples this voice's output has been inaudible
-    uint32_t released;     // samples since its envelopes finished with the key up, 0 until then (notes §20)
-    double   fade;         // 1.0 normally; driven to 0 to retire a voice that will not stop on its own
-    uint32_t trigger;      // counts note-ons that restart the envelopes - see voice_note_on()
-    uint8_t  velocity;     // the note-on velocity, 1-127 - the Keyboard module's Lin and Exp (§26)
-    uint8_t  release;      // the release velocity, 0 until the key comes up - its Release
-    uint8_t  velLevel;     // §26.2 - which row of the velocity table this note plays
-    bool     sustained;    // §26.3 - its key is up but the sustain pedal holds it
+    int32_t  note;            // MIDI note this voice holds, -1 for none
+    bool     gate;            // key still down
+    bool     sounding;        // rendered this block: gate open, or still releasing
+    double   glidePitch;      // chases `note`; fractional, since a glide is mostly between two notes
+    bool     glideActive;     // this note began while another was still held — see the Auto glide mode
+    double   envelope;        // the anti-click ramp, used only when the patch has no EnvADSR
+    uint64_t age;             // allocation order, so the oldest can be identified for stealing
+    uint32_t quiet;           // consecutive samples this voice's output has been inaudible
+    uint32_t released;        // samples since its envelopes finished with the key up, 0 until then (notes §20)
+    double   fade;            // 1.0 normally; driven to 0 to retire a voice that will not stop on its own
+    uint32_t trigger;         // counts note-ons that restart the envelopes - see voice_note_on()
+    uint8_t  velocity;        // the note-on velocity, 1-127 - the Keyboard module's Lin and Exp (§26)
+    uint8_t  release;         // the release velocity, 0 until the key comes up - its Release
+    uint8_t  row[eAxisCount]; // §26.2 - which row of each per-voice morph table this note plays
+    bool     sustained;       // §26.3 - its key is up but the sustain pedal holds it
 } tVoice;
 
 static tVoice             gVoiceBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES];
@@ -1367,7 +1382,8 @@ static double param_value(tModule * module, uint32_t variation, uint32_t index) 
         }
         {
             int32_t offset = (raw < 128) ? (int32_t)raw : ((int32_t)raw - 256);
-            double  amount = (group == MORPH_GROUP_VELOCITY) ? sBuildVelocity
+            double  amount = (group == MORPH_GROUP_VELOCITY) ? sBuildAxis[eAxisVelocity]
+                             : (group == MORPH_GROUP_KEYBOARD) ? sBuildAxis[eAxisKey]
                              : ((double)atomic_load(&gMorphMilli[group]) / 1000.0);
 
             value += (double)offset * amount;
@@ -1833,9 +1849,27 @@ static uint32_t voice_to_allocate(uint32_t count, int32_t note) {
     return voice_to_steal(count, note);
 }
 
-// §26.2 - the velocity table row nearest a velocity
-static uint8_t velocity_level(uint8_t velocity) {
+// §26.2 - the table rows nearest a velocity and a note, and the morph amount each row was built at
+static uint8_t velocity_row(uint8_t velocity) {
     return (uint8_t)lround(((double)velocity * (double)(VEL_MORPH_LEVELS - 1)) / 127.0);
+}
+
+static uint8_t key_row(int32_t note) {
+    int32_t row = (note < 0) ? 0 : ((note + 1) / 2);
+
+    return (uint8_t)((row < KEY_MORPH_LEVELS) ? row : (KEY_MORPH_LEVELS - 1));
+}
+
+// The Keyb morph's amount is (note - 36)/60 on the instrument, beyond 0..1 at either end (§26.2).
+static double axis_amount(tMorphAxis axis, uint32_t row) {
+    if (axis == eAxisVelocity) {
+        return (double)row / (double)(VEL_MORPH_LEVELS - 1);
+    }
+    return ((double)(row * 2u) - KEY_MORPH_ZERO_NOTE) / KEY_MORPH_SPAN;
+}
+
+static uint32_t axis_rows(tMorphAxis axis) {
+    return (axis == eAxisVelocity) ? VEL_MORPH_LEVELS : KEY_MORPH_LEVELS;
 }
 
 static void voice_note_on(int32_t note, uint8_t velocity) {
@@ -1854,7 +1888,7 @@ static void voice_note_on(int32_t note, uint8_t velocity) {
     tVoice * voice = &gVoice[voice_to_allocate(count, note)];
 
     // notes §70
-    voice->glideActive = voice->gate;
+    voice->glideActive        = voice->gate;
 
     // notes §71
     if ((voice->gate == false) || (atomic_load(&gEngineLegato) == false)) {
@@ -1864,17 +1898,19 @@ static void voice_note_on(int32_t note, uint8_t velocity) {
     if (voice->glidePitch < 0.0) {
         voice->glidePitch = (double)note;   // first note this voice has had: start where it is played
     }
-    voice->note        = note;
-    voice->velocity    = velocity;
-    voice->velLevel    = velocity_level(velocity);
-    voice->sustained   = false;
-    voice->release     = 0;
-    voice->gate        = true;
-    voice->sounding    = true;
-    voice->released    = 0;
-    voice->fade        = 1.0;   // a stolen voice may have been fading; this note cancels that
-    voice->age         = ++gVoiceClock;
-    gLastVelLevel      = voice->velLevel;
+    voice->note               = note;
+    voice->velocity           = velocity;
+    voice->row[eAxisVelocity] = velocity_row(velocity);
+    voice->row[eAxisKey]      = key_row(note);
+    voice->sustained          = false;
+    voice->release            = 0;
+    voice->gate               = true;
+    voice->sounding           = true;
+    voice->released           = 0;
+    voice->fade               = 1.0; // a stolen voice may have been fading; this note cancels that
+    voice->age                = ++gVoiceClock;
+    gLastRow[eAxisVelocity]   = voice->row[eAxisVelocity];
+    gLastRow[eAxisKey]        = voice->row[eAxisKey];
 
     if ((note < MIDI_KEY_COUNT) && (gKeyHeld[note] < UINT8_MAX)) {
         gKeyHeld[note]++;
@@ -1928,15 +1964,16 @@ static void voice_note_off(int32_t note, uint8_t release) {
             continue;
         }
         // notes §189
-        voice->glideActive = true;
+        voice->glideActive   = true;
 
         if (legato == false) {
             voice->trigger++;
         }
-        voice->note        = highest;
-        voice->released    = 0;
-        voice->fade        = 1.0;
-        voice->age         = ++gVoiceClock;
+        voice->note          = highest;
+        voice->row[eAxisKey] = key_row(highest);
+        voice->released      = 0;
+        voice->fade          = 1.0;
+        voice->age           = ++gVoiceClock;
     }
 }
 
@@ -3530,7 +3567,7 @@ static void mark_post_mix_nodes(tSoundEngineParams * params) {
     }
 }
 
-// The whole chain from the patch, at the Vel morph position sBuildVelocity. Database read lock held.
+// The whole chain from the patch, at the per-voice morph amounts in sBuildAxis. Database read lock held.
 static void build_snapshot(tSoundEngineParams * out) {
     SE_LOCAL;
 
@@ -3662,56 +3699,93 @@ static void build_snapshot(tSoundEngineParams * out) {
     memcpy(out, &snapshot, sizeof(snapshot));
 }
 
-// §26.2 - velocity table. Called under gParamsWriteMutex, with the base build (Vel morph at 0) in hand.
-static void build_velocity_nodes(const tSoundEngineParams * base, const tSoundEngineParams * probe) {
+// §26.2 - one module's node alone, at the morph amounts in sBuildAxis. Its wiring is the base build's.
+static bool build_module_node(const tEngineNode * base, uint32_t variation, tEngineNode * out) {
     SE_LOCAL;
 
-    static _Thread_local tSoundEngineParams level;
-    uint32_t                                count = 0;
+    static _Thread_local tSoundEngineParams part;
+    tModule *                               module = get_module_slot(engine_slot(), base->location, base->moduleIndex);
 
-    atomic_fetch_add(&gVelNodesSeq, 1);    // odd while the table is being written
-    gVelNodes.build = base->build;
-    gVelNodes.count = 0;
-    memset(gVelNodes.column, -1, sizeof(gVelNodes.column));
+    memset(&part, 0, sizeof(part));
+    part.tap         = -1;
 
-    // The nodes that move are the ones the full-velocity build does not agree with.
+    int32_t                                 self   = (module != NULL) ? add_node(&part, module, variation, 0) : -1;
+
+    if (self < 0) {
+        return false;
+    }
+    *out             = part.node[self];
+    out->kind        = base->kind;
+    out->moduleIndex = base->moduleIndex;
+    out->location    = base->location;
+    out->inCount     = base->inCount;
+    out->line        = base->line;
+    out->dxBase      = base->dxBase;
+    out->postMix     = base->postMix;
+    memcpy(out->in, base->in, sizeof(out->in));
+    memcpy(out->srcOut, base->srcOut, sizeof(out->srcOut));
+    memcpy(out->srcLeg, base->srcLeg, sizeof(out->srcLeg));
+    return true;
+}
+
+// §26.2 - one axis's table. The nodes that move are the ones its full-amount build does not agree with.
+static void build_axis_table(tMorphAxis axis, const tSoundEngineParams * base, const tSoundEngineParams * probe) {
+    SE_LOCAL;
+
+    tMorphTable * table     = &gVoiceMorphs.axis[axis];
+    uint32_t      variation = gPatchDescr[engine_slot()].activeVariation;
+    uint32_t      count     = 0;
+
+    table->count = 0;
+    memset(table->column, -1, sizeof(table->column));
+
     if ((probe->nodeCount == base->nodeCount) && (probe->topology == base->topology)) {
-        for (uint32_t n = 0; (n < base->nodeCount) && (count < MAX_VEL_NODES); n++) {
+        for (uint32_t n = 0; (n < base->nodeCount) && (count < MAX_VOICE_NODES); n++) {
             if (memcmp(&probe->node[n], &base->node[n], sizeof(tEngineNode)) != 0) {
-                gVelNodes.column[n] = (int8_t)count++;
+                table->column[n] = (int8_t)count++;
             }
         }
     }
 
-    for (uint32_t row = 0; (count > 0) && (row < VEL_MORPH_LEVELS); row++) {
-        sBuildVelocity = (double)row / (double)(VEL_MORPH_LEVELS - 1);
-        build_snapshot(&level);
+    for (uint32_t n = 0; (count > 0) && (n < base->nodeCount); n++) {
+        if (table->column[n] < 0) {
+            continue;
+        }
 
-        for (uint32_t n = 0; n < base->nodeCount; n++) {
-            if (gVelNodes.column[n] >= 0) {
-                gVelNodes.node[row][gVelNodes.column[n]] = level.node[n];
+        for (uint32_t row = 0; row < axis_rows(axis); row++) {
+            tEngineNode * cell = &table->node[row][table->column[n]];
+
+            sBuildAxis[axis] = axis_amount(axis, row);
+
+            if (build_module_node(&base->node[n], variation, cell) == false) {
+                *cell = base->node[n];
             }
         }
+
+        sBuildAxis[axis] = 0.0;
     }
 
-    sBuildVelocity  = 0.0;
-    gVelNodes.count = count;
-    atomic_fetch_add(&gVelNodesSeq, 1);
+    table->count = count;
 }
 
 void sound_engine_update_from_patch(void) {
     SE_LOCAL;
 
     static _Thread_local tSoundEngineParams snapshot;
-    static _Thread_local tSoundEngineParams probe;
+    static _Thread_local tSoundEngineParams probe[eAxisCount];
 
     if (atomic_load(&gActive) == false) {
         return;
     }
-    // §26.2 - at full velocity as well, so a changed Vel morph range is seen even when nothing else moved
-    sBuildVelocity = 1.0;
-    build_snapshot(&probe);
-    sBuildVelocity = 0.0;
+
+    // §26.2 - at each per-voice morph's full amount as well, so a changed range is seen even when
+    // nothing else moved
+    for (uint32_t axis = 0; axis < eAxisCount; axis++) {
+        sBuildAxis[axis] = 1.0;
+        build_snapshot(&probe[axis]);
+        sBuildAxis[axis] = 0.0;
+    }
+
     build_snapshot(&snapshot);
 
     // How many voices the audio thread may allocate. Published separately as well as in the snapshot
@@ -3724,16 +3798,29 @@ void sound_engine_update_from_patch(void) {
     // The snapshot above was built outside the writers' mutex; the velocity table is built inside it,
     // since it is written in place.
     pthread_mutex_lock(&gParamsWriteMutex);
-    // Rebuilt on every redraw, so the velocity table is rebuilt only when the chain really changed.
-    snapshot.build = gParams.build;
-    probe.build    = gParams.build;
+    // Rebuilt on every redraw, so the per-voice tables are rebuilt only when the chain really changed.
+    bool changed = false;
 
-    if (  (memcmp(&snapshot, &gParams, sizeof(snapshot)) != 0)
-       || (memcmp(&probe, &gVelProbe, sizeof(probe)) != 0)) {
-        snapshot.build = ++gBuildSerial;
-        probe.build    = snapshot.build;
-        memcpy(&gVelProbe, &probe, sizeof(probe));
-        build_velocity_nodes(&snapshot, &probe);
+    snapshot.build = gParams.build;
+
+    for (uint32_t axis = 0; axis < eAxisCount; axis++) {
+        probe[axis].build = gAxisProbe[axis].build;
+        changed           = changed || (memcmp(&probe[axis], &gAxisProbe[axis], sizeof(tSoundEngineParams)) != 0);
+    }
+
+    changed        = changed || (memcmp(&snapshot, &gParams, sizeof(snapshot)) != 0);
+
+    if (changed == true) {
+        snapshot.build     = ++gBuildSerial;
+        atomic_fetch_add(&gVoiceMorphsSeq, 1);    // odd while the tables are being written
+        gVoiceMorphs.build = snapshot.build;
+
+        for (uint32_t axis = 0; axis < eAxisCount; axis++) {
+            memcpy(&gAxisProbe[axis], &probe[axis], sizeof(tSoundEngineParams));
+            build_axis_table((tMorphAxis)axis, &snapshot, &probe[axis]);
+        }
+
+        atomic_fetch_add(&gVoiceMorphsSeq, 1);
     }
     atomic_fetch_add(&gParamsSeq, 1);    // now odd — a reader seeing this discards its copy
     memcpy(&gParams, &snapshot, sizeof(snapshot));
@@ -3741,41 +3828,53 @@ void sound_engine_update_from_patch(void) {
     pthread_mutex_unlock(&gParamsWriteMutex);
 }
 
-// §26.2 - audio thread: take the velocity table when a new one is whole, and use it only with its own build.
-static void refresh_velocity_nodes(uint64_t build) {
+// §26.2 - audio thread: take the per-voice tables when new ones are whole, and use them only with
+// their own build. Only the cells in use are copied.
+static void refresh_voice_morphs(uint64_t build) {
     SE_LOCAL;
 
-    uint32_t seq = atomic_load(&gVelNodesSeq);
+    uint32_t seq = atomic_load(&gVoiceMorphsSeq);
 
-    if ((seq != gVelNodesSeen) && ((seq & 1u) == 0u)) {
-        gVelNodesAudio.build = gVelNodes.build;
-        gVelNodesAudio.count = gVelNodes.count;
-        memcpy(gVelNodesAudio.column, gVelNodes.column, sizeof(gVelNodesAudio.column));
+    if ((seq != gVoiceMorphsSeen) && ((seq & 1u) == 0u)) {
+        gVoiceMorphsAudio.build = gVoiceMorphs.build;
 
-        if (gVelNodesAudio.count > 0) {
-            memcpy(gVelNodesAudio.node, gVelNodes.node, sizeof(gVelNodesAudio.node));
+        for (uint32_t axis = 0; axis < eAxisCount; axis++) {
+            const tMorphTable * from = &gVoiceMorphs.axis[axis];
+            tMorphTable *       to   = &gVoiceMorphsAudio.axis[axis];
+            uint32_t            used = (from->count < MAX_VOICE_NODES) ? from->count : MAX_VOICE_NODES;
+
+            to->count = used;
+            memcpy(to->column, from->column, sizeof(to->column));
+
+            for (uint32_t row = 0; row < axis_rows((tMorphAxis)axis); row++) {
+                memcpy(to->node[row], from->node[row], used * sizeof(tEngineNode));
+            }
         }
+
         atomic_thread_fence(memory_order_acquire);
 
-        if (atomic_load(&gVelNodesSeq) == seq) {
-            gVelNodesSeen = seq;
+        if (atomic_load(&gVoiceMorphsSeq) == seq) {
+            gVoiceMorphsSeen = seq;
         } else {
-            gVelNodesAudio.count = 0;    // torn - try again next buffer
+            gVoiceMorphsAudio.build = 0;    // torn - try again next buffer
         }
     }
-    gVelUsable = (gVelNodesAudio.count > 0) && (gVelNodesAudio.build == build);
+    gVoiceMorphsUsable = (gVoiceMorphsAudio.build == build)
+                         && ((gVoiceMorphsAudio.axis[eAxisVelocity].count + gVoiceMorphsAudio.axis[eAxisKey].count) > 0);
 }
 
-// §26.2 - the node a voice plays: its velocity's row where a Vel morph moves it
-static const tEngineNode * voice_node(const tEngineNode * base, uint32_t n, uint32_t voice) {
+// §26.2 - the node a voice plays on one axis: its row where that morph moves the node, else the base
+static const tEngineNode * voice_morph_node(tMorphAxis axis, const tEngineNode * base, uint32_t n, uint32_t voice) {
     SE_LOCAL;
 
-    if ((gVelUsable == false) || (gVelNodesAudio.column[n] < 0)) {
+    const tMorphTable * table = &gVoiceMorphsAudio.axis[axis];
+
+    if ((gVoiceMorphsUsable == false) || (table->column[n] < 0)) {
         return base;
     }
-    uint8_t row = (base->postMix == true) ? gLastVelLevel : gVoice[voice].velLevel;
+    uint8_t             row   = (base->postMix == true) ? gLastRow[axis] : gVoice[voice].row[axis];
 
-    return &gVelNodesAudio.node[row][gVelNodesAudio.column[n]];
+    return &table->node[row][table->column[n]];
 }
 
 // Audio thread half of the seqlock. Returns the newest whole snapshot, or the last one it managed to
@@ -5732,12 +5831,15 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
     SE_LOCAL;
 
     const tEngineNode * base   = &paramsIn->node[n];
-    const tEngineNode * spec   = voice_node(base, n, voice);
-    // The smoothed dial values follow the knob; a voice's velocity moves them by its own offset.
-    double              shape  = gSmoothedShape[n] + (spec->shape - base->shape);
-    double              cutoff = gSmoothedCutoff[n] + (spec->cutoffParam - base->cutoffParam);
-    double              res    = gSmoothedRes[n] + (spec->resonance - base->resonance);
-    double              gain   = gSmoothedGain[n] + (spec->gain - base->gain);
+    const tEngineNode * byVel  = voice_morph_node(eAxisVelocity, base, n, voice);
+    const tEngineNode * byKey  = voice_morph_node(eAxisKey, base, n, voice);
+    // §26.2 - a node both morphs move plays its Keyb node; the smoothed values below take both offsets
+    const tEngineNode * spec   = (byKey != base) ? byKey : byVel;
+    // The smoothed dial values follow the knob; a voice's velocity and key move them by their own offsets.
+    double              shape  = gSmoothedShape[n] + (byVel->shape - base->shape) + (byKey->shape - base->shape);
+    double              cutoff = gSmoothedCutoff[n] + (byVel->cutoffParam - base->cutoffParam) + (byKey->cutoffParam - base->cutoffParam);
+    double              res    = gSmoothedRes[n] + (byVel->resonance - base->resonance) + (byKey->resonance - base->resonance);
+    double              gain   = gSmoothedGain[n] + (byVel->gain - base->gain) + (byKey->gain - base->gain);
     double              a      = signal_in(spec, value, 0);
 
     for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
@@ -5885,8 +5987,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             for (uint32_t c = 0; c < spec->inCount; c++) {
                 double in = signal_in(spec, value, c);
 
-                left  += in * (gSmoothedLevel[n][2u * c] + (spec->level[2u * c] - base->level[2u * c]));
-                right += in * (gSmoothedLevel[n][(2u * c) + 1] + (spec->level[(2u * c) + 1] - base->level[(2u * c) + 1]));
+                left  += in * (gSmoothedLevel[n][2u * c] + (byVel->level[2u * c] - base->level[2u * c]) + (byKey->level[2u * c] - base->level[2u * c]));
+                right += in * (gSmoothedLevel[n][(2u * c) + 1] + (byVel->level[(2u * c) + 1] - base->level[(2u * c) + 1]) + (byKey->level[(2u * c) + 1] - base->level[(2u * c) + 1]));
             }
 
             value[n][0] = left;
@@ -5932,7 +6034,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 uint32_t channel = stereoPairs ? (c / 2) : c;
                 uint32_t leg     = stereoPairs ? (c % 2) : 0u;
 
-                value[n][leg] += signal_in(spec, value, c) * (gSmoothedLevel[n][channel] + (spec->level[channel] - base->level[channel]));
+                value[n][leg] += signal_in(spec, value, c) * (gSmoothedLevel[n][channel] + (byVel->level[channel] - base->level[channel]) + (byKey->level[channel] - base->level[channel]));
             }
 
             break;
@@ -6135,7 +6237,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         return;
     }
     params = read_params();
-    refresh_velocity_nodes(params.build);
+    refresh_voice_morphs(params.build);
 
     if (params.topology != gSeenTopology) {
         // notes §171
@@ -6636,14 +6738,14 @@ static void engine_reset_state(void) {
     memset(&gSmoothPrimed, 0, sizeof(gSmoothPrimed));
     memset(&gEnvStage, 0, sizeof(gEnvStage));
     memset(&gEnvTrigger, 0, sizeof(gEnvTrigger));
-    memset(&gVelNodes, 0, sizeof(gVelNodes));
-    memset(&gVelNodesSeq, 0, sizeof(gVelNodesSeq));
-    memset(&gVelNodesAudio, 0, sizeof(gVelNodesAudio));
-    memset(&gVelNodesSeen, 0, sizeof(gVelNodesSeen));
-    memset(&gVelUsable, 0, sizeof(gVelUsable));
-    memset(&gLastVelLevel, 0, sizeof(gLastVelLevel));
+    memset(&gVoiceMorphs, 0, sizeof(gVoiceMorphs));
+    memset(&gVoiceMorphsSeq, 0, sizeof(gVoiceMorphsSeq));
+    memset(&gVoiceMorphsAudio, 0, sizeof(gVoiceMorphsAudio));
+    memset(&gVoiceMorphsSeen, 0, sizeof(gVoiceMorphsSeen));
+    memset(&gVoiceMorphsUsable, 0, sizeof(gVoiceMorphsUsable));
+    memset(&gLastRow, 0, sizeof(gLastRow));
     memset(&gBuildSerial, 0, sizeof(gBuildSerial));
-    memset(&gVelProbe, 0, sizeof(gVelProbe));
+    memset(&gAxisProbe, 0, sizeof(gAxisProbe));
     memset(&gSustainPedal, 0, sizeof(gSustainPedal));
     memset(&gSustainSeen, 0, sizeof(gSustainSeen));
     pthread_mutex_init(&gParamsWriteMutex, NULL);
