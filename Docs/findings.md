@@ -9852,3 +9852,14 @@ Checked through the audio device (OscB > Mix4-1C > EnvADSR > 2-Out, level 1.13 a
 0.160 at velocity 64 and 0.015 at 30. Both on the same level at note 96, velocity 64 read 0.297 - the offsets
 add in gain terms, where the instrument would clamp the dial to 127 and give full level (limit recorded).
 
+2026-09-17 - STORE BACK TO BANK, AND ONE "LAST PLACE" PER PATCH (CT). Each slot, and the performance, now
+remembers the bank location it was loaded from (gBankOrigin, written by the USB thread). A Load from Bank sets a
+pending origin that the slot's following re-download adopts; any other re-download clears it - but only if the
+patch that comes back differs from what the editor held, compared as a hash of the SET_PATCH payload the editor
+would send, so a late version notice after our own write does not count as the G2 changing the patch. File >
+"Store ... Back to Bank b:l..." runs the existing Store peek-and-confirm on that location. CT's rule that a patch
+has one last place: a G2-side replacement (bank load, panel, Store, reconnect) bumps gPatchSourceSerial, and Save
+to the remembered file is only offered while that is unchanged since the path was remembered; opening or saving a
+file clears the bank origin, and a Store sets it. Checked on the G2 without any flash write (backdoor BANKLOAD,
+ORIGIN, MENU File/Open Recent): the two options swapped correctly three times.
+

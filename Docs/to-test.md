@@ -3,6 +3,14 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***STORE BACK TO BANK; SAVE AND STORE BACK EXCLUSIVE (2026-09-17)*** - File > "Store Patch/Perf Back to
+  Bank b:l..." stores to where the patch (or performance) was loaded from, through the usual
+  peek-and-confirm; greyed when it did not come from a bank. A bank load greys Save (to the last file),
+  and opening or saving a file greys Store Back. Checked on the G2 (no store): bank 5:21 into slot A,
+  then Open Recent, then the bank again - the two swap each time, and a late version notice did not
+  undo the file load. STILL TO CHECK: the Store itself, a performance, a patch changed on the G2's
+  panel (both greyed), and a bulk edit (neither changed). Save now reads 'Save Patch Back to File "name"' to match
+  (checked offline).
 - ***KEYB MORPH PER VOICE (2026-09-17)*** - reference §26.2. Checked offline: a Keyb morph +127 on a
   mixer level is silent at note 36, dial ~64 at note 66 and full at 96. STILL TO CHECK: a
   Keyb-morphed patch against the G2 by ear.

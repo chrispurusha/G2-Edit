@@ -146,6 +146,14 @@ typedef struct tG2Document {
     bool             gPatchNotesDiscardPressed;
     _Atomic uint64_t gUsbTxTime;
     _Atomic uint64_t gUsbRxTime;
+    // Where each slot's patch - and, at [MAX_SLOTS], the performance - was loaded from, as
+    // BANK_ORIGIN(bank, location); 0 when it did not come from a bank. USB thread writes, UI reads.
+    _Atomic int32_t  gBankOrigin[MAX_SLOTS + 1];
+    // Bumped (USB thread) whenever the G2 puts a different patch/performance in place - its panel, a
+    // Load from Bank, a Store, a reconnect. A remembered file path is only Save's target while this
+    // still has the value it had when the path was remembered (gSavedPathSerial, UI thread).
+    _Atomic uint32_t gPatchSourceSerial[MAX_SLOTS + 1];
+    uint32_t         gSavedPathSerial[MAX_SLOTS + 1];
     _Atomic bool     gBankBackupActive;
     _Atomic bool     gBankBackupIsPerf;                                                // true = backing up a Performance Bank, false = Patch Bank
     _Atomic bool     gBankBackupIsEverything;                                          // true = part of a "Backup Everything" sweep
@@ -289,6 +297,9 @@ tG2Document * g2_document_current(void);
 #define gPatchNotesDiscardPressed        (gDoc->gPatchNotesDiscardPressed)
 #define gUsbTxTime                       (gDoc->gUsbTxTime)
 #define gUsbRxTime                       (gDoc->gUsbRxTime)
+#define gBankOrigin                      (gDoc->gBankOrigin)
+#define gPatchSourceSerial               (gDoc->gPatchSourceSerial)
+#define gSavedPathSerial                 (gDoc->gSavedPathSerial)
 #define gBankBackupActive                (gDoc->gBankBackupActive)
 #define gBankBackupIsPerf                (gDoc->gBankBackupIsPerf)
 #define gBankBackupIsEverything          (gDoc->gBankBackupIsEverything)
@@ -331,6 +342,13 @@ tG2Document * g2_document_current(void);
 #define gCable                           (gDoc->gCable)
 #define gDatabaseLock                    (gDoc->gDatabaseLock)
 #define gVariationLinks                  (gDoc->gVariationLinks)
+
+// gBankOrigin's encoding: +1 so a zeroed document means "not from a bank"
+#define BANK_ORIGIN_NONE                 (0)
+#define BANK_ORIGIN_PERF                 (MAX_SLOTS)
+#define BANK_ORIGIN(bank, location)     ((int32_t)((((bank) << 8) | (location)) + 1))
+#define BANK_ORIGIN_BANK(origin)        ((uint32_t)(((origin) - 1) >> 8))
+#define BANK_ORIGIN_LOCATION(origin)    ((uint32_t)(((origin) - 1) & 0xff))
 
 // notes §5
 static inline bool device_ready(void) {
