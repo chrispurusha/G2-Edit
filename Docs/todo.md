@@ -5,6 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
+- Classic filter graphical representation drawing might be suffering from quantisation effects when at maximum resonance. If I adjust freq when at max res, the peak seems to jump around.
 - Fix currently modules in sound engine using the recent methods.
 - Vel/Keyb morph on a DXRouter's Operators: the per-voice tables do not cover their dxOp entries
 - Vel and Keyb morph on the same node: other params keep only Keyb, and one smoothed value moved by both adds in gain terms (reference §26.2 LIMITS)
