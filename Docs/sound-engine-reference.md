@@ -851,16 +851,28 @@ The Keyboard module is a per-voice node with six outputs, in its connector order
 Lin and Exp are the instrument's own velocity curves in closed form: Lin is exact and the cube agrees
 with every entry of its table to half a count.
 
-**26.2 The Vel morph, per voice (2026-09-17).** On the instrument each note-on gives every parameter
-with a Vel morph range its own value for that voice: the patch-wide value plus range x velocity/127,
-in dial units, held to 0-127. (The Keyb morph works the same way, with (note - 36)/60 plus the octave
-shift in place of velocity/127 - not yet in the engine.) The engine prepares this, since the audio
-thread cannot build nodes: whenever the chain or a morph range changes, it builds the chain at full
-velocity as well, takes the nodes that differ from the velocity-0 build (up to eight), and builds
-those at 32 velocities (`build_velocity_nodes()`). Each voice picks its row at note-on
-(`velocity_level()`), so the worst step is range/31 dial units. Knob smoothing stays per node, and a
-voice adds its own offset from the velocity-0 node to each smoothed value. FX Area nodes take the
-latest note's row. A DXRouter's Operators do not follow the Vel morph yet.
+**26.2 The Vel and Keyb morphs, per voice (2026-09-17).** On the instrument each note-on gives every
+parameter with a Vel or Keyb morph range its own value for that voice: the patch-wide value plus
+range x velocity/127 plus range x (note - 36 + octave shift x 12)/60, in dial units, held to 0-127. The
+Keyb amount is 0 at C1 and 1 at C6, and goes past both (-0.6 at note 0, 1.52 at 127). The engine has
+no panel octave shift.
+
+The engine prepares these, since the audio thread cannot build nodes. Whenever the chain or a morph
+range changes, it builds the chain at each morph's full amount as well, takes the nodes that differ
+from the base build (at most eight per morph), and rebuilds just those modules along that morph's
+axis: 32 velocities, and every other note from 0 to 126 (`build_axis_table()`, `build_module_node()`).
+Each voice picks its rows at note-on (and a Mono voice returning to a held key its new Keyb row), so
+the worst step is range/31 dial units for velocity and range/30 for a two-semitone key step. Knob
+smoothing stays per node, and a voice adds each table's offset from the base node to the smoothed
+Freq, Res, gain, shape and mixer levels. FX Area nodes take the latest note's rows.
+
+LIMITS. A node both morphs move plays its Keyb node for everything but those smoothed values, so a
+Vel morph on another of its parameters (an envelope time, say) is lost there. When both morphs move
+the SAME smoothed value their effects add in that value's own terms, which is exact for Freq (dial
+units) but not for a gain on a curve: a mixer level with Vel +127 and Keyb +64 reads 0.27 of full at
+note 96, velocity 64, where the instrument clamps the dial to 127. A DXRouter's Operators follow
+neither morph. Building both tables takes about 3.6 ms in a Debug build when every row is used - on
+the audio thread in the plug-in, which rebuilds there when a morph moves.
 
 **26.3 Sustain pedal (2026-09-17).** Morph group 5 (Sust.Pd) is the pedal, down from 0.5 (CC64 at 64 and
 above). A key released while it is down leaves its voice gated - the envelopes sustain and the

@@ -9843,3 +9843,12 @@ prefs_set_string_in()/prefs_get_string_from() reach one key of another app's fil
 provider for its start folder at every open. Checked with a scratch test (another process's key survives a
 save; a key written to another app's file reads back).
 
+2026-09-17 - KEYB MORPH PER VOICE, AND THE TABLES BUILT MODULE BY MODULE (reference §26.2). The instrument's note-on
+also gives each Keyb-morphed parameter a per-voice value, range x (note - 36 + octave shift x 12)/60 (octave shift
+from the panel, x 12). A full chain build costs about 0.11 ms (Debug), so the tables are now filled by rebuilding
+only the moved module per row, its wiring copied from the base build: Keyb 64 rows 2.7 ms, Vel 32 rows 0.9 ms.
+Checked through the audio device (OscB > Mix4-1C > EnvADSR > 2-Out, level 1.13 at dial 127): Keyb +127 gives
+0 / 0.142 / 1.089 / 0 at notes 36 / 66 / 96 / 24 (the cube law predicts 0 / 0.145 / 1.13 / 0); Vel +127 still
+0.160 at velocity 64 and 0.015 at 30. Both on the same level at note 96, velocity 64 read 0.297 - the offsets
+add in gain terms, where the instrument would clamp the dial to 127 and give full level (limit recorded).
+
