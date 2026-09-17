@@ -5,11 +5,12 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Keyb morph group in the engine: not driven - per voice on the G2, (note - 36)/60 plus the octave shift, the same machinery as the Vel morph (reference §26.2)
-- Vel morph on a DXRouter's Operators: the velocity table does not cover their dxOp entries
 - Need a save patch back to same slot it was loaded from. If we didn't load the patch from a slot, then needs to be greyed-out.
 - Store the PATCH CONTENT in the host project - the rest of "remember and restore the patch/performance/settings" (path-loading removed 2026-09-16, so a reopened project is empty until this lands; the Voice/FX divider folds into it then, since barPosition IS patch data, and the interim split= key in the state record goes)
 - Fix current modules in sound engine using the recent methods.
+- Vel/Keyb morph on a DXRouter's Operators: the per-voice tables do not cover their dxOp entries
+- Vel and Keyb morph on the same node: other params keep only Keyb, and one smoothed value moved by both adds in gain terms (reference §26.2 LIMITS)
+- G2 Alike rebuilds on the audio thread when a morph moves - up to ~3.6 ms (Debug) with per-voice morph tables; move it off
 - Bug where we see a sudden/random scroll VA area right about half a module's width.
 - Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter.
 - Fix or add various module oscillator style graphics. Wave graphs for PulseOsc, OscNoise, LfoD, Operator, DrumSynth etc.-

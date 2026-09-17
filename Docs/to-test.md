@@ -3,6 +3,9 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***KEYB MORPH PER VOICE (2026-09-17)*** - reference §26.2. Checked offline: a Keyb morph +127 on a
+  mixer level is silent at note 36, dial ~64 at note 66 and full at 96. STILL TO CHECK: a
+  Keyb-morphed patch against the G2 by ear.
 - ***VEL MORPH PER VOICE, SUSTAIN PEDAL (2026-09-17)*** - reference §26.2-26.3. Checked offline by
   rendering straight to memory: a Vel morph on a mixer level follows the velocity to the dial it maps
   to, and the pedal holds a released note at its sustain level. STILL TO CHECK: a velocity-morphed patch
