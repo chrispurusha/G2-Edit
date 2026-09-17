@@ -50,6 +50,7 @@ extern "C" {
 #include "globalVars.h"
 #include "dataBase.h"
 #include "msgQueue.h"
+#include "misc.h"
 #include "protocol.h"
 #include "moduleResourcesAccess.h"
 #include "mouseHandle.h"
@@ -467,6 +468,52 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         read_file_into_memory_and_process(arg);
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "BANKLOAD") == 0) {
+        // BANKLOAD <PATCH|PERF> <bank 1-32> <location 1-128> - Load from Bank without the browser or its
+        // confirmation: replaces the current slot's patch (or the performance) ON THE G2.
+        char            kind[8]  = {0};
+        uint32_t        bank     = 0;
+        uint32_t        location = 0;
+
+        if ((sscanf(arg, "%7s %u %u", kind, &bank, &location) != 3) || (bank < 1) || (location < 1) || (location > NUM_LOCATIONS_PER_BANK)) {
+            backdoor_write_result("ERROR: expected 'BANKLOAD <PATCH|PERF> <bank 1-32> <location 1-128>'\n");
+            return;
+        }
+        tMessageContent msg      = {0};
+
+        msg.cmd                           = eMsgCmdLoadPatch;
+        msg.bankLocationPerfData.bank     = bank - 1;
+        msg.bankLocationPerfData.location = location - 1;
+        msg.bankLocationPerfData.isPerf   = (strcasecmp(kind, "PERF") == 0);
+        msg_send(&gToUsbThread, &msg);
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "ORIGIN") == 0) {
+        // ORIGIN - where each slot's patch and the performance came from, and what Save and Store
+        // Back would do for the current one
+        char     text[512] = {0};
+        size_t   used      = 0;
+        uint32_t bank      = 0;
+        uint32_t location  = 0;
+
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "OK\n");
+
+        for (uint32_t i = 0; i <= BANK_ORIGIN_PERF; i++) {
+            int32_t origin = gBankOrigin[i];
+
+            used += (size_t)snprintf(text + used, sizeof(text) - used, "%s origin=%s%u:%u serial=%u savedSerial=%u\n",
+                                     (i == BANK_ORIGIN_PERF) ? "perf" : (i == 0) ? "A" : (i == 1) ? "B" : (i == 2) ? "C" : "D",
+                                     (origin == BANK_ORIGIN_NONE) ? "none " : "",
+                                     (origin == BANK_ORIGIN_NONE) ? 0 : (BANK_ORIGIN_BANK(origin) + 1),
+                                     (origin == BANK_ORIGIN_NONE) ? 0 : (BANK_ORIGIN_LOCATION(origin) + 1),
+                                     (unsigned)gPatchSourceSerial[i], (unsigned)gSavedPathSerial[i]);
+        }
+
+        bool     back      = file_menu_bank_origin(&bank, &location);
+
+        snprintf(text + used, sizeof(text) - used, "current slot %u: save-to-file=%s store-back=%s%u:%u\n",
+                 (unsigned)gSlot, file_menu_have_saved_path() ? "yes" : "no", back ? "yes " : "no ",
+                 back ? bank + 1 : 0, back ? location + 1 : 0);
+        backdoor_write_result(text);
     } else if (strcmp(cmd, "SLOT") == 0) {
         uint32_t slot = 0;
 

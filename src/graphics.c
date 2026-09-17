@@ -324,7 +324,7 @@ void read_file_into_memory_and_process(const char * filepath) {
 // notes §7
 static void remember_file_path(const char * path) {
     // notes §8
-    uint32_t slot = gSlot;
+    uint32_t slot  = gSlot;
 
     if ((path == NULL) || (path[0] == '\0')) {
         return;
@@ -343,6 +343,11 @@ static void remember_file_path(const char * path) {
     } else if (gSavedPatchPath[slot] != path) {
         COPY_STRING(gSavedPatchPath[slot], path);
     }
+    // The file is now where this lives, rather than any bank location it was loaded from
+    uint32_t index = (gGlobalSettings.perfMode == 1) ? BANK_ORIGIN_PERF : slot;
+
+    gSavedPathSerial[index] = gPatchSourceSerial[index];
+    gBankOrigin[index]      = BANK_ORIGIN_NONE;
 }
 
 static void on_file_opened(const char * path) {

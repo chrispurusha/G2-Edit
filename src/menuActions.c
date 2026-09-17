@@ -320,8 +320,21 @@ void file_menu_save_patch_to_current_path(void) {
     wake_glfw();
 }
 
+// The file Save would write to, or NULL - see file_menu_have_saved_path().
+const char * file_menu_saved_path(void) {
+    if (!file_menu_have_saved_path()) {
+        return NULL;
+    }
+    return (gGlobalSettings.perfMode == 1) ? gSavedPerfPath : gSavedPatchPath[(uint32_t)gSlot];
+}
+
+// Only while the G2 has not since put something else there - a bank load, its own panel, a Store.
 bool file_menu_have_saved_path(void) {
-    return (gGlobalSettings.perfMode == 1) ? (gSavedPerfPath[0] != '\0') : (gSavedPatchPath[gSlot][0] != '\0');
+    bool         isPerf = gGlobalSettings.perfMode == 1;
+    uint32_t     index  = isPerf ? BANK_ORIGIN_PERF : (uint32_t)gSlot;
+    const char * path   = isPerf ? gSavedPerfPath : gSavedPatchPath[index];
+
+    return (path[0] != '\0') && (gSavedPathSerial[index] == gPatchSourceSerial[index]);
 }
 
 void file_menu_new_patch(void) {
@@ -342,6 +355,32 @@ void file_menu_new_patch(void) {
     device_op_begin("New Patch...");
 
     wake_glfw();
+}
+
+// Where the current patch (or, in performance mode, the performance) was loaded from, if a bank.
+bool file_menu_bank_origin(uint32_t * bank, uint32_t * location) {
+    bool    isPerf = gGlobalSettings.perfMode == 1;
+    int32_t origin = gBankOrigin[isPerf ? BANK_ORIGIN_PERF : (uint32_t)gSlot];
+
+    if (origin == BANK_ORIGIN_NONE) {
+        return false;
+    }
+    *bank     = BANK_ORIGIN_BANK(origin);
+    *location = BANK_ORIGIN_LOCATION(origin);
+    return true;
+}
+
+// Store back to where it came from: the same peek-and-confirm as Store to Bank, with the location
+// already chosen, so what is there now is still shown before anything is written.
+void file_menu_store_back_to_bank(void) {
+    uint32_t bank     = 0;
+    uint32_t location = 0;
+
+    if (!device_ready() || !file_menu_bank_origin(&bank, &location)) {
+        return;
+    }
+    sPendingStoreIsPerf = gGlobalSettings.perfMode == 1;
+    on_store_bank_location_chosen(true, bank + 1, location + 1);
 }
 
 void file_menu_store_to_bank(void) {

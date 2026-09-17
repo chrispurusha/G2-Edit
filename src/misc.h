@@ -57,12 +57,17 @@ void file_menu_open_path(const char * path);
 void file_menu_save_patch(void);
 void file_menu_save_patch_to_current_path(void);
 bool file_menu_have_saved_path(void);
+const char * file_menu_saved_path(void);
 void file_menu_new_patch(void);
 void file_menu_load_patch_location(void);
 void file_menu_load_perf_location(void);
 void file_menu_delete_patch_location(void);
 void file_menu_delete_perf_location(void);
 void file_menu_store_to_bank(void);
+// The bank location the current patch (performance, in performance mode) was loaded from, if any,
+// and Store back to it.
+bool file_menu_bank_origin(uint32_t * bank, uint32_t * location);
+void file_menu_store_back_to_bank(void);
 
 // Settings menu actions
 void settings_menu_open_synth(void);
