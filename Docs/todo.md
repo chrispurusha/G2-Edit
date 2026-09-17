@@ -218,9 +218,8 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 ## Sound engine - open at 2026-09-14 (session cut short; see findings.md 2026-09-14 OSCSHPB entry)
 
 - DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
-- OscShpB: port the instrument's eight wave parts into the engine (harness built and checked against captures, see findings); replaces waveModels.c laws for the engine
+- OscShpB: Sine2 from the instrument - emulate its divide faithfully first (level falls at low pitch and spikes at Shape 127 in the translation); Sine1, TriSaw, DblSaw, Pulse, SymPulse now match (reference §27)
 - OscShpB: Sine3/Sine4 level in the harness is 1/4 of the hardware at Shape 0 and ~0.38 at Shape 64 - find the missing gain before porting those two
-- OscShpB: Pulse is DC-compensated on the instrument (+1.5/-0.5 at 25%), the engine's is not; DblSaw is two unit saws summed (peak 2), the engine halves it
 - OscShpB: SymMod (Shape mod input) and the Sync part not yet compared with the engine
 - Compressor: new §25 port needs an ear (to-test)
 - 03 Chris' Lead coverage left: OscShpB waves (above), native check of Mix4-1C/Mix4-1S, clock-synced DelayB uses a fixed 120 BPM

@@ -879,3 +879,23 @@ above). A key released while it is down leaves its voice gated - the envelopes s
 Keyboard module's Gate stays high - and the pedal coming up releases every voice it was holding. A
 new note on such a voice clears the hold; All Notes Off releases them regardless.
 
+## 27. OscShpB and OscShpA wave shapes
+
+Checked 2026-09-17 against the instrument's own wave parts, run natively, at 187.5 Hz and Shape 0, 32, 64, 96
+and 127. g is the Shape word, dial/128 with 127 counting as 1 (`wave_shape_word()`).
+
+| Wave | Law | Engine vs instrument |
+|---|---|---|
+| Sine1 | a sine whose rising half takes (1 - g)/2 of the cycle, never under two samples, and its falling half the rest, each linear in angle | exact, every Shape |
+| Sine2 | not yet from the instrument - see below | the fitted law; 3-10 dB from the translation above Shape 0 |
+| Sine3, Sine4 | fitted to the captures | the translation is 12 dB low at Shape 0, as it is against the hardware |
+| TriSaw | triangle, peak at 0.5 + g/2, fall never under two samples | within 0.1 dB to harmonic 20 |
+| DblSaw | two full saws, the second Shape/256 of a cycle later, summed (peak 2) | within 0.1 dB; the engine halved it until now |
+| Pulse | high for (1 - g)/2 of the cycle, never under one sample, with the DC taken out: the ±1 square minus (2d - 1), d the duty | within 0.2 dB; at Shape 127 the instrument's two one-sample edges leave a spike, which the one-sample floor reproduces to 2 dB |
+| SymPulse | high, low, then silent | matches |
+
+Sine2 reads the increment too - its steep part is held to four samples - and its core is a divide of
+(1 - p)(1 + s)-style terms by s^2 - 1. The translation's level falls at low pitch (0.29 rms at 10 Hz)
+and spikes to +3 at Shape 127, so its divide is not yet emulated faithfully (TriSaw's needed the DSP's
+magnitude divide); until it is, the engine keeps the law fitted to the two captures.
+

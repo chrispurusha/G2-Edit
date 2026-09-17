@@ -9871,3 +9871,14 @@ tools/vst3host (new --state-file / --save-state): DualBob.prf2 wrapped as a reco
 in the editor, and load/save/load/save gives byte-identical saves (9206 bytes, the image re-serialised from
 9466). The note probe stayed silent - DualBob's modules (ADSR-Mod and others) are not in the engine.
 
+2026-09-17 - OSCSHPB AGAINST THE INSTRUMENT, ALL EIGHT WAVES (reference §27). The engine's osc_shp_wave() against the
+native wave parts at 187.5 Hz, Shape 0-127: TriSaw and SymPulse already matched. DblSaw was exactly 6 dB low (the
+engine halved the two saws). Pulse kept a DC offset the instrument removes, and its width law (0.5 - 0.49s) missed the
+instrument's (1 - g)/2, which narrows to nothing at 127 - where two overlapping one-sample edges leave a spike. Sine1's
+fitted law was the instrument's in all but name: its measured breakpoints are (1 - g)/4 to 0.0005, and the instrument
+also floors the rise at two samples (SineSym reads the increment, <<1). All four now follow the instrument and match
+to 0.2 dB (0.7 dB at harmonic 40, where the two band-limits differ). Sine2 was left: its translation reads the
+increment (a four-sample floor) but its level falls with pitch (0.29 rms at 10 Hz, 0.70 at 187 Hz) and spikes to +3 at
+Shape 127, which points at the divide (as TriSaw's did). Sine3/4's translation is still 12 dB low, as it is against
+the hardware.
+
