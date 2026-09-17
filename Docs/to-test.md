@@ -3,9 +3,22 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
-- ***OSCSHPB SINE1 / DBLSAW / PULSE FROM THE INSTRUMENT (2026-09-17)*** - reference §27. DblSaw is now 6 dB
-  louder (two full saws), Pulse loses its DC offset and narrows to nothing at full Shape, Sine1 follows the
-  exact law. STILL TO CHECK by ear against the G2, DblSaw's level especially.
+- ***OSCA/OSCB/OSCC/OSCD WAVES AGAINST THE INSTRUMENT (2026-09-17)*** - reference §6.3. Saw and square are
+  duller at the top (up to 4 dB by 18 kHz, as the G2), the saw now rises, squares carry no DC, OscB's fifth
+  wave is DualSaw (it was three detuned saws), the sine is the instrument's. Harmonics checked against
+  captures; STILL TO CHECK by ear, a high OscB saw or a DualSaw patch especially.
+- ***OSCSHPB AND OSCDUAL ON THE INSTRUMENT'S LAWS (2026-09-17)*** - reference §27.5, §12.5. OscShpB matches its
+  harness sample for sample (TriSaw near-exact); OscDual's sub lost its shelf (fuller bass), square/saw/sub
+  polarities and saw rotation follow the instrument, mod inputs deeper. Listen, OscDual's sub especially; the old
+  code is kept verbatim in Docs/oscillator-code-before-edge-conversion.md.
+- ***RANDOM OSCILLATOR START PHASE (2026-09-17)*** - notes §63. Two oscillators at the same pitch in one voice
+  now sound different in each voice and after each load, as on the G2. Check by ear on a layered patch
+  (two OscB saws at the same pitch, chords): the voices should no longer all share one timbre.
+- ***OSCSHPB ALL EIGHT WAVES AGAINST THE INSTRUMENT (2026-09-17)*** - reference §27. DblSaw is now 6 dB
+  louder (two full saws), Pulse loses its DC offset and narrows to nothing at full Shape, Sine1 and Sine2
+  follow the instrument exactly (Sine2 up to 6 dB louder above Shape 0, and thinner at very low pitch),
+  Sine3/Sine4 quieter above Shape 0. STILL TO CHECK by ear against the G2, DblSaw's and Sine2's levels
+  especially, and a low Sine2 note.
 - ***G2 ALIKE KEEPS ITS PATCHES IN THE PROJECT (2026-09-17)*** - the state record ends with the whole
   instance as a .prf2 image. Checked with tools/vst3host: a record built from DualBob.prf2 restores the
   performance (editor shows it), and saving, reloading and saving again gives identical bytes. STILL TO
