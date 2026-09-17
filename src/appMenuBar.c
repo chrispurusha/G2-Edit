@@ -118,6 +118,11 @@ static void action_store_to_bank(int index) {
     file_menu_store_to_bank();
 }
 
+static void action_store_back_to_bank(int index) {
+    (void)index;
+    file_menu_store_back_to_bank();
+}
+
 // notes §2
 static bool sDeviceCapable = true;
 
@@ -126,7 +131,7 @@ void app_menu_set_device_capable(bool capable) {
 }
 
 void open_file_menu(tCoord anchor) {
-    static tMenuItem items[11];  // 10 entries + the NULL terminator
+    static tMenuItem items[12];  // 11 entries + the NULL terminator
     bool             online      = device_ready();
     bool             isPerf      = gGlobalSettings.perfMode == 1;
     int              i           = 0;
@@ -184,16 +189,52 @@ void open_file_menu(tCoord anchor) {
     }
     // Save writes back to wherever this patch/perf came from; it only appears live once there IS
     // such a place, which is why Save As sits below it rather than being the only option.
-    bool haveSavePath = file_menu_have_saved_path();
+    // Named after the file, as Store Back is after its location
+    static char  saveLabel[72];
+    const char * savePath     = file_menu_saved_path();
+    bool         haveSavePath = savePath != NULL;
 
+    if (haveSavePath) {
+        const char * slash = strrchr(savePath, '/');
+        char         name[40];
+
+        snprintf(name, sizeof(name), "%s", (slash != NULL) ? (slash + 1) : savePath);
+
+        // The menu font has ASCII glyphs only
+        for (char * c = name; *c != '\0'; c++) {
+            *c = ((unsigned char)*c < 0x80) ? *c : '?';
+        }
+
+        snprintf(saveLabel, sizeof(saveLabel), "Save %s Back to File \"%s\"", isPerf ? "Perf" : "Patch", name);
+    } else {
+        snprintf(saveLabel, sizeof(saveLabel), "Save %s Back to File", isPerf ? "Perf" : "Patch");
+    }
     items[i++] = (tMenuItem){
-        isPerf ? "Save Perf" : "Save Patch",
+        saveLabel,
         haveSavePath ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
         haveSavePath ? action_save_patch_current : NULL, 0, NULL, 0, 0.0
     };
     items[i++] = (tMenuItem){
         isPerf ? "Save Perf As..." : "Save Patch As...", (tRgb)RGB_GREY_3, action_save_patch, 0, NULL, 0, 0.0
     };
+
+    // Store back to the bank location it was loaded from - greyed when it did not come from one
+    if (sDeviceCapable) {
+        static char label[48];
+        uint32_t    bank     = 0;
+        uint32_t    location = 0;
+        bool        known    = file_menu_bank_origin(&bank, &location);
+        bool        live     = online && known;
+
+        if (known) {
+            snprintf(label, sizeof(label), "Store %s Back to Bank %u:%u...", isPerf ? "Perf" : "Patch", bank + 1, location + 1);
+        } else {
+            snprintf(label, sizeof(label), "Store %s Back to Bank", isPerf ? "Perf" : "Patch");
+        }
+        items[i++] = (tMenuItem){
+            label, live ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, live ? action_store_back_to_bank : NULL, 0, NULL, 0, 0.0
+        };
+    }
 
     if (sDeviceCapable) {
         items[i++] = (tMenuItem){

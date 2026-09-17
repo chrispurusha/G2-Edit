@@ -62,8 +62,37 @@ extern "C" {
 #define USB_KEEPALIVE_INTERVAL_S    (2)    // macOS suspends USB after ~3s idle; keep well inside that
 
 // Atomic flags for cross-thread signalling
-static _Atomic bool           gotBadConnectionIndication            = false;
-static _Atomic bool           gotPatchChangeIndication[MAX_SLOTS]   = {0};
+static _Atomic bool gotBadConnectionIndication          = false;
+static _Atomic bool gotPatchChangeIndication[MAX_SLOTS] = {0};
+// The bank location a Load from Bank asked for, per slot, until that slot's patch arrives. USB thread only.
+static int32_t      sPendingBankOrigin[MAX_SLOTS]       = {0};
+
+// The G2 has put something else in this slot (BANK_ORIGIN_PERF: the performance and every slot), so a
+// remembered file is no longer where this came from.
+static void g2_replaced_patch(uint32_t slot) {
+    uint32_t first = (slot == BANK_ORIGIN_PERF) ? 0 : slot;
+    uint32_t last  = (slot == BANK_ORIGIN_PERF) ? BANK_ORIGIN_PERF : slot;
+
+    for (uint32_t i = first; (i <= last) && (i <= BANK_ORIGIN_PERF); i++) {
+        gPatchSourceSerial[i]++;
+    }
+}
+
+// A patch in this slot that did not come from a bank location, or (slot == BANK_ORIGIN_PERF) the
+// whole performance and every slot in it.
+static void forget_bank_origin(uint32_t slot) {
+    uint32_t first = (slot == BANK_ORIGIN_PERF) ? 0 : slot;
+    uint32_t last  = (slot == BANK_ORIGIN_PERF) ? BANK_ORIGIN_PERF : slot;
+
+    for (uint32_t i = first; (i <= last) && (i <= BANK_ORIGIN_PERF); i++) {
+        gBankOrigin[i] = BANK_ORIGIN_NONE;
+
+        if (i < MAX_SLOTS) {
+            sPendingBankOrigin[i] = BANK_ORIGIN_NONE;
+        }
+    }
+}
+
 static _Atomic bool           gotPerfSettingsChangeIndication       = false;
 static int32_t                stopCount                             = 0;
 
@@ -2000,6 +2029,12 @@ static int store_patch_to_bank(uint32_t bank, uint32_t location, bool isPerf) {
     result = send_store_patch(domain, bank, location);
 
     if (result == EXIT_SUCCESS) {
+        // The bank location is now where this lives, rather than any file it was opened from
+        uint32_t index = isPerf ? BANK_ORIGIN_PERF : (uint32_t)gSlot;
+
+        g2_replaced_patch(index);
+        gBankOrigin[index] = BANK_ORIGIN(bank, location);
+
         snprintf(msg, sizeof(msg), "Stored %s to Bank %u, Location %u", typeLabel, bank + 1, location + 1);
 
         // notes §42
@@ -2126,6 +2161,14 @@ static int load_patch_from_bank(uint32_t bank, uint32_t location, bool isPerf) {
         return EXIT_FAILURE;
     }
     result = send_retrieve_patch(domain, bank, location);
+
+    if ((result == EXIT_SUCCESS) && isPerf) {
+        forget_bank_origin(BANK_ORIGIN_PERF);
+        g2_replaced_patch(BANK_ORIGIN_PERF);
+        gBankOrigin[BANK_ORIGIN_PERF] = BANK_ORIGIN(bank, location);
+    } else if (result == EXIT_SUCCESS) {
+        sPendingBankOrigin[gSlot] = BANK_ORIGIN(bank, location);
+    }
 
     // notes §47
     if ((result == EXIT_SUCCESS) && (domain == BANK_UPLOAD_DOMAIN_PERFORMANCE)) {
@@ -2897,16 +2940,16 @@ static int send_get_patch_data(uint32_t slot) {
 
 // notes §58
 
-static int push_slot_to_device(uint32_t slot) {
-    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
-
-    LOG_DEBUG("Pushing slot %u to device\n", slot);
+// The whole slot as SET_PATCH carries it. *contentFrom is where the patch itself begins, after the
+// header - which names the slot and its version, and so differs between two copies of one patch.
+static void build_slot_patch(uint32_t slot, uint8_t * buff, uint32_t * bitPosOut, uint32_t * contentFrom) {
+    uint32_t bitPos = BYTE_TO_BIT(COMMAND_OFFSET);
 
     usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_PATCH);
     write_bit_stream(buff, &bitPos, 8, 0x00);
     write_bit_stream(buff, &bitPos, 8, 0x00);
     write_bit_stream(buff, &bitPos, 8, 0x00);
+    *contentFrom = bitPos;
 
     write_clavia_string(buff, &bitPos, gGlobalSettings.slot[slot].patchName);
 
@@ -2928,9 +2971,37 @@ static int push_slot_to_device(uint32_t slot) {
     write_module_names(slot, locationVa, buff, &bitPos);
     write_module_names(slot, locationFx, buff, &bitPos);
     write_patch_notes(slot, buff, &bitPos);
+    *bitPosOut = bitPos;
+}
 
-    int expectedResp = SUB_RESPONSE_PATCH_VERSION;
+static int push_slot_to_device(uint32_t slot) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = 0;
+    uint32_t contentFrom             = 0;
+
+    LOG_DEBUG("Pushing slot %u to device\n", slot);
+    build_slot_patch(slot, buff, &bitPos, &contentFrom);
+
+    int      expectedResp            = SUB_RESPONSE_PATCH_VERSION;
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), expectedResp, USB_RECV_DATA_MS);
+}
+
+// What the slot holds, as a hash of the patch SET_PATCH would carry - so a re-download that only
+// brings back what the editor itself wrote can be told from the G2 putting a different patch there.
+static uint64_t slot_content_hash(uint32_t slot) {
+    static uint8_t buff[SEND_MESSAGE_SIZE];    // USB thread only
+    uint32_t       bitPos      = 0;
+    uint32_t       contentFrom = 0;
+    uint64_t       hash        = 1469598103934665603ull;
+
+    memset(buff, 0, sizeof(buff));
+    build_slot_patch(slot, buff, &bitPos, &contentFrom);
+
+    for (uint32_t i = BIT_TO_BYTE(contentFrom); i < BIT_TO_BYTE(bitPos); i++) {
+        hash = (hash ^ buff[i]) * 1099511628211ull;
+    }
+
+    return hash;
 }
 
 static int send_set_patch_name(uint32_t slot, const char * name) {
@@ -3481,6 +3552,8 @@ static int send_init_sequence_pull(void) {
     send_start();
 
     LOG_DEBUG("Pull init sequence complete\n");
+    forget_bank_origin(BANK_ORIGIN_PERF);    // what the G2 holds now came from somewhere we did not see
+    g2_replaced_patch(BANK_ORIGIN_PERF);
 
     for (int i = 0; i < MAX_SLOTS; i++) {
         gotPatchChangeIndication[i] = false;
@@ -3660,6 +3733,7 @@ static int load_perf_from_payload(uint8_t * buff, int64_t byteOffset, int64_t pa
         }
     }
 
+    forget_bank_origin(BANK_ORIGIN_PERF);
     gGlobalSettings.perfMode        = 1;
     parse_perf(buff + byteOffset, (int)payloadLen);
     free(buff);
@@ -3678,6 +3752,7 @@ static int load_patch_from_payload(uint8_t * buff, int64_t byteOffset, int64_t p
     // read the old device patch back over what we're about to parse and write.
     gotPatchChangeIndication[slot] = false;
 
+    forget_bank_origin(slot);
     clear_slot_data_usb(slot);
     parse_patch(slot, buff + byteOffset, (uint32_t)payloadLen);
     set_patch_name_from_filename(slot, filePath);
@@ -4004,6 +4079,7 @@ static int send_write_data(tMessageContent * messageContent) {
             uint32_t slot = messageContent->patchFileData.slot;
 
             init_patch(slot);
+            forget_bank_origin(slot);
 
             // Offline there is nothing to push to, and attempting it would fail the whole command
             // and report an error for what was a perfectly good local reset.
@@ -4295,9 +4371,23 @@ static void state_handler(void) {
         if (gotPatchChangeIndication[i] == true) {
             gotPatchChangeIndication[i] = false;
             LOG_DEBUG("Patch change on slot %u — reloading\n", i);
+
+            uint64_t before = slot_content_hash((uint32_t)i);
+
             send_stop();
             send_get_patch_data(i);
             send_start();
+
+            // From the bank location we asked for; or from somewhere we cannot know (the G2's panel)
+            // if what came back is not what we already had - a late notice of our own write is not.
+            if (sPendingBankOrigin[i] != BANK_ORIGIN_NONE) {
+                gBankOrigin[i] = sPendingBankOrigin[i];
+                g2_replaced_patch((uint32_t)i);
+            } else if (slot_content_hash((uint32_t)i) != before) {
+                gBankOrigin[i] = BANK_ORIGIN_NONE;
+                g2_replaced_patch((uint32_t)i);
+            }
+            sPendingBankOrigin[i]       = BANK_ORIGIN_NONE;
             foundOneChange              = true;
         }
     }

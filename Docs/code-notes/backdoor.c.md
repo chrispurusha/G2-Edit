@@ -47,6 +47,8 @@ caller polls for the command file's disappearance to know it's done.
   SNDDUMP           — the resolved chain, the parameters read, and the peak level since last read
   NOTE <n> [vel]|OFF — play/release a note on the sound engine (LOCAL engine, not the G2); vel defaults to 100
   RENDERNOTE <note> <vel> <ms> — render the local engine into memory with the note held; reports the peak. Only while no device renders it
+  BANKLOAD <PATCH|PERF> <bank> <loc> — Load from Bank with no dialog (replaces the slot/perf ON THE G2)
+  ORIGIN            — each slot's bank origin and source serial; what Save and Store Back would do
   ENGMORPH <group> <amount> — move the local engine's morph group (4 = sustain pedal, down from 0.5)
   MORPHSET <VA|FX> <index> <param> <group> <range> — a morph range, LOCAL-ONLY like SET (range -127..127)
   DEVSET <VA|FX> <index> <param> <value> — as SET, but SENT TO THE G2. This is what lets the
