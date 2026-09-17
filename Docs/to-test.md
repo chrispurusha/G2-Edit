@@ -7,6 +7,7 @@ Full detail for each is in findings.md, searchable by the wording below.
   duller at the top (up to 4 dB by 18 kHz, as the G2), the saw now rises, squares carry no DC, OscB's fifth
   wave is DualSaw (it was three detuned saws), the sine is the instrument's. Harmonics checked against
   captures; STILL TO CHECK by ear, a high OscB saw or a DualSaw patch especially.
+- ***FILTER GRAPH PEAK STEADY AT FULL RESONANCE (2026-09-17)*** - code-notes/moduleGraphics.c.md §68a. FltClassic at Res 127: sweep Freq, the peak should glide rather than jump.
 - ***OSCSHPB AND OSCDUAL ON THE INSTRUMENT'S LAWS (2026-09-17)*** - reference §27.5, §12.5. OscShpB matches its
   harness sample for sample (TriSaw near-exact); OscDual's sub lost its shelf (fuller bass), square/saw/sub
   polarities and saw rotation follow the instrument, mod inputs deeper. Listen, OscDual's sub especially; the old

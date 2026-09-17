@@ -843,6 +843,14 @@ Scale must stay within min(baseY's own fraction, 1-that fraction) - 0.6/0.55 did
 the box's bottom edge; 0.38 fits both the 0.6-above and 0.4-below headroom baseY
 leaves either side of it.
 
+## 68a. in `render_filter_response_graph()`
+
+THE PEAK JUMPED AS FREQ MOVED (CT, 2026-09-17). The curve was 100 points at fixed places across the box
+while the cutoff slides continuously with the dial, and at full resonance the peak is narrower than a
+point's spacing (a tenth of an octave) - so its drawn height depended on how near a point it happened
+to fall. The points now run on a grid through the cutoff itself, 16 times finer within two steps of it,
+so the resonant peak (at the cutoff for the ladder) is always sampled on its top.
+
 ## 69. in `render_filter_response_graph()`
 
 NEVER TRACE ALONG THE FLOOR, at either end. A low-pass that has fully rolled off used to
