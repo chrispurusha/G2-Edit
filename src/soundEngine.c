@@ -3960,6 +3960,10 @@ static double osc_shp_wave(uint32_t waveform, double phase, double dt, double sh
     // notes §102
     switch (waveform) {
         case 0:
+        {
+            // The rise never shortens past two samples at this pitch, as TriSaw's fall does (notes §102)
+            return wave_sine1_limited(phase, shape, 2.0 * dt * (double)OSC_OVERSAMPLE);
+        }
         case 1:
         case 2:
         case 3:
@@ -3978,11 +3982,15 @@ static double osc_shp_wave(uint32_t waveform, double phase, double dt, double sh
         {
             double second = fmod(phase + wave_dblsaw_detune(shape), 1.0);
 
-            return (osc_saw(phase, dt) + osc_saw(second, dt)) * 0.5;
+            return osc_saw(phase, dt) + osc_saw(second, dt);    // two full saws: peak 2, as on the instrument
         }
         case 6:
         {
-            return osc_square(phase, dt, wave_pulse_duty(shape));
+            // Never narrower than one sample: the instrument's two one-sample edges overlap there and
+            // leave a spike rather than silence
+            double duty = fmax(wave_shpb_pulse_duty(shape), dt * (double)OSC_OVERSAMPLE);
+
+            return osc_square(phase, dt, duty) - ((2.0 * duty) - 1.0);    // with its DC taken out
         }
         default:
         {

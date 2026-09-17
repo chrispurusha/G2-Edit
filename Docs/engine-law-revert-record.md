@@ -54,6 +54,7 @@ Add to it whenever a law is replaced. Hardware checks for each are in to-test.md
 | 39 | Vel morph (2026-09-17) | never driven: morph group 1 read from `gMorphMilli`, which nothing set, so every voice played velocity 0's values | per voice, from a table of nodes built at 32 velocities (§26.2) | `52029a9` `src/soundEngine.c` `param_value()`, `sound_engine_update_from_patch()`, `eval_node()` |
 | 40 | Sustain pedal (2026-09-17) | ignored by the voices (only morph group 5 moved) | holds released keys' voices until it comes up (§26.3) | `52029a9` `src/soundEngine.c` `voice_note_off()` |
 | 41 | Keyb morph (2026-09-17) | never driven: morph group 2 read from `gMorphMilli`, which nothing set, so every voice played the values at amount 0 | per voice, (note - 36)/60, from a table of nodes rebuilt module by module every other note (§26.2); the Vel table now built the same way | `d5343a4` `src/soundEngine.c` |
+| 42 | OscShpB Sine1, DblSaw, Pulse (2026-09-17) | Sine1 breakpoint b = 0.25 - 0.2551s + 0.0125s^2 (s = dial/127); DblSaw (saw + saw) x 0.5, offset s/2; Pulse `wave_pulse_duty()` 0.5 - 0.49s, no DC removal | Sine1 rise (1 - g)/2, two-sample floor; DblSaw summed, offset g/2; Pulse `wave_shpb_pulse_duty()` (1 - g)/2 with a one-sample floor, DC removed; g = dial/128 (§27) | `3089c6d` `src/waveModels.c`, `src/soundEngine.c` `osc_shp_wave()` |
 
 API removed along with 1 and 4: `sound_engine_is_polyphonic()` (replaced by `sound_engine_note_sounding()`)
 and `note_stack_top()`, both at `e225d27`.

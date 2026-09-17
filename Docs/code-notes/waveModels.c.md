@@ -31,6 +31,14 @@ Shape 0 is a clean sine; as b shrinks the rise compresses into the front of the 
 remainder becomes a long linear sweep from w = 0.25 to w = 0.75 - a slow fall from peak to
 trough, which is the sawtooth the manual describes.
 
+REPLACED 2026-09-17 BY THE INSTRUMENT'S OWN LAW (reference §27). The rising half takes (1 - g)/2 of
+the cycle and the falling half the rest, each linear in angle, with g the Shape word (dial/128, 127
+counting as 1) - so the breakpoint above is b = (1 - g)/4, which the measured table matches to 0.0005
+at every setting but full Shape. There the instrument holds the rise to two samples
+(`wave_sine1_limited()`, the engine passes that; the drawing does not), which is 0.0034 at 329 Hz against
+the fitted 0.008 - a difference only far above the harmonics the capture could read. The fitted
+quadratic is kept below as the record of how the form was found.
+
 ## 3. in `wave_sine1()`
 
 RE-MEASURED 2026-08-30. The LINEAR term was already right; the QUADRATIC one was about five

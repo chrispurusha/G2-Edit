@@ -1266,7 +1266,7 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
         }
         case 6: // Pulse — asymmetric width
         {
-            double duty      = wave_pulse_duty(shape);
+            double duty      = wave_shpb_pulse_duty(shape);
             double edgeWidth = pulse_edge_width(fmin(duty, 1.0 - duty));
 
             if (phase < edgeWidth) {

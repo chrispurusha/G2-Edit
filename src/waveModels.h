@@ -30,7 +30,10 @@
 // figures land correctly once read that way. The dial acts over its whole range.
 
 // ── Complete waves ──────────────────────────────────────────────────────────
+double wave_shape_word(double shape);
 double wave_sine1(double phase, double shape);
+// Sine1 with its rise held to at least shortestRise of a cycle, as the instrument holds it to two samples
+double wave_sine1_limited(double phase, double shape, double shortestRise);
 double wave_sine2(double phase, double shape);
 double wave_sine3(double phase, double shape);
 double wave_sine4(double phase, double shape);
@@ -54,6 +57,7 @@ double wave_dblsaw_detune(double shape);
 
 // Pulse: the high fraction of the cycle. Measured 50% high down to 1% high.
 double wave_pulse_duty(double shape);
+double wave_shpb_pulse_duty(double shape);    // OscShpB's Pulse (OscA/OscB keep wave_pulse_duty())
 
 // SymPulse: one cycle is High for this long, then Low for the same, then zero for the remainder —
 // so this is half the non-zero part. At shape 1 it vanishes and the wave is silent.

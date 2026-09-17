@@ -3,6 +3,9 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***OSCSHPB SINE1 / DBLSAW / PULSE FROM THE INSTRUMENT (2026-09-17)*** - reference §27. DblSaw is now 6 dB
+  louder (two full saws), Pulse loses its DC offset and narrows to nothing at full Shape, Sine1 follows the
+  exact law. STILL TO CHECK by ear against the G2, DblSaw's level especially.
 - ***G2 ALIKE KEEPS ITS PATCHES IN THE PROJECT (2026-09-17)*** - the state record ends with the whole
   instance as a .prf2 image. Checked with tools/vst3host: a record built from DualBob.prf2 restores the
   performance (editor shows it), and saving, reloading and saving again gives identical bytes. STILL TO
