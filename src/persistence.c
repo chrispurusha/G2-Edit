@@ -135,11 +135,20 @@ void save_zoom_factor(double zoom) {
     prefs_set_double("zoomFactor", zoom);
 }
 
+// The last folder browsed lives in the APPLICATION's settings file, for the plug-in too, so either
+// opens where the other left off.
+#define G2_EDIT_PREFS_APP_NAME    "G2-Edit"
+#define PREF_BROWSER_DIRECTORY    "fileBrowserLastDirectory"
+
 void save_file_browser_directory(const char * path) {
     if (path == NULL) {
         return;
     }
-    prefs_set_string("fileBrowserLastDirectory", path);
+    prefs_set_string_in(G2_EDIT_PREFS_APP_NAME, PREF_BROWSER_DIRECTORY, path);
+}
+
+static const char * shared_file_browser_directory(void) {
+    return prefs_get_string_from(G2_EDIT_PREFS_APP_NAME, PREF_BROWSER_DIRECTORY, NULL);
 }
 
 // Restores window/zoom/dial-mode/last-browsed-folder state saved from a previous run. Called once
@@ -148,16 +157,12 @@ void save_file_browser_directory(const char * path) {
 void load_saved_settings(void) {
     synthlib_load_window_and_dial_mode(TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
 
-    double       savedZoom       = prefs_get_double("zoomFactor", -1.0);
+    double savedZoom = prefs_get_double("zoomFactor", -1.0);
 
     if (savedZoom >= 0.24) {
         set_zoom_factor(savedZoom, (tCoord){0.0, 0.0});
     }
-    const char * savedBrowserDir = prefs_get_string("fileBrowserLastDirectory", NULL);
-
-    if (savedBrowserDir != NULL) {
-        set_file_browser_start_directory(savedBrowserDir);
-    }
+    set_file_browser_start_directory_provider(shared_file_browser_directory);
     set_file_browser_directory_changed_callback(save_file_browser_directory);
     recent_files_load();
 }

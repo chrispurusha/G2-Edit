@@ -471,6 +471,37 @@ one departure: a jack fed by a module the engine does not play yet (the Keyboard
 often) counts as the keys, so those patches keep sounding. The Gate jack reads its source per voice,
 so an LFO gating it sounds only on a voice that is running - voice 0 at rest in drone mode.
 
+**17.5 AM (2026-09-16).** The envelope's level is multiplied by its AM jack, four times the jack's word
+on the instrument, so 64 units (1.0 here) is full level; the product is held to ±1, and an unpatched jack
+is full. The Env output carries the product and the VCA output is the audio times it. This is how a
+patch makes an envelope velocity sensitive: a Keyboard velocity output into AM (manual p.197).
+
+**17.6 Output Type (2026-09-16).** With L the level times AM (17.5) and S the Sustain level, the Env
+output is:
+
+| Type | Output | Idle | Peak (AM full) |
+|---|---|---|---|
+| Pos | L | 0 | +64 |
+| PosInv | 1 - L | +64 | 0 |
+| Neg | L - 1 | -64 | 0 |
+| NegInv | -L | 0 | -64 |
+| Bip | L - S | -S | 64 - S |
+| BipInv | S - L | +S | S - 64 |
+
+The bipolar pair are offset by Sustain, not by half scale: the sustain stage sits at 0 units, and AM
+does not scale the offset. The VCA output is the audio times this output, so PosInv, Neg, Bip and
+BipInv pass audio while no key is held. `env_output()`; matches the instrument's code to 5e-7 at every
+type, three Sustain settings and two AM levels.
+
+**17.7 Normal/Reset (2026-09-16).** Reset puts the level to zero in the tick the gate rises, and the
+attack runs from there; Normal (17.3) runs it from where it is. Matches the instrument's code tick for
+tick through a retrigger during the release.
+
+**17.8 How long 45 s is.** The dial says 45.0 s at 127 and the table's rate falls 40 dB in 44.7 s, but
+each step rounds down, which matters most near silence: the instrument's code reaches -40 dB in 37.0 s,
+-60 dB in 40.2 s and exact silence in 40.5 s (at 96: 8.2, 10.6 and 10.9 s against the dial's 8.72 s).
+The engine runs the same arithmetic, so it does too.
+
 ## 18. Pulse
 
 **18.1 Width.** The Sub range's width in 96 kHz samples is the dial's displayed time (the Lo display,
@@ -799,3 +830,40 @@ output rises at 1/r.
 and a fast release it never saw a peak. In 03 Chris' Lead (−4 dB, 4:1, Attack 104, Release 0, Level 0 dB)
 it did not compress at all. The instrument takes a 0 dB input down by 3 dB and a +6 dB input by 7.4 dB,
 after lifting everything by 3 dB.
+
+## 26. Keyboard module and velocity
+
+Added 2026-09-16. Every note reaches the engine with its velocity, and a note-off with its release
+velocity: MIDI as received (a note-on at 0 releases at 64), the plug-in's host velocity x 127, the
+Virtual Keyboard its own Velocity setting, which is what it sends the G2.
+
+The Keyboard module is a per-voice node with six outputs, in its connector order (manual p.158):
+
+| Output | Signal |
+|---|---|
+| Pitch | the voice's pitch, glide, bend and vibrato included, in semitones about E4 (note 64 is 0 units) |
+| Gate | full scale (+64 units) while the key is held |
+| Lin | velocity/127 |
+| Release | release velocity/127, 0 from the next note-on until the key comes up |
+| Note | the bare note number about E4 |
+| Exp | (velocity/127)³ |
+
+Lin and Exp are the instrument's own velocity curves in closed form: Lin is exact and the cube agrees
+with every entry of its table to half a count.
+
+**26.2 The Vel morph, per voice (2026-09-17).** On the instrument each note-on gives every parameter
+with a Vel morph range its own value for that voice: the patch-wide value plus range x velocity/127,
+in dial units, held to 0-127. (The Keyb morph works the same way, with (note - 36)/60 plus the octave
+shift in place of velocity/127 - not yet in the engine.) The engine prepares this, since the audio
+thread cannot build nodes: whenever the chain or a morph range changes, it builds the chain at full
+velocity as well, takes the nodes that differ from the velocity-0 build (up to eight), and builds
+those at 32 velocities (`build_velocity_nodes()`). Each voice picks its row at note-on
+(`velocity_level()`), so the worst step is range/31 dial units. Knob smoothing stays per node, and a
+voice adds its own offset from the velocity-0 node to each smoothed value. FX Area nodes take the
+latest note's row. A DXRouter's Operators do not follow the Vel morph yet.
+
+**26.3 Sustain pedal (2026-09-17).** Morph group 5 (Sust.Pd) is the pedal, down from 0.5 (CC64 at 64 and
+above). A key released while it is down leaves its voice gated - the envelopes sustain and the
+Keyboard module's Gate stays high - and the pedal coming up releases every voice it was holding. A
+new note on such a voice clears the hold; All Notes Off releases them regardless.
+

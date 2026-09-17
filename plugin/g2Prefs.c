@@ -36,9 +36,9 @@ void g2_plugin_prefs_init(void) {
 
     prefs_init(G2_PREFS_APP_NAME);
 
-    // The application's own restore: zoom, dial mode and the file browser's last folder, plus
-    // registering the callback that keeps that folder up to date. persistence.c has no GLFW in it,
-    // so the plug-in uses it rather than keeping a second set of keys that could drift.
+    // The application's own restore: zoom and dial mode from this file, and the file browser's last
+    // folder from the APPLICATION's file (persistence.c), shared so both open where either left off.
+    // persistence.c has no GLFW in it, so the plug-in uses it rather than a second set of keys.
     load_saved_settings();
 }
 

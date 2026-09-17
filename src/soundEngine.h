@@ -93,7 +93,8 @@ bool sound_engine_set_morph(uint32_t group, double amount);
 void sound_engine_pitch_bend(double bend);
 
 // notes §5
-void sound_engine_note(int32_t note, bool on);
+// velocity: 1-127 with a note-on, the release velocity (0 when unknown) with a note-off.
+void sound_engine_note(int32_t note, uint8_t velocity, bool on);
 
 // Whether a voice is sounding this key with its key still down. For poly pressure: in Mono a key
 // held underneath the one playing must not move the morph. Any thread; see §15 of the reference.

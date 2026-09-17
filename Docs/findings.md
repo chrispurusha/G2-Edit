@@ -9794,3 +9794,52 @@ does not model counts as the keys, so patches that gate from a Keyboard module k
 reverb tail), KB on again 0.76; KB off with the Keyboard module's Gate cabled in 1.22; KB off with an LfoC in
 the jacks 1.29 with no key held (voice 0 runs at rest in drone mode) - the FX loops make peaks vary run to run.
 
+2026-09-16 - VELOCITY IN THE ENGINE (CT: "the plug-in takes note data from the host"). The engine had no velocity
+at all - sound_engine_note() took none, the plug-in dropped the host's. Now every note carries it (reference §26),
+the Keyboard module is a six-output node, and the EnvADSR multiplies its level by its AM jack (§17.5). From the
+instrument: the AM jack is scaled x4 in its words, so 64 units is full level, clamped; an unpatched jack is full;
+the Keyboard's Lin and Exp come from two tables that are exactly v/127 and (v/127)^3 (the cube within half a count
+of every entry); a note-on writes Release back to 0. Checked offline on 03 Chris' Lead with FX mixed low, peaks:
+Lin into Amp Env AM 1.21 / 0.62 / 0.21 at velocity 127 / 64 / 30; Exp 1.26 / 0.15 / 0.011 (the Compressor in the
+chain levels these a little). The Vel morph group and the sustain pedal are still not modelled (todo.md).
+
+2026-09-16 - ENVADSR OUTPUT TYPE, NORMAL/RESET AND THE 45 S RELEASE. Output Type was never read (always Pos) and
+neither was Normal/Reset (always Normal). The instrument sets the type through three words - a sign on the level,
+a fixed offset, and an offset times the Sustain word - found by running its envelope code with each type: Bip is
+level - Sustain and BipInv Sustain - level, so their sustain stage sits at 0 and an idle envelope at -S/+S. Reset
+zeroes the level in the tick the gate rises. Both now in the engine (reference §17.6-17.7), matching the running
+code to 5e-7 across 36 type/Sustain/AM cases and tick for tick through a Reset retrigger. In the application
+PosInv on both envelopes of 03 Chris' Lead passes full sound (peak 1.01) with no key held, as it should.
+THE 45 S RELEASE (CT asked): the display reads 45.0s at 127 and the decay table's rate gives -40 dB in 44.7 s,
+but the running code rounds each step down and reaches -40 dB in 37.0 s, -60 dB in 40.2 s and silence in 40.5 s
+(reference §17.8). The comparison harness now compiles soundEngine.c against the running envelope code
+(scratch, not in the repo), so any envelope change can be checked tick for tick.
+
+2026-09-17 - THE TRANSIENT IS GONE (CT) and 03 CHRIS' LEAD WAS BRIGHTER IN THE PLUG-IN BECAUSE OF THE WHEEL. CT reports the
+sharper onset no longer there after the velocity and envelope work (which of them fixed it is not established).
+The brighter plug-in sound was the mod wheel: the patch's only morph is Filter Freq +67 on the Wheel group, and
+G2 Alike's Morph 1 was held above zero by the host - pulling the wheel to 0 matched the G2. The filter's own Env
+modulation was checked against the instrument's FltClassic code at the patch's settings (Freq 0, Res 22, Env 80,
+input 0 to 1): the engine agrees to the eighth harmonic and beyond. Fix: the morphs and bend are NO_SAVE in the
+plug-in, and SynthLib's state reader now ignores a saved value for a NO_SAVE parameter, so an old Live set no
+longer restores a raised wheel.
+
+2026-09-17 - VEL MORPH PER VOICE AND THE SUSTAIN PEDAL (reference §26.2-26.3). The instrument's note-on gives
+each Vel-morphed parameter a per-voice value (the patch value + range x velocity/127, dial units, clamped);
+the engine now plays it from nodes built at 32 velocities. A first version rebuilt that table only when the
+velocity-0 chain changed - so a changed morph RANGE, which leaves velocity 0 alone, kept the old table (range
+-64 still played as +127). Now a full-velocity build is compared as well. Checked by rendering the engine into
+memory (backdoor RENDERNOTE, since the Inject IO device had stopped clocking overnight): OscB > Mix4-1C (Lev 0,
+Vel morph +127) > EnvADSR > 2-Out peaks 0.024 at velocity 64 and 0.0023 at 30, the cube law at the dials those
+velocities reach; Lev 64 with Vel -64 gives 0.0029 at velocity 64 and 0.0226 at 1. The first note after a dial
+change carries the old smoothed level in such a test, because nothing renders between backdoor commands. The
+pedal held a released note at 0.137 (its sustain level) where an unheld one decayed. New backdoor commands:
+MORPHSET, ENGMORPH, RENDERNOTE; PARAMDUMP lists morph ranges.
+
+2026-09-17 - SHARED LAST FOLDER, AND SYNTHLIB PREFS NO LONGER CLOBBER ANOTHER PROCESS'S KEYS (CT). SynthLib's
+prefs store rewrote its whole file from memory on every change, which is why G2 Alike kept its own file. A
+save now writes only the keys its process set, over the file as it stands (SynthLib prefs.cpp notes §5), and
+prefs_set_string_in()/prefs_get_string_from() reach one key of another app's file. The file browser asks a
+provider for its start folder at every open. Checked with a scratch test (another process's key survives a
+save; a key written to another app's file reads back).
+

@@ -39,6 +39,7 @@ extern "C" {
 #pragma clang diagnostic pop
 
 #include <ctype.h>
+#include <math.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
@@ -309,7 +310,7 @@ static void backdoor_param_dump(void) {
 
     for (uint32_t l = 0; l < 2; l++) {
         for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
-            tModule * module = get_module_slot(gSlot, locs[l], index);
+            tModule * module    = get_module_slot(gSlot, locs[l], index);
 
             if ((module == NULL) || (module->type == 0)) {
                 continue; // type 0 == empty slot in the sparse per-index store
@@ -326,6 +327,21 @@ static void backdoor_param_dump(void) {
 
             for (uint32_t m = 0; (m < module->modeCount) && (m < MAX_NUM_MODES); m++) {
                 fprintf(file, " %u", (unsigned)module->mode[m].value);
+            }
+
+            // Morph ranges in the ACTIVE variation (the params above are variation 0): param:group:range.
+            uint32_t  variation = gPatchDescr[gSlot].activeVariation;
+
+            fprintf(file, "\nmorphs loc=%s index=%u variation=%u:", locNames[l], (unsigned)index, (unsigned)variation);
+
+            for (uint32_t p = 0; (p < module->actualParamCount) && (p < MAX_NUM_PARAMETERS); p++) {
+                for (uint32_t g = 0; g < NUM_MORPHS; g++) {
+                    uint8_t raw = module->param[variation][p].morphRange[g];
+
+                    if (raw != 0) {
+                        fprintf(file, " %u:%u:%d", (unsigned)p, (unsigned)g, (raw < 128) ? (int)raw : ((int)raw - 256));
+                    }
+                }
             }
 
             fprintf(file, "\n");
@@ -835,6 +851,51 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         module->param[gPatchDescr[gSlot].activeVariation][param].value = value;
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "ENGMORPH") == 0) {
+        // ENGMORPH <group 0-7> <amount 0-1> - move the engine's morph group as a controller would
+        // (group 4 is the sustain pedal, down from 0.5). The LOCAL engine only.
+        uint32_t group  = 0;
+        double   amount = 0.0;
+
+        if ((sscanf(arg, "%u %lf", &group, &amount) != 2) || (group >= NUM_MORPHS)) {
+            backdoor_write_result("ERROR: expected 'ENGMORPH <group 0-7> <amount 0-1>'\n");
+            return;
+        }
+
+        if (sound_engine_set_morph(group, amount) == true) {
+            database_read_lock();
+            sound_engine_update_from_patch();
+            database_read_unlock();
+        }
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "MORPHSET") == 0) {
+        // MORPHSET <VA|FX> <index> <param> <group 0-7> <range -127..127> - a param's morph range in
+        // the current slot and variation, LOCAL-ONLY, as SET is.
+        char      loc[8]   = {0};
+        uint32_t  index    = 0;
+        uint32_t  param    = 0;
+        uint32_t  group    = 0;
+        int32_t   range    = 0;
+
+        if (sscanf(arg, "%7s %u %u %u %d", loc, &index, &param, &group, &range) != 5) {
+            backdoor_write_result("ERROR: expected 'MORPHSET <VA|FX> <index> <param> <group> <range>'\n");
+            return;
+        }
+        uint32_t  location = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        tModule * module   = get_module_slot(gSlot, location, index);
+
+        if ((module == NULL) || (module->type == 0)) {
+            backdoor_write_result("ERROR: no module at that loc/index\n");
+            return;
+        }
+
+        if ((param >= MAX_NUM_PARAMETERS) || (group >= NUM_MORPHS) || (range < -127) || (range > 127)) {
+            backdoor_write_result("ERROR: param, group or range out of range\n");
+            return;
+        }
+        module->param[gPatchDescr[gSlot].activeVariation][param].morphRange[group] = (uint8_t)range;
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "DEVSET") == 0) {
         // notes §18
         char      loc[8]     = {0};
@@ -1337,19 +1398,21 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
     } else if (strcmp(cmd, "NOTE") == 0) {
         // NOTE <midi note> plays, NOTE OFF releases. The last thing that needed a mouse to test the
         // sound engine end to end.
-        int32_t note = 0;
+        int32_t note     = 0;
 
         if (strncasecmp(arg, "OFF", 3) == 0) {
-            sound_engine_note(-1, false);
+            sound_engine_note(-1, 0, false);
             backdoor_write_result("OK\n");
             return;
         }
+        int32_t velocity = 100;
 
-        if (sscanf(arg, "%d", &note) != 1) {
-            backdoor_write_result("ERROR: expected 'NOTE <0-127>' or 'NOTE OFF'\n");
+        if (sscanf(arg, "%d %d", &note, &velocity) < 1) {
+            backdoor_write_result("ERROR: expected 'NOTE <0-127> [velocity 1-127]' or 'NOTE OFF'\n");
             return;
         }
-        sound_engine_note(note, true);
+        velocity = (velocity < 1) ? 1 : ((velocity > 127) ? 127 : velocity);
+        sound_engine_note(note, (uint8_t)velocity, true);
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "KEYNOTE") == 0) {
         // notes §30
@@ -1370,6 +1433,58 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         char text[8400] = {0};
 
         snprintf(text, sizeof(text), "OK\n%s", sound_engine_debug_text());
+        backdoor_write_result(text);
+    } else if (strcmp(cmd, "RENDERNOTE") == 0) {
+        // RENDERNOTE <note> <velocity> <ms> - render the local engine straight into memory
+        // with that note held for <ms> and report the output peak; no audio device involved. For a
+        // machine whose output cannot be used. Refused while a device is rendering the engine.
+        int32_t      note     = 0;
+        int32_t      velocity = 0;
+        int32_t      heldMs   = 0;
+
+        if (sscanf(arg, "%d %d %d", &note, &velocity, &heldMs) != 3) {
+            backdoor_write_result("ERROR: expected 'RENDERNOTE <note> <velocity> <ms>'\n");
+            return;
+        }
+        (void)sound_engine_load_percent();
+        usleep(200000);
+
+        if ((sound_engine_active() == false) || (sound_engine_load_percent() != 0)) {
+            backdoor_write_result("ERROR: the engine is off, or a device is rendering it\n");
+            return;
+        }
+        enum {RENDER_BLOCK = 256};
+        static float block[RENDER_BLOCK * 2];
+        uint32_t     blocks   = (uint32_t)((heldMs * 48) / RENDER_BLOCK) + 1;
+        double       peak     = 0.0;
+
+        sound_engine_note(note, (uint8_t)((velocity < 1) ? 1 : ((velocity > 127) ? 127 : velocity)), true);
+
+        for (uint32_t b = 0; b < blocks; b++) {
+            sound_engine_render(block, RENDER_BLOCK, 2);
+
+            for (uint32_t i = 0; i < (RENDER_BLOCK * 2); i++) {
+                peak = (fabs(block[i]) > peak) ? fabs(block[i]) : peak;
+            }
+        }
+
+        double       released = 0.0;
+
+        sound_engine_note(note, 0, false);
+
+        for (uint32_t b = 0; b < ((48000 * 3) / RENDER_BLOCK); b++) {   // play the release out
+            sound_engine_render(block, RENDER_BLOCK, 2);
+
+            if (b < (4800 / RENDER_BLOCK)) {
+                for (uint32_t i = 0; i < (RENDER_BLOCK * 2); i++) {
+                    released = (fabs(block[i]) > released) ? fabs(block[i]) : released;
+                }
+            }
+        }
+
+        char         text[96];
+
+        snprintf(text, sizeof(text), "OK held-peak=%.4f first-100ms-after-release=%.4f\n", peak, released);
         backdoor_write_result(text);
     } else if (strcmp(cmd, "SNDSTATUS") == 0) {
         // Reads back what the Experimental menu would show, so a test can assert on why the engine

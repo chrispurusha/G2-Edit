@@ -48,24 +48,24 @@ static void held_remove(uint8_t note) {
     }
 }
 
-void note_stack_note_on(uint8_t note) {
+void note_stack_note_on(uint8_t note, uint8_t velocity) {
     held_remove(note);   // a repeat without its note off must not occupy two slots
 
     if (gHeldCount < NOTE_STACK_MAX) {
         gHeld[gHeldCount++] = note;
     }
-    sound_engine_note((int32_t)note, true);
+    sound_engine_note((int32_t)note, velocity, true);
 }
 
 // notes §1
-void note_stack_note_off(uint8_t note) {
+void note_stack_note_off(uint8_t note, uint8_t velocity) {
     held_remove(note);
-    sound_engine_note((int32_t)note, false);
+    sound_engine_note((int32_t)note, velocity, false);
 }
 
 void note_stack_all_off(void) {
     gHeldCount = 0;
-    sound_engine_note(-1, false);
+    sound_engine_note(-1, 0, false);
 }
 
 uint32_t note_stack_count(void) {

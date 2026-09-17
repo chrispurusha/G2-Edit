@@ -623,6 +623,7 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
                 case paramTypePartials:       render_param_function      = &render_paramType1Partials;
                     break;
                 case paramTypeUniPol:         render_param_function      = &render_paramType1UniPol;
+                    break;
                 case paramTypeUniPolShort:    render_param_function      = &render_paramType1UniPolShort;
                     break;
                 case paramTypeLevAmpDial:     render_param_function      = &render_paramType1LevAmpDial;

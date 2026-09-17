@@ -3,6 +3,25 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***VEL MORPH PER VOICE, SUSTAIN PEDAL (2026-09-17)*** - reference §26.2-26.3. Checked offline by
+  rendering straight to memory: a Vel morph on a mixer level follows the velocity to the dial it maps
+  to, and the pedal holds a released note at its sustain level. STILL TO CHECK: a velocity-morphed patch
+  against the G2 by ear, the pedal in a host and from a MIDI keyboard, and that a knob turned while
+  notes sound still moves smoothly.
+- ***G2 ALIKE STARTS WITH THE WHEEL AT 0; SHARED LAST FOLDER (2026-09-17)*** - the eight morphs and
+  pitch bend are no longer saved in a host project (and an old project's values for them are
+  ignored), so the wheel starts at rest. The file browser's last folder is kept in G2-Edit's own
+  prefs.txt by both the application and the plug-in. STILL TO CHECK: reopen a Live set that had the
+  wheel up; open a patch in one and see the other start in that folder.
+- ***ENVADSR OUTPUT TYPE AND NORMAL/RESET (2026-09-16)*** - the engine now reads both (reference §17.6,
+  §17.7), matched against the instrument's own envelope code. STILL TO CHECK BY EAR: a Bip/BipInv filter
+  envelope and a Reset retrigger against the G2, and a patch using PosInv or Neg.
+- ***VELOCITY IN THE ENGINE AND THE PLUG-IN (2026-09-16)*** - notes carry velocity from MIDI, the
+  Virtual Keyboard and the plug-in's host; the Keyboard module (Pitch, Gate, Lin, Release, Note, Exp) and
+  the EnvADSR AM jack are modelled (reference §17.5, §26). Checked offline: Lin into AM halves the level
+  at velocity 64, Exp takes it to about an eighth. STILL TO CHECK: velocity-sensitive patches against the
+  G2 by ear, in the application and in a host (G2 Alike), and that a Keyboard Pitch or Note into a
+  filter or oscillator tracks as on the G2.
 - ***ENVADSR KB AND GATE JACK (2026-09-16)*** - the engine now honours KB (the keyboard gate) and the
   Gate jack (reference §17.4). Checked offline on 03 Chris' Lead: KB off on both envelopes silences it,
   KB on restores it, a Keyboard module's Gate in the jacks still plays, an LFO in the jacks gates it.

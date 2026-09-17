@@ -31,7 +31,8 @@ caller polls for the command file's disappearance to know it's done.
   LEDDUMP           — live LED and volume-meter values per module, as the renderer reads them.
                       Poll it to measure a blink RATE, which no screenshot can show
   PARAMDUMP         — the same modules with their variation-0 PARAMETER and MODE values, plus the
-                      parameter count the patch declared against the one our table gives
+                      parameter count the patch declared against the one our table gives, and every
+                      non-zero morph range in the ACTIVE variation as param:group:range
   MENU <bar>[/<item>[/<sub>]] — run a menu item by label (leading substring, case-insensitive,
                       '/' separated); omit the last level to LIST what that level contains
   SELECT <VA|FX> <n> — select one module by index; SELECT NONE clears
@@ -44,7 +45,10 @@ caller polls for the command file's disappearance to know it's done.
                       right-click menu does. Local only; check the result with DUMP
   SNDSTATUS         — what the sound engine's status line currently reads
   SNDDUMP           — the resolved chain, the parameters read, and the peak level since last read
-  NOTE <n>|OFF      — play/release a note on the sound engine (LOCAL engine, not the G2)
+  NOTE <n> [vel]|OFF — play/release a note on the sound engine (LOCAL engine, not the G2); vel defaults to 100
+  RENDERNOTE <note> <vel> <ms> — render the local engine into memory with the note held; reports the peak. Only while no device renders it
+  ENGMORPH <group> <amount> — move the local engine's morph group (4 = sustain pedal, down from 0.5)
+  MORPHSET <VA|FX> <index> <param> <group> <range> — a morph range, LOCAL-ONLY like SET (range -127..127)
   DEVSET <VA|FX> <index> <param> <value> — as SET, but SENT TO THE G2. This is what lets the
                       measurement harness step one parameter on the hardware while its audio output
                       is recorded; SET stays local-only so a rendering test cannot write to a

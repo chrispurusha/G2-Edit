@@ -93,6 +93,9 @@ static _Atomic int32_t  gLastCC          = -1;
 // The same message the Virtual Keyboard posts — see send_note() in virtualKeyboard.c. Posted from
 // the CoreMIDI thread, which is safe: msg_send() takes a mutex and allocates, which would be wrong
 // on the audio thread but is fine on this one.
+// A note-on at velocity 0 is a note-off, and MIDI gives it the release velocity 64.
+#define MIDI_DEFAULT_RELEASE_VELOCITY    (64)
+
 static void send_note_to_synth(uint8_t note, uint8_t velocity, bool on) {
     tMessageContent msg = {0};
 
@@ -112,15 +115,15 @@ static void send_note_to_synth(uint8_t note, uint8_t velocity, bool on) {
 }
 
 static void note_on(uint8_t note, uint8_t velocity) {
-    note_stack_note_on(note);
+    note_stack_note_on(note, velocity);
 
     // The G2 gets the note as played. The last-note stack is for the local engine, which is
     // monophonic; the G2 does its own voice allocation and wants every note.
     send_note_to_synth(note, velocity, true);
 }
 
-static void note_off(uint8_t note) {
-    note_stack_note_off(note);       // Mono and Legato return to a held key in the engine - see noteStack.h
+static void note_off(uint8_t note, uint8_t release) {
+    note_stack_note_off(note, release);       // Mono and Legato return to a held key in the engine - see noteStack.h
     send_note_to_synth(note, 0, false);
 }
 
@@ -171,13 +174,13 @@ static void handle_message(uint32_t word) {
             if (data2 > 0) {
                 note_on(data1, data2);
             } else {
-                note_off(data1);
+                note_off(data1, MIDI_DEFAULT_RELEASE_VELOCITY);
             }
             break;
         }
         case 0x80:
         {
-            note_off(data1);
+            note_off(data1, data2);
             break;
         }
         case 0xB0:
