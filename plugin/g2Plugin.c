@@ -20,6 +20,7 @@
 
 // notes §1
 
+#include <math.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,14 +92,16 @@ static const uint8_t gControllerUid[16] = {
 static const tSynthLibParam gParams[G2_NUM_PARAMS] = {
     // The eight morph groups are the G2's own performance controls, so they are the right things to
     // put in front of a host: automating a morph is the nearest thing to playing the hardware.
-    { 0, "Morph 1", "Morph 1", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_MOD_WHEEL },
-    { 1, "Morph 2", "Morph 2", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_NONE },
-    { 2, "Morph 3", "Morph 3", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_NONE },
-    { 3, "Morph 4", "Morph 4", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_AFTERTOUCH },
-    { 4, "Morph 5", "Morph 5", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_SUSTAIN },
-    { 5, "Morph 6", "Morph 6", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_FOOT },
-    { 6, "Morph 7", "Morph 7", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_NONE },
-    { 7, "Morph 8", "Morph 8", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_NONE },
+    // NOT SAVED, like the bend below: a project reopens with the wheel and pedals at rest, as the
+    // hardware powers up, not wherever they were left - a wheel left up opens the filter it morphs.
+    { 0, "Morph 1", "Morph 1", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_MOD_WHEEL, SYNTHLIB_PARAM_NO_SAVE },
+    { 1, "Morph 2", "Morph 2", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_NONE, SYNTHLIB_PARAM_NO_SAVE },
+    { 2, "Morph 3", "Morph 3", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_NONE, SYNTHLIB_PARAM_NO_SAVE },
+    { 3, "Morph 4", "Morph 4", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_AFTERTOUCH, SYNTHLIB_PARAM_NO_SAVE },
+    { 4, "Morph 5", "Morph 5", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_SUSTAIN, SYNTHLIB_PARAM_NO_SAVE },
+    { 5, "Morph 6", "Morph 6", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_FOOT, SYNTHLIB_PARAM_NO_SAVE },
+    { 6, "Morph 7", "Morph 7", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_NONE, SYNTHLIB_PARAM_NO_SAVE },
+    { 7, "Morph 8", "Morph 8", eSynthLibUnitPercent, 0.0, 100.0, 0.0, 0, SYNTHLIB_MIDI_NONE, SYNTHLIB_PARAM_NO_SAVE },
 
     { G2_PARAM_LEVEL, "Output Level", "Level", eSynthLibUnitDecibels,
       G2_LEVEL_MIN_DB, 0.0, 1.0, 0, SYNTHLIB_MIDI_NONE },
@@ -107,7 +110,7 @@ static const tSynthLibParam gParams[G2_NUM_PARAMS] = {
     // it: a VST3 host converts the wheel into a parameter change and can only name a parameter that
     // exists. 0.5 is centre, which is why the default is normalized and not plain.
     { G2_PARAM_BEND, "Pitch Bend", "Bend", eSynthLibUnitGeneric,
-      -1.0, 1.0, 0.5, 0, SYNTHLIB_MIDI_PITCH_BEND }
+      -1.0, 1.0, 0.5, 0, SYNTHLIB_MIDI_PITCH_BEND, SYNTHLIB_PARAM_NO_SAVE }
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -122,6 +125,7 @@ static const tSynthLibParam gParams[G2_NUM_PARAMS] = {
 typedef struct {
     uint32_t offset;
     uint8_t  note;
+    uint8_t  velocity;   // 0-127: the note-on velocity, or the release velocity
     bool     on;
 } tG2NoteEvent;
 
@@ -287,9 +291,9 @@ static void render_span(tG2Plugin * g2, float ** out, uint32_t from, uint32_t fr
 
 static void apply_note(const tG2NoteEvent * e) {
     if (e->on) {
-        note_stack_note_on(e->note);
+        note_stack_note_on(e->note, e->velocity);
     } else {
-        note_stack_note_off(e->note);
+        note_stack_note_off(e->note, e->velocity);
     }
 }
 
@@ -342,8 +346,16 @@ static void g2_process(void * inst,
 
 // Held for g2_process(), or applied at once if a host sends more notes in one block than there is
 // room for - a note early is better than a note lost.
-static void queue_note(tG2Plugin * g2, uint8_t note, bool on, uint32_t sampleOffset) {
-    tG2NoteEvent e = {sampleOffset, note, on};
+// A host's 0-1 velocity as MIDI's 0-127. A note-on never goes below 1, which MIDI would read as an off.
+static uint8_t midi_velocity(float velocity, bool on) {
+    long v = lround((double)velocity * 127.0);
+
+    v = (v > 127) ? 127 : ((v < 0) ? 0 : v);
+    return (uint8_t)(((on == true) && (v < 1)) ? 1 : v);
+}
+
+static void queue_note(tG2Plugin * g2, uint8_t note, float velocity, bool on, uint32_t sampleOffset) {
+    tG2NoteEvent e = {sampleOffset, note, midi_velocity(velocity, on), on};
 
     if (g2->eventCount < (uint32_t)G2_MAX_EVENTS) {
         g2->events[g2->eventCount++] = e;
@@ -362,8 +374,7 @@ static void g2_note_on(void * inst, uint8_t channel, uint8_t note, float velocit
     tG2Plugin * g2 = enter(inst);
 
     (void)channel;
-    (void)velocity;                             // the engine has no velocity response yet
-    queue_note(g2, note, true, sampleOffset);
+    queue_note(g2, note, velocity, true, sampleOffset);
 }
 
 static void g2_note_off(void * inst, uint8_t channel, uint8_t note, float velocity,
@@ -371,8 +382,7 @@ static void g2_note_off(void * inst, uint8_t channel, uint8_t note, float veloci
     tG2Plugin * g2 = enter(inst);
 
     (void)channel;
-    (void)velocity;
-    queue_note(g2, note, false, sampleOffset);
+    queue_note(g2, note, velocity, false, sampleOffset);
 }
 
 static void g2_poly_pressure(void * inst, uint8_t channel, uint8_t note, float pressure,
