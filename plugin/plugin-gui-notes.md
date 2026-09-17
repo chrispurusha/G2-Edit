@@ -661,7 +661,8 @@ mouse event; the tick still stops itself once neither a drag nor an open menu ne
 **Persistence via the application's own `persistence.c`**, which has ZERO GLFW calls and was simply
 never linked. That gives the plug-in zoom, dial mode and the file browser's last folder on the same
 keys the application uses (`zoomFactor`, `dialMode`, `fileBrowserLastDirectory`) rather than a second
-set that could drift. `save_zoom_factor()` stopped being a stub as a result.
+set that could drift. `save_zoom_factor()` stopped being a stub as a result. Since 2026-09-17 `fileBrowserLastDirectory` is
+read from and written to the APPLICATION's prefs.txt rather than G2 Alike's, so the two share it.
 
 The complete set anything persists is: `zoomFactor` and `fileBrowserLastDirectory` (persistence.c),
 plus `dialMode`, `windowWidth`, `windowX`, `windowY` (synthlibPersistence.c). The plug-in takes the

@@ -119,11 +119,11 @@ static void set_sounding_note(int32_t note) {
     // The local sound engine hears the same pair in the same order, after the G2 so nothing here
     // can delay the hardware. A no-op while the engine is off.
     if (note >= 0) {
-        sound_engine_note(note, true);
+        sound_engine_note(note, (uint8_t)gVirtualKeyboard.velocity, true);
     }
 
     if (gVirtualKeyboard.noteOn >= 0) {
-        sound_engine_note(gVirtualKeyboard.noteOn, false);
+        sound_engine_note(gVirtualKeyboard.noteOn, (uint8_t)gVirtualKeyboard.velocity, false);
     }
     gVirtualKeyboard.noteOn = note;
 }
@@ -131,7 +131,7 @@ static void set_sounding_note(int32_t note) {
 // One key of the computer keyboard, to the G2 and to the engine alike. notes §10
 static void key_note(int32_t note, bool on) {
     send_note((uint32_t)note, on);
-    sound_engine_note(note, on);
+    sound_engine_note(note, (uint8_t)gVirtualKeyboard.velocity, on);
 }
 
 // A note left ringing after its key came up, released now that another key has gone down.

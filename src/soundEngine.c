@@ -174,8 +174,11 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define ENV_PARAM_DECAY          (2)
 #define ENV_PARAM_SUSTAIN        (3)
 #define ENV_PARAM_RELEASE        (4)
+#define ENV_PARAM_OUT_TYPE       (5)   // posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv
 #define ENV_PARAM_KB             (6)   // the keyboard gate, not key tracking (manual p.197)
-#define ENV_INPUT_GATE           (1)   // node input: 0 is the audio, 1 the Gate jack
+#define ENV_PARAM_RESET          (7)   // 0 Normal, 1 Reset
+#define ENV_INPUT_GATE           (1)   // node input: 0 is the audio, 1 the Gate jack, 2 AM
+#define ENV_INPUT_AM             (2)
 
 #define LEVAMP_PARAM_GAIN        (0)
 #define LEVAMP_PARAM_TYPE        (1)   // 0 = lin, 1 = exp
@@ -421,7 +424,7 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4};
 #define MAX_NODE_INPUTS        (10)
 
 // §9.3
-#define NODE_OUTPUTS           (3)
+#define NODE_OUTPUTS           (6)
 
 // §9.2
 #define MAX_NODE_LEVELS        (12)
@@ -435,10 +438,20 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4};
 
 // The G2 caps the total pitch modulation reaching an oscillator or filter at +/-64 semitones
 // (manual p.78), which is what an Env amount of 100% corresponds to.
-#define FULL_MOD_SEMITONES     (64.0)
+#define FULL_MOD_SEMITONES      (64.0)
 
 // notes §14
-#define PITCH_MOD_SEMITONES    (64.0)
+#define PITCH_MOD_SEMITONES     (64.0)
+
+// §26 - the Keyboard module's six outputs, in its connector order
+#define KEYBOARD_OUT_PITCH      (0)
+#define KEYBOARD_OUT_GATE       (1)
+#define KEYBOARD_OUT_LIN        (2)
+#define KEYBOARD_OUT_RELEASE    (3)
+#define KEYBOARD_OUT_NOTE       (4)
+#define KEYBOARD_OUT_EXP        (5)
+#define KEYBOARD_OUTPUTS        (6)
+#define KEYBOARD_PITCH_ZERO     (64.0)    // E4 is 0 units (manual p.158)
 
 // notes §15
 static double type_ii_attenuator(double dial) {
@@ -448,7 +461,9 @@ static double type_ii_attenuator(double dial) {
 // Aftertouch's morph group. The G2 hard-wires the eight — morphStrMap lists them Wheel, Vel, Keyb,
 // Aft.Tch, ... — so aftertouch is group 3. midiInput.c has the same constant for the same reason.
 #define MORPH_GROUP_WHEEL         (0)
+#define MORPH_GROUP_VELOCITY      (1)    // §26.2 - per voice, not from gMorphMilli
 #define MORPH_GROUP_AFTERTOUCH    (3)
+#define MORPH_GROUP_SUSTAIN       (4)    // §26.3 - the sustain pedal, which also holds the notes
 
 // patchModuleVibrato's Mod setting, in the order the patch-settings dropdown offers them.
 typedef enum {
@@ -540,6 +555,7 @@ typedef enum {
     eNodeEq,             // §11 - EqPeak, Eq2Band, Eq3band
     eNodeFltComb,        // §13
     eNodeDx,             // §14 - a DXRouter and the Operators patched into it, as one node
+    eNodeKeyboard,       // §26 - the voice's key as six signals
     eNodeOut,
 } tNodeKind;
 
@@ -592,6 +608,8 @@ typedef struct {
     int32_t         envRelHalf;
     int32_t         envRelAdd;
     int32_t         envSustainQ;
+    uint32_t        envOutType;   // §17.6
+    bool            envReset;     // §17.7
     bool            envKeyGate;   // §17.4 - the keys gate it: KB on, or a Gate jack fed by a module not played
 
     double          gain;         // LevAmp
@@ -694,6 +712,7 @@ typedef struct {
     double      bendSemitones;          // 0 when the patch has bend switched off
     uint64_t    topology;               // changes shape => the audio thread resets its per-node state
     uint32_t    voiceCount;             // how many voices this patch may sound at once, 1 for Mono/Legato
+    uint64_t    build;                  // which build this is - the velocity table names the one it belongs to
     tEngineNode node[MAX_ENGINE_NODES];
     tDxOperator dxOp[MAX_DX_OPERATORS]; // §14 - each DXRouter node's six, from its dxBase
     uint32_t    dxOpCount;
@@ -733,11 +752,50 @@ static pthread_mutex_t             gParamsWriteMutexBank[SOUND_ENGINE_MAX_ENGINE
 
 #define PARAMS_READ_ATTEMPTS    (4)   // then keep last good — a retry loop must not spin in audio
 
+// §26.2 - the nodes a Vel morph moves, built at VEL_MORPH_LEVELS velocities. Written under
+// gParamsWriteMutex behind its own sequence, and copied by the audio thread only when that changes.
+#define VEL_MORPH_LEVELS    (32)
+#define MAX_VEL_NODES       (8)
+
+typedef struct {
+    uint64_t    build;                     // tSoundEngineParams.build this belongs to
+    uint32_t    count;                     // nodes in the table; 0 when nothing is velocity-morphed
+    int8_t      column[MAX_ENGINE_NODES];  // a node's column, or -1
+    tEngineNode node[VEL_MORPH_LEVELS][MAX_VEL_NODES];
+} tVelocityNodes;
+
+static tVelocityNodes              gVelNodesBank[SOUND_ENGINE_MAX_ENGINES];
+#define gVelNodes         (gVelNodesBank[SE])
+static _Atomic uint32_t            gVelNodesSeqBank[SOUND_ENGINE_MAX_ENGINES];
+#define gVelNodesSeq      (gVelNodesSeqBank[SE])
+static tVelocityNodes              gVelNodesAudioBank[SOUND_ENGINE_MAX_ENGINES];   // audio thread only
+#define gVelNodesAudio    (gVelNodesAudioBank[SE])
+static uint32_t                    gVelNodesSeenBank[SOUND_ENGINE_MAX_ENGINES];    // audio thread only
+#define gVelNodesSeen     (gVelNodesSeenBank[SE])
+static bool                        gVelUsableBank[SOUND_ENGINE_MAX_ENGINES];       // audio thread only
+#define gVelUsable        (gVelUsableBank[SE])
+static uint8_t                     gLastVelLevelBank[SOUND_ENGINE_MAX_ENGINES];    // audio thread only
+#define gLastVelLevel     (gLastVelLevelBank[SE])
+static uint64_t                    gBuildSerialBank[SOUND_ENGINE_MAX_ENGINES];     // under gParamsWriteMutex
+#define gBuildSerial      (gBuildSerialBank[SE])
+// The last full-velocity build, under gParamsWriteMutex: a changed Vel morph range shows only here.
+static tSoundEngineParams          gVelProbeBank[SOUND_ENGINE_MAX_ENGINES];
+#define gVelProbe         (gVelProbeBank[SE])
+// The Vel morph position a build uses, 0..1. Per thread: two instances build at once on different threads.
+static _Thread_local double        sBuildVelocity;
+
+// §26.3
+static _Atomic bool                gSustainPedalBank[SOUND_ENGINE_MAX_ENGINES];
+#define gSustainPedal      (gSustainPedalBank[SE])
+static bool                        gSustainSeenBank[SOUND_ENGINE_MAX_ENGINES];     // audio thread only
+#define gSustainSeen       (gSustainSeenBank[SE])
+
 // notes §25
-#define NOTE_QUEUE_SIZE         (64)
+#define NOTE_QUEUE_SIZE    (64)
 
 typedef struct {
     int32_t          note;
+    uint8_t          velocity;   // note-on velocity, or the release velocity with a note-off
     bool             on;
     _Atomic uint32_t sequence;   // claim index + 1 once written; 0 means never used
 } tNoteEvent;
@@ -850,44 +908,48 @@ typedef struct {
     uint32_t released;     // samples since its envelopes finished with the key up, 0 until then (notes §20)
     double   fade;         // 1.0 normally; driven to 0 to retire a voice that will not stop on its own
     uint32_t trigger;      // counts note-ons that restart the envelopes - see voice_note_on()
+    uint8_t  velocity;     // the note-on velocity, 1-127 - the Keyboard module's Lin and Exp (§26)
+    uint8_t  release;      // the release velocity, 0 until the key comes up - its Release
+    uint8_t  velLevel;     // §26.2 - which row of the velocity table this note plays
+    bool     sustained;    // §26.3 - its key is up but the sustain pedal holds it
 } tVoice;
 
-static tVoice                      gVoiceBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES];
+static tVoice             gVoiceBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES];
 #define gVoice         (gVoiceBank[SE])
-static uint64_t                    gVoiceClockBank[SOUND_ENGINE_MAX_ENGINES];
+static uint64_t           gVoiceClockBank[SOUND_ENGINE_MAX_ENGINES];
 #define gVoiceClock    (gVoiceClockBank[SE])
 
 // notes §31
-static _Atomic uint32_t            gEngineVoicesBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1};
+static _Atomic uint32_t   gEngineVoicesBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1};
 #define gEngineVoices    (gEngineVoicesBank[SE])
 
 // Whether the patch is in LEGATO voice mode, the one mode where a key played while another is held
 // does not restart the envelopes. Published beside gEngineVoices for the same reason: it is read by
 // voice_note_on() on the audio thread, per note, where copying the snapshot to ask would be absurd.
-static _Atomic bool                gEngineLegatoBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic bool       gEngineLegatoBank[SOUND_ENGINE_MAX_ENGINES];
 #define gEngineLegato    (gEngineLegatoBank[SE])
 
 // Mono OR Legato: the modes where releasing the sounding key goes back to one still held. §15.2
-static _Atomic bool                gEngineMonoBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic bool       gEngineMonoBank[SOUND_ENGINE_MAX_ENGINES];
 #define gEngineMono       (gEngineMonoBank[SE])
 
 // §15.1 - the keys held down, as a count per key. Audio thread only: voice_note_on/off keep it.
 #define MIDI_KEY_COUNT    (128)
-static uint8_t                     gKeyHeldBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_COUNT];
+static uint8_t            gKeyHeldBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_COUNT];
 #define gKeyHeld          (gKeyHeldBank[SE])
 
 // notes §32
-static _Atomic uint32_t            gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic uint32_t   gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
 #define gLoadPercent    (gLoadPercentBank[SE])
 
 static void reset_voices(void);
 static uint32_t voice_count_for_patch(uint32_t slot);
 
-static double                      gVibratoPhaseBank[SOUND_ENGINE_MAX_ENGINES];
+static double             gVibratoPhaseBank[SOUND_ENGINE_MAX_ENGINES];
 #define gVibratoPhase        (gVibratoPhaseBank[SE])
-static tSoundEngineParams          gLastGoodParamsBank[SOUND_ENGINE_MAX_ENGINES];
+static tSoundEngineParams gLastGoodParamsBank[SOUND_ENGINE_MAX_ENGINES];
 #define gLastGoodParams      (gLastGoodParamsBank[SE])
-static uint64_t                    gSeenTopologyBank[SOUND_ENGINE_MAX_ENGINES];
+static uint64_t           gSeenTopologyBank[SOUND_ENGINE_MAX_ENGINES];
 #define gSeenTopology        (gSeenTopologyBank[SE])
 
 // notes §33
@@ -900,38 +962,38 @@ static uint64_t                    gSeenTopologyBank[SOUND_ENGINE_MAX_ENGINES];
 // transition width, not the oversampling factor, is what governs the result.
 #define OUT_DECIMATE_TAPS    (64)
 
-static double                      gOutDecimateBank[SOUND_ENGINE_MAX_ENGINES][OUT_DECIMATE_TAPS];
+static double             gOutDecimateBank[SOUND_ENGINE_MAX_ENGINES][OUT_DECIMATE_TAPS];
 #define gOutDecimate         (gOutDecimateBank[SE])
-static double                      gOutHistoryBank[SOUND_ENGINE_MAX_ENGINES][4][OUT_DECIMATE_TAPS]; // [pair*2 + channel]; one shared cursor, see the render loop
+static double             gOutHistoryBank[SOUND_ENGINE_MAX_ENGINES][4][OUT_DECIMATE_TAPS];          // [pair*2 + channel]; one shared cursor, see the render loop
 #define gOutHistory          (gOutHistoryBank[SE])
-static uint32_t                    gOutHistoryPosBank[SOUND_ENGINE_MAX_ENGINES];
+static uint32_t           gOutHistoryPosBank[SOUND_ENGINE_MAX_ENGINES];
 #define gOutHistoryPos       (gOutHistoryPosBank[SE])
 
-static double                      gOscDecimateBank[SOUND_ENGINE_MAX_ENGINES][OSC_DECIMATE_TAPS];
+static double             gOscDecimateBank[SOUND_ENGINE_MAX_ENGINES][OSC_DECIMATE_TAPS];
 #define gOscDecimate         (gOscDecimateBank[SE])
 
 // notes §35
-static float                       gOscHistoryBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
+static float              gOscHistoryBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
 #define gOscHistory       (gOscHistoryBank[SE])
-static uint32_t                    gOscHistoryPosBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t           gOscHistoryPosBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gOscHistoryPos    (gOscHistoryPosBank[SE])
 
-static double                      gPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double             gPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 // §7.1
-static uint32_t                    gNoiseSeedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t           gNoiseSeedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gNoiseSeed       (gNoiseSeedBank[SE])
-static double                      gNoiseLpBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double             gNoiseLpBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gNoiseLp         (gNoiseLpBank[SE])
 #define gPhase           (gPhaseBank[SE])
-static double                      gLfoLastPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double             gLfoLastPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gLfoLastPhase    (gLfoLastPhaseBank[SE])
-static double                      gLfoTargetBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double             gLfoTargetBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gLfoTarget       (gLfoTargetBank[SE])
-static double                      gLfoHeldBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double             gLfoHeldBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gLfoHeld         (gLfoHeldBank[SE])
-static double                      gSuperPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][2];
+static double             gSuperPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][2];
 #define gSuperPhase      (gSuperPhaseBank[SE])
-static double                      gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][FILTER_STATE_SLOTS];
+static double             gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][FILTER_STATE_SLOTS];
 #define gLadder          (gLadderBank[SE])
 
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
@@ -940,56 +1002,56 @@ static double                      gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOI
 #define MAX_DELAY_LINES       (4)
 // notes §36
 #define DELAY_LINE_SAMPLES    (134400 * ENGINE_OVERSAMPLE)
-static float                       gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
+static float              gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
 #define MAX_COMB_LINES        (2)        // FltCombs per patch that sound; any more pass their input dry
 #define COMB_LINE_SAMPLES     (16384)    // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
-static float                       gCombLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES][COMB_LINE_SAMPLES];
+static float              gCombLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES][COMB_LINE_SAMPLES];
 #define gCombLine             (gCombLineBank[SE])
-static uint32_t                    gCombWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];
+static uint32_t           gCombWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];
 #define gCombWrite            (gCombWriteBank[SE])
 #define gDelayLine            (gDelayLineBank[SE])
-static uint32_t                    gDelayWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
+static uint32_t           gDelayWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
 #define gDelayWrite           (gDelayWriteBank[SE])
-static double                      gDelayDampBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
+static double             gDelayDampBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
 #define gDelayDamp            (gDelayDampBank[SE])
-static double                      gDelayHpBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];     // the HP's lowpass half; the filter is x - this
+static double             gDelayHpBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];              // the HP's lowpass half; the filter is x - this
 #define gDelayHp              (gDelayHpBank[SE])
-static double                      gDelayHpBBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];    // §24.2 - the HP's second state
+static double             gDelayHpBBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];             // §24.2 - the HP's second state
 #define gDelayHpB             (gDelayHpBBank[SE])
-static double                      gDelayFbBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];     // §24.1 - last sample's feedback, written with this one
+static double             gDelayFbBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];              // §24.1 - last sample's feedback, written with this one
 #define gDelayFb              (gDelayFbBank[SE])
-static double                      gDelayModBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][3]; // §24.6 - FB, wet, dry, from last sample
+static double             gDelayModBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][3];          // §24.6 - FB, wet, dry, from last sample
 #define gDelayMod             (gDelayModBank[SE])
 
 // notes §37
 
 #define CHORUS_SAMPLES     (2048 * ENGINE_OVERSAMPLE)
 #define CHORUS_CHANNELS    (2)
-static float                       gChorusLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS][CHORUS_SAMPLES];
+static float              gChorusLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS][CHORUS_SAMPLES];
 #define gChorusLine        (gChorusLineBank[SE])
-static uint32_t                    gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS];
+static uint32_t           gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS];
 #define gChorusWrite       (gChorusWriteBank[SE])
-static int32_t                     gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static int32_t            gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gChorusPhase       (gChorusPhaseBank[SE])         // §19.2 - a signed 24-bit LFO phase
-static int32_t                     gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static int32_t            gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gChorusTrim        (gChorusTrimBank[SE])          // §19.2 - this instance's rate trim
-static double                      gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double             gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gChorusTick        (gChorusTickBank[SE])
 static void chorus_reset(uint32_t node);
 
 // Pulse: the countdown still to run, and the previous input, so a rising edge can be seen. Per voice,
 // because the gate is fired by that voice's own envelope.
-static uint32_t                    gPulseCountBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t           gPulseCountBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gPulseCount    (gPulseCountBank[SE])
-static double                      gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double             gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gPulsePrev     (gPulsePrevBank[SE])
 
 // Compressor gain-reduction state, one per node.
-static double                      gCompEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double             gCompEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gCompEnv             (gCompEnvBank[SE])
-static double                      gCompGrBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];  // §25.2 - the smoothed gain reduction
+static double             gCompGrBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];           // §25.2 - the smoothed gain reduction
 #define gCompGr              (gCompGrBank[SE])
-static double                      gCompLimBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES]; // §25.2 - the Level limiter
+static double             gCompLimBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];          // §25.2 - the Level limiter
 #define gCompLim             (gCompLimBank[SE])
 
 // §20 - the reverb: the instrument's own network, run on one ring of delay memory.
@@ -1009,7 +1071,7 @@ static double                      gCompLimBank[SOUND_ENGINE_MAX_ENGINES][MAX_VO
 #define RV_COEF              (8388608.0)             // its coefficients' grid
 #define RV_TOP               (4.0 - (1.0 / RV_WORD)) // the largest word: four times full scale
 
-static const float                 kRvRoomSize[REVERB_TYPE_COUNT] = {0.78f, 0.98f, 1.19f, 1.31f};
+static const float        kRvRoomSize[REVERB_TYPE_COUNT] = {0.78f, 0.98f, 1.19f, 1.31f};
 
 // §20.2 - the named positions of the network: a tap constant, and a fixed step from its tap.
 typedef enum {
@@ -1234,6 +1296,8 @@ bool sound_engine_drone_mode(void) {
     return atomic_load(&gDroneMode);
 }
 
+#define SUSTAIN_PEDAL_DOWN    (0.5)   // CC64 at 64 and above, as MIDI has it
+
 bool sound_engine_set_morph(uint32_t group, double amount) {
     SE_LOCAL;
 
@@ -1250,6 +1314,9 @@ bool sound_engine_set_morph(uint32_t group, double amount) {
     }
     scaled = (uint32_t)(amount * 1000.0);
 
+    if (group == MORPH_GROUP_SUSTAIN) {
+        atomic_store(&gSustainPedal, amount >= SUSTAIN_PEDAL_DOWN);
+    }
     // A controller repeating its current value is common — a wheel resting at zero, a sustain pedal
     // held down — and each one would otherwise cost a redraw of the whole patch.
     return atomic_exchange(&gMorphMilli[group], scaled) != scaled;
@@ -1300,7 +1367,8 @@ static double param_value(tModule * module, uint32_t variation, uint32_t index) 
         }
         {
             int32_t offset = (raw < 128) ? (int32_t)raw : ((int32_t)raw - 256);
-            double  amount = (double)atomic_load(&gMorphMilli[group]) / 1000.0;
+            double  amount = (group == MORPH_GROUP_VELOCITY) ? sBuildVelocity
+                             : ((double)atomic_load(&gMorphMilli[group]) / 1000.0);
 
             value += (double)offset * amount;
         }
@@ -1612,7 +1680,7 @@ const char * sound_engine_debug_text(void) {
         "Osc",      "OscShp",   "Filter",  "LevAmp", "LevMult",   "Mix",   "Env",
         "Chorus",   "Compress", "Delay",   "Reverb", "Lfo",       "Const", "FxIn",
         "PassThru", "Pulse",    "Shaper",  "Fade",   "MixStereo", "Noise", "OscNoise",
-        "FltMulti", "Eq",       "FltComb", "Dx",     "Out"
+        "FltMulti", "Eq",       "FltComb", "Dx",     "Keyboard",  "Out"
     };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
@@ -1647,14 +1715,15 @@ const char * sound_engine_debug_text(void) {
     return text;
 }
 
-void sound_engine_note(int32_t note, bool on) {
+void sound_engine_note(int32_t note, uint8_t velocity, bool on) {
     SE_LOCAL;
 
     uint32_t claim = atomic_fetch_add(&gNoteWrite, 1);
     uint32_t slot  = claim % NOTE_QUEUE_SIZE;
 
-    gNoteQueue[slot].note = note;
-    gNoteQueue[slot].on   = on;
+    gNoteQueue[slot].note     = note;
+    gNoteQueue[slot].velocity = velocity;
+    gNoteQueue[slot].on       = on;
 
     // Published last: the consumer treats a slot as filled only once this matches.
     atomic_store(&gNoteQueue[slot].sequence, claim + 1);
@@ -1764,7 +1833,12 @@ static uint32_t voice_to_allocate(uint32_t count, int32_t note) {
     return voice_to_steal(count, note);
 }
 
-static void voice_note_on(int32_t note) {
+// §26.2 - the velocity table row nearest a velocity
+static uint8_t velocity_level(uint8_t velocity) {
+    return (uint8_t)lround(((double)velocity * (double)(VEL_MORPH_LEVELS - 1)) / 127.0);
+}
+
+static void voice_note_on(int32_t note, uint8_t velocity) {
     SE_LOCAL;
 
     uint32_t count = atomic_load(&gEngineVoices);
@@ -1791,11 +1865,16 @@ static void voice_note_on(int32_t note) {
         voice->glidePitch = (double)note;   // first note this voice has had: start where it is played
     }
     voice->note        = note;
+    voice->velocity    = velocity;
+    voice->velLevel    = velocity_level(velocity);
+    voice->sustained   = false;
+    voice->release     = 0;
     voice->gate        = true;
     voice->sounding    = true;
     voice->released    = 0;
     voice->fade        = 1.0;   // a stolen voice may have been fading; this note cancels that
     voice->age         = ++gVoiceClock;
+    gLastVelLevel      = voice->velLevel;
 
     if ((note < MIDI_KEY_COUNT) && (gKeyHeld[note] < UINT8_MAX)) {
         gKeyHeld[note]++;
@@ -1804,14 +1883,18 @@ static void voice_note_on(int32_t note) {
 
 // A note-off names its key; -1 is all-notes-off. A released voice keeps its note and goes on
 // sounding its release at the pitch it was played at - unless §15.2 sends it back to a held key.
-static void voice_note_off(int32_t note) {
+static void voice_note_off(int32_t note, uint8_t release) {
     SE_LOCAL;
 
     if (note < 0) {
         memset(gKeyHeld, 0, sizeof(gKeyHeld));
 
         for (uint32_t v = 0; v < MAX_VOICES; v++) {
-            gVoice[v].gate = false;
+            if (gVoice[v].gate == true) {
+                gVoice[v].release = release;
+            }
+            gVoice[v].gate      = false;
+            gVoice[v].sustained = false;
         }
 
         return;
@@ -1834,7 +1917,14 @@ static void voice_note_off(int32_t note) {
         }
 
         if ((mono == false) || (highest < 0)) {
-            voice->gate = false;
+            voice->release = release;
+
+            // §26.3
+            if (atomic_load(&gSustainPedal) == true) {
+                voice->sustained = true;
+            } else {
+                voice->gate = false;
+            }
             continue;
         }
         // notes §189
@@ -1911,8 +2001,27 @@ uint32_t sound_engine_voices_sounding(void) {
 // Audio thread. Applies the next queued event if there is one, returning false when the queue is
 // empty. Called per sample, so a note lands on the sample it arrived rather than at the next buffer
 // boundary.
+// §26.3 - the pedal coming up releases every note it was holding
+static void sustain_pedal_follow(void) {
+    SE_LOCAL;
+
+    bool down = atomic_load(&gSustainPedal);
+
+    if ((down == false) && (gSustainSeen == true)) {
+        for (uint32_t v = 0; v < MAX_VOICES; v++) {
+            if (gVoice[v].sustained == true) {
+                gVoice[v].sustained = false;
+                gVoice[v].gate      = false;
+            }
+        }
+    }
+    gSustainSeen = down;
+}
+
 static bool take_next_note_event(void) {
     SE_LOCAL;
+
+    sustain_pedal_follow();
 
     uint32_t write = atomic_load(&gNoteWrite);
     uint32_t slot  = 0;
@@ -1932,9 +2041,9 @@ static bool take_next_note_event(void) {
     }
 
     if ((gNoteQueue[slot].on == true) && (gNoteQueue[slot].note >= 0)) {
-        voice_note_on(gNoteQueue[slot].note);
+        voice_note_on(gNoteQueue[slot].note, gNoteQueue[slot].velocity);
     } else {
-        voice_note_off(gNoteQueue[slot].note);
+        voice_note_off(gNoteQueue[slot].note, gNoteQueue[slot].velocity);
     }
     gNoteRead++;
     return true;
@@ -2056,7 +2165,20 @@ static const tLfoParams * lfo_params(tModuleType type) {
 
 // §9.3
 static uint32_t node_output_legs(tNodeKind kind) {
-    return (kind == eNodeFltMulti) ? 3u : 2u;
+    switch (kind) {
+        case eNodeFltMulti:
+        {
+            return 3u;
+        }
+        case eNodeKeyboard:
+        {
+            return KEYBOARD_OUTPUTS;
+        }
+        default:
+        {
+            return 2u;
+        }
+    }
 }
 
 static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial, double fbModDial, double mixModDial); // §24.2
@@ -2226,6 +2348,11 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeOut;
             return true;
         }
+        case moduleTypeKeyboard:
+        {
+            *kind = eNodeKeyboard;
+            return true;
+        }
         default:
         {
             return false;
@@ -2373,7 +2500,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeEnv:
         {
-            uint32_t count = inputs_in_module_order(moduleType, 2u, derived);    // In, Gate
+            uint32_t count = inputs_in_module_order(moduleType, 3u, derived);    // In, Gate, AM
             *connectors = derived;
             return count;
         }
@@ -3233,11 +3360,11 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeEnv:
         {
             // Read raw: Shape is a drop-down, and drop-downs cannot be morphed (manual p.20).
-            node->wave    = (tOscWave)module->param[variation][ENV_PARAM_SHAPE].value;
-            node->attack  = env_attack_seconds(param_value(module, variation, ENV_PARAM_ATTACK), (uint32_t)node->wave);
-            node->decay   = env_time_seconds(param_value(module, variation, ENV_PARAM_DECAY));
-            node->sustain = dial_fraction(param_value(module, variation, ENV_PARAM_SUSTAIN));   // §16.3
-            node->release = env_time_seconds(param_value(module, variation, ENV_PARAM_RELEASE));
+            node->wave       = (tOscWave)module->param[variation][ENV_PARAM_SHAPE].value;
+            node->attack     = env_attack_seconds(param_value(module, variation, ENV_PARAM_ATTACK), (uint32_t)node->wave);
+            node->decay      = env_time_seconds(param_value(module, variation, ENV_PARAM_DECAY));
+            node->sustain    = dial_fraction(param_value(module, variation, ENV_PARAM_SUSTAIN)); // §16.3
+            node->release    = env_time_seconds(param_value(module, variation, ENV_PARAM_RELEASE));
             env_rates_build(node);
 
             // §17.4
@@ -3249,6 +3376,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
                 node->envKeyGate = (module->param[variation][ENV_PARAM_KB].value != 0) || unplayed;
             }
+            // Read raw, like Shape: both are selectors
+            node->envOutType = module->param[variation][ENV_PARAM_OUT_TYPE].value;
+            node->envReset   = (module->param[variation][ENV_PARAM_RESET].value != 0);
             break;
         }
         case eNodePulse:
@@ -3400,16 +3530,16 @@ static void mark_post_mix_nodes(tSoundEngineParams * params) {
     }
 }
 
-void sound_engine_update_from_patch(void) {
+// The whole chain from the patch, at the Vel morph position sBuildVelocity. Database read lock held.
+static void build_snapshot(tSoundEngineParams * out) {
     SE_LOCAL;
 
-    tSoundEngineParams snapshot  = {0};
-    tModule *          tapModule = NULL;
-    uint32_t           variation = 0;
+    static _Thread_local tSoundEngineParams snapshot;
+    tModule *                               tapModule = NULL;
+    uint32_t                                variation = 0;
 
-    if (atomic_load(&gActive) == false) {
-        return;
-    }
+    // Zeroed whole, padding too: whether a build changed anything is decided by comparing bytes.
+    memset(&snapshot, 0, sizeof(snapshot));
     snapshot.tap = -1;
 
     // Glide and Bend come from the patch, not from any module in the chain — they sit on hidden
@@ -3529,6 +3659,61 @@ void sound_engine_update_from_patch(void) {
     snapshot.topology   = topology_signature(&snapshot);
     snapshot.voiceCount = voice_count_for_patch(engine_slot());
 
+    memcpy(out, &snapshot, sizeof(snapshot));
+}
+
+// §26.2 - velocity table. Called under gParamsWriteMutex, with the base build (Vel morph at 0) in hand.
+static void build_velocity_nodes(const tSoundEngineParams * base, const tSoundEngineParams * probe) {
+    SE_LOCAL;
+
+    static _Thread_local tSoundEngineParams level;
+    uint32_t                                count = 0;
+
+    atomic_fetch_add(&gVelNodesSeq, 1);    // odd while the table is being written
+    gVelNodes.build = base->build;
+    gVelNodes.count = 0;
+    memset(gVelNodes.column, -1, sizeof(gVelNodes.column));
+
+    // The nodes that move are the ones the full-velocity build does not agree with.
+    if ((probe->nodeCount == base->nodeCount) && (probe->topology == base->topology)) {
+        for (uint32_t n = 0; (n < base->nodeCount) && (count < MAX_VEL_NODES); n++) {
+            if (memcmp(&probe->node[n], &base->node[n], sizeof(tEngineNode)) != 0) {
+                gVelNodes.column[n] = (int8_t)count++;
+            }
+        }
+    }
+
+    for (uint32_t row = 0; (count > 0) && (row < VEL_MORPH_LEVELS); row++) {
+        sBuildVelocity = (double)row / (double)(VEL_MORPH_LEVELS - 1);
+        build_snapshot(&level);
+
+        for (uint32_t n = 0; n < base->nodeCount; n++) {
+            if (gVelNodes.column[n] >= 0) {
+                gVelNodes.node[row][gVelNodes.column[n]] = level.node[n];
+            }
+        }
+    }
+
+    sBuildVelocity  = 0.0;
+    gVelNodes.count = count;
+    atomic_fetch_add(&gVelNodesSeq, 1);
+}
+
+void sound_engine_update_from_patch(void) {
+    SE_LOCAL;
+
+    static _Thread_local tSoundEngineParams snapshot;
+    static _Thread_local tSoundEngineParams probe;
+
+    if (atomic_load(&gActive) == false) {
+        return;
+    }
+    // §26.2 - at full velocity as well, so a changed Vel morph range is seen even when nothing else moved
+    sBuildVelocity = 1.0;
+    build_snapshot(&probe);
+    sBuildVelocity = 0.0;
+    build_snapshot(&snapshot);
+
     // How many voices the audio thread may allocate. Published separately as well as in the snapshot
     // because the note stack asks the same question from the MIDI thread, where reading the whole
     // snapshot to answer it would be absurd.
@@ -3536,12 +3721,61 @@ void sound_engine_update_from_patch(void) {
     atomic_store(&gEngineLegato, gPatchDescr[engine_slot()].monoPoly == monoPolyLegato);
     atomic_store(&gEngineMono, gPatchDescr[engine_slot()].monoPoly != monoPolyPoly);
 
-    // The snapshot above was built into a local, so only this section needs the writers' mutex.
+    // The snapshot above was built outside the writers' mutex; the velocity table is built inside it,
+    // since it is written in place.
     pthread_mutex_lock(&gParamsWriteMutex);
+    // Rebuilt on every redraw, so the velocity table is rebuilt only when the chain really changed.
+    snapshot.build = gParams.build;
+    probe.build    = gParams.build;
+
+    if (  (memcmp(&snapshot, &gParams, sizeof(snapshot)) != 0)
+       || (memcmp(&probe, &gVelProbe, sizeof(probe)) != 0)) {
+        snapshot.build = ++gBuildSerial;
+        probe.build    = snapshot.build;
+        memcpy(&gVelProbe, &probe, sizeof(probe));
+        build_velocity_nodes(&snapshot, &probe);
+    }
     atomic_fetch_add(&gParamsSeq, 1);    // now odd — a reader seeing this discards its copy
-    gParams             = snapshot;
+    memcpy(&gParams, &snapshot, sizeof(snapshot));
     atomic_fetch_add(&gParamsSeq, 1);    // even again, snapshot is whole
     pthread_mutex_unlock(&gParamsWriteMutex);
+}
+
+// §26.2 - audio thread: take the velocity table when a new one is whole, and use it only with its own build.
+static void refresh_velocity_nodes(uint64_t build) {
+    SE_LOCAL;
+
+    uint32_t seq = atomic_load(&gVelNodesSeq);
+
+    if ((seq != gVelNodesSeen) && ((seq & 1u) == 0u)) {
+        gVelNodesAudio.build = gVelNodes.build;
+        gVelNodesAudio.count = gVelNodes.count;
+        memcpy(gVelNodesAudio.column, gVelNodes.column, sizeof(gVelNodesAudio.column));
+
+        if (gVelNodesAudio.count > 0) {
+            memcpy(gVelNodesAudio.node, gVelNodes.node, sizeof(gVelNodesAudio.node));
+        }
+        atomic_thread_fence(memory_order_acquire);
+
+        if (atomic_load(&gVelNodesSeq) == seq) {
+            gVelNodesSeen = seq;
+        } else {
+            gVelNodesAudio.count = 0;    // torn - try again next buffer
+        }
+    }
+    gVelUsable = (gVelNodesAudio.count > 0) && (gVelNodesAudio.build == build);
+}
+
+// §26.2 - the node a voice plays: its velocity's row where a Vel morph moves it
+static const tEngineNode * voice_node(const tEngineNode * base, uint32_t n, uint32_t voice) {
+    SE_LOCAL;
+
+    if ((gVelUsable == false) || (gVelNodesAudio.column[n] < 0)) {
+        return base;
+    }
+    uint8_t row = (base->postMix == true) ? gLastVelLevel : gVoice[voice].velLevel;
+
+    return &gVelNodesAudio.node[row][gVelNodesAudio.column[n]];
 }
 
 // Audio thread half of the seqlock. Returns the newest whole snapshot, or the last one it managed to
@@ -4821,6 +5055,12 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
                || ((spec->envKeyGate == true) && (gEnvTrigger[voice][node] != gVoice[voice].trigger))) {
                 gEnvStage[voice][node]   = eEnvAttack;   // from the level it is at - §17.3
                 gEnvTrigger[voice][node] = gVoice[voice].trigger;
+
+                // §17.7 - Reset starts it from zero, in the tick the gate rises
+                if (spec->envReset == true) {
+                    gEnvQ[voice][node]     = 0;
+                    gEnvLevel[voice][node] = 0.0;
+                }
             }
         } else if (gEnvStage[voice][node] != eEnvIdle) {
             gEnvStage[voice][node] = eEnvRelease;
@@ -5429,16 +5669,80 @@ static void meter_node(const tEngineNode * spec, uint32_t n, double left, double
     }
 }
 
+typedef enum {
+    eEnvOutPos = 0,
+    eEnvOutPosInv,
+    eEnvOutNeg,
+    eEnvOutNegInv,
+    eEnvOutBip,
+    eEnvOutBipInv,
+} tEnvOutType;   // posStrMap order
+
+// §17.6 - the Output Type: the level (already times AM) inverted and offset. The bipolar pair are
+// offset by Sustain, not by full scale, so the sustain stage sits at zero.
+static double env_output(const tEngineNode * spec, double level) {
+    double sustain = (double)spec->envSustainQ / ENV_FULL_SCALE_STEPS;
+
+    switch (spec->envOutType) {
+        case eEnvOutPosInv:
+        {
+            return 1.0 - level;
+        }
+        case eEnvOutNeg:
+        {
+            return level - 1.0;
+        }
+        case eEnvOutNegInv:
+        {
+            return -level;
+        }
+        case eEnvOutBip:
+        {
+            return level - sustain;
+        }
+        case eEnvOutBipInv:
+        {
+            return sustain - level;
+        }
+        default:
+        {
+            return level;
+        }
+    }
+}
+
+// §26 - the Keyboard module's outputs, in its connector order. One unit a semitone about E4 for the
+// two pitches, full scale for the gate, and the velocities through the instrument's own curves.
+static void keyboard_step(uint32_t voice, double voicePitch, double * out) {
+    SE_LOCAL;
+
+    const tVoice * v   = &gVoice[voice];
+    double         lin = (double)v->velocity / 127.0;
+
+    out[KEYBOARD_OUT_PITCH]   = (voicePitch - KEYBOARD_PITCH_ZERO) / PITCH_MOD_SEMITONES;
+    out[KEYBOARD_OUT_GATE]    = (v->gate == true) ? 1.0 : 0.0;
+    out[KEYBOARD_OUT_LIN]     = lin;
+    out[KEYBOARD_OUT_RELEASE] = (double)v->release / 127.0;
+    out[KEYBOARD_OUT_NOTE]    = ((v->note >= 0) ? ((double)v->note - KEYBOARD_PITCH_ZERO) : 0.0) / PITCH_MOD_SEMITONES;
+    out[KEYBOARD_OUT_EXP]     = lin * lin * lin;
+}
+
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
                       double value[][NODE_OUTPUTS], double voicePitch) {
     SE_LOCAL;
 
-    const tEngineNode * spec = &paramsIn->node[n];
-    double              a    = signal_in(spec, value, 0);
+    const tEngineNode * base   = &paramsIn->node[n];
+    const tEngineNode * spec   = voice_node(base, n, voice);
+    // The smoothed dial values follow the knob; a voice's velocity moves them by its own offset.
+    double              shape  = gSmoothedShape[n] + (spec->shape - base->shape);
+    double              cutoff = gSmoothedCutoff[n] + (spec->cutoffParam - base->cutoffParam);
+    double              res    = gSmoothedRes[n] + (spec->resonance - base->resonance);
+    double              gain   = gSmoothedGain[n] + (spec->gain - base->gain);
+    double              a      = signal_in(spec, value, 0);
 
-    value[n][0] = 0.0;
-    value[n][1] = 0.0;
-    value[n][2] = 0.0;
+    for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
+        value[n][leg] = 0.0;
+    }
 
     switch (spec->kind) {
         case eNodeLfo:
@@ -5464,7 +5768,6 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             // Connector 0 is the direct Pitch input, connector 1 the knob-attenuated
             // PitchVar — see oscillator_step().
-            double shape = gSmoothedShape[n];
 
             if ((spec->kind == eNodeOsc) && (spec->wave == eOscWaveDual)) {    // §12.4
                 double sawPhase = spec->dualSawPhase + (spec->dualPhaseMod * signal_in(spec, value, 3));
@@ -5482,7 +5785,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             // spec->fltGain is FltNord's GC and is 1.0 for every other filter, so this costs a
             // multiply and changes nothing where the module has no such control.
             value[n][0] = filter_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch,
-                                      gSmoothedCutoff[n], gSmoothedRes[n]) * spec->fltGain;
+                                      cutoff, res) * spec->fltGain;
             break;
         }
         case eNodeDx:
@@ -5491,11 +5794,18 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             value[n][1] = value[n][0];
             break;
         }
+        case eNodeKeyboard:
+        {
+            keyboard_step(voice, voicePitch, value[n]);
+            break;
+        }
         case eNodeEnv:
         {
             // §17.4
             bool   gate = ((spec->envKeyGate == true) && (gVoice[voice].gate == true)) || (signal_in(spec, value, ENV_INPUT_GATE) > 0.0);
-            double env  = envelope_step(voice, n, spec, gate);
+            // §17.5 - an unpatched AM is full scale
+            double am   = (spec->in[ENV_INPUT_AM] >= 0) ? fmin(fmax(signal_in(spec, value, ENV_INPUT_AM), -1.0), 1.0) : 1.0;
+            double env  = env_output(spec, envelope_step(voice, n, spec, gate) * am);
 
             // Output 0 is the envelope itself, for patching at a modulation input. Output 1
             // is whatever audio is patched into the module, shaped by that envelope — the
@@ -5506,7 +5816,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeLevAmp:
         {
-            value[n][0] = a * gSmoothedGain[n];
+            value[n][0] = a * gain;
             break;
         }
         case eNodeLevMult:
@@ -5530,7 +5840,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             double legs[3] = {0.0, 0.0, 0.0};
 
             fltmulti_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch,
-                          gSmoothedCutoff[n], gSmoothedRes[n], legs);
+                          cutoff, res, legs);
             value[n][0] = legs[0];
             value[n][1] = legs[1];
             value[n][2] = legs[2];
@@ -5545,7 +5855,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             value[n][0] = ((spec->active == true) && (spec->line < MAX_COMB_LINES))
                               ? fltcomb_step(voice, spec, a, signal_in(spec, value, 2), signal_in(spec, value, 1), voicePitch,
-                                             gSmoothedCutoff[n], signal_in(spec, value, 3))
+                                             cutoff, signal_in(spec, value, 3))
                               : a;
             break;
         }
@@ -5575,8 +5885,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             for (uint32_t c = 0; c < spec->inCount; c++) {
                 double in = signal_in(spec, value, c);
 
-                left  += in * gSmoothedLevel[n][2u * c];
-                right += in * gSmoothedLevel[n][(2u * c) + 1];
+                left  += in * (gSmoothedLevel[n][2u * c] + (spec->level[2u * c] - base->level[2u * c]));
+                right += in * (gSmoothedLevel[n][(2u * c) + 1] + (spec->level[(2u * c) + 1] - base->level[(2u * c) + 1]));
             }
 
             value[n][0] = left;
@@ -5586,7 +5896,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeFade:
         {
             bool   oneIn = (spec->fadeKind == eFadePan) || (spec->fadeKind == eFadeOneToTwo);
-            double pos   = gSmoothedShape[n] + (MOD_INPUT_SCALE * spec->fadeMod * signal_in(spec, value, oneIn ? 1u : 2u));
+            double pos   = shape + (MOD_INPUT_SCALE * spec->fadeMod * signal_in(spec, value, oneIn ? 1u : 2u));
             double wa    = 0.0;
             double wb    = 0.0;
 
@@ -5622,7 +5932,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 uint32_t channel = stereoPairs ? (c / 2) : c;
                 uint32_t leg     = stereoPairs ? (c % 2) : 0u;
 
-                value[n][leg] += signal_in(spec, value, c) * gSmoothedLevel[n][channel];
+                value[n][leg] += signal_in(spec, value, c) * (gSmoothedLevel[n][channel] + (spec->level[channel] - base->level[channel]));
             }
 
             break;
@@ -5674,9 +5984,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             // The two legs stay apart — see the bridge in add_node() for why leg 1 is resolved at
             // all. `a` is the feeder's left, input 1 its right.
-            value[n][0] = (spec->active == true) ? (a * gSmoothedGain[n]) : 0.0;
+            value[n][0] = (spec->active == true) ? (a * gain) : 0.0;
             value[n][1] = (spec->active == true)
-                          ? (signal_in(spec, value, 1) * gSmoothedGain[n]) : 0.0;
+                          ? (signal_in(spec, value, 1) * gain) : 0.0;
             break;
         }
         case eNodePassThru:
@@ -5701,8 +6011,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 if (haveRight == false) {
                     right = left;
                 }
-                value[n][0] = left * gSmoothedGain[n];
-                value[n][1] = right * gSmoothedGain[n];
+                value[n][0] = left * gain;
+                value[n][1] = right * gain;
             }
             break;
         }
@@ -5714,6 +6024,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
 
     // notes §168
     switch (spec->kind) {
+        case eNodeKeyboard:
         case eNodeEnv:
         case eNodeChorus:
         case eNodeReverb:
@@ -5824,6 +6135,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         return;
     }
     params = read_params();
+    refresh_velocity_nodes(params.build);
 
     if (params.topology != gSeenTopology) {
         // notes §171
@@ -6048,9 +6360,10 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     if (params.node[n].postMix == true) {
                         continue;
                     }
-                    voiceSum[n][0] += value[n][0] * level;
-                    voiceSum[n][1] += value[n][1] * level;
-                    voiceSum[n][2] += value[n][2] * level;
+
+                    for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
+                        voiceSum[n][leg] += value[n][leg] * level;
+                    }
 
                     // What this voice is putting out, measured at its Out modules — the point where
                     // it leaves the voice for the mix or for the FX Area.
@@ -6083,9 +6396,10 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             // What everything after the mix sees of the voices is their SUM, and so do their meters (notes §191).
             for (n = 0; n < params.nodeCount; n++) {
                 if (params.node[n].postMix == false) {
-                    value[n][0] = voiceSum[n][0];
-                    value[n][1] = voiceSum[n][1];
-                    value[n][2] = voiceSum[n][2];
+                    for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
+                        value[n][leg] = voiceSum[n][leg];
+                    }
+
                     meter_node(&params.node[n], n, value[n][0], value[n][1]);
                 }
             }
@@ -6322,6 +6636,16 @@ static void engine_reset_state(void) {
     memset(&gSmoothPrimed, 0, sizeof(gSmoothPrimed));
     memset(&gEnvStage, 0, sizeof(gEnvStage));
     memset(&gEnvTrigger, 0, sizeof(gEnvTrigger));
+    memset(&gVelNodes, 0, sizeof(gVelNodes));
+    memset(&gVelNodesSeq, 0, sizeof(gVelNodesSeq));
+    memset(&gVelNodesAudio, 0, sizeof(gVelNodesAudio));
+    memset(&gVelNodesSeen, 0, sizeof(gVelNodesSeen));
+    memset(&gVelUsable, 0, sizeof(gVelUsable));
+    memset(&gLastVelLevel, 0, sizeof(gLastVelLevel));
+    memset(&gBuildSerial, 0, sizeof(gBuildSerial));
+    memset(&gVelProbe, 0, sizeof(gVelProbe));
+    memset(&gSustainPedal, 0, sizeof(gSustainPedal));
+    memset(&gSustainSeen, 0, sizeof(gSustainSeen));
     pthread_mutex_init(&gParamsWriteMutex, NULL);
     gOutputGainMilli  = 1000;
     gStatus           = eStatusOff;

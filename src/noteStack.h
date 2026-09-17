@@ -29,8 +29,9 @@
 
 // Note on/off, passed to the sound engine as played. What sounds after a release in Mono or Legato
 // is the engine's decision, not the stack's - see §15 of the sound engine reference.
-void note_stack_note_on(uint8_t note);
-void note_stack_note_off(uint8_t note);
+// velocity as sound_engine_note() takes it: 1-127 on, the release velocity off.
+void note_stack_note_on(uint8_t note, uint8_t velocity);
+void note_stack_note_off(uint8_t note, uint8_t velocity);
 
 // Panic. Clears the stack and releases the engine. The caller is responsible for telling anything
 // else that needs to know — walk the stack with the accessors below BEFORE calling this.
