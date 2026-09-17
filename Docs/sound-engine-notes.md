@@ -1136,11 +1136,13 @@ staying exact at every position the dial can actually stop on.
 
 ## 63. in `reset_node_state()`
 
-Spread rather than zeroed, for the same reason the note-on path leaves them alone:
-from the very first note the oscillators should be at unrelated points in their
-cycles. The step is irrational-ish so no two land together — and the VOICE is folded
-into it as well, so two voices playing the same note are not phase-locked copies of
-each other. Held notes on the hardware do not cancel and reinforce like that.
+A random 24-bit phase for every node of every voice, drawn afresh at each reset - as the instrument
+draws one for each oscillator when a patch is linked, and never resets it at note-on (only Sync does).
+So oscillators free-run, and two at the same pitch sit in a different relation in each voice and on
+each load, as on the hardware. (Until 2026-09-17 this was a fixed spread, (node + 0.618 voice) x 0.382:
+every voice and every load held the same relation between a voice's oscillators.) The generator is an
+xorshift with a fixed first seed per engine, so the first load after start-up renders the same every
+time, which keeps offline tests repeatable.
 
 ## 64. `build_decimator()`
 
@@ -2559,18 +2561,9 @@ as the instrument's envelope does - a gate change is up to two ticks (83 us) lat
 
 ## 151. `osc_waveform()`
 
-One sample of the raw waveform, at whatever rate the caller is stepping the phase.
-`voice` IS NEEDED HERE, and its absence was a bug rather than an omission. gSuperPhase is
-[MAX_VOICES][MAX_ENGINE_NODES][2]; the Super branch below indexed it as gSuperPhase[node][0], which
-puts the NODE number in the VOICE position and 0/1 in the node position. The compiler had been saying
-so all along — passing `double (*)[2]` where a `double *` is expected is what a two-deep index into a
-three-deep array produces.
-
-It was not out of bounds, by luck: 28 nodes fits inside 32 voices. What it did do was ignore the
-voice entirely, so every voice sounding the same node shared one pair of phase accumulators, and two
-different Super oscillators trod on each other's storage. A single voice with one Super oscillator
-is unaffected — it read [node][0][0] and now reads [0][node][0], the same value in a different slot —
-so what changes audibly is polyphonic Super and multi-Super patches, which is the point.
+One sample of the raw waveform, at whatever rate the caller is stepping the phase. `voice` and `node`
+are OscDual's (its state lives in gLadder). The "Super" branch - three detuned saws standing in for OscB's
+fifth waveform - is gone (2026-09-17): that waveform is DualSaw (reference §6.3), so gSuperPhase went too.
 
 ## 152. in `osc_waveform()`
 
@@ -2589,7 +2582,10 @@ that is the knob an aftertouch morph can open.
 
 ## 154. `oscillator_step()`
 
-Runs the oscillator OSC_OVERSAMPLE times per output sample and filters the result back down.
+Runs the oscillator OSC_OVERSAMPLE times per output sample and filters the result back down - OscShpB and
+OscDual only, since 2026-09-17. The basic oscillators (reference §6.3) take one step per engine sample: their
+edges are already the instrument's own band-limiting, and the oversampling added half a millisecond's
+filter delay against every other module and nothing else.
 
 The oscillators are the only part of the graph that creates harmonics which were not already
 there — the filter, mixers and amplifiers below them are linear — so oversampling here alone

@@ -9882,3 +9882,75 @@ increment (a four-sample floor) but its level falls with pitch (0.29 rms at 10 H
 Shape 127, which points at the divide (as TriSaw's did). Sine3/4's translation is still 12 dB low, as it is against
 the hardware.
 
+2026-09-17 - OSCSHPB SINE2 IS THE INSTRUMENT'S, AND ITS "BROKEN" TRANSLATION WAS RIGHT (reference §27.2). The translation's
+Sine2 looked wrong - level falling with pitch, DC wandering, spikes to +3 at Shape 127 - but its tail is a DC blocker
+(two states, a = 4000/2^23, near 20 Hz) after a gain of 1 + Shape: all three follow from that. Instrumenting a scratch
+copy of the translation gave the warp directly (two linear segments, positive half (1 - s)/2 of the cycle, four-sample
+floor) and the polynomial from the frame values; a clean model then matched the code to 1.8e-4 of full scale at 10 Hz,
+187.5 Hz and 2 kHz, every Shape, once the gain was taken from the UNLIMITED Shape. The engine renders shape and gain,
+decimates, then runs the blocker; its output matches level, DC and harmonics (0.2 dB). The four-sample floor is the
+hardware's 0.013-cycle lobe at full Shape, measured 08-30. The old law's static mean removal and peak normalisation
+made it up to 6 dB quiet - the captures' 1.31x Sine1 at Shape 64 now comes out.
+SINE3/SINE4 LEVELS (§27.3): the translation gives r = 0.9714 x Shape and levels DSF and oddDSF/(1 + r) (x4); the captures
+at Shape 64 are those x 1/(1 + r) - one factor 4/(1 + r) missing on both waves. The engine's measured ratio laws stay;
+its levels are now DSF/(1 + r) and oddDSF/(1 + r)^2, 0.677 and 0.460 of Sine1 at Shape 64 against 0.68 and 0.46 measured
+(before: 0.80 and 1.02).
+
+2026-09-17 - THE SINE3/SINE4 "CONFLICT" RESOLVED BY A NEW CAPTURE (CT: "fix the conflict"). The instrument's code gives
+r = g x (0.987 - 8 x inc96) - pitch-dependent, which is its anti-alias limit - and 0.96 at E4 full Shape; the 08-23 fit
+said 0.90. A 48-point capture (QU-24 inputs 5/6; Shape 16-127 at E4, 64/96/127 at E2 and E6; kept in
+G2Captures/oscshpb/sweep-2026-09-17) shows both were right in part: the ratio is the code's exactly to Shape 112 at all
+three pitches, and the hardware holds it under about 0.905 (0.903 E4, 0.907 E2; E6's 0.877 stays under it). The level
+is linear in Shape and pitch-independent, 1 - 0.642g (twice the part's -0.321), and Sine4 is Sine3's level over 1 + r
+at every point. The engine now has that law: levels within 1% to Shape 112, 0.2-0.65 dB loud at 120-127. The capture
+chain has a high-pass: harmonics 2+ come in 1.10-1.13x the fundamental on every wave, so every ratio was read against
+the instrument's Sine1 at the same setting. CT's own editor was quit for the session; slot A holds the test patch.
+
+2026-09-17 - OSCA/OSCB/OSCC/OSCD ARE THE INSTRUMENT'S, AND THE PLUG-IN'S EXTRA BRIGHTNESS WAS PARTLY HERE (reference
+§6.3). The instrument's basic oscillator waves take no data tables, so they were run exactly and then checked against new
+captures (OscB into 2-Out, QU-24 inputs 5/6, eight pitches 110 Hz-12.5 kHz, the Sine set doubling as the chain's
+calibration; Sqr and DualSaw swept across Shape; OscC's Saw, three squares and Tri at four pitches). Saw and square
+harmonics agree with the captures within 0.1 dB below 16 kHz. What changed:
+  - EVERY EDGE IS TWO 96 kHz SAMPLES WIDE EACH SIDE, a triangle-kernel step, so each harmonic sits sinc^2(2F/96000) under
+    1/n. The engine's one-sample polyBLEP at 192 kHz was up to 3.8 dB too bright at 18 kHz, and 5 dB at a 2 kHz
+    saw's 10th harmonic - audible, and in the direction CT heard ("plugin patch is brighter than G2").
+  - THE TRIANGLE'S CORNERS ARE ROUNDED by the same triangle, with the squared term SATURATING: at 2 on OscA/OscB, at 1 on
+    OscC/OscD. A 32-bit copy of the instrument's arithmetic WRAPS there instead and comes out 2.6 dB too bright; the
+    unlimited formula comes out 0.8 dB too dull. The DSP limits on store, and the two modules' code evidently differ.
+  - THE SAW RISES and steps at half a cycle (the face graphs already said rises; the engine's "ramps DOWN, measured at C7"
+    comment was wrong for these modules). The sine is the instrument's fifth-order polynomial of the triangle.
+  - SQUARES ARE DC-FREE: high from y/2 to 0.5 plus y. OscB's y is Shape/128 (127 = 1). At Shape 124 the pulse is 1.6% of the
+    cycle and the capture agrees to 0.0 dB. There is NO eight-sample floor: the 2026-08-24 reading of 0.055 at the top
+    was the correlation fit, not the wave. At 127 the square is silent except a single-sample click at -38 dB.
+  - OSCB'S FIFTH WAVE IS DUALSAW, NOT "SUPER": saw + saw y/2 of a cycle on, double level at 0 and an octave up at 127, every
+    harmonic 2/(pi k) x 2|cos(k pi y/2)|, within 0.1 dB at all ten Shape settings measured. The engine had three detuned
+    saws there.
+  - OSCC'S SAW AND SQUARE ARE THE SAME AS OSCB'S, although the instrument's part list gives OscC separate Saw/Sqr parts
+    with a one-sample linear edge: the capture fits OscB's edge within 0.1 dB and the linear one not at all (2-3 dB).
+TRAPS: a DualSaw capture at Shape 127 read silent twice - once a real glitch, once the frequency refinement locking onto
+a pitch that is absent (a DualSaw at y = 1 has no fundamental); fix the pitch from the neighbouring setting. And the
+capture chain has a high-pass (-4 dB at 110 Hz), so every level was read against the Sine at the same pitch.
+  - AND THEY RUN AT THE ENGINE RATE, NOT OVERSAMPLED. At a 48 kHz device (engine at 96 kHz) the engine's basic
+    oscillators are now the instrument's samples to its 24-bit rounding (-112 dB and below; the sine -82 dB, from its
+    rounded coefficients), with no decimator delay (it was 12 samples) and half the work. A first check read -40 dB of
+    "error" that was only the test harness rounding its phase step to 24 bits and drifting - test at a pitch the
+    24-bit increment represents exactly.
+  - START PHASE. The instrument gives each oscillator a random 24-bit phase when the patch is linked and never resets it
+    at note-on - they free-run, as the engine's already did. But the engine's start spread was a fixed formula, which
+    held two same-pitch oscillators in one voice at the same relation (0.382 cycles) in EVERY voice and on every load:
+    one timbre everywhere, where the G2 gives each voice its own. Now random per node per voice per reset (notes §63).
+
+2026-09-17 - OSCSHPB AND OSCDUAL MOVED ONTO THE INSTRUMENT'S LAWS AT THE ENGINE RATE (CT: "G2Demo is the reference";
+"document so that we could go back"). The replaced code is kept verbatim in Docs/oscillator-code-before-edge-conversion.md
+(parts were uncommitted). OscShpB against its harness: Sine1 -82 dB, Sine2 -62, Sine3/4 -80 (except the hardware ratio
+cap at Shape 120-127), DblSaw/Pulse/SymPulse exact, TriSaw -43..-77 dB (-25 at 6 kHz). Found on the way: TriSaw's long
+ramp FALLS (the engine's rose - time-reversed, same magnitudes, which is why harmonic checks passed); DblSaw's saws
+rise; the phase origins of Sine1/Sine2 follow their floored widths; the Pulse's "1" is 0x7fffff; the TriSaw harness's
+corner signs flip with tiny pitch changes (its division emulation), so only the magnitude is trusted there.
+OscDual: a new harness (G2DemoTables harness/g2juno.c + juno_h.inc, the part regex-translated; its phase increment is
+half the output pitch, the part doubles it and keeps the undoubled phase for the sub). Its laws are in reference
+§12.5. THE SUB HAS NO SHELF in the instrument: the 2026-09-12 "190 Hz shelf 0.38 -> 1.12" matches this morning's
+finding that the QU-24 capture chain itself is -4 dB at 110 Hz - the sub, being low, took the chain's high-pass for
+the module's. The engine's square, saw and sub were each inverted relative to the instrument (relative relations
+matched, which is what the capture could see), and the saw rotated the other way. Engine code written and compiling;
+the sample-for-sample comparison with the harness was NOT run before the session ran out (todo.md).

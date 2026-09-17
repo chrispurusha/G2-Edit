@@ -93,16 +93,46 @@ full scale, so hard left is (127/128)² - the module sits 0.14 dB below unity.
 **6.1 One table.** OscA, OscB, OscC and OscD share the oscillator node; `kOscParams` says where each
 keeps its dials and its waveform.
 
-**6.2 Waveforms.** OscA, OscC and OscD: Sine, Tri, Saw, Sqr50, Sqr25, Sqr10 - the three squares as
-fixed duties via the shared Shape (0, 0.5102, 0.8163 -> 50%, 25%, 10%). OscA keeps its choice as a
-parameter, OscC and OscD as a mode.
+**6.2 Waveforms.** OscA, OscC and OscD: Sine, Tri, Saw, Sqr50, Sqr25, Sqr10. OscB: Sine, Tri, Saw, Sqr,
+DualSaw. OscA keeps its choice as a parameter, OscC and OscD as a mode. The node's `shape` is the PULSE
+OFFSET y (0..1): Sqr50/25/10 are y = 0, 0.5, 0.875 (duties 1/2, 1/4 and 1/16 - the manual's "10%" is
+1/16, measured 2026-08-24); OscB's is its Shape dial as a word, dial/128 with 127 = 1.
 
-**6.3 Pitch inputs.** Input 0 direct, input 1 attenuated by Pitch M. OscC: connectors 3 and 0. OscD:
+**6.3 The waves (measured 2026-09-17).** One cycle, phase 0..1, all peak 1:
+
+| wave | law |
+|---|---|
+| Sine | `wave_sine_polynomial()` of the triangle below, uncorrected - the odd fifth-order polynomial Sine2 uses (§27.2), so it starts at -1 |
+| Tri | -1 at phase 0, +1 at 0.5, each corner rounded by `osc_corner()` |
+| Saw | RISES: 0 at phase 0, +1 just before 0.5, steps to -1, back to 0 at 1 |
+| Sqr | +1 from y/2 to 0.5, -1 elsewhere, plus y - so it carries no DC, and is silent at y = 1 |
+| DualSaw | Saw + Saw a further y/2 of a cycle on: twice a saw at y = 0, a saw an octave up at y = 1 |
+
+Every step is spread over a triangle `OSC_EDGE_SAMPLES` (2) of the instrument's 96 kHz samples either side
+- the polyBLEP form stretched to 2 x inc96 per side, inc96 being the phase step per 96 kHz sample. That is
+the whole harmonic roll-off: each harmonic sits sinc^2(2F/96000) under 1/n. At 2 kHz the 10th harmonic is
+5 dB down, where a one-sample edge at the engine rate had put it. Each triangle corner gets the same
+triangle's rounding, x (2 - d) min((2 - d)^2, L) / 6 with x = 2 inc96 and d the distance in 96 kHz samples;
+the limit L is the instrument's arithmetic saturating, and differs by module: 2 on OscA/OscB, 1 on OscC/OscD
+(`OSC_CORNER_LIMIT_*`, each fitted to within 0.3 dB).
+
+These waves run once per engine sample, with no oversampling of their own: the instrument draws them for
+its 96 kHz sample and needs none, and the engine is at 96 kHz behind a 48 kHz device. There the output is the
+instrument's own sample for sample (checked to its 24-bit rounding); the edges are set in time, so at other
+rates the waves keep their shape. OscDual and OscShpB still run oversampled (notes §154).
+
+Measured on the hardware with OscB into 2-Out at eight pitches (110 Hz-12.5 kHz), Shape swept 0-127 on Sqr
+and DualSaw, and OscC's Saw, Sqr50/25/10 and Tri at four pitches; the chain was calibrated by the Sine at the
+same eight pitches. Every harmonic below 16 kHz agrees within 0.1 dB, apart from the triangle limits above.
+At Shape 127 the instrument's Sqr leaves a single-sample click at -38 dB per harmonic, which is not modelled.
+
+**6.3a Start phase.** Each oscillator free-runs from a random phase drawn when the patch is built (and again
+on every topology change); a note-on never resets it (notes §63).
+
+**6.4 Pitch inputs.** Input 0 direct, input 1 attenuated by Pitch M. OscC: connectors 3 and 0. OscD:
 Pitch only.
 
-**6.4 Check.** OscC and OscD match OscA to 0.02 dB in level and 0.25 dB over ten harmonics.
-
-**6.5 Not modelled.** FM on OscB and OscC.
+**6.5 Not modelled.** FM on OscB and OscC; OscB's Shape modulation input; Sync.
 
 ## 7. Noise
 
@@ -280,6 +310,14 @@ order the settings the same way (Soft above plain, the 180° mix below the 0° o
 its harmonic LEVELS only; its phase, and so its peak, is not pinned - the G2 meters it below full scale
 where the model peaks near 1.9. Captured peaks cannot settle it: the output path rings on hard edges
 (the plain square reaches 1.69 × the sine's peak in the capture while metering below full scale).
+
+**12.5 On the instrument's laws (2026-09-17, supersedes 12.2-12.3 where they differ).** From the instrument's
+own part, run as a harness: the square is LOW from phase 0 to 0.5 - PW/256 (dial 127 = silent), DC-free; the saw
+RISES and steps at phase Phase/128 (Phase dial through dial/128, 127 = 1); the sub is a square an octave down,
+low first; all three with the two-sample edge of §6.3; Soft = one-pole, coefficient 8 inc96, times 2. NO shelf on
+the sub: the measured 190 Hz shelf was very likely the capture chain's own high-pass (§6.3 found -4 dB at 110 Hz on
+that chain). PW input reaches 4x the dial's range (OSCDUAL_PW_DEPTH), the phase input 2x; over-range PW wraps.
+Runs at the engine rate. NOT YET compared sample for sample with the harness - see todo.md.
 
 ## 13. FltComb
 
@@ -887,15 +925,57 @@ and 127. g is the Shape word, dial/128 with 127 counting as 1 (`wave_shape_word(
 | Wave | Law | Engine vs instrument |
 |---|---|---|
 | Sine1 | a sine whose rising half takes (1 - g)/2 of the cycle, never under two samples, and its falling half the rest, each linear in angle | exact, every Shape |
-| Sine2 | not yet from the instrument - see below | the fitted law; 3-10 dB from the translation above Shape 0 |
-| Sine3, Sine4 | fitted to the captures | the translation is 12 dB low at Shape 0, as it is against the hardware |
+| Sine2 | 27.2 | level, DC and harmonics match at 10 Hz, 187.5 Hz and 1 kHz, every Shape (within 0.2 dB) |
+| Sine3, Sine4 | 27.3 | harmonic shape and level match the captures at Shape 64 |
 | TriSaw | triangle, peak at 0.5 + g/2, fall never under two samples | within 0.1 dB to harmonic 20 |
 | DblSaw | two full saws, the second Shape/256 of a cycle later, summed (peak 2) | within 0.1 dB; the engine halved it until now |
 | Pulse | high for (1 - g)/2 of the cycle, never under one sample, with the DC taken out: the ±1 square minus (2d - 1), d the duty | within 0.2 dB; at Shape 127 the instrument's two one-sample edges leave a spike, which the one-sample floor reproduces to 2 dB |
 | SymPulse | high, low, then silent | matches |
 
-Sine2 reads the increment too - its steep part is held to four samples - and its core is a divide of
-(1 - p)(1 + s)-style terms by s^2 - 1. The translation's level falls at low pitch (0.29 rms at 10 Hz)
-and spikes to +3 at Shape 127, so its divide is not yet emulated faithfully (TriSaw's needed the DSP's
-magnitude divide); until it is, the engine keeps the law fitted to the two captures.
+**27.2 Sine2.** With s the Shape word, limited so the positive lobe keeps at least four samples:
+- the positive half-sine takes (1 - s)/2 of the cycle and the negative half the rest; within each, a
+  linear phase x from 0 to 1 and back goes through the odd polynomial 1.5704x - 0.6419x^3 + 0.0716x^5
+  (close to sin(pi x/2));
+- times 1 + |Shape| - the UNLIMITED Shape, so the gain keeps rising where the lobe has stopped narrowing;
+- then a DC blocker at 96 kHz, a = 4000/2^23: w = b + a*c, out = in - w - 2b, b += a*out, c = w (b and c
+  its two states, per voice). It sits near 20 Hz, so a very low Sine2 is attenuated - 0.29 rms at 10 Hz
+  against 0.70 at 187 Hz - and the narrow lobe's DC is taken out, which is what lifts it above the trough.
 
+The engine renders the shape and gain with its oscillators and runs the blocker after their decimation,
+at the engine rate with a scaled to it (`oscillator_step()`); the model matched the instrument's code to
+1.8e-4 of full scale sample by sample, and the engine's output matches its level, DC and harmonics. The
+four-sample floor is the hardware's 0.013-cycle lobe at full Shape (329 Hz).
+
+**27.3 Sine3 and Sine4.** Measured 2026-09-17 on the G2 (Shape 16-127 at E4, and 64/96/127 at E2 and E6,
+G2Captures/oscshpb/sweep-2026-09-17) and set against the instrument's code:
+- the ratio r = g x (0.987 - 8 x inc96), inc96 the phase step per 96 kHz sample - the code's law, which the
+  captures follow exactly to Shape 112 at all three pitches - held under 0.905, where the hardware stops
+  (0.903 at E4 and 0.907 at E2 at full Shape, against the code's 0.96 and 0.98; E6 stays under it);
+- Sine3 = sin theta/(1 - 2r cos theta + r^2) x (1 - 0.642g): the whole harmonic series, at a level falling linearly
+  with Shape and not with pitch (0.642 is twice the part's own -0.321);
+- Sine4 = sin theta (1 - 0.642g)/(1 - 2r cos 2theta + r^2): the odd series, which is Sine3's level over 1 + r.
+
+`wave_sine3_instrument()` / `wave_sine4_instrument()`, `wave_dsf_ratio()`; the drawn shapes use the same r at
+unit peak. Against the sweep: levels within 1% (0.1 dB) to Shape 112, the ratio within 0.002 everywhere
+but Shape 120 (0.900 against 0.886); at Shape 120-127 the hardware is a further 0.2-0.65 dB down. The capture
+chain lifts harmonics 2 and up by 1.10-1.13 against the fundamental, so ratios were read against the
+instrument's Sine1 at the same setting. The code's translation lacks the level stage (it gives the series at
+a quarter, and Sine4 over 1 + r), which is why it read 12 dB low; the 08-23 fit's 0.90/0.94 were the capped
+ratio read from harmonics 2 and up.
+
+**27.5 On the instrument's phase, at the engine rate (2026-09-17).** OscShpB runs once per engine sample, like the
+basic oscillators (§6.3), against the instrument's own wave parts sample for sample (a test harness; 96 kHz):
+- Phase p = 2 x phase wrapped to -1..1; x = 2 inc96 is its step per sample; y the Shape word (dial/128, 127 = 1).
+- Sine1 peaks at half a cycle: argument phase + 0.5 + rise/2, rise = max((1 - y)/2, 2 inc96). -82 dB.
+- Sine2's positive lobe ends at half a cycle: phase + 0.5 + lobe, lobe = max((1 - y)/2, 4 inc96). -62 dB.
+- Sine3/Sine4 start 0.75 of a cycle on. -80 dB, except Shape 120-127 below ~1.5 kHz where the engine keeps the
+  hardware-measured ratio cap (§27.3), which the harness (missing its level stage) does not have.
+- TriSaw: FALLS from +1 at p = -y to -1, rises over max(1 - y, 2x); corners rounded by
+  turn x (2 - |d|)^3 / 24 (turn = 2/rise + 2/(2 - rise)) at the peak (down) and at the phase wrap p = 1 (up; skipped
+  at y = 1, where the peak is the wrap). -43 to -77 dB below 1.5 kHz, -25 to -32 dB at 6 kHz: the harness's own
+  division emulation flips the sign of the samples beside the peak with tiny pitch changes, so those two samples
+  are not settled by it.
+- DblSaw: two RISING saws stepping at phase 0, the second y/2 on, two-sample edges. Exact (-150 dB).
+- Pulse: high above p = y, each edge a straight line one sample either side (the later edge wins where they
+  overlap), + y; the instrument's "1" is 0x7fffff, which is what leaves a spike at y = 1. Exact (-102 dB).
+- SymPulse: -1 for the first (1 - y)/2, 0, +1 for the last (1 - y)/2, two-sample edges. Exact.

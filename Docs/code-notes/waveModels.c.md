@@ -81,6 +81,12 @@ The mean of sin() over this warp is exactly 2(2d - 1)/pi. Removing it is what li
 above the trough, and the hardware's output is AC coupled, so removing it is also what the
 instrument does.
 
+REPLACED 2026-09-17 BY THE INSTRUMENT'S OWN SINE2 (reference §27.2). The positive half takes (1 - s)/2 of
+the cycle (the measured d above), never under four samples - which at 329 Hz is 0.0137, the 0.013 the
+hardware showed at full Shape - through a fifth-order odd polynomial close to sin(pi x/2). The engine then
+multiplies by 1 + Shape and runs the instrument's DC blocker; wave_sine2() itself is the unit shape the
+editor draws. The subtracted mean below was a static stand-in for that blocker, and was 6 dB quiet.
+
 ## 5. in `wave_sine2()`
 
 MEASURED 2026-08-30: this clamp was the error, not the law. d wants 0.016 at full Shape and
@@ -100,6 +106,10 @@ as strong as the 2nd and 4th. Nothing that adds only even harmonics can produce 
 
 What does produce it is the Poisson kernel: a geometric harmonic series, every harmonic present
 with amplitude ratio^n. This is its closed form.
+
+REPLACED 2026-09-17 (reference §27.3): r is the instrument's g x (0.987 - 8 x inc96), held under 0.905, and
+the engine sounds the series at (1 - 0.642g) through wave_sine3_instrument(); this function is the unit-peak
+shape the editor draws. The "0.90" above was the capped ratio.
 
 ## 7. `wave_sine4()`
 

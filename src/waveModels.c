@@ -24,6 +24,15 @@
 
 #include "waveModels.h"
 
+#define SINE2_POLY_1       (1.5704)
+#define SINE2_POLY_3       (-0.6419)
+#define SINE2_POLY_5       (0.0716)
+
+#define DSF_RATIO_SCALE    (0.987)    // §27.3
+#define DSF_RATIO_PITCH    (8.0)
+#define DSF_RATIO_MAX      (0.905)
+#define DSF_LEVEL_SLOPE    (0.642)
+
 // The instrument's Shape word: dial/128, with 127 counting as full. `shape` is dial/127 here.
 double wave_shape_word(double shape) {
     return (shape >= 1.0) ? 1.0 : ((shape * 127.0) / 128.0);
@@ -56,42 +65,82 @@ double wave_sine1(double phase, double shape) {
     return wave_sine1_limited(phase, shape, 0.0);
 }
 
-// notes §4
-double wave_sine2(double phase, double shape) {
-    double d    = 0.5 - (0.51 * shape) + (0.026 * shape * shape);
-
-    // notes §5
-    if (d < 0.005) {
-        d = 0.005;
-    }
-    double w    = (phase < d) ? (0.5 * (phase / d))
-               : (0.5 + (0.5 * ((phase - d) / (1.0 - d))));
-    double mean = 2.0 * ((2.0 * d) - 1.0) / M_PI;
-
-    return (sin(2.0 * M_PI * w) - mean) / (1.0 - mean);
+// A fifth-order odd polynomial, the instrument's own, close to sin(pi x / 2) - its sines are this of a triangle
+double wave_sine_polynomial(double x) {
+    return x * (SINE2_POLY_1 + (x * x * (SINE2_POLY_3 + (x * x * SINE2_POLY_5))));
 }
 
-// notes §6
-double wave_sine3(double phase, double shape) {
-    double ratio = shape * (1.0 - (0.105 * shape)); // measured 0.24, 0.48, 0.71, 0.90
+// notes §4 - the instrument's Sine2 (reference §27.2), before its gain and its DC blocker
+double wave_sine2_limited(double phase, double shape, double shortestLobe) {
+    // Shape takes the positive half-sine down to (1 - s)/2 of the cycle and gives the negative half
+    // the rest; the positive lobe never narrows past shortestLobe.
+    double s     = wave_shape_word(shape);
+    double limit = 1.0 - (2.0 * shortestLobe);
+
+    s = (s > limit) ? limit : s;
+    s = (s < 0.0) ? 0.0 : s;
+
+    double lobe  = 0.5 * (1.0 - s);                  // the positive half's share of the cycle
+    double at    = fmod(phase, 1.0);                 // 0 where the positive half begins
+    double x;
+
+    if (at < 0.0) {
+        at += 1.0;
+    }
+
+    if (at < lobe) {
+        x = 1.0 - fabs(1.0 - (2.0 * at / lobe));
+    } else {
+        x = -(1.0 - fabs(1.0 - (2.0 * (at - lobe) / (1.0 - lobe))));
+    }
+    return wave_sine_polynomial(x);
+}
+
+double wave_sine2(double phase, double shape) {
+    return wave_sine2_limited(phase, shape, 0.0);
+}
+
+// §27.3 - Sine3 and Sine4's common ratio: Shape times a factor that falls with pitch (inc96 is the phase
+// increment per 96 kHz sample, as a fraction of a cycle), held under DSF_RATIO_MAX as the hardware holds it
+double wave_dsf_ratio(double shape, double inc96) {
+    double ratio = wave_shape_word(shape) * (DSF_RATIO_SCALE - (DSF_RATIO_PITCH * inc96));
+
+    ratio = (ratio > DSF_RATIO_MAX) ? DSF_RATIO_MAX : ratio;
+    return (ratio < 0.0) ? 0.0 : ratio;
+}
+
+// §27.3 - the instrument's Sine3: the whole harmonic series, times a level that falls with Shape
+double wave_sine3_instrument(double phase, double shape, double inc96) {
+    double ratio = wave_dsf_ratio(shape, inc96);
     double theta = 2.0 * M_PI * phase;
     double denom = 1.0 - (2.0 * ratio * cos(theta)) + (ratio * ratio);
 
-    if (denom < 1e-9) {
-        denom = 1e-9;
-    }
+    return sin(theta) * (1.0 - (DSF_LEVEL_SLOPE * wave_shape_word(shape))) / denom;
+}
+
+// §27.3 - and Sine4: the odd harmonics only, a further 1/(1 + r) down
+double wave_sine4_instrument(double phase, double shape, double inc96) {
+    double ratio = wave_dsf_ratio(shape, inc96);
+    double theta = 2.0 * M_PI * phase;
+    double denom = 1.0 - (2.0 * ratio * cos(2.0 * theta)) + (ratio * ratio);
+
+    return sin(theta) * (1.0 - (DSF_LEVEL_SLOPE * wave_shape_word(shape))) / denom;
+}
+
+// notes §6 - the shapes as the editor draws them, at unit peak
+double wave_sine3(double phase, double shape) {
+    double ratio = wave_dsf_ratio(shape, 0.0);
+    double theta = 2.0 * M_PI * phase;
+    double denom = 1.0 - (2.0 * ratio * cos(theta)) + (ratio * ratio);
+
     return (sin(theta) / denom) * (1.0 - (ratio * ratio));
 }
 
 // notes §7
 double wave_sine4(double phase, double shape) {
-    double ratio = 0.94 * shape;                    // measured 0.24, 0.48, 0.71, 0.94
+    double ratio = wave_dsf_ratio(shape, 0.0);
     double theta = 2.0 * M_PI * phase;
     double denom = 1.0 - (2.0 * ratio * cos(2.0 * theta)) + (ratio * ratio);
-
-    if (denom < 1e-9) {
-        denom = 1e-9;
-    }
     double y     = (1.0 + ratio) * sin(theta) / denom;
     double peak  = (ratio >= (3.0 - (2.0 * sqrt(2.0))))
                   ? ((1.0 + ratio) / (4.0 * sqrt(ratio) * (1.0 - ratio)))
@@ -138,11 +187,6 @@ double wave_dblsaw_detune(double shape) {
 // OscShpB's Pulse: high for (1 - Shape)/2 of the cycle, 50% down to nothing - the instrument's law.
 double wave_shpb_pulse_duty(double shape) {
     return 0.5 * (1.0 - wave_shape_word(shape));
-}
-
-// Pulse: "a Pulse with selectable ASYMMETRIC pulse width". Measured 50% high down to 1% high.
-double wave_pulse_duty(double shape) {
-    return 0.5 - (shape * 0.49);
 }
 
 // SymPulse: one cycle is High for this long, then Low for the same, then zero for the rest. It is

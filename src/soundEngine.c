@@ -479,9 +479,15 @@ typedef enum {
     eOscWaveTriangle,
     eOscWaveSaw,
     eOscWaveSquare,
-    eOscWaveSuper,
+    eOscWaveDualSaw,
     eOscWaveDual = 100,    // §12 - OscDual's own mix, never a selectable waveform
 } tOscWave;
+
+// §6.3
+#define OSC_INSTRUMENT_RATE         (96000.0)
+#define OSC_EDGE_SAMPLES            (2.0)
+#define OSC_CORNER_LIMIT_MULTI      (2.0)  // OscA, OscB
+#define OSC_CORNER_LIMIT_PARTS      (1.0)  // OscC, OscD
 
 // notes §16
 #define OSCB_TUNE_UNITY             (64.0)
@@ -579,6 +585,7 @@ typedef struct {
 
     tOscWave  wave;                    // oscillator
     bool      oscKbt;
+    double    oscCornerLimit;          // §6.3
     double    basePitch;
     double    shape;
     double    rateHz;        // LFO speed
@@ -996,20 +1003,21 @@ static uint32_t           gOscHistoryPosBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICE
 static double             gPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 // §7.1
 static uint32_t           gNoiseSeedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gNoiseSeed       (gNoiseSeedBank[SE])
+#define gNoiseSeed                (gNoiseSeedBank[SE])
+static uint32_t           gStartPhaseSeedBank[SOUND_ENGINE_MAX_ENGINES];
+#define gStartPhaseSeed           (gStartPhaseSeedBank[SE])
+#define START_PHASE_FIRST_SEED    (0x2545F491u)    // notes §63
 static double             gNoiseLpBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gNoiseLp         (gNoiseLpBank[SE])
-#define gPhase           (gPhaseBank[SE])
+#define gNoiseLp                  (gNoiseLpBank[SE])
+#define gPhase                    (gPhaseBank[SE])
 static double             gLfoLastPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gLfoLastPhase    (gLfoLastPhaseBank[SE])
+#define gLfoLastPhase             (gLfoLastPhaseBank[SE])
 static double             gLfoTargetBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gLfoTarget       (gLfoTargetBank[SE])
+#define gLfoTarget                (gLfoTargetBank[SE])
 static double             gLfoHeldBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gLfoHeld         (gLfoHeldBank[SE])
-static double             gSuperPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][2];
-#define gSuperPhase      (gSuperPhaseBank[SE])
+#define gLfoHeld                  (gLfoHeldBank[SE])
 static double             gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][FILTER_STATE_SLOTS];
-#define gLadder          (gLadderBank[SE])
+#define gLadder                   (gLadderBank[SE])
 
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
 // sensible rate, four lines, is enough for the delays a patch normally has and keeps this under a
@@ -1422,6 +1430,10 @@ static void reset_node_state(void) {
     uint32_t i = 0;
     uint32_t v = 0;
 
+    if (gStartPhaseSeed == 0u) {
+        gStartPhaseSeed = START_PHASE_FIRST_SEED;
+    }
+
     for (v = 0; v < MAX_VOICES; v++) {
         for (i = 0; i < MAX_ENGINE_NODES; i++) {
             gLfoLastPhase[v][i]  = 0.0;
@@ -1431,9 +1443,10 @@ static void reset_node_state(void) {
             memset(gOscHistory[v][i], 0, sizeof(gOscHistory[v][i]));
 
             // notes §63
-            gPhase[v][i]         = fmod(((double)i + ((double)v * 0.618034)) * 0.381966, 1.0);
-            gSuperPhase[v][i][0] = 0.0;
-            gSuperPhase[v][i][1] = 0.0;
+            gStartPhaseSeed     ^= gStartPhaseSeed << 13;
+            gStartPhaseSeed     ^= gStartPhaseSeed >> 17;
+            gStartPhaseSeed     ^= gStartPhaseSeed << 5;
+            gPhase[v][i]         = (double)(gStartPhaseSeed >> 8) / 16777216.0;
             gNoiseSeed[v][i]     = 0x9E3779B9u ^ ((v + 1u) * 0x85EBCA6Bu) ^ ((i + 1u) * 0xC2B2AE35u);
             gNoiseLp[v][i]       = 0.0;
             memset(gLadder[v][i], 0, sizeof(gLadder[v][i]));
@@ -2786,7 +2799,7 @@ static void oscdual_build(tEngineNode * node, tModule * module, uint32_t variati
     node->dualSquareLevel = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_SQUARE_LEVEL));
     node->dualSawLevel    = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_SAW_LEVEL));
     node->dualSubLevel    = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_SUB_LEVEL));
-    node->dualSawPhase    = param_value(module, variation, OSCDUAL_PARAM_SAW_PHASE) / 128.0;
+    node->dualSawPhase    = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_SAW_PHASE));
     node->dualPwMod       = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_PW_MOD));
     node->dualPhaseMod    = dial_fraction(param_value(module, variation, OSCDUAL_PARAM_PHASE_MOD));
     node->dualSoft        = (module->param[variation][OSCDUAL_PARAM_SOFT].value != 0);
@@ -3295,18 +3308,18 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             uint32_t           wave = (p->waveMode >= 0) ? module->mode[p->waveMode].value
                             : (uint32_t)param_value(module, variation, (uint32_t)p->waveParam);
 
+            // §6.2 - shape is the pulse offset: Sqr50/25/10 are fixed ones, OscB's is its Shape dial
             if (p->aWaves == true) {
-                // THE THREE SQUARES ARE FIXED DUTIES, reached through the same Shape the DSP already
-                // uses: wave_pulse_duty() is 0.5 - shape * 0.49, so 0, 0.5102 and 0.8163 land exactly
-                // on 50%, 25% and 10%. Nothing in the oscillator itself needed changing.
-                static const double kSqrShape[] = {0.0, 0.510204081632653, 0.816326530612245};
+                static const double kSqrOffset[] = {0.0, 0.5, 0.875};
 
                 node->wave  = (wave >= 3u) ? eOscWaveSquare : (tOscWave)wave;
-                node->shape = (wave >= 3u) ? kSqrShape[(wave - 3u) < 3u ? (wave - 3u) : 2u] : 0.0;
+                node->shape = (wave >= 3u) ? kSqrOffset[(wave - 3u) < 3u ? (wave - 3u) : 2u] : 0.0;
             } else {
-                node->wave  = (tOscWave)wave;
-                node->shape = osc_shape_percent(param_value(module, variation, (uint32_t)p->shape)) / 100.0;
+                node->wave  = (wave > (uint32_t)eOscWaveDualSaw) ? eOscWaveDualSaw : (tOscWave)wave;
+                node->shape = wave_shape_word(param_value(module, variation, (uint32_t)p->shape) / 127.0);
             }
+            node->oscCornerLimit = ((module->type == moduleTypeOscC) || (module->type == moduleTypeOscD))
+                                   ? OSC_CORNER_LIMIT_PARTS : OSC_CORNER_LIMIT_MULTI;
             break;
         }
         case eNodeFilter:
@@ -3930,9 +3943,8 @@ static double poly_blep(double t, double dt) {
     return 0.0;
 }
 
-// Ramps DOWN, matching the G2. Measured against a hardware capture of a single saw at C7: the G2's
-// ramp falls where a plain (2 * phase) - 1 rises. Alone this is inaudible, but it decides whether a
-// second oscillator mixed against this one reinforces or cancels, so it has to match.
+// Ramps DOWN from +1 at phase 0. OscShpB and OscDual use it as it is; the basic oscillators' saw is its
+// negation half a cycle on (§6.3).
 static double osc_saw(double phase, double dt) {
     return poly_blep(phase, dt) - ((2.0 * phase) - 1.0);
 }
@@ -3956,57 +3968,117 @@ static double osc_triangle(double phase, double width) {
 }
 
 // notes §101
-static double osc_shp_wave(uint32_t waveform, double phase, double dt, double shape) {
+#define SHP_WAVE_SINE2           (1u)
+#define SINE2_DC_COEFF           (4000.0 / 8388608.0) // §27.2 - per sample at SINE2_DC_RATE
+#define SINE2_DC_RATE            (96000.0)
+#define SHP_SINE1_SHORTEST       (2.0)                // §27.5 - samples
+#define SHP_SINE2_SHORTEST       (4.0)
+#define SHP_DSF_ORIGIN           (0.75)               // §27.5 - where Sine3/Sine4 start against the instrument's cycle
+#define TRISAW_SHORTEST_RISE     (2.0)                // samples
+#define TRISAW_CORNER_SAMPLES    (2.0)
+
+// §27.5 - the instrument's phase: 0 at phase 0, rising to +1 at half a cycle, wrapping to -1
+static double osc_instrument_phase(double phase) {
+    return (phase < 0.5) ? (2.0 * phase) : ((2.0 * phase) - 2.0);
+}
+
+#define OSC_WORD_ONE    (8388607.0 / 8388608.0)    // §27.5 - the instrument's largest word, its "1"
+
+static double osc_wrap_two(double value) {
+    return value - (2.0 * floor((value + 1.0) / 2.0));
+}
+
+// §27.5 - a corner's rounding: turn is the change of slope per unit of phase, x the phase step per sample
+static double shp_corner(double distance, double x, double turn) {
+    double v = TRISAW_CORNER_SAMPLES - fabs(distance / x);
+
+    return (v > 0.0) ? (turn * x * v * v * v / 24.0) : 0.0;
+}
+
+// §27.5 - TriSaw: falls from +1 at p = -y, rises over at least two samples from p = -y - rise
+static double shp_trisaw(double p, double x, double y) {
+    double rise   = fmax(1.0 - y, TRISAW_SHORTEST_RISE * x);
+    double peak   = -y;
+    double trough = osc_wrap_two(peak - rise);
+    double since  = osc_wrap_two(p - trough);
+    double value  = (since < 0.0) ? (since + 2.0) : since;
+    double turn   = (2.0 / rise) + (2.0 / (2.0 - rise));
+
+    value = (value < rise) ? (-1.0 + (2.0 * value / rise)) : (1.0 - (2.0 * (value - rise) / (2.0 - rise)));
+    double atWrap = (y < 1.0) ? shp_corner(osc_wrap_two(p - 1.0), x, turn) : 0.0;    // at y = 1 the peak is the wrap
+
+    return value - shp_corner(osc_wrap_two(p - peak), x, turn) + atWrap;
+}
+
+// §27.5 - Pulse: high above p = y, each edge a straight line one sample either side, and DC-free
+static double shp_pulse(double p, double x, double y) {
+    double value = (p > y) ? 1.0 : -1.0;
+    double rise  = osc_wrap_two(p - y) / x;
+    double fall  = osc_wrap_two(p - OSC_WORD_ONE) / x;
+
+    if (fabs(rise) < 1.0) {
+        value = rise;
+    }
+
+    if (fabs(fall) < 1.0) {
+        value = -fall;
+    }
+    return value + y;
+}
+
+// §27.5 - SymPulse: -1, then 0, then +1, the outer two each (1 - y)/2 of the cycle
+static double shp_sympulse(double phase, double edge, double y) {
+    double w     = 0.5 * (1.0 - y);
+    double value = (phase < w) ? -1.0 : ((phase < (1.0 - w)) ? 0.0 : 1.0);
+
+    return value - poly_blep(phase, edge) + (0.5 * poly_blep(fmod(phase + 1.0 - w, 1.0), edge))
+           + (0.5 * poly_blep(fmod(phase + w, 1.0), edge));
+}
+
+// §27 - inc96 is the phase step per 96 kHz sample
+static double osc_shp_wave(uint32_t waveform, double phase, double inc96, double shape) {
+    double y    = wave_shape_word(shape);
+    double x    = 2.0 * inc96;
+    double edge = fmin(OSC_EDGE_SAMPLES * inc96, 0.5);
+
     // notes §102
     switch (waveform) {
         case 0:
         {
-            // The rise never shortens past two samples at this pitch, as TriSaw's fall does (notes §102)
-            return wave_sine1_limited(phase, shape, 2.0 * dt * (double)OSC_OVERSAMPLE);
+            double rise = fmax(0.5 * (1.0 - y), SHP_SINE1_SHORTEST * inc96);    // peaks at half a cycle
+
+            return wave_sine1_limited(fmod(phase + 0.5 + (0.5 * rise), 1.0), shape, SHP_SINE1_SHORTEST * inc96);
         }
         case 1:
-        case 2:
-        case 3:
-            // Closed-form and continuous — no step to band-limit, so the shared value is used as it
-            // is, and is bit-for-bit what the editor draws.
-            return wave_sine_by_index(waveform, phase, shape);
+        {
+            // §27.2 - four samples at the least, and a gain of 1 + Shape; the DC blocker follows
+            double lobe = fmax(0.5 * (1.0 - y), SHP_SINE2_SHORTEST * inc96);    // ends at half a cycle
 
+            return wave_sine2_limited(fmod(phase + 0.5 + lobe, 1.0), shape, SHP_SINE2_SHORTEST * inc96) * (1.0 + y);
+        }
+        case 2:
+        {
+            return wave_sine3_instrument(fmod(phase + SHP_DSF_ORIGIN, 1.0), shape, inc96);    // §27.3
+        }
+        case 3:
+        {
+            return wave_sine4_instrument(fmod(phase + SHP_DSF_ORIGIN, 1.0), shape, inc96);
+        }
         case 4:
         {
-            // The fall never shortens past two samples at this pitch (dt is per oversampled sample).
-            double shortest = 2.0 * dt * (double)OSC_OVERSAMPLE;
-
-            return osc_triangle(phase, fmin(wave_trisaw_peak(shape), 1.0 - shortest));
+            return shp_trisaw(osc_instrument_phase(phase), x, y);
         }
         case 5:
         {
-            double second = fmod(phase + wave_dblsaw_detune(shape), 1.0);
-
-            return osc_saw(phase, dt) + osc_saw(second, dt);    // two full saws: peak 2, as on the instrument
+            return -osc_saw(phase, edge) - osc_saw(fmod(phase + (0.5 * y), 1.0), edge);
         }
         case 6:
         {
-            // Never narrower than one sample: the instrument's two one-sample edges overlap there and
-            // leave a spike rather than silence
-            double duty = fmax(wave_shpb_pulse_duty(shape), dt * (double)OSC_OVERSAMPLE);
-
-            return osc_square(phase, dt, duty) - ((2.0 * duty) - 1.0);    // with its DC taken out
+            return shp_pulse(osc_instrument_phase(phase), x, y);
         }
         default:
         {
-            // SymPulse: High, then Low, then silence for the rest of the cycle. Not band-limited,
-            // and deliberately so — its edges are already the two the square shares, and at Shape 1
-            // the wave vanishes entirely, which is what the capture shows.
-            double w = wave_sympulse_half_segment(shape);
-
-            if (phase < w) {
-                return 1.0;
-            }
-
-            if (phase < (2.0 * w)) {
-                return -1.0;
-            }
-            return 0.0;
+            return shp_sympulse(phase, edge, y);
         }
     }
 }
@@ -5187,102 +5259,114 @@ static double signal_in(const tEngineNode * spec, double value[][NODE_OUTPUTS], 
     return value[source][spec->srcLeg[input]];
 }
 
+// §6.3 - rises through 0 at phase 0, steps down at phase 0.5
+static double osc_rising_saw(double phase, double edge) {
+    return -osc_saw(fmod(phase + 0.5, 1.0), edge);
+}
+
 // notes §151
-#define OSCDUAL_SUB_SHELF_HZ      (190.0)    // §12.3
-#define OSCDUAL_SUB_SHELF_LOW     (0.38)
-#define OSCDUAL_SUB_SHELF_HIGH    (1.12)
-#define OSCDUAL_SOFT_GAIN         (2.0)
-#define OSCDUAL_SOFT_CORNER       (1.5)      // times the oscillator's pitch
+#define OSCDUAL_SOFT_GAIN      (2.0)   // §12.3
+#define OSCDUAL_SOFT_POLE      (8.0)   // times inc96
+#define OSCDUAL_PW_DEPTH       (4.0)   // §12.2 - the inputs' reach, in the dials' own terms
+#define OSCDUAL_PHASE_DEPTH    (2.0)
 
-// §12.3 - state: sub flip-flop, last phase, last sub square, shelf high-pass, soft low-pass, saw offset.
-static double oscdual_sub(double * state, double phase, double dt, bool soft) {
-    SE_LOCAL;
-
-    double subPhase  = 0.5 * (phase + state[0]);
-    double square    = osc_square(subPhase, 0.5 * dt, 0.5);
-    double shelfPole = exp(-2.0 * M_PI * OSCDUAL_SUB_SHELF_HZ / (gSampleRate * (double)OSC_OVERSAMPLE));
-    double highPass  = shelfPole * (state[3] + square - state[2]);
-    double shelved   = (OSCDUAL_SUB_SHELF_LOW * square) + ((OSCDUAL_SUB_SHELF_HIGH - OSCDUAL_SUB_SHELF_LOW) * highPass);
-
-    state[2]  = square;
-    state[3]  = highPass;
+// §12.3 - the octave below: low for the first half of its cycle. state: flip-flop, last phase, soft low-pass.
+static double oscdual_sub(double * state, double phase, double inc96, bool soft) {
+    double subPhase = 0.5 * (phase + state[0]);
+    double square   = -osc_square(subPhase, fmin(0.5 * OSC_EDGE_SAMPLES * inc96, 0.5), 0.5);
 
     if (!soft) {
-        return shelved;
+        return square;
     }
-    state[4] += (1.0 - exp(-2.0 * M_PI * OSCDUAL_SOFT_CORNER * dt)) * (shelved - state[4]);
+    state[4] += fmin(OSCDUAL_SOFT_POLE * inc96, 1.0) * (square - state[4]);
     return OSCDUAL_SOFT_GAIN * state[4];
 }
 
-// §12.2
-static double oscdual_wave(uint32_t voice, uint32_t node, const tEngineNode * spec, double phase, double dt, double pulsePosition) {
+// §12.2 - pulsePosition is the PW dial with its input added; state[5] is where the saw sits
+static double oscdual_wave(uint32_t voice, uint32_t node, const tEngineNode * spec, double phase, double inc96, double pulsePosition) {
     SE_LOCAL;
 
     double * state = gLadder[voice][node];
-    double   duty  = 0.5 * (1.0 - fmin(fmax(pulsePosition, 0.0), 1.0));
+    double   edge  = fmin(OSC_EDGE_SAMPLES * inc96, 0.5);
+    double   low   = 0.5 * (1.0 - pulsePosition);
     double   out   = 0.0;
 
     if (phase < state[1]) {
         state[0] = 1.0 - state[0];
     }
     state[1] = phase;
+    low     -= floor(low);
 
-    if ((spec->dualSquareLevel > 0.0) && (duty > 0.0)) {
-        out += spec->dualSquareLevel * (osc_square(phase, dt, duty) - ((2.0 * duty) - 1.0));
+    if (spec->dualSquareLevel > 0.0) {
+        out -= spec->dualSquareLevel * (osc_square(phase, edge, low) - ((2.0 * low) - 1.0));
     }
 
     if (spec->dualSawLevel > 0.0) {
-        out += spec->dualSawLevel * osc_saw(fmod(phase + state[5], 1.0), dt);
+        out += spec->dualSawLevel * osc_rising_saw(fmod(phase + state[5], 1.0), edge);
     }
 
-    if (spec->dualSubLevel > 0.0) {
-        out += spec->dualSubLevel * oscdual_sub(state, phase, dt, spec->dualSoft);
+    if ((spec->dualSubLevel > 0.0) || spec->dualSoft) {
+        out += spec->dualSubLevel * oscdual_sub(state, phase, inc96, spec->dualSoft);
     }
     return out;
 }
 
-static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * spec, double phase, double dt, double shape) {
-    SE_LOCAL;
+// §6.3 - a corner's correction; distance in cycles from it, inc96 the phase step per 96 kHz sample
+static double osc_corner(double distance, double inc96, double squareLimit) {
+    double v = OSC_EDGE_SAMPLES - (fabs(distance) / inc96);
+
+    if (v <= 0.0) {
+        return 0.0;
+    }
+    return (2.0 * inc96) * v * fmin(v * v, squareLimit) / 6.0;
+}
+
+// §6.3 - high from half the offset to half a cycle, and DC-free
+static double osc_offset_pulse(double phase, double edge, double offset) {
+    return osc_square(fmod(phase + 1.0 - (0.5 * offset), 1.0), edge, 0.5 * (1.0 - offset)) + offset;
+}
+
+// dt is the phase step per call, inc96 the step per 96 kHz sample (§6.3)
+static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * spec, double phase, double dt,
+                           double inc96, double shape) {
+    double edge = fmin(OSC_EDGE_SAMPLES * inc96, 0.5);
 
     // The shape oscillators have their own eight waveforms, and Shape morphs each of them rather
     // than acting as a pulse width, so they do not share the switch below.
     if (spec->kind == eNodeOscShp) {
-        return osc_shp_wave((uint32_t)spec->wave, phase, dt, shape);
+        return osc_shp_wave((uint32_t)spec->wave, phase, inc96, shape);
     }
 
     switch (spec->wave) {
         case eOscWaveSine:
         {
-            return sin(phase * 2.0 * M_PI);
+            return wave_sine_polynomial(osc_triangle(phase, 0.5));
         }
         case eOscWaveTriangle:
         {
             // notes §152
-            return osc_triangle(phase, 0.5);
+            double trough = (phase < 0.5) ? phase : (phase - 1.0);
+
+            return osc_triangle(phase, 0.5) + osc_corner(trough, inc96, spec->oscCornerLimit)
+                   - osc_corner(phase - 0.5, inc96, spec->oscCornerLimit);
         }
         case eOscWaveSaw:
         {
-            return osc_saw(phase, dt);
+            return osc_rising_saw(phase, edge);
         }
         case eOscWaveSquare:
         {
-            return osc_square(phase, dt, shape);
+            return osc_offset_pulse(phase, edge, fmin(fmax(shape, 0.0), 1.0));
+        }
+        case eOscWaveDualSaw:
+        {
+            double offset = 0.5 * fmin(fmax(shape, 0.0), 1.0);
+
+            return osc_rising_saw(phase, edge) + osc_rising_saw(fmod(phase + offset, 1.0), edge);
         }
         case eOscWaveDual:
         {
-            return oscdual_wave(voice, node, spec, phase, dt, shape);
-        }
-        case eOscWaveSuper:
-        {
-            // Approximation: three saws a few cents apart. The G2's own "sup" is a different
-            // algorithm — see the header.
-            double up   = dt * 1.0059;    // about +10 cents
-            double down = dt * 0.9941;    // about -10 cents
-            double sum  = osc_saw(phase, dt);
-
-            sum += osc_saw(advance_phase(&gSuperPhase[voice][node][0], up), up);
-            sum += osc_saw(advance_phase(&gSuperPhase[voice][node][1], down), down);
-            return sum / 3.0;
+            return oscdual_wave(voice, node, spec, phase, inc96, shape);
         }
         default:
         {
@@ -5325,17 +5409,23 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
     if (frequency > (gSampleRate * 0.5)) {
         return 0.0;
     }
-    dt        = frequency / (gSampleRate * (double)OSC_OVERSAMPLE);
+    double   inc96     = frequency / OSC_INSTRUMENT_RATE;
 
-    for (step = 0; step < OSC_OVERSAMPLE; step++) {
-        double phase = advance_phase(&gPhase[voice][node], dt);
+    // §6.3 - the basic waves are drawn for a 96 kHz sample and need no oversampling of their own
+    if ((spec->kind == eNodeOsc) || (spec->kind == eNodeOscShp)) {
+        dt  = frequency / gSampleRate;
+        sum = osc_waveform(voice, node, spec, advance_phase(&gPhase[voice][node], dt), dt, inc96, shape);
+    } else {
+        dt = frequency / (gSampleRate * (double)OSC_OVERSAMPLE);
 
-        gOscHistory[voice][node][gOscHistoryPos[voice][node]] = (float)osc_waveform(voice, node, spec, phase, dt, shape);
-        gOscHistoryPos[voice][node]                           = (gOscHistoryPos[voice][node] + 1) % OSC_DECIMATE_TAPS;
-    }
+        for (step = 0; step < OSC_OVERSAMPLE; step++) {
+            double phase = advance_phase(&gPhase[voice][node], dt);
 
-    // notes §156
-    {
+            gOscHistory[voice][node][gOscHistoryPos[voice][node]] = (float)osc_waveform(voice, node, spec, phase, dt, inc96, shape);
+            gOscHistoryPos[voice][node]                           = (gOscHistoryPos[voice][node] + 1) % OSC_DECIMATE_TAPS;
+        }
+
+        // notes §156
         const float * history = gOscHistory[voice][node];
         uint32_t      oldest  = gOscHistoryPos[voice][node];
 
@@ -5349,6 +5439,16 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
         }
     }
 
+    // §27.2 - Sine2's DC blocker, at the instrument's rate and on its own coefficient
+    if ((spec->kind == eNodeOscShp) && ((uint32_t)spec->wave == SHP_WAVE_SINE2)) {
+        double * state = gLadder[voice][node];
+        double   a     = SINE2_DC_COEFF * (SINE2_DC_RATE / gSampleRate);
+        double   held  = state[0] + (a * state[1]);
+
+        sum      = sum - held - (2.0 * state[0]);
+        state[0] = state[0] + (a * sum);
+        state[1] = held;
+    }
     return sum;
 }
 
@@ -5880,9 +5980,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             // PitchVar — see oscillator_step().
 
             if ((spec->kind == eNodeOsc) && (spec->wave == eOscWaveDual)) {    // §12.4
-                double sawPhase = spec->dualSawPhase + (spec->dualPhaseMod * signal_in(spec, value, 3));
+                double sawPhase = (0.5 - spec->dualSawPhase) - (OSCDUAL_PHASE_DEPTH * spec->dualPhaseMod * signal_in(spec, value, 3));
 
-                shape               += spec->dualPwMod * signal_in(spec, value, 2);
+                shape               += OSCDUAL_PW_DEPTH * spec->dualPwMod * signal_in(spec, value, 2);
                 gLadder[voice][n][5] = sawPhase - floor(sawPhase);
             }
             value[n][0] = (spec->active == true)
@@ -6708,7 +6808,6 @@ static void engine_reset_state(void) {
     memset(&gLfoLastPhase, 0, sizeof(gLfoLastPhase));
     memset(&gLfoTarget, 0, sizeof(gLfoTarget));
     memset(&gLfoHeld, 0, sizeof(gLfoHeld));
-    memset(&gSuperPhase, 0, sizeof(gSuperPhase));
     memset(&gLadder, 0, sizeof(gLadder));
     memset(&gDelayLine, 0, sizeof(gDelayLine));
     memset(&gDelayWrite, 0, sizeof(gDelayWrite));

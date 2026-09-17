@@ -218,9 +218,11 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 ## Sound engine - open at 2026-09-14 (session cut short; see findings.md 2026-09-14 OSCSHPB entry)
 
 - DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
-- OscShpB: Sine2 from the instrument - emulate its divide faithfully first (level falls at low pitch and spikes at Shape 127 in the translation); Sine1, TriSaw, DblSaw, Pulse, SymPulse now match (reference §27)
-- OscShpB: Sine3/Sine4 level in the harness is 1/4 of the hardware at Shape 0 and ~0.38 at Shape 64 - find the missing gain before porting those two
+- OscShpB Sine3/Sine4 at Shape 120-127: the hardware is a further 0.2-0.65 dB down and its ratio 0.886 at 120 (reference §27.3) - model the top of the dial if it matters
 - OscShpB: SymMod (Shape mod input) and the Sync part not yet compared with the engine
+- OscDual (§12.5): compare the new code sample for sample with the harness (G2DemoTables harness/g2juno.c: note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
+- OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
+- OscB: Shape mod input, Sync and FM (FmLin) not modelled (reference §6.5)
 - Compressor: new §25 port needs an ear (to-test)
 - 03 Chris' Lead coverage left: OscShpB waves (above), native check of Mix4-1C/Mix4-1S, clock-synced DelayB uses a fixed 120 BPM
 
