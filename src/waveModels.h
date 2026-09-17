@@ -31,11 +31,18 @@
 
 // ── Complete waves ──────────────────────────────────────────────────────────
 double wave_shape_word(double shape);
+double wave_sine_polynomial(double x);    // x a triangle in -1..1
 double wave_sine1(double phase, double shape);
 // Sine1 with its rise held to at least shortestRise of a cycle, as the instrument holds it to two samples
 double wave_sine1_limited(double phase, double shape, double shortestRise);
 double wave_sine2(double phase, double shape);
+// Sine2 with its positive lobe never narrower than shortestLobe of a cycle, as the instrument holds it to four samples
+double wave_sine2_limited(double phase, double shape, double shortestLobe);
 double wave_sine3(double phase, double shape);
+// §27.3 - the ratio, and the two waves at the instrument's level; inc96 is the phase increment per 96 kHz sample
+double wave_dsf_ratio(double shape, double inc96);
+double wave_sine3_instrument(double phase, double shape, double inc96);
+double wave_sine4_instrument(double phase, double shape, double inc96);
 double wave_sine4(double phase, double shape);
 
 // Sine1..Sine4 by index (0..3), for a caller that already has the waveform number. Returns 0.0 for
@@ -55,9 +62,8 @@ double wave_dblsaw_detune(double shape);
 // sits, in the same terms as wave_trisaw_peak().
 #define WAVE_DBLSAW_PEAK    (0.97)
 
-// Pulse: the high fraction of the cycle. Measured 50% high down to 1% high.
-double wave_pulse_duty(double shape);
-double wave_shpb_pulse_duty(double shape);    // OscShpB's Pulse (OscA/OscB keep wave_pulse_duty())
+// Pulse: the high fraction of the cycle, 50% down to nothing - OscShpB's Pulse and OscB's Sqr
+double wave_shpb_pulse_duty(double shape);
 
 // SymPulse: one cycle is High for this long, then Low for the same, then zero for the remainder —
 // so this is half the non-zero part. At shape 1 it vanishes and the wave is silent.
