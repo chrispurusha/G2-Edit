@@ -20,6 +20,7 @@
 #ifndef PATCH_WRITE_H
 #define PATCH_WRITE_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -28,6 +29,7 @@ extern "C" {
 
 int write_database_to_file(const char * filepath, uint32_t slot);  // EXIT_SUCCESS / EXIT_FAILURE
 int write_perf_to_file(const char * filepath);                     // EXIT_SUCCESS / EXIT_FAILURE
+uint8_t * write_perf_to_memory(size_t * sizeOut);                  // the .prf2 image; the caller frees it
 
 #ifdef __cplusplus
 }

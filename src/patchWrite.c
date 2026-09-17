@@ -114,40 +114,26 @@ int write_database_to_file(const char * filepath, uint32_t slot) {
     return EXIT_SUCCESS;
 }
 
-int write_perf_to_file(const char * filepath) {
-    FILE *    file        = NULL;
-    size_t    writtenSize = 0;
-    char      eol[]       = {0x0d, 0x0a, 0x00};
-    char      nullByte    = '\0';
-    uint8_t * buff        = NULL;
-    uint32_t  bitPos      = 0;
-    uint32_t  calcCrc     = 0;
+// The whole .prf2 image - text header, binary, CRC - in a buffer the caller frees. NULL on failure.
+uint8_t * write_perf_to_memory(size_t * sizeOut) {
+    static const char header[] = "Version=Nord Modular G2 File Format 1\r\n"
+                                 "Type=Performance\r\n"
+                                 "Version=23\r\n"
+                                 "Info=BUILD 320\r\n";
+    size_t            headLen  = sizeof(header);    // with the terminating NUL, which the format keeps
+    uint32_t          bitPos   = 0;
+    uint32_t          calcCrc  = 0;
+    // calloc, not malloc and memset: the work buffer is large, and zeroed pages cost nothing until used
+    uint8_t *         buff     = (uint8_t *)calloc(1, PERF_FILE_SIZE);
 
-    file = fopen(filepath, "wb");
-
-    if (!file) {
-        LOG_ERROR("Error opening file\n");
-        return EXIT_FAILURE;
+    if (sizeOut != NULL) {
+        *sizeOut = 0;
     }
-    buff = (uint8_t *)malloc(PERF_FILE_SIZE);
 
     if (buff == NULL) {
         LOG_ERROR("Memory allocation failed\n");
-        fclose(file);
-        return EXIT_FAILURE;
+        return NULL;
     }
-    memset(buff, 0, PERF_FILE_SIZE);
-
-    fwrite("Version=Nord Modular G2 File Format 1", 1, 37, file);
-    fwrite(eol, 1, 2, file);
-    fwrite("Type=Performance", 1, 16, file);
-    fwrite(eol, 1, 2, file);
-    fwrite("Version=23", 1, 10, file);
-    fwrite(eol, 1, 2, file);
-    fwrite("Info=BUILD 320", 1, 14, file);
-    fwrite(eol, 1, 2, file);
-    fwrite(&nullByte, 1, 1, file);
-
     write_bit_stream(buff, &bitPos, 8, 23); // version
     write_bit_stream(buff, &bitPos, 8, 1);  // type = performance
 
@@ -183,20 +169,50 @@ int write_perf_to_file(const char * filepath) {
 
     write_global_knobs(buff, &bitPos);
 
-    bitPos      = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos));
-    calcCrc     = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
+    bitPos  = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos));
+    calcCrc = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
     write_bit_stream(buff, &bitPos, 16, calcCrc);
 
-    writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
+    size_t    binLen = BIT_TO_BYTE_ROUND_UP(bitPos);
 
-    if (writtenSize != BIT_TO_BYTE_ROUND_UP(bitPos)) {
-        LOG_ERROR("Written %zu of %u\n", writtenSize, BIT_TO_BYTE_ROUND_UP(bitPos));
-    }
-
-    if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PERF_FILE_SIZE * 3) / 4)) {
+    if (binLen > ((PERF_FILE_SIZE * 3) / 4)) {
         LOG_ERROR("Write file size > 3/4 of %d, might need to increase PERF_FILE_SIZE\n", PERF_FILE_SIZE);
     }
+    uint8_t * image  = (uint8_t *)malloc(headLen + binLen);
+
+    if (image != NULL) {
+        memcpy(image, header, headLen);
+        memcpy(image + headLen, buff, binLen);
+
+        if (sizeOut != NULL) {
+            *sizeOut = headLen + binLen;
+        }
+    }
     free(buff);
+    return image;
+}
+
+int write_perf_to_file(const char * filepath) {
+    size_t    size    = 0;
+    uint8_t * image   = write_perf_to_memory(&size);
+    FILE *    file    = NULL;
+
+    if (image == NULL) {
+        return EXIT_FAILURE;
+    }
+    file = fopen(filepath, "wb");
+
+    if (!file) {
+        LOG_ERROR("Error opening file\n");
+        free(image);
+        return EXIT_FAILURE;
+    }
+    size_t    written = fwrite(image, 1, size, file);
+
+    if (written != size) {
+        LOG_ERROR("Written %zu of %zu\n", written, size);
+    }
+    free(image);
     fclose(file);
-    return EXIT_SUCCESS;
+    return (written == size) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -5,8 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Store the PATCH CONTENT in the host project - the rest of "remember and restore the patch/performance/settings" (path-loading removed 2026-09-16, so a reopened project is empty until this lands; the Voice/FX divider folds into it then, since barPosition IS patch data, and the interim split= key in the state record goes)
-- Fix current modules in sound engine using the recent methods.
+- Fix currently modules in sound engine using the recent methods.
 - Vel/Keyb morph on a DXRouter's Operators: the per-voice tables do not cover their dxOp entries
 - Vel and Keyb morph on the same node: other params keep only Keyb, and one smoothed value moved by both adds in gain terms (reference §26.2 LIMITS)
 - G2 Alike rebuilds on the audio thread when a morph moves - up to ~3.6 ms (Debug) with per-voice morph tables; move it off

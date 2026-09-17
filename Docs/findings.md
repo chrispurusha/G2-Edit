@@ -9863,3 +9863,11 @@ to the remembered file is only offered while that is unchanged since the path wa
 file clears the bank origin, and a Store sets it. Checked on the G2 without any flash write (backdoor BANKLOAD,
 ORIGIN, MENU File/Open Recent): the two options swapped correctly three times.
 
+2026-09-17 - G2 ALIKE STORES THE PATCHES IN THE HOST PROJECT (CT). The state record ends with "data=<n>" and n bytes
+of .prf2 image (write_perf_to_memory(), which write_perf_to_file() now uses too), plus a perfname= line since a
+.prf2 has no name of its own; g2_set_state() parses it with g2_plugin_parse_perf_image(), the loader File > Open
+already used. split= is no longer written - barPosition is in each slot's patch description. Checked with
+tools/vst3host (new --state-file / --save-state): DualBob.prf2 wrapped as a record restores MiniBob and the rest
+in the editor, and load/save/load/save gives byte-identical saves (9206 bytes, the image re-serialised from
+9466). The note probe stayed silent - DualBob's modules (ADSR-Mod and others) are not in the engine.
+

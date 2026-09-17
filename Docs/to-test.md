@@ -3,6 +3,11 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***G2 ALIKE KEEPS ITS PATCHES IN THE PROJECT (2026-09-17)*** - the state record ends with the whole
+  instance as a .prf2 image. Checked with tools/vst3host: a record built from DualBob.prf2 restores the
+  performance (editor shows it), and saving, reloading and saving again gives identical bytes. STILL TO
+  CHECK in Live: edit a patch, save the set, reopen - the edit and the Voice/FX divider are back; the AU
+  too; a set saved by an older build opens empty without complaint.
 - ***STORE BACK TO BANK; SAVE AND STORE BACK EXCLUSIVE (2026-09-17)*** - File > "Store Patch/Perf Back to
   Bank b:l..." stores to where the patch (or performance) was loaded from, through the usual
   peek-and-confirm; greyed when it did not come from a bank. A bank load greys Save (to the last file),
