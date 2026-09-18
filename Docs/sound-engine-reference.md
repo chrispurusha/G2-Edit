@@ -908,9 +908,27 @@ LIMITS. A node both morphs move plays its Keyb node for everything but those smo
 Vel morph on another of its parameters (an envelope time, say) is lost there. When both morphs move
 the SAME smoothed value their effects add in that value's own terms, which is exact for Freq (dial
 units) but not for a gain on a curve: a mixer level with Vel +127 and Keyb +64 reads 0.27 of full at
-note 96, velocity 64, where the instrument clamps the dial to 127. A DXRouter's Operators follow
-neither morph. Building both tables takes about 3.6 ms in a Debug build when every row is used - on
-the audio thread in the plug-in, which rebuilds there when a morph moves.
+note 96, velocity 64, where the instrument clamps the dial to 127. Building both tables takes about
+3.6 ms in a Debug build when every row is used; the plug-in does that on a thread of its own since
+2026-09-18 (`rebuild_worker()`, g2Plugin.c notes §14) rather than on the audio thread.
+
+**26.2.1 A DXRouter's Operators, per voice (2026-09-18).** An Operator's parameters live on the
+Operator module rather than on the router, so a Vel or Keyb morph on one moved nothing the router's
+own node carries: the table rows held a node alone, and the six Operators came from the base build
+whatever the voice. Each row now carries that router's six as well, built at the row's own amount
+(`build_module_node()`'s opsOut, `dx_operators_differ()`, `voice_morph_ops()`), and `dx_step()` reads
+the playing voice's set - while the per-voice state arrays stay keyed on dxBase, which is the base
+build's and the same for every row. They follow whichever axis the router's own node follows, so the
+limit above applies to them unchanged. Two morphed routers per axis (MAX_VOICE_DX_NODES); a third
+follows the base build, as a ninth morphed node already does.
+
+Checked offline on PatchTestFiles/DXTest.pch2 (Keyboard, DXRouter, six Operators, 2-Out): a -99 Vel
+morph on an Operator's Level plays, at every velocity from 22 to 127, within 0.04% rms of the same
+dial turned down by hand, and at velocity 1 within 2.6% - the axis's own step (row 0 is amount 0, so
+dial 99 against the hand's 98). Before the change the morphed note measured the same at every
+velocity, to five figures. The reading is only reproducible with a fresh engine per note: voice
+allocation round-robins and each voice starts its oscillators at a random phase (notes §63), which
+otherwise swamps the effect.
 
 **26.3 Sustain pedal (2026-09-17).** Morph group 5 (Sust.Pd) is the pedal, down from 0.5 (CC64 at 64 and
 above). A key released while it is down leaves its voice gated - the envelopes sustain and the

@@ -777,7 +777,7 @@ typedef enum {
 // §26.2 - how many DXRouters on one axis carry per-voice Operators. Two, not the engine's four: each
 // costs 64 rows of six, and a patch with more than two morphed routers is the same rarity that
 // MAX_VOICE_NODES already caps at eight.
-#define MAX_VOICE_DX_NODES     (2)
+#define MAX_VOICE_DX_NODES    (2)
 
 typedef struct {
     uint32_t    count;                     // nodes in the table; 0 when nothing is morphed on this axis
@@ -1429,6 +1429,16 @@ void sound_engine_set_sample_rate(double sampleRate) {
         gDeviceRate = sampleRate;
         gSampleRate = sampleRate * (double)ENGINE_OVERSAMPLE;
     }
+}
+
+// notes §63 - FOR THE OFFLINE HARNESSES ONLY (tools/morphcheck). Every voice's start phase comes from
+// this seed, and it is deliberately never reset, so two engines started in turn sound different - as
+// two power-ups of the instrument do. That also means a measurement cannot be repeated, which is what
+// pinning it here is for. Neither the application nor the plug-in calls it.
+void sound_engine_set_start_phase_seed(uint32_t seed) {
+    SE_LOCAL;
+
+    gStartPhaseSeed = (seed == 0u) ? START_PHASE_FIRST_SEED : seed;
 }
 
 static void reset_node_state(void) {
@@ -3764,7 +3774,6 @@ static bool dx_operators_differ(const tSoundEngineParams * base, const tSoundEng
        || ((dxBase + DX_OPERATORS) > base->dxOpCount) || ((dxBase + DX_OPERATORS) > probe->dxOpCount)) {
         return false;
     }
-
     return memcmp(&probe->dxOp[dxBase], &base->dxOp[dxBase], DX_OPERATORS * sizeof(tDxOperator)) != 0;
 }
 
@@ -3893,9 +3902,9 @@ static void refresh_voice_morphs(uint64_t build) {
         gVoiceMorphsAudio.build = gVoiceMorphs.build;
 
         for (uint32_t axis = 0; axis < eAxisCount; axis++) {
-            const tMorphTable * from = &gVoiceMorphs.axis[axis];
-            tMorphTable *       to   = &gVoiceMorphsAudio.axis[axis];
-            uint32_t            used = (from->count < MAX_VOICE_NODES) ? from->count : MAX_VOICE_NODES;
+            const tMorphTable * from   = &gVoiceMorphs.axis[axis];
+            tMorphTable *       to     = &gVoiceMorphsAudio.axis[axis];
+            uint32_t            used   = (from->count < MAX_VOICE_NODES) ? from->count : MAX_VOICE_NODES;
 
             uint32_t            dxUsed = (from->dxCount < MAX_VOICE_DX_NODES) ? from->dxCount : MAX_VOICE_DX_NODES;
 
