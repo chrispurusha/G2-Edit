@@ -6,9 +6,9 @@ Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
 - Fix current modules in sound engine using the recent methods.
+- Bug where we see a sudden/random scroll VA area right about half a module's width. Maybe a buffer over-run over the scroll position variable?
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
 - Drum Synth graphical representation in the space kept free on the right, under the Preset box
-- Bug where we see a sudden/random scroll VA area right about half a module's width. Maybe a buffer over-run over the scroll position variable?
 - Fix or add various module oscillator style graphics. Wave/filter graphs for PulseOsc, OscNoise, LfoD, Operator etc.-
 - Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. Focus on the 01 Mini Emulator patch in bank 1:10 on my G2.
 - Implement the other envelopes (EnvH, EnvD, EnvADR, EnvAHD, EnvADDSR, EnvMulti, ModADSR, ModAHD) are not in the engine at all
