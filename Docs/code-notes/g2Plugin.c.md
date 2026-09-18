@@ -56,13 +56,13 @@ why moving a morph there requires asking for one - and why its mod wheel respons
 frame rate, since a full canvas repaint sits between the wheel and the sound.
 
 A plug-in cannot borrow that arrangement: it has to work with the editor window closed. So the
-rebuild happens in render() instead, once per block, and only when something actually moved.
+rebuild is the plug-in's own to schedule - see §14 for where it happens now.
 
-A FLAG RATHER THAN REBUILDING ON THE SPOT, because the snapshot is published through a SEQLOCK
-(gParamsSeq in soundEngine.c). A seqlock tolerates exactly one writer; the audio thread is already
-its reader, and a parameter change can arrive on the host's UI thread. Letting both write would
-corrupt it. So every setter merely sets this, and render() - one thread, once per block - is the
-only writer. Per instance, since each has its own snapshot.
+A FLAG RATHER THAN REBUILDING ON THE SPOT. A setter can be called from anywhere: a host's generic
+panel is on its UI thread, automation is on the audio thread, and poly pressure is on the audio
+thread. Rebuilding wherever the setter happens to land would put a database walk and a node build on
+whichever of those it was. So every setter merely sets this, and one thread acts on it. Per instance,
+since each has its own snapshot.
 
 ## 5-6. `default_patch_path()` and `load_patch()`, removed 2026-09-16
 
@@ -201,3 +201,26 @@ own a taller window would simply uncover more rows rather than drawing the patch
 application never shows that because its window cannot be made taller without also becoming
 wider. Below 640 the module text stops being legible; there is no maximum, since everything
 scales.
+
+## 14. `rebuild_worker()`
+
+THE REBUILD IS NOT THE AUDIO THREAD'S WORK. It was, until 2026-09-18: render() folded any moved morph
+into the snapshot at the top of the block. Two things are wrong with that. The build walks the patch
+database and builds nodes - and since the per-voice Vel and Keyb tables arrived (reference §26.2) it
+builds up to 96 of them per moved node, about 3.6 ms in a Debug build, against a block budget that is
+often nearer 1 ms. And it takes gParamsWriteMutex, which the editor's thread also takes on every
+frame, so the audio thread could be made to wait on a repaint.
+
+So a thread per instance does it instead. It selects the instance's document exactly as every host
+entry point does (enter()), and the audio thread is left with what it had before: a seqlock read of
+whatever snapshot is current.
+
+IT POLLS RATHER THAN BEING SIGNALLED, at G2_REBUILD_POLL_US. Signalling would mean a condition
+variable, and the threads that set the flag include the audio thread - automation and poly pressure
+both land there - so signalling would put a lock back on the path this change exists to clear. A
+morph therefore reaches the sound within one poll, which at 4 ms is already quicker than the
+standalone editor's own route to it (a full canvas repaint, so one frame).
+
+STARTED AND STOPPED WITH THE AUDIO, and joined rather than detached: the worker holds this instance's
+document and engine, and g2_destroy() frees both. terminate() and destroy() stop it too, in case a
+host never called setActive(false).

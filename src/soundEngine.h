@@ -64,6 +64,10 @@ void sound_engine_stop(void);
 void sound_engine_start_hosted(double sampleRate);
 void sound_engine_stop_hosted(void);
 
+// Pins the random start phase so an offline measurement repeats exactly - tools/morphcheck and
+// nothing else. See the comment on the definition.
+void sound_engine_set_start_phase_seed(uint32_t seed);
+
 // notes §2
 void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t timeValue, uint32_t brightValue, float * out, uint32_t frames);
 

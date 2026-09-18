@@ -3,6 +3,17 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***DXROUTER OPERATORS FOLLOW THE VEL AND KEYB MORPHS (2026-09-18)*** - reference §26.2.1. A Vel or
+  Keyb morph on an Operator's own dials (Level, the ratio, the envelope) now moves per voice; it moved
+  nothing at all before. Checked offline on DXTest.pch2 to within 0.04% rms of the dial turned down by
+  hand. STILL TO CHECK by ear against the G2: a velocity-sensitive FM patch, the brightness especially,
+  since a Vel morph on a modulator's Level is what makes one. Two morphed routers per axis is the cap.
+- ***G2 ALIKE REBUILDS THE SNAPSHOT OFF THE AUDIO THREAD (2026-09-18)*** - g2Plugin.c notes §14. A
+  moved morph was folded in at the top of render() - up to ~3.6 ms of node building, and a mutex the
+  editor's thread holds every frame. A per-instance thread does it now, polling at 4 ms. Built and
+  loads (auval pending). STILL TO CHECK in a host: the mod wheel and aftertouch still move the sound
+  and still feel immediate, automation on the eight morph parameters, no crackle on a small buffer, and
+  nothing left behind when a track is deleted or the host stops and restarts the plug-in.
 - ***OSCA/OSCB/OSCC/OSCD WAVES AGAINST THE INSTRUMENT (2026-09-17)*** - reference §6.3. Saw and square are
   duller at the top (up to 4 dB by 18 kHz, as the G2), the saw now rises, squares carry no DC, OscB's fifth
   wave is DualSaw (it was three detuned saws), the sine is the instrument's. Harmonics checked against
