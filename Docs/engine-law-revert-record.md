@@ -65,6 +65,17 @@ Add to it whenever a law is replaced. Hardware checks for each are in to-test.md
 API removed along with 1 and 4: `sound_engine_is_polyphonic()` (replaced by `sound_engine_note_sounding()`)
 and `note_stack_top()`, both at `e225d27`.
 
+## 2026-09-18
+
+| # | What | Old | New | Old code at |
+|---|---|---|---|---|
+| 49 | EqPeak centre frequency | `flt_cutoff_hz(dial)` - the filter modules' curve, 13.75 x 2^(v/12), in the engine AND on the dial | `eq_peak_centre_hz()`: 20 x 800^(v/127), 20 Hz to 16 kHz (§11.3) | `fba2cac` `src/paramCurves.c` `eq_bands_build()`, `src/renderParams.c` `render_paramType1Freq()` |
+
+NOT a fit: the instrument's own coefficient table matches 20 x 800^(v/127) to 0.0074% across all 128
+dial values, and the old law to 45%. They agree only near dial 73, which is why the 2026-09-12 capture
+fit could not tell them apart and the question stood open. The EQ shelf tables were checked at the same
+time and needed NO change - see §11.2.
+
 ### Reverting one
 
 1-4 are behaviour, not constants: put back the old function from its commit (the note stack's fallback

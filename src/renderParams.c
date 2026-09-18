@@ -65,6 +65,8 @@ tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * 
             return render_dial_with_text(gParamRenderArea, rectangle, label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
         }
         freq = operator_fixed_hz((uint32_t)paramValue, p[OPERATOR_FINE_PARAM].value);
+    } else if (module->type == moduleTypeEqPeak) {
+        freq = eq_peak_centre_hz(paramValue);   // §11.3 - not the filters' curve
     } else {
         freq = flt_cutoff_hz(paramValue);
     }

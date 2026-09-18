@@ -3,6 +3,13 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***EQPEAK CENTRE IS NOW THE INSTRUMENT'S LAW (2026-09-18)*** - reference §11.3, revert record 49.
+  20 x 800^(v/127) instead of the filter curve: 20 Hz at dial 0 (was 13.8) and 16 kHz at 127 (was 21),
+  agreeing with the old law only near dial 73. THIS CHANGES HOW EXISTING PATCHES SOUND wherever an
+  EqPeak sits away from the middle of its dial, and the drawn EQ curve and the dial reading move with
+  it. STILL TO CHECK ON THE G2: the dial reading against the G2's own display at several settings,
+  0 and 127 especially, and an EqPeak patch by ear. The shelf tables were confirmed exact at the same
+  time and did NOT change.
 - ***DRUM SYNTH FACE RE-LAID OUT, SLAVE DIAL NOW A RATIO (2026-09-18)*** - findings 2026-09-18,
   renderParams.c notes §19. Four band headings, M/S/NF/B prefixes dropped, rows spread; the Slave dial
   reads x1.24 / 3:1 instead of a percentage. Checked by rendering at 1.0 and 0.59 (no overlaps, nothing

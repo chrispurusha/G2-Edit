@@ -248,20 +248,36 @@ record 20).
 Eq3band - is the dB it displays, (dial - 64) × 18/64 with 127 the full +18, to within 0.5 dB. `eq_dial_gain()`. Level is the
 mixer's Exp taper (§3.2), `mix_level_gain()`: Level 64 is -17.6 dB, not -6.
 
-**11.2 Shelves (from the DSP code, confirmed by 11.6).** Low shelf y = x + (G - 1)·lp, lp a one-pole
-low-pass at the Lo Freq corner. High shelf y = x + (G - 1)·hp, hp a one-pole high-pass with unity
-gain at Nyquist. Lo Freq: 80, 110 and 160 Hz, as named. Hi Freq: the FIRST setting sounds at 8 kHz and
-the SECOND at 6 kHz (fitted 8.1 and 6.0) - the reverse of the names the editor shows; the third
-fitted 13.3 kHz, where the capture thins out, and is taken as its name, 12 kHz.
+**11.2 Shelves (from the DSP code, confirmed by 11.6, EXACT since 2026-09-18).** Low shelf
+y = x + (G - 1)·lp, lp a one-pole low-pass at the Lo Freq corner. High shelf y = x + (G - 1)·hp, hp a
+one-pole high-pass with unity gain at Nyquist. Both corner tables are now read from the instrument
+rather than fitted, and both agree with the 2026-09-12 capture:
+
+| setting | Lo Freq | Hi Freq |
+|---|---|---|
+| 0 | 80 Hz | **8 kHz** |
+| 1 | 110 Hz | **6 kHz** |
+| 2 | 160 Hz | 12 kHz |
+
+THE HIGH SHELF'S FIRST TWO ARE SWAPPED IN THE INSTRUMENT ITSELF, and this is not ours to fix. Its
+coefficient table holds 8000, 6000, 12000 Hz in that order; its own display text reads "6 kHz",
+"8 kHz", "12 kHz". So a G2 set to the setting labelled 6 kHz filters at 8 kHz. Our engine follows the
+table and our dial follows the text, which is exactly what the instrument does on both counts - do
+not "correct" either side to match the other. The capture fitted 8.1, 6.0 and 13.3 kHz; the first two
+were right and the third was the capture thinning out, the table saying 12 kHz as its name does.
 
 **11.3 Peak.** EqPeak and Eq3band's mid band: y = x + (G - 1)·q·bp, bp a band-pass of damping q
 (peak 1/q). Centre: EqPeak `flt_cutoff_hz(Freq)`, Eq3band 100 × 80^(Freq/127) Hz. For a boost
 EqPeak's q = 2√2 × (1 - BW/128), whatever the gain - the instrument's own law, adopted 2026-09-13
 (`eq_peak_bw_damping()`). The measured fit it replaced, 2(2^N - 1)/√(2^N) with N = (128 - BW)/64
 octaves (twice the damping of a band-pass N octaves wide), agrees at BW 64 and within 4% elsewhere.
-EqPeak's CENTRE IS OPEN: the instrument's own table reads 20 × 800^(Freq/127) Hz, 20 Hz to 16 kHz,
-against the displayed curve used here; they meet only near Freq 73 (to-test.md). Eq3band's mid has no BW dial: it fits q = 1.36, and the engine uses the formula's
-1 octave, 1.41 (`EQ_MID_OCTAVES`).
+EqPeak's CENTRE, SETTLED 2026-09-18: 20 × 800^(Freq/127) Hz, 20 Hz at 0 to 16 kHz at 127
+(`eq_peak_centre_hz()`), which the instrument's own coefficient table matches to 0.0074% across all
+128 values. It is NOT `flt_cutoff_hz()`, the filter modules' curve, which the engine and the dial both
+used before and which is up to 45% away - the two agree only near Freq 73, which is why the capture
+fit could not separate them. Eq3band's mid has no BW dial: it fits q = 1.36, and the engine uses the
+formula's 1 octave, 1.41 (`EQ_MID_OCTAVES`); its centre, 100 × 80^(Freq/127), was already the
+instrument's.
 
 **11.4 Cuts mirror boosts.** A cut is the exact inverse of the boost of the same size: the peak's
 damping becomes q/G, a low shelf's corner rises to fc/G, a high shelf's falls to fc × G. A cut is

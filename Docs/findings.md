@@ -10134,3 +10134,28 @@ conversion is linear in dial units. A filter Freq is; an Operator's Level is not
   Measured: 7.66% and 3.87% out at the two mid points before, 0.14% and 0.01% after, the rest 0.00%. Seven
   morphcheck runs pass - both axes alone on Dx.pch2, a filter Freq, the same parameter on both axes for a
   dial-unit field and for a gain on a curve, and the disjoint-parameter case on two patches.
+
+2026-09-18 - THE EQs AGAINST THE INSTRUMENT'S OWN TABLES: ONE LAW REPLACED, ONE CONFIRMED EXACT, ONE
+INCONSISTENCY THAT IS THE G2'S (CT: "the ones in the engine which haven't been checked against the instrument's
+own parts (or G2Demo ideally)"; "G2Demo is the model to follow"). Both answers came from coefficient tables read
+out of the binary, not from the decompiled Compute() bodies - far quicker, and exact.
+
+  EQPEAK'S CENTRE WAS WRONG BY UP TO 45% and is now the instrument's (reference §11.3, revert record 49).
+  EqShelvHiFreqAction and EqPeakGetDSPvalue index `_eqTan`, a 128-entry table of tan(pi f / fs); read back
+  through atan at 96 kHz it is 20 x 800^(v/127) - 20 Hz at dial 0, 16 kHz at 127 - matching to 0.0074% across
+  every one of the 128 entries. The engine and the dial both used flt_cutoff_hz(), the FILTER modules' curve
+  (13.75 x 2^(v/12), to 21 kHz). WHY THE CAPTURE DID NOT CATCH IT: the two curves cross near dial 73 and only
+  diverge towards the ends, so the 2026-09-12 noise fit at moderate settings agreed with the wrong one. The
+  reference had it flagged OPEN for that reason; it is closed now. eq_bands_build() feeds the drawn EQ curve as
+  well as the engine, so both follow it, and render_paramType1Freq() special-cases EqPeak so the dial agrees.
+
+  THE SHELF TABLES NEEDED NO CHANGE, which is worth recording as loudly as a fix. `_kLoFreq` reads 80, 110,
+  160 Hz and `_kHiFreq` reads 8000, 6000, 12000 Hz; kEqLowShelfHz and kEqHighShelfHz already held exactly those,
+  including the 12 kHz the capture had fitted at 13.3 and the comment had taken on faith from the name.
+
+  AND THE HIGH SHELF'S FIRST TWO SETTINGS ARE SWAPPED IN THE INSTRUMENT ITSELF. Its coefficient table is 8000,
+  6000, 12000; ParamText::EqFreqHi builds its string table as "6 kHz", "8 kHz", "12 kHz". So a G2 set to the
+  setting its own screen calls 6 kHz filters at 8 kHz. The todo asked which of ours to fix, on the assumption
+  one of them was wrong; neither is - our engine follows the table and our dial follows the text, which is what
+  the instrument does on both counts. Correcting either side would make us disagree with the hardware. The
+  capture had measured this correctly (8.1 and 6.0 kHz) and it had been read as a defect in the measurement.

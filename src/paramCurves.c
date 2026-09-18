@@ -853,10 +853,22 @@ double shaper_transfer(const tShaperSettings * settings, double amount, double i
 }
 
 // notes §37
-static const double kEqLowShelfHz[]  = {80.0, 110.0, 160.0};      // §11.2
-static const double kEqHighShelfHz[] = {8000.0, 6000.0, 12000.0}; // measured order, not the names'
+// §11.2 - both exact, confirmed 2026-09-18 against the instrument's own coefficient tables. The high
+// shelf's first two ARE swapped relative to the names the G2 itself displays: its table holds 8k, 6k,
+// 12k while its own text reads "6 kHz", "8 kHz", "12 kHz". That is the instrument's inconsistency, not
+// ours - do not "correct" either side to match the other.
+static const double kEqLowShelfHz[]  = {80.0, 110.0, 160.0};
+static const double kEqHighShelfHz[] = {8000.0, 6000.0, 12000.0};
 
 #define EQ_MID_OCTAVES    (1.0)    // §11.3
+
+// §11.3 - EqPeak's centre, from the instrument's own coefficient table: 20 Hz at 0 to 16 kHz at 127,
+// which its table matches to 0.0074% across the whole dial. NOT flt_cutoff_hz(), which the engine and
+// the dial both used until 2026-09-18 - that is the filter modules' curve and is up to 45% away here,
+// agreeing only near dial 73.
+double eq_peak_centre_hz(double dial) {
+    return 20.0 * pow(800.0, dial / 127.0);
+}
 
 static double eq_dial_gain(double dial) {
     double steps = (dial >= 127.0) ? 64.0 : (dial - 64.0);        // §11.1 - 127 is the full +18
@@ -902,7 +914,7 @@ bool eq_bands_build(tModule * module, uint32_t variation, tParamReader dial, tEq
     switch (module->type) {
         case moduleTypeEqPeak:
         {
-            out->peakHz      = flt_cutoff_hz(dial(module, variation, 0));
+            out->peakHz      = eq_peak_centre_hz(dial(module, variation, 0));
             out->peakGain    = eq_dial_gain(dial(module, variation, 1));
             out->peakDamping = eq_peak_bw_damping(dial(module, variation, 2));
             out->active      = (dial(module, variation, 3) != 0.0);
