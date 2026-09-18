@@ -21,10 +21,12 @@
 // notes §1
 
 #include <math.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "synthlibGlobals.h"
 #include "sysIncludes.h"
@@ -141,6 +143,11 @@ typedef struct {
     // See the note below.
     atomic_bool      morphSnapshotDirty;
 
+    // notes §14 - the thread that acts on that flag, so the rebuild is not done on the audio thread
+    pthread_t        rebuildThread;
+    bool             rebuildRunning;
+    atomic_bool      rebuildStop;
+
     // This block's notes, in arrival order - which both wrappers make offset order. Audio thread only.
     tG2NoteEvent     events[G2_MAX_EVENTS];
     uint32_t         eventCount;
@@ -167,6 +174,49 @@ static tG2Plugin * enter(void * inst) {
 }
 
 // notes §4
+
+// notes §14 - how often the worker looks at morphSnapshotDirty. A morph reaches the sound within
+// this, which is already better than the standalone editor's frame rate.
+#define G2_REBUILD_POLL_US    (4000)
+
+static void * rebuild_worker(void * arg) {
+    tG2Plugin * g2 = (tG2Plugin *)arg;
+
+    // This thread's engine, exactly as every host entry point does it (enter()).
+    g2_document_select(g2->doc);
+    pthread_setname_np("G2 Alike rebuild");
+
+    while (atomic_load(&g2->rebuildStop) == false) {
+        if (atomic_exchange(&g2->morphSnapshotDirty, false) == true) {
+            sound_engine_update_from_patch();
+        }
+        usleep(G2_REBUILD_POLL_US);
+    }
+
+    return NULL;
+}
+
+static void rebuild_worker_start(tG2Plugin * g2) {
+    if (g2->rebuildRunning == true) {
+        return;
+    }
+    atomic_store(&g2->rebuildStop, false);
+
+    if (pthread_create(&g2->rebuildThread, NULL, rebuild_worker, g2) == 0) {
+        g2->rebuildRunning = true;
+    }
+}
+
+// Joined rather than detached: the worker holds this instance's document and engine, and both are
+// freed the moment the host is finished with it.
+static void rebuild_worker_stop(tG2Plugin * g2) {
+    if (g2->rebuildRunning == false) {
+        return;
+    }
+    atomic_store(&g2->rebuildStop, true);
+    pthread_join(g2->rebuildThread, NULL);
+    g2->rebuildRunning = false;
+}
 
 // ------------------------------------------------------------------------------------------------
 
@@ -227,6 +277,7 @@ static void * g2_create(const tSynthLibPluginDesc * desc) {
 static void g2_destroy(void * inst) {
     tG2Plugin * g2 = enter(inst);
 
+    rebuild_worker_stop(g2);
     sound_engine_stop_hosted();
     sound_engine_detach();
     g2_document_select(NULL);
@@ -243,7 +294,9 @@ static void g2_initialize(void * inst) {
 }
 
 static void g2_terminate(void * inst) {
-    (void)enter(inst);
+    tG2Plugin * g2 = enter(inst);
+
+    rebuild_worker_stop(g2);
     sound_engine_stop_hosted();
 }
 
@@ -263,7 +316,9 @@ static void g2_set_active(void * inst, bool active) {
 
         // notes §7
         sound_engine_update_from_patch();
+        rebuild_worker_start(g2);
     } else {
+        rebuild_worker_stop(g2);
         sound_engine_stop_hosted();
         g2->active = false;
     }
@@ -325,12 +380,8 @@ static void g2_process(void * inst,
         return;
     }
 
-    // Fold any moved morph into the parameter snapshot. Once per block rather than once per change,
-    // and only here - see morphSnapshotDirty for why this is the sole writer. Costs a database
-    // walk, which is what the standalone pays on every frame anyway.
-    if (atomic_exchange(&g2->morphSnapshotDirty, false) == true) {
-        sound_engine_update_from_patch();
-    }
+    // notes §14 - a moved morph is folded into the snapshot by rebuild_worker(), not here: the
+    // rebuild costs milliseconds and takes a mutex the editor's thread also holds.
 
     // notes §8
     uint32_t pos = 0;

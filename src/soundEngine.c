@@ -774,11 +774,18 @@ typedef enum {
 #define KEY_MORPH_SPAN         (60.0)
 #define MAX_AXIS_LEVELS        (64)
 #define MAX_VOICE_NODES        (8)
+// §26.2 - how many DXRouters on one axis carry per-voice Operators. Two, not the engine's four: each
+// costs 64 rows of six, and a patch with more than two morphed routers is the same rarity that
+// MAX_VOICE_NODES already caps at eight.
+#define MAX_VOICE_DX_NODES     (2)
 
 typedef struct {
     uint32_t    count;                     // nodes in the table; 0 when nothing is morphed on this axis
     int8_t      column[MAX_ENGINE_NODES];  // a node's column, or -1
+    int8_t      dxSlot[MAX_ENGINE_NODES];  // §26.2 - a DXRouter node's bank of six Operators, or -1
+    uint32_t    dxCount;
     tEngineNode node[MAX_AXIS_LEVELS][MAX_VOICE_NODES];
+    tDxOperator dxOp[MAX_AXIS_LEVELS][MAX_VOICE_DX_NODES][DX_OPERATORS];
 } tMorphTable;
 
 typedef struct {
@@ -3713,7 +3720,7 @@ static void build_snapshot(tSoundEngineParams * out) {
 }
 
 // §26.2 - one module's node alone, at the morph amounts in sBuildAxis. Its wiring is the base build's.
-static bool build_module_node(const tEngineNode * base, uint32_t variation, tEngineNode * out) {
+static bool build_module_node(const tEngineNode * base, uint32_t variation, tEngineNode * out, tDxOperator * opsOut) {
     SE_LOCAL;
 
     static _Thread_local tSoundEngineParams part;
@@ -3728,6 +3735,13 @@ static bool build_module_node(const tEngineNode * base, uint32_t variation, tEng
         return false;
     }
     *out             = part.node[self];
+
+    // §26.2 - a DXRouter's Operators were rebuilt at this amount too; out->dxBase below goes back to
+    // the base build's, which is what the per-voice state arrays are keyed on.
+    if (  (opsOut != NULL) && (base->kind == eNodeDx)
+       && ((part.node[self].dxBase + DX_OPERATORS) <= part.dxOpCount)) {
+        memcpy(opsOut, &part.dxOp[part.node[self].dxBase], DX_OPERATORS * sizeof(tDxOperator));
+    }
     out->kind        = base->kind;
     out->moduleIndex = base->moduleIndex;
     out->location    = base->location;
@@ -3741,6 +3755,19 @@ static bool build_module_node(const tEngineNode * base, uint32_t variation, tEng
     return true;
 }
 
+// §26.2 - a DXRouter whose Operators alone move: the router's own node can be identical, since every
+// Operator parameter lives on the Operator module rather than on it.
+static bool dx_operators_differ(const tSoundEngineParams * base, const tSoundEngineParams * probe, uint32_t n) {
+    uint32_t dxBase = base->node[n].dxBase;
+
+    if (  (base->node[n].kind != eNodeDx) || (probe->node[n].dxBase != dxBase)
+       || ((dxBase + DX_OPERATORS) > base->dxOpCount) || ((dxBase + DX_OPERATORS) > probe->dxOpCount)) {
+        return false;
+    }
+
+    return memcmp(&probe->dxOp[dxBase], &base->dxOp[dxBase], DX_OPERATORS * sizeof(tDxOperator)) != 0;
+}
+
 // §26.2 - one axis's table. The nodes that move are the ones its full-amount build does not agree with.
 static void build_axis_table(tMorphAxis axis, const tSoundEngineParams * base, const tSoundEngineParams * probe) {
     SE_LOCAL;
@@ -3749,13 +3776,21 @@ static void build_axis_table(tMorphAxis axis, const tSoundEngineParams * base, c
     uint32_t      variation = gPatchDescr[engine_slot()].activeVariation;
     uint32_t      count     = 0;
 
-    table->count = 0;
+    table->count   = 0;
+    table->dxCount = 0;
     memset(table->column, -1, sizeof(table->column));
+    memset(table->dxSlot, -1, sizeof(table->dxSlot));
 
     if ((probe->nodeCount == base->nodeCount) && (probe->topology == base->topology)) {
         for (uint32_t n = 0; (n < base->nodeCount) && (count < MAX_VOICE_NODES); n++) {
-            if (memcmp(&probe->node[n], &base->node[n], sizeof(tEngineNode)) != 0) {
+            if (  (memcmp(&probe->node[n], &base->node[n], sizeof(tEngineNode)) != 0)
+               || (dx_operators_differ(base, probe, n) == true)) {
                 table->column[n] = (int8_t)count++;
+
+                if (  (base->node[n].kind == eNodeDx) && (table->dxCount < MAX_VOICE_DX_NODES)
+                   && ((base->node[n].dxBase + DX_OPERATORS) <= base->dxOpCount)) {
+                    table->dxSlot[n] = (int8_t)table->dxCount++;
+                }
             }
         }
     }
@@ -3767,10 +3802,16 @@ static void build_axis_table(tMorphAxis axis, const tSoundEngineParams * base, c
 
         for (uint32_t row = 0; row < axis_rows(axis); row++) {
             tEngineNode * cell = &table->node[row][table->column[n]];
+            tDxOperator * ops  = (table->dxSlot[n] >= 0) ? table->dxOp[row][table->dxSlot[n]] : NULL;
 
             sBuildAxis[axis] = axis_amount(axis, row);
 
-            if (build_module_node(&base->node[n], variation, cell) == false) {
+            // The base build's Operators stand until this row's build replaces them.
+            if (ops != NULL) {
+                memcpy(ops, &base->dxOp[base->node[n].dxBase], DX_OPERATORS * sizeof(tDxOperator));
+            }
+
+            if (build_module_node(&base->node[n], variation, cell, ops) == false) {
                 *cell = base->node[n];
             }
         }
@@ -3856,11 +3897,16 @@ static void refresh_voice_morphs(uint64_t build) {
             tMorphTable *       to   = &gVoiceMorphsAudio.axis[axis];
             uint32_t            used = (from->count < MAX_VOICE_NODES) ? from->count : MAX_VOICE_NODES;
 
-            to->count = used;
+            uint32_t            dxUsed = (from->dxCount < MAX_VOICE_DX_NODES) ? from->dxCount : MAX_VOICE_DX_NODES;
+
+            to->count   = used;
+            to->dxCount = dxUsed;
             memcpy(to->column, from->column, sizeof(to->column));
+            memcpy(to->dxSlot, from->dxSlot, sizeof(to->dxSlot));
 
             for (uint32_t row = 0; row < axis_rows((tMorphAxis)axis); row++) {
                 memcpy(to->node[row], from->node[row], used * sizeof(tEngineNode));
+                memcpy(to->dxOp[row], from->dxOp[row], dxUsed * DX_OPERATORS * sizeof(tDxOperator));
             }
         }
 
@@ -3888,6 +3934,20 @@ static const tEngineNode * voice_morph_node(tMorphAxis axis, const tEngineNode *
     uint8_t             row   = (base->postMix == true) ? gLastRow[axis] : gVoice[voice].row[axis];
 
     return &table->node[row][table->column[n]];
+}
+
+// §26.2 - the six Operators a voice plays on one axis, or NULL where that morph does not move them
+static const tDxOperator * voice_morph_ops(tMorphAxis axis, const tEngineNode * base, uint32_t n, uint32_t voice) {
+    SE_LOCAL;
+
+    const tMorphTable * table = &gVoiceMorphsAudio.axis[axis];
+
+    if ((gVoiceMorphsUsable == false) || (table->dxSlot[n] < 0)) {
+        return NULL;
+    }
+    uint8_t             row   = (base->postMix == true) ? gLastRow[axis] : gVoice[voice].row[axis];
+
+    return table->dxOp[row][table->dxSlot[n]];
 }
 
 // Audio thread half of the seqlock. Returns the newest whole snapshot, or the last one it managed to
@@ -5083,7 +5143,7 @@ static double dx_envelope_db(uint32_t voice, uint32_t slot, const tDxOperator * 
 }
 
 // §14 - one sample of a DXRouter and its Operators, for one voice.
-static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, const tSoundEngineParams * params, double voicePitch) {
+static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, const tDxOperator * ops, double voicePitch) {
     SE_LOCAL;
 
     const tDxAlgorithm * alg               = dx_algorithm(spec->dxAlgorithm);
@@ -5101,8 +5161,9 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
 
     // Modulators before what they modulate: every DX7 modulation runs from a higher operator to a lower one.
     for (int32_t k = DX_OPERATORS - 1; k >= 0; k--) {
+        // §26.2 - the parameters come from the voice's own set; the state arrays stay keyed on dxBase
         uint32_t            slot = spec->dxBase + (uint32_t)k;
-        const tDxOperator * op   = &params->dxOp[slot];
+        const tDxOperator * op   = &ops[k];
         double              fm   = 0.0;
         double              hz   = 0.0;
         double              env  = 0.0;
@@ -5148,7 +5209,7 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
     }
 
     for (uint32_t k = 0; k < DX_OPERATORS; k++) {
-        if ((alg->target[k] == 0) && (params->dxOp[spec->dxBase + k].present == true)) {
+        if ((alg->target[k] == 0) && (ops[k].present == true)) {
             mix += out[k];
             carriers++;
         }
@@ -6000,7 +6061,13 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeDx:
         {
-            value[n][0] = (spec->active == true) ? dx_step(voice, n, spec, paramsIn, voicePitch) : 0.0;
+            // §26.2 - the Operators follow whichever axis the router's own node followed
+            const tDxOperator * ops = voice_morph_ops((spec == byKey) ? eAxisKey : eAxisVelocity, base, n, voice);
+
+            if (ops == NULL) {
+                ops = &paramsIn->dxOp[spec->dxBase];
+            }
+            value[n][0] = (spec->active == true) ? dx_step(voice, n, spec, ops, voicePitch) : 0.0;
             value[n][1] = value[n][0];
             break;
         }
