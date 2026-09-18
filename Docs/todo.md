@@ -9,6 +9,7 @@ CT (Priority order)
 - Vel/Keyb morph on a DXRouter's Operators: the per-voice tables do not cover their dxOp entries
 - Vel and Keyb morph on the same node: other params keep only Keyb, and one smoothed value moved by both adds in gain terms (reference §26.2 LIMITS)
 - G2 Alike rebuilds on the audio thread when a morph moves - up to ~3.6 ms (Debug) with per-voice morph tables; move it off
+- File menu needs re-arranging. Can we separate patch from perf somehow? Maybe in their own menu headings. Instead of "File", we could have "Patch" and "Performance". Also - I don't think we have performance write to bank nor file?
 - Drum synth could use text labels for the current 4 rows - Master, Slave, Noise Filter, Bend. That would allow us to remove the prefixes on the dial labels (M, S, NF, B). Would mean vertically spreading out the rows upwards. I think the first Slave dial is frequency, if so - units are wrong. Hopefully still room on the right (under preset button) to add graphical representation.
 - Bug where we see a sudden/random scroll VA area right about half a module's width. Maybe a buffer over-run over the scroll position variable?
 - Fix or add various module oscillator style graphics. Wave/filter graphs for PulseOsc, OscNoise, LfoD, Operator etc.-
@@ -20,9 +21,7 @@ CT (Priority order)
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
 - Add a top-level Edit menu (Undo, Redo, Cut, Copy, Paste, Delete, Paste Params, Select All)
-- Nudge arrows on knobs and sliders, for step-by-step mouse/touchpad adjustment
 - Yellow module-selection border is not obvious enough; try twice the line width and/or more prominent yellow
-- Reconnection dialogue does not always appear
 - Open Recent for patches loaded from a bank
 - Move Delete Unused Cables out of the cable popup to a top-level menu
 - Local mode button: draw a wave across sequencer columns, ultimately as a wave-representation mode
