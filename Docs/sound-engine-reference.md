@@ -904,12 +904,12 @@ the worst step is range/31 dial units for velocity and range/30 for a two-semito
 smoothing stays per node, and a voice adds each table's offset from the base node to the smoothed
 Freq, Res, gain, shape and mixer levels. FX Area nodes take the latest note's rows.
 
-LIMITS (narrowed 2026-09-18 - see §26.2.2). A node both morphs move no longer plays its Keyb node
-whole: it plays a merge, each word from whichever axis moves it, so a Vel morph on one of its
-parameters and a Keyb morph on another are BOTH delivered. What remains is the SAME parameter moved
-by both, where the two effects add in that value's own terms - exact for Freq (dial units) but not
-for a gain on a curve: a mixer level with Vel +127 and Keyb +64 reads 0.27 of full at note 96,
-velocity 64, where the instrument clamps the dial to 127. Building both tables takes about
+LIMITS (closed 2026-09-18 - see §26.2.2 and §26.2.3). A node both morphs move plays a merge, each
+word from whichever axis moves it, and the words BOTH move come from a build at the pair of amounts -
+so the two are summed before the conversion and the clamp, which is the law in §26.2.0. What is left
+is a resolution limit rather than a modelling one: the pair is tabulated at the same 32 velocities and
+64 notes as the per-axis tables, and only the FIRST node a patch morphs on both axes gets one
+(MAX_PAIR_NODES). Building the tables takes about
 3.6 ms in a Debug build when every row is used; the plug-in does that on a thread of its own since
 2026-09-18 (`rebuild_worker()`, g2Plugin.c notes §14) rather than on the audio thread.
 
@@ -970,6 +970,30 @@ and a Keyb morph of -80 on its Decay: before, the Sustain morph was lost entirel
 were 55%, 436%, 2040% and 1687% away from the same two dials set by hand; after, 0.77%, 0.61%, 0.25%
 and 0.00%. The single-axis cases and the same-parameter case are unchanged, the latter still 7.66%
 and 3.87% out at its worst on a DXRouter Operator's Level.
+
+**26.2.3 The same parameter on both axes (2026-09-18).** The merge in §26.2.2 settles every word only
+one axis moves. A word BOTH move it cannot: the right answer is the node built at (velocity, key)
+together, because §26.2.0's law sums the two offsets into one dial value and clamps it once, before
+the module's own conversion. Adding two converted offsets instead is exact only where the conversion
+is linear in dial units - Freq is, a gain on a curve is not, and a DXRouter Operator's Level was 7.7%
+out at its worst.
+
+WHAT MAKES A 2-D TABLE AFFORDABLE is that only the shared words are kept, not the node. The per-axis
+masks already say which words each axis moves (§26.2.2); their AND is exactly the set that needs the
+pair, and it is a handful of doubles rather than a node's 137 words. `build_pair_table()` walks
+VEL_MORPH_LEVELS x KEY_MORPH_LEVELS setting BOTH entries of sBuildAxis - which `param_value()` has
+always supported - and keeps those words alone, for the node and for a DXRouter's six Operators. 786
+KB a table, 2048 builds, against the 768 the two per-axis tables already cost; the rebuild has been
+off the audio thread since the same day, which is what makes that affordable.
+
+The four smoothed values then take ONE offset, `spec - base`, from the node the voice actually plays,
+where they used to take one per axis and add them. That is now correct in every case: only Vel moves
+it and spec is the Vel node, only Keyb and spec is the Keyb node, both and spec's word came from the
+pair build.
+
+Measured with `tools/morphcheck --axis both` on DXTest, a -60 morph on both axes of one Operator's
+Level: 7.66% and 3.87% out at the two mid points before, 0.14% and 0.01% after, the rest 0.00%. The
+single-axis and disjoint-parameter cases are unchanged.
 
 **26.3 Sustain pedal (2026-09-17).** Morph group 5 (Sust.Pd) is the pedal, down from 0.5 (CC64 at 64 and
 above). A key released while it is down leaves its voice gated - the envelopes sustain and the
