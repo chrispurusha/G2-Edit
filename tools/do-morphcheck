@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Builds tools/morphcheck — the offline check that a Vel or Keyb morph reaches the sound per voice.
+# See morphcheck.c and Docs/code-notes/morphcheck.c.md for what it is for.
+#
+# A script rather than an Xcode target, for the same reason do-render is one: this links a handful of
+# the application's own sources with no GUI and no device.
+#
+# THE FILE LIST IS THE POINT, exactly as in do-render — with two additions that tool does not need,
+# because this one has to LOAD A PATCH rather than build one in code:
+#
+#   plugin/g2Patch.c   the offline .pch2 reader, already written for the plug-in
+#   src/protocol.c     the bit-level patch format underneath it
+#
+# protocol.c calls undo_push_param_change(), and src/undo.c reaches into menus.c and selection.c — the
+# whole GUI. morphcheck.c defines the one stub instead, in the same spirit as plugin/g2HostIo.c. If
+# this list ever needs graphics.c or audioOutput.c to link, something has been added to the engine
+# that does not belong in it.
+
+set -e
+set -u
+set -o pipefail
+
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+OUT="${1:-$HERE/tools/morphcheck}"
+
+SOURCES=(
+    "$HERE/tools/morphcheck.c"
+    "$HERE/src/soundEngine.c"
+    "$HERE/src/paramCurves.c"
+    "$HERE/src/waveModels.c"
+    "$HERE/src/dataBase.c"
+    "$HERE/src/globalVars.c"
+    "$HERE/src/cableChain.c"
+    "$HERE/src/moduleResourcesAccess.c"
+    "$HERE/src/patchParamsResources.c"
+    "$HERE/src/noteStack.c"
+    "$HERE/src/protocol.c"
+    "$HERE/plugin/g2HostIo.c"
+    "$HERE/plugin/g2Patch.c"
+    "$HERE/SynthLib/src/utils.c"
+)
+
+# The two suppressions are do-render's, and for the same reasons: the null platform layer in
+# g2HostIo.c exists to ignore its arguments, and -Wextra fires on loops in moduleResourcesAccess.c
+# that predate these tools.
+cc -O2 -std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sign-compare \
+   -I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/plugin" \
+   -o "$OUT" "${SOURCES[@]}" -lm
+
+echo "built $OUT"

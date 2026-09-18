@@ -9954,3 +9954,41 @@ finding that the QU-24 capture chain itself is -4 dB at 110 Hz - the sub, being 
 the module's. The engine's square, saw and sub were each inverted relative to the instrument (relative relations
 matched, which is what the capture could see), and the saw rotated the other way. Engine code written and compiling;
 the sample-for-sample comparison with the harness was NOT run before the session ran out (todo.md).
+
+2026-09-18 - A DXROUTER'S OPERATORS NOW FOLLOW THE VEL AND KEYB MORPHS (CT priority list; reference §26.2.1). An
+Operator's dials live on the Operator module, not on the router, and the per-voice morph tables are built a NODE at a
+time - so every row of a DXRouter's table held the router's own fields while its six Operators kept coming from the
+base build. Two things were missing, not one: the tables never CARRIED the Operators, and the base-against-probe
+comparison that decides which nodes move never LOOKED at them, so a router whose Operators alone were morphed was not
+even entered in the table. Each table row now carries the six as well (build_module_node()'s opsOut,
+dx_operators_differ(), voice_morph_ops()), and dx_step() takes the playing voice's set as an argument instead of
+reaching into the snapshot. THE STATE ARRAYS STAY KEYED ON dxBase - gDxPhase, gDxEnvStage and gDxOut are per voice and
+per operator SLOT, and the slot is the base build's; only the parameters are per row, which is why out->dxBase is
+still overwritten with the base's. Cost is 110 KB per axis table (MAX_VOICE_DX_NODES = 2 routers x 64 rows x 6
+operators), zero-fill, so an engine that has no DXRouter pays nothing.
+
+  MEASURED OFFLINE, and the control is the point. A harness linking soundEngine.c with no device (the do-render file
+  list plus g2Patch.c/protocol.c) loads PatchTestFiles/DXTest.pch2 - Keyboard, DXRouter, six Operators, 2-Out, nothing
+  else - puts a -99 Vel morph on an Operator's Level and plays one note, then compares it with the SAME dial turned
+  down by hand at that velocity. After: within 0.04% rms at every velocity from 22 to 127, and 2.6% at velocity 1,
+  which is the axis's own step (row 0 is amount 0, so dial 99 against the hand's 98). Before: 0.022261 rms at EVERY
+  velocity, to five figures - the morph reached the operator not at all.
+
+  THE TRAP THAT COST THE MEASUREMENT TWICE. The first harness played its notes into one long-lived engine and the
+  readings scattered by 40%, which read exactly like a half-working fix. Voice allocation round-robins and each voice
+  starts its oscillators at a random phase (notes §63), so the same note played twice is two different timbres, and
+  with FM the difference is large. Stopping and starting the engine for every reading made it repeatable to the last
+  digit. Any future offline engine measurement wants the same.
+
+2026-09-18 - G2 ALIKE NO LONGER REBUILDS THE SNAPSHOT ON THE AUDIO THREAD (CT priority list; g2Plugin.c notes §14).
+render() folded any moved morph into the parameter snapshot at the top of the block. That was already a database walk
+and a node build; once the per-voice Vel and Keyb tables arrived it became up to 96 node builds per moved node, about
+3.6 ms in a Debug build, against a block budget often nearer 1 ms. It also took gParamsWriteMutex, which the editor's
+thread takes on EVERY frame - so the audio thread could be made to wait on a repaint, which is the worse of the two
+faults and the one that does not show up in a profile. A thread per instance does it now, selecting the instance's
+document exactly as every host entry point does.
+
+  IT POLLS, at 4 ms, rather than being signalled. The threads that set the dirty flag include the audio thread itself -
+  VST3 automation and poly pressure both land there - so a condition variable would put a lock back on the path the
+  change exists to clear. 4 ms is in any case quicker than the standalone editor's own route, which is a full canvas
+  repaint, i.e. one frame. auval passes clean and tools/vst3host runs four instances up and down with no leak.
