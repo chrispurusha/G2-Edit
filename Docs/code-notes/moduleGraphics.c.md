@@ -1204,3 +1204,25 @@ The veil registers no click region, so the module still edits and drags as befor
 one of these still loads and plays, with that module silent. In the plug-in the engine always runs, so
 the veil is always there; in the application only while Experimental > Enable Sound Engine is on.
 
+
+## 90. section heading bands, and `lighten_rgb()`
+
+A section heading (tLabelLocation - Operator's "Envelope", Drum Synth's four bands) sits on a band of
+colour rather than floating on the module face, CT 2026-09-18: "can we change the label background
+colour (also on other modules) to a slightly lighter version of the module colour?"
+
+DERIVED FROM THE MODULE'S OWN COLOUR, not a constant. A module's body is `gModuleColourMap[colour]`
+and the user can set any of the 25, so a fixed grey band would look pasted on over half of them.
+`lighten_rgb()` moves a colour LABEL_BAND_LIGHTEN of the way to white, which keeps the band the same
+hue as the face it sits on whatever that is - and works on the standard grey as well as the colours.
+
+THE BAND IS SIZED FROM THE TEXT, not from the table row, whose width is BLANK_SIZE (0.0) because a
+heading has never needed one: `get_text_width()` at the same height the text is drawn at, plus
+LABEL_BAND_PAD each side. eNoCache because the cache is keyed on the POINTER and these strings are
+static table entries that would sit in it forever for no gain.
+
+A HEADING BELONGS TO THE ROW BELOW IT, which is the whole point of having one, and the first version
+read as belonging to the row above: a dial's own label and value are drawn ABOVE its rect by the
+renderer, while a tLabelLocation rect is placed exactly where it is put, so the heading has to be
+close enough to its row's label to group with it and clear enough of the band above not to. On the
+Drum Synth that is dial + 10 in face units; at + 12 it read as a footer for the band above (CT).

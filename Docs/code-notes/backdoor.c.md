@@ -349,6 +349,18 @@ OK. That happened on 2026-08-24 and cost a capture that looked perfectly valid.
 The obvious tell is missing too: the top bar says "Offline" both when no G2 is plugged in
 and when another copy of the editor holds the USB claim.
 
+## 1a. `backdoor_channel_path()`
+
+`$G2_EDIT_BACKDOOR_CHANNEL` names the command/result pair (`<channel>_cmd.txt` and
+`<channel>_result.txt`); unset, it is the well-known `/tmp/g2edit_cmd.txt` pair it has always been.
+
+THE POINT IS NOT PARALLELISM, IT IS SAFETY. A test that starts its own editor otherwise shares one
+channel with whatever the developer already has open - so the test's commands can be answered by an
+editor sitting on a live G2, and the reply read back is from the wrong build. That is not
+hypothetical: it happened while the Patch/Performance menu split was being checked, with an editor
+running from Xcode and a day-old result file still in /tmp. Give a test its own channel and the two
+cannot reach each other.
+
 ## 25. in `backdoor_dispatch()`
 
 MENU <bar>[/<item>[/<subitem>]] — runs a menu item by label without going near the mouse.
@@ -411,3 +423,29 @@ as key_callback() would hand it (handle_note_entry_key(), no modifiers). The rep
 now sounding and how many keys are held. Added 2026-09-13 because synthetic key events from
 cliclick never reach GLFW, so holding one key while playing another could not be tested otherwise.
 A is C at the panel's first note; see note_offset_for_key() for the rest.
+
+## 25a. in the MENU listing
+
+A listed item carries `   [disabled]` when it has neither an action nor a flyout, which is exactly
+what makes it unclickable ("ERROR: item is disabled" above). Without it a listing says only that an
+item is PRESENT, and a menu whose whole design is which items are greyed in which state - the
+Performance menu, §14 of appMenuBar.c's notes - cannot be checked from a script at all.
+
+## 25b. QUIT
+
+Shuts the editor down through `synthlib_request_quit()`, the same path the window's close button
+takes, so a test's editor runs its real teardown instead of being killed mid-frame. The result is
+written BEFORE the request, since nothing will be around to write it afterwards. Pairs with §1a: a
+test starts an editor on its own channel and closes it again without ever sending a signal.
+
+## 25c. MENUOPEN and MENUSTATE
+
+`MENU` always closes what it opened, which is right for running an item but leaves no way to ask about
+a menu that is meant to STAY open. `MENUOPEN <bar>` opens a menu bar heading and leaves it standing;
+`MENUSTATE` answers `open=yes|no depth=N`.
+
+They exist for one test: that the pointer leaving the window closes an open menu (SynthLib's
+synthlibWindow.c notes §7). That needs a real pointer - `cliclick` moves it - and a way to ask the
+editor what happened, without screenshots or guessing where the window is. The sequence is: MENUOPEN,
+MENUSTATE (open), move the pointer off the window, MENUSTATE (closed), then move it back inside and
+check a move WITHIN the window leaves a menu alone.

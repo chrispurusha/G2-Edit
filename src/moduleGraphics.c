@@ -598,6 +598,9 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
                     break;
                 case paramTypeLfoShape:       render_param_function      = &render_paramType1LfoShape;
                     break;
+                case paramTypeDrumSlaveRatio: render_param_function      = &render_paramType1DrumSlaveRatio;
+                    break;
+
                 case paramTypeFreqDrum:       render_param_function      = &render_paramType1FreqDrum;
                     break;
                 case paramTypeLFORate:        render_param_function      = &render_paramType1LFORate;
@@ -3029,6 +3032,17 @@ static void graph_area_click_handler(tCoord coord, eClickPhase phase, void * use
 }
 
 // notes §88: a press on a graph but off its handles does nothing, rather than dragging the module.
+// notes §90 - a colour a given fraction of the way from this one to white. Derived from the module's
+// OWN colour rather than being a constant, since the user can set any of the 25 body colours and a
+// fixed grey band would look pasted on over half of them.
+static tRgb lighten_rgb(tRgb rgb, double fraction) {
+    return (tRgb){
+        rgb.red + ((1.0 - rgb.red) * fraction),
+        rgb.green + ((1.0 - rgb.green) * fraction),
+        rgb.blue + ((1.0 - rgb.blue) * fraction)
+    };
+}
+
 // Registered after the module body and before the graphs' own handles and keys, which therefore win.
 static void guard_graph_areas(tRectangle rectangle, tModule * module) {
     double                 scale = module->rectangle.size.w / rectangle.size.w;
@@ -3151,12 +3165,22 @@ void render_module_common(tRectangle rectangle, tModule * module) {
 
     // Section headings. No index cache and no hit-testing: there are a handful of rows in the whole
     // table, they never respond to the mouse, and nothing about them depends on the module's state.
+    // notes §90 - each sits on a band of its module's own colour, lightened.
     for (uint32_t i = 0; i < array_size_label_location_list(); i++) {
         if (labelLocationList[i].moduleType == module->type) {
             tRectangle adjusted = adjust_rectangle(rectangle, labelLocationList[i].rectangle, labelLocationList[i].anchor, module);
 
             adjusted.size.w = BLANK_SIZE;
             adjusted.size.h = STANDARD_TEXT_HEIGHT;
+
+            tRectangle band     = adjusted;
+
+            band.size.w     = get_text_width((char *)labelLocationList[i].text, adjusted.size.h, eNoCache)
+                              + (2.0 * LABEL_BAND_PAD);
+            band.coord.x   -= LABEL_BAND_PAD;
+            set_rgb_colour(lighten_rgb(gModuleColourMap[module->colour], LABEL_BAND_LIGHTEN));
+            render_rectangle(moduleArea, band);
+
             set_rgb_colour((tRgb)RGB_BLACK);
             render_text(moduleArea, adjusted, (char *)labelLocationList[i].text);
         }

@@ -78,14 +78,26 @@ static void action_clear_recent(int index) {
     recent_files_clear();
 }
 
+// §14 - a pair per operation, so the menu item says which of the two it is instead of the action
+// asking what mode the G2 is in.
 static void action_save_patch(int index) {
     (void)index;
-    file_menu_save_patch();
+    file_menu_save_patch(false);
+}
+
+static void action_save_perf(int index) {
+    (void)index;
+    file_menu_save_patch(true);
 }
 
 static void action_save_patch_current(int index) {
     (void)index;
-    file_menu_save_patch_to_current_path();
+    file_menu_save_patch_to_current_path(false);
+}
+
+static void action_save_perf_current(int index) {
+    (void)index;
+    file_menu_save_patch_to_current_path(true);
 }
 
 static void action_new_patch(int index) {
@@ -115,12 +127,22 @@ static void action_delete_perf_location(int index) {
 
 static void action_store_to_bank(int index) {
     (void)index;
-    file_menu_store_to_bank();
+    file_menu_store_to_bank(false);
+}
+
+static void action_store_perf_to_bank(int index) {
+    (void)index;
+    file_menu_store_to_bank(true);
 }
 
 static void action_store_back_to_bank(int index) {
     (void)index;
-    file_menu_store_back_to_bank();
+    file_menu_store_back_to_bank(false);
+}
+
+static void action_store_perf_back_to_bank(int index) {
+    (void)index;
+    file_menu_store_back_to_bank(true);
 }
 
 // notes §2
@@ -130,17 +152,9 @@ void app_menu_set_device_capable(bool capable) {
     sDeviceCapable = capable;
 }
 
-void open_file_menu(tCoord anchor) {
-    static tMenuItem items[12];  // 11 entries + the NULL terminator
-    bool             online      = device_ready();
-    bool             isPerf      = gGlobalSettings.perfMode == 1;
-    int              i           = 0;
-
-    items[i++] = (tMenuItem){
-        "Open Patch/Perf File...", (tRgb)RGB_GREY_3, action_open_patch, 0, NULL, 0, 0.0
-    };
-
-    // notes §3
+// §14 - the Open Recent flyout, shared by both menus: a recent file can be either kind and the
+// loader settles which by reading it, so there is nothing to split.
+static tMenuItem * recent_files_flyout(void) {
     static tMenuItem recentItems[RECENT_FILES_MAX + 2];
     uint32_t         recentCount = recent_files_count();
     uint32_t         r           = 0;
@@ -167,31 +181,40 @@ void open_file_menu(tCoord anchor) {
     recentItems[r] = (tMenuItem){
         NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
     };
+    return (recentCount > 0) ? recentItems : NULL;
+}
+
+// §14 - ONE browser for both kinds, in both menus. The file dialogue does not filter by extension and
+// the loader decides patch or performance by reading the file, so two entries would be two names for
+// the same dialogue - and opening a .prf2 puts the G2 into Performance mode by itself.
+void open_patch_menu(tCoord anchor) {
+    static tMenuItem items[12];
+    bool             online = device_ready();
+    int              i      = 0;
+    tMenuItem *      recent = recent_files_flyout();
+
+    items[i++] = (tMenuItem){
+        "Open Patch or Performance File...", (tRgb)RGB_GREY_3, action_open_patch, 0, NULL, 0, 0.0
+    };
 
     // Greyed with no flyout when there is nothing in it, rather than opening an empty one.
-    items[i++]     = (tMenuItem){
+    items[i++] = (tMenuItem){
         "Open Recent",
-        (recentCount > 0) ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
-        NULL, 0,
-        (recentCount > 0) ? recentItems : NULL, 0, 0.0
+        (recent != NULL) ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+        NULL, 0, recent, 0, 0.0
     };
 
     if (sDeviceCapable) {
         items[i++] = (tMenuItem){
-            "Load Patch from Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_load_patch_location : NULL, 0, NULL, 0, 0.0
+            "Load Patch from Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+            online ? action_load_patch_location : NULL, 0, NULL, 0, 0.0
         };
     }
-
-    if (sDeviceCapable) {
-        items[i++] = (tMenuItem){
-            "Load Performance from Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_load_perf_location : NULL, 0, NULL, 0, 0.0
-        };
-    }
-    // Save writes back to wherever this patch/perf came from; it only appears live once there IS
-    // such a place, which is why Save As sits below it rather than being the only option.
-    // Named after the file, as Store Back is after its location
+    // Save writes back to wherever this patch came from; it only appears live once there IS such a
+    // place, which is why Save As sits below it. Named after the file, as Store Back is after its
+    // location.
     static char  saveLabel[72];
-    const char * savePath     = file_menu_saved_path();
+    const char * savePath     = file_menu_saved_path(false);
     bool         haveSavePath = savePath != NULL;
 
     if (haveSavePath) {
@@ -205,9 +228,9 @@ void open_file_menu(tCoord anchor) {
             *c = ((unsigned char)*c < 0x80) ? *c : '?';
         }
 
-        snprintf(saveLabel, sizeof(saveLabel), "Save %s Back to File \"%s\"", isPerf ? "Perf" : "Patch", name);
+        snprintf(saveLabel, sizeof(saveLabel), "Save Patch Back to File \"%s\"", name);
     } else {
-        snprintf(saveLabel, sizeof(saveLabel), "Save %s Back to File", isPerf ? "Perf" : "Patch");
+        snprintf(saveLabel, sizeof(saveLabel), "Save Patch Back to File");
     }
     items[i++] = (tMenuItem){
         saveLabel,
@@ -215,47 +238,126 @@ void open_file_menu(tCoord anchor) {
         haveSavePath ? action_save_patch_current : NULL, 0, NULL, 0, 0.0
     };
     items[i++] = (tMenuItem){
-        isPerf ? "Save Perf As..." : "Save Patch As...", (tRgb)RGB_GREY_3, action_save_patch, 0, NULL, 0, 0.0
+        "Save Patch As...", (tRgb)RGB_GREY_3, action_save_patch, 0, NULL, 0, 0.0
     };
 
-    // Store back to the bank location it was loaded from - greyed when it did not come from one
     if (sDeviceCapable) {
         static char label[48];
         uint32_t    bank     = 0;
         uint32_t    location = 0;
-        bool        known    = file_menu_bank_origin(&bank, &location);
+        bool        known    = file_menu_bank_origin(false, &bank, &location);
         bool        live     = online && known;
 
         if (known) {
-            snprintf(label, sizeof(label), "Store %s Back to Bank %u:%u...", isPerf ? "Perf" : "Patch", bank + 1, location + 1);
+            snprintf(label, sizeof(label), "Store Patch Back to Bank %u:%u...", bank + 1, location + 1);
         } else {
-            snprintf(label, sizeof(label), "Store %s Back to Bank", isPerf ? "Perf" : "Patch");
+            snprintf(label, sizeof(label), "Store Patch Back to Bank");
         }
         items[i++] = (tMenuItem){
-            label, live ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, live ? action_store_back_to_bank : NULL, 0, NULL, 0, 0.0
+            label, live ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+            live ? action_store_back_to_bank : NULL, 0, NULL, 0, 0.0
         };
-    }
-
-    if (sDeviceCapable) {
         items[i++] = (tMenuItem){
-            isPerf ? "Store Perf to Bank..." : "Store Patch to Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_store_to_bank : NULL, 0, NULL, 0, 0.0
+            "Store Patch to Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+            online ? action_store_to_bank : NULL, 0, NULL, 0, 0.0
         };
-    }
-
-    if (sDeviceCapable) {
         items[i++] = (tMenuItem){
-            "Delete Patch...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_delete_patch_location : NULL, 0, NULL, 0, 0.0
-        };
-    }
-
-    if (sDeviceCapable) {
-        items[i++] = (tMenuItem){
-            "Delete Performance...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_delete_perf_location : NULL, 0, NULL, 0, 0.0
+            "Delete Patch...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+            online ? action_delete_patch_location : NULL, 0, NULL, 0, 0.0
         };
     }
     items[i++] = (tMenuItem){
         "New Patch", (tRgb)RGB_GREY_3, action_new_patch, 0, NULL, 0, 0.0
     };
+    items[i++] = (tMenuItem){
+        NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+    };
+
+    open_context_menu(anchor, items, 0, 0.0);
+}
+
+// §14 - THE BANK ITEMS NEED PERFORMANCE MODE, and are greyed rather than hidden when the G2 is not in
+// it. Store and Delete act on the instrument's own edit buffer, and in Patch mode that buffer IS one
+// patch - there is no performance there to store. Greyed, they still say the operation exists, which
+// is the whole reason this menu was split out of File: it existed before, but only ever in perf mode.
+// The FILE items carry no such condition: the editor holds four slots whatever mode the G2 is in.
+void open_performance_menu(tCoord anchor) {
+    static tMenuItem items[10];
+    bool             online       = device_ready();
+    bool             perfMode     = gGlobalSettings.perfMode == 1;
+    int              i            = 0;
+    tMenuItem *      recent       = recent_files_flyout();
+
+    items[i++] = (tMenuItem){
+        "Open Patch or Performance File...", (tRgb)RGB_GREY_3, action_open_patch, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Open Recent",
+        (recent != NULL) ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+        NULL, 0, recent, 0, 0.0
+    };
+
+    if (sDeviceCapable) {
+        items[i++] = (tMenuItem){
+            "Load Performance from Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+            online ? action_load_perf_location : NULL, 0, NULL, 0, 0.0
+        };
+    }
+    static char      saveLabel[72];
+    const char *     savePath     = file_menu_saved_path(true);
+    bool             haveSavePath = savePath != NULL;
+
+    if (haveSavePath) {
+        const char * slash = strrchr(savePath, '/');
+        char         name[40];
+
+        snprintf(name, sizeof(name), "%s", (slash != NULL) ? (slash + 1) : savePath);
+
+        for (char * c = name; *c != '\0'; c++) {
+            *c = ((unsigned char)*c < 0x80) ? *c : '?';
+        }
+
+        snprintf(saveLabel, sizeof(saveLabel), "Save Performance Back to File \"%s\"", name);
+    } else {
+        snprintf(saveLabel, sizeof(saveLabel), "Save Performance Back to File");
+    }
+    items[i++] = (tMenuItem){
+        saveLabel,
+        haveSavePath ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+        haveSavePath ? action_save_perf_current : NULL, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Save Performance As...", (tRgb)RGB_GREY_3, action_save_perf, 0, NULL, 0, 0.0
+    };
+
+    if (sDeviceCapable) {
+        static char label[52];
+        uint32_t    bank      = 0;
+        uint32_t    location  = 0;
+        bool        known     = file_menu_bank_origin(true, &bank, &location);
+        bool        live      = online && perfMode && known;
+
+        if (known) {
+            snprintf(label, sizeof(label), "Store Performance Back to Bank %u:%u...", bank + 1, location + 1);
+        } else {
+            snprintf(label, sizeof(label), "Store Performance Back to Bank");
+        }
+        items[i++] = (tMenuItem){
+            label, live ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+            live ? action_store_perf_back_to_bank : NULL, 0, NULL, 0, 0.0
+        };
+
+        bool        storeLive = online && perfMode;
+
+        items[i++] = (tMenuItem){
+            "Store Performance to Bank...", storeLive ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+            storeLive ? action_store_perf_to_bank : NULL, 0, NULL, 0, 0.0
+        };
+        items[i++] = (tMenuItem){
+            "Delete Performance...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+            online ? action_delete_perf_location : NULL, 0, NULL, 0, 0.0
+        };
+    }
     items[i++] = (tMenuItem){
         NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
     };
@@ -1045,7 +1147,8 @@ void open_experimental_menu(tCoord anchor) {
 
 
 tMenuBarItem gAppMenuBar[] = {
-    {"File",         open_file_menu        },
+    {"Patch",        open_patch_menu       },
+    {"Performance",  open_performance_menu },
     {"Settings",     open_settings_menu    },
     {"Backup",       open_backup_menu      },
     {"Restore",      open_restore_menu     },

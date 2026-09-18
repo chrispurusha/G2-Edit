@@ -75,3 +75,41 @@ mapping, and several in a row look like a pass.
 One throwaway note before the sweep. The first note of a run measures a little low whatever the
 settings - about 2% on SimpleLead - and without this the sweep's first point carries it. Cheap
 insurance; the cause has not been chased, since it is gone once the first note has been played.
+
+## 8. `eAxisBoth`
+
+`--axis both` puts the SAME range on both axes and sweeps velocity and note together, and its `by
+hand` reference sums the two amounts before clamping, which is what the instrument does (reference
+§26.2.0). It is the check on the one case two per-axis builds cannot get right, so it is expected to
+DIFFER on any parameter whose conversion is not linear in dial units - a gain on a curve - and to
+match on one that is, such as a filter Freq. Read it as a measurement of that error, not as a defect
+to be chased.
+
+## 9. `--param2`
+
+The case that CAN be got right: the two axes moving DIFFERENT parameters of one module. The Vel range
+goes on `--param` and the Keyb range on `--param2`, and the `by hand` reference moves both dials to
+where the two morphs should have put them. Before the per-voice merge (reference §26.2.2) this failed
+by orders of magnitude, since the whole node came from the Keyb build and the Vel-morphed parameter
+was simply absent.
+
+PICK PARAMETERS THAT ARE NOT DROP-DOWNS. A mode is read raw - the manual is explicit that a drop-down
+cannot be morphed - so a morph on one moves nothing and the sweep reports a vacuous PASS or, worse,
+looks like a broken fix. EnvADSR parameter 0 is Shape, and cost a confusing half hour that way;
+parameters 1-4 (Attack, Decay, Sustain, Release) are the ones with something to hear.
+
+## 10. `write_test_patch()`
+
+`--write out.pch2` saves the patch the sweep WOULD have played, instead of playing it: the same module,
+the same dials and the same morph ranges, through the application's own writer. It exists because the
+offline sweep only proves the engine follows its own law - hearing it against the G2 needs a patch the
+instrument can load, and nothing in PatchTestFiles used a Vel or Keyb morph at all until these.
+
+EVERY VARIATION gets the range, not just the active one: the file holds a morph range per variation,
+and a patch that only morphs in variation 1 is a confusing thing to hand somebody to listen to.
+
+The four it made are in PatchTestFiles: `MorphVelFilter` (Vel +90 on FltClassic Freq),
+`MorphKeybFilter` (the same on the Keyb axis), `MorphSplitEnv` (Vel -80 on an EnvADSR's Sustain and
+Keyb -80 on its Decay - the case the merge fixes) and `MorphSameDxLevel` (both axes on one Operator's
+Level - the case it does not). The two filter ones keep SimpleLead's own wheel morph on the same dial,
+which is deliberate: it is also a check that a patch-wide morph and a per-voice one coexist.

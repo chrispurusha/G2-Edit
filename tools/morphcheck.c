@@ -34,6 +34,7 @@
 #include "moduleResourcesAccess.h"
 #include "soundEngine.h"
 #include "g2Patch.h"
+#include "patchWrite.h"
 
 #define RATE               (48000.0)
 #define BLOCK              (512)
@@ -64,12 +65,16 @@ void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variat
 
 typedef enum {
     eAxisVel = 0,
-    eAxisKeyb
+    eAxisKeyb,
+    eAxisBoth        // notes §8 - the same parameter morphed on BOTH axes at once
 } tAxis;
 
 static tModule * sModule;
 static uint32_t  sVariation;
 static uint32_t  sParamIndex;
+// notes §9 - the SECOND parameter, for the case the two axes move different dials of one module
+static int32_t   sParam2Index = -1;
+static uint8_t   sParam2Dial;
 
 static double velocity_amount(uint8_t velocity) {
     double row = round(((double)velocity * (double)(VEL_MORPH_LEVELS - 1)) / 127.0);
@@ -102,12 +107,23 @@ static double render_rms(uint32_t blocks) {
 }
 
 // notes §3 - one reading: the dial and its morph ranges, then one note into a FRESH engine.
-static double reading(uint8_t dial, int32_t velRange, int32_t keybRange, int32_t note, uint8_t velocity) {
+// notes §9 - with a second parameter, the Vel range goes on the first and the Keyb range on the
+// second, and `dial2` is where the second one sits.
+static double reading2(uint8_t dial, int32_t velRange, int32_t keybRange, int32_t note, uint8_t velocity,
+                       uint8_t dial2) {
     tParam * param = &sModule->param[sVariation][sParamIndex];
 
     param->value                  = dial;
     param->morphRange[VEL_GROUP]  = (uint8_t)((velRange < 0) ? (256 + velRange) : velRange);
-    param->morphRange[KEYB_GROUP] = (uint8_t)((keybRange < 0) ? (256 + keybRange) : keybRange);
+    param->morphRange[KEYB_GROUP] = (uint8_t)((sParam2Index >= 0) ? 0 : ((keybRange < 0) ? (256 + keybRange) : keybRange));
+
+    if (sParam2Index >= 0) {
+        tParam * other = &sModule->param[sVariation][sParam2Index];
+
+        other->value                  = dial2;
+        other->morphRange[VEL_GROUP]  = 0;
+        other->morphRange[KEYB_GROUP] = (uint8_t)((keybRange < 0) ? (256 + keybRange) : keybRange);
+    }
 
     // notes §3 - the same phases every time, or three readings of the SAME dial disagree by tens of
     // percent and the verdict is noise.
@@ -124,6 +140,10 @@ static double reading(uint8_t dial, int32_t velRange, int32_t keybRange, int32_t
 
     sound_engine_note(note, 64, false);
     return rms;
+}
+
+static double reading(uint8_t dial, int32_t velRange, int32_t keybRange, int32_t note, uint8_t velocity) {
+    return reading2(dial, velRange, keybRange, note, velocity, sParam2Dial);
 }
 
 static uint8_t hand_dial(uint8_t dial, int32_t range, double amount) {
@@ -151,11 +171,46 @@ static void list_modules(void) {
     }
 }
 
+// notes §10 - write the patch the sweep would have played, so the same test can be heard on the G2.
+static bool write_test_patch(const char * path, uint8_t dial, int32_t range, bool onVel, bool onKeyb) {
+    uint8_t raw  = (uint8_t)((range < 0) ? (256 + range) : range);
+    uint8_t vel  = (onVel == true) ? raw : 0u;
+    uint8_t keyb = (onKeyb == true) ? raw : 0u;
+
+    if (gMorphCount[0] <= (uint32_t)KEYB_GROUP) {
+        fprintf(stderr, "morphcheck: this patch carries only %u morph groups\n", gMorphCount[0]);
+        return false;
+    }
+
+    // EVERY VARIATION, not just the active one. The file holds a morph range per variation, and a
+    // patch that only morphs in variation 1 is a confusing thing to hand somebody to listen to.
+    for (uint32_t v = 0; v < NUM_VARIATIONS_USB; v++) {
+        sModule->param[v][sParamIndex].value                = dial;
+        sModule->param[v][sParamIndex].morphRange[VEL_GROUP] = vel;
+
+        if (sParam2Index >= 0) {
+            sModule->param[v][sParamIndex].morphRange[KEYB_GROUP]  = 0;
+            sModule->param[v][sParam2Index].value                  = sParam2Dial;
+            sModule->param[v][sParam2Index].morphRange[KEYB_GROUP] = keyb;
+        } else {
+            sModule->param[v][sParamIndex].morphRange[KEYB_GROUP] = keyb;
+        }
+    }
+
+    if (write_database_to_file(path, 0) != EXIT_SUCCESS) {
+        fprintf(stderr, "morphcheck: cannot write %s\n", path);
+        return false;
+    }
+    printf("wrote %s\n", path);
+    return true;
+}
+
 static void usage(void) {
     fprintf(stderr,
             "usage: morphcheck <patch.pch2> --module N --param N [--axis vel|keyb|both]\n"
             "                  [--area va|fx] [--range N] [--note N] [--velocity N]\n"
-            "                  [--points N] [--tolerance PCT] [--separation PCT]\n"
+            "                  [--param2 N] [--points N] [--tolerance PCT] [--separation PCT]\n"
+            "                  [--write out.pch2]\n"
             "       morphcheck <patch.pch2> --list\n"
             "\n"
             "Checks that a Vel or Keyb morph on one parameter reaches the sound PER VOICE, by\n"
@@ -166,7 +221,7 @@ static void usage(void) {
 // notes §4 - one axis, swept. Returns false if any point failed or the whole sweep was vacuous.
 static bool sweep(tAxis axis, uint8_t dial, int32_t range, int32_t fixedNote, uint8_t fixedVelocity,
                   uint32_t points, double tolerance, double separation) {
-    const char * name      = (axis == eAxisVel) ? "VELOCITY" : "KEYBOARD";
+    const char * name      = (axis == eAxisVel) ? "VELOCITY" : ((axis == eAxisKeyb) ? "KEYBOARD" : "BOTH AXES");
     uint32_t     failed    = 0;
     uint32_t     vacuous   = 0;
 
@@ -174,8 +229,10 @@ static bool sweep(tAxis axis, uint8_t dial, int32_t range, int32_t fixedNote, ui
 
     if (axis == eAxisVel) {
         printf("  note %d held; velocity swept\n", fixedNote);
-    } else {
+    } else if (axis == eAxisKeyb) {
         printf("  velocity %u held; note swept\n", fixedVelocity);
+    } else {
+        printf("  velocity and note swept together, the same range on each axis\n");
     }
     printf("  %-26s %10s %10s %10s  %8s %9s\n", "point (hand dial)", "morphed", "by hand", "no morph",
            "error", "separation");
@@ -189,18 +246,26 @@ static bool sweep(tAxis axis, uint8_t dial, int32_t range, int32_t fixedNote, ui
         if (axis == eAxisVel) {
             velocity = (uint8_t)lround(1.0 + (span * 126.0));
             amount   = velocity_amount(velocity);
-        } else {
+        } else if (axis == eAxisKeyb) {
             note   = (int32_t)lround(36.0 + (span * 60.0));   // C1 to C6, where the axis runs 0 to 1
             amount = key_amount(note);
+        } else {
+            velocity = (uint8_t)lround(1.0 + (span * 126.0));
+            note     = (int32_t)lround(36.0 + (span * 60.0));
+            // §26.2.0 - one parameter: the instrument sums both offsets and clamps ONCE. Two: each
+            // dial takes its own axis, and the merge is what has to deliver both at the same time.
+            amount   = (sParam2Index >= 0) ? velocity_amount(velocity)
+                       : (velocity_amount(velocity) + key_amount(note));
         }
         uint8_t hand     = hand_dial(dial, range, amount);
+        uint8_t hand2    = (sParam2Index >= 0) ? hand_dial(sParam2Dial, range, key_amount(note)) : sParam2Dial;
 
         // The three readings the verdict needs: the morph, the dial moved by hand to where the morph
         // should have put it, and the dial left alone. notes §5.
-        double  got      = reading(dial, (axis == eAxisVel) ? range : 0, (axis == eAxisKeyb) ? range : 0,
-                                   note, velocity);
-        double  want     = reading(hand, 0, 0, note, velocity);
-        double  null     = reading(dial, 0, 0, note, velocity);
+        double  got      = reading2(dial, (axis != eAxisKeyb) ? range : 0, (axis != eAxisVel) ? range : 0,
+                                    note, velocity, sParam2Dial);
+        double  want     = reading2(hand, 0, 0, note, velocity, hand2);
+        double  null     = reading2(dial, 0, 0, note, velocity, sParam2Dial);
 
         double  error    = (want > 0.0) ? (fabs(got - want) / want) : ((got > 0.0) ? 1.0 : 0.0);
         double  apart    = (want > 0.0) ? (fabs(null - want) / want) : 0.0;
@@ -209,8 +274,12 @@ static bool sweep(tAxis axis, uint8_t dial, int32_t range, int32_t fixedNote, ui
 
         if (axis == eAxisVel) {
             snprintf(point, sizeof(point), "velocity %3u (dial %3u)", velocity, hand);
-        } else {
+        } else if (axis == eAxisKeyb) {
             snprintf(point, sizeof(point), "note %3d (dial %3u)", note, hand);
+        } else if (sParam2Index >= 0) {
+            snprintf(point, sizeof(point), "vel %3u note %3d (%3u/%3u)", velocity, note, hand, hand2);
+        } else {
+            snprintf(point, sizeof(point), "vel %3u note %3d (dial %3u)", velocity, note, hand);
         }
 
         if (apart < separation) {
@@ -255,6 +324,8 @@ int main(int argc, char ** argv) {
     bool         wantList   = false;
     bool         doVel      = true;
     bool         doKeyb     = true;
+    bool         doBoth     = false;
+    const char * writePath   = NULL;
 
     if (argc < 2) {
         usage();
@@ -267,6 +338,10 @@ int main(int argc, char ** argv) {
             moduleIdx = atoi(argv[++i]);
         } else if ((strcmp(argv[i], "--param") == 0) && ((i + 1) < argc)) {
             paramIdx = atoi(argv[++i]);
+        } else if ((strcmp(argv[i], "--param2") == 0) && ((i + 1) < argc)) {
+            sParam2Index = atoi(argv[++i]);
+        } else if ((strcmp(argv[i], "--write") == 0) && ((i + 1) < argc)) {
+            writePath = argv[++i];
         } else if ((strcmp(argv[i], "--area") == 0) && ((i + 1) < argc)) {
             location = (strcmp(argv[++i], "fx") == 0) ? locationFx : locationVa;
         } else if ((strcmp(argv[i], "--range") == 0) && ((i + 1) < argc)) {
@@ -284,8 +359,9 @@ int main(int argc, char ** argv) {
         } else if (strcmp(argv[i], "--axis") == 0 && ((i + 1) < argc)) {
             const char * which = argv[++i];
 
-            doVel  = (strcmp(which, "keyb") != 0);
-            doKeyb = (strcmp(which, "vel") != 0);
+            doBoth = (strcmp(which, "both") == 0);
+            doVel  = (doBoth == false) && (strcmp(which, "keyb") != 0);
+            doKeyb = (doBoth == false) && (strcmp(which, "vel") != 0);
         } else if (strcmp(argv[i], "--list") == 0) {
             wantList = true;
         } else {
@@ -321,6 +397,12 @@ int main(int argc, char ** argv) {
     }
     uint8_t dial = sModule->param[sVariation][sParamIndex].value;
 
+    if (sParam2Index >= 0) {
+        sParam2Dial = sModule->param[sVariation][sParam2Index].value;
+        printf("second parameter %d, dial %u - Vel goes on the first, Keyb on this one\n",
+               sParam2Index, sParam2Dial);
+    }
+
     // notes §6 - a range that lands the dial on the far end without clamping past it
     if (range == 0) {
         range = (dial >= 64) ? -(int32_t)dial : (int32_t)(127 - dial);
@@ -328,6 +410,9 @@ int main(int argc, char ** argv) {
     printf("module %d (%s), parameter %d, dial %u\n",
            moduleIdx, gModuleProperties[sModule->type].name, paramIdx, dial);
 
+    if (writePath != NULL) {
+        return (write_test_patch(writePath, dial, range, doVel || doBoth, doKeyb || doBoth) == true) ? 0 : 1;
+    }
     sound_engine_set_sample_rate(RATE);
     sound_engine_start_hosted(RATE);
 
@@ -343,6 +428,10 @@ int main(int argc, char ** argv) {
 
     if (doKeyb == true) {
         ok = sweep(eAxisKeyb, dial, range, note, velocity, points, tolerance, separation) && ok;
+    }
+
+    if (doBoth == true) {
+        ok = sweep(eAxisBoth, dial, range, note, velocity, points, tolerance, separation) && ok;
     }
     sound_engine_stop_hosted();
     printf("\n%s\n", (ok == true) ? "morphcheck: PASS" : "morphcheck: FAIL");

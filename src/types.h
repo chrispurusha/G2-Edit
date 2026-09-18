@@ -328,6 +328,7 @@ typedef enum {
     paramTypeFine,
     paramTypeGeneralFreq,
     paramTypeFreqDrum,
+    paramTypeDrumSlaveRatio,
     paramTypeInt,
     paramTypeLFORate,
     paramTypeShape,

@@ -174,3 +174,26 @@ draw_button() returns the rect AFTER scale_scroll_adjust_rectangle(), which is t
 the click registry works in; the layout rect above is in unadjusted module coordinates.
 Returning the latter registered the group somewhere else entirely — the buttons drew in
 the right place and no click could ever reach them, at any zoom or scroll position.
+
+## 19. `render_paramType1DrumSlaveRatio()`
+
+THE SLAVE DIAL IS A RATIO, NOT A FREQUENCY, and it used to be neither: it was a plain percent dial
+reading "11.7" where the G2 shows a pitch multiplier. The owner's guess was that it was a frequency
+with the wrong units; the manual says otherwise, and so does the instrument's own code.
+
+> "The Master display box shows the master pitch in Hz, and the Slave display box the pitch ratio
+> related to the master pitch. Range: Master: 20.0 Hz to 784 Hz. Slave: 1:1 to 6.26."
+
+The law is `2^(value/48)` - the value is quarter-semitones - which gives exactly 1.0 at 0 and 6.2586
+at 127, the two ends the manual quotes. The instrument reads the dial as a semitone count in the top
+six bits and a quarter-semitone in the bottom two, which is the same number.
+
+TWO FORMS, and the choice between them is the interesting part. The instrument prints `N:1` when the
+ratio is near a whole number and `x2.51` otherwise, and "near" is not a fixed tolerance: it is whether
+THIS dial position is the closest one to the whole number, i.e. the error is under half the step to
+the next position. So raw 75 reads x2.95 and raw 76 reads 3:1. Whole ratios land at 0, 48, 76, 96 and
+111 (1 to 5); 6 would need raw 124, but the dial's own 2:1-at-48 spacing puts 127 at 6.26, so the top
+of the dial is a multiplier rather than 6:1.
+
+The second display box the manual describes - Master pitch in Hz beside Slave ratio - is the
+original's, not ours: we draw the value under each dial instead, which says the same thing.

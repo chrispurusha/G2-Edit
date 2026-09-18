@@ -406,8 +406,9 @@ Automate *** We lack an UI element for the CTRL selector   [module type 57]
 
 Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Bend/Click/Noise(y=65)   [module type 58]
 --------------------------------------------------------------------------------------------------------------------
-   0. Master Freq       FreqDrum      --   
-   1. Slave Ratio       CommonDial    --   declared as DrumSynthRatio, but rendered as the plain percent dial - check
+   0. Master Freq       FreqDrum      OK   Hz = 20 * 2^(v*0.041675): 20.0 at 0 and 784.0 at 127, the manual's own range
+   1. Slave Ratio       DrumSlaveRatio OK  ratio = 2^(v/48): 1:1 at 0 and x6.26 at 127, the manual's own range. Was the
+                                           plain percent dial, which read "11.7" for a ratio  [fixed 2026-09-18]
    2. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    3. Dcy               ADRTime       OK   seconds = 45.0*((v+40.167)/167.167)^8, all 128 readings   [computed, 2026-08-10]
    4. Lev               CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100

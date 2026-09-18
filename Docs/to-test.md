@@ -3,6 +3,50 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***DRUM SYNTH FACE RE-LAID OUT, SLAVE DIAL NOW A RATIO (2026-09-18)*** - findings 2026-09-18,
+  renderParams.c notes §19. Four band headings, M/S/NF/B prefixes dropped, rows spread; the Slave dial
+  reads x1.24 / 3:1 instead of a percentage. Checked by rendering at 1.0 and 0.59 (no overlaps, nothing
+  off the right edge) and the ratio law against the manual's own 1:1-to-6.26. STILL TO CHECK ON THE G2:
+  that the Slave readings match the panel dial for dial (especially where it flips between "N:1" and
+  "x2.51", around raw 75/76), and that the face reads well at the zoom you actually work at.
+- ***SECTION HEADINGS SIT ON A LIGHTENED BAND (2026-09-18)*** - moduleGraphics.c notes §90. Every
+  tLabelLocation heading now has a background a fraction of the way from its module's OWN colour to
+  white, so it follows whatever body colour the module is set to. Checked at 1.0 and 0.59 on the Drum
+  Synth and the Operator. STILL TO CHECK: how it looks on a module set to each of the 25 body colours,
+  the darkest shades especially - LABEL_BAND_LIGHTEN (0.28) is one number for all of them and may want
+  to be more on a dark colour.
+- ***AN OPEN MENU CLOSES WHEN THE POINTER LEAVES THE WINDOW (2026-09-18)*** - SynthLib
+  synthlibWindow.c notes §7. IN SYNTHLIB, so SynthEdit and EmuUtility get it too once the pin moves.
+  Tested end to end with a real pointer (cliclick) and the new MENUOPEN/MENUSTATE backdoor commands:
+  opens, closes on leaving, and a move WITHIN the window leaves it alone. STILL TO CHECK by hand: a
+  flyout open two levels deep, a right-click context menu (not just the menu bar), that nothing closes
+  while a drag is in progress, and the same in the plug-in editor - which has no GLFW, so it does NOT
+  get this yet and would need an NSTrackingArea.
+- ***FILE MENU SPLIT INTO PATCH AND PERFORMANCE (2026-09-18)*** - appMenuBar.c notes §13-14. The
+  performance operations were always there but only ever visible in Perf mode; they now have their own
+  heading, and the kind follows the menu item rather than the G2's mode. NEW CAPABILITY: in Perf mode a
+  single slot's patch can be saved to a .pch2, which was impossible before (the save wrote a .prf2).
+  Checked offline through the backdoor - both menus list correctly and every device item is greyed.
+  STILL TO CHECK ON THE G2, and the destructive half has NOT been exercised: Store Patch to Bank and
+  Store Performance to Bank from their own menus (peek-and-confirm should name the right kind), Store
+  Back to Bank b:l, Delete Patch/Performance, that the perf bank items grey out in Patch mode and come
+  live in Perf mode, and that Save Patch As... in Perf mode really writes one slot as a .pch2. Also the
+  plug-in's own two menus (no bank items there).
+- ***BACKDOOR: PER-INSTANCE CHANNEL AND QUIT (2026-09-18)*** - backdoor.c notes §1a, §25a, §25b.
+  $G2_EDIT_BACKDOOR_CHANNEL names the command/result pair so a test's editor cannot be answered by one
+  already running on a live G2; QUIT shuts down through the normal teardown instead of a signal; and a
+  MENU listing now marks greyed items [disabled]. Checked offline. STILL TO CHECK: that tools/face-shots
+  and anything else on the default channel still work unchanged (the default is untouched), and that
+  QUIT leaves prefs.txt written as a window-close does.
+- ***A NODE BOTH MORPH AXES MOVE IS MERGED PER VOICE (2026-09-18)*** - reference §26.2.2. A Vel morph on
+  one parameter of a module and a Keyb morph on another are now both delivered; the Vel one used to be
+  thrown away entirely. Checked offline on an EnvADSR (Vel on Sustain, Keyb on Decay): 1687% out before,
+  0.00% after. The same parameter moved by both axes is deliberately unchanged and still 7.7% out at
+  worst. STILL TO CHECK BY EAR AGAINST THE G2, and four patches now exist for it (morphcheck --write):
+  PatchTestFiles/MorphVelFilter (velocity opens the filter), MorphKeybFilter (the key does),
+  MorphSplitEnv (Vel on an envelope's Sustain, Keyb on its Decay - this entry's case) and
+  MorphSameDxLevel (both on one Operator Level - the case still 7.7% out). Load each on the G2 and in
+  the editor and compare; none of §26.2 has ever been heard against the instrument.
 - ***DXROUTER OPERATORS FOLLOW THE VEL AND KEYB MORPHS (2026-09-18)*** - reference §26.2.1. A Vel or
   Keyb morph on an Operator's own dials (Level, the ratio, the envelope) now moves per voice; it moved
   nothing at all before. Checked offline on DXTest.pch2 to within 0.04% rms of the dial turned down by

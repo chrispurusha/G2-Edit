@@ -81,12 +81,36 @@ bool backdoor_enabled(void) {
     return cached == 1;
 }
 
+// notes §1a - $G2_EDIT_BACKDOOR_CHANNEL names the pair, so two editors can be driven at once without
+// stealing each other's commands. Unset, it is the single well-known pair it has always been. The
+// point is not parallelism but SAFETY: a second editor started for a test would otherwise answer, or
+// be answered for, by whichever one the developer already had open on a live G2.
+static const char * backdoor_channel_path(bool result) {
+    static char cmdPath[512];
+    static char resultPath[512];
+    static bool built;
+
+    if (built == false) {
+        const char * channel = getenv("G2_EDIT_BACKDOOR_CHANNEL");
+
+        if ((channel != NULL) && (channel[0] != '\0')) {
+            snprintf(cmdPath, sizeof(cmdPath), "%s_cmd.txt", channel);
+            snprintf(resultPath, sizeof(resultPath), "%s_result.txt", channel);
+        } else {
+            snprintf(cmdPath, sizeof(cmdPath), "/tmp/g2edit_cmd.txt");
+            snprintf(resultPath, sizeof(resultPath), "/tmp/g2edit_result.txt");
+        }
+        built = true;
+    }
+    return (result == true) ? resultPath : cmdPath;
+}
+
 static const char * backdoor_cmd_path(void) {
-    return "/tmp/g2edit_cmd.txt";
+    return backdoor_channel_path(false);
 }
 
 static const char * backdoor_result_path(void) {
-    return "/tmp/g2edit_result.txt";
+    return backdoor_channel_path(true);
 }
 
 // Case-insensitive "does this label contain that text", for the MENU command's label matching.
@@ -508,10 +532,11 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
                                      (unsigned)gPatchSourceSerial[i], (unsigned)gSavedPathSerial[i]);
         }
 
-        bool     back      = file_menu_bank_origin(&bank, &location);
+        bool     isPerf    = gGlobalSettings.perfMode == 1;
+        bool     back      = file_menu_bank_origin(isPerf, &bank, &location);
 
         snprintf(text + used, sizeof(text) - used, "current slot %u: save-to-file=%s store-back=%s%u:%u\n",
-                 (unsigned)gSlot, file_menu_have_saved_path() ? "yes" : "no", back ? "yes " : "no ",
+                 (unsigned)gSlot, file_menu_have_saved_path(isPerf) ? "yes" : "no", back ? "yes " : "no ",
                  back ? bank + 1 : 0, back ? location + 1 : 0);
         backdoor_write_result(text);
     } else if (strcmp(cmd, "SLOT") == 0) {
@@ -1297,14 +1322,56 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
             used += (size_t)snprintf(list + used, sizeof(list) - used, "OK\n");
 
+            // notes §25a - a greyed item has no action and no flyout, which is exactly what makes it
+            // unclickable above ("item is disabled"). Marking it here is what lets a test check that
+            // something is offered but unavailable, rather than only that it is present.
             for (i = 0; (items != NULL) && (items[i].label != NULL) && (used < sizeof(list)); i++) {
-                used += (size_t)snprintf(list + used, sizeof(list) - used, "%s%s\n",
-                                         items[i].label, (items[i].subMenu != NULL) ? " >" : "");
+                bool flyout   = items[i].subMenu != NULL;
+                bool disabled = (items[i].action == NULL) && (flyout == false);
+
+                used += (size_t)snprintf(list + used, sizeof(list) - used, "%s%s%s\n",
+                                         items[i].label, flyout ? " >" : "",
+                                         disabled ? "   [disabled]" : "");
             }
 
             close_context_menu();
             backdoor_write_result(list);
         }
+    } else if (strcmp(cmd, "MENUSTATE") == 0) {
+        // notes §25c - is a menu open, and how deep? MENU above always closes what it opened, so
+        // there was no way to ask - and "the pointer leaving closes the menu" cannot be tested by a
+        // script without it.
+        char state[64] = {0};
+
+        snprintf(state, sizeof(state), "OK\nopen=%s depth=%u\n",
+                 (gContextMenu.active == true) ? "yes" : "no", (unsigned)gContextMenu.depth);
+        backdoor_write_result(state);
+        return;
+    } else if (strcmp(cmd, "MENUOPEN") == 0) {
+        // notes §25c - open a menu bar heading and LEAVE it open, which MENU deliberately does not.
+        uint32_t i = 0;
+
+        for (i = 0; (gAppMenuBar[i].label != NULL); i++) {
+            if (label_contains(gAppMenuBar[i].label, arg) == true) {
+                // Anchored at the origin, as MENU does: the position does not matter here, only
+                // that the menu is left standing for the pointer to leave.
+                close_context_menu();
+                gAppMenuBar[i].open((tCoord){0.0, 0.0});
+                synthlib_request_redraw();
+                backdoor_write_result("OK\n");
+                return;
+            }
+        }
+
+        backdoor_write_result("ERROR: no such menu\n");
+        return;
+    } else if (strcmp(cmd, "QUIT") == 0) {
+        // notes §25b - shut down the way the window's close button does, so a test's editor runs its
+        // real teardown (prefs written, USB closed, engine stopped) instead of being killed mid-frame.
+        // The result is written BEFORE the request, since nothing will be around to write it after.
+        backdoor_write_result("OK\n");
+        synthlib_request_quit();
+        return;
     } else if (strcmp(cmd, "SELECTADD") == 0) {
         // SELECTADD <VA|FX> <index> — adds to the selection instead of replacing it, so a script can
         // build the multiple selection that MOVESEL below needs.

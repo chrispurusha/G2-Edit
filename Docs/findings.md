@@ -9992,3 +9992,117 @@ document exactly as every host entry point does.
   VST3 automation and poly pressure both land there - so a condition variable would put a lock back on the path the
   change exists to clear. 4 ms is in any case quicker than the standalone editor's own route, which is a full canvas
   repaint, i.e. one frame. auval passes clean and tools/vst3host runs four instances up and down with no leak.
+
+2026-09-18 - THE VEL/KEYB MORPH LAW CONFIRMED AGAINST THE INSTRUMENT'S OWN CODE (CT: "G2Demo is your guide on
+that"; reference §26.2.0). The per-voice parameter update sums every morph contribution into ONE accumulator in
+1/256 dial units - the dial times 256, each of the eight groups as range x controller scaled by 4/127, then
+range x velocity/127 and range x (note - 36 + octave shift)/60 - clamps that sum ONCE to 0..127, and converts
+afterwards. Divisors 127 and 60 and the offset 36 are all literal in it, which is what §26.2 already said from
+measurement; this settles it. THE USEFUL PART IS WHAT IT RULES OUT: there is no ordering between the two axes and
+no sense in which one wins, because there are no nodes at that level at all - a parameter simply has one value
+per voice. Our param_value() is already exactly this law, clamp included, so any SINGLE build at a given
+(velocity, key) is right. The defect is the sampling: the engine builds at (velocity, 0) and (0, key) and
+recombines two whole nodes, which cannot be right where both axes move the same parameter, since the sum has to
+happen before the conversion and before the clamp.
+
+  NO TEST DATA EXISTS FOR IT. Dx.pch2 (DxPiano, bank 5:22), DXTest.pch2, SimpleLead.pch2 and MiniEmulator.pch2
+  have no Vel or Keyb morph on any parameter between them - only wheel-group morphs. So the remaining limit has
+  never been heard in a patch we hold, and a fix for it cannot be verified until one exists. Worth making a patch
+  for it before building anything.
+
+2026-09-18 - A NODE BOTH MORPH AXES MOVE IS NOW MERGED PER VOICE, NOT CHOSEN BETWEEN (CT priority list;
+reference §26.2.2). The per-voice tables are built one axis at a time, so a node both axes moved had two
+candidate builds and the engine played the Keyb one whole - which silently threw away every Vel-morphed
+parameter of that node except the four smoothed values, an envelope time or a sustain level being the obvious
+casualties. §26.2.0 is what says the fix: the law is a per-parameter SUM, so a build at (amount, 0) is already
+right for any parameter only the Vel axis moves and a build at (0, amount) for any the Keyb axis moves. Only a
+parameter BOTH move needs a build at the pair. The two builds are therefore merged instead of chosen between,
+8 bytes at a time, each word taken from whichever axis moves it; where both move a word the Keyb value stands,
+as the whole node used to, and the smoothed values still take both offsets. Masks are recorded when the tables
+are built and the merge runs at note-on and on a new build, never per sample. 346 KB an engine.
+
+  BY WORD AND NOT BY FIELD, which is worth stating plainly: there is no field list, only a bitmap of 8-byte
+  words, and a _Static_assert holds tEngineNode (137 words) and an Operator set (108) to a whole number of them.
+  Every field in either is a double, a uint32 pair or smaller and none straddles a word today; if one ever does,
+  the assert will not catch it and the merge will mix two halves of one value. memcmp/memcpy rather than a
+  uint64 pointer, since reading a struct as an array of integers is what strict aliasing forbids.
+
+  MEASURED, and the control is again what makes it worth anything: tools/morphcheck --param2 on SimpleLead, Vel
+  -80 on an EnvADSR's Sustain and Keyb -80 on its Decay, against both dials set by hand. Before: 55%, 436%,
+  2040%, 1687% out, with separations of 259% to 5400% so every point was strongly conclusive. After: 0.77%,
+  0.61%, 0.25%, 0.00%. Single-axis Vel and Keyb still pass on Dx.pch2 and SimpleLead, and the same-parameter
+  case is unchanged at 7.66% and 3.87% - it is the residue the merge deliberately does not address.
+
+  A DROP-DOWN CANNOT BE MORPHED, and picking one as the test parameter cost half an hour: EnvADSR parameter 0
+  is Shape, read raw like every mode, so a Vel morph on it moved nothing and the instrumented build showed the
+  Velocity axis with no columns at all, which read exactly like the merge not firing. Parameters 1-4 are the
+  ones with something to hear. Noted in Docs/code-notes/morphcheck.c.md §9.
+
+2026-09-18 - FOUR PATCHES THAT ACTUALLY USE THE VEL AND KEYB MORPHS (CT: "load a patch like simple lead, modify
+it for morphs and save as a new patch for that test"). Nothing in PatchTestFiles used either morph, so every
+claim in §26.2 rested on the engine agreeing with its own law and none of it had been heard against the
+instrument. morphcheck grew a --write option: it applies the morph ranges a sweep would have used and saves the
+patch through the application's own writer (write_database_to_file()) instead of playing it. In every variation,
+since the file holds a range per variation and a patch that morphs only in variation 1 is a confusing thing to
+hand somebody.
+
+| Patch | From | Morph |
+|---|---|---|
+| MorphVelFilter.pch2 | SimpleLead | Vel +90 on FltClassic Freq |
+| MorphKeybFilter.pch2 | SimpleLead | Keyb +90 on the same dial |
+| MorphSplitEnv.pch2 | SimpleLead | Vel -80 on an EnvADSR Sustain, Keyb -80 on its Decay - the §26.2.2 case |
+| MorphSameDxLevel.pch2 | DXTest | Vel -60 and Keyb -60 on one Operator Level - the case still 7.7% out |
+
+  ROUND-TRIPPED AND PLAYED, both worth doing separately. Reloading each file shows the ranges back where they
+  were put, on the parameters they were put on. Playing each AS SAVED, with nothing injected: SimpleLead itself
+  is flat across velocity (0.028808 at 1 and at 127); MorphVelFilter moves with it (0.028809 -> 0.025509);
+  MorphKeybFilter is flat across velocity but spreads much further across the keyboard than the baseline
+  (0.041905 -> 0.026767 against 0.041906 -> 0.033049); MorphSplitEnv moves with both at once (velocity
+  0.011218 -> 0.003027, note 0.022198 -> 0.000945). The two filter patches keep SimpleLead's own wheel morph on
+  the same dial, deliberately: it is also a check that a patch-wide morph and a per-voice one coexist.
+
+2026-09-18 - DRUM SYNTH FACE: BAND HEADINGS, PREFIXES GONE, AND THE SLAVE DIAL WAS NEVER A PERCENTAGE (CT
+priority list). Four headings - Master, Slave, Noise Filter, Bend - go in labelLocationList (the separate table,
+since a heading in paramLocationList would shift every parameter index after it), and the dials drop the M/S/NF/B
+prefixes they carried only to say which band they belonged to: MDcy/SDcy/NFDcy/BDcy are all just Dcy now, and the
+two unlabelled leaders became Freq and Ratio. Rows spread from 16 units apart to 19 and moved up, the Noise
+Filter's type menu with them.
+
+  THE HEADING OFFSET TOOK THREE GOES, and the reason is worth writing down: a dial's label and value are drawn
+  ABOVE its rect by the renderer (module-layout-rules.md), but a labelLocationList rect is placed literally where
+  it is put. So a heading is NOT at dial_y + one row; it sits one text line above the row's own label, which is
+  8.6 units above the dial - heading = dial + 12. At +17 each heading landed on the dial of the band above, and
+  the sign of the error was not obvious from the table. Rendering it (tools/face-shots) settled in one look what
+  arithmetic had got wrong twice, at 1.0 and at 0.59.
+
+  NOT THE ORIGINAL'S ARRANGEMENT, deliberately. The original editor lays the module out as a 2x2 of blocks -
+  Master top-left, Noise Filter top-right, Slave bottom-left, Bend bottom-right - with its four headings as
+  <#Bitmap>s above each block, and that is how it fits four headings in 8 rows. It does not port: its dial
+  spacing is ~11 units where ours needs ~15, because it shows values in two display boxes and we draw a value
+  under every dial. CT: "I'd keep their relative horizontal and vertical positions. Spread out vertically and add
+  the labels."
+
+  THE SLAVE DIAL: the owner's guess was a frequency with the wrong units; it is a RATIO, and the answer is in
+  both sources. The manual: "the Slave display box the pitch ratio related to the master pitch ... Slave: 1:1 to
+  6.26". The instrument's own text formatter takes the top six bits as semitones and the bottom two as quarters,
+  giving 2^(v/48) - 1.0 at raw 0 and 6.2586 at 127, the manual's two ends exactly. It prints "N:1" where the dial
+  position is the nearest one to a whole number and "x2.51" elsewhere; whole ratios land at 0, 48, 76, 96 and
+  111. paramTypeDrumSlaveRatio does this; it read "11.7" before. param-validation.md had this flagged as "check"
+  since the table declared DrumSynthRatio and rendered a percent dial.
+
+  HEADINGS SIT ON A BAND of their module's own colour, lightened (moduleGraphics.c notes §90, CT:
+  "can we change the label background colour (also on other modules) to a slightly lighter version of
+  the module colour?"). Derived from gModuleColourMap[module->colour] rather than being a constant,
+  since a module can be any of 25 colours and a fixed grey band would look pasted on over half of
+  them. Applies to every tLabelLocation heading, so the Operator's "Envelope" and "KB Lev Scale" get
+  it too. The band is sized from get_text_width() since the table row's width is BLANK_SIZE.
+
+  AND A HEADING BELONGS TO THE ROW BELOW IT, which took a second pass after CT: "label text needs to
+  be closer to the row it represents. Currently closer to the row above." Moved from dial + 12 to
+  dial + 10.
+
+  THE OTHER DIALS ARE ALREADY RIGHT, which the same source settles: the instrument's formatter map for this
+  module sends params 4, 5, 11, 13 and 14 to ParamText::Default, which is From0to100 - a 0-100 percentage, which
+  is what our CommonDial already shows (raw 39 -> 30.5). The manual describes Swp and Bend Amt as "0 to 5
+  octaves", but that is prose about what the control does, not what the G2 displays. Reading the instrument
+  rather than the manual is what stopped two dials being "fixed" into being wrong.

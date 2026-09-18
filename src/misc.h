@@ -54,20 +54,25 @@ void recent_files_clear(void);
 // notes §2
 void file_menu_open_patch(void);
 void file_menu_open_path(const char * path);
-void file_menu_save_patch(void);
-void file_menu_save_patch_to_current_path(void);
-bool file_menu_have_saved_path(void);
-const char * file_menu_saved_path(void);
+// THE KIND IS PASSED IN, NOT INFERRED. These used to read gGlobalSettings.perfMode, which made the
+// operation follow the G2's mode rather than the menu item the user picked - and meant that in
+// Performance mode a slot's own patch could not be saved to a file at all. See code-notes §14.
+void file_menu_save_patch(bool asPerf);
+void file_menu_save_patch_to_current_path(bool asPerf);
+bool file_menu_have_saved_path(bool isPerf);
+const char * file_menu_saved_path(bool isPerf);
+// What the save now in flight is writing - graphics.c reads this where it used to read perfMode.
+bool file_menu_save_is_perf(void);
 void file_menu_new_patch(void);
 void file_menu_load_patch_location(void);
 void file_menu_load_perf_location(void);
 void file_menu_delete_patch_location(void);
 void file_menu_delete_perf_location(void);
-void file_menu_store_to_bank(void);
+void file_menu_store_to_bank(bool isPerf);
 // The bank location the current patch (performance, in performance mode) was loaded from, if any,
 // and Store back to it.
-bool file_menu_bank_origin(uint32_t * bank, uint32_t * location);
-void file_menu_store_back_to_bank(void);
+bool file_menu_bank_origin(bool isPerf, uint32_t * bank, uint32_t * location);
+void file_menu_store_back_to_bank(bool isPerf);
 
 // Settings menu actions
 void settings_menu_open_synth(void);
