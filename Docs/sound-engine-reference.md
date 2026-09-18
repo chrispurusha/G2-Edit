@@ -904,13 +904,28 @@ the worst step is range/31 dial units for velocity and range/30 for a two-semito
 smoothing stays per node, and a voice adds each table's offset from the base node to the smoothed
 Freq, Res, gain, shape and mixer levels. FX Area nodes take the latest note's rows.
 
-LIMITS. A node both morphs move plays its Keyb node for everything but those smoothed values, so a
-Vel morph on another of its parameters (an envelope time, say) is lost there. When both morphs move
-the SAME smoothed value their effects add in that value's own terms, which is exact for Freq (dial
-units) but not for a gain on a curve: a mixer level with Vel +127 and Keyb +64 reads 0.27 of full at
-note 96, velocity 64, where the instrument clamps the dial to 127. Building both tables takes about
+LIMITS (narrowed 2026-09-18 - see §26.2.2). A node both morphs move no longer plays its Keyb node
+whole: it plays a merge, each word from whichever axis moves it, so a Vel morph on one of its
+parameters and a Keyb morph on another are BOTH delivered. What remains is the SAME parameter moved
+by both, where the two effects add in that value's own terms - exact for Freq (dial units) but not
+for a gain on a curve: a mixer level with Vel +127 and Keyb +64 reads 0.27 of full at note 96,
+velocity 64, where the instrument clamps the dial to 127. Building both tables takes about
 3.6 ms in a Debug build when every row is used; the plug-in does that on a thread of its own since
 2026-09-18 (`rebuild_worker()`, g2Plugin.c notes §14) rather than on the audio thread.
+
+**26.2.0 The law, confirmed against the instrument's own code (2026-09-18).** Every morph
+contribution - all eight groups and both per-voice axes - is summed into ONE value per parameter per
+voice, in 1/256 dial units: the dial times 256, plus each group's range times its controller (scaled
+by 4/127), plus range x velocity/127 and range x (note - 36 + octave shift)/60, both times 256. That
+sum is clamped ONCE to 0..127 and only then converted by the module's own law. There is no ordering
+between the axes and no notion of one winning: a parameter has a single value per voice.
+
+`param_value()` already implements exactly this, clamp included, so a single build of the chain at a
+given (velocity, key) pair is correct. What is not correct is how the engine SAMPLES it: it builds at
+(velocity, 0) and (0, key) separately and recombines two whole nodes. Where the two axes move
+different parameters of a node that recombination could be exact; where they move the SAME parameter
+it cannot, because the sum has to happen before the conversion and before the clamp. That is the
+limit above, and it is an artefact of the per-axis tables rather than of the law.
 
 **26.2.1 A DXRouter's Operators, per voice (2026-09-18).** An Operator's parameters live on the
 Operator module rather than on the router, so a Vel or Keyb morph on one moved nothing the router's
@@ -929,6 +944,32 @@ dial 99 against the hand's 98). Before the change the morphed note measured the 
 velocity, to five figures. The reading is only reproducible with a fresh engine per note: voice
 allocation round-robins and each voice starts its oscillators at a random phase (notes §63), which
 otherwise swamps the effect.
+
+**26.2.2 A node both axes move, merged per voice (2026-09-18).** The tables are built one axis at a
+time, so a node both axes move had two candidate builds and the engine simply played the Keyb one -
+which threw away every Vel-morphed parameter of that node that was not one of the four smoothed
+values. Since the law is a per-parameter sum (§26.2.0), building at (amount, 0) and at (0, amount)
+gives the RIGHT answer for any parameter only one axis moves; only a parameter both move needs a
+build at the pair. So the two builds are now merged rather than chosen between.
+
+The merge is by 8-byte word. When a table is built, each column records which words of the node its
+axis moves anywhere on that axis (`mark_moved_words()`); a `_Static_assert` holds tEngineNode and an
+Operator set to a whole number of words, since the merge assumes no field straddles one. A voice
+whose note-on changes its rows assembles its node from the base, the words the Vel axis moves and the
+words the Keyb axis moves (`merge_moved_words()`, `merge_voice_nodes()`), and plays that. Post-mix
+nodes get the same from the latest note's rows, as they did before. Words BOTH axes move take the
+Keyb value, exactly as the whole node used to, and eval_node() still adds both offsets to the four
+smoothed values - that is the limit above, unchanged.
+
+The merge happens at note-on and when a new build arrives, never per sample: the cost is one node
+copy per merged node per note. It holds at most MAX_VOICE_NODES merged nodes and MAX_VOICE_DX_NODES
+merged Operator sets, and costs 346 KB per engine.
+
+Measured with `tools/morphcheck --param2` on SimpleLead, a Vel morph of -80 on an EnvADSR's Sustain
+and a Keyb morph of -80 on its Decay: before, the Sustain morph was lost entirely and the readings
+were 55%, 436%, 2040% and 1687% away from the same two dials set by hand; after, 0.77%, 0.61%, 0.25%
+and 0.00%. The single-axis cases and the same-parameter case are unchanged, the latter still 7.66%
+and 3.87% out at its worst on a DXRouter Operator's Level.
 
 **26.3 Sustain pedal (2026-09-17).** Morph group 5 (Sust.Pd) is the pedal, down from 0.5 (CC64 at 64 and
 above). A key released while it is down leaves its voice gated - the envelopes sustain and the

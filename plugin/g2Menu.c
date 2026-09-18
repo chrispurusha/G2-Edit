@@ -69,8 +69,9 @@ static void open_plugin_help_menu(tCoord anchor) {
 }
 
 tMenuBarItem gPluginMenuBar[] = {
-    {"File",     open_file_menu    },
-    {"Settings", open_settings_menu},
+    {"Patch",       open_patch_menu      },
+    {"Performance", open_performance_menu},
+    {"Settings",    open_settings_menu   },
     {"Controls", open_controls_menu},
     {"Tools",    open_tools_menu   },
     {"View",     open_view_menu    },

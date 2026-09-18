@@ -2268,47 +2268,47 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeEnvMulti,   paramTypeMenu,           {{-26, -17}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          },          // 52 Shape
     // 53 SandH -- No parameters
     // 54 FltStatic
-    {moduleTypeFltStatic,  paramTypeFreq,           {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  75, NULL,                                  NULL          },              // 54 Freq
-    {moduleTypeFltStatic,  paramTypeResonanceQ,     {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Res",          128,   0, NULL,                                  NULL          },              // 54 Res
-    {moduleTypeFltStatic,  paramTypeMenu,           {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, staticFilterTypeStrMap,                NULL          },              // 54 FilterType
-    {moduleTypeFltStatic,  paramTypeBypass,         {{ -3,   2}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },              // 54 Bypass
-    {moduleTypeFltStatic,  paramTypeToggle,         {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, gcStrMap,                              offOnColourMap},              // 54 GC
+    {moduleTypeFltStatic,  paramTypeFreq,           {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  75, NULL,                                  NULL          },             // 54 Freq
+    {moduleTypeFltStatic,  paramTypeResonanceQ,     {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Res",          128,   0, NULL,                                  NULL          },             // 54 Res
+    {moduleTypeFltStatic,  paramTypeMenu,           {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, staticFilterTypeStrMap,                NULL          },             // 54 FilterType
+    {moduleTypeFltStatic,  paramTypeBypass,         {{ -3,   2}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },             // 54 Bypass
+    {moduleTypeFltStatic,  paramTypeToggle,         {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, gcStrMap,                              offOnColourMap},             // 54 GC
     // 55 EnvD
-    {moduleTypeEnvD,       paramTypeADRTime,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,  54, NULL,                                  NULL          },              // 55 Decay
-    {moduleTypeEnvD,       paramTypeMenu,           {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, posNegInvStrMap,                       NULL          },              // 55 OutType
+    {moduleTypeEnvD,       paramTypeADRTime,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,  54, NULL,                                  NULL          },             // 55 Decay
+    {moduleTypeEnvD,       paramTypeMenu,           {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, posNegInvStrMap,                       NULL          },             // 55 OutType
     // 56 Resonator (Not in Clavia editor)
-    {moduleTypeResonator,  paramTypeOscFreq,        {{ 32,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },              // 56 Tune
-    {moduleTypeResonator,  paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },              // 56 Cent
-    {moduleTypeResonator,  paramTypeToggle,         {{ 15, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},              // 56 Kbt
-    {moduleTypeResonator,  paramTypeCommonDial,     {{ 17,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },              // 56 Pitch M
-    {moduleTypeResonator,  paramTypeMenu,           {{ 30,  12}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },              // 56 Pitch Type
-    {moduleTypeResonator,  paramTypeUniPol,         {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                                  NULL          },              // 56 Decay
-    {moduleTypeResonator,  paramTypeUniPol,         {{ 62, -17}, { 7,  7}}, anchorBottomLeft,  "Damp",         128,   0, NULL,                                  NULL          },              // 56 Damp
-    {moduleTypeResonator,  paramTypeBypass,         {{ -3,  -3}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },              // 56 Bypass
-    {moduleTypeResonator,  paramTypeUniPol,         {{ 75, -17}, { 7,  7}}, anchorBottomLeft,  "Pos",          128,   0, NULL,                                  NULL          },              // 56 Pos
-    {moduleTypeResonator,  paramTypeMenu,           {{ 30,  23}, { 7,  7}}, anchorTopLeft,     "Alg",            5,   0, resonAlgStrMap,                        NULL          },              // 56 Algorithm
+    {moduleTypeResonator,  paramTypeOscFreq,        {{ 32,  -3}, { 7,  7}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },             // 56 Tune
+    {moduleTypeResonator,  paramTypeFine,           {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },             // 56 Cent
+    {moduleTypeResonator,  paramTypeToggle,         {{ 15, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},             // 56 Kbt
+    {moduleTypeResonator,  paramTypeCommonDial,     {{ 17,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },             // 56 Pitch M
+    {moduleTypeResonator,  paramTypeMenu,           {{ 30,  12}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },             // 56 Pitch Type
+    {moduleTypeResonator,  paramTypeUniPol,         {{ 62,  -3}, { 7,  7}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                                  NULL          },             // 56 Decay
+    {moduleTypeResonator,  paramTypeUniPol,         {{ 62, -17}, { 7,  7}}, anchorBottomLeft,  "Damp",         128,   0, NULL,                                  NULL          },             // 56 Damp
+    {moduleTypeResonator,  paramTypeBypass,         {{ -3,  -3}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },             // 56 Bypass
+    {moduleTypeResonator,  paramTypeUniPol,         {{ 75, -17}, { 7,  7}}, anchorBottomLeft,  "Pos",          128,   0, NULL,                                  NULL          },             // 56 Pos
+    {moduleTypeResonator,  paramTypeMenu,           {{ 30,  23}, { 7,  7}}, anchorTopLeft,     "Alg",            5,   0, resonAlgStrMap,                        NULL          },             // 56 Algorithm
     // 57 Automate *** We lack an UI element for the CTRL selector
-    {moduleTypeAutomate,   paramTypeInt,            {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Ctrl",         128,   7, NULL,                                  NULL          },              // 57 Ctrl CC
-    {moduleTypeAutomate,   paramTypeInt,            {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  "Val",          128,  64, NULL,                                  NULL          },              // 57 Val
-    {moduleTypeAutomate,   paramTypeMenu,           {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Ch",            17,   0, midiChanAutomateStrMap,                NULL          },              // 57 Channel
-    {moduleTypeAutomate,   paramTypeMenu,           {{ 33,   0}, { 7,  7}}, anchorBottomLeft,  "Echo",           2,   0, offOnStrMap,                           NULL          },              // 57 Echo
+    {moduleTypeAutomate,   paramTypeInt,            {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Ctrl",         128,   7, NULL,                                  NULL          },             // 57 Ctrl CC
+    {moduleTypeAutomate,   paramTypeInt,            {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  "Val",          128,  64, NULL,                                  NULL          },             // 57 Val
+    {moduleTypeAutomate,   paramTypeMenu,           {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Ch",            17,   0, midiChanAutomateStrMap,                NULL          },             // 57 Channel
+    {moduleTypeAutomate,   paramTypeMenu,           {{ 33,   0}, { 7,  7}}, anchorBottomLeft,  "Echo",           2,   0, offOnStrMap,                           NULL          },             // 57 Echo
     // 58 Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Bend/Click/Noise(y=65)
-    {moduleTypeDrumSynth,  paramTypeFreqDrum,       {{ 15, -51}, { 7,  7}}, anchorBottomLeft,  "Master",       128,  42, NULL,                                  NULL          },              // 58 Master Freq
-    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 15, -35}, { 7,  7}}, anchorBottomLeft,  "Slave",        128,  15, NULL,                                  NULL          },              // 58 Slave Ratio
-    {moduleTypeDrumSynth,  paramTypeADRTime,        {{ 30, -51}, { 7,  7}}, anchorBottomLeft,  "MDcy",         128,  46, NULL,                                  NULL          },              // 58 MasterDecay
-    {moduleTypeDrumSynth,  paramTypeADRTime,        {{ 30, -35}, { 7,  7}}, anchorBottomLeft,  "SDcy",         128,  50, NULL,                                  NULL          },              // 58 Slave Decay
-    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 45, -51}, { 7,  7}}, anchorBottomLeft,  "MLev",         128, 120, NULL,                                  NULL          },              // 58 Master Level
-    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 45, -35}, { 7,  7}}, anchorBottomLeft,  "SLev",         128, 102, NULL,                                  NULL          },              // 58 Slave Level
-    {moduleTypeDrumSynth,  paramTypeFreq,           {{ 15, -19}, { 7,  7}}, anchorBottomLeft,  "NFFreq",       128,  57, NULL,                                  NULL          },              // 58 Noise Filter Freq
-    {moduleTypeDrumSynth,  paramTypeResonance,      {{ 30, -19}, { 7,  7}}, anchorBottomLeft,  "NFRes",        128,  32, NULL,                                  NULL          },              // 58 Noise Filter Res
-    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 45, -19}, { 7,  7}}, anchorBottomLeft,  "NFSwp",        128,  39, NULL,                                  NULL          },              // 58 Noise Filter Sweep
-    {moduleTypeDrumSynth,  paramTypeADRTime,        {{ 60, -19}, { 7,  7}}, anchorBottomLeft,  "NFDcy",        128,  49, NULL,                                  NULL          },              // 58 Noise Filter Decay
-    {moduleTypeDrumSynth,  paramTypeMenu,           {{  3, -22}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   1, staticFilterTypeStrMap,                NULL          },              // 58 Noise FilterType
-    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 15,  -3}, { 7,  7}}, anchorBottomLeft,  "BAmt",         128,  68, NULL,                                  NULL          },              // 58 Bend Amount
-    {moduleTypeDrumSynth,  paramTypeADRTime,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  "BDcy",         128,  61, NULL,                                  NULL          },              // 58 BendDecay
-    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "BClick",       128,  79, NULL,                                  NULL          },              // 58 Click Amount
-    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "BNoise",       128, 115, NULL,                                  NULL          },              // 58 Noise Amount
-    {moduleTypeDrumSynth,  paramTypeBypass,         {{ -3, -12}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },              // 58 On
+    {moduleTypeDrumSynth,  paramTypeFreqDrum,       {{ 15, -60}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  42, NULL,                                  NULL          },             // 58 Master Freq
+    {moduleTypeDrumSynth,  paramTypeDrumSlaveRatio, {{ 15, -41}, { 7,  7}}, anchorBottomLeft,  "Ratio",        128,  15, NULL,                                  NULL          },             // 58 Slave Ratio
+    {moduleTypeDrumSynth,  paramTypeADRTime,        {{ 30, -60}, { 7,  7}}, anchorBottomLeft,  "Dcy",          128,  46, NULL,                                  NULL          },             // 58 MasterDecay
+    {moduleTypeDrumSynth,  paramTypeADRTime,        {{ 30, -41}, { 7,  7}}, anchorBottomLeft,  "Dcy",          128,  50, NULL,                                  NULL          },             // 58 Slave Decay
+    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 45, -60}, { 7,  7}}, anchorBottomLeft,  "Lev",          128, 120, NULL,                                  NULL          },             // 58 Master Level
+    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 45, -41}, { 7,  7}}, anchorBottomLeft,  "Lev",          128, 102, NULL,                                  NULL          },             // 58 Slave Level
+    {moduleTypeDrumSynth,  paramTypeFreq,           {{ 15, -22}, { 7,  7}}, anchorBottomLeft,  "Freq",         128,  57, NULL,                                  NULL          },             // 58 Noise Filter Freq
+    {moduleTypeDrumSynth,  paramTypeResonance,      {{ 30, -22}, { 7,  7}}, anchorBottomLeft,  "Res",          128,  32, NULL,                                  NULL          },             // 58 Noise Filter Res
+    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 45, -22}, { 7,  7}}, anchorBottomLeft,  "Swp",          128,  39, NULL,                                  NULL          },             // 58 Noise Filter Sweep
+    {moduleTypeDrumSynth,  paramTypeADRTime,        {{ 60, -22}, { 7,  7}}, anchorBottomLeft,  "Dcy",          128,  49, NULL,                                  NULL          },             // 58 Noise Filter Decay
+    {moduleTypeDrumSynth,  paramTypeMenu,           {{  3, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   1, staticFilterTypeStrMap,                NULL          },             // 58 Noise FilterType
+    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 15,  -3}, { 7,  7}}, anchorBottomLeft,  "Amt",          128,  68, NULL,                                  NULL          },             // 58 Bend Amount
+    {moduleTypeDrumSynth,  paramTypeADRTime,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  "Dcy",          128,  61, NULL,                                  NULL          },             // 58 BendDecay
+    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Click",        128,  79, NULL,                                  NULL          },             // 58 Click Amount
+    {moduleTypeDrumSynth,  paramTypeCommonDial,     {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Noise",        128, 115, NULL,                                  NULL          },             // 58 Noise Amount
+    {moduleTypeDrumSynth,  paramTypeBypass,         {{ -3, -12}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },             // 58 On
 
     // 59 CompLev
     {moduleTypeCompLev,    paramTypeBipLevel,       {{ 28,  -3}, { 7,  7}}, anchorBottomLeft,  "C",            128,  64, NULL,                                  NULL          },     // 59 Compare Level
@@ -4236,8 +4236,15 @@ const tDisplayLocation   displayLocationList[]   = {
 // Coordinates transformed from the original's <#Bitmap> positions by the rule in
 // Docs/module-layout-rules.md.
 const tLabelLocation     labelLocationList[]     = {
-    {moduleTypeOperator, {{12, 38}, {BLANK_SIZE, 7}}, anchorTopLeft, "Envelope"    },
-    {moduleTypeOperator, {{12, 87}, {BLANK_SIZE, 7}}, anchorTopLeft, "KB Lev Scale"}, };
+    {moduleTypeOperator,  {{12,  38}, {BLANK_SIZE, 7}}, anchorTopLeft,    "Envelope"    },
+    {moduleTypeOperator,  {{12,  87}, {BLANK_SIZE, 7}}, anchorTopLeft,    "KB Lev Scale"},
+    // The four bands of the Drum Synth, one heading each, which is what lets the dials drop their
+    // M/S/NF/B prefixes. Bottom-anchored like the dials they head, 17 above each band's dial row -
+    // one text line clear of that row's own label.
+    {moduleTypeDrumSynth, {{15, -70}, {BLANK_SIZE, 7}}, anchorBottomLeft, "Master"      },
+    {moduleTypeDrumSynth, {{15, -51}, {BLANK_SIZE, 7}}, anchorBottomLeft, "Slave"       },
+    {moduleTypeDrumSynth, {{15, -32}, {BLANK_SIZE, 7}}, anchorBottomLeft, "Noise Filter"},
+    {moduleTypeDrumSynth, {{15, -13}, {BLANK_SIZE, 7}}, anchorBottomLeft, "Bend"        }, };
 
 const tLedLocation       ledLocationList[]       = {
     {moduleTypeInvert,     ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft},
