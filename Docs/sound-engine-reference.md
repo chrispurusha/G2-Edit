@@ -50,9 +50,19 @@ and where each type keeps its level dials, On buttons, Inv switches, curve and p
 | Mix8-1B | 8 | Lev ×8, curve, pad |
 | MixFader | 8 | Lev ×8, On ×8, curve, pad |
 
-**3.2 Exp (and dB) curve.** Gain = 0.99x³ + 0.01x, x = dial/127 - `mix_level_gain()`, the same
-function the dial's dB text uses. Fits 218 measured steps to 0.01 dB RMS; a pure cube is 5.8 dB out
-at dial 13. The manual (p.216): Exp and dB are the same curve.
+**3.2 Exp (and dB) curve. EXACT - confirmed against the instrument's own table, 2026-09-18.**
+Gain = 0.99x³ + 0.01x, x = dial/127 - `mix_level_gain()`, the same function the dial's dB text uses.
+
+This began as a fit to 218 measured steps (0.01 dB RMS; a pure cube is 5.8 dB out at dial 13) and is
+now known to be the instrument's law rather than a good approximation to it. `_gExpCurve2` is a
+4065-entry table reaching full scale at index 4064 = 127 × 32, so it is indexed by the dial at 1/32
+resolution - the level a mixer sends the DSP is the morph accumulator's, not the integer dial, and the
+part looks the curve up. Read back at every integer dial value it agrees with the formula to **0.006 dB
+at worst**, at dial 1 where the table itself quantises, and to 0.000 dB everywhere else.
+
+So nothing here needs changing, and the formula is if anything better than the table: a morphed level
+moves through 4065 steps on the instrument and continuously here. The manual (p.216): Exp and dB are
+the same curve.
 
 **3.3 Lin curve.** §2.1 - dial/128, 127 = 1.
 

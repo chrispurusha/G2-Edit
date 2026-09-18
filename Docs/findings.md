@@ -10159,3 +10159,26 @@ out of the binary, not from the decompiled Compute() bodies - far quicker, and e
   one of them was wrong; neither is - our engine follows the table and our dial follows the text, which is what
   the instrument does on both counts. Correcting either side would make us disagree with the hardware. The
   capture had measured this correctly (8.1 and 6.0 kHz) and it had been read as a defect in the measurement.
+
+2026-09-18 - THE MIXER TAPER IS EXACT, NOT A GOOD FIT (CT priority list, "the ones in the engine which haven't
+been checked against the instrument's own parts"). `mix_level_gain()` - 0.99x^3 + 0.01x, x = dial/127 - was
+fitted to 218 measured steps in September and carried the caveat that it was a fit. It is the instrument's own
+law: read back from `_gExpCurve2` at every integer dial value it agrees to 0.006 dB at worst (dial 1, where the
+TABLE quantises) and 0.000 dB everywhere else. Nothing changed; the mixers are now known-exact rather than
+known-fitted, which matters because every patch uses one.
+
+  THE TABLE'S SHAPE IS THE INTERESTING PART. It is 4065 entries, not 128, reaching 0x800000 at index 4064 =
+  127 x 32 - so it is indexed by the dial at 1/32 resolution. That fits what §26.2.0 found about morphs: a
+  parameter reaches the DSP as the morph accumulator's value, not the integer dial, and a mixer's Lev is no
+  exception (Mix1_1GetDSPvalue returns param 0 raw and rounds only the switches). Our continuous formula is if
+  anything better than the lookup - a morphed level moves through 4065 steps on the instrument and smoothly
+  here.
+
+  THE PAD IS NOT IN A TABLE. OutPadAction passes the setting straight to the part, so its 0 / -6.02 / -12.04 dB
+  (§3.4) stays a measurement - though those are exactly x1, x1/2, x1/4, which is the obvious fixed-point shift
+  and is very unlikely to be anything else.
+
+  A NOTE ON METHOD, since this is the third module read this way: the answer came from a coefficient table in
+  minutes, where CNativeFltCombPart::Compute() defeated a direct read earlier the same day (emulated fixed point
+  with a bit-serial divide inlined). Read the TABLES first and reach for the translate-and-run harness only when
+  the structure itself is the question.
