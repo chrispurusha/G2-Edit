@@ -7,7 +7,6 @@ Built-but-unchecked work goes in to-test.md.
 CT (Priority order)
 - Fix current modules in sound engine using the recent methods.
 - Vel and Keyb morph on the SAME parameter: the two add in that value's own terms, exact for Freq but not a gain on a curve - 7.7% out on a DXRouter Operator Level (reference §26.2.2); needs a build at the pair, not two per-axis builds
-- Drum Synth: the Click and Noise dials sit under the "Bend" heading but the manual makes CLICK and NOISE their own sections - decide whether that row wants two more headings or none
 - Drum Synth graphical representation in the space kept free on the right, under the Preset box
 - Bug where we see a sudden/random scroll VA area right about half a module's width. Maybe a buffer over-run over the scroll position variable?
 - Fix or add various module oscillator style graphics. Wave/filter graphs for PulseOsc, OscNoise, LfoD, Operator etc.-
