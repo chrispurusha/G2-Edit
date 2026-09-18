@@ -10,9 +10,9 @@ CT (Priority order)
 - Vel and Keyb morph on the same node: other params keep only Keyb, and one smoothed value moved by both adds in gain terms (reference §26.2 LIMITS)
 - G2 Alike rebuilds on the audio thread when a morph moves - up to ~3.6 ms (Debug) with per-voice morph tables; move it off
 - Drum synth could use text labels for the current 4 rows - Master, Slave, Noise Filter, Bend. That would allow us to remove the prefixes on the dial labels (M, S, NF, B). Would mean vertically spreading out the rows upwards. I think the first Slave dial is frequency, if so - units are wrong. Hopefully still room on the right (under preset button) to add graphical representation.
-- Bug where we see a sudden/random scroll VA area right about half a module's width.
+- Bug where we see a sudden/random scroll VA area right about half a module's width. Maybe a buffer over-run over the scroll position variable?
 - Fix or add various module oscillator style graphics. Wave/filter graphs for PulseOsc, OscNoise, LfoD, Operator etc.-
-- Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter.
+- Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. Focus on the 01 Mini Emulator patch in bank 1:10 on my G2.
 - Implement the other envelopes (EnvH, EnvD, EnvADR, EnvAHD, EnvADDSR, EnvMulti, ModADSR, ModAHD) are not in the engine at all
 - Zoom to Fit from a right click, fitting the area under the cursor
 - Separate zoom for VA and FX.
