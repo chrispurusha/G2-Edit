@@ -6,10 +6,9 @@ Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
 - Fix current modules in sound engine using the recent methods.
-- Vel and Keyb morph on the same node: other params keep only Keyb, and one smoothed value moved by both adds in gain terms (reference §26.2 LIMITS)
-- File menu needs re-arranging. Can we separate patch from perf somehow? Maybe in their own menu headings. Instead of "File", we could have "Patch" and "Performance". Also - I don't think we have performance write to bank nor file? Open patch file and performance file could be split across the 2 menus.
-- If cursor moves outside of window, open menus could close.
-- Drum synth could use text labels for the current 4 rows - Master, Slave, Noise Filter, Bend. That would allow us to remove the prefixes on the dial labels (M, S, NF, B). Would mean vertically spreading out the rows upwards. I think the first Slave dial is frequency, if so - units are wrong. Hopefully still room on the right (under preset button) to add graphical representation.
+- Vel and Keyb morph on the SAME parameter: the two add in that value's own terms, exact for Freq but not a gain on a curve - 7.7% out on a DXRouter Operator Level (reference §26.2.2); needs a build at the pair, not two per-axis builds
+- Drum Synth: the Click and Noise dials sit under the "Bend" heading but the manual makes CLICK and NOISE their own sections - decide whether that row wants two more headings or none
+- Drum Synth graphical representation in the space kept free on the right, under the Preset box
 - Bug where we see a sudden/random scroll VA area right about half a module's width. Maybe a buffer over-run over the scroll position variable?
 - Fix or add various module oscillator style graphics. Wave/filter graphs for PulseOsc, OscNoise, LfoD, Operator etc.-
 - Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. Focus on the 01 Mini Emulator patch in bank 1:10 on my G2.

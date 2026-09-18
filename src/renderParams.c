@@ -232,6 +232,24 @@ tRectangle render_paramType1FreqDrum(tModule * module, tRectangle rectangle, cha
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// notes §17 - the Slave oscillator's pitch RATIO to the Master, never a frequency. 2^(value/48), so
+// 1:1 at 0 and 6.26 at 127 - exactly the range the manual gives. Printed as "N:1" at the dial position
+// nearest a whole-number ratio and "x2.51" everywhere else, which is what the instrument does.
+tRectangle render_paramType1DrumSlaveRatio(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    double ratio    = pow(2.0, paramValue / 48.0);
+    double nearest  = round(ratio);
+    // Half the step to the next dial position. Inside that, THIS position is the closest one to the
+    // whole number, which is when a ratio rather than a multiplier is the honest reading.
+    double halfStep = (ratio * (pow(2.0, 1.0 / 48.0) - 1.0)) / 2.0;
+
+    if ((nearest >= 1.0) && (fabs(ratio - nearest) < halfStep)) {
+        snprintf(buff, buffSize, "%d:1", (int)nearest);
+    } else {
+        snprintf(buff, buffSize, "x%.2f", ratio);
+    }
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
 tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double   rate;
     int      rateModeParamIndex;

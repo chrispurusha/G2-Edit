@@ -322,7 +322,7 @@ void read_file_into_memory_and_process(const char * filepath) {
 }
 
 // notes §7
-static void remember_file_path(const char * path) {
+static void remember_file_path(const char * path, bool isPerf) {
     // notes §8
     uint32_t slot  = gSlot;
 
@@ -336,7 +336,7 @@ static void remember_file_path(const char * path) {
     }
 
     // notes §9
-    if (gGlobalSettings.perfMode == 1) {
+    if (isPerf) {
         if (gSavedPerfPath != path) {
             COPY_STRING(gSavedPerfPath, path);
         }
@@ -344,7 +344,7 @@ static void remember_file_path(const char * path) {
         COPY_STRING(gSavedPatchPath[slot], path);
     }
     // The file is now where this lives, rather than any bank location it was loaded from
-    uint32_t index = (gGlobalSettings.perfMode == 1) ? BANK_ORIGIN_PERF : slot;
+    uint32_t index = isPerf ? BANK_ORIGIN_PERF : slot;
 
     gSavedPathSerial[index] = gPatchSourceSerial[index];
     gBankOrigin[index]      = BANK_ORIGIN_NONE;
@@ -355,7 +355,8 @@ static void on_file_opened(const char * path) {
         LOG_INFO("Selected file: %s", path);
         read_file_into_memory_and_process(path);
         recent_files_add(path);    // File > Open Recent — same event that settles File > Save's target
-        remember_file_path(path);  // Read AFTER the load: it is the load that settles perf vs patch
+        // Read AFTER the load: it is the load that settles perf vs patch
+        remember_file_path(path, gGlobalSettings.perfMode == 1);
         //set_window_title(path);
     }
     gNeedFocus = true;
@@ -392,7 +393,7 @@ static void on_offline_conflict_choice(int choice) {
 
         case 1:  // Save As... — park the resolve until the save has been through the browser
             sConflictMaskPendingSave = slotMask;
-            file_menu_save_patch();
+            file_menu_save_patch(gGlobalSettings.perfMode == 1);
             break;
 
         default:  // Pull from Synth, and what Escape means: the G2's patches win
@@ -441,7 +442,9 @@ static void on_file_saved(const char * path) {
     if (path) {
         LOG_INFO("Saving file: %s", path);
 
-        if (gGlobalSettings.perfMode == 1) {
+        // §14 - what the MENU ITEM asked for, not what mode the G2 happens to be in. Saving one
+        // slot's patch while the G2 is in Performance mode is a perfectly ordinary thing to want.
+        if (file_menu_save_is_perf()) {
             if (device_ready()) {
                 // Online: serialise the whole DB (all 4 slots) on the USB thread — same reason as the
                 // patch save below: the DB read must be atomic against this thread's async reparses.
@@ -468,7 +471,7 @@ static void on_file_saved(const char * path) {
             write_database_to_file(path, slot);
             set_patch_name_from_filename(slot, path);
         }
-        remember_file_path(path);
+        remember_file_path(path, file_menu_save_is_perf());
 
         // notes §11
         recent_files_add(path);
@@ -742,7 +745,7 @@ static void check_action_flags(void) {
                     char     patchName[CLAVIA_NAME_SIZE + 1]   = {0};
                     char     defaultName[CLAVIA_NAME_SIZE + 6] = {0}; // name (16) + extension (5) + null
 
-                    if (gGlobalSettings.perfMode == 1) {
+                    if (file_menu_save_is_perf()) {
                         if (gGlobalSettings.perfName[0] != '\0') {
                             snprintf(defaultName, sizeof(defaultName), "%s.prf2", gGlobalSettings.perfName);
                         } else {
@@ -766,7 +769,7 @@ static void check_action_flags(void) {
                     // File > Save: straight back to the remembered path, no browser. The menu only
                     // offers this once there IS one, but re-check here — the drain runs a frame or
                     // more after the click, and a slot change in between would move the goalposts.
-                    const char * path = (gGlobalSettings.perfMode == 1) ? gSavedPerfPath : gSavedPatchPath[gSlot];
+                    const char * path = file_menu_save_is_perf() ? gSavedPerfPath : gSavedPatchPath[gSlot];
 
                     if (path[0] == '\0') {
                         open_file_browser_write(on_file_saved, "patch.pch2");  // Nothing to save back to

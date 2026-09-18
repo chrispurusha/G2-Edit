@@ -779,6 +779,14 @@ typedef enum {
 // MAX_VOICE_NODES already caps at eight.
 #define MAX_VOICE_DX_NODES    (2)
 
+// §26.2.2 - a node and a router's Operators as bitmaps of 8-byte words, so a voice can be given each
+// word by whichever axis moves it. Eight bytes because every field in either struct is a double, a
+// uint32 pair or smaller and none straddles that boundary.
+#define MORPH_WORD_BYTES    (8u)
+#define NODE_WORDS          ((uint32_t)(sizeof(tEngineNode) / MORPH_WORD_BYTES))
+#define DX_SET_WORDS        ((uint32_t)((DX_OPERATORS * sizeof(tDxOperator)) / MORPH_WORD_BYTES))
+#define MORPH_MASK_WORDS    (3u)       // 192 bits, checked against both of the above below
+
 typedef struct {
     uint32_t    count;                     // nodes in the table; 0 when nothing is morphed on this axis
     int8_t      column[MAX_ENGINE_NODES];  // a node's column, or -1
@@ -786,12 +794,26 @@ typedef struct {
     uint32_t    dxCount;
     tEngineNode node[MAX_AXIS_LEVELS][MAX_VOICE_NODES];
     tDxOperator dxOp[MAX_AXIS_LEVELS][MAX_VOICE_DX_NODES][DX_OPERATORS];
+    // §26.2.2 - which words of each column this axis moves anywhere on it
+    uint64_t    moves[MAX_VOICE_NODES][MORPH_MASK_WORDS];
+    uint64_t    dxMoves[MAX_VOICE_DX_NODES][MORPH_MASK_WORDS];
 } tMorphTable;
 
 typedef struct {
     uint64_t    build;                     // tSoundEngineParams.build these belong to
     tMorphTable axis[eAxisCount];
+    // §26.2.2 - the nodes BOTH axes move: a voice plays a merge of the two rather than one of them
+    int8_t      mergedSlot[MAX_ENGINE_NODES];
+    uint32_t    mergedCount;
+    int8_t      mergedDxSlot[MAX_ENGINE_NODES];   // and the same for a DXRouter's Operators
+    uint32_t    mergedDxCount;
 } tVoiceMorphs;
+
+// The word masks have to cover both objects, and neither may have a field straddling a word.
+_Static_assert((sizeof(tEngineNode) % MORPH_WORD_BYTES) == 0u, "tEngineNode is not a whole number of words");
+_Static_assert(((DX_OPERATORS * sizeof(tDxOperator)) % MORPH_WORD_BYTES) == 0u, "an Operator set is not a whole number of words");
+_Static_assert(NODE_WORDS <= (MORPH_MASK_WORDS * 64u), "MORPH_MASK_WORDS is too small for tEngineNode");
+_Static_assert(DX_SET_WORDS <= (MORPH_MASK_WORDS * 64u), "MORPH_MASK_WORDS is too small for an Operator set");
 
 static tVoiceMorphs         gVoiceMorphsBank[SOUND_ENGINE_MAX_ENGINES];
 #define gVoiceMorphs          (gVoiceMorphsBank[SE])
@@ -805,11 +827,23 @@ static bool                 gVoiceMorphsUsableBank[SOUND_ENGINE_MAX_ENGINES];   
 #define gVoiceMorphsUsable    (gVoiceMorphsUsableBank[SE])
 static uint8_t              gLastRowBank[SOUND_ENGINE_MAX_ENGINES][eAxisCount];       // audio thread only
 #define gLastRow              (gLastRowBank[SE])
-static uint64_t             gBuildSerialBank[SOUND_ENGINE_MAX_ENGINES];               // under gParamsWriteMutex
-#define gBuildSerial          (gBuildSerialBank[SE])
+// §26.2.2 - the merged nodes themselves, remade when a voice takes a note and when the tables change.
+// Audio thread only. The `Last` pair is what a post-mix node plays, which follows the latest note.
+static tEngineNode          gMergedNodeBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_VOICE_NODES];
+#define gMergedNode       (gMergedNodeBank[SE])
+static tEngineNode          gMergedLastBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICE_NODES];
+#define gMergedLast       (gMergedLastBank[SE])
+static tDxOperator          gMergedOpsBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_VOICE_DX_NODES][DX_OPERATORS];
+#define gMergedOps        (gMergedOpsBank[SE])
+static tDxOperator          gMergedLastOpsBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICE_DX_NODES][DX_OPERATORS];
+#define gMergedLastOps    (gMergedLastOpsBank[SE])
+static uint64_t             gMergedBuildBank[SOUND_ENGINE_MAX_ENGINES];   // which build the merges belong to
+#define gMergedBuild      (gMergedBuildBank[SE])
+static uint64_t             gBuildSerialBank[SOUND_ENGINE_MAX_ENGINES];   // under gParamsWriteMutex
+#define gBuildSerial      (gBuildSerialBank[SE])
 // The last build at each axis's full amount, under gParamsWriteMutex: a changed morph range shows only here.
 static tSoundEngineParams   gAxisProbeBank[SOUND_ENGINE_MAX_ENGINES][eAxisCount];
-#define gAxisProbe            (gAxisProbeBank[SE])
+#define gAxisProbe        (gAxisProbeBank[SE])
 // The Vel and Keyb morph amounts a build uses. Per thread: two instances build at once on different threads.
 static _Thread_local double sBuildAxis[eAxisCount];
 
@@ -1902,7 +1936,10 @@ static uint32_t axis_rows(tMorphAxis axis) {
     return (axis == eAxisVelocity) ? VEL_MORPH_LEVELS : KEY_MORPH_LEVELS;
 }
 
-static void voice_note_on(int32_t note, uint8_t velocity) {
+static void merge_voice_nodes(uint32_t voice, const tSoundEngineParams * params);
+static void merge_last_nodes(const tSoundEngineParams * params);
+
+static void voice_note_on(int32_t note, uint8_t velocity, const tSoundEngineParams * params) {
     SE_LOCAL;
 
     uint32_t count = atomic_load(&gEngineVoices);
@@ -1941,6 +1978,10 @@ static void voice_note_on(int32_t note, uint8_t velocity) {
     voice->age                = ++gVoiceClock;
     gLastRow[eAxisVelocity]   = voice->row[eAxisVelocity];
     gLastRow[eAxisKey]        = voice->row[eAxisKey];
+
+    // §26.2.2 - this voice's rows have just changed, and gLastRow with them
+    merge_voice_nodes((uint32_t)(voice - &gVoice[0]), params);
+    merge_last_nodes(params);
 
     if ((note < MIDI_KEY_COUNT) && (gKeyHeld[note] < UINT8_MAX)) {
         gKeyHeld[note]++;
@@ -2085,7 +2126,7 @@ static void sustain_pedal_follow(void) {
     gSustainSeen = down;
 }
 
-static bool take_next_note_event(void) {
+static bool take_next_note_event(const tSoundEngineParams * params) {
     SE_LOCAL;
 
     sustain_pedal_follow();
@@ -2108,7 +2149,7 @@ static bool take_next_note_event(void) {
     }
 
     if ((gNoteQueue[slot].on == true) && (gNoteQueue[slot].note >= 0)) {
-        voice_note_on(gNoteQueue[slot].note, gNoteQueue[slot].velocity);
+        voice_note_on(gNoteQueue[slot].note, gNoteQueue[slot].velocity, params);
     } else {
         voice_note_off(gNoteQueue[slot].note, gNoteQueue[slot].velocity);
     }
@@ -3777,6 +3818,49 @@ static bool dx_operators_differ(const tSoundEngineParams * base, const tSoundEng
     return memcmp(&probe->dxOp[dxBase], &base->dxOp[dxBase], DX_OPERATORS * sizeof(tDxOperator)) != 0;
 }
 
+// §26.2.2 - the words of `rows` copies of a `words`-word object that differ from the base one. Compared
+// and copied eight bytes at a time through memcmp/memcpy, not through a uint64 pointer: a tEngineNode
+// is not an array of integers and reading it as one is what strict aliasing forbids.
+static void mark_moved_words(uint64_t * mask, const void * base, const void * rows, uint32_t words,
+                             uint32_t rowCount, size_t rowStride) {
+    memset(mask, 0, MORPH_MASK_WORDS * sizeof(uint64_t));
+
+    for (uint32_t row = 0; row < rowCount; row++) {
+        const char * from = (const char *)rows + (row * rowStride);
+
+        for (uint32_t w = 0; w < words; w++) {
+            size_t at = (size_t)w * MORPH_WORD_BYTES;
+
+            if (memcmp(from + at, (const char *)base + at, MORPH_WORD_BYTES) != 0) {
+                mask[w >> 6] |= (uint64_t)1u << (w & 63u);
+            }
+        }
+    }
+}
+
+// §26.2.2 - one object built from the base and the two axes: each word from whichever axis moves it.
+// Where BOTH move the same word the Keyb one stands, exactly as a voice used to play the whole Keyb
+// node - eval_node() still adds both offsets to the smoothed values, which is where that case is
+// handled as well as two per-axis builds allow (§26.2.0).
+static void merge_moved_words(void * out, const void * base, uint32_t words,
+                              const void * fromVel, const uint64_t * velMoves,
+                              const void * fromKey, const uint64_t * keyMoves) {
+    memcpy(out, base, (size_t)words * MORPH_WORD_BYTES);
+
+    for (uint32_t w = 0; w < words; w++) {
+        size_t   at  = (size_t)w * MORPH_WORD_BYTES;
+        uint64_t bit = (uint64_t)1u << (w & 63u);
+
+        if ((velMoves[w >> 6] & bit) != 0u) {
+            memcpy((char *)out + at, (const char *)fromVel + at, MORPH_WORD_BYTES);
+        }
+
+        if ((keyMoves[w >> 6] & bit) != 0u) {
+            memcpy((char *)out + at, (const char *)fromKey + at, MORPH_WORD_BYTES);
+        }
+    }
+}
+
 // §26.2 - one axis's table. The nodes that move are the ones its full-amount build does not agree with.
 static void build_axis_table(tMorphAxis axis, const tSoundEngineParams * base, const tSoundEngineParams * probe) {
     SE_LOCAL;
@@ -3789,6 +3873,8 @@ static void build_axis_table(tMorphAxis axis, const tSoundEngineParams * base, c
     table->dxCount = 0;
     memset(table->column, -1, sizeof(table->column));
     memset(table->dxSlot, -1, sizeof(table->dxSlot));
+    memset(table->moves, 0, sizeof(table->moves));
+    memset(table->dxMoves, 0, sizeof(table->dxMoves));
 
     if ((probe->nodeCount == base->nodeCount) && (probe->topology == base->topology)) {
         for (uint32_t n = 0; (n < base->nodeCount) && (count < MAX_VOICE_NODES); n++) {
@@ -3826,6 +3912,16 @@ static void build_axis_table(tMorphAxis axis, const tSoundEngineParams * base, c
         }
 
         sBuildAxis[axis] = 0.0;
+
+        // §26.2.2 - what this axis actually moves, so a voice can take those words and no others
+        mark_moved_words(table->moves[table->column[n]], &base->node[n], &table->node[0][table->column[n]],
+                         NODE_WORDS, axis_rows(axis), sizeof(table->node[0]));
+
+        if (table->dxSlot[n] >= 0) {
+            mark_moved_words(table->dxMoves[table->dxSlot[n]], &base->dxOp[base->node[n].dxBase],
+                             &table->dxOp[0][table->dxSlot[n]][0], DX_SET_WORDS, axis_rows(axis),
+                             sizeof(table->dxOp[0]));
+        }
     }
 
     table->count = count;
@@ -3874,13 +3970,36 @@ void sound_engine_update_from_patch(void) {
     changed        = changed || (memcmp(&snapshot, &gParams, sizeof(snapshot)) != 0);
 
     if (changed == true) {
-        snapshot.build     = ++gBuildSerial;
+        snapshot.build             = ++gBuildSerial;
         atomic_fetch_add(&gVoiceMorphsSeq, 1);    // odd while the tables are being written
-        gVoiceMorphs.build = snapshot.build;
+        gVoiceMorphs.build         = snapshot.build;
 
         for (uint32_t axis = 0; axis < eAxisCount; axis++) {
             memcpy(&gAxisProbe[axis], &probe[axis], sizeof(tSoundEngineParams));
             build_axis_table((tMorphAxis)axis, &snapshot, &probe[axis]);
+        }
+
+        // §26.2.2 - which nodes BOTH axes move. Only those need merging; a node one axis moves is
+        // already exact, since building at (a, 0) or (0, b) is building at its own pair.
+        gVoiceMorphs.mergedCount   = 0;
+        gVoiceMorphs.mergedDxCount = 0;
+        memset(gVoiceMorphs.mergedSlot, -1, sizeof(gVoiceMorphs.mergedSlot));
+        memset(gVoiceMorphs.mergedDxSlot, -1, sizeof(gVoiceMorphs.mergedDxSlot));
+
+        for (uint32_t n = 0; n < snapshot.nodeCount; n++) {
+            const tMorphTable * vel = &gVoiceMorphs.axis[eAxisVelocity];
+            const tMorphTable * key = &gVoiceMorphs.axis[eAxisKey];
+
+            if (  (vel->column[n] < 0) || (key->column[n] < 0)
+               || (gVoiceMorphs.mergedCount >= MAX_VOICE_NODES)) {
+                continue;
+            }
+            gVoiceMorphs.mergedSlot[n] = (int8_t)gVoiceMorphs.mergedCount++;
+
+            if (  (vel->dxSlot[n] >= 0) && (key->dxSlot[n] >= 0)
+               && (gVoiceMorphs.mergedDxCount < MAX_VOICE_DX_NODES)) {
+                gVoiceMorphs.mergedDxSlot[n] = (int8_t)gVoiceMorphs.mergedDxCount++;
+            }
         }
 
         atomic_fetch_add(&gVoiceMorphsSeq, 1);
@@ -3899,7 +4018,11 @@ static void refresh_voice_morphs(uint64_t build) {
     uint32_t seq = atomic_load(&gVoiceMorphsSeq);
 
     if ((seq != gVoiceMorphsSeen) && ((seq & 1u) == 0u)) {
-        gVoiceMorphsAudio.build = gVoiceMorphs.build;
+        gVoiceMorphsAudio.build         = gVoiceMorphs.build;
+        gVoiceMorphsAudio.mergedCount   = gVoiceMorphs.mergedCount;
+        gVoiceMorphsAudio.mergedDxCount = gVoiceMorphs.mergedDxCount;
+        memcpy(gVoiceMorphsAudio.mergedSlot, gVoiceMorphs.mergedSlot, sizeof(gVoiceMorphsAudio.mergedSlot));
+        memcpy(gVoiceMorphsAudio.mergedDxSlot, gVoiceMorphs.mergedDxSlot, sizeof(gVoiceMorphsAudio.mergedDxSlot));
 
         for (uint32_t axis = 0; axis < eAxisCount; axis++) {
             const tMorphTable * from   = &gVoiceMorphs.axis[axis];
@@ -3912,6 +4035,8 @@ static void refresh_voice_morphs(uint64_t build) {
             to->dxCount = dxUsed;
             memcpy(to->column, from->column, sizeof(to->column));
             memcpy(to->dxSlot, from->dxSlot, sizeof(to->dxSlot));
+            memcpy(to->moves, from->moves, sizeof(to->moves));
+            memcpy(to->dxMoves, from->dxMoves, sizeof(to->dxMoves));
 
             for (uint32_t row = 0; row < axis_rows((tMorphAxis)axis); row++) {
                 memcpy(to->node[row], from->node[row], used * sizeof(tEngineNode));
@@ -3957,6 +4082,86 @@ static const tDxOperator * voice_morph_ops(tMorphAxis axis, const tEngineNode * 
     uint8_t             row   = (base->postMix == true) ? gLastRow[axis] : gVoice[voice].row[axis];
 
     return table->dxOp[row][table->dxSlot[n]];
+}
+
+// §26.2.2 - the merged nodes for one set of axis rows. `rows` is a voice's pair, or gLastRow for the
+// post-mix nodes, which follow the latest note.
+static void merge_nodes_for(const tSoundEngineParams * params, const uint8_t * rows,
+                            tEngineNode * outNode, tDxOperator(*outOps)[DX_OPERATORS]) {
+    SE_LOCAL;
+
+    const tVoiceMorphs * morphs = &gVoiceMorphsAudio;
+    const tMorphTable *  vel    = &morphs->axis[eAxisVelocity];
+    const tMorphTable *  key    = &morphs->axis[eAxisKey];
+    uint8_t              velRow = rows[eAxisVelocity];
+    uint8_t              keyRow = rows[eAxisKey];
+
+    for (uint32_t n = 0; n < params->nodeCount; n++) {
+        int8_t slot   = morphs->mergedSlot[n];
+
+        if (slot < 0) {
+            continue;
+        }
+        merge_moved_words(&outNode[slot], &params->node[n], NODE_WORDS,
+                          &vel->node[velRow][vel->column[n]], vel->moves[vel->column[n]],
+                          &key->node[keyRow][key->column[n]], key->moves[key->column[n]]);
+
+        int8_t dxSlot = morphs->mergedDxSlot[n];
+
+        if (dxSlot >= 0) {
+            merge_moved_words(outOps[dxSlot], &params->dxOp[params->node[n].dxBase], DX_SET_WORDS,
+                              vel->dxOp[velRow][vel->dxSlot[n]], vel->dxMoves[vel->dxSlot[n]],
+                              key->dxOp[keyRow][key->dxSlot[n]], key->dxMoves[key->dxSlot[n]]);
+        }
+    }
+}
+
+static void merge_voice_nodes(uint32_t voice, const tSoundEngineParams * params) {
+    SE_LOCAL;
+
+    if ((gVoiceMorphsUsable == false) || (gVoiceMorphsAudio.mergedCount == 0u)) {
+        return;
+    }
+    merge_nodes_for(params, gVoice[voice].row, gMergedNode[voice], gMergedOps[voice]);
+}
+
+static void merge_last_nodes(const tSoundEngineParams * params) {
+    SE_LOCAL;
+
+    if ((gVoiceMorphsUsable == false) || (gVoiceMorphsAudio.mergedCount == 0u)) {
+        return;
+    }
+    merge_nodes_for(params, gLastRow, gMergedLast, gMergedLastOps);
+}
+
+// §26.2.2 - the node a voice plays where BOTH axes move it. Where only one does, or neither, the
+// per-axis node stands and nothing was merged.
+static const tEngineNode * voice_spec_node(const tEngineNode * base, uint32_t n, uint32_t voice,
+                                           const tEngineNode * byVel, const tEngineNode * byKey) {
+    SE_LOCAL;
+
+    if (gVoiceMorphsUsable == true) {
+        int8_t slot = gVoiceMorphsAudio.mergedSlot[n];
+
+        if (slot >= 0) {
+            return (base->postMix == true) ? &gMergedLast[slot] : &gMergedNode[voice][slot];
+        }
+    }
+    return (byKey != base) ? byKey : byVel;
+}
+
+static const tDxOperator * voice_merged_ops(const tEngineNode * base, uint32_t n, uint32_t voice) {
+    SE_LOCAL;
+
+    if (gVoiceMorphsUsable == false) {
+        return NULL;
+    }
+    int8_t dxSlot = gVoiceMorphsAudio.mergedDxSlot[n];
+
+    if (dxSlot < 0) {
+        return NULL;
+    }
+    return (base->postMix == true) ? gMergedLastOps[dxSlot] : gMergedOps[voice][dxSlot];
 }
 
 // Audio thread half of the seqlock. Returns the newest whole snapshot, or the last one it managed to
@@ -6011,8 +6216,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
     const tEngineNode * base   = &paramsIn->node[n];
     const tEngineNode * byVel  = voice_morph_node(eAxisVelocity, base, n, voice);
     const tEngineNode * byKey  = voice_morph_node(eAxisKey, base, n, voice);
-    // §26.2 - a node both morphs move plays its Keyb node; the smoothed values below take both offsets
-    const tEngineNode * spec   = (byKey != base) ? byKey : byVel;
+    // §26.2.2 - a node both morphs move plays a merge of the two, each word from the axis that moves
+    // it; the smoothed values below still take both offsets, which is where a word both move lands
+    const tEngineNode * spec   = voice_spec_node(base, n, voice, byVel, byKey);
     // The smoothed dial values follow the knob; a voice's velocity and key move them by their own offsets.
     double              shape  = gSmoothedShape[n] + (byVel->shape - base->shape) + (byKey->shape - base->shape);
     double              cutoff = gSmoothedCutoff[n] + (byVel->cutoffParam - base->cutoffParam) + (byKey->cutoffParam - base->cutoffParam);
@@ -6070,8 +6276,12 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeDx:
         {
-            // §26.2 - the Operators follow whichever axis the router's own node followed
-            const tDxOperator * ops = voice_morph_ops((spec == byKey) ? eAxisKey : eAxisVelocity, base, n, voice);
+            // §26.2.2 - merged where both axes move them, else whichever axis the node itself followed
+            const tDxOperator * ops = voice_merged_ops(base, n, voice);
+
+            if (ops == NULL) {
+                ops = voice_morph_ops((byKey != base) ? eAxisKey : eAxisVelocity, base, n, voice);
+            }
 
             if (ops == NULL) {
                 ops = &paramsIn->dxOp[spec->dxBase];
@@ -6423,6 +6633,17 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     params = read_params();
     refresh_voice_morphs(params.build);
 
+    // §26.2.2 - new tables, so every merged node is stale. Once per build, not once per block.
+    if (gMergedBuild != params.build) {
+        gMergedBuild = params.build;
+
+        for (uint32_t v = 0; v < MAX_VOICES; v++) {
+            merge_voice_nodes(v, &params);
+        }
+
+        merge_last_nodes(&params);
+    }
+
     if (params.topology != gSeenTopology) {
         // notes §171
         LOG_DEBUG("TOPOLOGY CHANGE %llu -> %llu, nodes %u, tap %d — delay and reverb buffers cleared\n",
@@ -6514,7 +6735,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             // One event per sample. A chord's worth of note-ons arriving together therefore lands over
             // consecutive samples rather than all but the last being thrown away, and every note takes
             // effect where it actually arrived instead of at the next buffer boundary.
-            (void)take_next_note_event();
+            (void)take_next_note_event(&params);
 
             // notes §176
             double vibrato      = 0.0;

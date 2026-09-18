@@ -319,8 +319,10 @@
 
 #define COMP_MARGIN                    (5.0)
 
-#define BLANK_SIZE                     (0.0)       // Not used directly by calling function, or needs calculation in following calls
+#define BLANK_SIZE                     (0.0)      // Not used directly by calling function, or needs calculation in following calls
 #define STANDARD_TEXT_HEIGHT           (12.0)
+#define LABEL_BAND_PAD                 (3.0)      // notes §90 - breathing room each side of a section heading
+#define LABEL_BAND_LIGHTEN             (0.28)     // how far its band is lightened towards white
 #define STANDARD_BUTTON_TEXT_HEIGHT    (12.0)
 
 // notes §7

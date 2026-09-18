@@ -99,3 +99,34 @@ offers the choice because every instance on an idle track pays for the voices dr
 running (sound-engine-notes §20). It acts on the engine of the instance whose editor the menu
 was opened from, and is saved with the host's project (g2Plugin.c notes §10). The tick follows
 the View menu's pattern: a "*" and the green.
+
+## 13-14. `open_patch_menu()` and `open_performance_menu()`
+
+ONE "File" MENU BECAME TWO, 2026-09-18 (CT). What was there before switched its own labels on
+`gGlobalSettings.perfMode` - "Save Patch As..." became "Save Perf As...", "Store Patch to Bank..."
+became "Store Perf to Bank..." - so exactly half the operations were invisible at any moment. The
+performance ones had existed all along; the owner's note asking whether performances could be written
+to a file or a bank at all is the evidence that hiding them behind a mode made them unfindable.
+
+THE KIND IS NOW THE MENU ITEM'S, NOT THE MODE'S. `file_menu_save_patch()`,
+`file_menu_save_patch_to_current_path()`, `file_menu_saved_path()`, `file_menu_have_saved_path()`,
+`file_menu_bank_origin()`, `file_menu_store_to_bank()` and `file_menu_store_back_to_bank()` all take a
+`bool isPerf` instead of reading perfMode, and `file_menu_save_is_perf()` carries the answer through
+the GUI message queue to graphics.c, which used to decide for itself. That fixes a real gap rather
+than only rearranging: in Performance mode the editor still holds four patches, but saving one of them
+to a `.pch2` was impossible - the save wrote a `.prf2` and the browser even offered a `.prf2` name.
+
+THE BANK ITEMS OF THE PERFORMANCE MENU ARE GREYED, NOT HIDDEN, when the G2 is not in Performance
+mode. Store and Delete act on the instrument's own edit buffer, and in Patch mode that buffer IS a
+single patch - there is no performance there to store, so greying them is correct behaviour and not a
+limitation. Greyed, they still say the operation exists, which is the whole point of the split.
+Hiding them would put back the problem it was made to solve. The FILE items carry no such condition.
+
+ONE "Open Patch or Performance File..." IN BOTH MENUS, not one entry per kind. The file dialogue does
+not filter by extension and the loader settles patch or performance by reading the file, so two
+entries would be two names for one dialogue - and opening a `.prf2` puts the G2 into Performance mode
+by itself, so the menu it was reached from cannot constrain the choice anyway.
+
+The plug-in gets both headings too (`plugin/g2Menu.c`), where `sDeviceCapable` is false and every bank
+item drops out: Patch keeps Open, Open Recent, Save Back, Save As and New, and Performance keeps Open,
+Open Recent, Save Back and Save As. There is no New Performance, because there is no action for one.

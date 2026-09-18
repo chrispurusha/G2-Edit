@@ -302,37 +302,46 @@ void file_menu_open_path(const char * path) {
     wake_glfw();
 }
 
-void file_menu_save_patch(void) {
+// notes §14 - which of the two a save in flight is writing. Set as the message is posted and read by
+// graphics.c when the browser comes back, since the answer has to survive the trip through the queue.
+static bool sSaveAsPerf;
+
+bool file_menu_save_is_perf(void) {
+    return sSaveAsPerf;
+}
+
+void file_menu_save_patch(bool asPerf) {
     tMessageContent msg = {0};
 
-    msg.cmd = eRspShowOpenWrite;
+    sSaveAsPerf = asPerf;
+    msg.cmd     = eRspShowOpenWrite;
     msg_send(&gToGuiThread, &msg);
     wake_glfw();
 }
 
 // File > Save — overwrite the file this patch/perf was last opened from or saved to. Offered by
 // the menu only when file_menu_have_saved_path() says there is one.
-void file_menu_save_patch_to_current_path(void) {
+void file_menu_save_patch_to_current_path(bool asPerf) {
     tMessageContent msg = {0};
 
-    msg.cmd = eRspSaveToCurrentPath;
+    sSaveAsPerf = asPerf;
+    msg.cmd     = eRspSaveToCurrentPath;
     msg_send(&gToGuiThread, &msg);
     wake_glfw();
 }
 
 // The file Save would write to, or NULL - see file_menu_have_saved_path().
-const char * file_menu_saved_path(void) {
-    if (!file_menu_have_saved_path()) {
+const char * file_menu_saved_path(bool isPerf) {
+    if (!file_menu_have_saved_path(isPerf)) {
         return NULL;
     }
-    return (gGlobalSettings.perfMode == 1) ? gSavedPerfPath : gSavedPatchPath[(uint32_t)gSlot];
+    return isPerf ? gSavedPerfPath : gSavedPatchPath[(uint32_t)gSlot];
 }
 
 // Only while the G2 has not since put something else there - a bank load, its own panel, a Store.
-bool file_menu_have_saved_path(void) {
-    bool         isPerf = gGlobalSettings.perfMode == 1;
-    uint32_t     index  = isPerf ? BANK_ORIGIN_PERF : (uint32_t)gSlot;
-    const char * path   = isPerf ? gSavedPerfPath : gSavedPatchPath[index];
+bool file_menu_have_saved_path(bool isPerf) {
+    uint32_t     index = isPerf ? BANK_ORIGIN_PERF : (uint32_t)gSlot;
+    const char * path  = isPerf ? gSavedPerfPath : gSavedPatchPath[index];
 
     return (path[0] != '\0') && (gSavedPathSerial[index] == gPatchSourceSerial[index]);
 }
@@ -358,8 +367,7 @@ void file_menu_new_patch(void) {
 }
 
 // Where the current patch (or, in performance mode, the performance) was loaded from, if a bank.
-bool file_menu_bank_origin(uint32_t * bank, uint32_t * location) {
-    bool    isPerf = gGlobalSettings.perfMode == 1;
+bool file_menu_bank_origin(bool isPerf, uint32_t * bank, uint32_t * location) {
     int32_t origin = gBankOrigin[isPerf ? BANK_ORIGIN_PERF : (uint32_t)gSlot];
 
     if (origin == BANK_ORIGIN_NONE) {
@@ -372,19 +380,18 @@ bool file_menu_bank_origin(uint32_t * bank, uint32_t * location) {
 
 // Store back to where it came from: the same peek-and-confirm as Store to Bank, with the location
 // already chosen, so what is there now is still shown before anything is written.
-void file_menu_store_back_to_bank(void) {
+void file_menu_store_back_to_bank(bool isPerf) {
     uint32_t bank     = 0;
     uint32_t location = 0;
 
-    if (!device_ready() || !file_menu_bank_origin(&bank, &location)) {
+    if (!device_ready() || !file_menu_bank_origin(isPerf, &bank, &location)) {
         return;
     }
-    sPendingStoreIsPerf = gGlobalSettings.perfMode == 1;
+    sPendingStoreIsPerf = isPerf;
     on_store_bank_location_chosen(true, bank + 1, location + 1);
 }
 
-void file_menu_store_to_bank(void) {
-    bool               isPerf       = gGlobalSettings.perfMode == 1;
+void file_menu_store_to_bank(bool isPerf) {
     const char *       typeName     = isPerf ? "performance" : "patch";
     char               message[320] = {0};
     tBankBrowserItem * items        = NULL;

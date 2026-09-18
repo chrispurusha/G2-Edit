@@ -1305,7 +1305,7 @@ void key_callback(int key, int scancode, int action, int mods) {
         }
 
         if (key == GLFW_KEY_S) {
-            file_menu_save_patch();
+            file_menu_save_patch(gGlobalSettings.perfMode == 1);
         }
 
         if (key == GLFW_KEY_N) {
