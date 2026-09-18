@@ -41,8 +41,8 @@ Full detail for each is in findings.md, searchable by the wording below.
 - ***A NODE BOTH MORPH AXES MOVE IS MERGED PER VOICE (2026-09-18)*** - reference §26.2.2. A Vel morph on
   one parameter of a module and a Keyb morph on another are now both delivered; the Vel one used to be
   thrown away entirely. Checked offline on an EnvADSR (Vel on Sustain, Keyb on Decay): 1687% out before,
-  0.00% after. The same parameter moved by both axes is deliberately unchanged and still 7.7% out at
-  worst. STILL TO CHECK BY EAR AGAINST THE G2, and four patches now exist for it (morphcheck --write):
+  0.00% after. The same parameter moved by both axes is now covered too (reference §26.2.3): a build at
+  the PAIR of amounts for the words both axes move, 7.66% out before and 0.14% after. STILL TO CHECK BY EAR AGAINST THE G2, and four patches now exist for it (morphcheck --write):
   PatchTestFiles/MorphVelFilter (velocity opens the filter), MorphKeybFilter (the key does),
   MorphSplitEnv (Vel on an envelope's Sustain, Keyb on its Decay - this entry's case) and
   MorphSameDxLevel (both on one Operator Level - the case still 7.7% out). Load each on the G2 and in

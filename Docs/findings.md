@@ -10106,3 +10106,31 @@ Filter's type menu with them.
   is what our CommonDial already shows (raw 39 -> 30.5). The manual describes Swp and Bend Amt as "0 to 5
   octaves", but that is prose about what the control does, not what the G2 displays. Reading the instrument
   rather than the manual is what stopped two dials being "fixed" into being wrong.
+
+2026-09-18 - THE SAME PARAMETER ON BOTH MORPH AXES, CLOSED (CT priority list; reference §26.2.3). The merge
+earlier the same day settled every word only one axis moves; a word BOTH move it could not, because the right
+answer is the node built at (velocity, key) TOGETHER - §26.2.0's law sums the two offsets into one dial value
+and clamps it once, before the module's conversion. Adding two converted offsets is exact only where that
+conversion is linear in dial units. A filter Freq is; an Operator's Level is not, and measured 7.66% out.
+
+  THE CHEAP PART IS THAT THE MASKS ALREADY EXISTED. The merge records, per axis, which 8-byte words of a node
+  that axis moves. Their AND is exactly the set needing a build at the pair - a handful of doubles, not the
+  node's 137 words - so a VEL_MORPH_LEVELS x KEY_MORPH_LEVELS table costs 786 KB rather than the megabytes a
+  grid of whole nodes would. build_pair_table() sets BOTH entries of sBuildAxis, which param_value() has always
+  supported; nothing in the build path needed changing. 2048 builds against the 768 the per-axis tables already
+  cost, and the rebuild moved off the audio thread the same day, which is what makes that affordable.
+
+  IT ALSO SIMPLIFIED eval_node(). The four smoothed values took one offset per axis and added them; they now
+  take ONE, spec - base, from the node the voice actually plays. That is correct in every case - only Vel moves
+  it and spec IS the Vel node, only Keyb and spec is the Keyb node, both and spec's word came from the pair
+  build. The two-offset form was the modelling error written out in code.
+
+  THE FIRST ATTEMPT MEASURED NO CHANGE AT ALL, and the reason is worth recording: the parameter in the test is
+  an Operator's Level, and an Operator's parameters are not in the node - they live in dxOp[], which the merge
+  handles through its own masks. The node's own words were disjoint, so the pair table came out empty and did
+  nothing. The table needed the Operator half as well. A test that had used a filter Freq would have passed and
+  hidden it.
+
+  Measured: 7.66% and 3.87% out at the two mid points before, 0.14% and 0.01% after, the rest 0.00%. Seven
+  morphcheck runs pass - both axes alone on Dx.pch2, a filter Freq, the same parameter on both axes for a
+  dial-unit field and for a gain on a curve, and the disjoint-parameter case on two patches.
