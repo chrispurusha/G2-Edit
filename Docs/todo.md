@@ -47,7 +47,6 @@ MODULES AND GRAPHICS
 
 FILTERS
 - FltNord's FM-lin and Res-mod inputs are not modelled in the engine (its filter is the instrument's since 2026-09-14, reference §23)
-- Eq2Band/Eq3band Hi Freq: setting 0 sounds at 8 kHz and 1 at 6 kHz, the reverse of eq2BandHiStrMap's names - check what the G2's own display calls them and fix whichever is wrong (the engine follows the sound)
 - EqPeak/Eq3band deep wide cuts above ~1 kHz: the instrument's Chamberlin form is unstable there - measure what it actually does (§11.5)
 - FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs
 - Measure FltPhase against the Freq dial - notch positions are not yet tied to it
