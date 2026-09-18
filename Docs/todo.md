@@ -10,6 +10,7 @@ CT (Priority order)
 - Vel and Keyb morph on the same node: other params keep only Keyb, and one smoothed value moved by both adds in gain terms (reference §26.2 LIMITS)
 - G2 Alike rebuilds on the audio thread when a morph moves - up to ~3.6 ms (Debug) with per-voice morph tables; move it off
 - File menu needs re-arranging. Can we separate patch from perf somehow? Maybe in their own menu headings. Instead of "File", we could have "Patch" and "Performance". Also - I don't think we have performance write to bank nor file?
+- If cursor moves outside of window, open menus could close.
 - Drum synth could use text labels for the current 4 rows - Master, Slave, Noise Filter, Bend. That would allow us to remove the prefixes on the dial labels (M, S, NF, B). Would mean vertically spreading out the rows upwards. I think the first Slave dial is frequency, if so - units are wrong. Hopefully still room on the right (under preset button) to add graphical representation.
 - Bug where we see a sudden/random scroll VA area right about half a module's width. Maybe a buffer over-run over the scroll position variable?
 - Fix or add various module oscillator style graphics. Wave/filter graphs for PulseOsc, OscNoise, LfoD, Operator etc.-
