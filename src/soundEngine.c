@@ -799,6 +799,23 @@ typedef struct {
     uint64_t    dxMoves[MAX_VOICE_DX_NODES][MORPH_MASK_WORDS];
 } tMorphTable;
 
+// §26.2.3 - the words BOTH axes move, built at the PAIR of amounts rather than at each axis alone.
+// Only those words are held, not the whole node, which is what makes a 2-D table affordable: a node
+// is 137 words and the parameters morphed on both axes are a handful.
+#define PAIR_MAX_WORDS    (24u)
+#define MAX_PAIR_NODES    (1u)     // one such node per patch; a second keeps the per-axis behaviour
+
+typedef struct {
+    uint8_t  word[PAIR_MAX_WORDS];   // which words of the node these are
+    uint32_t wordCount;
+    uint64_t value[VEL_MORPH_LEVELS][KEY_MORPH_LEVELS][PAIR_MAX_WORDS];
+    // And the same for a DXRouter's six Operators, whose parameters are not in the node at all - which
+    // is where this first showed up, an Operator's Level being the one dial morphed on both axes.
+    uint8_t  dxWord[PAIR_MAX_WORDS];
+    uint32_t dxWordCount;
+    uint64_t dxValue[VEL_MORPH_LEVELS][KEY_MORPH_LEVELS][PAIR_MAX_WORDS];
+} tPairTable;
+
 typedef struct {
     uint64_t    build;                     // tSoundEngineParams.build these belong to
     tMorphTable axis[eAxisCount];
@@ -807,6 +824,10 @@ typedef struct {
     uint32_t    mergedCount;
     int8_t      mergedDxSlot[MAX_ENGINE_NODES];   // and the same for a DXRouter's Operators
     uint32_t    mergedDxCount;
+    // §26.2.3
+    int8_t      pairSlot[MAX_ENGINE_NODES];
+    uint32_t    pairCount;
+    tPairTable  pair[MAX_PAIR_NODES];
 } tVoiceMorphs;
 
 // The word masks have to cover both objects, and neither may have a field straddling a word.
@@ -3861,6 +3882,67 @@ static void merge_moved_words(void * out, const void * base, uint32_t words,
     }
 }
 
+// §26.2.3 - the words both axes move, built at every PAIR of amounts. This is the one case two
+// per-axis builds cannot answer: the instrument sums both offsets into one dial value and clamps once
+// (§26.2.0), so a parameter both morphs move has to be built at (velocity, key) together. Only the
+// shared words are kept - the rest of the node the merge already settles - which is what keeps a
+// VEL_MORPH_LEVELS x KEY_MORPH_LEVELS table to a few hundred KB instead of a few hundred MB.
+// The words of one object that BOTH masks move, packed into a list.
+static uint32_t shared_words(uint8_t * out, uint32_t words, const uint64_t * velMoves, const uint64_t * keyMoves) {
+    uint32_t count = 0;
+
+    for (uint32_t w = 0; (w < words) && (count < PAIR_MAX_WORDS); w++) {
+        uint64_t bit = (uint64_t)1u << (w & 63u);
+
+        if (((velMoves[w >> 6] & bit) != 0u) && ((keyMoves[w >> 6] & bit) != 0u)) {
+            out[count++] = (uint8_t)w;
+        }
+    }
+
+    return count;
+}
+
+static void build_pair_table(tPairTable * pair, const tSoundEngineParams * base, uint32_t n,
+                             const uint64_t * velMoves, const uint64_t * keyMoves,
+                             const uint64_t * velDxMoves, const uint64_t * keyDxMoves, uint32_t variation) {
+    SE_LOCAL;
+
+    static _Thread_local tEngineNode cell;
+    static _Thread_local tDxOperator ops[DX_OPERATORS];
+
+    pair->wordCount   = shared_words(pair->word, NODE_WORDS, velMoves, keyMoves);
+    pair->dxWordCount = (velDxMoves != NULL) ? shared_words(pair->dxWord, DX_SET_WORDS, velDxMoves, keyDxMoves) : 0u;
+
+    if ((pair->wordCount == 0u) && (pair->dxWordCount == 0u)) {
+        return;     // the two axes move disjoint parameters here: the merge is already exact
+    }
+
+    for (uint32_t v = 0; v < VEL_MORPH_LEVELS; v++) {
+        for (uint32_t k = 0; k < KEY_MORPH_LEVELS; k++) {
+            sBuildAxis[eAxisVelocity] = axis_amount(eAxisVelocity, v);
+            sBuildAxis[eAxisKey]      = axis_amount(eAxisKey, k);
+
+            if (build_module_node(&base->node[n], variation, &cell, ops) == false) {
+                cell = base->node[n];
+                memcpy(ops, &base->dxOp[base->node[n].dxBase], sizeof(ops));
+            }
+
+            for (uint32_t i = 0; i < pair->wordCount; i++) {
+                memcpy(&pair->value[v][k][i], (const char *)&cell + ((size_t)pair->word[i] * MORPH_WORD_BYTES),
+                       MORPH_WORD_BYTES);
+            }
+
+            for (uint32_t i = 0; i < pair->dxWordCount; i++) {
+                memcpy(&pair->dxValue[v][k][i], (const char *)ops + ((size_t)pair->dxWord[i] * MORPH_WORD_BYTES),
+                       MORPH_WORD_BYTES);
+            }
+        }
+    }
+
+    sBuildAxis[eAxisVelocity] = 0.0;
+    sBuildAxis[eAxisKey]      = 0.0;
+}
+
 // §26.2 - one axis's table. The nodes that move are the ones its full-amount build does not agree with.
 static void build_axis_table(tMorphAxis axis, const tSoundEngineParams * base, const tSoundEngineParams * probe) {
     SE_LOCAL;
@@ -3981,6 +4063,8 @@ void sound_engine_update_from_patch(void) {
 
         // §26.2.2 - which nodes BOTH axes move. Only those need merging; a node one axis moves is
         // already exact, since building at (a, 0) or (0, b) is building at its own pair.
+        gVoiceMorphs.pairCount     = 0;
+        memset(gVoiceMorphs.pairSlot, -1, sizeof(gVoiceMorphs.pairSlot));
         gVoiceMorphs.mergedCount   = 0;
         gVoiceMorphs.mergedDxCount = 0;
         memset(gVoiceMorphs.mergedSlot, -1, sizeof(gVoiceMorphs.mergedSlot));
@@ -3999,6 +4083,23 @@ void sound_engine_update_from_patch(void) {
             if (  (vel->dxSlot[n] >= 0) && (key->dxSlot[n] >= 0)
                && (gVoiceMorphs.mergedDxCount < MAX_VOICE_DX_NODES)) {
                 gVoiceMorphs.mergedDxSlot[n] = (int8_t)gVoiceMorphs.mergedDxCount++;
+            }
+
+            // §26.2.3 - the words both axes move are the ones the merge cannot settle, because the
+            // answer is a build at the pair rather than either axis's own build.
+            if (gVoiceMorphs.pairCount < MAX_PAIR_NODES) {
+                bool         dxBoth = (vel->dxSlot[n] >= 0) && (key->dxSlot[n] >= 0);
+                tPairTable * pair   = &gVoiceMorphs.pair[gVoiceMorphs.pairCount];
+
+                build_pair_table(pair, &snapshot, n,
+                                 vel->moves[vel->column[n]], key->moves[key->column[n]],
+                                 dxBoth ? vel->dxMoves[vel->dxSlot[n]] : NULL,
+                                 dxBoth ? key->dxMoves[key->dxSlot[n]] : NULL,
+                                 gPatchDescr[engine_slot()].activeVariation);
+
+                if ((pair->wordCount + pair->dxWordCount) > 0u) {
+                    gVoiceMorphs.pairSlot[n] = (int8_t)gVoiceMorphs.pairCount++;
+                }
             }
         }
 
@@ -4021,8 +4122,11 @@ static void refresh_voice_morphs(uint64_t build) {
         gVoiceMorphsAudio.build         = gVoiceMorphs.build;
         gVoiceMorphsAudio.mergedCount   = gVoiceMorphs.mergedCount;
         gVoiceMorphsAudio.mergedDxCount = gVoiceMorphs.mergedDxCount;
+        gVoiceMorphsAudio.pairCount     = gVoiceMorphs.pairCount;
         memcpy(gVoiceMorphsAudio.mergedSlot, gVoiceMorphs.mergedSlot, sizeof(gVoiceMorphsAudio.mergedSlot));
         memcpy(gVoiceMorphsAudio.mergedDxSlot, gVoiceMorphs.mergedDxSlot, sizeof(gVoiceMorphsAudio.mergedDxSlot));
+        memcpy(gVoiceMorphsAudio.pairSlot, gVoiceMorphs.pairSlot, sizeof(gVoiceMorphsAudio.pairSlot));
+        memcpy(gVoiceMorphsAudio.pair, gVoiceMorphs.pair, gVoiceMorphs.pairCount * sizeof(tPairTable));
 
         for (uint32_t axis = 0; axis < eAxisCount; axis++) {
             const tMorphTable * from   = &gVoiceMorphs.axis[axis];
@@ -4097,7 +4201,7 @@ static void merge_nodes_for(const tSoundEngineParams * params, const uint8_t * r
     uint8_t              keyRow = rows[eAxisKey];
 
     for (uint32_t n = 0; n < params->nodeCount; n++) {
-        int8_t slot   = morphs->mergedSlot[n];
+        int8_t slot     = morphs->mergedSlot[n];
 
         if (slot < 0) {
             continue;
@@ -4106,12 +4210,31 @@ static void merge_nodes_for(const tSoundEngineParams * params, const uint8_t * r
                           &vel->node[velRow][vel->column[n]], vel->moves[vel->column[n]],
                           &key->node[keyRow][key->column[n]], key->moves[key->column[n]]);
 
-        int8_t dxSlot = morphs->mergedDxSlot[n];
+        int8_t dxSlot   = morphs->mergedDxSlot[n];
 
         if (dxSlot >= 0) {
             merge_moved_words(outOps[dxSlot], &params->dxOp[params->node[n].dxBase], DX_SET_WORDS,
                               vel->dxOp[velRow][vel->dxSlot[n]], vel->dxMoves[vel->dxSlot[n]],
                               key->dxOp[keyRow][key->dxSlot[n]], key->dxMoves[key->dxSlot[n]]);
+        }
+        // §26.2.3 - LAST, over whichever axis the merges above took: the words both axes move are
+        // right only in the build at this voice's PAIR of amounts.
+        int8_t pairSlot = morphs->pairSlot[n];
+
+        if (pairSlot >= 0) {
+            const tPairTable * pair = &morphs->pair[pairSlot];
+
+            for (uint32_t i = 0; i < pair->wordCount; i++) {
+                memcpy((char *)&outNode[slot] + ((size_t)pair->word[i] * MORPH_WORD_BYTES),
+                       &pair->value[velRow][keyRow][i], MORPH_WORD_BYTES);
+            }
+
+            if (dxSlot >= 0) {
+                for (uint32_t i = 0; i < pair->dxWordCount; i++) {
+                    memcpy((char *)outOps[dxSlot] + ((size_t)pair->dxWord[i] * MORPH_WORD_BYTES),
+                           &pair->dxValue[velRow][keyRow][i], MORPH_WORD_BYTES);
+                }
+            }
         }
     }
 }
@@ -6219,11 +6342,15 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
     // §26.2.2 - a node both morphs move plays a merge of the two, each word from the axis that moves
     // it; the smoothed values below still take both offsets, which is where a word both move lands
     const tEngineNode * spec   = voice_spec_node(base, n, voice, byVel, byKey);
-    // The smoothed dial values follow the knob; a voice's velocity and key move them by their own offsets.
-    double              shape  = gSmoothedShape[n] + (byVel->shape - base->shape) + (byKey->shape - base->shape);
-    double              cutoff = gSmoothedCutoff[n] + (byVel->cutoffParam - base->cutoffParam) + (byKey->cutoffParam - base->cutoffParam);
-    double              res    = gSmoothedRes[n] + (byVel->resonance - base->resonance) + (byKey->resonance - base->resonance);
-    double              gain   = gSmoothedGain[n] + (byVel->gain - base->gain) + (byKey->gain - base->gain);
+    // The smoothed dial values follow the knob; a voice's velocity and key move them by ONE offset,
+    // taken from the node this voice actually plays. §26.2.3 - that used to be two offsets, one per
+    // axis, added in the value's own terms: right for a dial-unit field and wrong for a gain on a
+    // curve. Where both axes move the same value, spec's word now comes from the build at the PAIR,
+    // so the two amounts were summed before the conversion and the clamp, as the instrument does it.
+    double              shape  = gSmoothedShape[n] + (spec->shape - base->shape);
+    double              cutoff = gSmoothedCutoff[n] + (spec->cutoffParam - base->cutoffParam);
+    double              res    = gSmoothedRes[n] + (spec->resonance - base->resonance);
+    double              gain   = gSmoothedGain[n] + (spec->gain - base->gain);
     double              a      = signal_in(spec, value, 0);
 
     for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
