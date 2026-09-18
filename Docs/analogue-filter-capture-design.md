@@ -14,14 +14,20 @@ it may move to a project of its own once there is code.
 **1.1 Control.** SynthEdit already drives the Voyager's filter over MIDI (its `voyager.txt` layout), and
 has a backdoor for scripted sweeps - the same shape as G2-Edit's backdoor that the G2 measurements ran on.
 
-**1.2 Capture and analysis.** `tools/capture.c` (AUHAL, chosen channels, a comment in the file), windows
+**1.2 Resolution.** The Voyager's filter controls are finer than a standard 7-bit MIDI controller: Cutoff and
+Resonance are 14-bit MSB/LSB pairs (CC 19/51 and CC 21/53, 0..16383), as are its other continuous controls,
+and the Panel Dump carries the same value shifted left 2. Hardware-confirmed 2026-07 and already how
+SynthEdit sends them. So a sweep can step the cutoff law finely enough to fit it - unlike the G2's 128 steps.
+A physical pot does not quite reach either end of its range; set values over MIDI, never by hand.
+
+**1.3 Capture and analysis.** `tools/capture.c` (AUHAL, chosen channels, a comment in the file), windows
 aligned on a signal edge rather than the clock, noise-floor masking, clip checks, and per-setting model
 fitting - all used for the G2 today (sound engine reference §10-§13, `findings.md`).
 
-**1.3 A plug-in framework.** SynthLib's VST3 and AUv2 wrappers take a format-free description; GenBridge
+**1.4 A plug-in framework.** SynthLib's VST3 and AUv2 wrappers take a format-free description; GenBridge
 is already an effect built on them.
 
-**1.4 A starting model.** The engine's FltClassic is a 4-pole ladder whose topology and feedback range
+**1.5 A starting model.** The engine's FltClassic is a 4-pole ladder whose topology and feedback range
 were settled from captures - the same family as the Voyager's filter.
 
 ## 2. What is harder than the G2
@@ -37,12 +43,64 @@ reference measurement through each session (§5.7) to see how much.
 (which can overload before the filter does), and the VCA and output stage all colour what is captured.
 §3.2 is how they are separated out.
 
+**2.4 Fully open is not flat (to confirm).** The Voyager's filter may not fully open even with cutoff at
+maximum, so "filter wide open" cannot serve as the unfiltered reference. The reference has to be a signal
+that bypasses the filter altogether (§3.2), and the model has to reproduce whatever roll-off remains at the
+top of the cutoff range rather than treat it as the chain's.
+
+**First measurement, 2026-09-17** (saw of §3.1 at 64.33 Hz, cutoff 16383 AND filter envelope amount 16383
+with full sustain - the widest the filter could be opened, see §2.5; resonance 0, Dual LP, Spacing 8192,
+pole setting not yet read off the panel). Filtered / unfiltered at every harmonic, relative to the
+fundamental, median per band (spread within a band about ±0.3 dB below 8 kHz):
+
+| Band (Hz) | 120-250 | 250-500 | 0.5-1k | 1-2k | 2-4k | 4-8k | 8-12k | 12-16k | 16-21k |
+|---|---|---|---|---|---|---|---|---|---|
+| dB | -0.1 | -0.5 | -0.8 | -1.0 | -1.2 | -1.4 | -2.3 | -3.1 | -4.8 |
+
+So fully open is NOT flat: a gentle tilt of about -1 dB by 1 kHz that no low-pass near 20 kHz would make,
+then a steeper fall above 8 kHz. What is filter and what is the VCA and output stage (which the unfiltered
+tap skips) is not yet separated. The filtered output sits +1.4 dB above the unfiltered at the fundamental.
+
+**2.5 Cutoff over MIDI barely moved the filter (2026-09-17, open).** With the envelope amount at 0, cutoff
+0..16383 over CC 19/51 changed the response by under 1 dB, monotonically, and it stayed a low-pass near
+100 Hz falling 12 dB/octave (a 2-pole slope - the pole setting is to be checked). Resonance over CC 21/53
+did act (a peak near 110 Hz), and the envelope opened the filter fully, so the filter works and the CCs
+arrive. To check at the panel: the physical Cutoff knob and whether it overrides the CC, a filter CV or
+pedal input, and any modulation routed to cutoff.
+
 ## 3. The rig
 
-**3.1 Signal path.** The Mac plays a test signal out of the audio interface into the Voyager's external
-audio input; the Voyager's own oscillators and noise are off. The signal goes through its mixer, the
-filter, the VCA and out. The VCA is held fully open with a note held, the envelope amount to the filter
-at zero and keyboard tracking off, so the filter's controls are the only thing that changes.
+**3.1 Signal path - phase 1, the Voyager's own sources (owner, 2026-09-17).** No external input yet: a
+MIDI note plays the Voyager's own oscillators or noise through its mixer, the filter, the VCA and out.
+The unfiltered output (§3.2a) is the filter's input, captured at the same moment, so the filter's
+response is filtered / unfiltered per capture and no test signal has to be sent or calibrated. The VCA is
+held fully open with the note held, the envelope amount to the filter at zero and keyboard tracking off,
+so the filter's controls are the only thing that changes.
+
+- **Noise** is the linear-response source: a continuous spectrum, so filtered/unfiltered gives the whole
+  magnitude curve at once (§4.3), averaged over enough of it to settle.
+- **One sawtooth** gives harmonics at known frequencies and a known slope - the response sampled at the
+  harmonics, and a check on the noise result. Pick the pitch so they are dense where the cutoff is.
+  Oscillator 1 is set to saw, but the Voyager's Wave control is continuous, so its "saw" point may not be a
+  pure one. Sweep Wave around it and pick the setting whose UNFILTERED spectrum is closest to a saw's
+  (every harmonic present, falling as 1/k, even ones as strong as odd). Purity matters less than it seems -
+  the ratio divides the actual input out - but a missing or weak harmonic is a hole in the measurement.
+  **Measured 2026-09-17** (C3 held, Osc 1 sounding at 64.3 Hz, unfiltered channel only, harmonics 2-32
+  against 1/k): Osc 1 Wave is the 14-bit pair **CC 9/41**, as `voyager.txt` has it (CC 95 not tried). Below
+  about 5700 the saw is blended with triangle - every harmonic low by the same amount, -9 dB at 2048; above
+  about 5800 the pulse blends in and notches walk through the harmonics. **Best saw: 5728** (MSB 44, LSB 96),
+  1.0 dB rms from ideal, repeatable to 0.03 dB; a flat -1.3 dB offset (the fundamental slightly strong)
+  remains at every setting and is the instrument's. On the panel's 0-127 scale 5728 is 44.75 (value / 128);
+  limited to whole steps, 45 (1.33 dB) beats 44 (1.98 dB). Settings for the good saw: Osc 1 on and saw at
+  Wave 5728, Osc 2 and 3 off, note C3 (MIDI 48) on channel 8 (sounds at 64.3 Hz).
+
+  **The unfiltered output runs without a note** - the oscillators free-run at the LAST note's pitch - so a
+  capture must start its analysis after the note's pitch has arrived. A "second tone" at 101 Hz on the
+  first analysis was exactly that: the previous note, until the new one came in. No reply to a Panel Dump
+  Request came back through the Cirklon port.
+
+**3.1a Phase 2, external input (later).** The Mac plays a designed test signal (§4.1-§4.2) into the
+Voyager's external audio input instead, for exponential sweeps and stepped sines at exact levels.
 
 **3.2 Two captures at once - before and after the filter.** Besides the Voyager's normal output, take its
 UNFILTERED signal: the mixer's output ahead of the filter. Captured together on two channels:
@@ -53,7 +111,20 @@ UNFILTERED signal: the mixer's output ahead of the filter. Captured together on 
 - the interface's own loopback, out to in, captured once, calibrates the rest.
 
 Which jack carries the pre-filter signal, and whether taking it changes the path, to be settled at the
-instrument before the first capture.
+instrument before the first capture. That separate output, bypassing the filter, is also the only honest
+comparison for §2.4 - capture it alongside the filtered output at maximum cutoff to see how far the filter
+really opens.
+
+**3.2a The rig as wired (owner, 2026-09-17).** Already in place:
+
+- Voyager UNFILTERED output -> QU-24 input 16 (channel 15 as `tools/capture` numbers them, 0-indexed);
+- Voyager main output, FILTERED -> QU-24 input 24 (channel 23, 0-indexed);
+- MIDI from the Mac through the Cirklon, port "Mirror" (MIDI 1), Voyager on channel 8.
+
+So phase 1 (§3.1) needs no new cabling. Phase 2 (§3.1a) adds the "what was sent" leg - a QU-24 output
+into the Voyager's external audio input, and a loopback of that output for §5.1. Before the first capture,
+scan all channels before trusting the map (the G2 captures found other QU-24 channels carrying loud bleed).
+The exact CoreMIDI destination name for the Cirklon port is to be read off the system, not guessed.
 
 **3.3 Levels.** Per the G2 lesson (memory: capture drive and clipping): small-signal sweeps well below
 the point where the input stage or the filter saturates, and a clip check on every capture before a fit
@@ -63,6 +134,8 @@ is trusted or distrusted.
 captures do - capture start latency varies by a large fraction of a second.
 
 ## 4. Test signals
+
+Phase 1 uses the Voyager's own noise and sawtooth (§3.1); §4.1-§4.2 are phase 2.
 
 **4.1 Exponential sine sweeps.** One sweep yields the linear response AND each harmonic's response
 separately (the harmonics fall at known times ahead of the fundamental), so mild nonlinearity is measured
@@ -123,18 +196,21 @@ compression curve, self-oscillation.
 
 ## 9. Open questions
 
-- Which Voyager output carries the pre-filter signal (§3.2), and the interface channels for send, before
-  and after.
-- The control resolution for cutoff over MIDI - whether 7 bits is fine enough to fit the law, or the
-  sweep needs the finer form if the layout has one.
+- The QU-24 output used to send the test signal (§3.2a); before and after are already on inputs 16 and 24.
+- Whether the filter fully opens at maximum cutoff (§2.4) - first capture: bypass output against filtered
+  output, cutoff at 16383, resonance at 0.
 - How the VCA is held open for long captures without the envelope intruding.
 - Whether a second profile (the Minitaur) follows the same model with different laws.
 - Separate plug-in, or a filter type inside G2 Alike.
 
 ## 10. First steps
 
-1. Settle the rig (§3.1-§3.2): cables, channels, levels; a loopback capture.
-2. A capture script driving SynthEdit's backdoor the way `tools/`'s G2 scripts drive G2-Edit's.
-3. Small-signal grid (§5.2) and the model's linear part.
-4. Large-signal (§5.3) and self-oscillation (§5.4).
+1. Scan the QU-24 channels with a note held; confirm unfiltered on 15 and filtered on 23 (0-indexed), and
+   the Cirklon port's CoreMIDI name ("Cirklon2+Mirror MIDI 1"). Done 2026-09-17, with the saw sweep (§3.1). Then the §2.4 check: noise, cutoff 16383, resonance 0, filtered
+   against unfiltered.
+2. A capture script driving SynthEdit's backdoor (cutoff, resonance, mixer levels) and sending the note,
+   the way `tools/`'s G2 scripts drive G2-Edit's.
+3. Small-signal grid (§5.2) on noise, cross-checked on a sawtooth, and the model's linear part.
+4. Large-signal (§5.3) by raising the mixer level, and self-oscillation (§5.4).
 5. A first plug-in, and §8.
+6. Later: phase 2 (§3.1a), external input and designed test signals.
