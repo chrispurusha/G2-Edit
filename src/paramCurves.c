@@ -320,8 +320,10 @@ double flt_kbt_amount(uint32_t kbtValue) {
 }
 
 // notes §15
-#define LFO_SEMITONE_RATIO    (1.0 / 12.0)
-#define LFO_HI_BASE_HZ        (0.2555)      // Rate Hi at dial 0; Rate Lo is this over 16
+#define LFO_SEMITONE_RATIO       (1.0 / 12.0)
+#define LFO_HI_BASE_HZ           (0.2555)   // Rate Hi at dial 0; Rate Lo is this over 16
+// The delay's clocked time uses the same fixed tempo, for the same reason - see ENGINE_REFERENCE_BPM.
+#define LFO_CLK_REFERENCE_BPM    (120.0)
 
 double lfo_rate_hz(uint32_t rangeMode, double paramValue) {
     switch (rangeMode) {
@@ -351,6 +353,16 @@ double lfo_rate_hz(uint32_t rangeMode, double paramValue) {
                          : (154.0 + round(2.0 * (paramValue - 97.0)));
 
             return bpm / 60.0;
+        }
+        case 4:   // Rate Clk: the master clock divided - §28
+        {
+            // The instrument's LFO sync ratios (its own 32-entry table) are 256/beats, which is
+            // EXACTLY the series clk_sync_beats() already holds for the delay's Clk, entry for entry.
+            // One table serves both, and the delay's reference tempo serves both too - the engine has
+            // no live master clock yet, so like the delay this runs at LFO_CLK_REFERENCE_BPM.
+            double beats = clk_sync_beats(paramValue);
+
+            return (beats > 0.0) ? ((LFO_CLK_REFERENCE_BPM / 60.0) / beats) : 1.0;
         }
         default:
         {
@@ -868,6 +880,11 @@ static const double kEqHighShelfHz[] = {8000.0, 6000.0, 12000.0};
 // agreeing only near dial 73.
 double eq_peak_centre_hz(double dial) {
     return 20.0 * pow(800.0, dial / 127.0);
+}
+
+// §8.3 - measured 2026-09-12: 3.3 at Width 127, 4.9 at 112, 9 at 96, and about 190 at 0.
+double osc_noise_resonator_q(double widthDial) {
+    return 3.34 * exp(0.032 * (127.0 - widthDial));
 }
 
 static double eq_dial_gain(double dial) {

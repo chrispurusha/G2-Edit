@@ -2927,6 +2927,149 @@ static double kbscale_offset(uint32_t curve, double depth, double distance) {
 }
 
 // notes §86
+// notes §91 - the Drum Synth's picture: how long the drum rings, and how far it bends.
+#define DRUM_GRAPH_MASTER_DCY    (2)
+#define DRUM_GRAPH_SLAVE_DCY     (3)
+#define DRUM_GRAPH_MASTER_LEV    (4)
+#define DRUM_GRAPH_SLAVE_LEV     (5)
+#define DRUM_GRAPH_NOISE_DCY     (9)
+#define DRUM_GRAPH_BEND_AMT      (11)
+#define DRUM_GRAPH_BEND_DCY      (12)
+#define DRUM_GRAPH_NOISE_LEV     (14)
+#define DRUM_GRAPH_STEPS         (48)
+#define DRUM_GRAPH_HEADROOM      (0.9)   // leave the top of the box clear of the border
+
+// One decaying voice at time t, as a fraction of where it started. Shape 0 is EnvADSR's own fall.
+static double drum_decay_at(double t, double seconds) {
+    double progress = (seconds > 0.0) ? (t / seconds) : 1.0;
+
+    return (progress >= 1.0) ? 0.0 : env_fall_level(0u, progress);
+}
+
+static void render_drum_graph(tRectangle rectangle, tModule * module) {
+    const tGraphLocation * graphLoc  = find_graph_location(module->type);
+
+    if ((graphLoc == NULL) || (module->type != moduleTypeDrumSynth)) {
+        return;
+    }
+    uint32_t               variation = gPatchDescr[module->key.slot].activeVariation;
+    tRectangle             graphRect = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+
+    double                 mLev      = graph_param_raw(module, variation, DRUM_GRAPH_MASTER_LEV) / 127.0;
+    double                 sLev      = graph_param_raw(module, variation, DRUM_GRAPH_SLAVE_LEV) / 127.0;
+    double                 nLev      = graph_param_raw(module, variation, DRUM_GRAPH_NOISE_LEV) / 127.0;
+    double                 mDcy      = adr_time_seconds(graph_param_raw(module, variation, DRUM_GRAPH_MASTER_DCY));
+    double                 sDcy      = adr_time_seconds(graph_param_raw(module, variation, DRUM_GRAPH_SLAVE_DCY));
+    double                 nDcy      = adr_time_seconds(graph_param_raw(module, variation, DRUM_GRAPH_NOISE_DCY));
+    double                 bend      = graph_param_raw(module, variation, DRUM_GRAPH_BEND_AMT) / 127.0;
+    double                 bDcy      = adr_time_seconds(graph_param_raw(module, variation, DRUM_GRAPH_BEND_DCY));
+
+    // The picture spans the drum's AUDIBLE length - the longest of the three voices - not the longest
+    // thing on it. A fixed span would put a short kick in the first pixel and run a long tom off the
+    // end; spanning the bend instead squashes the sound into a corner whenever the bend outlasts it,
+    // which is most kicks. The bend simply runs to the right edge still falling, which is the truth:
+    // it is still bending something that has already died away.
+    double                 span      = fmax(mDcy, fmax(sDcy, nDcy));
+    double                 peak      = mLev + sLev + nLev;
+    double                 baseY     = graphRect.coord.y + graphRect.size.h;
+    double                 height    = graphRect.size.h * DRUM_GRAPH_HEADROOM;
+
+    if (span <= 0.0) {
+        span = 1.0;
+    }
+
+    if (peak <= 0.0) {
+        peak = 1.0;      // everything silenced: draw the shape it would have, flat on the floor
+    }
+    set_rgb_colour((tRgb)RGB_GREY_2);
+    render_rectangle(moduleArea, graphRect);
+
+    set_rgb_colour((tRgb)RGB_GREY_5);
+    render_line(moduleArea, (tCoord){graphRect.coord.x, baseY},
+                (tCoord){graphRect.coord.x + graphRect.size.w, baseY}, 1.0);
+
+    // The bend first, so the amplitude reads over it where they cross.
+    if (bend > 0.0) {
+        tCoord prev = {graphRect.coord.x, baseY - (bend * height)};
+
+        set_rgb_colour((tRgb)RGB_ORANGE_1);
+
+        for (uint32_t i = 1; i <= DRUM_GRAPH_STEPS; i++) {
+            double fraction = (double)i / (double)DRUM_GRAPH_STEPS;
+            tCoord point    = {
+                graphRect.coord.x + (fraction * graphRect.size.w),
+                baseY - (bend * drum_decay_at(fraction * span, bDcy) * height)
+            };
+
+            render_line(moduleArea, prev, point, 1.0);
+            prev = point;
+        }
+    }
+    // The three voices summed at their own levels, against their own peak: the drum's own shape.
+    tCoord prev = {graphRect.coord.x, baseY - height};
+
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
+
+    for (uint32_t i = 1; i <= DRUM_GRAPH_STEPS; i++) {
+        double fraction = (double)i / (double)DRUM_GRAPH_STEPS;
+        double t        = fraction * span;
+        double level    = ((mLev * drum_decay_at(t, mDcy)) + (sLev * drum_decay_at(t, sDcy))
+                           + (nLev * drum_decay_at(t, nDcy))) / peak;
+        tCoord point    = {graphRect.coord.x + (fraction * graphRect.size.w), baseY - (level * height)};
+
+        render_line(moduleArea, prev, point, 1.5);
+        prev = point;
+    }
+}
+
+// notes §92 - OscNoise's band. Width alone shapes it, which is what the original's graph depends on
+// too; the pitch only moves it, and a picture with no frequency axis cannot show that.
+#define OSCNOISE_GRAPH_WIDTH       (6)   // §8.1 - the INSTRUMENT's numbering, not the face's old one
+#define OSCNOISE_GRAPH_STEPS       (56)
+#define OSCNOISE_GRAPH_OCTAVES     (2.5) // either side of centre
+#define OSCNOISE_GRAPH_FLOOR_DB    (-42.0)
+
+static void render_oscnoise_graph(tRectangle rectangle, tModule * module) {
+    const tGraphLocation * graphLoc  = find_graph_location(module->type);
+
+    if ((graphLoc == NULL) || (module->type != moduleTypeOscNoise)) {
+        return;
+    }
+    uint32_t               variation = gPatchDescr[module->key.slot].activeVariation;
+    tRectangle             graphRect = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+    double                 width     = graph_param_raw(module, variation, OSCNOISE_GRAPH_WIDTH);
+    // §8.3 - Q per resonator, two of them in series
+    double                 q         = osc_noise_resonator_q(width);
+    double                 baseY     = graphRect.coord.y + graphRect.size.h;
+    tCoord                 prev      = {0};
+
+    set_rgb_colour((tRgb)RGB_GREY_2);
+    render_rectangle(moduleArea, graphRect);
+
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
+
+    for (uint32_t i = 0; i <= OSCNOISE_GRAPH_STEPS; i++) {
+        double fraction = (double)i / (double)OSCNOISE_GRAPH_STEPS;
+        // Log frequency about the centre, so a narrow band stays a symmetrical spike
+        double octaves  = ((fraction * 2.0) - 1.0) * OSCNOISE_GRAPH_OCTAVES;
+        double ratio    = exp2(octaves);
+        double detune   = (ratio) - (1.0 / ratio);
+        double single   = 1.0 / sqrt(1.0 + ((q * detune) * (q * detune)));
+        double both     = single * single;                       // §8.2 - two in series
+        double levelDb  = 20.0 * log10(fmax(both, 1e-6));
+        double level    = fmax(0.0, 1.0 - (levelDb / OSCNOISE_GRAPH_FLOOR_DB));
+        tCoord point    = {
+            graphRect.coord.x + (fraction * graphRect.size.w),
+            baseY - (level * graphRect.size.h * 0.92)
+        };
+
+        if (i > 0) {
+            render_line(moduleArea, prev, point, 1.5);
+        }
+        prev = point;
+    }
+}
+
 static void render_operator_kbscale_graph(tRectangle rectangle, tModule * module) {
     const tGraphLocation * graphLoc   = find_graph_location_nth(module->type, 1);
 
@@ -3136,6 +3279,8 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     render_dxrouter_algorithm_graph(rectangle, module);
     render_operator_kbscale_graph(rectangle, module);
     render_compress_graph(rectangle, module);
+    render_drum_graph(rectangle, module);
+    render_oscnoise_graph(rectangle, module);
     render_keyquant_keyboard(rectangle, module);
 
     for (uint32_t i = module->volumeIndexCache; i < array_size_volume_location_list(); i++) {
