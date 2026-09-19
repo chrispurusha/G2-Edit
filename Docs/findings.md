@@ -10796,3 +10796,21 @@ Checked against the instrument's own parts where they are readable:
 list - but only once the envelope fix let the chain get deep enough to reach a switch. It presented
 as a segfault in `memmove` eight frames into the recursion. AddressSanitizer named the line in one
 run; reading the recursion did not.
+
+2026-09-19 - THE DECIMATORS WERE BUILT BEFORE THE ENGINE KNEW THE DEVICE RATE (found while chasing
+"standalone - note from keyboard/midi isn't affecting pitch"; CT reports pitch working again).
+Notes §29a.
+
+`sound_engine_start()` - the APPLICATION's path - calls `build_decimator()`, then
+`audio_output_start()`, and it is the device open that tells the engine its rate. That ordering was
+harmless while the oversampling factor was a compile-time constant: the coefficients came out the
+same whenever they were computed. §29a made the factor depend on the rate, so the application could
+build its decimators against one factor and then run at another. The plug-in never could -
+`sound_engine_start_hosted()` sets the rate first, which is why it was standalone-only.
+
+`sound_engine_set_sample_rate()` now rebuilds them when either factor actually changes, which fixes
+the ordering from the other end and leaves the start sequence alone - reordering it would race the
+device against `reset_node_state()`.
+
+A latent bug of the same shape to watch for: anything else derived from `gOversample` or
+`gOscOversample` at prime time rather than per block.

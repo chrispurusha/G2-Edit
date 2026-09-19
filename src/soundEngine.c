@@ -1625,12 +1625,26 @@ static void set_oversampling(double deviceRate) {
 // The device's rate; the ENGINE runs at gOversample times this (§29a). gSampleRate is the internal
 // rate, so every coefficient already derived from it — envelope and glide times, filter and chorus
 // coefficients, LFO and oscillator increments — scales with no further change.
+static void build_decimator(void);
+
 void sound_engine_set_sample_rate(double sampleRate) {
     SE_LOCAL;
 
     if (sampleRate > 0.0) {
+        uint32_t wasGraph = gOversample;
+        uint32_t wasOsc   = gOscOversample;
+
         gDeviceRate = sampleRate;
         set_oversampling(sampleRate);
+
+        // §29a - THE DECIMATORS ARE BUILT FROM THESE, so a rate that changes either factor has to
+        // rebuild them. sound_engine_start() primes the engine BEFORE audio_output_start() tells it
+        // the device's rate, so the application builds them once against whatever the factors were
+        // and then learns the rate - which did not matter while the factor was a compile-time
+        // constant and does now.
+        if ((gOversample != wasGraph) || (gOscOversample != wasOsc)) {
+            build_decimator();
+        }
     }
 }
 
