@@ -62,7 +62,7 @@ FILTERS
 SOUND ENGINE
 - Sound engine across cores: the blocker is the per-sample note grid - `for each sample { for each voice { for each node } }` cannot fork and join 384000 times a second. Both this and any real single-thread gain need per-voice rendering into whole sub-blocks, with note events quantised to a sub-block boundary (findings 2026-09-19). NOTE a single plug-in instance does not split across cores either; what looks like it is the host running other tracks in parallel-
 - Break-up with several notes: at 48 kHz the engine is 26% of a core for BigPad at 16 voices and the worst block is 18% of its deadline, so ASK WHAT RATE AND BUFFER the interface is on before chasing the DSP - 96 and 192 kHz were the real cost and are now halved (findings 2026-09-19)
-- Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) and the topbar reports the same number - but the G2 assigns voices by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"). Our limit should be 32 per slot and topbar should show a requested/assigned pair as the original does
+- Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) - CONFIRMED right (02 Big Pad asks for and gets 14, 2026-09-19) - but the G2 assigns by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"), so the topbar should show a requested/assigned pair as the original does
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
 - 01 Mini Emulator (PatchTestFiles/MiniEmulator.pch2) plays nothing in the engine: ten missing module types and a node budget a third of its size - see Docs/mini-emulator-engine-plan.md
 - The sustain pedal does not hold keys in the engine (only its morph group moves); the G2 keeps a sustained key held until the pedal lifts (reference §15.5)
@@ -145,6 +145,14 @@ BUILD
 
 
 DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from this file, the constraint is not)
+
+- The "sudden/random horizontal VA scroll" was the SIDE WHEEL on the owner's new mouse (CT,
+  2026-09-19), not a trackpad momentum tail. Do not re-derive the trackpad theory from that symptom.
+  The minor-axis filter written for it (SCROLL_AXIS_DOMINANCE, dropping whichever scroll axis was
+  under half the other) has been REVERTED: a nudge of a side wheel is a pure-x event, which that
+  filter passes straight through, so it never addressed the cause - and it would have cost a real
+  diagonal trackpad gesture its minor axis. If horizontal drift is ever seen again on a machine with
+  no horizontal scroll device, that is the point at which the trackpad theory becomes worth testing.
 
 - FT_LOAD_FORCE_AUTOHINT in the glyph rasteriser: tried and REJECTED. Crisper, but it changes glyph
   advances, and with canonical-advance positioning it renders "R andomA 1" / "554.4H z". Do not re-try
