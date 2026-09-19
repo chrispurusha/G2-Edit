@@ -3700,10 +3700,10 @@ MEASURED (headless, both engines built from the same harness, SimpleLead.pch2):
 STILL NEEDS AN EAR. Everything above is numerical. The knob-turn behaviour in particular changed
 (smoothing domain) and cannot be measured from steady-state renders.
 
-CORRECTION to the reference reading, for whoever goes back to it: CNativeFilterCoeffsPart::Compute
-is NOT the frequency conversion this section claimed. It computes x + Q23mul(x, y) and stores a
+CORRECTION to the reference reading, for whoever goes back to it: the filter COEFFICIENT part is
+NOT the frequency conversion this section claimed. It computes x + Q23mul(x, y) and stores a
 pair — a coefficient smoother/interpolator. Do not go looking for cutoff-to-hertz constants in it.
-Also note CNativeFilterModPart clamps the sum AFTER a *4, so the effective bound on the sum is
+Also note the filter MOD part clamps the sum AFTER a *4, so the effective bound on the sum is
 +/-0x200000, not +/-0x800000; that detail was not needed here but will matter if anyone tries to
 match the hardware's modulation depth exactly.
 
@@ -3728,20 +3728,19 @@ is to run the filter oversampled". That describes the pre-ENGINE_OVERSAMPLE engi
 now bite earlier than it needs to at 96 kHz, but that is range at the very top of the dial, not
 tone across it.
 
---- 4. G2Demo.c DOES contain the full emulated DSP (I claimed otherwise; I was wrong) ---
+--- 4. THE REFERENCE MATERIAL DOES contain the full emulated DSP (I claimed otherwise; I was wrong) ---
 
-Real audio: AudioOutputProc -> PortAudio -> CoreAudio AudioDeviceAddIOProc (~line 402172).
-299 CNative*Part classes, each with Compute() — the per-module DSP. List them with:
-    grep -oE "CNative[A-Za-z0-9_]*Part" G2Demo.c | sort -u
-Searching for AudioUnit/RenderCallback finds nothing and is what misled me.
+It plays real audio through PortAudio and CoreAudio, and it holds one class per DSP part, each with
+a compute method — 299 of them, which are the per-module DSP. Searching for an AudioUnit render
+callback finds nothing, and that is what misled me.
 
-Reading the Compute() bodies (CDspEmulator = SHARC fixed point emulated in software):
+Reading a compute body (the SHARC's fixed point, emulated in software):
     0x7fffff / 0xff800000   24-bit saturation clamps
     >> 0x17 after a multiply Q23 fixed-point multiply
     g_r3 / g_r4             emulated register indices into the input arrays
     DAT_0031xxxx            coefficient constants — the actual magic numbers
     repeated x = a*x >> 0x17  successive powers, i.e. a polynomial
-Worked example: CNativeSaturatePart::Compute builds successive powers, so Saturate is a polynomial
+Worked example: the Saturate part builds successive powers of its input, so Saturate is a polynomial
 waveshaper. Also present: 229 text-formatter functions giving parameter->real-unit meanings
 authoritatively (that family is what fixed the delay Clk mapping).
 Cross-check DSP against github.com/gleb812/pch2csd (MIT) — its resources/value_maps.json has 116
@@ -3932,7 +3931,7 @@ resources already hold.
   filter response curves (Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ
   curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/
   Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger —
-  see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the
+  see the original editor's custom-object factory in the reference material, and the
   CPnl*Graph class family for reference implementations.
 
 - DRAW THE WAVEFORM GRAPHICS FROM CAPTURED SAMPLES RATHER THAN BY HAND (2026-08-20, owner's idea).
@@ -4143,7 +4142,7 @@ resources already hold.
 
 - Seq* park-LED (SeqNote/SeqEvent/SeqVal/SeqLev/SeqCtr) — DEFERRED pending a look at the REAL
   original editor. Confirmed from the reference that the park LED is NOT in the hardware LED stream
-  (CLedDataList::PopulateList, G2Editor.c:103614, only enrols LEDs with GroupId/CodeRef >= 0; the
+  (its LED-list builder only enrols LEDs with GroupId/CodeRef >= 0; the
   park LED is GroupId=-1, rendered but stream-excluded), so G2-Edit's exclusion is CORRECT and must
   STAY. Its lit state is editor-computed. Owner observed the real editor lights it when the Park
   input is patched, but the exact trigger isn't provable from the reference. G2-Edit paints a
@@ -4874,7 +4873,7 @@ resources already hold.
   platform layer and a separate question from the application.
 
 - Compress(150) — module height may be 1 row too many (currently 5 rows, moduleResources.h). The
-  original editor's module-info structs are opaque in the reference (SModuleInfo/CBuildModule are
+  original editor's module-info structs are opaque in the reference (they are
   placeholder structs, heights not recoverable as readable data); needs validation by running the
   original editor and comparing.
 
@@ -5768,7 +5767,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
       looked wrong, and a later delete removed only one copy — which is what "Disconnect doesn't
       remove the cable on the hardware" actually was. Fixed by sending SUB_COMMAND_WRITE_CABLE_COLOUR
       (0x54) via a new eMsgCmdSetCableColour; header byte is (location << 3) | colour per
-      CMCableRecolor::WriteStream (G2Editor.c:18192). Callers: cable_chain_apply_colour() and
+      the original editor's cable-recolour message writer. Callers: cable_chain_apply_colour() and
       apply_cable_edit() in undo.c when a cable exists and only its colour differs.
       HARDWARE-CONFIRMED: two drags now leave two cables on the device (was four), and deleting
       them leaves none. NOTE: patches written by older builds may still carry duplicate cables.
@@ -8213,7 +8212,7 @@ AN ODDITY LEFT OPEN: sine, saw and square all trigger at the SAME threshold (raw
 neither peak nor RMS of what reaches the output. It may be reading a pre-band-limited amplitude, or
 the summed sidechain, or something smoothed. It does not affect the probe's USE - the 6 dB validation
 above is waveform-agnostic and that is what matters - but anything that needs the detector's actual
-law should settle it first. G2Demo's compressor Compute() is the obvious place to look, remembering
+law should settle it first. The instrument's own compressor part is the obvious place to look, remembering
 that it is a hypothesis generator and that constants are usually not in it.
 
 FOUR LEVEL MEASUREMENTS WITH THE COMPRESSOR PROBE AND THE CONVERTER (2026-09-07).
@@ -9505,7 +9504,7 @@ wrong model:
     exponential approach, which covered any interval in the same time.
   Checked offline only (to-test.md has the list for the instrument).
 
-2026-09-13 - THREE ENGINE LAWS CORRECTED while reading factory patch 01 Mini Emulator (whose octave
+2026-09-13 - THREE ENGINE LAWS CORRECTED while reading the 01 Mini Emulator patch (whose octave
 switches are Constants 12 units apart) - sound-engine-reference §16:
   - CONSTANT BIP/UNI WAS REVERSED. The switch reads 0 for Bipolar; the engine treated 0 as Unipolar,
     so every Constant played in the other mode. Bipolar is now (value - 64) units and Unipolar value/2,
@@ -9589,7 +9588,7 @@ across both dials, the remainder the instrument's fixed-point rounding.
     was Catmull-Rom at any position).
   - THE LEVEL IS UNITY AT AMOUNT 0: dry × (1 - a/2), each tap × a/2. The fitted law put the whole module
     +3 dB above its input there, which would make Bypass drop 3 dB. CHECKED ON THE G2: the same level
-    bypassed and at Amount 0 (CT: "I think it's identical bypassed or not. G2Demo seems to be correct.
+    bypassed and at Amount 0 (CT: "I think it's identical bypassed or not. [The instrument's own code] seems to be correct.
     Possible transients spoiled the test previously." - a first reading had shown +1.8 dB).
   Old laws in the revert record, rows 24-26.
 
@@ -9940,14 +9939,14 @@ capture chain has a high-pass (-4 dB at 110 Hz), so every level was read against
     held two same-pitch oscillators in one voice at the same relation (0.382 cycles) in EVERY voice and on every load:
     one timbre everywhere, where the G2 gives each voice its own. Now random per node per voice per reset (notes §63).
 
-2026-09-17 - OSCSHPB AND OSCDUAL MOVED ONTO THE INSTRUMENT'S LAWS AT THE ENGINE RATE (CT: "G2Demo is the reference";
+2026-09-17 - OSCSHPB AND OSCDUAL MOVED ONTO THE INSTRUMENT'S LAWS AT THE ENGINE RATE (CT: "[the instrument's own code] is the reference";
 "document so that we could go back"). The replaced code is kept verbatim in Docs/oscillator-code-before-edge-conversion.md
 (parts were uncommitted). OscShpB against its harness: Sine1 -82 dB, Sine2 -62, Sine3/4 -80 (except the hardware ratio
 cap at Shape 120-127), DblSaw/Pulse/SymPulse exact, TriSaw -43..-77 dB (-25 at 6 kHz). Found on the way: TriSaw's long
 ramp FALLS (the engine's rose - time-reversed, same magnitudes, which is why harmonic checks passed); DblSaw's saws
 rise; the phase origins of Sine1/Sine2 follow their floored widths; the Pulse's "1" is 0x7fffff; the TriSaw harness's
 corner signs flip with tiny pitch changes (its division emulation), so only the magnitude is trusted there.
-OscDual: a new harness (G2DemoTables harness/g2juno.c + juno_h.inc, the part regex-translated; its phase increment is
+OscDual: a new harness (the offline part harness kept outside the repo, `harness/g2juno.c` + `juno_h.inc`, the part regex-translated; its phase increment is
 half the output pitch, the part doubles it and keeps the undoubled phase for the sub). Its laws are in reference
 §12.5. THE SUB HAS NO SHELF in the instrument: the 2026-09-12 "190 Hz shelf 0.38 -> 1.12" matches this morning's
 finding that the QU-24 capture chain itself is -4 dB at 110 Hz - the sub, being low, took the chain's high-pass for
@@ -10463,4 +10462,167 @@ discontinuity - the stolen note is cut off dead rather than let go - and on a pa
 rather than an instant one. `voice->fade` and `VOICE_FADE_SECONDS` already exist for retiring a
 long-tailed voice, but using them here means holding the note-on back until the fade finishes, which
 the note queue does not currently do. The instrument's own allocator writes its zero and then waits
-on the DSP before trigging (`CDSP::WaitOnB`), which is the same shape of answer.
+on the DSP before trigging, which is the same shape of answer.
+
+2026-09-19 - THE STEAL IS A GATE CYCLE, NOT A RESET: BOTH OF THE DAY'S ATTEMPTS WERE WRONG (CT:
+"its mono mode should be the reference at least for mono mode"; then "if there's code in there for
+poly, even if disabled, we should follow it"). Reference §15.3a, revert record 54.
+
+### What the reference allocator does
+
+Read end to end, keyboard down to gate word. A note reaches the allocator through the keyboard
+handler, sustain, hold and the arpeggiator, and the allocator does this:
+
+- **A free voice exists** (used < the part's voice count): take the next one off the free list.
+  Nothing else happens. This is not a steal and nothing is touched.
+- **None does**: take the oldest in use - unless the new note is higher than the lowest note held
+  AND that candidate is the voice holding it, in which case take the next one instead. That is the
+  manual's "it will try to keep the lowest note sounding", and §15.3 already had it.
+  Then: **write a ZERO into that voice's gate word**, run the DSP until a pass has completed, write
+  the new pitch and velocity, and **write the gate high again**.
+
+That is all of it. **The zero is the GATE, not a level.** Nothing is reset, nothing is faded and no
+envelope is touched by the allocator at all - the gate falling puts every envelope into its release
+stage and the gate rising restarts the attack, from the level it is at (§17.3) or from zero where
+that envelope's Reset switch is on (§17.7). Whether a stolen note has an attack is therefore the
+PATCH's answer, not the allocator's, and we already implement both sides of it.
+
+Two more things fell out of the same read, and both confirm what we had:
+
+- The gate drop is skipped outright in **Legato**, and the gate is re-raised only when no key was
+  held. So a legato voice changes note with the gate never falling - which is what our
+  `trigger`/`gEngineLegato` handling already did.
+- **Mono is not a special case anywhere.** One voice, nothing free, so a second key goes down the
+  steal path like any other - and in Mono the gate cycle is simply an ordinary retrigger. The
+  note-OFF side is the separate rule §15.2 already has: with the mono flag set and a key still held,
+  the voice is re-trigged onto the held note.
+
+### What we had got wrong, twice in one day
+
+**First**, "writes a zero" was read as zeroing the envelope LEVEL, so `voice_steal_reset()` cleared
+every envelope's level, accumulator, tick and stage on a steal. That takes a held voice's output to
+nothing between one sample and the next, which is the click CT reported.
+
+**Second**, that click was treated as needing a 5 ms fade before the new note trigged. It measured
+beautifully and it is not what the instrument does; it also made every stolen note 5 ms late.
+
+Both are gone. `voice_note_on()` now drops the gate and sets `stealWait`;
+`start_pending_steals()` counts it down beside the note queue and trigs when it reaches zero. The
+wait is one envelope tick (`VOICE_STEAL_GATE_TICKS`), the least that guarantees every envelope has
+run a tick with the gate down - the instrument waits a whole DSP pass, and both are tens of
+microseconds.
+
+### Measured
+
+02 Big Pad, two voices, the sample either side of the steal. Before, with the reset, the local slope
+is about 0.00002 a sample and then:
+
+```
+    +12  -0.006562  +0.000059
+    +13  -0.006662  -0.000100
+    +14  -0.006367  +0.000296
+    +15  -0.007554  -0.001188      <- sixty times the local slope
+    +16  -0.008839  -0.001285
+```
+
+With the gate cycle the same window is monotonic and continuous - +0.000001, +0.000009, +0.000012,
++0.000017, +0.000025, +0.000027, +0.000039 - and goes on smoothly into the new note. Same on
+SimpleLead. Legato is untouched either way, as it should be.
+
+**A measurement trap, twice.** "Largest one-sample step in a window" is not a click detector once
+the window is wide enough to contain the new note: a higher note is a steeper waveform, so the
+metric rises when the fix works. It said the poly fade made things worse (6.1% -> 12.3%) and it said
+the gate cycle was worse than the fade (1.4% -> 10.6%), and both times the join itself was cleaner.
+Only the samples either side of the join answer this; look at them.
+
+### The reference is usable for POLY too
+
+It emulates a single DSP - the count is set to 1 at boot - and the per-part voice count is derived
+from that by the voice placer, so in practice it plays one voice. But the ALLOCATOR is untouched
+poly code: a free list, a steal list, the lowest-note protection and an arbitrary voice count. It is
+limited by DSP resources, not by anything removed, so it answers poly questions as well as mono ones
+(CT's call, and the code agrees with it).
+
+2026-09-19 - A PLUG-IN MENU DID NOT CLOSE WHEN YOU CLICKED OUTSIDE IT (CT: "On plugin (not
+standalone), when a menu is opened and I click outside of it, menu doesn't close"). plugin/g2Input.c.
+
+SynthLib's `context_menu_mouse()` declines a click that is not inside the menu - deliberately, so the
+click can reach whatever is under it - and the dismissal is left to the host. The application does it
+in `mouse_button()`'s `mouseButtonLeftUp` case: menu bar rect, else `handle_context_menu_click()`,
+else `gContextMenu.active = false`. The plug-in's `g2_input_mouse_event()` had no equivalent, so its
+menus could only be closed by choosing something in them.
+
+The press half was missing too, and would have been the next complaint: the application guards
+`dispatch_click_region()` and `canvas_empty_press()` with `!gContextMenu.active`, so the click that
+dismisses a menu does not also act on the thing it landed on. The plug-in guarded neither, which is
+why a click outside a menu there started a rubber band under it.
+
+Both halves are now the application's, in the application's order, including the menu bar exception
+that lets a second title switch menus rather than close them. While in there, the release path was
+assigning `dispatch_click_region()`'s answer over `handled` rather than or-ing it, throwing away what
+the palette and the topbar had reported - cosmetic, since `g2View.m` ignores the return, but wrong.
+
+2026-09-19 - THE ENGINE WAS OVERSAMPLING A DEVICE THAT WAS ALREADY FAST ENOUGH, AND IT IS THE FIRST
+THING TO CHECK ABOUT THE BREAK-UP (CT: "CPU bandwidth used is currently high"; "with multiple notes
+playing, it starts breaking up"). Notes §29a, revert record 56.
+
+### What the measurement said first
+
+An offline harness linking the engine with no device (the `do-render` source list plus `protocol.c`
+and `g2Patch.c`), rendering 10 s of audio and reporting CPU. BigPad, 16 voices, 16 notes held:
+
+| device rate | before | after |
+|---|---|---|
+| 44.1 kHz | 24.1% of a core | 23.5% |
+| 48 kHz | 26.3% | 25.8% |
+| 88.2 kHz | 48.2% | 23.7% |
+| 96 kHz | 52.4% | 26.0% |
+| 192 kHz | **105.1%** | 51.4% |
+
+At 48 kHz on an M4 Max the engine is at a quarter of one core with every voice sounding, and the
+worst single block is 18% of its deadline at a 64-frame buffer - so on this machine, at this rate,
+raw throughput is not what breaks up. At 192 kHz it needs more than a whole core and CANNOT keep up,
+and at 96 kHz it is at half a core before the GUI has drawn anything. **If the interface is at 96 or
+192 kHz, that is the first thing to look at.**
+
+### Why it was doing it
+
+`ENGINE_OVERSAMPLE` was applied to the DEVICE rate. Notes §29's reason for oversampling at all is
+that "its audio rate is 96 kHz against a typical 48 kHz output" - the target is the instrument's own
+rate, and at 48 kHz doubling reaches it exactly. At 96 kHz the doubling overshoots to 192, and at
+192 kHz to 384: twice and four times the arithmetic, to run a model fitted against the G2 at 96 kHz
+somewhere the G2 has never been. The reverb is the instrument's own network word for word; running
+it at 384 kHz is not running the instrument's reverb.
+
+`set_oversampling()` now picks the smallest factor that reaches 88.2 kHz for the graph and 176.4 kHz
+for the oscillators. Neither number is new - 88.2 is what a 44.1 kHz device already gave, and 176.4
+is the pair notes §34 fitted the oscillator decimator at. Both decimators are skipped outright at a
+factor of 1, the output one having been 256 multiply-accumulates per output sample with nothing to
+fold.
+
+### The check that mattered
+
+**Bit-identical at 44.1 and 48 kHz.** Four patches (SimpleLead, BigPad, Dx, ChorusSaw), a fixed
+start-phase seed and a fixed note sequence, compared byte for byte; and `tools/render`'s reverb
+impulse response likewise. Above 48 kHz the output does change, and it moves TOWARDS the 48 kHz
+reference rather than away - BigPad's rms at a 192 kHz device was 0.09980 against 48 kHz's 0.10294,
+and is now 0.10198. That is the expected direction: those rates were the ones running a different
+model.
+
+### The rest of the profile, for whoever takes the next bite
+
+Sampled at 48 kHz, BigPad, 16 voices: `eval_node` 52%, `sound_engine_render` 25% (which is mostly
+the inlined `eval_node` call site), `osc_waveform` 3.5%, `exp2` 4%, `sin` 3.4%, `meter_node` 1.9%,
+`memset` 1.7%. So three quarters of it is the per-node switch, run once per node per voice per
+oversampled sample. Two small things were taken here - the per-sample `exp()` for the smoothing
+coefficient hoisted out of the sample loop, and `voiceSum` cleared over `nodeCount` rather than all
+128 - and together they are worth about 1%, which is roughly what todo.md already predicted
+("the compiler already does it").
+
+**Anything bigger needs the inner loop restructured**, and that is the same restructure the
+across-cores item needs - see the note added to todo.md. The loop is
+`for each sample { for each voice { for each node } }`, and the per-sample note grid is what holds
+it that way: note events are consumed INSIDE the sample loop so they land on the fine grid. Voices
+cannot be spread over threads at that granularity - it would be a fork and join every sample, 384000
+a second. Splitting per-voice rendering into whole sub-blocks is what both want, and it means
+quantising note events to a sub-block boundary.

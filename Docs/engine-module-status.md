@@ -143,10 +143,13 @@ The palette offers 170 of the 210 types in `types.h`; the rest the G2 does not o
 menus. `Operator` and `Name` sit outside `module_kind()` - an Operator plays only as part of the
 DXRouter that owns it (§14), and a Name module is text.
 
-## The two factory targets
+## The two target patches
 
-- **02 Big Pad** (bank 1:24, `PatchTestFiles/BigPad.pch2`) - complete since 2026-09-19; its last
+Neither is a factory patch - both are CT's own, and the copies in `PatchTestFiles/` are the only
+reference to them.
+
+- **02 Big Pad** (`PatchTestFiles/BigPad.pch2`) - complete since 2026-09-19; its last
   two, `ModAmt` and `SwOnOffT`, are both in the unsettled list.
-- **01 Mini Emulator** (bank 1:10, `PatchTestFiles/MiniEmulator.pch2`) - needs eight more:
+- **01 Mini Emulator** (`PatchTestFiles/MiniEmulator.pch2`) - needs eight more:
   `MonoKey`, `Glide`, `LevConv`, `LevAdd`, `Sw2-1`, `Sw8-1`, `ValSw2-1`, `2-In`. Their laws are
   worked out in `mini-emulator-engine-plan.md`.

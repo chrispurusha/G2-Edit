@@ -385,6 +385,40 @@ to interpolate for each nonlinear node and no per-node decimator, just one filte
 end. The linear parts (mixers, amplifiers, delay, reverb) gain nothing from it but cost little,
 and having one rate throughout means nothing has to know it is happening.
 
+## 29a. The graph rate is CAPPED, not simply the device rate doubled (2026-09-19)
+
+The factor above was applied to whatever the device was running at, so a 96 kHz interface ran the
+graph at 192 kHz and a 192 kHz one at 384 kHz - two and four times the CPU, to run a model of a
+96 kHz instrument at a rate the instrument never uses. Every law in `sound-engine-reference.md` was
+fitted against the G2 at its own rate, so the extra passes bought nothing and the reverb - which is
+the instrument's own network word for word - was being run somewhere it was never designed for.
+
+`set_oversampling()` picks the smallest factor that reaches each target:
+
+| device | graph, before | graph, now | oscillators, before | now |
+|---|---|---|---|---|
+| 44.1 kHz | 88.2 kHz | 88.2 kHz | 176.4 kHz | 176.4 kHz |
+| 48 kHz | 96 kHz | 96 kHz | 192 kHz | 192 kHz |
+| 88.2 kHz | 176.4 kHz | 88.2 kHz | 352.8 kHz | 176.4 kHz |
+| 96 kHz | 192 kHz | 96 kHz | 384 kHz | 192 kHz |
+| 192 kHz | 384 kHz | 192 kHz | 768 kHz | 192 kHz |
+
+44.1 and 48 kHz are untouched, and the output is bit-identical there - checked sample for sample on
+SimpleLead, BigPad, Dx and ChorusSaw, and on the reverb IR `tools/render` writes. Above them the
+cost halves, and BigPad at 16 voices went from 105% of a core at a 192 kHz device (i.e. it could not
+play) to 51%. What sound there is changes only at those rates, and it moves TOWARDS the 48 kHz
+reference rather than away: BigPad's rms at 192 kHz was 0.09980 against 48 kHz's 0.10294, and is now
+0.10198.
+
+`ENGINE_OVERSAMPLE` and `OSC_OVERSAMPLE` remain as the MAXIMA - `DELAY_LINE_SAMPLES` and
+`CHORUS_SAMPLES` are sized with them at compile time and an array cannot be sized by a runtime
+factor. Both decimators are skipped outright when their factor is 1: there is no image to fold, and
+the output one alone was 256 multiply-accumulates an output sample.
+
+Both targets are the note above's own numbers rather than new ones. 88.2 kHz is what 44.1 already
+gave, and 176.4 kHz is the pair note 34 fitted the oscillator decimator at ("decimating 192 kHz to
+96 kHz").
+
 ## 30. `tVoice`
 
 ── VOICES ──────────────────────────────────────────────────────────────────────────────────────

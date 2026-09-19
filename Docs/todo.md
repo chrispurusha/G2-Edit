@@ -5,17 +5,16 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Big Pad and Mini Emulator aren't factory patches by the way. Probably best to not mention them in the docs.
-- On plugin (not standalone), when a menu is opened and I click outside of it, menu doesn't close.
-- Plugin appears to split work across cores. Standalone should do similar. Currently, with multiple notes playing, it starts breaking up.
-- Voice stealing CUTS the stolen note dead: its amplitude envelope goes to zero in one sample and a pad clicks, which means holding the note-on back until it finishes (findings 2026-09-19, reference §15.3a). Click can also be heard on mono and legato patches (which were previously OK), when holding a note and playing a new note. If we do the right thing for mono, poly should shake out. One of the envelopes. Think it's only a problem when old release runs into new note.
+- Sound engine across cores: the blocker is the per-sample note grid - `for each sample { for each voice { for each node } }` cannot fork and join 384000 times a second. Both this and any real single-thread gain need per-voice rendering into whole sub-blocks, with note events quantised to a sub-block boundary (findings 2026-09-19). NOTE a single plug-in instance does not split across cores either; what looks like it is the host running other tracks in parallel
+- Break-up with several notes: at 48 kHz the engine is 26% of a core for BigPad at 16 voices and the worst block is 18% of its deadline, so ASK WHAT RATE AND BUFFER the interface is on before chasing the DSP - 96 and 192 kHz were the real cost and are now halved (findings 2026-09-19)
 - Fix current modules in sound engine using the recent methods.
-- Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. 02 Big Pad (bank 1:24, PatchTestFiles/BigPad.pch2) needed only ModAmt and SwOnOffT - both done 2026-09-19, ModAmt's Enable button still a guess (to-test.md). 01 Mini Emulator (bank 1:10) still needs eight: MonoKey, Glide, LevConv, LevAdd, Sw2-1, Sw8-1, ValSw2-1 and 2-In (its SwOnOffT is now done) - see mini-emulator-engine-plan.md
+- Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. 02 Big Pad (PatchTestFiles/BigPad.pch2) needed only ModAmt and SwOnOffT - both done 2026-09-19, ModAmt's Enable button still a guess (to-test.md). 01 Mini Emulator still needs eight: MonoKey, Glide, LevConv, LevAdd, Sw2-1, Sw8-1, ValSw2-1 and 2-In (its SwOnOffT is now done) - see mini-emulator-engine-plan.md
 - Envelopes: the other eight now play (reference §17.9) but their KB gate and Reset are not read (EnvADSR's parameter numbers only), and EnvMulti's rise to an intermediate level is a guess - settle both against the instrument's own envelope parts
 - Zoom to Fit from a right click, fitting the area under the cursor
 - Separate zoom for VA and FX.
 - Module wave/filter graphs, what is left of the original's 43: LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two). PulseOsc and LfoD carry one in the original but are NOT module types we have - they are among the unfilled slots below, so they cannot be drawn until the modules exist
-- CPU bandwidth used is currently high. If we can optimise at some point, it's worth doing. There may be cases where a consistent input of zero or possibly unchanged values, don't need a module to process? Obviously, need to be careful there.
+- CPU: three quarters of it is `eval_node`'s per-node switch, run once per node per voice per oversampled sample (profile in findings 2026-09-19). The cheap wins are taken; skipping a node whose inputs are constant needs the sub-block restructure above to be worth the test that decides it
+- `DELAY_LINE_SAMPLES` is sized 2.8 s at a 96 kHz graph, so at a 192 kHz device the longest Time is truncated to 1.4 s - pre-existing, and worse before the rate cap
 
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
@@ -66,7 +65,7 @@ FILTERS
 SOUND ENGINE
 - Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) and the topbar reports the same number - but the G2 assigns voices by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"). Our limit should be 32 per slot and topbar should show a requested/assigned pair as the original does
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
-- 01 Mini Emulator (Bank 1:10, PatchTestFiles/MiniEmulator.pch2) plays nothing in the engine: ten missing module types and a node budget a third of its size - see Docs/mini-emulator-engine-plan.md
+- 01 Mini Emulator (PatchTestFiles/MiniEmulator.pch2) plays nothing in the engine: ten missing module types and a node budget a third of its size - see Docs/mini-emulator-engine-plan.md
 - The sustain pedal does not hold keys in the engine (only its morph group moves); the G2 keeps a sustained key held until the pedal lifts (reference §15.5)
 - ShpStatic Inv x3/Inv x2: the engine plays exponents 1/3 and 1/2, the 2026-08-24 capture measured 0.49 and 0.65 (the picker icon draws those) - reconcile
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.md)
@@ -219,7 +218,7 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
 - OscShpB Sine3/Sine4 at Shape 120-127: the hardware is a further 0.2-0.65 dB down and its ratio 0.886 at 120 (reference §27.3) - model the top of the dial if it matters
 - OscShpB: SymMod (Shape mod input) and the Sync part not yet compared with the engine
-- OscDual (§12.5): compare the new code sample for sample with the harness (G2DemoTables harness/g2juno.c: note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
+- OscDual (§12.5): compare the new code sample for sample with the harness (the offline part harness kept outside the repo, `harness/g2juno.c`: note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
 - OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
 - OscB: Shape mod input, Sync and FM (FmLin) not modelled (reference §6.5)
 - Compressor: new §25 port needs an ear (to-test)

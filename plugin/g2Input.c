@@ -176,11 +176,17 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         // rubber band acts on the half being worked in.
         (void)split_view_focus_at(gMouse);
 
-        if (dispatch_click_region(gMouse, phase) == true) {
+        // BOTH GUARDED BY THE OPEN MENU, as the application's mouseButtonLeftDown case guards
+        // them: while a context menu is up, a press outside it dismisses the menu on the release
+        // below and must not also reach the widget or the bare canvas underneath.
+        if ((gContextMenu.active == false) && (dispatch_click_region(gMouse, phase) == true)) {
             return true;
         }
 
         // notes §10
+        if (gContextMenu.active == true) {
+            return true;
+        }
         return canvas_empty_press(gMouse, false);
     }
 
@@ -189,17 +195,37 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         gTopbarControls[i].isPressed = false;
     }
 
+    // AN OPEN MENU THE CLICK MISSED IS DISMISSED HERE, which is the whole of what the plug-in was
+    // missing against the application (mouseHandle.c's mouseButtonLeftUp case): context_menu_mouse()
+    // declines a click outside the menu so the dispatch above falls straight through, and nothing
+    // then closed it (CT, plug-in only). The menu bar is the exception - a release on it belongs to
+    // the title the press already opened, so the menu stays up and switches.
+    if (gContextMenu.active == true) {
+        if (within_rectangle(gMouse, g2_plugin_menu_bar_rect()) == true) {
+            handled = true;
+        } else if (handle_context_menu_click(gMouse) == true) {
+            handled = true;
+        } else {
+            close_context_menu();
+        }
+        synthlib_request_redraw();
+    }
+
     // notes §12
-    if (palette_left_up(gMouse) == true) {
-        handled = true;
-    } else if (handle_topbar_left_up(gMouse, gSlot) == true) {
-        handled = true;
+    if (handled == false) {
+        if (palette_left_up(gMouse) == true) {
+            handled = true;
+        } else if (handle_topbar_left_up(gMouse, gSlot) == true) {
+            handled = true;
+        }
     }
 
     (void)handle_split_bar_mouse(gMouse, mouseButtonLeftUp);
     pane_scrollbar_release();
 
-    handled = dispatch_click_region(gMouse, phase);
+    if (dispatch_click_region(gMouse, phase) == true) {
+        handled = true;
+    }
 
     // notes §13
     if (canvas_gesture_release(&(tCanvasGestureEvent){
