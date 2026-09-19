@@ -482,6 +482,17 @@ uint32_t array_size_module_role_list(void) {
     return (uint32_t)(sizeof(gModuleRoleList) / sizeof(gModuleRoleList[0]));
 }
 
+// §36 - the Glide module's Time dial as the G2 shows it, 0.2ms at 0 to 22400ms at 127. The sound
+// engine reads the table rather than fitting a curve to it, exactly as it does for the patch-wide
+// glide, so the two can never disagree with what the face prints. Here because `glide_timeStrMap`
+// lives in moduleResources.h, which only this file includes.
+const char * glide_module_time_str(uint8_t value) {
+    if (value > 127u) {
+        value = 127u;
+    }
+    return glide_timeStrMap[value];
+}
+
 // The role a module's connector or parameter fills, or NULL if it fills none. `index` counts within
 // the connector's own direction for the two connector kinds, matching tCableKey's io counts.
 const char * module_role_for(tModuleType moduleType, tRoleKind kind, uint32_t index) {
