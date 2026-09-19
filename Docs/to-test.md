@@ -3,6 +3,31 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***THE ENGINE NO LONGER OVERSAMPLES A DEVICE THAT IS ALREADY FAST (2026-09-19)*** - notes §29a,
+  revert record 56. It was multiplying the DEVICE rate by two, so a 96 kHz interface ran the graph at
+  192 kHz and a 192 kHz one at 384 kHz, for two and four times the CPU. It now caps at the
+  instrument's own 96 kHz. AT 44.1 AND 48 kHz NOTHING CHANGES - bit-identical output, checked sample
+  for sample on four patches and on the reverb IR - so this needs checking only if you run the
+  interface at 88.2 kHz or above, where the sound does change slightly (towards what 48 kHz gives,
+  not away from it). WORTH KNOWING IF THE BREAK-UP WAS THIS: at a 192 kHz device BigPad at 16 voices
+  needed 105% of a core and simply could not play; it is 51% now.
+- ***VOICE STEALING IS NOW THE INSTRUMENT'S OWN GATE CYCLE (2026-09-19)*** - reference §15.3a,
+  revert record 54. A steal drops the stolen voice's gate, waits one envelope tick so every envelope
+  has seen it down, then trigs the new note - which is what the instrument's allocator does, and all
+  it does. The envelope reset added earlier the same day is GONE, and so is the 5 ms fade that was
+  tried to cure the click it caused. Mono goes down this path too (one voice, nothing free), where
+  it amounts to an ordinary retrigger; Legato skips it, so the voice changes note with the gate never
+  falling. NEEDS AN EAR: steal notes off a pad with the voice count low, hold a note on a mono and on
+  a legato patch and play another, and listen for the thing that started all this - whether a stolen
+  note has an attack. It will have one only where that envelope's Reset switch is on, which is the
+  instrument's answer rather than ours, so if a patch sounds wrong that switch is the first thing to
+  look at. Offline the join is continuous sample for sample on SimpleLead and 02 Big Pad.
+- ***PLUG-IN: A MENU NOW CLOSES WHEN YOU CLICK OUTSIDE IT (2026-09-19)*** - plugin/g2Input.c. It never
+  did in the plug-in and always did in the application, which had the dismissal and the plug-in had
+  not (CT). Check in a host: open any menu bar menu and a canvas right-click menu, click on bare
+  canvas, on a module, on the topbar and on another menu bar title. The click that dismisses a menu
+  must not also do what it landed on - that half is guarded now too - and clicking a second menu bar
+  title must still switch menus rather than close them.
 - ***RANDOM HORIZONTAL VA SCROLL - DIAGNOSED AND FIXED, UNCONFIRMED (2026-09-19)*** - mouseHandle.c
   notes §28a. The canvas now drops whichever scroll axis is under half the other, which should stop a
   trackpad's minor axis (and its momentum tail) walking the VA sideways on its own. THIS IS THE ONE
@@ -710,7 +735,7 @@ CROSS-PROJECT
 
 ModAmt and SwOnOffT in the sound engine (2026-09-19, reference §29/§30)
   - ModAmt's ENABLE BUTTON is a guess: the engine passes In through unchanged when it is off. Not
-    confirmed on the instrument, and factory patch 02 Big Pad has it off on BOTH its ModAmts, so
+    confirmed on the instrument, and the 02 Big Pad test patch has it off on BOTH its ModAmts, so
     this decides how that patch sounds. The other reading is that Enable off mutes the output.
     Worth settling from the G2's panel before trusting Big Pad's balance.
   - ModAmt's m/1-m and the Depth taper are settled (manual p.232, and the Exp curve is the mixers'

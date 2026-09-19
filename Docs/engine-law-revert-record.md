@@ -83,6 +83,11 @@ time and needed NO change - see §11.2.
 | 52 | Which envelope modules the engine plays | EnvADSR alone; the other eight failed `module_kind()` and dropped out of the chain | all nine, from the stage map their faces already used (§17.9) | `f62ce06` `src/soundEngine.c` `module_kind()`, `env_rates_build()`, `envelope_step()` |
 | 53 | What a STOLEN voice does with its envelopes | kept them, so a new note attacked from wherever the stolen note had them - at Sustain, no attack at all | reset to zero on a steal only; the free and released queues still hand over the level they were at (§15.3a) | `src/soundEngine.c` `voice_steal_reset()`, `voice_to_allocate()`, `voice_note_on()` |
 
+| 54 | What a steal actually is | 53's reading: zero every envelope level, accumulator, tick and stage on the stolen voice | the instrument's own: drop that voice's GATE, wait until it has been seen down, then trig - no reset, no fade, and the patch's Reset switch decides whether the attack starts from zero (§15.3a) | `d2b7341` `src/soundEngine.c` `voice_to_allocate()`, `voice_note_on()`, `voice_start_note()`, `start_pending_steals()` |
+
+| 56 | The engine's internal rate | the device rate times a fixed 2 (and the oscillators times 4), so a 96 kHz device ran the graph at 192 kHz and a 192 kHz one at 384 kHz | capped: the smallest factor reaching 88.2 kHz for the graph and 176.4 kHz for the oscillators, so 44.1 and 48 kHz are unchanged and everything above them halves (notes §29a) | `d2b7341` `src/soundEngine.c` `set_oversampling()`, `sound_engine_set_sample_rate()` |
+
+
 52 is a rewrite rather than a constant: the four fixed per-stage words (`envAtkHalf` and the rest) and
 `env_rates_build()` went with it, replaced by a stage list on the node. Reverting means restoring that
 function and the fixed-stage walker together. EnvADSR renders bit-identically either way, which is
@@ -91,7 +96,9 @@ what makes the swap safe to make and to undo.
 ### Reverting one
 
 1-4 are behaviour, not constants: put back the old function from its commit (the note stack's fallback
-needs `sound_engine_is_polyphonic()` back as well). 5-11 are a constant or a formula each, quoted
+needs `sound_engine_is_polyphonic()` back as well). 54 REPLACES 53 rather than adjusting it -
+`voice_steal_reset()` is gone, so reverting to 53 means restoring that function and calling it from
+`voice_note_on()` again. 5-11 are a constant or a formula each, quoted
 above; 9 and 10 go together, since the recurrences use the new constants. 12-23 are likewise one
 formula each - but reverting 20 also brings back two bugs (the π tuning error and FilterType never
 read), so revert only its damping if that is what is in question. 29 is a whole module, not a

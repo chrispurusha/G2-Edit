@@ -512,21 +512,37 @@ the new note is higher, when the next oldest goes instead - the manual's "it wil
 note sounding" (Voice allocation and polyphony). A repeated note-on for a key whose voice is still
 releasing takes a fresh voice and lets that release ring on; a note-off closes every voice on its key.
 
-**15.3a A STOLEN voice restarts its envelopes from zero (2026-09-19).** A voice taken from the free
-queue or from the released-but-ringing queue does not, and must not: 17.3 and 17.7 have a Normal
-envelope attack from the level it is at, and that matches the instrument tick for tick through a
-retrigger during the release. A steal is the different case - the note being stolen is still HELD, so
-its envelopes are sitting at Sustain, and an attack that starts there has nowhere to travel. The
-symptom is a stolen note with no attack at all, which is what CT heard.
+**15.3a A STOLEN voice gets a GATE CYCLE, and nothing else (settled 2026-09-19 against the
+instrument's own allocator).** Where the free list is empty, the allocator takes the voice, writes a
+**zero into that voice's gate word**, runs the DSP far enough that the gate has been seen down, and
+only then writes the new note's pitch and velocity and raises the gate again. That is the whole of
+it. No envelope is reset, no level is touched, and nothing is faded.
 
-The instrument does something explicit here that the other two paths do not: where the free queue is
-empty its allocator writes a zero into the stolen voice and waits for the DSP to see it before the new
-note trigs. `voice_steal_reset()` is that - the per-voice envelope level, its integer accumulator, its
-tick and its stage for every node, and every Operator's envelope with them (14).
+What the stolen note then does is the patch's own business, not the allocator's: the gate falling
+puts every envelope into its release stage, and the gate rising restarts the attack - from the level
+it is at (17.3, Normal) or from zero (17.7, Reset). So a stolen note attacks from zero only where
+the envelope is set to Reset, and the instrument has no rule that says otherwise.
 
-Measured on SimpleLead at two voices with four keys held: the stolen voice's envelope stood at 0.638
-when the new note took it, and every note after the second began from there. It now begins at 0.000,
-while the free and released paths still hand over whatever level they were at.
+**Mono is not exempt.** A Mono patch has one voice, so a second key with the first still held finds
+nothing free and goes down this same path - and in Mono the result is indistinguishable from an
+ordinary retrigger, which is what it is.
+
+**Legato skips it entirely.** The gate is not taken down for a steal, and it is not re-raised while
+any key is still held; only a note arriving with nothing held raises it. So the voice simply changes
+note with the gate never falling, and no envelope restarts. That is Legato, and it comes out of the
+allocator rather than being a special case anywhere else.
+
+`VOICE_STEAL_GATE_TICKS` is how long the engine holds the gate down: one envelope tick, which is the
+least that guarantees every envelope has seen it. The instrument waits a whole DSP pass. Both are
+tens of microseconds and neither is audible as a late note.
+
+**Two wrong turns on the way here, both recorded because they are easy to take again.** The first
+read "writes a zero" as zeroing the envelope LEVEL and reset every envelope, accumulator, tick and
+stage on a steal - which takes a held voice's output to nothing between one sample and the next, and
+is exactly the click CT then heard. The second tried to cure that click with a 5 ms fade before the
+note trigged. Neither is anything the instrument does. On 02 Big Pad the reset shows as a slope
+discontinuity about sixty times the local slope four hundred microseconds into the steal; the gate
+cycle is continuous through the join, sample for sample.
 
 **15.4 Patch glide is CONSTANT RATE.** The manual (Patch Settings, Glide): "the greater the distance
 between two subsequent notes, the longer the glide time", 19 ms to 6.27 s per octave. So the voice moves
@@ -1273,7 +1289,7 @@ drop-down cannot carry a morph (manual p.20).
 
 **29.4 Enable is UNSETTLED.** The engine treats Enable off as a bypass that passes In through
 unchanged. That is the usual reading of the G2's Enable buttons but it has NOT been confirmed on the
-instrument, and it matters: factory patch 02 Big Pad has Enable off on both of its ModAmts. The
+instrument, and it matters: the 02 Big Pad test patch has Enable off on both of its ModAmts. The
 alternative - Enable off silencing the output - would sound very different. See to-test.md.
 
 ## 30. SwOnOffT
