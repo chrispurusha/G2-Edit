@@ -5,6 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
+- When in Poly mode, I'm not sure that each note starts envelopes etc. fresh in isolation. Seems that subsequent notes are maybe skipping the attack portion of envelopes etc.
 - Fix current modules in sound engine using the recent methods.
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
 - Module wave/filter graphs, what is left of the original's 43: LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two). PulseOsc and LfoD carry one in the original but are NOT module types we have - they are among the unfilled slots below, so they cannot be drawn until the modules exist
