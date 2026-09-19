@@ -727,9 +727,8 @@ StChorus line pooling (2026-09-19)
     and 02 Big Pad are the ones to listen to. A third chorus in one patch now passes its input dry.
 
 Stolen-voice envelope reset (2026-09-19, reference §15.3a)
-  - A stolen voice now restarts its envelopes from zero. Confirmed by measurement (0.638 -> 0.000),
-    NOT yet by ear, and not against the G2. Play a pad with more keys than voices and listen for the
-    stolen notes having a real attack - and for the steal itself not clicking, which is the thing a
-    hard reset could introduce.
+  - The reset itself is CONFIRMED by measurement on 02 Big Pad: every envelope restarts from zero and
+    the slow amplitude attack runs (findings 2026-09-19). The click it could introduce is REAL and CT
+    hears it - that is now a todo item, not a to-test one.
   - A voice reused from the free or released queue deliberately still attacks from where it was
     (§17.3/§17.7). If a released-voice reuse also sounds attackless, that is a separate question.
