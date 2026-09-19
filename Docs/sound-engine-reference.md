@@ -490,6 +490,22 @@ played over a held one and a return to a held key alike (`trigger`, notes §71 a
 restarts on neither - the note moves, gliding if Auto glide is on - and restarts only for a key played
 with nothing held. A key played with nothing held restarts in both.
 
+**15.1a Which free voice a note takes (2026-09-19).** The LEAST RECENTLY USED of the silent voices,
+not the lowest-numbered one. `voice_to_allocate()` returned the first voice that was neither sounding
+nor gated, which in a phrase of separated notes is voice 0 every single time - so one voice played the
+whole part.
+
+THAT IS AUDIBLE, and not because of the voice count. A voice stops being `sounding` when its OUTPUT
+dies, but a modulation envelope that reaches nothing audible goes on releasing after that. Reusing the
+voice immediately hands the next note an envelope part-way down, and §17.3 has an attack start from
+the level it is at - so every note after the first began its filter envelope from wherever the last
+one had got to. Measured on SimpleLead with eight voices and each note left to decay fully: every note
+took voice 0, and its second envelope was at 0.217 and still in release when the next note took it.
+With the fix the notes take voices 0, 1, 2, 3, 4, 5 and every envelope starts at 0.000.
+
+The instrument keeps its voices in a queue and puts a released one at the BACK of it, taking new notes
+from the front, which is what picking by age does here.
+
 **15.3 Poly stealing.** A new note takes a free voice first: one doing nothing, then the longest
 released. With every voice held it steals the oldest, unless that voice has the lowest note held and
 the new note is higher, when the next oldest goes instead - the manual's "it will try to keep the lowest
@@ -621,6 +637,45 @@ tick through a retrigger during the release.
 each step rounds down, which matters most near silence: the instrument's code reaches -40 dB in 37.0 s,
 -60 dB in 40.2 s and exact silence in 40.5 s (at 96: 8.2, 10.6 and 10.9 s against the dial's 8.72 s).
 The engine runs the same arithmetic, so it does too.
+
+**17.8 All nine envelope modules, from one stage map (2026-09-19).** EnvADSR was the only envelope the
+engine knew: every other envelope module failed `module_kind()`, so `add_node()` refused it and it fell
+out of the chain entirely - whatever it fed got nothing. All nine now play.
+
+THE STAGES COME FROM THE MAP THE FACE ALREADY USED. `env_stage_map()` (paramCurves.c) describes every
+envelope module as a list of segments - which parameter sets each time, which sets each level, and
+where the held one is - and it moved out of the drawing code so both can read it. One description, so
+a face and the sound cannot disagree about what an envelope does.
+
+| | stages |
+|---|---|
+| EnvADSR, ModADSR | A, D, hold, R |
+| EnvADR | A, R - and a hold between them in Release mode while gated |
+| EnvAHD, ModAHD | A, H, D - no hold, a one-shot |
+| EnvD | to full at once, then D |
+| EnvH | to full at once, H, then off at once |
+| EnvADDSR | A, D1, D2, hold, R - the hold at L1 or L2 as its own switch says |
+| EnvMulti | four segments to L1-L4, the hold wherever Sustain names |
+
+A segment rises or falls depending on where the one before it left off, and takes the attack curves of
+§17.1 or the decay of §17.2 accordingly. A held segment is not advanced INTO while the gate is up,
+which is how the ADSR decay goes on running toward the sustain level and never finishes - exactly what
+it did before. The gate falling jumps past the held segment; with no held segment there is nothing to
+jump past and a one-shot runs to its end, which is what EnvAHD and EnvD want.
+
+LEVELS COME FROM THE DIAL, not from the map: the map's own level is a DRAWING level (value/127) and
+the dialled one is §16.3's value/128. A held segment sits at whatever the segment before it reached,
+which is also where §17.6's bipolar types centre.
+
+Checked: SimpleLead and Dx.pch2 render bit-identically to the engine before the change, so EnvADSR and
+the DX envelopes are untouched. Re-typing SimpleLead's amp envelope to each module in turn, the eight
+others all produced sound where every one of them had been silent.
+
+NOT YET CHECKED. The KB gate and Reset are read at EnvADSR's own parameter numbers only; the other
+modules number theirs differently, so they gate from the key and never reset. A segment that RISES to
+an intermediate level - EnvMulti's alone - uses the attack curve toward that level, which is a
+reasonable reading and not one taken from the instrument. Neither the stages nor the curves have been
+heard against a G2.
 
 ## 18. Pulse
 
@@ -1180,3 +1235,36 @@ The rate is therefore `(BPM/60) / clk_sync_beats(dial)`: 256 beats per cycle at 
 beat at 127, which at the reference 120 BPM is 0.0078 Hz to 32 Hz. The engine has no live master clock
 yet, so this uses the same fixed reference tempo the delay's Clk does - when one arrives, both follow
 it together.
+
+## 29. ModAmt
+
+Added 2026-09-19. Parameters, validated against the G2 (param-validation.md): 0 Depth, 1 Enable,
+2 Exp/Lin, 3 m/1-m.
+
+**29.1 The Depth taper is the mixers' own law.** On **Exp** the Depth dial is exactly
+`mix_level_gain()` - the cube-plus-1%-linear curve of §3.2 - to within 6e-8 over all 128 positions,
+so the two share one function rather than carrying a table each. On **Lin** it is the plain fraction
+`dial / 128`, with 127 reaching exactly 1.0 as the other level dials do (§16.3). The dial's own
+display agrees: param-validation records Depth as `percent = raw*100/128`.
+
+**29.2 m and 1-m.** With the m/1-m button OFF the module is a plain multiplier, so nothing comes out
+at Depth 0: `Out = In x Depth x Mod`. With it ON the input stays at full level at Depth 0 and the
+modulation is crossfaded in: `Out = In x ((1 - Depth) + (Depth x Mod))` (manual p.232).
+
+**29.3 Depth rides on the node's `gain`**, which is what gives it the per-sample smoothing and the
+per-voice morph offset every other level dial gets; the three drop-downs are read raw, because a
+drop-down cannot carry a morph (manual p.20).
+
+**29.4 Enable is UNSETTLED.** The engine treats Enable off as a bypass that passes In through
+unchanged. That is the usual reading of the G2's Enable buttons but it has NOT been confirmed on the
+instrument, and it matters: factory patch 02 Big Pad has Enable off on both of its ModAmts. The
+alternative - Enable off silencing the output - would sound very different. See to-test.md.
+
+## 30. SwOnOffT
+
+Added 2026-09-19. One parameter, 0 On.
+
+Closed, the output is the input; open, it is nothing. With **nothing patched to In** a closed switch
+sends 64 units, which is 1.0 in the engine (§16), so the module doubles as a manual constant. The
+Ctrl output carries the switch state as a logic signal on the same scale - 1.0 closed, 0 open
+(manual p.222, and the Logic group's definition of a logic HIGH on p.233).

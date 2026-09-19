@@ -70,12 +70,11 @@ Laws from the manual unless marked; each needs confirming on the hardware once b
 
 ## Engine limits the patch runs into
 
-- **Node budget.** `MAX_ENGINE_NODES` is 28; the patch needs about 92 (85 Voice, 7 FX). At 128, three
-  things want changing first, because every per-node bank is multiplied by 32 engines in the plug-in:
-  the chorus buffers (2 x 4096 samples per NODE - about 134 MB of address space) should move onto a
-  small pool of lines as the delays and reverbs have; the snapshot, about 115 KB, must not be copied
-  onto the audio thread's stack as `sound_engine_render()` does now; and `sound_engine_update_from_patch()`
-  builds one on its caller's stack too, which includes the CoreMIDI thread.
+- **Node budget - DONE 2026-09-19.** `MAX_ENGINE_NODES` is now 128 (was 28); the patch needs about
+  92 (85 Voice, 7 FX). The chorus moved onto a pool of 2 lines as the delays, reverbs and combs
+  already had, which paid for nearly all of it: the plug-in grew 26 MB, not 142, and the application
+  shrank. `sound_engine_render()`'s snapshot moved off the audio thread's stack; the other two
+  snapshot copies were already `_Thread_local`. See findings 2026-09-19.
 - **FltClassic's second control input** - the direct Pitch input, 1 unit a semitone on the Freq
   dial's scale - is not modelled; the engine reads only the audio and the Env input.
 - **Pitch-input scale and the Constant.** Both were wrong in the engine and matter to every pitch path

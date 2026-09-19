@@ -10317,3 +10317,103 @@ fluctuating sine" at the narrow end.
   types - they are part of the unfilled slots in gModuleProperties. So they cannot be drawn until the modules
   themselves exist, and the todo line has been corrected to say so rather than leaving two names that read like
   oversights.
+
+2026-09-19 - POLY PLAYED EVERY NOTE ON VOICE 0, AND THAT IS THE SKIPPED ATTACK (CT: "when in Poly mode, I'm not
+sure that each note starts envelopes etc. fresh in isolation. Seems that subsequent notes are maybe skipping the
+attack portion"; reference §15.1a, revert record 51). voice_to_allocate() had two loops: the first returned the
+first voice that was neither sounding nor gated, the second picked the oldest still-ringing one by age. The
+first loop is the bug - in a phrase of separated notes the freed voice is always voice 0, so it returned voice 0
+every time and one voice played the whole part.
+
+  WHY THAT SKIPS AN ATTACK, which is not obvious: a voice stops being `sounding` when its OUTPUT dies, but a
+  modulation envelope feeding a filter rather than the output goes on releasing after there is nothing to hear.
+  Hand that voice straight to the next note and §17.3 does the rest - an attack starts from the level it is at,
+  so the second note's filter envelope began wherever the first had got to. Only the FIRST note of a phrase had
+  a full attack, which is exactly what was reported.
+
+  MEASURED, by instrumenting voice_note_on in a throwaway build to print the allocated voice and its envelope
+  levels: SimpleLead forced to Poly with eight voices, each note released and left to decay fully, still gave
+  "note 60 voice 0", "note 62 voice 0", ... with the second envelope reading 0.217 and still in release at every
+  allocation after the first. With the fix: voices 0, 1, 2, 3, 4, 5 and 0.000 across the board.
+
+  AUDIO COULD NOT SETTLE IT, and two attempts wasted time before the instrumented build did. Comparing note
+  onsets in the rendered output is confounded three ways - the reverb and delay tails of the previous note bleed
+  into the next, held notes accumulate so a "fraction of peak" means nothing, and the random start phase (notes
+  §63) changes the shape of every note anyway. The first note of a DX patch read 0.72 of its peak in the first
+  block on a guaranteed-fresh engine, which is just a fast attack: the metric could not tell that from a skipped
+  one. Printing the envelope level at the moment of allocation answered it immediately.
+
+  THE INSTRUMENT AGREES. Its voices live in a linked pool: ReleaseVoicePart splices a released voice out and
+  appends it to the TAIL, with new notes taken from the front - a least-recently-used queue, which is what
+  picking by age does here.
+
+  THE OTHER TWO PARTS OF THE SAME TODO. Note stealing already follows the instrument (§15.3, adopted
+  2026-09-13): the oldest voice goes, unless it holds the lowest note and the new note is higher. What is still
+  open is the voice COUNT - we give a Poly patch voiceCount+1 capped at 32 and the topbar reports that number,
+  where the G2 assigns by DSP load and shows what it actually got ("15 (16)", findings 2026-08-29). Left in
+  todo.md as its own line.
+
+2026-09-19 - ALL NINE ENVELOPE MODULES NOW PLAY, FROM THE MAP THEIR FACES ALREADY USED (CT priority list;
+reference §17.8, revert record 52). EnvADSR was the only envelope module_kind() recognised, so add_node()
+refused the other eight and they fell out of the chain entirely - not "wrong", absent, with whatever they fed
+getting nothing.
+
+  THE DESCRIPTION EXISTED ALREADY, in the drawing code. env_stage_map() had a complete per-module stage list -
+  which parameter sets each time, which sets each level, where the held one is - written in September so one
+  renderer could draw all nine faces. It moved to paramCurves.c, which the engine links and the GUI does not
+  own, exactly as the shapers', EQs' and FltComb's laws did. One description, so a face and the sound cannot
+  disagree.
+
+  THE MOVE WAS PROVED BY PIXELS BEFORE ANY ENGINE CODE CHANGED: the four envelope faces render byte-identically
+  at 1.0 and 0.59 after it. Worth doing in that order - a pure move that changes nothing is easy to verify and
+  makes the next step honest.
+
+  TWO DETAILS THE MAP COULD NOT BE USED FOR AS-IS. Its levels are DRAWING levels, value/127, where a dialled
+  level is §16.3's value/128 - so the engine reads each level through the segment's levelParam and only falls
+  back on the map's own number where a segment has no level parameter. And the map rewrites its levels for the
+  Bip output types, which is right for a picture of the output and wrong for a player that applies the output
+  type itself (§17.6); env_stage_map() took a flag for that.
+
+  THE ADSR CASE HAD TO COME OUT UNCHANGED and did: SimpleLead and Dx.pch2 render BIT-IDENTICALLY to the engine
+  before the change. The generic walker reproduces the old four-stage machine exactly, including the part that
+  looks like an accident - the decay runs toward the sustain level and simply never finishes while the gate is
+  up, which the general rule "do not advance INTO a held stage" says on its own.
+
+  MEASURED, with the control that matters: re-typing SimpleLead's amp envelope to each module in turn and
+  rendering a note gave, before, EnvADSR 0.096 peak and every other module 0.00077 - the reverb floor, silence.
+  After: all nine between 0.0008 and 0.12, each with its own shape. (The numbers differ between modules because
+  each reads SimpleLead's ADSR parameter VALUES through a different module's layout; the test asks whether they
+  play, not what they should sound like.)
+
+  WHAT IS NOT DONE. KB and Reset are read at EnvADSR's parameter numbers only, so the other eight gate from the
+  key and never reset. EnvMulti's rise to an intermediate level uses the attack curve toward that level, which
+  is a reasonable reading and not one taken from the instrument. None of it has been heard against a G2.
+
+## 2026-09-19 - 02 Big Pad, and what the node budget actually cost
+
+**02 Big Pad pulled off the G2** (bank 1 location 24, found from the name cache without opening the
+device) to `PatchTestFiles/BigPad.pch2`. 38 modules, of which the engine already modelled 35.
+
+**It was already playing, and the node budget was never its blocker.** The first reading of the
+inventory - 35 playable modules against a 28-node budget - was wrong about the consequence: the
+engine resolves only what is reachable from the Out, so Big Pad built a 22-node chain both before
+and after the budget was raised. What it was missing was not capacity but three modules sitting in
+its modulation paths: two ModAmt and one SwOnOffT. Checked by building the pre-change engine and
+running the same patch through it - an identical 22-node chain.
+
+**With ModAmt and SwOnOffT added it resolves 25 nodes.** The new ones are the "EnvVel" ModAmt and
+the Keyboard module it pulls in, which together put velocity onto the filter envelope - a path that
+simply was not in the chain before. The "FM env" ModAmt and the "Osc1>2" switch are still pruned,
+correctly: that switch is OPEN in the patch, so nothing downstream of it can sound.
+
+**MAX_ENGINE_NODES 28 -> 128 cost 26 MB, not 142 MB.** The plug-in's static footprint went from
+568.2 MB to 594.2 MB (arm64, 32 engines), because the chorus was moved onto a pool of 2 lines at the
+same time. The chorus was 70% of the whole node-scaled cost - one 32 KB buffer per NODE per engine,
+28 MB at 28 nodes and 128 MB at 128 - and pooling it the way the delays, reverbs and combs already
+are took it to 64 KB. The application, which builds one engine, got SMALLER: 120.0 MB to 116.0 MB.
+The three prerequisites the Mini Emulator plan listed were two-thirds already done; only
+`sound_engine_render()`'s stack copy of the 37 KB snapshot still needed moving off the stack.
+
+**ModAmt's Exp taper is the mixers' own law.** The Depth dial on Exp matches `mix_level_gain()` -
+`x(1-0.99) + x^3(0.99)`, reference §3.2 - to within 6e-8 across all 128 positions, which is the
+instrument's own table rounding. No new curve, and one fewer place for the two to drift apart.
