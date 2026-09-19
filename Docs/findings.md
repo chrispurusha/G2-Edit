@@ -9812,7 +9812,7 @@ code to 5e-7 across 36 type/Sustain/AM cases and tick for tick through a Reset r
 PosInv on both envelopes of 03 Chris' Lead passes full sound (peak 1.01) with no key held, as it should.
 THE 45 S RELEASE (CT asked): the display reads 45.0s at 127 and the decay table's rate gives -40 dB in 44.7 s,
 but the running code rounds each step down and reaches -40 dB in 37.0 s, -60 dB in 40.2 s and silence in 40.5 s
-(reference §17.8). The comparison harness now compiles soundEngine.c against the running envelope code
+(reference §17.9). The comparison harness now compiles soundEngine.c against the running envelope code
 (scratch, not in the repo), so any envelope change can be checked tick for tick.
 
 2026-09-17 - THE TRANSIENT IS GONE (CT) and 03 CHRIS' LEAD WAS BRIGHTER IN THE PLUG-IN BECAUSE OF THE WHEEL. CT reports the
@@ -10354,7 +10354,7 @@ every time and one voice played the whole part.
   todo.md as its own line.
 
 2026-09-19 - ALL NINE ENVELOPE MODULES NOW PLAY, FROM THE MAP THEIR FACES ALREADY USED (CT priority list;
-reference §17.8, revert record 52). EnvADSR was the only envelope module_kind() recognised, so add_node()
+reference §17.9, revert record 52). EnvADSR was the only envelope module_kind() recognised, so add_node()
 refused the other eight and they fell out of the chain entirely - not "wrong", absent, with whatever they fed
 getting nothing.
 
@@ -10417,3 +10417,24 @@ The three prerequisites the Mini Emulator plan listed were two-thirds already do
 **ModAmt's Exp taper is the mixers' own law.** The Depth dial on Exp matches `mix_level_gain()` -
 `x(1-0.99) + x^3(0.99)`, reference §3.2 - to within 6e-8 across all 128 positions, which is the
 instrument's own table rounding. No new curve, and one fewer place for the two to drift apart.
+
+## 2026-09-19 - a stolen voice had no attack
+
+CT: "when voice stealing happens, it sounds again like the attack portion of the envelope isn't
+happening". It was not happening. A stolen voice kept its envelope state, and §17.3 has a Normal
+envelope attack from the level it is at - so a note that stole a voice whose note was still HELD
+started its attack at that voice's Sustain level, with nowhere left to travel.
+
+**Measured** on SimpleLead at two voices with four keys held: the third and fourth notes both stole,
+and the envelope stood at **0.638** as they took it. After the fix both start at 0.000.
+
+**Only a steal resets.** The free queue and the released-but-ringing queue must keep handing over the
+level they were at, because §17.7 matched the instrument tick for tick through a retrigger during the
+release - that is the documented Normal behaviour and it is right. The difference is that a steal
+takes a voice whose note has not been let go. The instrument marks the same distinction: where its
+free queue is empty its allocator writes a zero into the stolen voice and waits for the DSP to see it
+before the new note trigs, which neither of the other two paths do.
+
+This is the second half of the same fault as 15.1a (2026-09-19, LRU allocation). That one fixed notes
+inheriting a modulation envelope part-way down a release; this one fixes them inheriting a held note's
+Sustain. Both had the one symptom - an attack that is not there.

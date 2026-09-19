@@ -577,7 +577,7 @@ typedef enum {
     eNodeOut,
 } tNodeKind;
 
-// §17.8 - one segment of an envelope, in the instrument's own per-tick words (§17.3). Sized to a
+// §17.9 - one segment of an envelope, in the instrument's own per-tick words (§17.3). Sized to a
 // whole number of 8-byte words: tEngineNode is merged word-wise per voice (§26.2.2) and asserts on it.
 #define ENV_MAX_STAGES    (ENV_GRAPH_MAX_SEGMENTS)
 #define ENV_STAGE_IDLE    (0xFFFFFFFFu)
@@ -635,7 +635,7 @@ typedef struct {
     double          sustain;     // 0..1
     double          release;
     int32_t         envSustainQ; // §17.6 - where the bipolar output types centre
-    // §17.8 - the stage list this envelope plays, from the map every envelope module shares with its
+    // §17.9 - the stage list this envelope plays, from the map every envelope module shares with its
     // own face. ADSR is the four it always was; the others are however many their map gives.
     tEnvSegment     envStage[ENV_MAX_STAGES];
     uint32_t        envStageCount;
@@ -1938,8 +1938,30 @@ static uint32_t voice_to_steal(uint32_t count, int32_t note) {
     return (oldest >= 0) ? (uint32_t)oldest : 0;
 }
 
+// §15.3a - a STOLEN voice starts its envelopes again from zero. A voice taken from the free or the
+// released queue does not: §17.3/§17.7 have Normal attack from the level it is at, and that matches
+// the instrument through a retrigger during release. A steal is the different case - the stolen note
+// is still held, so its envelopes are sitting at Sustain and an attack from there is no attack at all.
+static void voice_steal_reset(uint32_t v) {
+    SE_LOCAL;
+
+    for (uint32_t n = 0; n < MAX_ENGINE_NODES; n++) {
+        gEnvLevel[v][n] = 0.0;
+        gEnvQ[v][n]     = 0;
+        gEnvTick[v][n]  = 0.0;
+        gEnvStage[v][n] = ENV_STAGE_IDLE;
+    }
+
+    for (uint32_t o = 0; o < MAX_DX_OPERATORS; o++) {   // §14 - an Operator's envelope is one too
+        gDxEnvDb[v][o]    = DX_SILENT_DB;
+        gDxEnvStage[v][o] = eDxIdle;
+    }
+
+    gVoice[v].envelope = 0.0;
+}
+
 // notes §69
-static uint32_t voice_to_allocate(uint32_t count, int32_t note) {
+static uint32_t voice_to_allocate(uint32_t count, int32_t note, bool * stolen) {
     SE_LOCAL;
 
     uint32_t best    = 0;
@@ -1972,6 +1994,7 @@ static uint32_t voice_to_allocate(uint32_t count, int32_t note) {
     if (bestAge != UINT64_MAX) {
         return best;
     }
+    *stolen = true;
     return voice_to_steal(count, note);
 }
 
@@ -2004,7 +2027,7 @@ static void merge_last_nodes(const tSoundEngineParams * params);
 static void voice_note_on(int32_t note, uint8_t velocity, const tSoundEngineParams * params) {
     SE_LOCAL;
 
-    uint32_t count = atomic_load(&gEngineVoices);
+    uint32_t count  = atomic_load(&gEngineVoices);
 
     // Bounded BEFORE it is used to pick a voice, not after. A published count is already clamped,
     // but a zero would send voice_to_allocate() round an empty loop and every note would land on
@@ -2014,7 +2037,13 @@ static void voice_note_on(int32_t note, uint8_t velocity, const tSoundEnginePara
     } else if (count > MAX_VOICES) {
         count = MAX_VOICES;
     }
-    tVoice * voice = &gVoice[voice_to_allocate(count, note)];
+    bool     stolen = false;
+    uint32_t chosen = voice_to_allocate(count, note, &stolen);
+
+    if (stolen == true) {
+        voice_steal_reset(chosen);   // §15.3a
+    }
+    tVoice * voice  = &gVoice[chosen];
 
     // notes §70
     voice->glideActive        = voice->gate;
@@ -2274,7 +2303,7 @@ static double env_ticks(double seconds) {
     return fmax(seconds * ENV_TICK_HZ, 1.0);
 }
 
-// §17.8 - one stage's per-tick words. A rise uses the attack shapes of §17.3, a fall the decay one.
+// §17.9 - one stage's per-tick words. A rise uses the attack shapes of §17.3, a fall the decay one.
 static void env_stage_rates(tEnvSegment * stage, double seconds, uint32_t shape, bool rising) {
     double ticks  = env_ticks(seconds);
     bool   linear = (shape == (uint32_t)eEnvShapeLinLin);
@@ -2311,7 +2340,7 @@ static void env_stage_rates(tEnvSegment * stage, double seconds, uint32_t shape,
     }
 }
 
-// §17.8 - the whole stage list, from the map the module shares with its face.
+// §17.9 - the whole stage list, from the map the module shares with its face.
 static void env_stages_build(tEngineNode * node, tModule * module, uint32_t variation) {
     tEnvGraph map;
 
@@ -2462,7 +2491,7 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
         case moduleTypeModADSR:
         case moduleTypeModAHD:
         {
-            *kind = eNodeEnv;   // §17.8 - all nine play from the same stage map
+            *kind = eNodeEnv;   // §17.9 - all nine play from the same stage map
             return true;
         }
         case moduleTypeOscShpB:
@@ -3624,7 +3653,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeEnv:
         {
             // Read raw: Shape is a drop-down, and drop-downs cannot be morphed (manual p.20).
-            // §17.8 - the stages come from the map this module shares with its own face, so every
+            // §17.9 - the stages come from the map this module shares with its own face, so every
             // envelope module plays, not just EnvADSR. The map sets wave (shape) and envOutType too.
             env_stages_build(node, module, variation);
 
@@ -5732,7 +5761,7 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
 
         gEnvTick[voice][node] += 1.0;
 
-        // §17.8 - walk the stage list. The ADSR case is the four stages it always was and behaves
+        // §17.9 - walk the stage list. The ADSR case is the four stages it always was and behaves
         // exactly as before: the decay runs toward the sustain target and simply never finishes while
         // the gate is up, which is what "do not advance into a sustain" says here.
         uint32_t index = gEnvStage[voice][node];
@@ -5781,7 +5810,7 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
                 }
             }
         } else if (gEnvStage[voice][node] != ENV_STAGE_IDLE) {
-            // §17.8 - the gate falling jumps PAST the held stage. With no held stage there is nothing
+            // §17.9 - the gate falling jumps PAST the held stage. With no held stage there is nothing
             // to jump past and a one-shot runs on to its end, which is what EnvAHD and EnvD want.
             if (spec->envSustainStage >= 0) {
                 gEnvStage[voice][node] = (uint32_t)spec->envSustainStage + 1u;

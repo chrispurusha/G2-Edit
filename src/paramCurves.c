@@ -383,7 +383,7 @@ static double operator_env_width(uint32_t rate, double from, double to) {
     return fabs(to - from) * (0.03 + (0.25 * slowness));
 }
 
-// §17.8 - THE STAGE MAP OF EVERY ENVELOPE MODULE, in one place because two things need it: the face
+// §17.9 - THE STAGE MAP OF EVERY ENVELOPE MODULE, in one place because two things need it: the face
 // draws these and the engine plays them. Stages carry which PARAMETER sets each time and level, not
 // the times themselves - `width` is a drawing width and nothing else (a real envelope spans 0.5 ms to
 // 45 s and will not draw to scale in a box), so a player reads timeParam through env_time_seconds()

@@ -7,7 +7,7 @@ Built-but-unchecked work goes in to-test.md.
 CT (Priority order)
 - Fix current modules in sound engine using the recent methods.
 - Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. 02 Big Pad (bank 1:24, PatchTestFiles/BigPad.pch2) needed only ModAmt and SwOnOffT - both done 2026-09-19, ModAmt's Enable button still a guess (to-test.md). 01 Mini Emulator (bank 1:10) still needs eight: MonoKey, Glide, LevConv, LevAdd, Sw2-1, Sw8-1, ValSw2-1 and 2-In (its SwOnOffT is now done) - see mini-emulator-engine-plan.md
-- Envelopes: the other eight now play (reference §17.8) but their KB gate and Reset are not read (EnvADSR's parameter numbers only), and EnvMulti's rise to an intermediate level is a guess - settle both against the instrument's own envelope parts
+- Envelopes: the other eight now play (reference §17.9) but their KB gate and Reset are not read (EnvADSR's parameter numbers only), and EnvMulti's rise to an intermediate level is a guess - settle both against the instrument's own envelope parts
 - Zoom to Fit from a right click, fitting the area under the cursor
 - Separate zoom for VA and FX.
 - Module wave/filter graphs, what is left of the original's 43: LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two). PulseOsc and LfoD carry one in the original but are NOT module types we have - they are among the unfilled slots below, so they cannot be drawn until the modules exist

@@ -45,14 +45,14 @@ why 02 Big Pad played for months while quietly missing its velocity-to-filter pa
 
 **Plays, unsettled** (8):
 
-- `Envelop ADDSR` - KB gate and Reset not read (§17.8)
-- `Envelope ADR` - KB gate and Reset not read (§17.8)
-- `Envelope AHD` - KB gate and Reset not read (§17.8)
-- `Envelope D` - KB gate and Reset not read (§17.8)
-- `Envelope H` - KB gate and Reset not read (§17.8)
-- `Envelope Mod ADSR` - KB gate and Reset not read (§17.8)
-- `Envelope Mod AHD` - KB gate and Reset not read (§17.8)
-- `Envelope Multi` - rise to an intermediate level is a guess (§17.8)
+- `Envelop ADDSR` - KB gate and Reset not read (§17.9)
+- `Envelope ADR` - KB gate and Reset not read (§17.9)
+- `Envelope AHD` - KB gate and Reset not read (§17.9)
+- `Envelope D` - KB gate and Reset not read (§17.9)
+- `Envelope H` - KB gate and Reset not read (§17.9)
+- `Envelope Mod ADSR` - KB gate and Reset not read (§17.9)
+- `Envelope Mod AHD` - KB gate and Reset not read (§17.9)
+- `Envelope Multi` - rise to an intermediate level is a guess (§17.9)
 
 ## LFOs  (§28)
 

@@ -80,7 +80,8 @@ time and needed NO change - see §11.2.
 
 | 51 | Which free voice a note takes | `voice_to_allocate()` returned the FIRST voice neither sounding nor gated - voice 0 for every note of a separated phrase | the LEAST RECENTLY USED of them, by age (§15.1a) | `f62ce06` `src/soundEngine.c` `voice_to_allocate()` |
 
-| 52 | Which envelope modules the engine plays | EnvADSR alone; the other eight failed `module_kind()` and dropped out of the chain | all nine, from the stage map their faces already used (§17.8) | `f62ce06` `src/soundEngine.c` `module_kind()`, `env_rates_build()`, `envelope_step()` |
+| 52 | Which envelope modules the engine plays | EnvADSR alone; the other eight failed `module_kind()` and dropped out of the chain | all nine, from the stage map their faces already used (§17.9) | `f62ce06` `src/soundEngine.c` `module_kind()`, `env_rates_build()`, `envelope_step()` |
+| 53 | What a STOLEN voice does with its envelopes | kept them, so a new note attacked from wherever the stolen note had them - at Sustain, no attack at all | reset to zero on a steal only; the free and released queues still hand over the level they were at (§15.3a) | `src/soundEngine.c` `voice_steal_reset()`, `voice_to_allocate()`, `voice_note_on()` |
 
 52 is a rewrite rather than a constant: the four fixed per-stage words (`envAtkHalf` and the rest) and
 `env_rates_build()` went with it, replaced by a stage list on the node. Reverting means restoring that

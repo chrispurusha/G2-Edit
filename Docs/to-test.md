@@ -24,7 +24,7 @@ Full detail for each is in findings.md, searchable by the wording below.
   it. STILL TO CHECK ON THE G2: the dial reading against the G2's own display at several settings,
   0 and 127 especially, and an EqPeak patch by ear. The shelf tables were confirmed exact at the same
   time and did NOT change.
-- ***ALL NINE ENVELOPE MODULES PLAY (2026-09-19)*** - reference §17.8, revert record 52. EnvADR,
+- ***ALL NINE ENVELOPE MODULES PLAY (2026-09-19)*** - reference §17.9, revert record 52. EnvADR,
   EnvAHD, EnvD, EnvH, EnvADDSR, EnvMulti, ModADSR and ModAHD were absent from the engine and are now
   played from the same stage map their faces draw. EnvADSR renders bit-identically, so nothing that
   worked before has moved. STILL TO CHECK ON THE G2: each of the eight against the hardware by ear -
@@ -725,3 +725,11 @@ StChorus line pooling (2026-09-19)
     phase is seeded from the LINE index, not the node index. A patch with a chorus therefore renders
     a slightly different (equally arbitrary, equally repeatable) phase than before. ChorusSaw.pch2
     and 02 Big Pad are the ones to listen to. A third chorus in one patch now passes its input dry.
+
+Stolen-voice envelope reset (2026-09-19, reference §15.3a)
+  - A stolen voice now restarts its envelopes from zero. Confirmed by measurement (0.638 -> 0.000),
+    NOT yet by ear, and not against the G2. Play a pad with more keys than voices and listen for the
+    stolen notes having a real attack - and for the steal itself not clicking, which is the thing a
+    hard reset could introduce.
+  - A voice reused from the free or released queue deliberately still attacks from where it was
+    (§17.3/§17.7). If a released-voice reuse also sounds attackless, that is a separate question.
