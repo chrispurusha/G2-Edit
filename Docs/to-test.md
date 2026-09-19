@@ -11,17 +11,6 @@ Full detail for each is in findings.md, searchable by the wording below.
   interface at 88.2 kHz or above, where the sound does change slightly (towards what 48 kHz gives,
   not away from it). WORTH KNOWING IF THE BREAK-UP WAS THIS: at a 192 kHz device BigPad at 16 voices
   needed 105% of a core and simply could not play; it is 51% now.
-- ***VOICE STEALING IS NOW THE INSTRUMENT'S OWN GATE CYCLE (2026-09-19)*** - reference §15.3a,
-  revert record 54. A steal drops the stolen voice's gate, waits one envelope tick so every envelope
-  has seen it down, then trigs the new note - which is what the instrument's allocator does, and all
-  it does. The envelope reset added earlier the same day is GONE, and so is the 5 ms fade that was
-  tried to cure the click it caused. Mono goes down this path too (one voice, nothing free), where
-  it amounts to an ordinary retrigger; Legato skips it, so the voice changes note with the gate never
-  falling. NEEDS AN EAR: steal notes off a pad with the voice count low, hold a note on a mono and on
-  a legato patch and play another, and listen for the thing that started all this - whether a stolen
-  note has an attack. It will have one only where that envelope's Reset switch is on, which is the
-  instrument's answer rather than ours, so if a patch sounds wrong that switch is the first thing to
-  look at. Offline the join is continuous sample for sample on SimpleLead and 02 Big Pad.
 - ***PLUG-IN: A MENU NOW CLOSES WHEN YOU CLICK OUTSIDE IT (2026-09-19)*** - plugin/g2Input.c. It never
   did in the plug-in and always did in the application, which had the dismissal and the plug-in had
   not (CT). Check in a host: open any menu bar menu and a canvas right-click menu, click on bare

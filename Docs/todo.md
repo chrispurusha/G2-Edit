@@ -5,9 +5,6 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Sound engine across cores: the blocker is the per-sample note grid - `for each sample { for each voice { for each node } }` cannot fork and join 384000 times a second. Both this and any real single-thread gain need per-voice rendering into whole sub-blocks, with note events quantised to a sub-block boundary (findings 2026-09-19). NOTE a single plug-in instance does not split across cores either; what looks like it is the host running other tracks in parallel
-- Break-up with several notes: at 48 kHz the engine is 26% of a core for BigPad at 16 voices and the worst block is 18% of its deadline, so ASK WHAT RATE AND BUFFER the interface is on before chasing the DSP - 96 and 192 kHz were the real cost and are now halved (findings 2026-09-19)
-- Fix current modules in sound engine using the recent methods.
 - Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. 02 Big Pad (PatchTestFiles/BigPad.pch2) needed only ModAmt and SwOnOffT - both done 2026-09-19, ModAmt's Enable button still a guess (to-test.md). 01 Mini Emulator still needs eight: MonoKey, Glide, LevConv, LevAdd, Sw2-1, Sw8-1, ValSw2-1 and 2-In (its SwOnOffT is now done) - see mini-emulator-engine-plan.md
 - Envelopes: the other eight now play (reference §17.9) but their KB gate and Reset are not read (EnvADSR's parameter numbers only), and EnvMulti's rise to an intermediate level is a guess - settle both against the instrument's own envelope parts
 - Zoom to Fit from a right click, fitting the area under the cursor
@@ -63,6 +60,8 @@ FILTERS
 - Re-check FltComb FB 127 and FltPhase FB 127 with the level-tracking test, as FltClassic/FltNord were
 
 SOUND ENGINE
+- Sound engine across cores: the blocker is the per-sample note grid - `for each sample { for each voice { for each node } }` cannot fork and join 384000 times a second. Both this and any real single-thread gain need per-voice rendering into whole sub-blocks, with note events quantised to a sub-block boundary (findings 2026-09-19). NOTE a single plug-in instance does not split across cores either; what looks like it is the host running other tracks in parallel-
+- Break-up with several notes: at 48 kHz the engine is 26% of a core for BigPad at 16 voices and the worst block is 18% of its deadline, so ASK WHAT RATE AND BUFFER the interface is on before chasing the DSP - 96 and 192 kHz were the real cost and are now halved (findings 2026-09-19)
 - Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) and the topbar reports the same number - but the G2 assigns voices by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"). Our limit should be 32 per slot and topbar should show a requested/assigned pair as the original does
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
 - 01 Mini Emulator (PatchTestFiles/MiniEmulator.pch2) plays nothing in the engine: ten missing module types and a node budget a third of its size - see Docs/mini-emulator-engine-plan.md
