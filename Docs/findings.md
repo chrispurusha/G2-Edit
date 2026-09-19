@@ -10535,6 +10535,13 @@ metric rises when the fix works. It said the poly fade made things worse (6.1% -
 the gate cycle was worse than the fade (1.4% -> 10.6%), and both times the join itself was cleaner.
 Only the samples either side of the join answer this; look at them.
 
+### CONFIRMED ON THE HARDWARE, same day
+
+CT, after playing it against the G2: "Now seems to work the same way as the G2 hardware re:
+stealing." So the gate cycle is right, and with it the two things that come out of it rather than
+out of any rule of ours - that a stolen note attacks from zero only where that envelope's Reset
+switch is on, and that Legato changes note with the gate never falling.
+
 ### The reference is usable for POLY too
 
 It emulates a single DSP - the count is set to 1 at boot - and the per-part voice count is derived

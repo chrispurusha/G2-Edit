@@ -513,7 +513,7 @@ note sounding" (Voice allocation and polyphony). A repeated note-on for a key wh
 releasing takes a fresh voice and lets that release ring on; a note-off closes every voice on its key.
 
 **15.3a A STOLEN voice gets a GATE CYCLE, and nothing else (settled 2026-09-19 against the
-instrument's own allocator).** Where the free list is empty, the allocator takes the voice, writes a
+instrument's own allocator, and CONFIRMED on the hardware the same day).** Where the free list is empty, the allocator takes the voice, writes a
 **zero into that voice's gate word**, runs the DSP far enough that the gate has been seen down, and
 only then writes the new note's pitch and velocity and raises the gate again. That is the whole of
 it. No envelope is reset, no level is touched, and nothing is faded.
