@@ -10438,3 +10438,29 @@ before the new note trigs, which neither of the other two paths do.
 This is the second half of the same fault as 15.1a (2026-09-19, LRU allocation). That one fixed notes
 inheriting a modulation envelope part-way down a release; this one fixes them inheriting a held note's
 Sustain. Both had the one symptom - an attack that is not there.
+
+### The part that is still wrong: the CUT, not the attack (2026-09-19, measured)
+
+CT still hears it on 02 Big Pad at two voices. Traced every envelope of that patch through a steal,
+per node rather than as a maximum - which is what hid it the first time, a fast modulation envelope
+standing in front of the slow amplitude one:
+
+```
+MARK  note=67 voice=1 stolen=1
+t=5.260  n1=0.9995  n5=0.9859  n9=0.0006  n15=0.0014
+t=5.370  n1=0.9672  n5=0.3850  n9=0.0238  n15=0.0576
+```
+
+All four ARE restarting from zero. n9 and n15 (the amplitude envelope) climb slowly from 0.0000 -
+the pad attack is there and it is running. n1 and n5 are modulation envelopes with near-instant
+attacks: they reached full inside the first 10 ms and are already decaying, which is correct.
+
+So the envelope reset works and the attack happens. What is left is the other end of the steal: the
+voice was at FULL LEVEL and its amplitude envelope is now set to zero in one sample. That is a step
+discontinuity - the stolen note is cut off dead rather than let go - and on a pad it is loud.
+
+**Next step, not taken.** The stolen voice wants a short fade to zero before the new note starts,
+rather than an instant one. `voice->fade` and `VOICE_FADE_SECONDS` already exist for retiring a
+long-tailed voice, but using them here means holding the note-on back until the fade finishes, which
+the note queue does not currently do. The instrument's own allocator writes its zero and then waits
+on the DSP before trigging (`CDSP::WaitOnB`), which is the same shape of answer.
