@@ -512,6 +512,22 @@ the new note is higher, when the next oldest goes instead - the manual's "it wil
 note sounding" (Voice allocation and polyphony). A repeated note-on for a key whose voice is still
 releasing takes a fresh voice and lets that release ring on; a note-off closes every voice on its key.
 
+**15.3a A STOLEN voice restarts its envelopes from zero (2026-09-19).** A voice taken from the free
+queue or from the released-but-ringing queue does not, and must not: 17.3 and 17.7 have a Normal
+envelope attack from the level it is at, and that matches the instrument tick for tick through a
+retrigger during the release. A steal is the different case - the note being stolen is still HELD, so
+its envelopes are sitting at Sustain, and an attack that starts there has nowhere to travel. The
+symptom is a stolen note with no attack at all, which is what CT heard.
+
+The instrument does something explicit here that the other two paths do not: where the free queue is
+empty its allocator writes a zero into the stolen voice and waits for the DSP to see it before the new
+note trigs. `voice_steal_reset()` is that - the per-voice envelope level, its integer accumulator, its
+tick and its stage for every node, and every Operator's envelope with them (14).
+
+Measured on SimpleLead at two voices with four keys held: the stolen voice's envelope stood at 0.638
+when the new note took it, and every note after the second began from there. It now begins at 0.000,
+while the free and released paths still hand over whatever level they were at.
+
 **15.4 Patch glide is CONSTANT RATE.** The manual (Patch Settings, Glide): "the greater the distance
 between two subsequent notes, the longer the glide time", 19 ms to 6.27 s per octave. So the voice moves
 at 12 semitones per glide time, whatever the interval. Normal slides every note from wherever its
@@ -638,7 +654,7 @@ each step rounds down, which matters most near silence: the instrument's code re
 -60 dB in 40.2 s and exact silence in 40.5 s (at 96: 8.2, 10.6 and 10.9 s against the dial's 8.72 s).
 The engine runs the same arithmetic, so it does too.
 
-**17.8 All nine envelope modules, from one stage map (2026-09-19).** EnvADSR was the only envelope the
+**17.9 All nine envelope modules, from one stage map (2026-09-19).** EnvADSR was the only envelope the
 engine knew: every other envelope module failed `module_kind()`, so `add_node()` refused it and it fell
 out of the chain entirely - whatever it fed got nothing. All nine now play.
 
