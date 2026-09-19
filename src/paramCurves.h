@@ -46,6 +46,33 @@ double osc_sub_freq_hz(double paramValue, double fineSemitones);
 
 // The same idea for the filters: one definition of the cutoff, resonance and slope curves, shared
 // by the dial text, the response curve drawn on the module, and the sound engine.
+#define ENV_GRAPH_MAX_SEGMENTS     (8)
+#define ENV_GRAPH_SUSTAIN_WIDTH    (0.24)   // a level, not a time - a fixed width just to show the plateau
+#define ENV_NO_PARAM               (-1)
+
+typedef struct {
+    double  width;          // of the box, before any scaling to fit
+    double  level;          // where the segment ends, in Pos's own convention
+    bool    sustain;        // held while the gate is: drawn flat and orange
+    int32_t timeParam;      // the parameter that sets the width - a handle drags it - or ENV_NO_PARAM
+    int32_t levelParam;     // the parameter that sets the end level, or ENV_NO_PARAM
+} tEnvGraphSegment;
+
+typedef struct {
+    uint32_t         shape;          // envShapeStrMap
+    uint32_t         outputType;     // posStrMap order; the shorter maps are prefixes of it
+    bool             bipolarLevels;  // EnvMulti in Bip: its levels themselves span -1..+1
+    double           startLevel;
+    uint32_t         count;
+    tEnvGraphSegment segment[ENV_GRAPH_MAX_SEGMENTS];
+} tEnvGraph;
+
+// §17.8 - every envelope module's stages: which parameter is each time and level, and where the
+// sustain is. Shared by the face that draws them and the engine that plays them.
+// applyOutputType: true rewrites the levels into what the module OUTPUTS, which is what a drawing
+// wants; false leaves the stages as dialled, for a player that applies the output type itself.
+bool env_stage_map(tModuleType type, const tParam * p, tEnvGraph * graph, bool applyOutputType);
+
 double eq_peak_centre_hz(double dial);
 // §8.3 - OscNoise's Q per resonator, two of which sit in series. Shared by the engine and the face.
 double osc_noise_resonator_q(double widthDial);

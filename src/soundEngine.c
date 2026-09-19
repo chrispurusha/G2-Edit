@@ -358,9 +358,18 @@ static const tMixSpec * mix_spec(tModuleType type) {
     return NULL;
 }
 
-#define MIX_CURVE_LIN           (1)     // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
+#define MIX_CURVE_LIN    (1)            // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
 
 // StChorus: a detune depth and an amount, then its power button.
+// §29 - ModAmt, and §30 - SwOnOffT. Parameter order validated against the G2 (param-validation.md).
+#define MODAMT_PARAM_DEPTH      (0)
+#define MODAMT_PARAM_ENABLE     (1)
+#define MODAMT_PARAM_EXPLIN     (2)
+#define MODAMT_PARAM_MODE       (3)   // the m/1-m button
+#define MODAMT_EXPLIN_LIN       (1)   // expStrMap {Exp, Lin, dB}
+#define SWITCH_PARAM_ON         (0)
+#define LOGIC_HIGH_LEVEL        (1.0) // a logic HIGH is 64 units (manual p.233), which is 1.0 in the engine (§16)
+
 #define CHORUS_PARAM_DETUNE     (0)
 #define CHORUS_PARAM_AMOUNT     (1)
 #define CHORUS_PARAM_ACTIVE     (2)
@@ -508,7 +517,7 @@ typedef enum {
 #define LADDER_LOOP_POLES           (4) // the RESONANCE loop is four long whatever is tapped - measured
 
 // notes §18
-#define MAX_ENGINE_NODES            (28)
+#define MAX_ENGINE_NODES            (128)
 #define MAX_DX_OPERATORS            (24) // §14 - six per DXRouter, so four routers
 
 // §14 - Operator and DXRouter. See the reference for what each of these is and how sure it is.
@@ -563,8 +572,24 @@ typedef enum {
     eNodeFltComb,        // §13
     eNodeDx,             // §14 - a DXRouter and the Operators patched into it, as one node
     eNodeKeyboard,       // §26 - the voice's key as six signals
+    eNodeModAmt,         // §29 - ModAmt: the Depth dial scales In by the Mod input
+    eNodeSwitch,         // §30 - SwOnOffT: closed passes In, open outputs nothing
     eNodeOut,
 } tNodeKind;
+
+// §17.8 - one segment of an envelope, in the instrument's own per-tick words (§17.3). Sized to a
+// whole number of 8-byte words: tEngineNode is merged word-wise per voice (§26.2.2) and asserts on it.
+#define ENV_MAX_STAGES    (ENV_GRAPH_MAX_SEGMENTS)
+#define ENV_STAGE_IDLE    (0xFFFFFFFFu)
+
+typedef struct {
+    int32_t half;       // half the multiplier, Q23
+    int32_t add;        // the per-tick add, Q23
+    int32_t target;     // where the segment heads, in envelope steps
+    uint8_t rising;     // chooses the attack-shaped recurrence and which way the end test runs
+    uint8_t sustain;    // held while the gate is
+    uint8_t pad[2];
+} tEnvSegment;
 
 typedef struct {
     tNodeKind kind;
@@ -609,29 +634,28 @@ typedef struct {
     double          decay;
     double          sustain;     // 0..1
     double          release;
-    int32_t         envAtkHalf;  // §17.3 - each segment's per-tick words, Q23: half the multiplier,
-    int32_t         envAtkAdd;   // the add, and (decay only) the target
-    int32_t         envDcyHalf;
-    int32_t         envDcyAdd;
-    int32_t         envRelHalf;
-    int32_t         envRelAdd;
-    int32_t         envSustainQ;
-    uint32_t        envOutType;   // §17.6
-    bool            envReset;     // §17.7
-    bool            envKeyGate;   // §17.4 - the keys gate it: KB on, or a Gate jack fed by a module not played
+    int32_t         envSustainQ; // §17.6 - where the bipolar output types centre
+    // §17.8 - the stage list this envelope plays, from the map every envelope module shares with its
+    // own face. ADSR is the four it always was; the others are however many their map gives.
+    tEnvSegment     envStage[ENV_MAX_STAGES];
+    uint32_t        envStageCount;
+    int32_t         envSustainStage; // the held stage, or -1: a gate release jumps past it
+    uint32_t        envOutType;      // §17.6
+    bool            envReset;        // §17.7
+    bool            envKeyGate;      // §17.4 - the keys gate it: KB on, or a Gate jack fed by a module not played
 
-    double          gain;         // LevAmp
-    double          pulseSeconds; // Pulse gate width
-    uint32_t        outDest;      // Out module: 0 = outputs 1/2, 1 = outputs 3/4
+    double          gain;            // LevAmp
+    double          pulseSeconds;    // Pulse gate width
+    uint32_t        outDest;         // Out module: 0 = outputs 1/2, 1 = outputs 3/4
 
-    double          depth;        // chorus detune depth, and the delay's feedback
-    double          amount;       // chorus wet amount, delay/reverb dry-wet
-    double          timeSeconds;  // delay time
-    double          damping;      // delay LP / reverb brightness, 0..1
-    double          hpCoeff;      // delay HP in the feedback loop; 0 = filter off
-    double          threshold;    // compressor
+    double          depth;           // chorus detune depth, and the delay's feedback
+    double          amount;          // chorus wet amount, delay/reverb dry-wet
+    double          timeSeconds;     // delay time
+    double          damping;         // delay LP / reverb brightness, 0..1
+    double          hpCoeff;         // delay HP in the feedback loop; 0 = filter off
+    double          threshold;       // compressor
     double          ratio;
-    double          refLevel;     // the level the compressor drives TOWARDS - see compress_step()
+    double          refLevel;        // the level the compressor drives TOWARDS - see compress_step()
     double          attackCoeff;
     double          releaseCoeff;
     // Shaper group. Stored rather than re-derived from the module type so the render loop never
@@ -671,9 +695,11 @@ typedef struct {
     double          rvDry;               // §20.5
     double          rvWet;
 
-    uint32_t        dxBase;        // §14 - where this router's six Operators sit in dxOp[]
-    uint32_t        dxAlgorithm;   // 0..31
-    double          dxFeedback;    // FM units fed back, from the Feedback selector
+    bool            modAmtOneMinus; // §27 - ModAmt's m/1-m button: In stays at full level at Depth 0
+
+    uint32_t        dxBase;         // §14 - where this router's six Operators sit in dxOp[]
+    uint32_t        dxAlgorithm;    // 0..31
+    double          dxFeedback;     // FM units fed back, from the Feedback selector
 
     // Evaluated ONCE per sample, after the voices are summed, rather than once per voice. True for
     // everything in the FX Area, for the three module kinds that own a shared delay buffer wherever
@@ -1089,6 +1115,7 @@ static double             gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_
 #define DELAY_LINE_SAMPLES    (134400 * ENGINE_OVERSAMPLE)
 static float              gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
 #define MAX_COMB_LINES        (2)        // FltCombs per patch that sound; any more pass their input dry
+#define MAX_CHORUS_LINES      (2)        // StChorus lines per patch; any more pass their input dry
 #define COMB_LINE_SAMPLES     (16384)    // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
 static float              gCombLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES][COMB_LINE_SAMPLES];
 #define gCombLine             (gCombLineBank[SE])
@@ -1112,17 +1139,17 @@ static double             gDelayModBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINE
 
 #define CHORUS_SAMPLES     (2048 * ENGINE_OVERSAMPLE)
 #define CHORUS_CHANNELS    (2)
-static float              gChorusLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS][CHORUS_SAMPLES];
+static float              gChorusLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES][CHORUS_CHANNELS][CHORUS_SAMPLES];
 #define gChorusLine        (gChorusLineBank[SE])
-static uint32_t           gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][CHORUS_CHANNELS];
+static uint32_t           gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES][CHORUS_CHANNELS];
 #define gChorusWrite       (gChorusWriteBank[SE])
-static int32_t            gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static int32_t            gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES];
 #define gChorusPhase       (gChorusPhaseBank[SE])         // §19.2 - a signed 24-bit LFO phase
-static int32_t            gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static int32_t            gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES];
 #define gChorusTrim        (gChorusTrimBank[SE])          // §19.2 - this instance's rate trim
-static double             gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double             gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES];
 #define gChorusTick        (gChorusTickBank[SE])
-static void chorus_reset(uint32_t node);
+static void chorus_reset(uint32_t line);
 
 // Pulse: the countdown still to run, and the previous input, so a rising edge can be seen. Per voice,
 // because the gate is fired by that voice's own envelope.
@@ -1525,7 +1552,7 @@ static void reset_node_state(void) {
             gEnvLevel[v][i]      = 0.0;
             gEnvQ[v][i]          = 0;
             gEnvTick[v][i]       = 0.0;
-            gEnvStage[v][i]      = eEnvIdle;
+            gEnvStage[v][i]      = ENV_STAGE_IDLE;
             gEnvTrigger[v][i]    = gVoice[v].trigger;   // nothing pending: idle already attacks on a gate
             gCompEnv[v][i]       = 0.0;
             gPulseCount[v][i]    = 0;
@@ -1554,6 +1581,9 @@ static void reset_node_state(void) {
 
     for (i = 0; i < MAX_ENGINE_NODES; i++) {
         gSmoothPrimed[i] = false;
+    }
+
+    for (i = 0; i < MAX_CHORUS_LINES; i++) {
         chorus_reset(i);
     }
 
@@ -1778,10 +1808,10 @@ const char * sound_engine_debug_text(void) {
     // One entry per tNodeKind, in enum order. Kept in step with it — a short array here is read off
     // the end by the kindName[n->kind] below, which is a stack overflow rather than a wrong label.
     const char * kindName[] = {
-        "Osc",      "OscShp",   "Filter",  "LevAmp", "LevMult",   "Mix",   "Env",
-        "Chorus",   "Compress", "Delay",   "Reverb", "Lfo",       "Const", "FxIn",
-        "PassThru", "Pulse",    "Shaper",  "Fade",   "MixStereo", "Noise", "OscNoise",
-        "FltMulti", "Eq",       "FltComb", "Dx",     "Keyboard",  "Out"
+        "Osc",      "OscShp",   "Filter",  "LevAmp", "LevMult",   "Mix",    "Env",
+        "Chorus",   "Compress", "Delay",   "Reverb", "Lfo",       "Const",  "FxIn",
+        "PassThru", "Pulse",    "Shaper",  "Fade",   "MixStereo", "Noise",  "OscNoise",
+        "FltMulti", "Eq",       "FltComb", "Dx",     "Keyboard",  "ModAmt", "Switch", "Out"
     };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
@@ -1915,11 +1945,22 @@ static uint32_t voice_to_allocate(uint32_t count, int32_t note) {
     uint32_t best    = 0;
     uint64_t bestAge = UINT64_MAX;
 
+    // §15.1a - THE LEAST RECENTLY USED of the silent voices, not the lowest-numbered one. Returning
+    // the first silent voice sent every note in a phrase to voice 0, and a voice goes silent while
+    // its MODULATION envelopes are still releasing - so the next note inherited one part-way down and
+    // started its attack from there (§17.3 attacks from the level it is at). The instrument keeps its
+    // voices in a queue and puts a released one at the BACK, which is what picking by age does here.
     for (uint32_t v = 0; v < count; v++) {
-        if ((gVoice[v].sounding == false) && (gVoice[v].gate == false)) {
-            return v;
+        if ((gVoice[v].sounding == false) && (gVoice[v].gate == false) && (gVoice[v].age < bestAge)) {
+            bestAge = gVoice[v].age;
+            best    = v;
         }
     }
+
+    if (bestAge != UINT64_MAX) {
+        return best;
+    }
+    bestAge = UINT64_MAX;
 
     for (uint32_t v = 0; v < count; v++) {   // released but still ringing: the oldest of them
         if ((gVoice[v].gate == false) && (gVoice[v].age < bestAge)) {
@@ -2233,42 +2274,95 @@ static double env_ticks(double seconds) {
     return fmax(seconds * ENV_TICK_HZ, 1.0);
 }
 
-// §17.3 - the instrument's per-tick segment words, each rounded down to 24 bits as its tables are.
-static void env_rates_build(tEngineNode * node) {
-    double attack  = env_ticks(node->attack);
-    double decay   = env_ticks(node->decay);
-    double release = env_ticks(node->release);
-    bool   linear  = ((uint32_t)node->wave == (uint32_t)eEnvShapeLinLin);
+// §17.8 - one stage's per-tick words. A rise uses the attack shapes of §17.3, a fall the decay one.
+static void env_stage_rates(tEnvSegment * stage, double seconds, uint32_t shape, bool rising) {
+    double ticks  = env_ticks(seconds);
+    bool   linear = (shape == (uint32_t)eEnvShapeLinLin);
 
-    switch ((uint32_t)node->wave) {
+    if (rising == false) {
+        stage->half = linear ? ENV_HALF_UNITY : (env_q23(exp(-ENV_FALL_SHARPNESS / ticks)) >> 1);
+        stage->add  = linear ? -env_q23(1.0 / ticks) : 0;
+        return;
+    }
+
+    switch (shape) {
         case eEnvShapeLogExp:
         {
-            double mul = exp(-ENV_RISE_SHARPNESS / attack);
+            double mul = exp(-ENV_RISE_SHARPNESS / ticks);
 
-            node->envAtkHalf = env_q23(mul / 2.0);
-            node->envAtkAdd  = env_q23(ENV_LOG_RISE_TARGET * (1.0 - mul));
+            stage->half = env_q23(mul / 2.0);
+            stage->add  = env_q23(ENV_LOG_RISE_TARGET * (1.0 - mul));
             break;
         }
         case eEnvShapeExpExp:
         {
-            double mul = exp(ENV_RISE_SHARPNESS / attack);
+            double mul = exp(ENV_RISE_SHARPNESS / ticks);
 
-            node->envAtkHalf = env_q23(mul / 2.0);
-            node->envAtkAdd  = env_q23((mul - 1.0) / (exp(ENV_RISE_SHARPNESS) - 1.0));
+            stage->half = env_q23(mul / 2.0);
+            stage->add  = env_q23((mul - 1.0) / (exp(ENV_RISE_SHARPNESS) - 1.0));
             break;
         }
         default:
         {
-            node->envAtkHalf = ENV_HALF_UNITY;
-            node->envAtkAdd  = env_q23(1.0 / attack);
+            stage->half = ENV_HALF_UNITY;
+            stage->add  = env_q23(1.0 / ticks);
             break;
         }
     }
-    node->envDcyHalf  = linear ? ENV_HALF_UNITY : (env_q23(exp(-ENV_FALL_SHARPNESS / decay)) >> 1);
-    node->envDcyAdd   = linear ? -env_q23(1.0 / decay) : 0;
-    node->envRelHalf  = linear ? ENV_HALF_UNITY : (env_q23(exp(-ENV_FALL_SHARPNESS / release)) >> 1);
-    node->envRelAdd   = linear ? -env_q23(1.0 / release) : 0;
-    node->envSustainQ = (int32_t)fmin(ENV_TOP, round(node->sustain * ENV_FULL_SCALE_STEPS));
+}
+
+// §17.8 - the whole stage list, from the map the module shares with its face.
+static void env_stages_build(tEngineNode * node, tModule * module, uint32_t variation) {
+    tEnvGraph map;
+
+    node->envStageCount   = 0;
+    node->envSustainStage = -1;
+    node->envSustainQ     = 0;
+
+    if (env_stage_map(module->type, module->param[variation], &map, false) == false) {
+        return;
+    }
+    node->wave            = (tOscWave)map.shape;
+    node->envOutType      = map.outputType;
+
+    double    from = map.startLevel;
+
+    for (uint32_t i = 0; (i < map.count) && (node->envStageCount < ENV_MAX_STAGES); i++) {
+        const tEnvGraphSegment * segment = &map.segment[i];
+        tEnvSegment *            stage   = &node->envStage[node->envStageCount];
+        // §16.3 - a dialled level is value/128 with 127 pinned to 1. The map's own level is a
+        // DRAWING level (value/127) and is only used where a stage has no level parameter at all.
+        // A held stage sits at whatever the stage before it reached - which is the DIALLED level,
+        // where the map's own level for it is only a drawing value. §17.6's bipolar offset reads it.
+        double                   level   = (segment->sustain != false)
+                                           ? from
+                                           : ((segment->levelParam >= 0)
+                                              ? dial_fraction(param_value(module, variation, (uint32_t)segment->levelParam))
+                                              : fabs(segment->level));
+        bool                     rising  = level > from;
+
+        stage->sustain = (uint8_t)segment->sustain;
+        stage->rising  = (uint8_t)rising;
+        stage->target  = (int32_t)fmin((double)ENV_TOP, round(level * ENV_FULL_SCALE_STEPS));
+
+        if (segment->sustain != false) {
+            node->envSustainStage = (int32_t)node->envStageCount;
+            node->envSustainQ     = stage->target;   // §17.6 - where the bipolar types centre
+            stage->half           = ENV_HALF_UNITY;
+            stage->add            = 0;
+        } else {
+            // A rise reads its time through the attack curve, as §17.1 has it; a fall through §17.2.
+            double seconds = (segment->timeParam >= 0)
+                             ? (rising
+                                ? env_attack_seconds(param_value(module, variation, (uint32_t)segment->timeParam), map.shape)
+                                : env_time_seconds(param_value(module, variation, (uint32_t)segment->timeParam)))
+                             : 0.0;
+
+            env_stage_rates(stage, seconds, map.shape, rising);
+        }
+        node->envStageCount++;
+        from           = level;
+    }
 }
 
 static const tLfoParams * lfo_params(tModuleType type) {
@@ -2359,8 +2453,16 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             return true;
         }
         case moduleTypeEnvADSR:
+        case moduleTypeEnvADR:
+        case moduleTypeEnvAHD:
+        case moduleTypeEnvD:
+        case moduleTypeEnvH:
+        case moduleTypeEnvADDSR:
+        case moduleTypeEnvMulti:
+        case moduleTypeModADSR:
+        case moduleTypeModAHD:
         {
-            *kind = eNodeEnv;
+            *kind = eNodeEnv;   // §17.8 - all nine play from the same stage map
             return true;
         }
         case moduleTypeOscShpB:
@@ -2482,6 +2584,16 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeKeyboard;
             return true;
         }
+        case moduleTypeModAmt:
+        {
+            *kind = eNodeModAmt;     // §29
+            return true;
+        }
+        case moduleTypeSwOnOffT:
+        {
+            *kind = eNodeSwitch;     // §30
+            return true;
+        }
         default:
         {
             return false;
@@ -2579,11 +2691,17 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             return (moduleType == moduleTypeOscD) ? 1 : 2;
         }
         case eNodeLevMult:
+        case eNodeModAmt:    // §29 - In, then the Mod input the Depth dial scales
         case eNodePulse:
         case eNodeOut:
         {
             *connectors = twoIn;
             return 2;
+        }
+        case eNodeSwitch:
+        {
+            *connectors = twoIn;     // §30 - only In is read; Ctrl is an output
+            return 1;
         }
         case eNodeMix:
         {
@@ -3307,6 +3425,23 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                                             module->param[variation][CONST_PARAM_BIP_UNI].value == 0);
             break;
         }
+        case eNodeModAmt:
+        {
+            // §29 - Depth rides on gain so it is smoothed and morphable; the drop-downs are read raw.
+            double depth = param_value(module, variation, MODAMT_PARAM_DEPTH);
+
+            node->gain           = (module->param[variation][MODAMT_PARAM_EXPLIN].value == MODAMT_EXPLIN_LIN)
+                             ? ((depth >= 127.0) ? 1.0 : (depth / 128.0))
+                             : mix_level_gain(depth);
+            node->active         = (module->param[variation][MODAMT_PARAM_ENABLE].value != 0);
+            node->modAmtOneMinus = (module->param[variation][MODAMT_PARAM_MODE].value != 0);
+            break;
+        }
+        case eNodeSwitch:
+        {
+            node->active = (module->param[variation][SWITCH_PARAM_ON].value != 0);
+            break;
+        }
         case eNodeFxIn:
         {
             // db12PadStrMap is {"+6dB", "0dB", "-6dB", "-12dB"}, and the default is the FIRST entry,
@@ -3489,12 +3624,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeEnv:
         {
             // Read raw: Shape is a drop-down, and drop-downs cannot be morphed (manual p.20).
-            node->wave       = (tOscWave)module->param[variation][ENV_PARAM_SHAPE].value;
-            node->attack     = env_attack_seconds(param_value(module, variation, ENV_PARAM_ATTACK), (uint32_t)node->wave);
-            node->decay      = env_time_seconds(param_value(module, variation, ENV_PARAM_DECAY));
-            node->sustain    = dial_fraction(param_value(module, variation, ENV_PARAM_SUSTAIN)); // §16.3
-            node->release    = env_time_seconds(param_value(module, variation, ENV_PARAM_RELEASE));
-            env_rates_build(node);
+            // §17.8 - the stages come from the map this module shares with its own face, so every
+            // envelope module plays, not just EnvADSR. The map sets wave (shape) and envOutType too.
+            env_stages_build(node, module, variation);
 
             // §17.4
             {
@@ -3503,11 +3635,15 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 tModule * gateSource = (gateJack >= 0) ? module_feeding(module, (uint32_t)gateJack, &sourceLeg) : NULL;
                 bool      unplayed   = (gateSource != NULL) && (node->in[ENV_INPUT_GATE] < 0);
 
-                node->envKeyGate = (module->param[variation][ENV_PARAM_KB].value != 0) || unplayed;
+                // §17.4 - KB and Reset sit at EnvADSR's own parameter numbers. The other envelope
+                // modules number theirs differently and are not read here yet, so they gate from the
+                // key as an unpatched envelope does and never reset. envOutType came from the map.
+                bool      adsr       = (module->type == moduleTypeEnvADSR);
+
+                node->envKeyGate = adsr ? ((module->param[variation][ENV_PARAM_KB].value != 0) || unplayed)
+                                        : true;
+                node->envReset   = adsr && (module->param[variation][ENV_PARAM_RESET].value != 0);
             }
-            // Read raw, like Shape: both are selectors
-            node->envOutType = module->param[variation][ENV_PARAM_OUT_TYPE].value;
-            node->envReset   = (module->param[variation][ENV_PARAM_RESET].value != 0);
             break;
         }
         case eNodePulse:
@@ -3769,10 +3905,11 @@ static void build_snapshot(tSoundEngineParams * out) {
     // Hand out the shared delay lines. Done here rather than in add_node() so the assignment is
     // stable for a given chain — the audio thread keys its buffers off it.
     {
-        uint32_t i     = 0;
-        uint32_t lines = 0;
-        uint32_t verbs = 0;
-        uint32_t combs = 0;
+        uint32_t i        = 0;
+        uint32_t lines    = 0;
+        uint32_t verbs    = 0;
+        uint32_t combs    = 0;
+        uint32_t choruses = 0;
 
         for (i = 0; i < snapshot.nodeCount; i++) {
             if (snapshot.node[i].kind == eNodeDelay) {
@@ -3781,6 +3918,8 @@ static void build_snapshot(tSoundEngineParams * out) {
                 snapshot.node[i].line = verbs++;
             } else if (snapshot.node[i].kind == eNodeFltComb) {
                 snapshot.node[i].line = combs++;
+            } else if (snapshot.node[i].kind == eNodeChorus) {
+                snapshot.node[i].line = choruses++;
             }
         }
     }
@@ -4296,8 +4435,8 @@ static tSoundEngineParams read_params(void) {
     uint32_t attempt = 0;
 
     for (attempt = 0; attempt < PARAMS_READ_ATTEMPTS; attempt++) {
-        uint32_t           before = atomic_load(&gParamsSeq);
-        tSoundEngineParams copy;
+        uint32_t                                before = atomic_load(&gParamsSeq);
+        static _Thread_local tSoundEngineParams copy;
 
         if ((before & 1u) != 0u) {
             continue;    // mid-write
@@ -4697,28 +4836,28 @@ static uint32_t chorus_scramble(uint32_t x) {
 
 // §19.2 - each instance draws its own start phase and rate trim, as the instrument does at load;
 // drawn from the node index here so that a render repeats.
-static void chorus_reset(uint32_t node) {
+static void chorus_reset(uint32_t line) {
     SE_LOCAL;
 
-    uint32_t h = chorus_scramble(0x9E3779B9u ^ ((node + 1u) * 0x85EBCA6Bu));
+    uint32_t h = chorus_scramble(0x9E3779B9u ^ ((line + 1u) * 0x85EBCA6Bu));
 
-    gChorusPhase[node]    = chorus_sign24(h);
-    gChorusTrim[node]     = chorus_sign24(chorus_scramble(h));
-    gChorusTick[node]     = 0.0;
-    gChorusWrite[node][0] = 0;
-    gChorusWrite[node][1] = 0;
-    memset(gChorusLine[node], 0, sizeof(gChorusLine[node]));
+    gChorusPhase[line]    = chorus_sign24(h);
+    gChorusTrim[line]     = chorus_sign24(chorus_scramble(h));
+    gChorusTick[line]     = 0.0;
+    gChorusWrite[line][0] = 0;
+    gChorusWrite[line][1] = 0;
+    memset(gChorusLine[line], 0, sizeof(gChorusLine[line]));
 }
 
 // §19.1 - 4-point Lagrange; the sample just written is 0 ago, so the shortest delay is 1.
-static double chorus_read(uint32_t node, uint32_t ch, double delay) {
+static double chorus_read(uint32_t line, uint32_t ch, double delay) {
     SE_LOCAL;
 
     double   whole = fmin(fmax(floor(delay), 1.0), (double)(CHORUS_SAMPLES - 3));
     double   t     = fmin(fmax(delay - whole, 0.0), 1.0);
-    uint32_t base  = gChorusWrite[node][ch] + CHORUS_SAMPLES - (uint32_t)whole;
+    uint32_t base  = gChorusWrite[line][ch] + CHORUS_SAMPLES - (uint32_t)whole;
 
-#define CHR(offset)    ((double)gChorusLine[node][ch][(base + 1u - (offset)) % CHORUS_SAMPLES])
+#define CHR(offset)    ((double)gChorusLine[line][ch][(base + 1u - (offset)) % CHORUS_SAMPLES])
     double   ym1   = CHR(0u);
     double   y0    = CHR(1u);
     double   y1    = CHR(2u);
@@ -4736,7 +4875,7 @@ static double chorus_quantise(double samples) {
 }
 
 // §19.1, §19.3 - one channel: two taps either side of the triangle, then the mix.
-static double chorus_tap(uint32_t node, uint32_t ch, double input, int32_t phase, double amount) {
+static double chorus_tap(uint32_t line, uint32_t ch, double input, int32_t phase, double amount) {
     SE_LOCAL;
 
     double u     = fabs((double)phase / (double)CHORUS_PHASE_HALF);
@@ -4744,34 +4883,34 @@ static double chorus_tap(uint32_t node, uint32_t ch, double input, int32_t phase
     double tap1  = chorus_quantise(CHORUS_TAP1_MAX - (CHORUS_TAP1_SPAN * u)) * scale;
     double tap2  = chorus_quantise(CHORUS_TAP2_MIN + (CHORUS_TAP2_SPAN * u)) * scale;
 
-    gChorusLine[node][ch][gChorusWrite[node][ch]] = (float)input;
+    gChorusLine[line][ch][gChorusWrite[line][ch]] = (float)input;
 
-    double wet   = chorus_read(node, ch, tap1) + chorus_read(node, ch, tap2);
+    double wet   = chorus_read(line, ch, tap1) + chorus_read(line, ch, tap2);
 
-    gChorusWrite[node][ch]                        = (gChorusWrite[node][ch] + 1u) % CHORUS_SAMPLES;
+    gChorusWrite[line][ch]                        = (gChorusWrite[line][ch] + 1u) % CHORUS_SAMPLES;
     return (input * (1.0 - (0.5 * amount))) + (wet * 0.5 * amount);
 }
 
 // §19.2 - the right channel reads the LFO a quarter cycle on; the LFO steps at CHORUS_TICK_HZ.
-static void chorus_step(uint32_t node, double input, double detune, double amount,
+static void chorus_step(uint32_t line, double input, double detune, double amount,
                         double * outLeft, double * outRight) {
     SE_LOCAL;
 
-    int32_t phase = gChorusPhase[node];
+    int32_t phase = gChorusPhase[line];
 
-    *outLeft           = chorus_tap(node, 0, input, phase, amount);
-    *outRight          = chorus_tap(node, 1, input, chorus_sign24((uint32_t)phase + (CHORUS_PHASE_HALF / 2)), amount);
+    *outLeft           = chorus_tap(line, 0, input, phase, amount);
+    *outRight          = chorus_tap(line, 1, input, chorus_sign24((uint32_t)phase + (CHORUS_PHASE_HALF / 2)), amount);
 
     // The instrument steps it after the taps, on the first sample and every fourth after.
 
-    if (gChorusTick[node] <= 0.0) {
+    if (gChorusTick[line] <= 0.0) {
         int32_t step = (int32_t)floor(detune * CHORUS_DETUNE_STEP);
 
-        step              += (int32_t)(((int64_t)step * gChorusTrim[node]) >> 25);     // x (1 + trim/4)
-        gChorusTick[node] += 1.0;
-        gChorusPhase[node] = chorus_sign24((uint32_t)(phase + step));
+        step              += (int32_t)(((int64_t)step * gChorusTrim[line]) >> 25);     // x (1 + trim/4)
+        gChorusTick[line] += 1.0;
+        gChorusPhase[line] = chorus_sign24((uint32_t)(phase + step));
     }
-    gChorusTick[node] -= CHORUS_TICK_HZ / gSampleRate;
+    gChorusTick[line] -= CHORUS_TICK_HZ / gSampleRate;
 }
 
 // §25.1 - the instrument's own attack and release coefficients, one per dial step; the host interpolates.
@@ -5162,7 +5301,7 @@ void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_
 
     // A second render in one process would otherwise start with the previous one's line and LFO
     // phase - the same trap the reverb IR clears for.
-    for (uint32_t i = 0; i < MAX_ENGINE_NODES; i++) {
+    for (uint32_t i = 0; i < MAX_CHORUS_LINES; i++) {
         chorus_reset(i);
     }
 
@@ -5571,6 +5710,11 @@ static bool dx_voice_sounding(const tSoundEngineParams * params, const tEngineNo
     return false;
 }
 
+// A stage at or past the held one: a gate rising there restarts the envelope rather than continuing.
+static bool env_stage_is_release(const tEngineNode * spec, uint32_t index) {
+    return (spec->envSustainStage >= 0) && (index > (uint32_t)spec->envSustainStage);
+}
+
 // §17.3 - one tick of a segment in the instrument's integer arithmetic: the doubled product rounded
 // down, never below the target, and not yet clamped, so the attack can see itself pass full scale.
 static int32_t env_segment(int32_t level, int32_t half, int32_t add, int32_t target) {
@@ -5584,41 +5728,38 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
 
     // §17.3 - the segments step at the envelope tick, and the level holds between ticks.
     if (gEnvTick[voice][node] <= 0.0) {
-        int32_t q = gEnvQ[voice][node];
+        int32_t  q     = gEnvQ[voice][node];
 
         gEnvTick[voice][node] += 1.0;
 
-        switch (gEnvStage[voice][node]) {
-            case eEnvAttack:
-            {
-                q = env_segment(q, spec->envAtkHalf, spec->envAtkAdd, 0);
+        // §17.8 - walk the stage list. The ADSR case is the four stages it always was and behaves
+        // exactly as before: the decay runs toward the sustain target and simply never finishes while
+        // the gate is up, which is what "do not advance into a sustain" says here.
+        uint32_t index = gEnvStage[voice][node];
 
-                if (q > ENV_TOP) {
-                    q                      = ENV_TOP;
-                    gEnvStage[voice][node] = eEnvDecay;
-                }
-                break;
-            }
-            case eEnvDecay:
-            case eEnvSustain:
-            {
-                q = env_segment(q, spec->envDcyHalf, spec->envDcyAdd, spec->envSustainQ);
-                break;
-            }
-            case eEnvRelease:
-            {
-                q = env_segment(q, spec->envRelHalf, spec->envRelAdd, 0);
+        if (index >= spec->envStageCount) {
+            q = 0;                                  // idle
+        } else {
+            const tEnvSegment * stage = &spec->envStage[index];
 
-                if (q <= 0) {
-                    q                      = 0;
-                    gEnvStage[voice][node] = eEnvIdle;
+            if (stage->sustain != 0u) {
+                q = env_segment(q, stage->half, stage->add, stage->target);
+            } else {
+                q = env_segment(q, stage->half, stage->add, (stage->rising != 0u) ? 0 : stage->target);
+
+                bool     done = (stage->rising != 0u) ? (q > stage->target) : (q <= stage->target);
+                uint32_t next = index + 1u;
+                bool     hold = (next < spec->envStageCount) && (spec->envStage[next].sustain != 0u)
+                                && (gate == true);
+
+                if ((done == true) && (hold == false)) {
+                    q                      = stage->target;
+                    gEnvStage[voice][node] = next;
+
+                    if (next >= spec->envStageCount) {
+                        gEnvStage[voice][node] = ENV_STAGE_IDLE;
+                    }
                 }
-                break;
-            }
-            default:
-            {
-                q = 0;
-                break;
             }
         }
         gEnvQ[voice][node]     = (q > ENV_TOP) ? ENV_TOP : q;
@@ -5627,10 +5768,10 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
         // §17.3 - the gate is read at the tick and takes effect from the next one, as on the instrument.
         if (gate == true) {
             // notes §150
-            if (  (gEnvStage[voice][node] == eEnvIdle)
-               || (gEnvStage[voice][node] == eEnvRelease)
+            if (  (gEnvStage[voice][node] == ENV_STAGE_IDLE)
+               || (env_stage_is_release(spec, gEnvStage[voice][node]) == true)
                || ((spec->envKeyGate == true) && (gEnvTrigger[voice][node] != gVoice[voice].trigger))) {
-                gEnvStage[voice][node]   = eEnvAttack;   // from the level it is at - §17.3
+                gEnvStage[voice][node]   = 0u;           // from the level it is at - §17.3
                 gEnvTrigger[voice][node] = gVoice[voice].trigger;
 
                 // §17.7 - Reset starts it from zero, in the tick the gate rises
@@ -5639,8 +5780,12 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
                     gEnvLevel[voice][node] = 0.0;
                 }
             }
-        } else if (gEnvStage[voice][node] != eEnvIdle) {
-            gEnvStage[voice][node] = eEnvRelease;
+        } else if (gEnvStage[voice][node] != ENV_STAGE_IDLE) {
+            // §17.8 - the gate falling jumps PAST the held stage. With no held stage there is nothing
+            // to jump past and a one-shot runs on to its end, which is what EnvAHD and EnvD want.
+            if (spec->envSustainStage >= 0) {
+                gEnvStage[voice][node] = (uint32_t)spec->envSustainStage + 1u;
+            }
         }
     }
     gEnvTick[voice][node] -= ENV_TICK_HZ / gSampleRate;
@@ -6447,6 +6592,29 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             value[n][0] = a * signal_in(spec, value, 1);
             break;
         }
+        case eNodeModAmt:
+        {
+            // §29 - m: In through the Mod input at Depth. 1-m: In stays at full level at Depth 0.
+            double mod = signal_in(spec, value, 1);
+
+            if (spec->active == false) {
+                value[n][0] = a;
+            } else if (spec->modAmtOneMinus == true) {
+                value[n][0] = a * ((1.0 - gain) + (gain * mod));
+            } else {
+                value[n][0] = a * gain * mod;
+            }
+            break;
+        }
+        case eNodeSwitch:
+        {
+            // §30 - closed passes In, or 64 units with nothing patched; open sends nothing.
+            double closed = (spec->active == true) ? LOGIC_HIGH_LEVEL : 0.0;
+
+            value[n][0] = (spec->in[0] < 0) ? closed : (a * ((spec->active == true) ? 1.0 : 0.0));
+            value[n][1] = closed;
+            break;
+        }
         case eNodePulse:
         {
             value[n][0] = pulse_step(voice, n, a, spec);
@@ -6562,8 +6730,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeChorus:
         {
-            if (spec->active == true) {
-                chorus_step(n, a, spec->depth, spec->amount, &value[n][0], &value[n][1]);
+            if ((spec->active == true) && (spec->line < MAX_CHORUS_LINES)) {
+                chorus_step(spec->line, a, spec->depth, spec->amount, &value[n][0], &value[n][1]);
             } else {
                 value[n][0] = a;
                 value[n][1] = a;
@@ -6740,12 +6908,12 @@ static bool voice_is_finished(const tSoundEngineParams * paramsIn, uint32_t v, b
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
     SE_LOCAL;
 
-    tSoundEngineParams params;
-    uint32_t           frame            = 0;
-    bool               chainHasEnvelope = false;
-    uint32_t           n                = 0;
+    static _Thread_local tSoundEngineParams params;    // notes §18 - too big for a callback's stack
+    uint32_t                                frame            = 0;
+    bool                                    chainHasEnvelope = false;
+    uint32_t                                n                = 0;
 
-    struct timespec    started          = {0};
+    struct timespec                         started          = {0};
 
     (void)clock_gettime(CLOCK_MONOTONIC, &started);
 
