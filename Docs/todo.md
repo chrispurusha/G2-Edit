@@ -5,6 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
+- On plugin (not standalone), when a menu is opened and I click outside of it, menu doesn't close.
 - Voice stealing CUTS the stolen note dead: its amplitude envelope goes to zero in one sample and a pad clicks. Needs a short fade before the new note starts, which means holding the note-on back until it finishes (findings 2026-09-19, reference §15.3a). Click can also be heard on mono and legato patches (which were previously OK), when holding a note and playing a new note. If we do the right thing for mono, poly should shake out.
 - Fix current modules in sound engine using the recent methods.
 - Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. 02 Big Pad (bank 1:24, PatchTestFiles/BigPad.pch2) needed only ModAmt and SwOnOffT - both done 2026-09-19, ModAmt's Enable button still a guess (to-test.md). 01 Mini Emulator (bank 1:10) still needs eight: MonoKey, Glide, LevConv, LevAdd, Sw2-1, Sw8-1, ValSw2-1 and 2-In (its SwOnOffT is now done) - see mini-emulator-engine-plan.md
