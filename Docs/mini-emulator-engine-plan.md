@@ -1,15 +1,23 @@
 # 01 Mini Emulator in the sound engine
 
-Living design note, started 2026-09-13. Nothing built yet. What the local sound engine lacks to play
-**01 Mini Emulator**, and the order to add it in. It is not a factory patch - it is one of CT's own,
-and `PatchTestFiles/MiniEmulator.pch2` is the only copy of it here.
+Living design note, started 2026-09-13. **BUILT 2026-09-19 - the patch plays, and needs an ear
+against the G2 (to-test.md).** What was missing is below as it was written, since the laws and the
+routing survey are still the reference for checking it; the module table's eight types are all in
+(reference §§31-37), and the thing that actually kept the voice area silent was not on the list at
+all - an envelope's In/Gate/AM jacks were found by position, so the chain stopped at every ModADSR
+(§17.4a). The engine builds 80 of its modules.
+
+**01 Mini Emulator** is not a factory patch - it is one of CT's own, and
+`PatchTestFiles/MiniEmulator.pch2` is the only copy of it here. What follows is what the engine
+lacked and the order it was added in; the survey of how the patch is built is what to check it
+against.
 
 That copy was saved from Slot A. Its name modules read
 "MiniMoogy G2", "Patched by Varice J. Mire", "2005". Voice mode Mono.
 
-## What the engine does with it today
+## What the engine did with it before this (kept for the diagnosis)
 
-It builds the FX area only (Fx-In, two DelayB, Reverb, Mix4-1S, 2-Out, and a Constant for the delay
+It built the FX area only (Fx-In, two DelayB, Reverb, Mix4-1S, 2-Out, and a Constant for the delay
 feedback), all of which it already models. Nothing from the Voice area arrives: every path from the
 Voice area's Output back to a source runs through a module type the engine does not have, so the
 status reads "Nothing is patched into it".
