@@ -34,10 +34,6 @@
 // Scroll rates, in CONTENT pixels — see pane_scroll_by() in splitView.c. Expressed in content
 // rather than scrollbar units so the feel stays constant as the zoom and the pane's height change.
 #define WHEEL_SCROLL_STEP    (40.0)         // roughly one module row per wheel notch
-// notes §28a - how far the minor axis of a wheel/trackpad gesture is allowed to be before it is
-// dropped. A macOS trackpad reports both axes at once and goes on reporting after the fingers lift,
-// so a vertical flick with a few degrees of drift walks the canvas sideways on its own.
-#define SCROLL_AXIS_DOMINANCE    (0.5)
 // Edge auto-scroll while a drag is held past a pane's edge. The rate ramps with how far past the
 // edge the cursor is, so easing over the boundary creeps and shoving well past it moves quickly —
 // a fixed rate makes the slow end of the range unreachable.

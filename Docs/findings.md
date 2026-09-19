@@ -10633,3 +10633,106 @@ it that way: note events are consumed INSIDE the sample loop so they land on the
 cannot be spread over threads at that granularity - it would be a fork and join every sample, 384000
 a second. Splitting per-voice rendering into whole sub-blocks is what both want, and it means
 quantising note events to a sub-block boundary.
+
+2026-09-19 - "STEALING AFTER A FEW NOTES" WAS VOICE 0 EATING ITS OWN TAIL, AND THE VOICE COUNT WAS
+NEVER WRONG (CT: "Are we actually allocating the right number of voices for poly though? g2 itself
+seems to cope with 14 voices for Big Pad"; then "It seem to happen where I release notes and play
+them again"). Reference §15.1a, revert record 57 and 58.
+
+### The count was right
+
+02 Big Pad's patch declares 13 in its 5-bit voice-count field, the engine gives 13 + 1 = 14, and the
+G2 shows 14. Holding fourteen keys allocates fourteen voices, one each. So nothing to fix there -
+the remaining todo item about voices is only the requested/assigned PAIR in the topbar.
+
+### What was actually happening
+
+CT's second message is what found it. Held notes were fine; notes RELEASED and played again were
+not. Tracing every allocation through a 22-note phrase on 14 voices:
+
+```
+    note  1..14  ->  voice 0, 1, 2, ... 13     (correct)
+    note 15      ->  voice 0
+    note 16      ->  voice 0
+    note 17      ->  voice 0                   ... and voice 0 for every note after it
+```
+
+Thirteen voices sitting idle while one was reused over and over, each new note cutting off the
+release of the one before. That is what CT was hearing, and it is not the steal path at all - no
+steal was ever reported in that trace.
+
+**`free_voice_runs()` is true only for voice 0**, and in drone mode (the default) for every patch,
+which is how one voice drones at rest (notes §179). The render then did this at key-up:
+
+```c
+    if ((freeVoice == true) && (voice->gate == false)) {
+        voice->sounding = false;          // hand it to free-run
+        freeRun         = true;
+    }
+```
+
+`sounding` is a RENDERING flag, and the allocator's first pass read it as "this voice is available".
+So voice 0 became available the instant its key came up - while its pad release was still audible -
+and being silent it always won the least-recently-used scan against thirteen voices that were still
+marked sounding. Every note from the fifteenth onwards went to it.
+
+### The fix is the instrument's own allocator, which is simpler than what we had
+
+Read the release side of the reference allocator: on a note-off it unlinks that voice, relinks it at
+the BACK of the queue and decrements the in-use count **there and then**, whether or not the release
+is still sounding. There is no second list and no audibility test anywhere in it. Released is
+available; the queue order alone decides; a new note takes the front, which is the voice released
+longest ago.
+
+So `voice_to_allocate()` is now one pass over `queueOrder` and does not look at `sounding` at all.
+`queueOrder` starts in voice order and every release - a key up, the sustain pedal lifting, an
+all-notes-off - sends that voice to the back. The two-pass version it replaces (this morning's
+§15.1a) was an approximation that ordered by last note-ON rather than last note-OFF, and it is what
+let a rendering flag reach the allocator.
+
+Separately, §180 now hands voice 0 to free-run only where the chain has NO envelope to release. With
+one, the key coming up starts that release like any other voice's and the voice retires through
+§182 before it free-runs again. The drone is unaffected either way - the voice is rendering
+throughout - but `sounding` is now honest for anything else that reads it.
+
+### After
+
+```
+    released and replayed, 22 notes:  0 1 2 3 4 5 6 7 8 9 10 11 12 13 0 1 2 3 4 5 6 7
+    all seventeen held:               0..13 then STEAL voice 1, 2, 3
+```
+
+The steal takes voice 1 rather than voice 0 because voice 0 holds the lowest note and the new note
+is higher - §15.3's "keep the lowest note sounding", working. The steal join measured on 02 Big Pad
+is unchanged and still continuous.
+
+**The lesson worth keeping:** the allocator must not read a flag the render owns. `sounding` means
+"render this voice this block"; it is set and cleared for rendering reasons - free-run, drone, the
+retire path - and every one of those is a reason it can be wrong as an answer to "is this voice
+free". The instrument does not ask the question at all.
+
+2026-09-19 - THE RANDOM HORIZONTAL VA SCROLL WAS A MOUSE, AND THE FILTER FOR IT IS REVERTED (CT:
+"My new mouse has a scroll wheel on the side"). See todo.md's DO NOT RE-TRY.
+
+The morning's diagnosis was a macOS trackpad reporting both axes and going on reporting after the
+fingers lift, so that a vertical flick's few degrees of drift walked the canvas sideways on its own.
+`scroll_event()` was given a minor-axis filter for it: whichever of x and y was under half the other
+was dropped, on the canvas only.
+
+The symptom has a simpler cause - the owner's new mouse has a second wheel on its side, and nudging
+it scrolls the canvas horizontally, which is exactly what it is for.
+
+**The filter could never have fixed that, and the arithmetic says so plainly.** It drops the MINOR
+axis. A nudge of a side wheel arrives as x with y at zero, so the first test (`|x| < 0.5|y|`) is
+false and the second zeroes a y that is already zero: the horizontal scroll passes through
+untouched. For any single-axis device the filter is a no-op in both directions.
+
+What it was not a no-op for is a genuine two-axis gesture, where it throws the smaller axis away -
+so it could only ever cost a real diagonal trackpad pan its minor component. A behaviour change that
+cannot deliver its stated benefit and can cost something real, with the evidence for it now
+explained away, is worth removing rather than leaving in place on the chance it helps: reverted in
+`scroll_event()` and `defs.h`, and code-note §28a with them.
+
+The original reasoning is preserved in commit `03af6c8` if the trackpad case is ever seen on its
+own - which would mean horizontal drift on a machine with no horizontal scroll device, and that is
+the test that was never run.

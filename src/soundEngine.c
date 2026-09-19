@@ -1037,6 +1037,7 @@ typedef struct {
     bool     glideActive;     // this note began while another was still held — see the Auto glide mode
     double   envelope;        // the anti-click ramp, used only when the patch has no EnvADSR
     uint64_t age;             // allocation order, so the oldest can be identified for stealing
+    uint64_t queueOrder;      // §15.1a - its place in the free queue; a note-off sends it to the back
     uint32_t quiet;           // consecutive samples this voice's output has been inaudible
     uint32_t released;        // samples since its envelopes finished with the key up, 0 until then (notes §20)
     double   fade;            // 1.0 normally; driven to 0 to retire a voice that will not stop on its own
@@ -1918,9 +1919,10 @@ static void reset_voices(void) {
         gVoice[v].released    = 0;
         gVoice[v].fade        = 1.0;
         gVoice[v].stealWait   = 0u;
+        gVoice[v].queueOrder  = v;   // §15.1a - the queue starts in voice order, front to back
     }
 
-    gVoiceClock = 0;
+    gVoiceClock = (uint64_t)MAX_VOICES;
     memset(gKeyHeld, 0, sizeof(gKeyHeld));
 }
 
@@ -1982,34 +1984,21 @@ static uint32_t voice_to_steal(uint32_t count, int32_t note) {
 static uint32_t voice_to_allocate(uint32_t count, int32_t note, bool * stolen) {
     SE_LOCAL;
 
-    uint32_t best    = 0;
-    uint64_t bestAge = UINT64_MAX;
+    uint32_t best      = 0;
+    uint64_t bestOrder = UINT64_MAX;
 
-    // §15.1a - THE LEAST RECENTLY USED of the silent voices, not the lowest-numbered one. Returning
-    // the first silent voice sent every note in a phrase to voice 0, and a voice goes silent while
-    // its MODULATION envelopes are still releasing - so the next note inherited one part-way down and
-    // started its attack from there (§17.3 attacks from the level it is at). The instrument keeps its
-    // voices in a queue and puts a released one at the BACK, which is what picking by age does here.
+    // §15.1a - ONE QUEUE, front to back, which is the whole of the instrument's rule. A note-off
+    // unlinks that voice and relinks it at the BACK there and then, whether or not its release is
+    // still sounding, and a new note comes off the FRONT - so it takes the voice released longest
+    // ago. Nothing here asks whether a voice is still making a sound.
     for (uint32_t v = 0; v < count; v++) {
-        if ((gVoice[v].sounding == false) && (gVoice[v].gate == false) && (gVoice[v].age < bestAge)) {
-            bestAge = gVoice[v].age;
-            best    = v;
+        if ((gVoice[v].gate == false) && (gVoice[v].queueOrder < bestOrder)) {
+            bestOrder = gVoice[v].queueOrder;
+            best      = v;
         }
     }
 
-    if (bestAge != UINT64_MAX) {
-        return best;
-    }
-    bestAge = UINT64_MAX;
-
-    for (uint32_t v = 0; v < count; v++) {   // released but still ringing: the oldest of them
-        if ((gVoice[v].gate == false) && (gVoice[v].age < bestAge)) {
-            bestAge = gVoice[v].age;
-            best    = v;
-        }
-    }
-
-    if (bestAge != UINT64_MAX) {
+    if (bestOrder != UINT64_MAX) {
         return best;
     }
     *stolen = true;   // §15.3a - in EVERY mode, Mono and Legato included, as the instrument does
@@ -2153,7 +2142,8 @@ static void voice_note_off(int32_t note, uint8_t release) {
 
         for (uint32_t v = 0; v < MAX_VOICES; v++) {
             if (gVoice[v].gate == true) {
-                gVoice[v].release = release;
+                gVoice[v].release    = release;
+                gVoice[v].queueOrder = ++gVoiceClock;   // §15.1a - all released, oldest-held first
             }
             gVoice[v].gate      = false;
             gVoice[v].sustained = false;
@@ -2193,7 +2183,8 @@ static void voice_note_off(int32_t note, uint8_t release) {
             if (atomic_load(&gSustainPedal) == true) {
                 voice->sustained = true;
             } else {
-                voice->gate = false;
+                voice->gate       = false;
+                voice->queueOrder = ++gVoiceClock;    // §15.1a - to the BACK, as the key comes up
             }
             continue;
         }
@@ -2281,8 +2272,9 @@ static void sustain_pedal_follow(void) {
     if ((down == false) && (gSustainSeen == true)) {
         for (uint32_t v = 0; v < MAX_VOICES; v++) {
             if (gVoice[v].sustained == true) {
-                gVoice[v].sustained = false;
-                gVoice[v].gate      = false;
+                gVoice[v].sustained  = false;
+                gVoice[v].gate       = false;
+                gVoice[v].queueOrder = ++gVoiceClock;   // §15.1a - released now, so to the back
             }
         }
     }
@@ -7202,7 +7194,16 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 }
 
                 // notes §180
-                if ((freeVoice == true) && (voice->gate == false)) {
+                //
+                // ONLY WHERE THERE IS NO ENVELOPE TO RELEASE. With one, the key coming up has to
+                // start that release like any other voice's, and this used to hand the voice
+                // straight to free-run instead - clearing `sounding` on a voice still audibly
+                // releasing. The allocator reads `sounding`, so voice 0 then looked free from the
+                // moment its key came up: once the other voices had each been used, EVERY note
+                // landed on voice 0 and cut its own tail off (CT 2026-09-19, heard on 02 Big Pad as
+                // stealing after a few notes, with thirteen voices sitting idle). It retires
+                // through §182 now, and free-runs once it is actually finished.
+                if ((freeVoice == true) && (voice->gate == false) && (chainHasEnvelope == false)) {
                     voice->sounding = false;
                     freeRun         = true;
                 }
