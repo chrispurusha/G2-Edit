@@ -76,6 +76,8 @@ dial values, and the old law to 45%. They agree only near dial 73, which is why 
 fit could not tell them apart and the question stood open. The EQ shelf tables were checked at the same
 time and needed NO change - see §11.2.
 
+| 50 | LFO Rate in Clk (clock sync) | not implemented: `lfo_rate_hz()` fell to `default` and returned 1.0 Hz whatever the dial | `(BPM/60) / clk_sync_beats(dial)`, the instrument's own 32 sync ratios (§28.2), at the delay's reference tempo | `f62ce06` `src/paramCurves.c` `lfo_rate_hz()` |
+
 ### Reverting one
 
 1-4 are behaviour, not constants: put back the old function from its commit (the note stack's fallback

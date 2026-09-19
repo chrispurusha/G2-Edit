@@ -32,6 +32,16 @@ is exactly one half. Holds for mixer Lin levels, Pan, X-Fade, the faders and the
 
 **2.2 Exception.** MixStereo's pan dials divide by 127 (§5.2).
 
+**2.3 The filter Freq curve, and what it is nine semitones away from (2026-09-18).** `flt_cutoff_hz()`
+is 13.75 × 2^(dial/12), and it is the instrument's own curve read off a SHIFTED index. The table every
+filter's cutoff comes from holds one entry per semitone - the Chamberlin coefficient 2·sin(π·f/96000) -
+and **entry 64 is E4, 329.628 Hz, exactly**. So it is a PITCH table
+about E4, not a dial table - which is why the same E4 pivot turns up in filter key tracking (§21.3).
+
+Written as a frequency, entry k is 13.75 × 2^((k - 9)/12) Hz, to 0.005% at every entry. So
+`flt_cutoff_hz(dial)` is that table at `dial + 9`: the filters index it nine semitones above
+the dial, and the measurements (§10.3, §21, §22, §23) are what say that offset is right for them.
+
 ## 3. Mixers
 
 **3.1 One node.** Every summing mixer is `eNodeMix`, driven by `kMixSpecs`: channel count, stereo,
@@ -54,8 +64,8 @@ and where each type keeps its level dials, On buttons, Inv switches, curve and p
 Gain = 0.99x³ + 0.01x, x = dial/127 - `mix_level_gain()`, the same function the dial's dB text uses.
 
 This began as a fit to 218 measured steps (0.01 dB RMS; a pure cube is 5.8 dB out at dial 13) and is
-now known to be the instrument's law rather than a good approximation to it. `_gExpCurve2` is a
-4065-entry table reaching full scale at index 4064 = 127 × 32, so it is indexed by the dial at 1/32
+now known to be the instrument's law rather than a good approximation to it. Its level table is
+4065 entries, reaching full scale at index 4064 = 127 × 32, so it is indexed by the dial at 1/32
 resolution - the level a mixer sends the DSP is the morph accumulator's, not the integer dial, and the
 part looks the curve up. Read back at every integer dial value it agrees with the formula to **0.006 dB
 at worst**, at dial 1 where the table itself quantises, and to 0.000 dB everywhere else.
@@ -157,8 +167,47 @@ and level in dB. Tabulated because the G2 looks the pole up in a stored table.
 | corner Hz | 18306 | 7664 | 3164 | 1353 | 615 | 323 | 194 | 143 | 129 |
 | level dB RMS re FS | -7.7 | -9.6 | -10.2 | -9.4 | -8.6 | -9.1 | -10.7 | -12.8 | -14.8 |
 
+**7.2a The instrument's module, exactly (2026-09-18).** Read from its own DSP part and the host code
+that feeds it - the whole module, not a fit:
+
+    x    = 24-bit LFSR, shift left, XOR the tap mask X[0] when the bit shifted out is 1,
+           then sign-extended: white noise at full scale
+    y    = clamp24(A·y' + B·x)                       the one-pole, Q23 throughout
+    out  = clamp24(y · (1 + 32·C))                   the level compensation
+
+with the three coefficients written by the host on every Color change:
+
+| | value | |
+|---|---|---|
+| A | the colour table at `127 - dial` | the pole - note the REVERSED index |
+| B | `(0x7fffff - A) / 4` | so the one-pole's DC gain is exactly 1/4, -12.04 dB |
+| C | `dial³ × 4` as a Q23 word | so the compensation is `1 + dial³/65536`, 0 dB at dial 0 to +30.2 dB at 127 |
+
+That last row is 7.3's "growing as the dial cubed", now exact - and it IS the filtered signal that is
+scaled, not a share of the dry mixed back. The P-code word decides: one value outputs zero (the
+module off), another applies the compensation, anything else passes `y` through unscaled.
+
+**The corner** is a clean geometric run from **exactly 20000.0 Hz at dial 0 to exactly 12.000 Hz at
+dial 127** (ratio 1.0602 a step) - the round endpoints are what confirm 96 kHz is the right rate.
+
+| dial | 0 | 16 | 32 | 48 | 64 | 80 | 96 | 112 | 127 |
+|---|---|---|---|---|---|---|---|---|---|
+| instrument's pole, Hz | 20000 | 7855 | 3085 | 1212 | 476 | 187 | 73 | 29 | 12 |
+| measured (7.2), Hz | 18306 | 7664 | 3164 | 1353 | 615 | 323 | 194 | 143 | 129 |
+
+The two agree to a few per cent while the noise is bright and diverge to a factor of TEN by the top of
+the dial. THE ENGINE STILL USES THE MEASURED TABLE, deliberately. Putting the whole model above through
+the same arithmetic gives a level curve whose SHAPE follows the measured one to about 1 dB over dials
+0-64 and then drifts apart, reaching 6 dB by 127 - the same half of the dial the corners disagree on -
+over a constant 12 dB offset that is B's own 1/4 and is presumably the output stage the capture was
+referred to. So the bright half is confirmed and the dark half is not, and the measured table is what
+currently reproduces the captured levels. Adopting the model wholesale would move the noise by that
+12 dB and change the dark end by more, on an explanation nobody has heard yet: it wants a listening
+check against the G2 first (todo.md).
+
 **7.3 Level compensation.** The G2 adds back a share of the filtered signal growing as the dial cubed
-(from the DSP code), which is why the level barely falls as the noise darkens.
+(from the DSP code), which is why the level barely falls as the noise darkens - but see 7.2a, which
+casts doubt on whether it is the filtered signal that is added back.
 
 **7.4 Check.** Engine and G2 meters agree at 6 of 9 settings; the brightest read one value higher in
 the engine (a crest difference).
@@ -354,6 +403,13 @@ FB 3, FB Mod 4, Type 5 (Notch, Peak, Deep), Level 6, On 7. Inputs In, Pitch, Pit
 SEMITONES DOWN, `flt_cutoff_hz(Freq - 9)`: the teeth sit a major sixth below what the dial reads. Fits
 the four Freq settings measured to 0.01 samples. (An earlier reading, "nominal / 1.67", was this law
 seen through the one-sample offset, which is why it drifted at high Freq.)
+
+**AND THE NINE SEMITONES ARE NOT THE COMB'S (2026-09-18).** `flt_cutoff_hz(Freq - 9)` is exactly
+the instrument's own cutoff table (§2.3) read at the dial, with no offset at all
+(§2.3, 0.000% at every dial from 0 to 122). The other filters read the same table at `dial + 9`. So
+the comb is the module that indexes it straight, and the "major sixth below what the dial reads" is
+the OTHER filters' offset seen from here, not a property of the comb. The magic number was measured
+before the table was read; it is the same number either way, and now it has a reason.
 
 **13.3 Feedback.** g = (FB - 64)/64: 64 is no comb, below 64 the comb inverts.
 
@@ -1088,3 +1144,39 @@ basic oscillators (§6.3), against the instrument's own wave parts sample for sa
 - Pulse: high above p = y, each edge a straight line one sample either side (the later edge wins where they
   overlap), + y; the instrument's "1" is 0x7fffff, which is what leaves a spike at y = 1. Exact (-102 dB).
 - SymPulse: -1 for the first (1 - y)/2, 0, +1 for the last (1 - y)/2, two-sample edges. Exact.
+
+
+## 28. LFO rate
+
+Checked 2026-09-18 against the instrument's own rate tables and the code that reads them. All four ranges
+that were implemented agreed; the fifth, Clk, was not implemented at all.
+
+**28.1 The ranges.** The Range selector picks between five laws, and the instrument reads the dial at
+the morph accumulator's 1/256 resolution, not as an integer:
+
+| Range | Instrument | Engine | State |
+|---|---|---|---|
+| Sub | `(dial + 1) x 16`, no table - linear | `(dial + 1) / 699.0507` Hz | EXACT: the ratio to Hi matches to 0.001% |
+| Lo | its Lo table, 128 entries, interpolated | `(0.2555/16) x 2^(dial/12)` | EXACT |
+| Hi | its Hi table, 128 entries, interpolated | `0.2555 x 2^(dial/12)` | EXACT, and separately hardware-measured |
+| BPM | three straight runs | the same three runs | confirmed 2026-09-13 |
+| Clk | its sync-ratio table at `dial/4`, 32 slots | §28.2 | ADDED 2026-09-18; was 1 Hz flat |
+
+Both tables are pure geometric at exactly 12 steps per octave (0.001 dB from a fitted geometric for
+Hi, 0.020 for Lo), which is where `2^(dial/12)` comes from.
+
+**LO IS EXACTLY HI/16, and the tables appear to say otherwise at the bottom of the dial.** At dial 0
+they read 2858 and 178, a ratio of 16.056; by dial 96 it is 16.0001 and at 120 it is 16.0000 exactly.
+The discrepancy is the rounding of 178.6 to 178, not a law - do not "correct" the base from the first
+entry.
+
+**28.2 Clk, and the table the delay already had.** The instrument's LFO sync ratios are 1, 4/3, 2,
+8/3, 4 ... 4096, 6144 - straight and triplet divisions over 32 slots, indexed by dial/4. Those are
+`256 / beats` for the very table `clk_sync_beats()` already holds for the delay's Clk, entry for entry
+(worst 0.024%, and only on the triplets where 1365/1024 is a rounded 4/3). So one beat table serves
+both modules, and the delay's Clk table is confirmed as the instrument's own into the bargain.
+
+The rate is therefore `(BPM/60) / clk_sync_beats(dial)`: 256 beats per cycle at dial 0 to 1/24 of a
+beat at 127, which at the reference 120 BPM is 0.0078 Hz to 32 Hz. The engine has no live master clock
+yet, so this uses the same fixed reference tempo the delay's Clk does - when one arrives, both follow
+it together.

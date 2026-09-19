@@ -721,6 +721,13 @@ void scroll_event(double x, double y) {
         canvas_zoom_step_at(y * ZOOM_DELTA, coord);
         set_module_pane(prevPane);
     } else {
+        // notes §28a - ONE AXIS PER GESTURE. Only the canvas gets this: the popups and the palette
+        // above read y alone, so a diagonal gesture over either still behaves as it did.
+        if (fabs(x) < (SCROLL_AXIS_DOMINANCE * fabs(y))) {
+            x = 0.0;
+        } else if (fabs(y) < (SCROLL_AXIS_DOMINANCE * fabs(x))) {
+            y = 0.0;
+        }
         // Content pixels per notch, relative to THAT PANE's own position — see pane_scroll_by().
         pane_scroll_by((uint32_t)hovered, -x * WHEEL_SCROLL_STEP, -y * WHEEL_SCROLL_STEP);
     }

@@ -2477,8 +2477,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscNoise,   paramTypeToggle,         {{ 12, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},               // 97 Kbt
     {moduleTypeOscNoise,   paramTypeCommonDial,     {{ 12,  -3}, { 7,  7}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },               // 97 Pitch M
     {moduleTypeOscNoise,   paramTypeMenu,           {{ 29, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },               // 97 Pitch Type
-    {moduleTypeOscNoise,   paramTypeCommonDial,     {{ 61,  -3}, { 7,  7}}, anchorBottomLeft,  "Width",        128,   0, NULL,                                  NULL          },               // 106 Width
-    {moduleTypeOscNoise,   paramTypeCommonDial,     {{ 77,  -3}, { 7,  7}}, anchorBottomLeft,  "WidthM",       128,   0, NULL,                                  NULL          },               // 106 Width M
+    // §8.1 - THE LABELS WERE THE WRONG WAY ROUND until 2026-09-19, though the positions were not:
+    // on the instrument parameter 5 is the modulation amount and 6 is Width itself, which is what
+    // the engine has always read (OSCNOISE_PARAM_WIDTH). Left to right is WidthM then Width, as
+    // the original has it.
+    {moduleTypeOscNoise,   paramTypeCommonDial,     {{ 61,  -3}, { 7,  7}}, anchorBottomLeft,  "WidthM",       128,   0, NULL,                                  NULL          },               // 106 Width Mod
+    {moduleTypeOscNoise,   paramTypeCommonDial,     {{ 77,  -3}, { 7,  7}}, anchorBottomLeft,  "Width",        128,   0, NULL,                                  NULL          },               // 106 Width
     {moduleTypeOscNoise,   paramTypeBypass,         {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },               // 106 Bypass
 
     // 107 Unknown
@@ -3634,7 +3638,10 @@ const tConnectorLocation connectorLocationList[] = {
     // 106 OscNoise
     {moduleTypeOscNoise,    connectorDirIn,  connectorTypeControl, {{  3,  -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   },    // 1106 Pitch
     {moduleTypeOscNoise,    connectorDirIn,  connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",            labelLocRight},    // 106  PitchVar
-    {moduleTypeOscNoise,    connectorDirIn,  connectorTypeControl, {{ 70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight},    // 106  Width
+    // §8.1 - the jack pairs with the ATTENUATOR, as the PitchVar jack above pairs with Pitch. It sat
+    // at 70, linking right to the dial at 77 - which was labelled WidthM and is really Width. With the
+    // labels put right (2026-09-19) it moves left of the dial at 61, the modulation amount it feeds.
+    {moduleTypeOscNoise,    connectorDirIn,  connectorTypeControl, {{ 53,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight},    // 106  Width
     {moduleTypeOscNoise,    connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   },    // 106 Out
     // 107 Unknown
     // 108 Vocoder
@@ -4391,6 +4398,15 @@ const tGraphLocation     graphLocationList[] = {
     {moduleTypeFltComb,    {{  -16,   3}, {20.4, 12}}, anchorTopRight  },
     {moduleTypeFltPhase,   {{  -16,   3}, {20.4, 14}}, anchorTopRight  },
     {moduleTypeVocoder,    {{   10,   6}, {  80, 48}}, anchorTopLeft   },
+    // The Drum Synth's, in the space the 2026-09-18 face re-layout kept clear under the Preset
+    // display (CT: "hopefully still room on the right (under preset button)"). The original draws
+    // one here too, 64x21 at its XPos 157, depending on all fifteen parameters - ours shows the two
+    // that say what a drum sounds like, see moduleGraphics.c notes §91. Starts at 70% so the Noise
+    // Filter row's last dial, which ends at 67%, has clearance.
+    {moduleTypeDrumSynth,  {{   -4,  16}, {  26, 14}}, anchorTopRight  },
+    // OscNoise's band, in the strip its face leaves clear above the controls. The original draws one
+    // here too, and its dependency list is the single parameter Width - which is what ours shows.
+    {moduleTypeOscNoise,   {{   -3,   3}, {  20,  9}}, anchorTopRight  },
     // The envelopes follow EnvADSR's box, as near as each face allows today - moduleGraphics.c's notes §83.
     {moduleTypeEnvADR,     {{   20,   6}, {  44, 10}}, anchorTopLeft   },
     {moduleTypeEnvAHD,     {{   20,   8}, {  60, 16}}, anchorTopLeft   },

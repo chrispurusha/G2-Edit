@@ -1226,3 +1226,46 @@ read as belonging to the row above: a dial's own label and value are drawn ABOVE
 renderer, while a tLabelLocation rect is placed exactly where it is put, so the heading has to be
 close enough to its row's label to group with it and clear enough of the band above not to. On the
 Drum Synth that is dial + 10 in face units; at + 12 it read as a footer for the band above (CT).
+
+## 91. `render_drum_graph()`
+
+The Drum Synth's picture, in the space the 2026-09-18 face re-layout kept clear under the Preset
+display (CT: "hopefully still room on the right (under preset button) to add graphical
+representation"). Two curves:
+
+- GREEN, the amplitude: the Master, Slave and Noise voices each decaying from their own Lev at their
+  own Dcy, summed and divided by their sum at t=0. So it starts at the top whatever the levels are,
+  and its SHAPE is the drum's - a single decay when the three times agree, a fast knee and a tail
+  when they do not.
+- ORANGE, the bend: Bend Amt falling over Bend Dcy. Drawn first so the amplitude reads over it where
+  they cross, and not drawn at all at Amt 0, where there is nothing to say.
+
+THE TIME AXIS IS THE DRUM'S AUDIBLE LENGTH - the longest of the three voice decays - and getting that
+wrong is the whole difficulty of this graph. Spanning the longest thing ON the picture was the first
+attempt, and since the bend usually outlasts the sound (810 ms against 322 on the stock Kick 1) it
+squashed the amplitude into the left quarter and the picture said "drops instantly" for every patch.
+A fixed span is worse again: a short kick lands in the first pixel and a long tom runs off the end.
+The bend simply carries on to the right edge still falling, which is the truth - it is still bending
+something that has already died away.
+
+WHAT IT DOES NOT SHOW. The original draws a graph here too, in a 64x21 box, and its dependency list
+is all fifteen parameters - so it is showing something more composite than this. We take the
+arrangement and not the appearance (module-layout-rules.md), and the two curves above are the two
+things a drum synth is actually dialled by. Click, the filter and the oscillator tunings are not in
+it.
+
+## 92. `render_oscnoise_graph()`
+
+OscNoise's band, in the strip its face leaves clear above the controls. Two two-pole band-passes in
+series (reference §8.2) at a Q of `osc_noise_resonator_q()` (§8.3), drawn on a LOG frequency axis
+2.5 octaves either side of centre so a narrow band stays a symmetrical spike rather than collapsing
+into the left edge.
+
+WIDTH ALONE SHAPES IT, and that is not a simplification - the original's graph here depends on the
+single parameter Width too. The pitch only MOVES the band, and a picture with no frequency axis on it
+cannot show that; drawing the centre where the pitch puts it would just slide the curve off the box.
+
+THE PARAMETER INDEX IS THE INSTRUMENT'S, 6, not the one the face used to show. Reference §8.1: on the
+instrument 5 is the modulation amount and 6 is Width, and our module tables had the two LABELS the
+wrong way round until 2026-09-19 - the positions and the engine were always right. A graph written
+against the old labels would have followed the mod attenuator and looked broken for no visible reason.

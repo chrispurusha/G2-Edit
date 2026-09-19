@@ -6,10 +6,8 @@ Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
 - Fix current modules in sound engine using the recent methods.
-- Bug where we see a sudden/random scroll VA area right about half a module's width. Maybe a buffer over-run over the scroll position variable?
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
-- Drum Synth graphical representation in the space kept free on the right, under the Preset box
-- Fix or add various module oscillator style graphics. Wave/filter graphs for PulseOsc, OscNoise, LfoD, Operator etc.-
+- Module wave/filter graphs, what is left of the original's 43: LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two). PulseOsc and LfoD carry one in the original but are NOT module types we have - they are among the unfilled slots below, so they cannot be drawn until the modules exist
 - Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. Focus on the 01 Mini Emulator patch in bank 1:10 on my G2.
 - Implement the other envelopes (EnvH, EnvD, EnvADR, EnvAHD, EnvADDSR, EnvMulti, ModADSR, ModAHD) are not in the engine at all
 - Zoom to Fit from a right click, fitting the area under the cursor
@@ -26,7 +24,6 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Add a dedicated master-clock/tempo panel
 
 MODULES AND GRAPHICS
-- The VA area sometimes scrolls horizontally by itself - possibly on a mouse move with no button pressed, possibly while sounding notes from the Mac keyboard (CT, 2026-09-14). Cause not narrowed down
 - Re-lay out the remaining families by rule (module-layout-rules.md "common face", tools/relayout.py) - Level group done 2026-09-13; next the delays and the pitch/FX group still on port coordinates
 - A drag-and-drop layout mode in the editor that snaps to the grid and writes the rows back - for what the rules cannot settle
 - Draw the jack-to-dial link as a short graphical line instead of the "-"/"--" connector label (CT) - the labels already mark every pair
@@ -48,7 +45,8 @@ MODULES AND GRAPHICS
 FILTERS
 - FltNord's FM-lin and Res-mod inputs are not modelled in the engine (its filter is the instrument's since 2026-09-14, reference §23)
 - EqPeak/Eq3band deep wide cuts above ~1 kHz: the instrument's Chamberlin form is unstable there - measure what it actually does (§11.5)
-- FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs
+- FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs - NOT in the host tables (the part computes the drive; its starting X frame is all zeros but for a 0.9 at X4, as FltStatic's X3), so this needs the translate-and-run harness
+- Noise: the instrument's whole module is now known exactly (reference §7.2a - LFSR, one-pole A with B = (1-A)/4, output x (1 + dial^3/65536)) and the engine still uses the measured table instead. Its level shape follows the measurement to ~1 dB over dials 0-64 and drifts to 6 dB by 127, over a constant 12 dB offset. Play the two against the G2 and adopt the model if it wins - it is exact where the table is fitted
 - Measure FltPhase against the Freq dial - notch positions are not yet tied to it
 - FltComb Deep fits only to |g| 0.5 with one section (5 dB rms at full feedback) - find its real structure (§13.4)
 - FltComb: only two per patch sound in the engine (MAX_COMB_LINES), and at a 192 kHz engine rate the lowest octave of Freq is clamped (COMB_LINE_SAMPLES); FB Mod depth unmeasured
@@ -73,7 +71,6 @@ SOUND ENGINE
 - OscDual's PW (param 11) and its mod amount (param 6) are SWAPPED in G2-Edit's tables: the face labels 6 as PW and 11 as SqrM - fix the face; the engine reads the instrument's order (§12.1)
 - OscDual's PW and Phase input depths are unmeasured (scale 1 in the engine) and Sync is not modelled
 - LFO KBT (LfoA, LfoB, LfoShpA have the control) is not implemented in the engine: the rate ignores the key. The instrument feeds the same key-tracking values the filters use (pivot E4, reference §21.3)
-- OscNoise's Width and WidthMod are SWAPPED in G2-Edit's tables: on the instrument parameter 6 is Width (it widens the band) and 5 is the Width modulation amount - the module tables (and so the face) call them 5 Width, 6 WidthMod. Fix the face and any engine read; measured 2026-09-12
 - OscD's face draws a "Pitch" dial at parameter 3, where the module tables have Tune Md (a Semi/Freq/Factor/Partial drop-down) - check against the instrument and fix the face
 - OscB's DualSaw renders as eOscWaveSuper in the engine; hardware says it is DblSaw (detune 0.5*Shape)
 - tOscWave has no DualSaw and value 4 means Sqr25 on OscA/C/D - the waveform enum needs a per-module map

@@ -458,3 +458,29 @@ F IS NOT BOUND, THOUGH THE MANUAL DEFINES IT. The same sentence gives "Press F .
 the current split position and viewing only the FX Area", but F is a white key in the computer
 keyboard's note entry (A S D F G H J K, help panel), so binding it would cost a note to gain a view
 toggle. Left for the owner to settle rather than decided here - see todo.md.
+
+## 28a. in `scroll_event()`
+
+ONE AXIS PER GESTURE, on the canvas only. A macOS trackpad reports both axes of every scroll event and
+goes on reporting after the fingers lift - momentum - and GLFW passes all of it straight through. A
+vertical flick carrying a few degrees of drift therefore arrives as a long tail of events each with a
+little `x` in it, and at WHEEL_SCROLL_STEP (40) content pixels a unit that walks the canvas sideways
+by itself, seconds after the gesture. Whichever axis dominates wins; the other is zeroed.
+
+THIS IS THE "sudden/random scroll VA area right about half a module's width" of todo.md, and the
+symptoms all line up with it: it arrives with no button pressed (a trackpad gesture is not a button),
+it arrives when nothing was touched (the momentum tail), it is horizontal (the minor axis of a
+vertical scroll), and half a module's width is about 175 content pixels - four or five units, which is
+what a momentum tail delivers, not the one unit a single wheel notch would.
+
+DELIBERATELY NOT APPLIED to the popups or the palette above it: both read `y` alone, so a diagonal
+gesture over either behaves exactly as it did.
+
+WHAT IT IS NOT. The owner's guess was a buffer over-run over the scroll position. It is not:
+`gCurrentModulePane` is static to utilsGraphics.c and only `set_module_pane()` writes it, behind a
+bounds check; `set_module_pane_extent()` checks too; and every write to `gModulePane[]` goes through
+that one bounded index. The percent bookkeeping was checked for a mismatch as well - `calc_scroll_x()`
+divides by `scale((MAX_COLUMNS + 1) * MODULE_X_SPAN) - area.w`, `pane_scroll_by()` by
+`content_width() - r.size.w` and `set_zoom_factor()` by `gZoomFactor * totalWidth - area.size.w`, and
+all three are the same number, so a scroll cannot drift by being written in one scale and read in
+another.

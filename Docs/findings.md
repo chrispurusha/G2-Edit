@@ -9993,8 +9993,8 @@ document exactly as every host entry point does.
   change exists to clear. 4 ms is in any case quicker than the standalone editor's own route, which is a full canvas
   repaint, i.e. one frame. auval passes clean and tools/vst3host runs four instances up and down with no leak.
 
-2026-09-18 - THE VEL/KEYB MORPH LAW CONFIRMED AGAINST THE INSTRUMENT'S OWN CODE (CT: "G2Demo is your guide on
-that"; reference §26.2.0). The per-voice parameter update sums every morph contribution into ONE accumulator in
+2026-09-18 - THE VEL/KEYB MORPH LAW CONFIRMED AGAINST THE INSTRUMENT'S OWN CODE (CT, on using the instrument's own code
+as the guide; reference §26.2.0). The per-voice parameter update sums every morph contribution into ONE accumulator in
 1/256 dial units - the dial times 256, each of the eight groups as range x controller scaled by 4/127, then
 range x velocity/127 and range x (note - 36 + octave shift)/60 - clamps that sum ONCE to 0..127, and converts
 afterwards. Divisors 127 and 60 and the offset 36 are all literal in it, which is what §26.2 already said from
@@ -10102,7 +10102,7 @@ Filter's type menu with them.
   dial + 10.
 
   THE OTHER DIALS ARE ALREADY RIGHT, which the same source settles: the instrument's formatter map for this
-  module sends params 4, 5, 11, 13 and 14 to ParamText::Default, which is From0to100 - a 0-100 percentage, which
+  module sends params 4, 5, 11, 13 and 14 to its default text formatter, which is a 0-100 percentage, which
   is what our CommonDial already shows (raw 39 -> 30.5). The manual describes Swp and Bend Amt as "0 to 5
   octaves", but that is prose about what the control does, not what the G2 displays. Reading the instrument
   rather than the manual is what stopped two dials being "fixed" into being wrong.
@@ -10137,11 +10137,11 @@ conversion is linear in dial units. A filter Freq is; an Operator's Level is not
 
 2026-09-18 - THE EQs AGAINST THE INSTRUMENT'S OWN TABLES: ONE LAW REPLACED, ONE CONFIRMED EXACT, ONE
 INCONSISTENCY THAT IS THE G2'S (CT: "the ones in the engine which haven't been checked against the instrument's
-own parts (or G2Demo ideally)"; "G2Demo is the model to follow"). Both answers came from coefficient tables read
+own parts"; and that the instrument's own code is the model to follow). Both answers came from coefficient tables read
 out of the binary, not from the decompiled Compute() bodies - far quicker, and exact.
 
   EQPEAK'S CENTRE WAS WRONG BY UP TO 45% and is now the instrument's (reference §11.3, revert record 49).
-  EqShelvHiFreqAction and EqPeakGetDSPvalue index `_eqTan`, a 128-entry table of tan(pi f / fs); read back
+  The shelf and peak parameter code both index a 128-entry table of tan(pi f / fs); read back
   through atan at 96 kHz it is 20 x 800^(v/127) - 20 Hz at dial 0, 16 kHz at 127 - matching to 0.0074% across
   every one of the 128 entries. The engine and the dial both used flt_cutoff_hz(), the FILTER modules' curve
   (13.75 x 2^(v/12), to 21 kHz). WHY THE CAPTURE DID NOT CATCH IT: the two curves cross near dial 73 and only
@@ -10149,12 +10149,12 @@ out of the binary, not from the decompiled Compute() bodies - far quicker, and e
   reference had it flagged OPEN for that reason; it is closed now. eq_bands_build() feeds the drawn EQ curve as
   well as the engine, so both follow it, and render_paramType1Freq() special-cases EqPeak so the dial agrees.
 
-  THE SHELF TABLES NEEDED NO CHANGE, which is worth recording as loudly as a fix. `_kLoFreq` reads 80, 110,
-  160 Hz and `_kHiFreq` reads 8000, 6000, 12000 Hz; kEqLowShelfHz and kEqHighShelfHz already held exactly those,
+  THE SHELF TABLES NEEDED NO CHANGE, which is worth recording as loudly as a fix. its low-shelf table reads 80, 110,
+  160 Hz and its high-shelf table reads 8000, 6000, 12000 Hz; kEqLowShelfHz and kEqHighShelfHz already held exactly those,
   including the 12 kHz the capture had fitted at 13.3 and the comment had taken on faith from the name.
 
   AND THE HIGH SHELF'S FIRST TWO SETTINGS ARE SWAPPED IN THE INSTRUMENT ITSELF. Its coefficient table is 8000,
-  6000, 12000; ParamText::EqFreqHi builds its string table as "6 kHz", "8 kHz", "12 kHz". So a G2 set to the
+  6000, 12000; its own display text builds its string table as "6 kHz", "8 kHz", "12 kHz". So a G2 set to the
   setting its own screen calls 6 kHz filters at 8 kHz. The todo asked which of ours to fix, on the assumption
   one of them was wrong; neither is - our engine follows the table and our dial follows the text, which is what
   the instrument does on both counts. Correcting either side would make us disagree with the hardware. The
@@ -10163,22 +10163,157 @@ out of the binary, not from the decompiled Compute() bodies - far quicker, and e
 2026-09-18 - THE MIXER TAPER IS EXACT, NOT A GOOD FIT (CT priority list, "the ones in the engine which haven't
 been checked against the instrument's own parts"). `mix_level_gain()` - 0.99x^3 + 0.01x, x = dial/127 - was
 fitted to 218 measured steps in September and carried the caveat that it was a fit. It is the instrument's own
-law: read back from `_gExpCurve2` at every integer dial value it agrees to 0.006 dB at worst (dial 1, where the
+law: read back from its own level table at every integer dial value it agrees to 0.006 dB at worst (dial 1, where the
 TABLE quantises) and 0.000 dB everywhere else. Nothing changed; the mixers are now known-exact rather than
 known-fitted, which matters because every patch uses one.
 
   THE TABLE'S SHAPE IS THE INTERESTING PART. It is 4065 entries, not 128, reaching 0x800000 at index 4064 =
   127 x 32 - so it is indexed by the dial at 1/32 resolution. That fits what §26.2.0 found about morphs: a
   parameter reaches the DSP as the morph accumulator's value, not the integer dial, and a mixer's Lev is no
-  exception (Mix1_1GetDSPvalue returns param 0 raw and rounds only the switches). Our continuous formula is if
+  exception (a mixer sends its Lev dial on raw and rounds only the switches). Our continuous formula is if
   anything better than the lookup - a morphed level moves through 4065 steps on the instrument and smoothly
   here.
 
-  THE PAD IS NOT IN A TABLE. OutPadAction passes the setting straight to the part, so its 0 / -6.02 / -12.04 dB
+  THE PAD IS NOT IN A TABLE. The output pad's action passes the setting straight to the part, so its 0 / -6.02 / -12.04 dB
   (§3.4) stays a measurement - though those are exactly x1, x1/2, x1/4, which is the obvious fixed-point shift
   and is very unlikely to be anything else.
 
   A NOTE ON METHOD, since this is the third module read this way: the answer came from a coefficient table in
-  minutes, where CNativeFltCombPart::Compute() defeated a direct read earlier the same day (emulated fixed point
+  minutes, where the comb filter's own part defeated a direct read earlier the same day (emulated fixed point
   with a bit-serial divide inlined). Read the TABLES first and reach for the translate-and-run harness only when
   the structure itself is the question.
+
+2026-09-18 - THE LFO RATES AGAINST THE INSTRUMENT: FOUR CONFIRMED, ONE MISSING ENTIRELY (CT priority list;
+reference §28, new - the LFOs had no section at all, having never been checked). Its Hi and Lo rate tables
+are 128 entries each, both pure geometric at exactly 12 steps per octave, which is where our 2^(dial/12) comes
+from; the code that reads them indexes by the integer dial and interpolates with the morph fraction, so a
+morphed LFO rate moves between table entries. Sub has no table at all - it is `(dial + 1) x 16`, linear, exactly
+the shape we had.
+
+  THE RATIOS BETWEEN RANGES NEED NO ASSUMED SAMPLE RATE, which is what makes this a real check rather than a
+  circular one. Our Sub/Hi ratio implies 178.607 and the instrument's tables give 178.625 (0.01%); our Lo/Hi is
+  16 and the instrument's converges to 16.0000. Both confirmed without converting a single increment to Hz. I
+  had started to back out a tick rate from our own constant, which would have proved nothing - CT: "refer to
+  the instrument's own code rather than inferring it".
+
+  LO IS EXACTLY HI/16 AND THE TABLE LOOKS LIKE IT IS NOT. At dial 0 the entries are 2858 and 178, a ratio of
+  16.056, which would say our base is 0.35% fast; by dial 96 the ratio is 16.0001 and by 120 it is 16.0000. The
+  bottom of the table is rounding 178.6 to 178, nothing more. A fit to the low entries would have "corrected" a
+  law that was already right.
+
+  CLK WAS NOT IMPLEMENTED: lfo_rate_hz() had no case 4, so every clock-synced LFO in every patch ran at a flat
+  1 Hz regardless of its dial. The instrument's sync ratios are 1, 4/3, 2, 8/3 ... 6144 over 32 slots indexed by
+  dial/4 - straight and triplet divisions - and they are `256 / beats` for the table clk_sync_beats() ALREADY
+  HELD for the delay's Clk, entry for entry, worst 0.024% and only on the triplets. So the delay's Clk table is
+  confirmed as the instrument's own at the same time, and one table now serves both modules. Clk runs 0.0078 Hz
+  to 32 Hz at the reference 120 BPM (revert record 50).
+
+2026-09-18 - PAN, FLTMULTI AND NOISE READ AGAINST THE INSTRUMENT: TWO CONFIRMED, TWO SENT TO THE HARNESS.
+
+  PAN's two scales are confirmed and neither changes. Its parameter code sends the position as dial << 8 with dial
+  127 SNAPPED to exactly 0x7fffff - which is §2.1's dial/128-with-127-as-1 exactly - and the modulation
+  attenuator as dial << 6 with 127 giving 0x200000, a quarter of full scale, which is §4.3's MOD_INPUT_SCALE of
+  4 confirmed a second way. The Lin/Log curve itself is not in a host table: Pan_UpdateLin patches the part's
+  P-code, so the law stays the 2026-09-12 fit (which is good to 0.001).
+
+  FLTMULTI's GComp is NOT reachable from the tables. The part exposes only an UpdateType custom action, which
+  patches four P-frame opcodes per slope; the drive is computed in the part. Its starting X frame is five words,
+  all zero but for X4 = 0.9000 exactly - the same 0.9 constant FltStatic carries at X3. So "what does GComp OFF
+  do" stays open and needs the harness, not another table read.
+
+  NOISE: THE WHOLE MODULE IS NOW KNOWN, AND THE ENGINE STILL DOES NOT USE IT. Its own DSP part is
+  66 lines and reads straight - a 24-bit LFSR (shift left, XOR the tap mask when the bit shifted out is 1,
+  sign-extended to give full-scale white), a one-pole y = A.y' + B.x in Q23, a clamp, and an output scaling.
+  The host writes all three coefficients on every Color change: A = the colour table at `127 - dial`,
+  B = (0x7fffff - A)/4 - so the one-pole's DC gain is exactly 1/4 - and C = dial^3 x 4, with the output scaled
+  by (1 + 32C) = 1 + dial^3/65536, which is 0 dB at dial 0 and +30.2 dB at 127. That settles §7.3 both ways: the
+  cube is exact, and it IS the filtered signal that is scaled, not a share of the dry mixed back, which was the
+  explanation I had guessed at from the tables alone and which turns out to be wrong.
+
+  PUT THROUGH THE SAME ARITHMETIC the model's level curve follows the measured one to about 1 dB over dials
+  0-64 and then drifts apart, 6 dB by 127 - the same half of the dial the corners disagree on - over a constant
+  12 dB offset that is B's own 1/4 and is presumably the output stage the capture was referred to. So the bright
+  half is confirmed and the dark half is not. I did NOT adopt it: the measured table is what reproduces the
+  captured levels today, and swapping it in would move the noise by that 12 dB and the dark end by more, on the
+  strength of an explanation nobody has heard. It is in todo.md to adopt after a listening check - exact where
+  the table is fitted, so it should win, but that is a judgement for ears not arithmetic.
+
+  THE EARLIER TABLE-ONLY READING OF THIS, kept because it is a lesson: the colour table is
+  128 Q23 pole coefficients indexed by 127 - dial, and read as a one-pole at 96 kHz the corner runs from exactly
+  20000.0 Hz at dial 0 to exactly 12.000 Hz at 127, geometric at 1.0602 a step. Those two round endpoints are
+  what make the 96 kHz reading certain. Our measured corners agree to a few per cent while the noise is bright
+  and end up a FACTOR OF TEN apart - 129 Hz measured against 12 Hz in the table.
+
+  I DID NOT ADOPT IT, which is worth saying given the instruction to follow the instrument's own code. A one-pole at 12 Hz is far
+  darker than the G2 sounds at that setting, so something else in the module is putting the brightness back, and
+  our gain is calibrated to the measured RMS on top of the measured corner - changing one without the other
+  would be worse than either. The likeliest explanation also rewrites §7.3: if what is mixed back is a share of
+  the UNFILTERED noise rather than a boost of the filtered, then the level holding up as the noise darkens AND a
+  one-pole fit reading ten times too high a corner both follow at once. That needs the part's own code. Recorded
+  in §7.2a with both tables side by side so whoever runs the harness starts from the numbers.
+
+2026-09-19 - THE RANDOM HORIZONTAL VA SCROLL IS THE TRACKPAD'S MINOR AXIS (CT: "could you divert think about
+the scroll bug"; mouseHandle.c notes §28a). scroll_event() passed GLFW's x and y straight to pane_scroll_by()
+with no deadzone and no axis locking. A macOS trackpad reports both axes on every event AND goes on reporting
+after the fingers lift, so a vertical flick with a few degrees of drift arrives as a tail of events each
+carrying a little x - at 40 content pixels a unit, that walks the canvas sideways on its own, seconds after
+anything was touched. The canvas scroll now drops whichever axis is under half the other; the popups and the
+palette are untouched, both reading y alone.
+
+  EVERY SYMPTOM FITS, which is what makes this more than a guess. "No button pressed" - a trackpad gesture is
+  not a button. "By itself" - the momentum tail. "Horizontal" - the minor axis of a vertical scroll. "About half
+  a module's width" - 175 content pixels is four or five units, which is a momentum tail rather than the one
+  unit a wheel notch gives, so the size of the jump is itself evidence for the burst. And "while sounding notes
+  from the Mac keyboard" needs no separate explanation: a hand resting near the trackpad while the other plays.
+
+  THE BUFFER OVER-RUN WAS RULED OUT, not merely doubted. gCurrentModulePane is static to utilsGraphics.c, only
+  set_module_pane() writes it and it bounds-checks; set_module_pane_extent() bounds-checks; every write to
+  gModulePane[] goes through that one index. I also checked the other way a scroll can jump - a percent written
+  in one scale and read in another - and calc_scroll_x(), pane_scroll_by() and set_zoom_factor() all use the
+  same total extent, so that is not it either.
+
+  NOT CONFIRMED ON THE HARDWARE OF THE PROBLEM, which is the owner's hands: this is a diagnosis from the code
+  and the symptoms, and the fix is the standard one, but only using it will say whether the drift has gone. If
+  it has not, the next suspect is the sensitivity itself - WHEEL_SCROLL_STEP is 40 content pixels a unit, and
+  "far too fast" is already a user request. (A second suspect was raised and withdrawn: set_zoom_factor()
+  anchors on module_area(), the CURRENT pane, but the wheel handler sets the pane to the HOVERED one around the
+  call and puts it back, so the anchor is already right. Checked, not a bug.)
+
+2026-09-18 - THE FILTER CUTOFF TABLE, AND THE COMB'S NINE SEMITONES EXPLAINED (CT priority list; reference §2.3
+and §13.2). The table every filter's cutoff is looked up in had its absolute scale as the one
+row in the working notes still marked "NOT checked". It is one entry per semitone holding the
+Chamberlin coefficient 2.sin(pi.f/96000), and ENTRY 64 IS E4 - 329.628 Hz, to three decimals. That is what
+identifies it: it is a PITCH table about E4, not a dial table, which is the same E4 pivot the filters' key
+tracking uses (§21.3).
+
+  As a frequency its entry k is 13.75 x 2^((k - 9)/12) Hz, to 0.005% at every entry. So our
+  flt_cutoff_hz(dial) is the table at `dial + 9`, and the measurements are what say that offset is right for the
+  filters that use it - a nine-semitone error would have wrecked the §10.3 and §21 shape fits, which came in at
+  0.5-0.6 dB.
+
+  THE PAYOFF IS AN OLD MAGIC NUMBER LOSING ITS MYSTERY. §13.2 had FltComb tuned to flt_cutoff_hz(Freq - 9),
+  "nine semitones down, a major sixth below what the dial reads", fitted from captures in September and never
+  explained. That expression is exactly that table read at the dial with NO offset,
+  0.000% at every dial from 0 to 122. So the comb is simply the module that indexes the shared table straight,
+  and the nine semitones are the other filters' offset seen from the comb's side. Same number, now with a
+  reason, and nothing to change in the code.
+
+2026-09-19 - OSCNOISE: THE BAND DRAWN, AND THE WIDTH LABELS PUT RIGHT (CT priority list). The face now carries a
+graph of the noise band in the strip above its controls - two two-pole band-passes in series at the measured Q
+(reference §8.2, §8.3), on a log axis 2.5 octaves either side of centre. Checked live through the backdoor at
+Width 127, 96 and 40: broad, medium, a spike, which is the Q law (3.3, 9, about 60) and the manual's "lively
+fluctuating sine" at the narrow end.
+
+  THE LABELS WERE SWAPPED and that is now fixed - a todo open since 2026-09-12. On the instrument parameter 5 is
+  the Width MODULATION amount and 6 is Width itself; our module tables labelled 5 "Width" and 6 "WidthM". Only
+  the labels were wrong: the positions matched the original's left-to-right order all along, and the engine has
+  always read 6 as Width (OSCNOISE_PARAM_WIDTH, with a comment saying the tables disagree). Writing the graph
+  is what forced the issue - drawn against the face's own numbering it would have followed the mod attenuator
+  and looked broken for no visible reason.
+
+  TWO OF THE THREE MODULES THE TODO NAMED DO NOT EXIST HERE. It asked for wave/filter graphs on "PulseOsc,
+  OscNoise, LfoD, Operator". Operator's two were drawn on 2026-09-13; PulseOsc (the original's OscPulse, 6 rows,
+  33 controls) and LfoD (6 rows, 39 controls) are in the original's resources but are NOT among our module
+  types - they are part of the unfilled slots in gModuleProperties. So they cannot be drawn until the modules
+  themselves exist, and the todo line has been corrected to say so rather than leaving two names that read like
+  oversights.
