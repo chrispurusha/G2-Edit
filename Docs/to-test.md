@@ -24,6 +24,18 @@ Full detail for each is in findings.md, searchable by the wording below.
   it. STILL TO CHECK ON THE G2: the dial reading against the G2's own display at several settings,
   0 and 127 especially, and an EqPeak patch by ear. The shelf tables were confirmed exact at the same
   time and did NOT change.
+- ***ALL NINE ENVELOPE MODULES PLAY (2026-09-19)*** - reference §17.8, revert record 52. EnvADR,
+  EnvAHD, EnvD, EnvH, EnvADDSR, EnvMulti, ModADSR and ModAHD were absent from the engine and are now
+  played from the same stage map their faces draw. EnvADSR renders bit-identically, so nothing that
+  worked before has moved. STILL TO CHECK ON THE G2: each of the eight against the hardware by ear -
+  the times and the curves especially, and EnvMulti most of all, whose rise to an intermediate level
+  is a guess. Their KB gate and Reset are NOT read yet, so they always gate from the key.
+- ***POLY NOW CYCLES ITS VOICES (2026-09-19)*** - reference §15.1a, revert record 51. Every note of a
+  separated phrase used to land on voice 0, which handed the next note a modulation envelope still
+  part-way through its release - so only the first note of a phrase had a full attack. Measured fixed
+  offline. STILL TO CHECK BY EAR: play a Poly patch with a slow filter envelope and confirm every note
+  now opens the same way, and that a fast repeated note on ONE key still behaves (§15.3 gives it a
+  fresh voice and lets the old one ring).
 - ***OSCNOISE BAND GRAPH, AND ITS WIDTH LABELS SWAPPED (2026-09-19)*** - moduleGraphics.c notes §92,
   reference §8.1. The face's two right-hand dials now read WidthM then Width, which is the instrument's
   own numbering and the order the engine already used - so a patch will BEHAVE the same, but the dial
@@ -695,3 +707,21 @@ CROSS-PROJECT
   the dialogue works in Ableton. STILL UNCHECKED: that the .pch2 it writes opens unchanged in the
   application, that File > Open Recent lists what was opened and saved, and that a save into an
   unwritable folder shows the alert rather than failing silently.
+
+ModAmt and SwOnOffT in the sound engine (2026-09-19, reference §29/§30)
+  - ModAmt's ENABLE BUTTON is a guess: the engine passes In through unchanged when it is off. Not
+    confirmed on the instrument, and factory patch 02 Big Pad has it off on BOTH its ModAmts, so
+    this decides how that patch sounds. The other reading is that Enable off mutes the output.
+    Worth settling from the G2's panel before trusting Big Pad's balance.
+  - ModAmt's m/1-m and the Depth taper are settled (manual p.232, and the Exp curve is the mixers'
+    own §3.2 law to 6e-8) - these need only a listening check, not a measurement.
+  - SwOnOffT closed with NOTHING patched to In should send 64 units; open should send nothing, and
+    the Ctrl output should follow the button. Untested against the hardware.
+  - 02 Big Pad now resolves 25 nodes instead of 22: the "EnvVel" ModAmt and the Keyboard module it
+    pulls in put velocity onto the filter envelope for the first time. Needs a listen against the G2.
+
+StChorus line pooling (2026-09-19)
+  - A chorus now takes a line from a pool of 2 rather than one buffer per node, so its LFO start
+    phase is seeded from the LINE index, not the node index. A patch with a chorus therefore renders
+    a slightly different (equally arbitrary, equally repeatable) phase than before. ChorusSaw.pch2
+    and 02 Big Pad are the ones to listen to. A third chorus in one patch now passes its input dry.

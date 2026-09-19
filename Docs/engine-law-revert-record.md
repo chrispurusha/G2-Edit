@@ -78,6 +78,15 @@ time and needed NO change - see §11.2.
 
 | 50 | LFO Rate in Clk (clock sync) | not implemented: `lfo_rate_hz()` fell to `default` and returned 1.0 Hz whatever the dial | `(BPM/60) / clk_sync_beats(dial)`, the instrument's own 32 sync ratios (§28.2), at the delay's reference tempo | `f62ce06` `src/paramCurves.c` `lfo_rate_hz()` |
 
+| 51 | Which free voice a note takes | `voice_to_allocate()` returned the FIRST voice neither sounding nor gated - voice 0 for every note of a separated phrase | the LEAST RECENTLY USED of them, by age (§15.1a) | `f62ce06` `src/soundEngine.c` `voice_to_allocate()` |
+
+| 52 | Which envelope modules the engine plays | EnvADSR alone; the other eight failed `module_kind()` and dropped out of the chain | all nine, from the stage map their faces already used (§17.8) | `f62ce06` `src/soundEngine.c` `module_kind()`, `env_rates_build()`, `envelope_step()` |
+
+52 is a rewrite rather than a constant: the four fixed per-stage words (`envAtkHalf` and the rest) and
+`env_rates_build()` went with it, replaced by a stage list on the node. Reverting means restoring that
+function and the fixed-stage walker together. EnvADSR renders bit-identically either way, which is
+what makes the swap safe to make and to undo.
+
 ### Reverting one
 
 1-4 are behaviour, not constants: put back the old function from its commit (the note stack's fallback

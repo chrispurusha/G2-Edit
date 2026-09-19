@@ -1869,207 +1869,6 @@ static void graph_handle_draw(tCoord centre, bool live) {
     render_rectangle(moduleArea, square);
 }
 
-#define ENV_GRAPH_MAX_SEGMENTS     (8)
-#define ENV_GRAPH_SUSTAIN_WIDTH    (0.24)   // a level, not a time - a fixed width just to show the plateau
-#define ENV_NO_PARAM               (-1)
-
-typedef struct {
-    double  width;          // of the box, before any scaling to fit
-    double  level;          // where the segment ends, in Pos's own convention
-    bool    sustain;        // held while the gate is: drawn flat and orange
-    int32_t timeParam;      // the parameter that sets the width - a handle drags it - or ENV_NO_PARAM
-    int32_t levelParam;     // the parameter that sets the end level, or ENV_NO_PARAM
-} tEnvGraphSegment;
-
-typedef struct {
-    uint32_t         shape;          // envShapeStrMap
-    uint32_t         outputType;     // posStrMap order; the shorter maps are prefixes of it
-    bool             bipolarLevels;  // EnvMulti in Bip: its levels themselves span -1..+1
-    double           startLevel;
-    uint32_t         count;
-    tEnvGraphSegment segment[ENV_GRAPH_MAX_SEGMENTS];
-} tEnvGraph;
-
-// notes §61
-static double env_graph_time_width(const tParam * p, uint32_t index) {
-    return 0.04 + (((double)p[index].value / 127.0) * 0.20);
-}
-
-static double env_graph_level(const tParam * p, uint32_t index) {
-    return (double)p[index].value / 127.0;
-}
-
-static void env_graph_add(tEnvGraph * graph, double width, double level, bool sustain, int32_t timeParam, int32_t levelParam) {
-    if (graph->count < ENV_GRAPH_MAX_SEGMENTS) {
-        graph->segment[graph->count++] = (tEnvGraphSegment){
-            width, level, sustain, timeParam, levelParam
-        };
-    }
-}
-
-#define DX_LEVEL_MAX    (127.0)   // the G2 reads 127 at the top (panel, 2026-08-10) - not the DX's 99
-
-static double operator_env_level(uint32_t value) {
-    return fmin((double)value, DX_LEVEL_MAX) / DX_LEVEL_MAX;
-}
-
-// notes §86
-static double operator_env_width(uint32_t rate, double from, double to) {
-    double slowness = (DX_LEVEL_MAX - fmin((double)rate, DX_LEVEL_MAX)) / DX_LEVEL_MAX;
-
-    return fabs(to - from) * (0.03 + (0.25 * slowness));
-}
-
-// notes §83. Reads a parameter array rather than the module, so a handle can try a value on a copy.
-static bool env_graph_segments(tModuleType type, const tParam * p, tEnvGraph * graph) {
-    *graph = (tEnvGraph){
-        .shape = eEnvShapeLinExp
-    };
-
-    switch (type) {
-        case moduleTypeEnvADSR:
-        case moduleTypeModADSR:
-        {
-            bool    mod = (type == moduleTypeModADSR);
-            int32_t a   = mod ? 0 : 1;           // A, D, S, R run in order from here
-
-            graph->shape      = mod ? (uint32_t)eEnvShapeLinExp : p[0].value;
-            graph->outputType = p[mod ? 8 : 5].value;
-            env_graph_add(graph, env_graph_time_width(p, a), 1.0, false, a, ENV_NO_PARAM);
-            env_graph_add(graph, env_graph_time_width(p, a + 1), env_graph_level(p, a + 2), false, a + 1, a + 2);
-            env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(p, a + 2), true, ENV_NO_PARAM, ENV_NO_PARAM);
-            env_graph_add(graph, env_graph_time_width(p, a + 3), 0.0, false, a + 3, ENV_NO_PARAM);
-            break;
-        }
-        case moduleTypeEnvADR:
-        {
-            graph->shape      = p[0].value;
-            graph->outputType = p[5].value;
-            env_graph_add(graph, env_graph_time_width(p, 1), 1.0, false, 1, ENV_NO_PARAM);
-
-            if ((p[7].value == 1) && (p[4].value == 1)) {   // Release mode, and gated - the manual's ASR
-                env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, 1.0, true, ENV_NO_PARAM, ENV_NO_PARAM);
-            }
-            env_graph_add(graph, env_graph_time_width(p, 3), 0.0, false, 3, ENV_NO_PARAM);
-            break;
-        }
-        case moduleTypeEnvAHD:
-        case moduleTypeModAHD:
-        {
-            bool    mod = (type == moduleTypeModAHD);
-            int32_t a   = mod ? 0 : 1;           // A, H, then D two further on in EnvAHD (Reset sits between)
-            int32_t d   = mod ? 2 : 4;
-
-            graph->shape      = mod ? (uint32_t)eEnvShapeLinExp : p[0].value;
-            graph->outputType = p[mod ? 6 : 5].value;
-            env_graph_add(graph, env_graph_time_width(p, a), 1.0, false, a, ENV_NO_PARAM);
-            env_graph_add(graph, env_graph_time_width(p, a + 1), 1.0, false, a + 1, ENV_NO_PARAM);
-            env_graph_add(graph, env_graph_time_width(p, d), 0.0, false, d, ENV_NO_PARAM);
-            break;
-        }
-        case moduleTypeEnvD:
-        {
-            graph->outputType = p[1].value;
-            env_graph_add(graph, 0.0, 1.0, false, ENV_NO_PARAM, ENV_NO_PARAM);
-            env_graph_add(graph, env_graph_time_width(p, 0), 0.0, false, 0, ENV_NO_PARAM);
-            break;
-        }
-        case moduleTypeEnvH:
-        {
-            graph->outputType = p[1].value;
-            env_graph_add(graph, 0.0, 1.0, false, ENV_NO_PARAM, ENV_NO_PARAM);
-            env_graph_add(graph, env_graph_time_width(p, 0), 1.0, false, 0, ENV_NO_PARAM);
-            env_graph_add(graph, 0.0, 0.0, false, ENV_NO_PARAM, ENV_NO_PARAM);
-            break;
-        }
-        case moduleTypeEnvADDSR:
-        {
-            bool sustainAtL1 = (p[8].value == 0);
-
-            graph->shape      = p[1].value;
-            graph->outputType = p[9].value;
-            env_graph_add(graph, env_graph_time_width(p, 2), 1.0, false, 2, ENV_NO_PARAM);
-            env_graph_add(graph, env_graph_time_width(p, 3), env_graph_level(p, 4), false, 3, 4);
-
-            if (sustainAtL1) {
-                env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(p, 4), true, ENV_NO_PARAM, ENV_NO_PARAM);
-            }
-            env_graph_add(graph, env_graph_time_width(p, 5), env_graph_level(p, 6), false, 5, 6);
-
-            if (sustainAtL1 == false) {
-                env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(p, 6), true, ENV_NO_PARAM, ENV_NO_PARAM);
-            }
-            env_graph_add(graph, env_graph_time_width(p, 7), 0.0, false, 7, ENV_NO_PARAM);
-            break;
-        }
-        case moduleTypeEnvMulti:
-        {
-            // L1-L4 are params 0-3 and T1-T4 4-7; Sustain (9) is L1, L2, L3 or none.
-            bool bip = (p[10].value == 4);
-
-            graph->shape         = p[12].value;
-            graph->outputType    = p[10].value;
-            graph->bipolarLevels = bip;
-
-            for (int32_t stage = 0; stage < 4; stage++) {
-                double level = bip ? (((double)p[stage].value - 64.0) / 64.0) : env_graph_level(p, stage);
-
-                if (stage == 0) {
-                    graph->startLevel = 0.0;
-                }
-                env_graph_add(graph, env_graph_time_width(p, 4 + stage), level, false, 4 + stage, stage);
-
-                if ((stage < 3) && (p[9].value == (uint32_t)stage)) {
-                    env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, level, true, ENV_NO_PARAM, ENV_NO_PARAM);
-                }
-            }
-
-            if (p[8].value == 0) {             // Normal: a retrigger starts from where L4 left it
-                graph->startLevel = graph->segment[graph->count - 1].level;
-            }
-            break;
-        }
-        case moduleTypeOperator:
-        {
-            // notes §86: from L4 through L1, L2 and L3 (held) and back to L4. R1-R4 are params 8, 10,
-            // 12 and 14; L1-L4 are 9, 11, 13 and 15.
-            double from = operator_env_level(p[15].value);
-
-            graph->startLevel = from;
-
-            for (int32_t stage = 0; stage < 4; stage++) {
-                double to = operator_env_level(p[9 + (2 * stage)].value);
-
-                env_graph_add(graph, operator_env_width(p[8 + (2 * stage)].value, from, to), to, false, 8 + (2 * stage), 9 + (2 * stage));
-
-                if (stage == 2) {
-                    env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, to, true, ENV_NO_PARAM, ENV_NO_PARAM);
-                }
-                from = to;
-            }
-
-            break;
-        }
-        default:
-            return false;
-    }
-
-    // Bip and BipInv hold their sustain at the centre and end at the far extreme (manual).
-    if (((graph->outputType == 4) || (graph->outputType == 5)) && (graph->bipolarLevels == false)) {
-        for (uint32_t i = 0; i < graph->count; i++) {
-            if (graph->segment[i].sustain) {
-                graph->segment[i].level = 0.0;
-
-                if (i > 0) {
-                    graph->segment[i - 1].level = 0.0;
-                }
-            }
-        }
-
-        graph->segment[graph->count - 1].level = -1.0;
-    }
-    return true;
-}
 
 // notes §62: where a graph's zero line and full swing sit in its box, and how its widths scale to fit.
 typedef struct {
@@ -2121,7 +1920,7 @@ static uint32_t env_handle_value(tModuleKey key, tRectangle graphBox, tCoord poi
     }
     memcpy(params, module->param[gPatchDescr[key.slot].activeVariation], sizeof(params));
 
-    if ((env_graph_segments(module->type, params, &graph) == false) || (item < 0) || ((uint32_t)item >= graph.count)) {
+    if ((env_stage_map(module->type, params, &graph, true) == false) || (item < 0) || ((uint32_t)item >= graph.count)) {
         return 0;
     }
     int32_t   which    = vertical ? graph.segment[item].levelParam : graph.segment[item].timeParam;
@@ -2138,7 +1937,7 @@ static uint32_t env_handle_value(tModuleKey key, tRectangle graphBox, tCoord poi
         double miss;
 
         params[which].value = candidate;
-        env_graph_segments(module->type, params, &graph);
+        env_stage_map(module->type, params, &graph, true);
         end                 = env_graph_segment_end(&graph, graphBox, (uint32_t)item);
         miss                = vertical ? fabs(end.y - pointer.y) : fabs(end.x - pointer.x);
 
@@ -2164,7 +1963,7 @@ static void render_envelope_graph(tRectangle rectangle, tModule * module) {
     uint32_t               variation     = gPatchDescr[module->key.slot].activeVariation;
     tEnvGraph              graph         = {0};
 
-    if ((graphLoc == NULL) || (env_graph_segments(module->type, module->param[variation], &graph) == false)) {
+    if ((graphLoc == NULL) || (env_stage_map(module->type, module->param[variation], &graph, true) == false)) {
         return;
     }
     tRectangle             graphRect     = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
