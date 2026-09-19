@@ -15,7 +15,7 @@ CT (Priority order)
 - Zoom to Fit from a right click, fitting the area under the cursor
 - Separate zoom for VA and FX.
 - Module wave/filter graphs, what is left of the original's 43: LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two). PulseOsc and LfoD carry one in the original but are NOT module types we have - they are among the unfilled slots below, so they cannot be drawn until the modules exist
-- CPU bandwidth used is currently high. If we can optimise at some point, it's worth doing.
+- CPU bandwidth used is currently high. If we can optimise at some point, it's worth doing. There may be cases where a consistent input of zero or possibly unchanged values, don't need a module to process? Obviously, need to be careful there.
 
 USER REQUESTS (reported 2026-08-22; none blocking)
 - Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
