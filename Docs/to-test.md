@@ -3,6 +3,16 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***VOICE ALLOCATION IS NOW THE INSTRUMENT'S SINGLE QUEUE (2026-09-19)*** - reference §15.1a,
+  revert record 57 and 58. What sounded like stealing after a few notes was not stealing: voice 0 is
+  the one the engine free-runs for drone, and it had `sounding` cleared the moment its key came up,
+  so the allocator saw it as free while it was still releasing. Once the other thirteen had been
+  used, every note landed on voice 0 and cut its own tail. The allocator no longer consults
+  audibility at all - released goes to the back of one queue, a new note takes the front. CHECK:
+  play 02 Big Pad, release notes and play them again, and the tails should now ring on undisturbed
+  through a long phrase; hold more notes than the patch's voice count and it should still steal, and
+  still keep the lowest note. ALSO WORTH AN EAR: drone mode on a patch WITH an envelope, since voice
+  0 now releases and retires before it free-runs again rather than jumping straight to free-run.
 - ***THE ENGINE NO LONGER OVERSAMPLES A DEVICE THAT IS ALREADY FAST (2026-09-19)*** - notes §29a,
   revert record 56. It was multiplying the DEVICE rate by two, so a 96 kHz interface ran the graph at
   192 kHz and a 192 kHz one at 384 kHz, for two and four times the CPU. It now caps at the
@@ -11,20 +21,6 @@ Full detail for each is in findings.md, searchable by the wording below.
   interface at 88.2 kHz or above, where the sound does change slightly (towards what 48 kHz gives,
   not away from it). WORTH KNOWING IF THE BREAK-UP WAS THIS: at a 192 kHz device BigPad at 16 voices
   needed 105% of a core and simply could not play; it is 51% now.
-- ***PLUG-IN: A MENU NOW CLOSES WHEN YOU CLICK OUTSIDE IT (2026-09-19)*** - plugin/g2Input.c. It never
-  did in the plug-in and always did in the application, which had the dismissal and the plug-in had
-  not (CT). Check in a host: open any menu bar menu and a canvas right-click menu, click on bare
-  canvas, on a module, on the topbar and on another menu bar title. The click that dismisses a menu
-  must not also do what it landed on - that half is guarded now too - and clicking a second menu bar
-  title must still switch menus rather than close them.
-- ***RANDOM HORIZONTAL VA SCROLL - DIAGNOSED AND FIXED, UNCONFIRMED (2026-09-19)*** - mouseHandle.c
-  notes §28a. The canvas now drops whichever scroll axis is under half the other, which should stop a
-  trackpad's minor axis (and its momentum tail) walking the VA sideways on its own. THIS IS THE ONE
-  THING IN THIS FILE I CANNOT CHECK AT ALL - it needs your hands on the trackpad over a few sessions.
-  Also check the things it must NOT have broken: deliberate horizontal scrolling of a wide patch, a
-  diagonal gesture over a popup or the palette band (both untouched, they read y alone), and a plain
-  wheel mouse if you use one. If the drift is still there, findings.md 2026-09-19 names the next two
-  suspects.
 - ***LFO CLOCK SYNC NOW PLAYS (2026-09-18)*** - reference §28.2, revert record 50. An LFO with Range
   set to Clk ran at a flat 1 Hz whatever its rate dial; it now follows the instrument's own 32 sync
   ratios, 256 beats per cycle at dial 0 down to 1/24 beat at 127. STILL TO CHECK ON THE G2: a

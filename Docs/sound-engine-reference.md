@@ -490,21 +490,29 @@ played over a held one and a return to a held key alike (`trigger`, notes §71 a
 restarts on neither - the note moves, gliding if Auto glide is on - and restarts only for a key played
 with nothing held. A key played with nothing held restarts in both.
 
-**15.1a Which free voice a note takes (2026-09-19).** The LEAST RECENTLY USED of the silent voices,
-not the lowest-numbered one. `voice_to_allocate()` returned the first voice that was neither sounding
-nor gated, which in a phrase of separated notes is voice 0 every single time - so one voice played the
-whole part.
+**15.1a Which free voice a note takes: ONE QUEUE (settled 2026-09-19 against the instrument's own
+allocator).** The instrument holds its voices in a single linked queue with a count of how many are
+in use. A note takes the one at the FRONT. A note-off unlinks that voice and relinks it at the BACK
+there and then, and decrements the in-use count in the same breath - **whether or not its release is
+still sounding**. There is no second list and no test anywhere for whether a voice is still making a
+sound: released IS available, and the queue order alone decides, so the voice a new note takes is
+the one released longest ago.
 
-THAT IS AUDIBLE, and not because of the voice count. A voice stops being `sounding` when its OUTPUT
-dies, but a modulation envelope that reaches nothing audible goes on releasing after that. Reusing the
-voice immediately hands the next note an envelope part-way down, and §17.3 has an attack start from
-the level it is at - so every note after the first began its filter envelope from wherever the last
-one had got to. Measured on SimpleLead with eight voices and each note left to decay fully: every note
-took voice 0, and its second envelope was at 0.217 and still in release when the next note took it.
-With the fix the notes take voices 0, 1, 2, 3, 4, 5 and every envelope starts at 0.000.
+`queueOrder` is that position. It starts in voice order, and every release - a key up, the sustain
+pedal lifting, an all-notes-off - sends the voice to the back.
 
-The instrument keeps its voices in a queue and puts a released one at the BACK of it, taking new notes
-from the front, which is what picking by age does here.
+**Two earlier versions, both wrong, both audible.** The first returned the first voice that was
+neither sounding nor gated, which in a phrase of separated notes is voice 0 every time, so one voice
+played the whole part. The second (the same morning) picked the least recently used of the SILENT
+voices and only then fell back to the released-but-ringing ones. That reads the `sounding` flag,
+which is a rendering flag rather than an allocation one - and 179 clears it on voice 0 the moment
+that voice's key comes up, so voice 0 looked free while it was still audibly releasing. Once the
+other thirteen had each been used, EVERY note landed on voice 0 and cut its own tail off, with
+thirteen voices sitting idle. CT heard that on 02 Big Pad as stealing after a few notes; the voice
+count was never the problem, and 02 Big Pad does ask for and get its 14.
+
+Two things follow, and both are worth keeping in mind before adding a cleverer rule: the allocator
+must not consult anything about audibility, and a flag that the render owns must not be read here.
 
 **15.3 Poly stealing.** A new note takes a free voice first: one doing nothing, then the longest
 released. With every voice held it steals the oldest, unless that voice has the lowest note held and
