@@ -3,6 +3,20 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***RANDOM HORIZONTAL VA SCROLL - DIAGNOSED AND FIXED, UNCONFIRMED (2026-09-19)*** - mouseHandle.c
+  notes §28a. The canvas now drops whichever scroll axis is under half the other, which should stop a
+  trackpad's minor axis (and its momentum tail) walking the VA sideways on its own. THIS IS THE ONE
+  THING IN THIS FILE I CANNOT CHECK AT ALL - it needs your hands on the trackpad over a few sessions.
+  Also check the things it must NOT have broken: deliberate horizontal scrolling of a wide patch, a
+  diagonal gesture over a popup or the palette band (both untouched, they read y alone), and a plain
+  wheel mouse if you use one. If the drift is still there, findings.md 2026-09-19 names the next two
+  suspects.
+- ***LFO CLOCK SYNC NOW PLAYS (2026-09-18)*** - reference §28.2, revert record 50. An LFO with Range
+  set to Clk ran at a flat 1 Hz whatever its rate dial; it now follows the instrument's own 32 sync
+  ratios, 256 beats per cycle at dial 0 down to 1/24 beat at 127. STILL TO CHECK ON THE G2: a
+  clock-synced LFO against the hardware at a few dial settings. NOTE it uses the same fixed 120 BPM the
+  delay's Clk does, because the engine has no live master clock - so it will only agree with a G2 set
+  to 120. The other four ranges were confirmed exact and did NOT change.
 - ***EQPEAK CENTRE IS NOW THE INSTRUMENT'S LAW (2026-09-18)*** - reference §11.3, revert record 49.
   20 x 800^(v/127) instead of the filter curve: 20 Hz at dial 0 (was 13.8) and 16 kHz at 127 (was 21),
   agreeing with the old law only near dial 73. THIS CHANGES HOW EXISTING PATCHES SOUND wherever an
@@ -10,6 +24,16 @@ Full detail for each is in findings.md, searchable by the wording below.
   it. STILL TO CHECK ON THE G2: the dial reading against the G2's own display at several settings,
   0 and 127 especially, and an EqPeak patch by ear. The shelf tables were confirmed exact at the same
   time and did NOT change.
+- ***OSCNOISE BAND GRAPH, AND ITS WIDTH LABELS SWAPPED (2026-09-19)*** - moduleGraphics.c notes §92,
+  reference §8.1. The face's two right-hand dials now read WidthM then Width, which is the instrument's
+  own numbering and the order the engine already used - so a patch will BEHAVE the same, but the dial
+  you reach for changes. STILL TO CHECK ON THE G2: that the dial the G2 calls Width is the one we now
+  label Width, and that the band picture matches what you hear as Width is swept.
+- ***DRUM SYNTH GRAPH (2026-09-19)*** - moduleGraphics.c notes §91. Amplitude (green, the three voices
+  summed) and bend (orange) in the space kept free under the Preset box. Checked live through the
+  backdoor at two settings - short decays with no bend against long decays with full bend - and the
+  curves change as they should. STILL TO CHECK: that it reads well against real presets rather than
+  two made-up settings, the short ones especially, and at the zoom you work at.
 - ***DRUM SYNTH FACE RE-LAID OUT, SLAVE DIAL NOW A RATIO (2026-09-18)*** - findings 2026-09-18,
   renderParams.c notes §19. Four band headings, M/S/NF/B prefixes dropped, rows spread; the Slave dial
   reads x1.24 / 3:1 instead of a percentage. Checked by rendering at 1.0 and 0.59 (no overlaps, nothing

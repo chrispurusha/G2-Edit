@@ -47,6 +47,8 @@ double osc_sub_freq_hz(double paramValue, double fineSemitones);
 // The same idea for the filters: one definition of the cutoff, resonance and slope curves, shared
 // by the dial text, the response curve drawn on the module, and the sound engine.
 double eq_peak_centre_hz(double dial);
+// §8.3 - OscNoise's Q per resonator, two of which sit in series. Shared by the engine and the face.
+double osc_noise_resonator_q(double widthDial);
 double flt_cutoff_hz(double paramValue);                   // Freq dial:  13.75 Hz .. ~21 kHz
 double flt_resonance_q(double paramValue);                 // Res dial:   Q 0.5 .. 50
 uint32_t flt_slope_extra_poles(uint32_t slopeValue);       // 0/1/2 extra one-pole stages: 12/18/24 dB

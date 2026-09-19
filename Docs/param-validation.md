@@ -637,8 +637,8 @@ OscNoise   [module type 106]
    2. Kbt         Toggle        OK   selector names match the G2 exactly
    3. Pitch       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
    4. Pitch Type  Menu          --   enumerated selector - name list not yet cross-checked
-   5. Width       CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
-   6. Width M     CommonDial    OK   percent = raw*100/128, no decimal at 0/25/50/75/100
+   5. Width M     CommonDial    OK   percent = raw*100/128; the FACE called this Width until 2026-09-19 (§8.1)
+   6. Width       CommonDial    OK   percent = raw*100/128; the face called this Width M - the engine always had it right
    7. Bypass      Bypass        OK   confirmed by the owner
 
 Vocoder   [module type 108]
