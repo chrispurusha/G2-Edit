@@ -362,25 +362,45 @@ static const tMixSpec * mix_spec(tModuleType type) {
 
 // StChorus: a detune depth and an amount, then its power button.
 // §29 - ModAmt, and §30 - SwOnOffT. Parameter order validated against the G2 (param-validation.md).
-#define MODAMT_PARAM_DEPTH      (0)
-#define MODAMT_PARAM_ENABLE     (1)
-#define MODAMT_PARAM_EXPLIN     (2)
-#define MODAMT_PARAM_MODE       (3)   // the m/1-m button
-#define MODAMT_EXPLIN_LIN       (1)   // expStrMap {Exp, Lin, dB}
-#define SWITCH_PARAM_ON         (0)
-#define LOGIC_HIGH_LEVEL        (1.0) // a logic HIGH is 64 units (manual p.233), which is 1.0 in the engine (§16)
+#define MODAMT_PARAM_DEPTH     (0)
+#define MODAMT_PARAM_ENABLE    (1)
+#define MODAMT_PARAM_EXPLIN    (2)
+#define MODAMT_PARAM_MODE      (3)    // the m/1-m button
+#define MODAMT_EXPLIN_LIN      (1)    // expStrMap {Exp, Lin, dB}
+#define SWITCH_PARAM_ON        (0)
+#define LOGIC_HIGH_LEVEL       (1.0)  // a logic HIGH is 64 units (manual p.233), which is 1.0 in the engine (§16)
 
-#define CHORUS_PARAM_DETUNE     (0)
-#define CHORUS_PARAM_AMOUNT     (1)
-#define CHORUS_PARAM_ACTIVE     (2)
+// §31-§36 - the routing, level and keyboard modules 01 Mini Emulator needs. Parameter order is the
+// module tables' own, which param-validation.md has against the G2.
+#define LEVCONV_PARAM_OUT         (0)    // posStrMap {Pos, PosInv, Neg, NegInv, Bip, BipInv}
+#define LEVCONV_PARAM_IN          (1)    // levConvStrMap {Bip, Pos, Neg}
+#define LEVADD_PARAM_VALUE        (0)
+#define LEVADD_PARAM_BIP_UNI      (1)    // bipUniStrMap, 0 is BIPOLAR (§16.1)
+#define SWSEL_PARAM_SELECT        (0)    // Sw2-1 and Sw8-1: which input is through
+#define SWSEL_CTRL_UNITS          (4.0)  // §33 - In 1 is 0 units, In 2 is 4, ... In 8 is 28
+#define UNITS_PER_FULL_SCALE      (64.0) // §16 - a signal of 1.0 in the engine is 64 units on the G2
+#define VALSW_PARAM_VALUE         (0)    // the Ctrl threshold, 0-64 units in whole steps
+#define VALSW_VALUE_TOP           (63)   // the top step reads 64, not 63 (render_paramType1UniPolShort)
+#define MONOKEY_PARAM_PRIORITY    (0)    // monoKeyStrMap {Last, Lo, Hi}
+#define GLIDE_PARAM_TIME          (0)
+#define GLIDE_PARAM_ON            (1)    // offOnStrMap, default On
+#define GLIDE_PARAM_SHAPE         (2)    // logStrMap {Log, Lin}: 0 is Log
+#define GLIDE_SHAPE_LIN           (1)
+// §36 - a Log glide's Time read as the time to close the gap to 1% of it, which is §17.3's own
+// convention for a time on this instrument. ln(100).
+#define GLIDE_LOG_DECADES         (4.60517)
+
+#define CHORUS_PARAM_DETUNE       (0)
+#define CHORUS_PARAM_AMOUNT       (1)
+#define CHORUS_PARAM_ACTIVE       (2)
 
 // Compress: threshold and reference level run 0..42, ratio 0..66.
-#define COMP_PARAM_THRESHOLD    (0)
-#define COMP_PARAM_RATIO        (1)
-#define COMP_PARAM_ATTACK       (2)
-#define COMP_PARAM_RELEASE      (3)
-#define COMP_PARAM_REFLVL       (4)
-#define COMP_PARAM_ACTIVE       (6)
+#define COMP_PARAM_THRESHOLD      (0)
+#define COMP_PARAM_RATIO          (1)
+#define COMP_PARAM_ATTACK         (2)
+#define COMP_PARAM_RELEASE        (3)
+#define COMP_PARAM_REFLVL         (4)
+#define COMP_PARAM_ACTIVE         (6)
 
 // Read off the instrument's own dial displays, not guessed. See where they are used.
 
@@ -584,6 +604,13 @@ typedef enum {
     eNodeKeyboard,       // §26 - the voice's key as six signals
     eNodeModAmt,         // §29 - ModAmt: the Depth dial scales In by the Mod input
     eNodeSwitch,         // §30 - SwOnOffT: closed passes In, open outputs nothing
+    eNodeLevConv,        // §31 - reads one range and writes another
+    eNodeLevAdd,         // §32 - adds its dial to In
+    eNodeSwSelect,       // §33 - Sw2-1 and Sw8-1: one of n inputs, plus a Ctrl output
+    eNodeValSw,          // §34 - ValSw2-1: In 2 once Ctrl reaches the threshold
+    eNodeMonoKey,        // §35 - the keyboard's last/lowest/highest key, shared by every voice
+    eNodeGlide,          // §36 - a slew for control signals
+    eNodeAudioIn,        // §37 - 2-In: the engine has no audio input, so silence
     eNodeOut,
 } tNodeKind;
 
@@ -706,6 +733,13 @@ typedef struct {
     double          rvWet;
 
     bool            modAmtOneMinus; // §27 - ModAmt's m/1-m button: In stays at full level at Depth 0
+
+    uint32_t        levConvIn;      // §31 - the range read,  levConvStrMap {Bip, Pos, Neg}
+    uint32_t        levConvOut;     // §31 - the range written, posStrMap {Pos, PosInv, ... BipInv}
+    uint32_t        select;         // §33 - which input a Sw2-1/Sw8-1 passes; §35 MonoKey's priority
+    uint32_t        inputCount;     // §33 - how many inputs that switch has (2 or 8)
+    double          glideSeconds;   // §36 - the Time dial, off the instrument's own displayed table
+    bool            glideLin;       // §36 - logStrMap {Log, Lin}: 0 is Log
 
     uint32_t        dxBase;         // §14 - where this router's six Operators sit in dxOp[]
     uint32_t        dxAlgorithm;    // 0..31
@@ -1070,12 +1104,19 @@ static _Atomic bool       gEngineLegatoBank[SOUND_ENGINE_MAX_ENGINES];
 
 // Mono OR Legato: the modes where releasing the sounding key goes back to one still held. §15.2
 static _Atomic bool       gEngineMonoBank[SOUND_ENGINE_MAX_ENGINES];
-#define gEngineMono       (gEngineMonoBank[SE])
+#define gEngineMono    (gEngineMonoBank[SE])
+
+// §35 - the last key pressed and its velocity, for MonoKey's Last priority. They OUTLIVE the key
+// coming up, as the module's pitch output does. Audio thread only, like gKeyHeld below.
+static int32_t            gMonoLastNoteBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = -1};
+#define gMonoLastNote        (gMonoLastNoteBank[SE])
+static uint8_t            gMonoLastVelocityBank[SOUND_ENGINE_MAX_ENGINES];
+#define gMonoLastVelocity    (gMonoLastVelocityBank[SE])
 
 // §15.1 - the keys held down, as a count per key. Audio thread only: voice_note_on/off keep it.
-#define MIDI_KEY_COUNT    (128)
+#define MIDI_KEY_COUNT       (128)
 static uint8_t            gKeyHeldBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_COUNT];
-#define gKeyHeld          (gKeyHeldBank[SE])
+#define gKeyHeld             (gKeyHeldBank[SE])
 
 // notes §32
 static _Atomic uint32_t   gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
@@ -1184,8 +1225,15 @@ static void chorus_reset(uint32_t line);
 // because the gate is fired by that voice's own envelope.
 static uint32_t           gPulseCountBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gPulseCount    (gPulseCountBank[SE])
+// §36 - one Glide module's slewed output, per voice. `primed` is what makes the FIRST value it
+// ever sees arrive whole instead of being glided up from zero.
+static double             gGlideOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gGlideOut       (gGlideOutBank[SE])
+static bool               gGlidePrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gGlidePrimed    (gGlidePrimedBank[SE])
+
 static double             gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gPulsePrev     (gPulsePrevBank[SE])
+#define gPulsePrev      (gPulsePrevBank[SE])
 
 // Compressor gain-reduction state, one per node.
 static double             gCompEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
@@ -1490,6 +1538,39 @@ static double glide_time_seconds(double setting) {
     return low + ((high - low) * fraction);
 }
 
+// §36 - the Glide MODULE's Time dial, read off the same displayed table the G2 shows on its face:
+// 0.2 ms at 0 to 22.4 s at 127, which is a different law from the patch glide's above. Reading the
+// table rather than fitting it is what the patch glide already does, and it cannot drift from what
+// the module's own dial reads.
+static double glide_module_seconds(double setting) {
+    const char * lowText  = NULL;
+    const char * highText = NULL;
+    double       fraction = 0.0;
+    int          index    = 0;
+
+    if (setting < 0.0) {
+        setting = 0.0;
+    } else if (setting > 127.0) {
+        setting = 127.0;
+    }
+    index    = (int)setting;
+    fraction = setting - (double)index;
+    lowText  = glide_module_time_str((uint8_t)index);
+    highText = glide_module_time_str((uint8_t)((index < 127) ? (index + 1) : 127));
+
+    if ((lowText == NULL) || (highText == NULL)) {
+        return 0.0002;
+    }
+    // Every entry is in milliseconds, and the first few carry a decimal point ("0.2ms"), so atof
+    // rather than atoi - which would read those as zero.
+    {
+        double low  = atof(lowText) / 1000.0;
+        double high = atof(highText) / 1000.0;
+
+        return low + ((high - low) * fraction);
+    }
+}
+
 // A parameter's value with every morph applied. morphRange is a SIGNED 8-bit offset from the dialled
 // value — under 128 it is positive, at or above it is that value minus 256 — so a morph sweeps the
 // parameter from where the knob sits towards its morph target as the controller moves.
@@ -1597,6 +1678,8 @@ static void reset_node_state(void) {
             gCompEnv[v][i]       = 0.0;
             gPulseCount[v][i]    = 0;
             gPulsePrev[v][i]     = 0.0;
+            gGlideOut[v][i]      = 0.0;      // §36
+            gGlidePrimed[v][i]   = false;
         }
     }
 
@@ -1848,10 +1931,11 @@ const char * sound_engine_debug_text(void) {
     // One entry per tNodeKind, in enum order. Kept in step with it — a short array here is read off
     // the end by the kindName[n->kind] below, which is a stack overflow rather than a wrong label.
     const char * kindName[] = {
-        "Osc",      "OscShp",   "Filter",  "LevAmp", "LevMult",   "Mix",    "Env",
-        "Chorus",   "Compress", "Delay",   "Reverb", "Lfo",       "Const",  "FxIn",
-        "PassThru", "Pulse",    "Shaper",  "Fade",   "MixStereo", "Noise",  "OscNoise",
-        "FltMulti", "Eq",       "FltComb", "Dx",     "Keyboard",  "ModAmt", "Switch", "Out"
+        "Osc",      "OscShp",   "Filter",   "LevAmp", "LevMult",   "Mix",    "Env",
+        "Chorus",   "Compress", "Delay",    "Reverb", "Lfo",       "Const",  "FxIn",
+        "PassThru", "Pulse",    "Shaper",   "Fade",   "MixStereo", "Noise",  "OscNoise",
+        "FltMulti", "Eq",       "FltComb",  "Dx",     "Keyboard",  "ModAmt", "Switch",
+        "LevConv",  "LevAdd",   "SwSelect", "ValSw",  "MonoKey",   "Glide",  "AudioIn", "Out"
     };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
@@ -1922,7 +2006,9 @@ static void reset_voices(void) {
         gVoice[v].queueOrder  = v;   // §15.1a - the queue starts in voice order, front to back
     }
 
-    gVoiceClock = (uint64_t)MAX_VOICES;
+    gVoiceClock       = (uint64_t)MAX_VOICES;
+    gMonoLastNote     = -1;          // §35
+    gMonoLastVelocity = 0;
     memset(gKeyHeld, 0, sizeof(gKeyHeld));
 }
 
@@ -2094,6 +2180,8 @@ static void voice_note_on(int32_t note, uint8_t velocity, const tSoundEnginePara
     if ((note < MIDI_KEY_COUNT) && (gKeyHeld[note] < UINT8_MAX)) {
         gKeyHeld[note]++;
     }
+    gMonoLastNote     = note;        // §35 - MonoKey's Last, which outlives the key coming up
+    gMonoLastVelocity = velocity;
 
     // §15.3a - A STEAL DROPS THE VOICE'S GATE AND WAITS FOR IT TO HAVE BEEN SEEN, which is the
     // whole of what the instrument's allocator does here: it writes a zero into that voice's gate
@@ -2487,6 +2575,10 @@ static uint32_t node_output_legs(tNodeKind kind) {
         {
             return KEYBOARD_OUTPUTS;
         }
+        case eNodeMonoKey:
+        {
+            return 3u;   // §35 - Pitch, Gate, Vel
+        }
         default:
         {
             return 2u;
@@ -2684,6 +2776,42 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeSwitch;     // §30
             return true;
         }
+        case moduleTypeLevConv:
+        {
+            *kind = eNodeLevConv;    // §31
+            return true;
+        }
+        case moduleTypeLevAdd:
+        {
+            *kind = eNodeLevAdd;     // §32
+            return true;
+        }
+        case moduleTypeSw2to1:
+        case moduleTypeSw8to1:
+        {
+            *kind = eNodeSwSelect;   // §33
+            return true;
+        }
+        case moduleTypeValSw2to1:
+        {
+            *kind = eNodeValSw;      // §34
+            return true;
+        }
+        case moduleTypeMonoKey:
+        {
+            *kind = eNodeMonoKey;    // §35
+            return true;
+        }
+        case moduleTypeGlide:
+        {
+            *kind = eNodeGlide;      // §36
+            return true;
+        }
+        case moduleType2toIn:
+        {
+            *kind = eNodeAudioIn;    // §37
+            return true;
+        }
         default:
         {
             return false;
@@ -2716,6 +2844,26 @@ static uint32_t inputs_in_module_order(tModuleType moduleType, uint32_t max, uin
         derived[count] = (uint32_t)found;
         count++;
     }
+    return count;
+}
+
+// §17.4 - an envelope's three inputs in the node's own order (audio In, Gate, AM), looked up by the
+// role each plays rather than by where it sits in the module's connector list. Falls back to the
+// positional order for a type the role table does not cover, which is what every envelope used to
+// get.
+static uint32_t env_input_connectors(tModuleType moduleType, uint32_t * derived) {
+    static const char * role[3] = {"VCA Inputs", "Trig & Gate Inputs", "Amp Inputs"};
+    uint32_t            count   = 0;
+
+    for (uint32_t i = 0; i < 3u; i++) {
+        uint32_t index = module_index_for_role(moduleType, roleKindInput, role[i]);
+
+        if (index == MODULE_ROLE_NONE) {
+            return inputs_in_module_order(moduleType, 3u, derived);
+        }
+        derived[count++] = index;
+    }
+
     return count;
 }
 
@@ -2837,9 +2985,13 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeEnv:
         {
-            uint32_t count = inputs_in_module_order(moduleType, 3u, derived);    // In, Gate, AM
+            // §17.4 - BY ROLE, NOT BY POSITION. The first three input connectors are In, Gate and
+            // AM on EnvADSR alone; ModADSR puts its four mod jacks in between, so taking the first
+            // three gave it Gate, Attack M and Decay M - its audio In was never even looked at, the
+            // chain stopped dead at the envelope and everything upstream of it went unbuilt. The
+            // module role table already names all three for every envelope type.
             *connectors = derived;
-            return count;
+            return env_input_connectors(moduleType, derived);
         }
         case eNodeFxIn:
         {
@@ -2855,6 +3007,29 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         {
             *connectors = none;     // a source: no inputs at all
             return 0;
+        }
+        case eNodeMonoKey:          // §35 - the keyboard is its input
+        case eNodeAudioIn:          // §37 - the jacks on the back, which this engine does not have
+        {
+            *connectors = none;
+            return 0;
+        }
+        case eNodeLevConv:          // §31 - In
+        case eNodeLevAdd:           // §32 - In
+        {
+            *connectors = oneIn;
+            return 1;
+        }
+        case eNodeGlide:            // §36 - In, then the Glide On logic input
+        {
+            *connectors = twoIn;
+            return 2;
+        }
+        case eNodeSwSelect:         // §33 - In 1..n, in the module's own order; Ctrl is an OUTPUT
+        case eNodeValSw:            // §34 - In 1, In 2 (On) and Ctrl, likewise
+        {
+            *connectors = derived;
+            return inputs_in_module_order(moduleType, MAX_NODE_INPUTS, derived);
         }
         case eNodeFltMulti:
         case eNodeOscNoise:
@@ -3532,6 +3707,49 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->active = (module->param[variation][SWITCH_PARAM_ON].value != 0);
             break;
         }
+        case eNodeLevConv:
+        {
+            // §31 - both are drop-downs, so both are read raw: a drop-down cannot be morphed.
+            node->levConvIn  = (uint32_t)module->param[variation][LEVCONV_PARAM_IN].value;
+            node->levConvOut = (uint32_t)module->param[variation][LEVCONV_PARAM_OUT].value;
+            break;
+        }
+        case eNodeLevAdd:
+        {
+            // §32 - the same dial law as a Constant (§16.1), which is what it adds.
+            node->constant = constant_level(param_value(module, variation, LEVADD_PARAM_VALUE),
+                                            module->param[variation][LEVADD_PARAM_BIP_UNI].value == 0);
+            break;
+        }
+        case eNodeSwSelect:
+        {
+            // §33 - the selector is a radio button, read raw. inputCount is what the module has,
+            // so Sw2-1 and Sw8-1 share one node kind and one evaluation.
+            node->select     = (uint32_t)module->param[variation][SWSEL_PARAM_SELECT].value;
+            node->inputCount = node->inCount;
+            break;
+        }
+        case eNodeValSw:
+        {
+            // §34 - the threshold in units, its top step reading 64 rather than 63.
+            double raw = param_value(module, variation, VALSW_PARAM_VALUE);
+
+            node->constant = ((raw >= (double)VALSW_VALUE_TOP) ? 64.0 : raw) / UNITS_PER_FULL_SCALE;
+            break;
+        }
+        case eNodeMonoKey:
+        {
+            node->select = (uint32_t)module->param[variation][MONOKEY_PARAM_PRIORITY].value;   // §35
+            break;
+        }
+        case eNodeGlide:
+        {
+            // §36 - Time off the instrument's own displayed table, as the patch glide reads its own.
+            node->glideSeconds = glide_module_seconds(param_value(module, variation, GLIDE_PARAM_TIME));
+            node->glideLin     = (module->param[variation][GLIDE_PARAM_SHAPE].value == GLIDE_SHAPE_LIN);
+            node->active       = (module->param[variation][GLIDE_PARAM_ON].value != 0);
+            break;
+        }
         case eNodeFxIn:
         {
             // db12PadStrMap is {"+6dB", "0dB", "-6dB", "-12dB"}, and the default is the FIRST entry,
@@ -3720,7 +3938,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
             // §17.4
             {
-                int       gateJack   = connector_index_for_input(module->type, ENV_INPUT_GATE, anyConnectorType);
+                uint32_t  envJacks[3];
+                uint32_t  envCount   = env_input_connectors(module->type, envJacks);
+                int       gateJack   = (envCount > ENV_INPUT_GATE) ? (int)envJacks[ENV_INPUT_GATE] : -1;
                 uint32_t  sourceLeg  = 0;
                 tModule * gateSource = (gateJack >= 0) ? module_feeding(module, (uint32_t)gateJack, &sourceLeg) : NULL;
                 bool      unplayed   = (gateSource != NULL) && (node->in[ENV_INPUT_GATE] < 0);
@@ -6574,6 +6794,126 @@ static void keyboard_step(uint32_t voice, double voicePitch, double * out) {
     out[KEYBOARD_OUT_EXP]     = lin * lin * lin;
 }
 
+// §36 - the Glide module's slew, per voice. Log holds the TIME whatever the jump, so it is an
+// exponential approach; Lin holds the RATE, an octave per Time, so it is a straight ramp. The Glide
+// On input gates it: high (or nothing patched, with the button on) glides, otherwise In goes
+// straight through. The first value a Glide ever sees arrives whole rather than being slewed up
+// from zero, which is what `primed` is for.
+static double glide_step(uint32_t voice, uint32_t node, double input, double gateIn,
+                         const tEngineNode * spec) {
+    SE_LOCAL;
+
+    double current = gGlideOut[voice][node];
+    // The button, unless something is patched into Glide On, which then decides. A logic input is
+    // high at 32 units and above - half of the 64 a logic HIGH carries (§16).
+    bool   gliding = (spec->in[1] >= 0) ? (gateIn >= (LOGIC_HIGH_LEVEL * 0.5)) : spec->active;
+
+    if (gGlidePrimed[voice][node] == false) {
+        gGlidePrimed[voice][node] = true;
+        gGlideOut[voice][node]    = input;
+        return input;
+    }
+
+    if ((gliding == false) || (spec->glideSeconds <= 0.0)) {
+        gGlideOut[voice][node] = input;
+        return input;
+    }
+
+    if (spec->glideLin == true) {
+        // A constant rate: an OCTAVE per Time, and a pitch input is one unit a semitone (§16.2),
+        // so twelve units - the same shape the patch glide has (§15.4).
+        double step = (12.0 / UNITS_PER_FULL_SCALE) / (spec->glideSeconds * gSampleRate);
+        double gap  = input - current;
+
+        if (fabs(gap) <= step) {
+            current = input;
+        } else {
+            current += (gap > 0.0) ? step : -step;
+        }
+    } else {
+        // A constant time: a one-pole approach, with Time read as the time to close the gap to
+        // 1% of it. That is §17.3's own convention for a time on this instrument - its decay and
+        // release tables are quoted to -40 dB - rather than a figure invented here. UNMEASURED,
+        // see to-test.md.
+        double tau = spec->glideSeconds / GLIDE_LOG_DECADES;
+
+        current += (input - current) * (1.0 - exp(-1.0 / (tau * gSampleRate)));
+    }
+    gGlideOut[voice][node] = current;
+    return current;
+}
+
+// §31 - the low and high ends of a LevConv range, in engine terms (1.0 is 64 units, §16).
+static void lev_conv_range(bool isOut, uint32_t type, double * lo, double * hi) {
+    if (isOut == false) {
+        // levConvStrMap {Bip, Pos, Neg}
+        switch (type) {
+            case 1:  *lo = 0.0;
+                *hi      = 1.0;
+                break;                                // Pos
+            case 2:  *lo = -1.0;
+                *hi      = 0.0;
+                break;                                // Neg
+            default: *lo = -1.0;
+                *hi      = 1.0;
+                break;                                // Bip
+        }
+        return;
+    }
+
+    // posStrMap {Pos, PosInv, Neg, NegInv, Bip, BipInv} - the Inv forms are the same range, reversed
+    switch (type) {
+        case 1:  *lo = 1.0;
+            *hi      = 0.0;
+            break;                                // PosInv
+        case 2:  *lo = -1.0;
+            *hi      = 0.0;
+            break;                                // Neg
+        case 3:  *lo = 0.0;
+            *hi      = -1.0;
+            break;                                // NegInv
+        case 4:  *lo = -1.0;
+            *hi      = 1.0;
+            break;                                // Bip
+        case 5:  *lo = 1.0;
+            *hi      = -1.0;
+            break;                                // BipInv
+        default: *lo = 0.0;
+            *hi      = 1.0;
+            break;                                // Pos
+    }
+}
+
+// §35 - which key MonoKey reports, or -1 with nothing held. Shared by every voice, so it reads the
+// keys the engine holds rather than anything belonging to one voice.
+static int32_t mono_key_note(uint32_t priority) {
+    SE_LOCAL;
+
+    int32_t found = -1;
+
+    if (priority == 1u) {            // Lo
+        for (int32_t k = 0; k < MIDI_KEY_COUNT; k++) {
+            if (gKeyHeld[k] > 0u) {
+                return k;
+            }
+        }
+
+        return -1;
+    }
+
+    if (priority == 2u) {            // Hi
+        for (int32_t k = MIDI_KEY_COUNT - 1; k >= 0; k--) {
+            if (gKeyHeld[k] > 0u) {
+                return k;
+            }
+        }
+
+        return -1;
+    }
+    found = gMonoLastNote;           // Last, which outlives the key that set it
+    return found;
+}
+
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
                       double value[][NODE_OUTPUTS], double voicePitch) {
     SE_LOCAL;
@@ -6711,6 +7051,72 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             value[n][0] = (spec->in[0] < 0) ? closed : (a * ((spec->active == true) ? 1.0 : 0.0));
             value[n][1] = closed;
             break;
+        }
+        case eNodeLevConv:
+        {
+            // §31 - a straight line from the range it is told to read onto the one it writes, and
+            // then SATURATED: the instrument's part computes offset + gain x In and clamps the
+            // result to full scale, so an over-range input does not carry on past it.
+            double inLo  = 0.0;
+            double inHi  = 0.0;
+            double outLo = 0.0;
+            double outHi = 0.0;
+            double out   = 0.0;
+
+            lev_conv_range(false, spec->levConvIn, &inLo, &inHi);
+            lev_conv_range(true, spec->levConvOut, &outLo, &outHi);
+            out         = outLo + (((a - inLo) * (outHi - outLo)) / (inHi - inLo));
+            value[n][0] = (out > 1.0) ? 1.0 : ((out < -1.0) ? -1.0 : out);
+            break;
+        }
+        case eNodeLevAdd:
+        {
+            value[n][0] = a + spec->constant;   // §32
+            break;
+        }
+        case eNodeSwSelect:
+        {
+            // §33 - the selected input on Out, and which one that is on Ctrl.
+            uint32_t pick = (spec->select < spec->inputCount) ? spec->select : 0u;
+
+            value[n][0] = signal_in(spec, value, pick);
+            value[n][1] = ((double)pick * SWSEL_CTRL_UNITS) / UNITS_PER_FULL_SCALE;
+            break;
+        }
+        case eNodeValSw:
+        {
+            // §34 - In 2 once Ctrl has REACHED the threshold, In 1 below it.
+            double ctrl = signal_in(spec, value, 2);
+
+            value[n][0] = (ctrl >= spec->constant) ? signal_in(spec, value, 1) : a;
+            break;
+        }
+        case eNodeMonoKey:
+        {
+            // §35 - one keyboard, shared by every voice, so none of this reads the voice.
+            int32_t key = mono_key_note(spec->select);
+            bool    any = false;
+
+            for (int32_t k = 0; k < MIDI_KEY_COUNT; k++) {
+                if (gKeyHeld[k] > 0u) {
+                    any = true;
+                    break;
+                }
+            }
+
+            value[n][0] = ((key >= 0) ? ((double)key - KEYBOARD_PITCH_ZERO) : 0.0) / PITCH_MOD_SEMITONES;
+            value[n][1] = (any == true) ? LOGIC_HIGH_LEVEL : 0.0;   // single-trigger: the LAST key up
+            value[n][2] = (double)gMonoLastVelocity / 127.0;
+            break;
+        }
+        case eNodeGlide:
+        {
+            value[n][0] = glide_step(voice, n, a, signal_in(spec, value, 1), spec);   // §36
+            break;
+        }
+        case eNodeAudioIn:
+        {
+            break;   // §37 - the engine has no audio input; both legs stay at zero
         }
         case eNodePulse:
         {
@@ -6920,6 +7326,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeMixStereo:    // a genuine stereo pair
         case eNodeFltMulti:     // three outputs of its own
         case eNodeFxIn:         // the FX bus's two legs
+        case eNodeMonoKey:      // §35 - Pitch, Gate and Vel
+        case eNodeSwSelect:     // §33 - Out and Ctrl, which are not a stereo pair
+        case eNodeSwitch:       // §30 - likewise
+        case eNodeAudioIn:      // §37 - silent, both legs already zero
         case eNodeOut:
         {
             break;

@@ -10736,3 +10736,63 @@ explained away, is worth removing rather than leaving in place on the chance it 
 The original reasoning is preserved in commit `03af6c8` if the trackpad case is ever seen on its
 own - which would mean horizontal drift on a machine with no horizontal scroll device, and that is
 the test that was never run.
+
+2026-09-19 - 01 MINI EMULATOR PLAYS: EIGHT MODULES, AND THE BUG THAT WAS ACTUALLY STOPPING IT (CT:
+"Implement the missing modules for Mini Emulator?"; then, on every law, "check G2Demo" and "in fact
+- any of it"). Reference §§31-37 and §17.4a, revert record 59, Docs/mini-emulator-engine-plan.md.
+
+### The eight
+
+`MonoKey`, `Glide`, `LevConv`, `LevAdd`, `Sw2-1`, `Sw8-1`, `ValSw2-1` and `2-In`, from the plan's
+own table. Connector and parameter ORDER comes from the module resource tables, which are the
+device's own layout; the laws are in the reference sections.
+
+### The bug that mattered more, and it was not on the list
+
+With all eight in, the patch still reported "Nothing is patched into it" and built TEN nodes - the
+FX area, plus one Out and one envelope. The envelope's inputs read `-1`.
+
+`input_connectors()` took an envelope's first three input connectors as In, Gate and AM. **That is
+EnvADSR's layout and no other envelope's.** Checked against the role table, for all nine:
+
+| | In | Gate | AM | what the positional read gave |
+|---|---|---|---|---|
+| EnvADSR | 0 | 1 | 2 | correct |
+| EnvADR, EnvMulti | 1 | 0 | 2 | In and Gate swapped |
+| EnvAHD, EnvD, EnvH, EnvADDSR | 2 | 0 | 1 | all three wrong |
+| ModADSR | 5 | 0 | 6 | In and AM never looked at |
+| ModAHD | 4 | 0 | 5 | the same |
+
+So the eight envelopes that started playing with §17.9 were reading the wrong jacks. On a modulation
+input that is a wrong value; on the AUDIO input it is fatal, because the engine resolves the chain
+BACKWARDS from the Out - an input it never looks at is a chain that stops there. 01 Mini Emulator
+ends its voice path in a ModADSR used as the amp VCA, so the whole voice area behind it went
+unbuilt. It builds 80 nodes now and sounds.
+
+The fix is a lookup, not a new table: the module role list already names all three for every type
+("VCA Inputs", "Trig & Gate Inputs", "Amp Inputs"). EnvADSR's mapping is unchanged, so a patch using
+only those is unaffected - 02 Big Pad still resolves its 25 nodes.
+
+### What the reference settled, and what it did not
+
+Checked against the instrument's own parts where they are readable:
+
+- **LevConv** computes `offset + 2k x In` and CLAMPS to full scale. That confirms the affine
+  straight-line map between the declared ranges AND answers the question the plan left open: it
+  saturates, so an over-range input stops at the rail. The engine clamps now.
+- **Sw2-1** reads the selected connector and writes it with no arithmetic - a pass-through, as
+  assumed.
+- **Glide is NOT settled.** It is built from three Portamento parts whose bodies are lifted
+  fixed-point, and the Main one interleaves a gap-times-coefficient term with a signed constant
+  step - consistent with an approach for Log and a ramp for Lin, but that is a reading, not a
+  decode. The Time dial IS settled: it comes off the instrument's own displayed table (0.2 ms to
+  22.4 s), read rather than fitted, as the patch glide already reads its own. Log's SHAPE uses our
+  convention - a one-pole with the Time as the time to close the gap to 1%, which is §17.3's
+  reading of a time here. Settling it properly needs the translate-and-run harness that FltStatic
+  and OscDual used; todo.md carries it.
+
+**A crash worth recording, because it cost the diagnosis half an hour.** The new switch case in
+`input_connectors()` returned a count and never set `*connectors`, so `add_node()` walked a NULL
+list - but only once the envelope fix let the chain get deep enough to reach a switch. It presented
+as a segfault in `memmove` eight frames into the recursion. AddressSanitizer named the line in one
+run; reading the recursion did not.

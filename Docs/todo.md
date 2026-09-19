@@ -5,7 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. 02 Big Pad (PatchTestFiles/BigPad.pch2) needed only ModAmt and SwOnOffT - both done 2026-09-19, ModAmt's Enable button still a guess (to-test.md). 01 Mini Emulator still needs eight: MonoKey, Glide, LevConv, LevAdd, Sw2-1, Sw8-1, ValSw2-1 and 2-In (its SwOnOffT is now done) - see mini-emulator-engine-plan.md
+- Implement more modules using the recent methods, especially those where we need graphical representation of wave/filter. 02 Big Pad and 01 Mini Emulator both play as of 2026-09-19 (to-test.md); the next targets have not been chosen
 - Envelopes: the other eight now play (reference §17.9) but their KB gate and Reset are not read (EnvADSR's parameter numbers only), and EnvMulti's rise to an intermediate level is a guess - settle both against the instrument's own envelope parts
 - Zoom to Fit from a right click, fitting the area under the cursor
 - Separate zoom for VA and FX.
@@ -64,7 +64,8 @@ SOUND ENGINE
 - Break-up with several notes: at 48 kHz the engine is 26% of a core for BigPad at 16 voices and the worst block is 18% of its deadline, so ASK WHAT RATE AND BUFFER the interface is on before chasing the DSP - 96 and 192 kHz were the real cost and are now halved (findings 2026-09-19)
 - Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) - CONFIRMED right (02 Big Pad asks for and gets 14, 2026-09-19) - but the G2 assigns by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"), so the topbar should show a requested/assigned pair as the original does
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
-- 01 Mini Emulator (PatchTestFiles/MiniEmulator.pch2) plays nothing in the engine: ten missing module types and a node budget a third of its size - see Docs/mini-emulator-engine-plan.md
+- Glide's Log shape: translate-and-run the instrument's three Portamento parts and settle it, as FltStatic and OscDual were. The engine runs a one-pole on OUR reading of the Time (reference §36.1); Lin and the Time table itself are settled
+- MonoKey Lo and Hi report raw keys, so they miss the patch glide that Last carries, and in a Poly patch none of the three knows which voice is asking (reference §35.1)
 - The sustain pedal does not hold keys in the engine (only its morph group moves); the G2 keeps a sustained key held until the pedal lifts (reference §15.5)
 - ShpStatic Inv x3/Inv x2: the engine plays exponents 1/3 and 1/2, the 2026-08-24 capture measured 0.49 and 0.65 (the picker icon draws those) - reconcile
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.md)

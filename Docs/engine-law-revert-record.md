@@ -83,6 +83,8 @@ time and needed NO change - see §11.2.
 | 52 | Which envelope modules the engine plays | EnvADSR alone; the other eight failed `module_kind()` and dropped out of the chain | all nine, from the stage map their faces already used (§17.9) | `f62ce06` `src/soundEngine.c` `module_kind()`, `env_rates_build()`, `envelope_step()` |
 | 53 | What a STOLEN voice does with its envelopes | kept them, so a new note attacked from wherever the stolen note had them - at Sustain, no attack at all | reset to zero on a steal only; the free and released queues still hand over the level they were at (§15.3a) | `src/soundEngine.c` `voice_steal_reset()`, `voice_to_allocate()`, `voice_note_on()` |
 
+| 59 | Where an envelope's In, Gate and AM jacks are | the first three input connectors, which is EnvADSR's layout and no other's - so eight of the nine read the wrong jacks and ModADSR's audio In was never looked at | by role from the module role table, per type (§17.4a) | `src/soundEngine.c` `env_input_connectors()`, `input_connectors()`, `add_node()` |
+
 | 57 | Which free voice a note takes | 51's least-recently-used scan over the SILENT voices, then a second pass over the released-but-ringing ones | the instrument's single queue: released goes to the back, a note takes the front, and nothing about audibility is consulted (§15.1a) | `d2b7341` `src/soundEngine.c` `voice_to_allocate()`, `reset_voices()`, `voice_note_off()`, `sustain_pedal_follow()` |
 
 | 58 | When voice 0 hands itself to free-run | at key-up, for every patch in drone mode - clearing `sounding` on a voice still releasing | only where the chain has NO envelope to release; with one it releases and retires normally first (notes §180) | `d2b7341` `src/soundEngine.c` `sound_engine_render()` |

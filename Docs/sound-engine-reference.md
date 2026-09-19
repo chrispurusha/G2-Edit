@@ -647,6 +647,28 @@ one departure: a jack fed by a module the engine does not play yet (the Keyboard
 often) counts as the keys, so those patches keep sounding. The Gate jack reads its source per voice,
 so an LFO gating it sounds only on a voice that is running - voice 0 at rest in drone mode.
 
+**17.4a AN ENVELOPE'S THREE INPUTS ARE FOUND BY ROLE, not by position (2026-09-19).** The engine
+took the first three input connectors as In, Gate and AM. That is EnvADSR's layout and **only**
+EnvADSR's: every other envelope orders them differently, and ModADSR puts its four mod jacks in
+between, so its audio In sits at connector 5 and its AM at 6.
+
+| | In | Gate | AM | positional read |
+|---|---|---|---|---|
+| EnvADSR | 0 | 1 | 2 | correct |
+| EnvADR, EnvMulti | 1 | 0 | 2 | In and Gate swapped |
+| EnvAHD, EnvD, EnvH, EnvADDSR | 2 | 0 | 1 | all three wrong |
+| ModADSR | 5 | 0 | 6 | In and AM never looked at |
+| ModAHD | 4 | 0 | 5 | the same |
+
+So the eight envelopes that started playing with 17.9 were all reading the wrong jacks, and the
+consequence is bigger than a wrong modulation: the engine follows the chain BACKWARDS from the Out,
+so an audio In it never looks at is a chain that stops dead at the envelope. That is why 01 Mini
+Emulator built ten nodes - the FX area and the envelope - and reported "Nothing is patched into
+it" with its whole voice area unbuilt. It builds 80 now.
+
+The module role table already named all three for every type ("VCA Inputs", "Trig & Gate Inputs",
+"Amp Inputs"), so this is a lookup rather than a new table. `env_input_connectors()`.
+
 **17.5 AM (2026-09-16).** The envelope's level is multiplied by its AM jack, four times the jack's word
 on the instrument, so 64 units (1.0 here) is full level; the product is held to ±1, and an unpatched jack
 is full. The Env output carries the product and the VCA output is the audio times it. This is how a
@@ -1308,3 +1330,83 @@ Closed, the output is the input; open, it is nothing. With **nothing patched to 
 sends 64 units, which is 1.0 in the engine (§16), so the module doubles as a manual constant. The
 Ctrl output carries the switch state as a logic signal on the same scale - 1.0 closed, 0 open
 (manual p.222, and the Logic group's definition of a logic HIGH on p.233).
+
+## 31. LevConv
+
+Added 2026-09-19. Two drop-downs, no dial: the range it READS (`levConvStrMap` {Bip, Pos, Neg}) and
+the one it WRITES (`posStrMap` {Pos, PosInv, Neg, NegInv, Bip, BipInv}). Both are drop-downs, so
+neither can be morphed and both are read raw.
+
+**31.1 A straight line between the two ranges, and then SATURATED.** In engine terms (1.0 is 64
+units, §16) Bip is -1..+1, Pos 0..+1 and Neg -1..0; the Inv output forms are the same range with
+its ends swapped. The output is `outLo + (In - inLo) x (outHi - outLo) / (inHi - inLo)`. Bip to Bip
+is therefore unity, which is how 01 Mini Emulator uses five of them.
+
+The instrument's own part computes `offset + 2k x In` and clamps the result to full scale, so the
+affine form is confirmed and the saturation is not optional - an over-range input stops at the rail
+rather than carrying on past it. The offset and the gain come from the host side, which is where
+the two drop-downs land.
+
+## 32. LevAdd
+
+Added 2026-09-19. Adds its dial to the input, and the dial is a Constant's: Bipolar (value - 64)
+units, Unipolar value / 2 units, 127 reading exactly 64 in both (§16.1). It shares
+`constant_level()` with the Constant module, so the two cannot drift apart.
+
+## 33. Sw2-1 and Sw8-1
+
+Added 2026-09-19, one node kind for both. **Out is the selected input, passed through untouched** -
+the instrument's part reads the chosen connector and writes it, with no arithmetic on the way. The
+selector is a radio button, read raw.
+
+**33.1 The Ctrl output** is 0 units for In 1, 4 for In 2, and so on to 28 for In 8 (manual, Common
+Switch parameters) - `select x 4 / 64` in engine terms. 01 Mini Emulator drives a ValSw2-1 from one.
+
+## 34. ValSw2-1
+
+Added 2026-09-19. In 1 normally, In 2 once the Ctrl input REACHES the threshold. The threshold dial
+counts whole units 0 to 64, and its top step reads 64 rather than 63 - the same law the face prints
+(`render_paramType1UniPolShort`).
+
+## 35. MonoKey
+
+Added 2026-09-19. Three outputs and no inputs, and it belongs to the KEYBOARD rather than to a
+voice: every voice sees the same values, so nothing in it reads the voice it is being evaluated for.
+
+- **Pitch** is the chosen key on the Keyboard module's own scale - E4 is 0 units, one unit a
+  semitone (§15.1, manual p.158).
+- **Gate** is high from the first key down until the LAST key comes up, which is the single-trigger
+  behaviour 01 Mini Emulator's two ModADSR depend on. It reads the engine's held-key table (§15.1).
+- **Vel** is the velocity of the last key pressed.
+
+**35.1 Priority** is `monoKeyStrMap` {Last, Lo, Hi}. Lo and Hi are the lowest and highest keys
+currently held; Last OUTLIVES the key that set it, as the module's pitch output does. UNSETTLED: Lo
+and Hi are reported as raw keys, so they do not carry the patch glide that Last does, and in a Poly
+patch all three ignore which voice is asking. Neither matters to 01 Mini Emulator, which is Mono -
+see to-test.md.
+
+## 36. Glide
+
+Added 2026-09-19. A slew for control signals, with its own Time dial - **a different law from the
+patch-wide glide of §15.4**, which runs 19 ms to 6.27 s per octave. This one runs 0.2 ms at 0 to
+22.4 s at 127, read straight off the table the face prints rather than fitted, exactly as the patch
+glide reads its own.
+
+It glides while its button is on, or while the Glide On logic input is high where something is
+patched into it; otherwise the input passes through. The first value a Glide ever sees arrives
+whole rather than being slewed up from zero.
+
+**36.1 THE SLEW SHAPE IS NOT SETTLED.** Lin is a constant rate - an octave per Time, so twelve
+units, the same shape §15.4 has - and that much follows from the manual. Log holds the TIME
+whatever the jump, which makes it an approach rather than a ramp, and the engine currently runs a
+one-pole with Time read as the time to close the gap to 1% of it. **That convention is ours, not
+the instrument's.** It is §17.3's own reading of a time here (the decay and release tables are
+quoted to -40 dB), but the module's own part has not been decoded: it is built from three
+Portamento parts whose bodies are lifted fixed-point, and settling them needs the translate-and-run
+harness the FltStatic and OscDual work used, not a reading. See todo.md.
+
+## 37. 2-In
+
+Added 2026-09-19. The jacks on the back of the instrument, which this engine does not have: two
+outputs, both silent. It exists as a node so a patch containing one is not reported as unmodelled
+and its face is not greyed out. 01 Mini Emulator has one, switched off in its mixer.

@@ -3,6 +3,27 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***01 MINI EMULATOR PLAYS (2026-09-19)*** - reference §§31-37, revert record 59. The eight module
+  types it lacked are in (MonoKey, Glide, LevConv, LevAdd, Sw2-1, Sw8-1, ValSw2-1, 2-In), and with
+  them a bug that mattered more: an envelope's In/Gate/AM jacks were found by POSITION, which is
+  right for EnvADSR and wrong for the other eight, so the chain stopped dead at any ModADSR. The
+  patch built ten nodes and reported "Nothing is patched into it"; it builds 80 and sounds. NEEDS
+  AN EAR AGAINST THE G2, which is the only thing that can settle it - play it in Slot A and
+  compare. Worth listening for specifically: the octave Range switches (Sw8-1 into Pitch), the
+  Decay switch (SwOnOffT and ValSw2-1 setting the envelopes' Release), the pitch path through
+  MonoKey and Glide landing on the played note, and the Filter KBT mix.
+- ***EIGHT ENVELOPES WERE READING THE WRONG JACKS (2026-09-19)*** - reference §17.4a. Separate from
+  the above because it affects any patch with an envelope that is not an EnvADSR: EnvADR and
+  EnvMulti had In and Gate swapped, EnvAHD/EnvD/EnvH/EnvADDSR had all three wrong, ModADSR and
+  ModAHD never looked at their audio In at all. EnvADSR is UNCHANGED, so a patch using only those
+  sounds exactly as it did. CHECK a patch with each of the others - a ModADSR used as a VCA is the
+  clearest case, since it produced silence before.
+- ***GLIDE'S LOG SHAPE IS A GUESS (2026-09-19)*** - reference §36.1. The module plays, its Time
+  comes off the instrument's own displayed table and Lin's constant rate follows the manual, but
+  Log's approach uses OUR reading of what a "time" means here (to 1% of the gap, §17.3's
+  convention). The instrument's Portamento parts have not been decoded. If a glide sounds too fast
+  or too slow on 01 Mini Emulator - its two Glides are Log, Time 28 - that is the first suspect,
+  and todo.md has the harness job.
 - ***VOICE ALLOCATION IS NOW THE INSTRUMENT'S SINGLE QUEUE (2026-09-19)*** - reference §15.1a,
   revert record 57 and 58. What sounded like stealing after a few notes was not stealing: voice 0 is
   the one the engine free-runs for drone, and it had `sounding` cleared the moment its key came up,
