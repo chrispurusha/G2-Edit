@@ -1,9 +1,10 @@
 # 01 Mini Emulator in the sound engine
 
 Living design note, started 2026-09-13. Nothing built yet. What the local sound engine lacks to play
-factory patch **01 Mini Emulator** (Bank 1, location 10 on CT's G2), and the order to add it in.
+**01 Mini Emulator**, and the order to add it in. It is not a factory patch - it is one of CT's own,
+and `PatchTestFiles/MiniEmulator.pch2` is the only copy of it here.
 
-A copy of the patch is `PatchTestFiles/MiniEmulator.pch2`, saved from Slot A. Its name modules read
+That copy was saved from Slot A. Its name modules read
 "MiniMoogy G2", "Patched by Varice J. Mire", "2005". Voice mode Mono.
 
 ## What the engine does with it today

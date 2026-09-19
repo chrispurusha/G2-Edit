@@ -545,6 +545,16 @@ typedef enum {
 #define VOICE_MAX_TAIL_SECONDS    (2.0)
 #define VOICE_FADE_SECONDS        (0.03)
 
+// §17.1 - a linear attack steps full scale in whole increments at ENV_TICK_HZ, so its time is the
+// dial's time rounded to the increment below; the Log and Exp attacks keep the dial's time. Up here
+// rather than beside the envelope code because the steal below is counted in its ticks.
+#define ENV_TICK_HZ    (24000.0)
+
+// §15.3a - how long a STOLEN voice is held with its gate LOW before the note that took it trigs.
+// The instrument runs the DSP a whole pass here; one envelope tick is the least that guarantees
+// every envelope has SEEN the gate down, which is what makes the gate edge a real one.
+#define VOICE_STEAL_GATE_TICKS    (1.0)
+
 typedef enum {
     eNodeOsc = 0,        // OscB
     eNodeOscShp,         // OscShpB — a different parameter layout and waveform set
@@ -987,7 +997,7 @@ typedef enum {
     eStatusPlaying,
 } tSoundEngineStatus;
 
-static tSoundEngineStatus   gStatusBank[SOUND_ENGINE_MAX_ENGINES]     = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = eStatusOff};
+static tSoundEngineStatus   gStatusBank[SOUND_ENGINE_MAX_ENGINES]        = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = eStatusOff};
 #define gStatus              (gStatusBank[SE])
 static uint32_t             gPlayingCountBank[SOUND_ENGINE_MAX_ENGINES];        // how many modules are in the rendered chain
 #define gPlayingCount        (gPlayingCountBank[SE])
@@ -995,14 +1005,27 @@ static uint32_t             gPlayingCountBank[SOUND_ENGINE_MAX_ENGINES];        
 // notes §29
 #define ENGINE_OVERSAMPLE    (2)
 
+// §29a - THE GRAPH RATE IS CAPPED, it is not simply the device rate doubled. The G2's own audio
+// rate is 96 kHz and everything in this engine is fitted against the instrument there, so a device
+// already at or above that needs no oversampling at all: it was paying twice the CPU (four times, at
+// 192 kHz) to run the model at a rate the instrument never uses. ENGINE_OVERSAMPLE stays as the
+// MAXIMUM, since the delay and chorus lines are sized with it at compile time.
+#define ENGINE_GRAPH_RATE_MIN    (88200.0)   // 44.1 kHz doubled - the lowest graph rate in use today
+#define OSC_GRAPH_RATE_MIN       (176400.0)  // notes §34 fitted the decimator at 192 kHz -> 96 kHz
+
+static uint32_t             gOversampleBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = ENGINE_OVERSAMPLE};
+#define gOversample              (gOversampleBank[SE])
+static uint32_t             gOscOversampleBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 4 / ENGINE_OVERSAMPLE};
+#define gOscOversample           (gOscOversampleBank[SE])
+
 // The tempo a clock-synced module works to. The engine does not run the patch's master clock, so
 // anything set to Clk needs a reference; 120 BPM is the obvious one and makes 1/4 exactly half a
 // second. See the delay's Clk branch — this is a stand-in, not the hardware's tempo.
 #define ENGINE_REFERENCE_BPM    (120.0)
 
-static double               gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
+static double               gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
 #define gDeviceRate             (gDeviceRateBank[SE])
-static double               gSampleRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
+static double               gSampleRateBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
 #define gSampleRate             (gSampleRateBank[SE])
 
 // notes §30
@@ -1022,6 +1045,11 @@ typedef struct {
     uint8_t  release;         // the release velocity, 0 until the key comes up - its Release
     uint8_t  row[eAxisCount]; // §26.2 - which row of each per-voice morph table this note plays
     bool     sustained;       // §26.3 - its key is up but the sustain pedal holds it
+    // §15.3a - a note waiting on this voice's gate having been seen LOW, which is what the
+    // instrument's allocator waits for before it trigs. Samples left to wait, the note, its velocity.
+    uint32_t stealWait;
+    int32_t  stealNote;
+    uint8_t  stealVelocity;
 } tVoice;
 
 static tVoice             gVoiceBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES];
@@ -1063,7 +1091,7 @@ static uint64_t           gSeenTopologyBank[SOUND_ENGINE_MAX_ENGINES];
 #define gSeenTopology        (gSeenTopologyBank[SE])
 
 // notes §33
-#define OSC_OVERSAMPLE       (4 / ENGINE_OVERSAMPLE)
+#define OSC_OVERSAMPLE       (4 / ENGINE_OVERSAMPLE)   // the MAXIMUM; gOscOversample is what runs
 // notes §34
 #define OSC_DECIMATE_TAPS    (48)
 
@@ -1501,7 +1529,18 @@ bool sound_engine_active(void) {
     return atomic_load(&gActive);
 }
 
-// The device's rate; the ENGINE runs at ENGINE_OVERSAMPLE times this. gSampleRate is the internal
+// §29a - the graph rate and the oscillators' rate for a given device rate. The smallest factor that
+// reaches each target, never more than the compile-time maximum the buffers are sized for. At 44.1
+// and 48 kHz both are what they have always been; above that they stop doubling.
+static void set_oversampling(double deviceRate) {
+    SE_LOCAL;
+
+    gOversample    = (deviceRate >= ENGINE_GRAPH_RATE_MIN) ? 1u : (uint32_t)ENGINE_OVERSAMPLE;
+    gSampleRate    = deviceRate * (double)gOversample;
+    gOscOversample = (gSampleRate >= OSC_GRAPH_RATE_MIN) ? 1u : (uint32_t)OSC_OVERSAMPLE;
+}
+
+// The device's rate; the ENGINE runs at gOversample times this (§29a). gSampleRate is the internal
 // rate, so every coefficient already derived from it — envelope and glide times, filter and chorus
 // coefficients, LFO and oscillator increments — scales with no further change.
 void sound_engine_set_sample_rate(double sampleRate) {
@@ -1509,7 +1548,7 @@ void sound_engine_set_sample_rate(double sampleRate) {
 
     if (sampleRate > 0.0) {
         gDeviceRate = sampleRate;
-        gSampleRate = sampleRate * (double)ENGINE_OVERSAMPLE;
+        set_oversampling(sampleRate);
     }
 }
 
@@ -1606,7 +1645,7 @@ static void reset_node_state(void) {
 static void build_decimator(void) {
     SE_LOCAL;
 
-    double   cutoff = 0.45 / (double)OSC_OVERSAMPLE;    // as a fraction of the oversampled rate
+    double   cutoff = 0.45 / (double)gOscOversample;    // as a fraction of the oversampled rate
     double   sum    = 0.0;
     uint32_t i      = 0;
 
@@ -1628,7 +1667,7 @@ static void build_decimator(void) {
         gOscDecimate[i] /= sum;
     }
 
-    cutoff         = 0.45 / (double)ENGINE_OVERSAMPLE;
+    cutoff         = 0.45 / (double)gOversample;
     sum            = 0.0;
 
     for (i = 0; i < OUT_DECIMATE_TAPS; i++) {
@@ -1878,6 +1917,7 @@ static void reset_voices(void) {
         gVoice[v].quiet       = 0;
         gVoice[v].released    = 0;
         gVoice[v].fade        = 1.0;
+        gVoice[v].stealWait   = 0u;
     }
 
     gVoiceClock = 0;
@@ -1938,28 +1978,6 @@ static uint32_t voice_to_steal(uint32_t count, int32_t note) {
     return (oldest >= 0) ? (uint32_t)oldest : 0;
 }
 
-// §15.3a - a STOLEN voice starts its envelopes again from zero. A voice taken from the free or the
-// released queue does not: §17.3/§17.7 have Normal attack from the level it is at, and that matches
-// the instrument through a retrigger during release. A steal is the different case - the stolen note
-// is still held, so its envelopes are sitting at Sustain and an attack from there is no attack at all.
-static void voice_steal_reset(uint32_t v) {
-    SE_LOCAL;
-
-    for (uint32_t n = 0; n < MAX_ENGINE_NODES; n++) {
-        gEnvLevel[v][n] = 0.0;
-        gEnvQ[v][n]     = 0;
-        gEnvTick[v][n]  = 0.0;
-        gEnvStage[v][n] = ENV_STAGE_IDLE;
-    }
-
-    for (uint32_t o = 0; o < MAX_DX_OPERATORS; o++) {   // §14 - an Operator's envelope is one too
-        gDxEnvDb[v][o]    = DX_SILENT_DB;
-        gDxEnvStage[v][o] = eDxIdle;
-    }
-
-    gVoice[v].envelope = 0.0;
-}
-
 // notes §69
 static uint32_t voice_to_allocate(uint32_t count, int32_t note, bool * stolen) {
     SE_LOCAL;
@@ -1994,7 +2012,7 @@ static uint32_t voice_to_allocate(uint32_t count, int32_t note, bool * stolen) {
     if (bestAge != UINT64_MAX) {
         return best;
     }
-    *stolen = true;
+    *stolen = true;   // §15.3a - in EVERY mode, Mono and Legato included, as the instrument does
     return voice_to_steal(count, note);
 }
 
@@ -2024,26 +2042,16 @@ static uint32_t axis_rows(tMorphAxis axis) {
 static void merge_voice_nodes(uint32_t voice, const tSoundEngineParams * params);
 static void merge_last_nodes(const tSoundEngineParams * params);
 
-static void voice_note_on(int32_t note, uint8_t velocity, const tSoundEngineParams * params) {
+// The second half of voice_note_on(): everything that starts a note once the voice is settled on.
+// Split out because a STOLEN voice does not start its note here - it fades first (§15.3a), and
+// start_pending_steals() calls this from the render loop when that fade has finished.
+static void voice_start_note(uint32_t chosen, int32_t note, uint8_t velocity,
+                             const tSoundEngineParams * params) {
     SE_LOCAL;
 
-    uint32_t count  = atomic_load(&gEngineVoices);
+    tVoice * voice = &gVoice[chosen];
 
-    // Bounded BEFORE it is used to pick a voice, not after. A published count is already clamped,
-    // but a zero would send voice_to_allocate() round an empty loop and every note would land on
-    // voice 0 — one note at a time, silently, with no obvious cause.
-    if (count < 1) {
-        count = 1;
-    } else if (count > MAX_VOICES) {
-        count = MAX_VOICES;
-    }
-    bool     stolen = false;
-    uint32_t chosen = voice_to_allocate(count, note, &stolen);
-
-    if (stolen == true) {
-        voice_steal_reset(chosen);   // §15.3a
-    }
-    tVoice * voice  = &gVoice[chosen];
+    voice->stealWait          = 0;
 
     // notes §70
     voice->glideActive        = voice->gate;
@@ -2073,9 +2081,65 @@ static void voice_note_on(int32_t note, uint8_t velocity, const tSoundEnginePara
     // §26.2.2 - this voice's rows have just changed, and gLastRow with them
     merge_voice_nodes((uint32_t)(voice - &gVoice[0]), params);
     merge_last_nodes(params);
+}
 
+static void voice_note_on(int32_t note, uint8_t velocity, const tSoundEngineParams * params) {
+    SE_LOCAL;
+
+    uint32_t count  = atomic_load(&gEngineVoices);
+
+    // Bounded BEFORE it is used to pick a voice, not after. A published count is already clamped,
+    // but a zero would send voice_to_allocate() round an empty loop and every note would land on
+    // voice 0 — one note at a time, silently, with no obvious cause.
+    if (count < 1) {
+        count = 1;
+    } else if (count > MAX_VOICES) {
+        count = MAX_VOICES;
+    }
+    bool     stolen = false;
+    uint32_t chosen = voice_to_allocate(count, note, &stolen);
+
+    // THE KEY COUNT IS KEPT HERE, not in voice_start_note(), so that a stolen note held back for its
+    // fade still counts as held the instant it arrived - otherwise a note-off inside those few
+    // milliseconds would find nothing to release.
     if ((note < MIDI_KEY_COUNT) && (gKeyHeld[note] < UINT8_MAX)) {
         gKeyHeld[note]++;
+    }
+
+    // §15.3a - A STEAL DROPS THE VOICE'S GATE AND WAITS FOR IT TO HAVE BEEN SEEN, which is the
+    // whole of what the instrument's allocator does here: it writes a zero into that voice's gate
+    // word and runs the DSP a pass before the new note trigs. Nothing is reset and nothing is cut -
+    // the envelopes take their release stage for that pass, and the gate rising then restarts the
+    // attack under §17.3 (from the level it is at) or §17.7 (from zero, where Reset is on). Which
+    // of those a stolen note gets is the patch's own Reset switch, not a rule of the allocator.
+    //
+    // LEGATO DOES NOT DO IT. The instrument skips the gate drop outright in Legato and does not
+    // re-raise the gate while a key is still held, so the note simply moves to the voice.
+    if ((stolen == true) && (atomic_load(&gEngineLegato) == false)) {
+        gVoice[chosen].gate          = false;
+        gVoice[chosen].stealWait     = (uint32_t)(VOICE_STEAL_GATE_TICKS * gSampleRate / ENV_TICK_HZ) + 1u;
+        gVoice[chosen].stealNote     = note;
+        gVoice[chosen].stealVelocity = velocity;
+        return;
+    }
+    voice_start_note(chosen, note, velocity, params);
+}
+
+// §15.3a - called once per sample from the render loop, beside the note queue. The instrument's
+// wait-for-the-DSP in one line: a stolen voice has had its gate taken down, and the note that took
+// it trigs once every envelope has run a tick with it down.
+static void start_pending_steals(const tSoundEngineParams * params) {
+    SE_LOCAL;
+
+    for (uint32_t v = 0; v < params->voiceCount; v++) {
+        if (gVoice[v].stealWait == 0u) {
+            continue;
+        }
+        gVoice[v].stealWait--;
+
+        if (gVoice[v].stealWait == 0u) {
+            voice_start_note(v, gVoice[v].stealNote, gVoice[v].stealVelocity, params);
+        }
     }
 }
 
@@ -2093,6 +2157,7 @@ static void voice_note_off(int32_t note, uint8_t release) {
             }
             gVoice[v].gate      = false;
             gVoice[v].sustained = false;
+            gVoice[v].stealWait = 0u;         // §15.3a - a note waiting on a gate pass goes with the rest
         }
 
         return;
@@ -2109,6 +2174,13 @@ static void voice_note_off(int32_t note, uint8_t release) {
 
     for (uint32_t v = 0; v < MAX_VOICES; v++) {
         tVoice * voice = &gVoice[v];
+
+        // §15.3a - THE KEY CAME UP INSIDE THE GATE PASS. Its note is not on a voice yet, so the
+        // test below would never see it: drop it here, and the voice stays as the steal left it -
+        // gate down, releasing.
+        if ((voice->stealWait != 0u) && (voice->stealNote == note)) {
+            voice->stealWait = 0u;
+        }
 
         if ((voice->gate == false) || (voice->note != note)) {
             continue;   // a key that was not sounding changes nothing but the keys held
@@ -2275,9 +2347,6 @@ static double env_time_seconds(double paramValue) {
     return adr_time_seconds(paramValue);
 }
 
-// §17.1 - a linear attack steps full scale in whole increments at ENV_TICK_HZ, so its time is the
-// dial's time rounded to the increment below; the Log and Exp attacks keep the dial's time.
-#define ENV_TICK_HZ             (24000.0)
 #define ENV_FULL_SCALE_STEPS    (8388608.0)  // full scale in the tick's fixed-point increments
 
 static double env_attack_seconds(double paramValue, uint32_t shape) {
@@ -5248,7 +5317,7 @@ void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t ti
     if (type >= REVERB_TYPE_COUNT) {
         type = 0;
     }
-    gSampleRate       = deviceRate * (double)ENGINE_OVERSAMPLE;
+    set_oversampling(deviceRate);
 
     tEngineNode node;
 
@@ -5326,7 +5395,7 @@ void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_
     if ((in == NULL) || (out == NULL) || (frames == 0) || (deviceRate <= 0.0)) {
         return;
     }
-    gSampleRate = deviceRate * (double)ENGINE_OVERSAMPLE;
+    set_oversampling(deviceRate);
 
     // A second render in one process would otherwise start with the previous one's line and LFO
     // phase - the same trap the reverb IR clears for.
@@ -5988,9 +6057,9 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
         dt  = frequency / gSampleRate;
         sum = osc_waveform(voice, node, spec, advance_phase(&gPhase[voice][node], dt), dt, inc96, shape);
     } else {
-        dt = frequency / (gSampleRate * (double)OSC_OVERSAMPLE);
+        dt = frequency / (gSampleRate * (double)gOscOversample);
 
-        for (step = 0; step < OSC_OVERSAMPLE; step++) {
+        for (step = 0; step < gOscOversample; step++) {
             double phase = advance_phase(&gPhase[voice][node], dt);
 
             gOscHistory[voice][node][gOscHistoryPos[voice][node]] = (float)osc_waveform(voice, node, spec, phase, dt, inc96, shape);
@@ -6001,12 +6070,19 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
         const float * history = gOscHistory[voice][node];
         uint32_t      oldest  = gOscHistoryPos[voice][node];
 
-        for (tap = 0; tap < OSC_DECIMATE_TAPS; tap++) {
-            sum += (double)history[oldest] * gOscDecimate[OSC_DECIMATE_TAPS - 1 - tap];
-            oldest++;
+        if (gOscOversample == 1u) {
+            // §29a - ONE SAMPLE IN, ONE OUT: there is no image to fold, so the filter is skipped
+            // rather than run as a near-allpass. The history is still written above, so the taps
+            // are warm the moment a rate change puts the oversampling back.
+            sum = (double)history[(oldest + (OSC_DECIMATE_TAPS - 1u)) % OSC_DECIMATE_TAPS];
+        } else {
+            for (tap = 0; tap < OSC_DECIMATE_TAPS; tap++) {
+                sum += (double)history[oldest] * gOscDecimate[OSC_DECIMATE_TAPS - 1 - tap];
+                oldest++;
 
-            if (oldest >= OSC_DECIMATE_TAPS) {
-                oldest = 0;
+                if (oldest >= OSC_DECIMATE_TAPS) {
+                    oldest = 0;
+                }
             }
         }
     }
@@ -7014,7 +7090,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
     // notes §174
     if (engine_no_free_run() == false) {
-        double idleSamples = (double)frameCount * (double)ENGINE_OVERSAMPLE;
+        double idleSamples = (double)frameCount * (double)gOversample;
 
         for (uint32_t v = 0; v < params.voiceCount; v++) {
             // notes §175
@@ -7046,19 +7122,30 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             }
         }
     }
+    // NONE OF THESE THREE DEPEND ON THE SAMPLE, so they are worked out once for the whole call
+    // rather than per sample - the exp() in particular. They were inside the sample loop, hoisted
+    // out of the voice loop but no further; the compiler will not lift them itself, because
+    // eval_node() could in principle write gSampleRate.
+    // §15.4 - a constant glide rate: the time is per octave, so this is semitones per sample.
+    double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
+    double smoothCoeff  = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
+    double glideStep    = (params.glideSeconds > 0.0)
+                          ? (12.0 / (params.glideSeconds * gSampleRate)) : 0.0;
 
     for (frame = 0; frame < frameCount; frame++) {
         uint32_t sub = 0;
 
-        // ENGINE_OVERSAMPLE passes of the whole graph per output sample. Note events are consumed
-        // inside, so they land on the finer grid too rather than being quantised to the output rate.
-        for (sub = 0; sub < ENGINE_OVERSAMPLE; sub++) {
+        // gOversample passes of the whole graph per output sample (§29a - one, where the device is
+        // already at the instrument's own rate). Note events are consumed inside, so they land on
+        // the finer grid too rather than being quantised to the output rate.
+        for (sub = 0; sub < gOversample; sub++) {
             double value[MAX_ENGINE_NODES][NODE_OUTPUTS];
             double voiceSum[MAX_ENGINE_NODES][NODE_OUTPUTS];
 
             // One event per sample. A chord's worth of note-ons arriving together therefore lands over
             // consecutive samples rather than all but the last being thrown away, and every note takes
             // effect where it actually arrived instead of at the next buffer boundary.
+            start_pending_steals(&params);   // §15.3a - before the queue: a voice about to trig is busy
             (void)take_next_note_event(&params);
 
             // notes §176
@@ -7078,14 +7165,6 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             }
             double bend         = ((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones;
             double sample[2][2] = {{0.0, 0.0}, {0.0, 0.0}};   // [output pair][channel]
-
-            double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
-            double smoothCoeff  = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
-            // Depends on the patch and the rate, not on the voice, so it is worked out once here
-            // rather than once per voice — an exp() per voice per sample is not free at eight of them.
-            // §15.4 - a constant rate: the time is per octave, so this is semitones per sample.
-            double glideStep    = (params.glideSeconds > 0.0)
-                                  ? (12.0 / (params.glideSeconds * gSampleRate)) : 0.0;
 
             // PARAMETER SMOOTHING IS PER SAMPLE, NOT PER VOICE. It tracks where a knob is, which is
             // one thing however many notes are sounding — and running it inside the voice loop would
@@ -7108,7 +7187,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 gSmoothPrimed[n]   = true;
             }
 
-            memset(voiceSum, 0, sizeof(voiceSum));
+            memset(voiceSum, 0, (size_t)params.nodeCount * sizeof(voiceSum[0]));
 
             // notes §178
             for (uint32_t v = 0; v < params.voiceCount; v++) {
@@ -7215,8 +7294,9 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 voice->released = (finished == true) ? (voice->released + 1) : 0;
 
                 // notes §182
-                if (  ((finished == true) && (voice->quiet > (uint32_t)(VOICE_SILENCE_SECONDS * gSampleRate)))
-                   || ((freeRun == false) && (voice->fade <= 0.0))) {
+                if (  (voice->stealWait == 0u)
+                   && (  ((finished == true) && (voice->quiet > (uint32_t)(VOICE_SILENCE_SECONDS * gSampleRate)))
+                      || ((freeRun == false) && (voice->fade <= 0.0)))) {
                     voice->sounding = false;
                     voice->quiet    = 0;
                     voice->released = 0;
@@ -7316,7 +7396,17 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             // Walked rather than recomputed, as in the oscillator decimator above and for the same
             // reason — the same taps in the same order, without a division per tap. All four
             // channels share the walk and the coefficient lookup; only the history line differs.
-            {
+            if (gOversample == 1u) {
+                // §29a - the graph already runs at the output rate, so every internal sample IS an
+                // output sample and there is nothing to fold down. 256 multiply-accumulates an
+                // output sample, skipped.
+                uint32_t last = (gOutHistoryPos + (OUT_DECIMATE_TAPS - 1u)) % OUT_DECIMATE_TAPS;
+
+                outSample[0] = gOutHistory[0][last];
+                outSample[1] = gOutHistory[1][last];
+                outSample[2] = gOutHistory[2][last];
+                outSample[3] = gOutHistory[3][last];
+            } else {
                 uint32_t oldest = gOutHistoryPos;
 
                 for (tap = 0; tap < OUT_DECIMATE_TAPS; tap++) {
@@ -7333,7 +7423,6 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     }
                 }
             }
-
             milli = fmax(fmax(fabs(outSample[0]), fabs(outSample[1])),
                          fmax(fabs(outSample[2]), fabs(outSample[3]))) * 1000.0;
 
