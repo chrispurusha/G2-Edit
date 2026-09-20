@@ -147,7 +147,13 @@ BUILD
 - Cross-platform build (Windows/Linux) - the render backend seam is in place, the rest is not
 
 
-- Some variations of 01 Mini Emulator do not sound like the G2 (CT 2026-09-20). The wave is ruled out (reference §6.2) and variations do reach the engine; needs a specific symptom - which variation and what is wrong
+- ModADSR/ModAHD: the ATTACK and SUSTAIN mod jacks, and all of ModAHD's, are implemented but unmeasured (reference §17.10) - only the decay is checked against the G2
+
+- Never measure an envelope or any other time constant THROUGH a resonant filter. Tracking a
+  cutoff sweep with an 80 ms window on a filter at high Res said our ModADSR attack was 4x slow
+  (40 ms against 160); measured directly through the module's own VCA on a sine the two agreed
+  within 4 ms. The window cannot resolve the attack and the ring smears the edge. Put the envelope
+  on a VCA and read the amplitude.
 
 DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from this file, the constraint is not)
 
