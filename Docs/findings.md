@@ -10814,3 +10814,266 @@ device against `reset_node_state()`.
 
 A latent bug of the same shape to watch for: anything else derived from `gOversample` or
 `gOscOversample` at prime time rather than per block.
+
+2026-09-19 - THE PLUG-IN STOPPED REMEMBERING THE LAST PATCH FOLDER, AND THE CAUSE WAS AN UNRELATED
+HOOK (CT: "plugin is no longer remembering to start at the last used patch folder"). plugin/g2Plugin.c.
+
+Nothing was wrong with the persistence. The key is written by the application into its own settings
+file and read back across files on purpose, so the two open where either left off
+(`save_file_browser_directory()` / `shared_file_browser_directory()`, persistence.c). It was on disk
+with a real path throughout, and a process calling itself "G2 Alike" reads and writes it correctly -
+checked directly against `prefs_get_string_from("G2-Edit", ...)`.
+
+What had gone was the REGISTRATION. `load_saved_settings()` is what hands the file browser its
+start-directory provider and its directory-changed callback, and in the plug-in the only thing that
+ever reached it was `g2_plugin_prefs_init()` - called from `g2_editor_width_load()` and nowhere
+else. Both view wrappers call that hook only when the instance has no width of its own:
+
+```
+    VST3 view:        if (initialWidth > 0.0) { ... } else if (d->editorWidthLoad != nullptr) { ... }
+    VST3 controller:  if (editorWidth > 0.0) { return editorWidth; }   // before editorWidthLoad
+    AU view:          the same shape
+```
+
+Once the editor geometry went into the saved state (2026-09-17), every REOPENED project had a
+restored width, so the hook was skipped, so prefs were never initialised, so the browser had no
+provider and opened at its default folder. A brand-new instance in a fresh project still took the
+old path and still worked, which is why it presented as "no longer" rather than "never".
+
+`g2_plugin_prefs_init()` is now called from `g2_create()`, where it belongs - the plug-in's prefs
+have nothing to do with how wide its editor is. It is idempotent, so the width hooks still calling
+it costs nothing.
+
+**The shape of this is worth remembering:** initialisation hung off an unrelated feature's hook
+works until that feature grows a reason to skip the hook, and then it fails somewhere else
+entirely. Nothing about the file browser changed.
+
+2026-09-19 - THE STANDALONE NEVER NOTICED A DEVICE RATE CHANGE (CT: "Sample rate may change
+though"). audioOutput.c notes §4.
+
+`audio_output_start()` reads the rate out of the unit's stream format and calls
+`sound_engine_set_sample_rate()` once, before the unit is initialised. Nothing watched it after
+that, and there was no listener on `kAudioDevicePropertyNominalSampleRate` anywhere. So a rate
+changed in Audio MIDI Setup, or set by another application that opened the device first, left the
+engine rendering for the old one - and since notes §29a the rate also picks the oversampling
+factor, so it would be doing the wrong amount of work as well as playing at the wrong speed.
+
+Now listened for, with the work kept off the two threads that must not do it: the listener runs on
+a HAL thread and only raises a flag and wakes the loop, because re-opening the unit from there
+would tear down the callback that may be running and rebuilding the decimators would race the audio
+thread reading them. `audio_output_poll_rate_change()` runs from `render_frame()` and re-OPENS the
+output rather than patching the rate in behind it, so the open does the whole job.
+
+### Not the break-up, though
+
+Chasing "break up after a few voices on standalone, plug-in much better, both at 48 kHz", three
+code-side candidates were measured and all three are too small:
+
+| | cost |
+|---|---|
+| the DSP itself | 15% of the block budget at 64 frames, 16 voices of 02 Big Pad |
+| the snapshot copy on the audio thread | `tSoundEngineParams` is 163 KB, ~480 KB memcpy per render call - about 5% of the budget at 64 frames, and the per-block figures barely move between 64 and 256 frames, so it is not dominant |
+| the per-frame chain rebuild | `sound_engine_update_from_patch()` is called from `render_frame()`, and it is 0.31 ms for 01 Mini Emulator's 80 nodes - 1.8% of a core at 60 fps, which is what notes §37 claims |
+
+So the difference is not in the engine, and the remaining candidates are all things the standalone
+has and the plug-in does not:
+
+- **The buffer size.** `PREF_KEY_BUFFER` defaults to 0, which means "leave the device alone", so
+  the standalone runs at whatever the interface is set to while the plug-in gets the host's - and a
+  host is usually at 256 or 512. At 32 frames the budget is 0.67 ms.
+- **The USB thread.** libusb runs only in the application, and `render_frame()` holds the database
+  READ lock across the whole frame while the USB thread wants the write lock.
+- **The canvas redraw.** The application draws the whole patch; while notes sound the meters keep
+  asking for frames.
+
+Next step is three numbers off the running application rather than more guessing: the buffer size
+from the Audio Device menu, the load the engine reports, and whether it still breaks up with the G2
+unplugged and with the window small.
+
+2026-09-19 (later) - THE BREAK-UP IS NOT THE ENGINE, AND NOW THERE IS SOMETHING THAT CAN SAY SO
+(CT: "I'm currently running at 48kHz and experiencing break up after a few voices on standalone.
+Plug-in is much better"; "I've been using 256 and 512 buffers on standalone and the ableton host";
+"if juce has clues"). audioOutput.c notes §5.
+
+Same rate and the same buffer size on both sides kills the buffer-size explanation, which was the
+best one. What is left is measurement, and everything measurable says the engine is nowhere near
+the deadline:
+
+| | at 256 frames, 48 kHz |
+|---|---|
+| worst render block, 01 Mini Emulator's 80 nodes sounding | 30% of the 5.33 ms budget |
+| the same with the snapshot republished every block | 12% - republishing does not spike it |
+| the per-frame chain rebuild on the UI thread | 0.31 ms, 1.8% of a core at 60 fps |
+| `merge_voice_nodes` for 32 voices on the AUDIO thread | guarded by a real `changed` test, and does not show |
+
+So the engine is not late. Either something is blocking or descheduling the callback, or the
+break-up is not a missed deadline at all - and there was no way to tell the two apart.
+
+### What JUCE had
+
+Its CoreAudio device listens for **`kAudioDeviceProcessorOverload`** and counts it as `xruns`. That
+is CoreAudio's own verdict on whether an IO cycle overran, and nothing here was listening for it.
+Its watched set is worth having whole - the buffer size and the stream format can change under a
+running unit exactly as the rate can (§4), and it watches `DeviceIsAlive` and `DeviceHasChanged`
+too, which we do not yet.
+
+That is the clue, and it is a diagnostic rather than a fix: `SNDSTATUS` now reports
+`rate= buffer= overloads=`. **If the count climbs while it breaks up, the callback really is late
+and there is something blocking it to find. If it stays at zero, our render time is not the
+problem** - and every number above says that is the likely answer.
+
+JUCE is AGPLv3; the mechanism is its idea, the code is ours.
+
+### Still not ruled out, and only testable at the machine
+
+- The USB thread. libusb runs only in the application, and `render_frame()` holds the database READ
+  lock across the whole frame while the USB thread wants the write lock. Does it still break up
+  with the G2 unplugged?
+- The canvas redraw. The application draws the whole patch and the meters keep asking for frames
+  while notes sound. Does a small window change it?
+
+2026-09-19 - THREE "EASY WIN" OPTIMISATIONS MEASURED, NONE KEPT (CT: "Any other easy win
+optimisations?"). All three reverted; the numbers are the point.
+
+Baseline throughout: 02 Big Pad, 16 voices all sounding, 48 kHz, offline harness, CPU seconds per
+6 s of audio. 26.0% of a core, reproducible to about +/-0.3.
+
+### 1. Iterate a node's real output legs instead of the constant - 26% SLOWER
+
+Three loops walk a node's outputs every sample: the clear at the top of `eval_node()`, the voice
+sum, and the mono fan-out. All three run `NODE_OUTPUTS` (6) iterations, and almost every node kind
+writes 2 - only Keyboard (6), MonoKey (3) and FltMulti (3) need more. The voice sum is a
+read-modify-write, so this looked like a three-fold cut in the hottest memory traffic in the
+engine.
+
+It measured **26.2% -> 32.9%**, twice, back to back against the same binary pair.
+
+A trip count of 6 known at compile time lets the compiler unroll those loops and do them as
+straight-line SIMD. A bound read from the node forces a real loop with a branch per iteration, and
+the branch costs more than the stores it saves. **This is in the DO NOT RE-TRY list**, because it
+is a genuinely convincing-looking change.
+
+### 2. Skip a node's smoothing once its dials have arrived - +0.6%
+
+CT's "unchanged values don't need processing", applied to the per-sample parameter smoothing: a
+per-node `settled` flag, set when every smoothed value equals its target exactly, cleared whenever
+a new snapshot arrives (the build serial already changes only when something really did). Correct,
+and worth 0.6% - the smoothing is simply not where the time goes.
+
+### 3. Cache `osc_frequency_hz()`'s exp2 per voice and node - +1.1%
+
+The same idea on the function the profile actually named: `exp2` was 4% of the engine, called once
+per oscillator per voice per oversampled sample. A held note's pitch only moves while a glide, a
+bend or a vibrato is moving it, so remembering the last pitch and the frequency it gave skips most
+of the calls, exactly (same double in, same double out). 1.1%, for 2 MB of banked arrays across 32
+engines. Not worth it.
+
+### Why they are all small
+
+The profile has not changed: `eval_node` and its inlined call site are about 77% of the engine, and
+that is the per-node switch, run once per node per voice per oversampled sample. Nothing that trims
+a constant factor off the edges touches it. The remaining named costs are all of this size - `sin`
+3.4%, `meter_node` 1.9%, `memset` 1.7% - so a handful more of these would buy perhaps 5% between
+them, at the price of five pieces of state to keep right.
+
+**The two changes that DID pay this week were both structural**: not oversampling a device that is
+already at the instrument's rate (notes §29a, 2x above 48 kHz), and the sub-block restructure that
+Docs/engine-multicore-design.md describes, which is worth 3-4x and has not been built. That is
+where the next real win is.
+
+2026-09-19 (later still) - OSCILLATOR PITCH TYPES, AND TWO INSTRUMENTS FOR THE BREAK-UP. Reference
+§6.1a, audioOutput.c notes §5, revert record 60 and 61.
+
+### The Pitch Type drop-down was never implemented
+
+CT, from a debug line on 02 Big Pad: `Osc PitchType 3 not supported, reading Tune as Semi`.
+
+Checked before assuming, because the last two of these turned out to be table bugs rather than
+missing features. This one is real: 02 Big Pad's two oscillators are OscB (type 7) with parameter 4
+- which genuinely IS OscB's Pitch Type menu - set to 3, Partial. Tune 63 in Partial is the ratio
+1:2, an octave below the note. They were playing a semitone below unity instead, so the patch was
+an octave high.
+
+All four settings are in now, from the laws the dial itself prints, and 02 Big Pad's oscillators
+moved from basePitch 63.07 to 52.07 exactly as predicted. §6.1a has the table.
+
+**And a table bug came out of it after all.** OscD's entry claimed its pitch type was parameter 3.
+OscD has five parameters and no Pitch Type menu at all; 3 is its "Pitch" mod dial. That was
+harmless while everything above Semi was refused, and would have become a pitch disaster the moment
+Freq/Factor/Partial started being acted on - a mod dial at 1, 2 or 3 reading as a pitch type. Now
+-1, meaning always Semi. Whether that dial is OscD's PitchVar attenuator is the open todo item and
+is NOT assumed here.
+
+Checked the other four while there: OscA (6), OscB (4), OscC (3), OscNoise (4) and OscDual (4) all
+point at real `pitchTypeStrMap` menus.
+
+### The break-up: what is now known
+
+CT: 48 kHz, 256 and 512 frame buffers on BOTH the standalone and Ableton, the G2 powered down, and
+a simple patch does it too. Then, with the new counter: **zero overruns while it breaks up.**
+
+That is the important one. CoreAudio is not reporting a missed deadline, so the callback is being
+serviced and returning in time - which rules out render cost, thread starvation and buffer size
+together, and agrees with every measurement (the worst block is 30% of budget at 256 frames).
+
+So it is the SAMPLES, not the timing. One candidate is measured and real, though not yet shown to
+be the cause: **the engine has no headroom at full polyphony.** 02 Big Pad's peak against voice
+count, at the default 0 dB output level:
+
+```
+    10 notes 0.853    12 notes 0.960    13 notes 0.997    14 notes 0.983
+```
+
+and the output stage hard-clips at +/-1.0. It did not actually clip in that test, but 0.997 is the
+rail, and a patch with a little more level, or the reverb tail landing on a peak, goes over. Turning
+the engine's Level down is a ten-second test of whether that is what CT is hearing.
+
+### A red herring, recorded so it is not chased again
+
+"Chris' Pad is brighter on plugin. Maybe we're not assuming pitch wheel is at rest?" - a good
+hypothesis, and both defaults were checked: the plug-in declares all eight morphs at 0 and bend
+centred, and the standalone only ever sets a morph from incoming MIDI. The actual cause was the
+computer keyboard against the G2's: the Virtual Keyboard sends a FIXED velocity of 100
+(`gVirtualKeyboard.velocity`), so a patch with velocity-to-filter is as bright as velocity 100 and
+no brighter, however hard the G2's keys are played. Not a bug.
+
+It did leave something worth having: the modulation status line reported the aftertouch morph
+alone, so a wheel, sustain or expression pedal left standing by a keyboard was invisible. It now
+names every morph group that is not zero and any bend that is not centred, or says "controls at
+rest".
+
+2026-09-19 (last) - THE EFFICIENCY-CORE HYPOTHESIS, AND A CHECK ON THE CHECKER (CT: "Ableton shows
+activity on performance cores. Standalone doesn't. Not hard evidence"). misc.mm notes §2a.
+
+CT's observation has a mechanism behind it, which is what makes it worth acting on. **This
+application draws only when something asks it to** - `synthlib_request_redraw()`, deliberately - so
+between gestures it genuinely looks idle to macOS. An idle process is a candidate for App Nap:
+timers coalesced, threads deprioritised, work moved onto the efficiency cores. A DAW never looks
+idle, and every DAW disables napping anyway.
+
+`NSActivityLatencyCritical` is the documented way to say a process is doing audio. It is now held
+for exactly as long as the audio output is open, so an editor with the engine off still naps.
+
+**Two honest caveats.**
+
+First, this does not fit the zero overruns. A thread running late on an efficiency core should make
+CoreAudio report `kAudioDeviceProcessorOverload`, and it reported none. So either the count is a
+false negative or the cores are not the cause. To settle which, `listen_for_rate_changes()` now
+LOGS a failure to attach each listener instead of swallowing it - a listener that silently failed
+would make the count read zero forever, which is the worst possible failure for a diagnostic. If
+the log is clean, zero really means zero and the efficiency-core theory has to explain how.
+
+Second, it is a hypothesis with a mechanism, not a diagnosis. If it does not fix the break-up it
+should come back out rather than stay in on a hunch - noted in to-test.md as something to report
+either way.
+
+### Where the break-up investigation stands
+
+Ruled out by measurement: render cost (30% of budget at 256 frames), the snapshot copy, the
+per-frame chain rebuild, buffer size (same on both), the USB thread (G2 powered down), and patch
+complexity (a simple patch does it too). Ruled out as a cause of the brightness difference, though
+real: nothing about controllers being off their rest values.
+
+Still open: why CoreAudio reports no overrun while the break-up is audible. Either the samples are
+wrong - and the engine has no headroom at full polyphony, 02 Big Pad peaking at 0.997 against a
+hard clip at 1.0 - or the callback is late in a way the device does not report.

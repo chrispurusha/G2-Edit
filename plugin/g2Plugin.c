@@ -239,6 +239,14 @@ static void * g2_create(const tSynthLibPluginDesc * desc) {
 
     (void)desc;     // one variant only - see synthlib_plugin_variants() at the foot of this file
 
+    // HERE, not off the editor-width hook. load_saved_settings() is what gives the file browser its
+    // start-directory provider and its changed callback, and the only thing that used to reach it
+    // was g2_editor_width_load() - which both view wrappers skip once the INSTANCE carries its own
+    // restored width. Since the editor geometry went into the saved state, every reopened project
+    // took that path, so the browser had no provider and opened at the default folder every time
+    // (CT). Idempotent, so the width hooks may still call it.
+    g2_plugin_prefs_init();
+
     if (g2 == NULL) {
         return NULL;
     }

@@ -330,12 +330,16 @@ typedef struct {
 
 static const tOscParams kOscParams[] = {
     //  type             tune cent kbt pmod ptype on  wparam wmode shape aWaves
-    {moduleTypeOscB,     0, 1, 2,  3, 4,  9,  8, -1,  6, false},
-    {moduleTypeOscA,     0, 1, 2,  3, 6,  5,  4, -1, -1, true },
-    {moduleTypeOscC,     0, 1, 2,  7, 3,  5, -1,  0, -1, true },              // FmM 4, FM type 6: FM not modelled, as on OscB
-    {moduleTypeOscD,     0, 1, 2, -1, 3,  4, -1,  0, -1, true },
-    {moduleTypeOscNoise, 0, 1, 2,  3, 4,  7, -1, -1, -1, false},
-    {moduleTypeOscDual,  0, 1, 2,  3, 4, 10, -1, -1, -1, false},
+    {moduleTypeOscB,     0, 1, 2,  3,  4,  9,  8, -1,  6, false},
+    {moduleTypeOscA,     0, 1, 2,  3,  6,  5,  4, -1, -1, true },
+    {moduleTypeOscC,     0, 1, 2,  7,  3,  5, -1,  0, -1, true },             // FmM 4, FM type 6: FM not modelled, as on OscB
+    // OscD has NO Pitch Type menu - five parameters, and 3 is its "Pitch" mod dial. This said 3,
+    // which read that dial as the type; harmless while anything above Semi was refused, and wrong
+    // the moment §6.1a started acting on it. -1 is "always Semi". Whether that dial is the PitchVar
+    // attenuator, and so belongs in pmod, is the open question in todo.md - not assumed here.
+    {moduleTypeOscD,     0, 1, 2, -1, -1,  4, -1,  0, -1, true },
+    {moduleTypeOscNoise, 0, 1, 2,  3,  4,  7, -1, -1, -1, false},
+    {moduleTypeOscDual,  0, 1, 2,  3,  4, 10, -1, -1, -1, false},
 };
 
 static const tOscParams * osc_params(tModuleType type) {
@@ -1906,7 +1910,7 @@ const char * sound_engine_status_text(void) {
 const char * sound_engine_modulation_text(void) {
     SE_LOCAL;
 
-    static char text[160];
+    static char text[256];
     char        vib[48] = {0};
     uint32_t    lfos    = 0;
     uint32_t    i       = 0;
@@ -1926,11 +1930,44 @@ const char * sound_engine_modulation_text(void) {
                  (unsigned)gParams.vibratoCents, gParams.vibratoHz);
     }
 
-    snprintf(text, sizeof(text), "Aftertouch %u msg, morph %u%% peak %u%%, %s, %u LFO of %u nodes",
-             (unsigned)midi_input_pressure_count(),
-             (unsigned)((atomic_load(&gMorphMilli[MORPH_GROUP_AFTERTOUCH]) + 5) / 10),
-             (unsigned)((atomic_load(&gMorphPeakMilli[MORPH_GROUP_AFTERTOUCH]) + 5) / 10),
-             vib, (unsigned)lfos, (unsigned)gParams.nodeCount);
+    // EVERY CONTROLLER THAT IS NOT AT REST, not just aftertouch. A morph left standing - a wheel, a
+    // sustain or expression pedal a keyboard sends at something other than zero, a bend not centred
+    // - changes the patch and there was no way to see it. It is the first thing to check when the
+    // same patch sounds different in two places (CT, 2026-09-19).
+    {
+        static const char * groupName[NUM_MORPHS] = {
+            "Wheel", "Vel", "Keyb", "AfTch", "Sustain", "Pedal", "M7", "M8"
+        };
+        char                moved[72]             = {0};
+        size_t              used                  = 0;
+        int32_t             bend                  = atomic_load(&gBendMilli);
+
+        for (i = 0; i < NUM_MORPHS; i++) {
+            uint32_t milli = atomic_load(&gMorphMilli[i]);
+
+            // Velocity and Keyboard are per voice and never come from a controller (§26.2).
+            if ((milli == 0u) || (i == MORPH_GROUP_VELOCITY) || (i == MORPH_GROUP_KEYBOARD)) {
+                continue;
+            }
+            used += (size_t)snprintf(moved + used, sizeof(moved) - used, "%s%s %u%%",
+                                     (used > 0) ? " " : "", groupName[i], (unsigned)((milli + 5) / 10));
+
+            if (used >= (sizeof(moved) - 12)) {
+                break;
+            }
+        }
+
+        if ((used == 0) && (bend == 0)) {
+            snprintf(moved, sizeof(moved), "controls at rest");
+        } else if (bend != 0) {
+            snprintf(moved + used, sizeof(moved) - used, "%sbend %+.2f", (used > 0) ? " " : "",
+                     (double)bend / 1000.0);
+        }
+        snprintf(text, sizeof(text), "%s, AfTch %u msg peak %u%%, %s, %u LFO of %u nodes",
+                 moved, (unsigned)midi_input_pressure_count(),
+                 (unsigned)((atomic_load(&gMorphPeakMilli[MORPH_GROUP_AFTERTOUCH]) + 5) / 10),
+                 vib, (unsigned)lfos, (unsigned)gParams.nodeCount);
+    }
     return text;
 }
 
@@ -3243,21 +3280,79 @@ static double eq_step(uint32_t voice, uint32_t node, const tEngineNode * spec, d
     return signal;
 }
 
+// §6.1a - what the Tune dial MEANS, which is the Pitch Type drop-down's whole job. All four end as
+// a `basePitch` in the Semi scale where 64 is unity, so the keyboard tracking below and everything
+// downstream stay as they are - a ratio is just an offset in semitones. The laws are the ones the
+// dial itself prints (renderParams.c), shared rather than restated so the two cannot drift.
+//
+// Freq and the sub-audio end of Partial are ABSOLUTE, so they ignore the key: Kbt is forced off for
+// those rather than left to the button, which is what "a fixed frequency" means.
+static double osc_base_pitch(int pitchType, double tune, bool * absolute, bool * silent) {
+    *absolute = false;
+    *silent   = false;
+
+    switch (pitchType) {
+        case 1:      // Freq - 8.1758 Hz to 12.55 kHz
+        {
+            *absolute = true;
+            return MIDI_NOTE_A440 + (12.0 * log2(osc_freq_hz(tune) / 440.0));
+        }
+
+        case 2:      // Factor - 0.0248x to 38.072x of the note
+        {
+            return OSCB_TUNE_UNITY + (12.0 * log2(osc_freq_factor(tune)));
+        }
+
+        case 3:      // Partial - silence, then sub-audio hertz, then 1:n and n:1 of the note
+        {
+            if (tune <= 0.0) {
+                *silent = true;
+                return OSCB_TUNE_UNITY;
+            }
+
+            if (tune < 33.0) {
+                const double minHz = 0.005;
+                const double maxHz = 5.153;
+                double       hz    = exp(((tune - 1.0) / 31.0) * log(maxHz / minHz)) * minHz;
+
+                *absolute = true;
+                return MIDI_NOTE_A440 + (12.0 * log2(hz / 440.0));
+            }
+            {
+                double ratio = (tune < 64.0) ? (1.0 / ((64.0 - tune) + 1.0)) : ((tune - 64.0) + 1.0);
+
+                return OSCB_TUNE_UNITY + (12.0 * log2(ratio));
+            }
+        }
+
+        default:     // Semi, and anything a module offers that this does not know
+        {
+            return tune;
+        }
+    }
+}
+
 static void set_osc_pitch(tEngineNode * node, tModule * module, uint32_t variation, const tOscParams * p) {
     double tune      = param_value(module, variation, (uint32_t)p->tune);
     double cent      = param_value(module, variation, (uint32_t)p->cent);
-    int    pitchType = (int)param_value(module, variation, (uint32_t)p->pitchType);
+    // -1 is a module with no Pitch Type menu at all, which is Semi and nothing else.
+    int    pitchType = (p->pitchType >= 0) ? (int)param_value(module, variation, (uint32_t)p->pitchType) : 0;
+    bool   absolute  = false;
+    bool   silent    = false;
 
-    // Factor and Partial set the pitch against a master oscillator, which the engine does not have.
-    if (pitchType > 1) {
+    if (pitchType > 3) {
         LOG_DEBUG("Sound engine: Osc PitchType %d not supported, reading Tune as Semi\n", pitchType);
     }
     node->oscKbt    = (param_value(module, variation, (uint32_t)p->kbt) != 0.0);
-    node->basePitch = tune + (osc_fine_cents(cent) / 100.0);
+    node->basePitch = osc_base_pitch(pitchType, tune, &absolute, &silent) + (osc_fine_cents(cent) / 100.0);
+
+    if (absolute == true) {
+        node->oscKbt = false;
+    }
     node->modAmount = (p->pitchMod >= 0)
                       ? type_ii_attenuator(param_value(module, variation, (uint32_t)p->pitchMod))
                       : 0.0;
-    node->active    = (param_value(module, variation, (uint32_t)p->active) != 0.0);
+    node->active    = (param_value(module, variation, (uint32_t)p->active) != 0.0) && (silent == false);
 }
 
 #define OSCDUAL_PARAM_SQUARE_LEVEL    (5)     // §12.1 - 6 and 11 are the other way round in the module tables

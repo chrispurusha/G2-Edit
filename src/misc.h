@@ -32,6 +32,11 @@ extern "C" {
 // notes §1
 bool platform_any_mouse_button_down(void);
 
+// notes §2a - tell macOS this process is doing latency-critical work, so it is not napped and its
+// threads are not pushed onto the efficiency cores. Held while the audio output is open.
+void platform_begin_audio_activity(void);
+void platform_end_audio_activity(void);
+
 void register_sleep_wake_notifications(void);
 void setup_main_menu(void);
 
