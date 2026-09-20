@@ -83,6 +83,10 @@ time and needed NO change - see §11.2.
 | 52 | Which envelope modules the engine plays | EnvADSR alone; the other eight failed `module_kind()` and dropped out of the chain | all nine, from the stage map their faces already used (§17.9) | `f62ce06` `src/soundEngine.c` `module_kind()`, `env_rates_build()`, `envelope_step()` |
 | 53 | What a STOLEN voice does with its envelopes | kept them, so a new note attacked from wherever the stolen note had them - at Sustain, no attack at all | reset to zero on a steal only; the free and released queues still hand over the level they were at (§15.3a) | `src/soundEngine.c` `voice_steal_reset()`, `voice_to_allocate()`, `voice_note_on()` |
 
+| 62 | The Glide module's slew | a one-pole per SAMPLE, its time read off the dial's printed string and divided by ln(100) - our convention, not the instrument's | the instrument's own: a coefficient per ENVELOPE TICK from the envelope's decay-multiplier and linear-step tables, via `adr_time_seconds()` (§36.1) | `src/soundEngine.c` `glide_tick_coeff()`, `glide_step()` |
+
+| 63 | What MonoKey's Last reports | a "last key pressed" global of its own, which outlived the key coming up | the mono voice's note, which §15.2 hands back to a still-held key (§35.1) | `src/soundEngine.c` `mono_key_note()` |
+
 | 60 | What an oscillator's Tune dial means | every Pitch Type read as Semi, with a debug line saying so - so Freq, Factor and Partial all played at the wrong pitch | all four implemented, from the laws the dial prints (§6.1a) | `src/soundEngine.c` `osc_base_pitch()`, `set_osc_pitch()` |
 
 | 61 | OscD's pitch-type parameter | index 3, which is its "Pitch" mod dial and not a pitch type - OscD has no such menu | -1, always Semi (§6.1a) | `src/soundEngine.c` `kOscParams[]` |

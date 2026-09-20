@@ -3,6 +3,15 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***MONOKEY RETURNS TO A HELD NOTE, AND GLIDE IS THE INSTRUMENT'S (2026-09-19)*** - reference
+  §35.1 and §36.1, revert record 62 and 63. Both found by reading the instrument after CT's repro:
+  hold a key on 01 Mini Emulator, play a higher one, release it, and the first should sound again -
+  it did on the G2 and did not here. MonoKey's Last now follows the mono voice, which §15.2 has
+  already handed back. Offline the pitch goes 300 Hz, 642, back to 300. The Glide's slew is now the
+  envelope-table coefficient the instrument uses rather than our reading of the printed dial, and
+  runs at the envelope tick rate. CHECK ON THE G2: CT's repro again by ear; a Glide at a few Time
+  settings in both Log and Lin against the hardware; and that Lo and Hi priorities behave (they
+  rescan the held keys now, and report that key's own velocity).
 - ***APP NAP IS NOW REFUSED WHILE THE AUDIO OUTPUT IS OPEN (2026-09-19)*** - misc.mm notes §2a.
   NOT the break-up fix - that was the Debug build (findings). Kept on its own merits: this
   application draws only on request, so between gestures it looks idle to macOS. The render thread
@@ -60,12 +69,6 @@ Full detail for each is in findings.md, searchable by the wording below.
   ModAHD never looked at their audio In at all. EnvADSR is UNCHANGED, so a patch using only those
   sounds exactly as it did. CHECK a patch with each of the others - a ModADSR used as a VCA is the
   clearest case, since it produced silence before.
-- ***GLIDE'S LOG SHAPE IS A GUESS (2026-09-19)*** - reference §36.1. The module plays, its Time
-  comes off the instrument's own displayed table and Lin's constant rate follows the manual, but
-  Log's approach uses OUR reading of what a "time" means here (to 1% of the gap, §17.3's
-  convention). The instrument's Portamento parts have not been decoded. If a glide sounds too fast
-  or too slow on 01 Mini Emulator - its two Glides are Log, Time 28 - that is the first suspect,
-  and todo.md has the harness job.
 - ***VOICE ALLOCATION IS NOW THE INSTRUMENT'S SINGLE QUEUE (2026-09-19)*** - reference §15.1a,
   revert record 57 and 58. What sounded like stealing after a few notes was not stealing: voice 0 is
   the one the engine free-runs for drone, and it had `sounding` cleared the moment its key came up,

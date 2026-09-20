@@ -1107,17 +1107,16 @@ static _Atomic bool       gEngineLegatoBank[SOUND_ENGINE_MAX_ENGINES];
 static _Atomic bool       gEngineMonoBank[SOUND_ENGINE_MAX_ENGINES];
 #define gEngineMono    (gEngineMonoBank[SE])
 
-// §35 - the last key pressed and its velocity, for MonoKey's Last priority. They OUTLIVE the key
-// coming up, as the module's pitch output does. Audio thread only, like gKeyHeld below.
-static int32_t            gMonoLastNoteBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = -1};
-#define gMonoLastNote        (gMonoLastNoteBank[SE])
-static uint8_t            gMonoLastVelocityBank[SOUND_ENGINE_MAX_ENGINES];
-#define gMonoLastVelocity    (gMonoLastVelocityBank[SE])
 
 // §15.1 - the keys held down, as a count per key. Audio thread only: voice_note_on/off keep it.
-#define MIDI_KEY_COUNT       (128)
+#define MIDI_KEY_COUNT    (128)
 static uint8_t            gKeyHeldBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_COUNT];
-#define gKeyHeld             (gKeyHeldBank[SE])
+#define gKeyHeld          (gKeyHeldBank[SE])
+
+// §35 - the velocity each held key was played at, as the instrument keeps one beside its held
+// count. Audio thread only, like gKeyHeld above.
+static uint8_t            gKeyVelocityBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_COUNT];
+#define gKeyVelocity    (gKeyVelocityBank[SE])
 
 // notes §32
 static _Atomic uint32_t   gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
@@ -2046,9 +2045,8 @@ static void reset_voices(void) {
         gVoice[v].queueOrder  = v;   // §15.1a - the queue starts in voice order, front to back
     }
 
-    gVoiceClock       = (uint64_t)MAX_VOICES;
-    gMonoLastNote     = -1;          // §35
-    gMonoLastVelocity = 0;
+    gVoiceClock = (uint64_t)MAX_VOICES;
+    memset(gKeyVelocity, 0, sizeof(gKeyVelocity));   // §35
     memset(gKeyHeld, 0, sizeof(gKeyHeld));
 }
 
@@ -2220,8 +2218,10 @@ static void voice_note_on(int32_t note, uint8_t velocity, const tSoundEnginePara
     if ((note < MIDI_KEY_COUNT) && (gKeyHeld[note] < UINT8_MAX)) {
         gKeyHeld[note]++;
     }
-    gMonoLastNote     = note;        // §35 - MonoKey's Last, which outlives the key coming up
-    gMonoLastVelocity = velocity;
+
+    if (note < MIDI_KEY_COUNT) {
+        gKeyVelocity[note] = velocity;   // §35 - MonoKey's Vel, per key as the instrument keeps it
+    }
 
     // §15.3a - A STEAL DROPS THE VOICE'S GATE AND WAITS FOR IT TO HAVE BEEN SEEN, which is the
     // whole of what the instrument's allocator does here: it writes a zero into that voice's gate
@@ -6984,10 +6984,8 @@ static void lev_conv_range(bool isOut, uint32_t type, double * lo, double * hi) 
 
 // §35 - which key MonoKey reports, or -1 with nothing held. Shared by every voice, so it reads the
 // keys the engine holds rather than anything belonging to one voice.
-static int32_t mono_key_note(uint32_t priority) {
+static int32_t mono_key_note(uint32_t priority, uint32_t voice) {
     SE_LOCAL;
-
-    int32_t found = -1;
 
     if (priority == 1u) {            // Lo
         for (int32_t k = 0; k < MIDI_KEY_COUNT; k++) {
@@ -7008,8 +7006,10 @@ static int32_t mono_key_note(uint32_t priority) {
 
         return -1;
     }
-    found = gMonoLastNote;           // Last, which outlives the key that set it
-    return found;
+    // Last is the mono voice's own note, which §15.2 has already handed back to a held key if the
+    // one above it came up. A "last key pressed" of its own is what stopped a held note returning
+    // when the note above it was released (CT, on 01 Mini Emulator).
+    return gVoice[voice].note;       // and it outlives the key, as the voice's note does
 }
 
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
@@ -7192,7 +7192,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeMonoKey:
         {
             // §35 - one keyboard, shared by every voice, so none of this reads the voice.
-            int32_t key = mono_key_note(spec->select);
+            int32_t key = mono_key_note(spec->select, voice);
             bool    any = false;
 
             for (int32_t k = 0; k < MIDI_KEY_COUNT; k++) {
@@ -7204,7 +7204,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
 
             value[n][0] = ((key >= 0) ? ((double)key - KEYBOARD_PITCH_ZERO) : 0.0) / PITCH_MOD_SEMITONES;
             value[n][1] = (any == true) ? LOGIC_HIGH_LEVEL : 0.0;   // single-trigger: the LAST key up
-            value[n][2] = (double)gMonoLastVelocity / 127.0;
+            value[n][2] = (double)((key >= 0) ? gKeyVelocity[key] : 0u) / 127.0;
             break;
         }
         case eNodeGlide:
