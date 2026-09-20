@@ -1420,3 +1420,14 @@ static const tDxAlgorithm kDxAlgorithms[DX_ALGORITHMS] = {
 const tDxAlgorithm * dx_algorithm(uint32_t index) {
     return &kDxAlgorithms[(index < DX_ALGORITHMS) ? index : 0u];
 }
+
+// §39 - DrumSynth's Master tune. 0 gives 20 Hz and 127 gives 784 Hz, which is the range the
+// manual quotes (p.181).
+double drum_master_hz(double paramValue) {
+    return 20.0 * pow(2.0, paramValue * 0.041675);
+}
+
+// §39 - DrumSynth's Slave, as a multiple of the Master. 127 gives 6.26, the manual's top.
+double drum_slave_ratio(double paramValue) {
+    return pow(2.0, paramValue / 48.0);
+}

@@ -3092,3 +3092,28 @@ voice 0 alone; what the G2 shows for a chord is not measured. FX Area modules ar
 METER_FLOOR. A follower decaying toward zero never gets there, and after a few minutes of silence it
 sinks into denormals, which are slow on Intel. Below 2^-7 the law reads 0 anyway (reference §1.1),
 so the follower is zeroed there and the display is unchanged.
+
+## 192. `sNodeBuilding[]`, in `add_node()`
+
+A PATCH MAY CABLE A MODULE BACK INTO ITS OWN INPUT, and 01 Mini Emulator does: Osc 3 goes through a
+LevConv into the "LFO/Osc 3" switch, the Mod.Mix cross-fader and the "Osc Mod" mixer, and back out
+to every oscillator's pitch - its own included. That is the Minimoog's Osc-3-as-LFO routing, wired
+in full whichever way the switch is set, and the G2 runs it with a delay in the loop.
+
+This walk builds a module's inputs before appending the module itself, so the "already in the
+chain?" test above cannot see a module that is still being built and the recursion goes round the
+loop until the node budget runs out. The patch then reported "Chain too long" and fell silent
+(2026-09-20 - it only surfaced once the cable walk started resolving the input-to-input link that
+closes this loop, cableChain notes §3).
+
+So a module marks itself while its inputs are built, and a leg that arrives back at a module
+already being built reads as UNPATCHED. The loop is broken at the leg that closes it, not at a
+place that would drop the rest of the chain. Cleared at `depth == 0`, which every top-level walk
+starts from, and `_Thread_local` because a plug-in instance builds its own snapshot on its own
+thread.
+
+**This is not the instrument's behaviour**, and it is the limit to lift if a patch ever needs a
+real feedback path: the G2 closes such a loop with a delay, where the node order here has every
+input at a lower index than its consumer and so cannot refer forward at all. In 01 Mini Emulator
+it makes no audible difference, because the switch in the loop is selecting the LFO rather than
+Osc 3.

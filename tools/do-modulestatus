@@ -1,0 +1,27 @@
+#!/bin/bash
+#
+# Builds and runs tools/modulestatus — the generator behind Docs/engine-module-status.md's Plays
+# and Silent lists. See modulestatus.c for why it exists.
+#
+# A script rather than an Xcode target, for the same reason do-render is one: it links a handful of
+# the application's own sources with no GUI and no device.
+
+set -e
+set -u
+set -o pipefail
+
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+OUT="$HERE/tools/modulestatus"
+
+cc -O2 -std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sign-compare \
+   -I"$HERE/src" -I"$HERE/SynthLib/src" \
+   -o "$OUT" \
+   "$HERE/tools/modulestatus.c" \
+   "$HERE/src/soundEngine.c" "$HERE/src/paramCurves.c" "$HERE/src/waveModels.c" \
+   "$HERE/src/dataBase.c" "$HERE/src/globalVars.c" "$HERE/src/cableChain.c" \
+   "$HERE/src/moduleResourcesAccess.c" "$HERE/src/patchParamsResources.c" \
+   "$HERE/src/noteStack.c" "$HERE/src/protocol.c" "$HERE/SynthLib/src/utils.c" \
+   "$HERE/plugin/g2HostIo.c" "$HERE/tools/modulestatus_stubs.c" -lm
+
+echo "built $OUT"
+"$OUT"

@@ -37,6 +37,11 @@ double osc_freq_semitones(double paramValue);   // PitchType 0 "Semi":   -64 .. 
 double osc_freq_hz(double paramValue);          // PitchType 1 "Freq":   8.1758 Hz .. 12.55 kHz
 double osc_freq_factor(double paramValue);      // PitchType 2 "Factor": 0.0248x .. 38.072x
 double osc_fine_cents(double paramValue);       // Cent dial:            -50 .. +50 cents
+
+// §39 - DrumSynth's two pitch dials. Shared with the engine, so the face and the sound cannot
+// disagree: the Master reads 20 Hz to 784 Hz and the Slave a ratio of 1 to 6.26 (manual p.181).
+double drum_master_hz(double paramValue);
+double drum_slave_ratio(double paramValue);
 double osc_shape_percent(double paramValue);    // Shape dial:           50% .. 99%
 double lfo_shape_percent(double paramValue);    // LfoShpA Shape dial:    1% .. 99% (neutral at centre)
 

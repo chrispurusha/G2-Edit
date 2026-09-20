@@ -1408,6 +1408,20 @@ voice: every voice sees the same values, so nothing in it reads the voice it is 
   behaviour 01 Mini Emulator's two ModADSR depend on. It reads the engine's held-key table (§15.1).
 - **Vel** is the velocity of the last key pressed.
 
+**35.2 Pitch carries BEND and VIBRATO, added 2026-09-20.** It did not, and that made the pitch
+wheel dead on any patch whose oscillators have KBT off and take their pitch from this module -
+01 Mini Emulator is exactly that patch, three OscA with KBT off and MonoKey's Pitch routed in
+through a Glide and a mixer per oscillator. The wheel worked everywhere else because every other
+pitch path reads `voicePitch`, which has always had bend and vibrato in it; only MonoKey rebuilt a
+pitch of its own from the raw key and so dropped them (CT, 2026-09-20: "pitch bend doesn't work
+with Mini Emulator. It works with Chris' Lead").
+
+They ride on the KEYBOARD, not on a voice's note, so what the module adds is `voicePitch` less
+that voice's own note - bend plus vibrato and nothing else. That difference is identical for every
+voice, which keeps 35's rule that all voices read the same value out of this module. The note
+itself must NOT come in that way: Last is the mono voice's note by 35 below, and Lo and Hi are
+keys that are still down.
+
 **35.1 Priority** is `monoKeyStrMap` {Last, Lo, Hi}, and the instrument keeps all three for it.
 
 Its note vector holds a HELD COUNT per key with that key's velocity, and the highest and lowest
@@ -1514,3 +1528,67 @@ Clk and Rst in, one output. The Divider dial reads **one more than it holds**, s
   (manual p.236).
 - **Rst is the barred arrow**: the reset does not act at once but waits for the next positive edge
   of Clk.
+
+## 39. DrumSynth
+
+Added 2026-09-19. A master and a slave oscillator, a noise source through a sweeping multimode
+filter, and a global bend plus a click - the classic analogue rhythmbox voice (manual p.181).
+Sixteen parameters, three inputs (Trig, Pitch, Vel) and one audio output.
+
+**39.1 What each dial becomes** is the instrument's own conversion, and the pattern is worth seeing
+whole, because five of the sixteen reuse tables this engine already models:
+
+| dial | conversion |
+|---|---|
+| Master Freq | its own pitch law: 20 Hz at 0 to 784 Hz at 127 |
+| Slave Ratio | `2^(v/48)`, so 1 to 6.26 times the master |
+| Master, Slave, Noise Filter and Bend Decay | the ENVELOPE's decay multiplier table - the same one §36.1's glide uses |
+| Noise Filter Freq | the FILTER cutoff table |
+| Noise Filter Res | linear in the dial, but a QUARTER of full scale at 127 - see 39.4 |
+| Noise Filter Sweep | linear in the dial, over 5 octaves; full scale at 127 |
+| Master and Slave Level, Bend Amount, Click, Noise | an exponential level curve - see 39.3 |
+
+The two pitch laws are shared with the face (`drum_master_hz()`, `drum_slave_ratio()` in
+paramCurves.c), so the dial's reading and the sound cannot disagree.
+
+**39.2 The voice.** Trig fires on a transition from at or below zero to above it (manual), and
+starts every envelope at once. Each then decays at its own per-tick multiplier, on the envelope's
+own 24 kHz tick. The bend sweeps both oscillators DOWN from its octaves above their pitch, and the
+noise filter sweeps DOWN from its octaves above its cutoff, each following its own decay - the
+manual is explicit that both start high and fall. Velocity scales the two levels, the sweep, the
+bend, the click and the noise, and full velocity reaches the dialled settings.
+
+The noise filter is a Chamberlin, the same form §23.1 uses, and it needs §23.1's clamps: without
+them the fifth Kick preset drove it unstable and the module produced 1e27 rather than a drum.
+
+**39.3 The level curve, SETTLED 2026-09-20.** Five dials - Master Level, Slave Level, Bend
+Amount, Click and Noise - share ONE curve, and it is the curve this engine already had:
+`0.01x + 0.99x^3` with `x = dial/127`, i.e. `mix_level_gain()`, the same law the mixers' Exp/dB
+taper and every mod amount use (§14). The instrument's parameter conversion dispatches all sixteen
+dials by index and sends exactly those five through that one table; there is no separate drum
+level law. Nothing in the engine changed.
+
+A hardware sweep on 2026-09-20 fitted each dial's peak independently as a power law and got 3.71
+(Master), 2.75 (Slave) and 2.99 (Noise) - so Noise landed on the cube and the other two did not.
+Those exponents were briefly adopted and are now reverted. **The measurement is not the law**: peak
+output of a decaying hit reads the whole voice - two oscillators summed, the bend still falling,
+the output stage - not the gain word, and the two oscillators are the two that interact. The curve
+stands on the instrument's own conversion; the capture is kept in findings.md as the record of what
+peak-of-a-hit actually measures, which is not this.
+
+**39.4 STILL UNSETTLED: the noise filter, and only the noise filter.** The whole module is two DSP
+parts of its own - one at 96 kHz, one at 24 kHz - so its filter is hand-written rather than one of
+the filter modules, and its coefficient law is inside that code. Two host-side facts are known and
+disagree with what the engine does:
+
+- **Res reaches only a quarter of full scale**: the instrument sends `dial/512`, capped at 0.25,
+  where the engine sends `dial_fraction()` - 0 to 1 - and turns it into a damping of `1 - 0.98 res`.
+  If that word is the Chamberlin damping directly, as the equivalent word is in §23, the engine is
+  four times too resonant at the top of the dial and the drums ring where the instrument thumps.
+- **Noise Filter Freq reads a different cutoff table** from the one §22 and §23 use.
+
+Neither can be settled from the host side alone, because the meaning of both words is in the two
+Compute() bodies. That is a native-harness job of the kind §21-§25 each were, and it would settle
+the filter, the cutoff scale, the click and the four decays together - a better use of a session
+than more captures. Until then the filter shape is the thing to listen to, and Res is the dial to
+distrust.

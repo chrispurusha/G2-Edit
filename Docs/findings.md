@@ -11265,3 +11265,139 @@ is `ParamText::Enum`, which prints the value PLUS ONE, so the Divider reads 1 to
 The truth tables and levels, directly: AND/NAND/OR/NOR/XOR/NXOR all correct over the four input
 pairs; HIGH above zero (0.001 is high, 0 is not); a HIGH output is 1.0, which is 64 units. The
 edge and timing behaviour is what needs the instrument - to-test.md says which cases.
+
+2026-09-19 - THE MODULE STATUS DOC IS GENERATED NOW, AND DRUMSYNTH PLAYS (CT: "Update the modules
+state document and implement drum synth"). Reference §39.
+
+### The doc generates itself
+
+`tools/modulestatus` asks `sound_engine_models_module()` - the same test the canvas uses to grey a
+module out - about every type the palette offers, and prints the Plays and Silent lists by group.
+`tools/do-modulestatus` builds and runs it. Which of the playing ones are UNSETTLED stays
+editorial, and those names are subtracted from the Plays line above them.
+
+It was worth doing: the hand-kept version was wrong about eight modules within a day of their being
+added, and wrong again about Drum Synth within an hour of this entry. **86 of 170 module types now
+play** - 69 settled, 17 unsettled, 84 silent.
+
+### DrumSynth
+
+Two oscillators, a noise source through a sweeping multimode filter, a global bend and a click. The
+instrument's own conversions, five of which reuse tables this engine already models: all four
+decays are the ENVELOPE's decay multiplier (the same table §36.1's glide turned out to use), the
+noise filter is the FILTER cutoff table, and the two pitch dials are laws the face already had -
+now shared through paramCurves.c so the reading and the sound cannot disagree.
+
+The voice follows the manual (p.181): Trig fires on a transition from at or below zero to above it;
+the bend sweeps both oscillators DOWN from its octaves above pitch and the noise filter DOWN from
+its octaves above cutoff, each on its own decay; velocity scales the two levels, the sweep, the
+bend, the click and the noise.
+
+**Two things the testing caught.** The noise filter is a Chamberlin and needed §23.1's clamps - the
+fifth Kick preset drove it unstable and the module produced 1e27 instead of a drum. And the level
+balance is NOT settled: the six level-ish dials go through an exponential table whose layout is not
+decoded. Reading it at the obvious stride gives values that never approach unity, which is plainly
+a misreading, so rather than bake in a guess the engine uses its own exponential level law and the
+table is left for later. Every factory preset produces a plausible hit, but the peaks run 0.8 to
+2.9 across them - hotter and less even than the instrument is likely to be, and that is the first
+thing to listen to. §39.3, to-test.md, todo.md.
+
+====================================================================================================
+
+## 2026-09-20 - DrumSynth's level curve was never wrong, and the hardware sweep that said it was
+
+CT: "You could capture some samples from the G2?" ... "Do the gain tweaks line-up with G2Demo?"
+
+**Outcome: no net change to the engine.** §39.3 guessed that the drum's level dials share one
+exponential curve and used `mix_level_gain()` - `0.01x + 0.99x^3` - for all of them. That guess was
+right, exactly right, and the parameter conversion says so: the module dispatches all sixteen dials
+by index, and Master Level, Slave Level, Bend Amount, Click and Noise (4, 5, 11, 13, 14 - the same
+indices the engine uses) all read the one shared curve, the identical table behind the mixers'
+Exp/dB taper and every mod amount. Five dials, one curve, no drum-specific law.
+
+**The measurement said otherwise, and this is the part worth keeping.** A hardware sweep the same
+morning - Keyboard -> DrumSynth -> LevAmp -> 2-Out in Slot A, `DEVSET`/`DEVNOTE` stepping each dial
+0..127 and one capture per sweep, hits extracted by onset with a 60 ms RMS window - fitted three
+different power laws:
+
+| dial | fitted | rms |
+|---|---|---|
+| Master Level | (v/127)^3.71 | 0.81 dB |
+| Slave Level | (v/127)^2.75 | 0.68 dB |
+| Noise | (v/127)^2.99 | 0.67 dB |
+
+Noise lands on the cube. The other two do not, and all three were briefly adopted as constants
+before the conversion was read. The residuals are small, the fits look convincing, and they are
+still not the law: **peak output of a decaying hit is not a read of the gain word.** It reads the
+whole voice - both oscillators summed, the bend still falling through the attack, the output stage
+- and Master and Slave are precisely the two that interact. Noise agrees because noise is the one
+contributor that reaches the output more or less alone.
+
+The general form of the trap: a clean fit to a derived quantity is not evidence about the primitive
+behind it, however small the residual. Same family as the capture-drive and match-excitation
+entries. The captures stay on disk and in the inventory; what they measure is the voice, not the
+curve.
+
+**What the same reading DID settle, for free and without the instrument:** all four decays really
+are the envelope's decay-multiplier table (the spot check the recipe wanted), Noise Filter Sweep is
+linear at `dial/128` reaching full scale at 127 - which `dial_fraction()` already is - and Master
+Freq, Slave Ratio, Noise Type and On reach the DSP raw.
+
+**And what it opened.** Two host-side facts now disagree with the engine, both about the noise
+filter (§39.4). Res is sent as `dial/512`, capped at a QUARTER of full scale, where the engine
+sends 0..1 and makes a damping of `1 - 0.98 res` from it - if that word is the Chamberlin damping
+directly, as the equivalent word is in §23, the engine is four times too resonant at the top of the
+dial. And Noise Filter Freq reads a different cutoff table from the one §22 and §23 use. Neither
+can go further from the host side: DrumSynth is two DSP parts of its own, one at 96 kHz and one at
+24 kHz, so its filter is hand-written and both words mean whatever that code says. That is a native
+harness of the kind §§21-25 each got, and it would settle the filter, the cutoff scale, the click
+and the decays together - a better next session than more captures. todo.md.
+
+====================================================================================================
+
+## 2026-09-20 - Two Mini Emulator faults, and the cycle the second one uncovered
+
+CT: "pitch bend doesn't work with Mini Emulator. It works with Chris' Lead. Also, there's something
+on Mini Emulator variation 7 which sounds like an oscillator isn't pitch changing by note at all."
+
+Two independent faults, both in the pitch path, both invisible on every other test patch.
+
+**1. MonoKey's Pitch had no bend in it** (reference §35.2). Every other pitch path reads
+`voicePitch`, which has carried bend and vibrato all along; MonoKey rebuilt a pitch of its own from
+the raw key and dropped both. That is dead only on a patch whose oscillators have KBT off and take
+their pitch from MonoKey - which is exactly 01 Mini Emulator, three OscA with KBT off, and exactly
+not Chris' Lead. What the module adds is now `voicePitch` less the voice's own note, which is bend
+plus vibrato and identical for every voice, so §35's rule that all voices read the same value out
+of it still holds. Offline: bend 0 reads 262 Hz, +1 reads 294 and -1 reads 233.5, and SimpleLead is
+unchanged to the digit.
+
+**2. The chain walk would not follow an input-to-input link backwards** (cableChain notes §3).
+Which end of such a link is recorded as the from-end is just which connector the drag started at;
+it carries no signal direction. `cable_chain_find_root()` only ever stepped `to` -> `from`, so
+SwOnOffT "Osc 3", whose input is joined to a fed input as the FROM end, resolved to nothing. The
+switch then fed Osc 3's pitch mixer a constant and that oscillator never left one note - silent in
+every variation except 7, the only one that raises it in the MixFader (p2: 0 -> 127), which is
+precisely what CT heard. The same patch also puts TWO cables on one input, an output's and a link's,
+so even where the walk did resolve, which source it found depended on the order the cables sat in.
+The walk now searches the chain UNDIRECTED when the parent walk ends on an input; it runs the parent
+walk first and keeps its answer wherever it finds one, so nothing that resolved before resolves
+differently. **24 connections in this one patch were being ignored and now are not**, and no other
+test patch has a single unresolved input.
+
+**And what that uncovered.** The newly resolved link closes a real loop: Osc 3 -> LevConv ->
+"LFO/Osc 3" switch -> Mod.Mix -> "Osc Mod" -> back to every oscillator's pitch, its own included.
+That is the Minimoog's Osc-3-as-LFO routing, cabled in full whichever way the switch is set, and
+the G2 runs it with a delay in the loop. `add_node()` builds a module's inputs before appending the
+module, so its "already in the chain?" test cannot see a module still being built: the walk went
+round the loop until the 128-node budget ran out, the patch reported "Chain too long" and went
+SILENT. CT caught it within minutes ("No sound from Mini Emulator at all now"). A module now marks
+itself while its inputs are built and a leg arriving back at one reads as unpatched, so the loop is
+broken at the leg that closes it - notes §192, which also records that this is not what the
+instrument does and what it would take to model the delay properly. Here it is inaudible, because
+the switch in the loop is selecting the LFO.
+
+**The order of it is the lesson.** Fault 2's fix was correct and made the patch silent, because a
+latent limit had been hidden behind the bug for as long as the bug existed. Fixing a resolution
+failure adds edges to a graph, and the code downstream has only ever run on the smaller graph. A
+sweep of every test patch, old binary against new, showed no other patch changed at all - which
+located the damage immediately and is worth doing on any change to the chain walk.
