@@ -223,8 +223,8 @@ tRectangle render_paramType1LfoShape(tModule * module, tRectangle rectangle, cha
 tRectangle render_paramType1FreqDrum(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double freq = 0.0;
 
-    // 0 -> 20 Hz, 127 -> 784 Hz
-    freq = round(20.0 * pow(2, (double)paramValue * 0.041675) * 100.0) / 100.0;
+    // §39 - the engine plays the same curve; see paramCurves.h.
+    freq = round(drum_master_hz((double)paramValue) * 100.0) / 100.0;
 
     if (freq < 100) {
         snprintf(buff, buffSize, "%.2fHz", freq);
@@ -238,7 +238,7 @@ tRectangle render_paramType1FreqDrum(tModule * module, tRectangle rectangle, cha
 // 1:1 at 0 and 6.26 at 127 - exactly the range the manual gives. Printed as "N:1" at the dial position
 // nearest a whole-number ratio and "x2.51" everywhere else, which is what the instrument does.
 tRectangle render_paramType1DrumSlaveRatio(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double ratio    = pow(2.0, paramValue / 48.0);
+    double ratio    = drum_slave_ratio(paramValue);   // §39 - shared with the engine
     double nearest  = round(ratio);
     // Half the step to the next dial position. Inside that, THIS position is the closest one to the
     // whole number, which is when a ratio rather than a multiplier is the honest reading.
