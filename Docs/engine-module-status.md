@@ -66,13 +66,13 @@ why 02 Big Pad played for months while quietly missing its velocity-to-filter pa
 
 ## Level  (§16, §29)
 
-**Plays** (3): `Constant`, `LevAmp`, `LevMult`
+**Plays** (5): `Constant`, `LevAdd`, `LevAmp`, `LevConv`, `LevMult`
 
 **Plays, unsettled** (1):
 
 - `ModAmt` - Enable button unconfirmed (§29.4)
 
-**Silent** (12): `Blue2Red`, `CompLev`, `CompSig`, `ConstSwM`, `ConstSwT`, `EnvFollow`, `LevAdd`, `LevConv`, `LevMod`, `MinMax`, `NoiseGate`, `Red2Blue`
+**Silent** (10): `Blue2Red`, `CompLev`, `CompSig`, `ConstSwM`, `ConstSwT`, `EnvFollow`, `LevMod`, `MinMax`, `NoiseGate`, `Red2Blue`
 
 ## Shapers  (§3.4)
 
@@ -96,9 +96,12 @@ why 02 Big Pad played for months while quietly missing its velocity-to-filter pa
 
 ## In/Out  (§16)
 
-**Plays** (4): `2 Outputs`, `4 Outputs`, `FX Input`, `Keyboard`
+**Plays** (6): `2 Inputs`, `2 Outputs`, `4 Outputs`, `FX Input`, `Keyboard`, `Monophonic Keyboard`
 
-**Silent** (7): `2 Inputs`, `4 Inputs`, `Device`, `Monophonic Keyboard`, `Name Bar`, `Note Detector`, `Status`
+**Silent** (5): `4 Inputs`, `Device`, `Name Bar`, `Note Detector`, `Status`
+
+(`2 Inputs` plays as SILENCE - the engine has no audio input, §37. It is listed as playing because
+it is modelled and not pruned, which is what stops a patch containing one reading as unsupported.)
 
 ## Switches  (§30)
 
@@ -106,7 +109,9 @@ why 02 Big Pad played for months while quietly missing its velocity-to-filter pa
 
 - `SwOnOffT` - untested on hardware (§30)
 
-**Silent** (17): `Mux1-8`, `Mux8-1`, `Mux8-1X`, `S&H`, `Sw1-2`, `Sw1-2M`, `Sw1-4`, `Sw1-8`, `Sw2-1`, `Sw2-1M`, `Sw4-1`, `Sw8-1`, `SwOnOffM`, `T&H`, `ValSw1-2`, `ValSw2-1`, `WindSw`
+**Plays** (3): `Sw2-1`, `Sw8-1`, `ValSw2-1`
+
+**Silent** (14): `Mux1-8`, `Mux8-1`, `Mux8-1X`, `S&H`, `Sw1-2`, `Sw1-2M`, `Sw1-4`, `Sw1-8`, `Sw2-1M`, `Sw4-1`, `SwOnOffM`, `T&H`, `ValSw1-2`, `WindSw`
 
 ## Logic
 
@@ -124,7 +129,11 @@ why 02 Big Pad played for months while quietly missing its velocity-to-filter pa
 
 ## Note  (§26)
 
-**Silent** (8): `Glide`, `Key Quantiser`, `Level Scaler`, `Note Quantiser`, `Note Scaler`, `Partial Quantiser`, `Pitch Tracker`, `Zero Crossing Counter`
+**Plays, unsettled** (1):
+
+- `Glide` - Lin and the Time table are the instrument's; the Log SHAPE is ours (§36.1)
+
+**Silent** (7): `Key Quantiser`, `Level Scaler`, `Note Quantiser`, `Note Scaler`, `Partial Quantiser`, `Pitch Tracker`, `Zero Crossing Counter`
 
 ## MIDI
 
