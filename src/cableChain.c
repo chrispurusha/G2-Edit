@@ -129,23 +129,77 @@ tCable * cable_chain_feeding_cable(uint32_t slot, uint32_t location, tCableNode 
     return NULL;
 }
 
+// notes §3
+static bool find_source_undirected(uint32_t slot, uint32_t location, tCableNode start, tCableNode * found) {
+    tCableNode queue[MAX_NUM_CABLES + 1];
+    bool       walked[MAX_NUM_CABLES] = {false};
+    uint32_t   head                   = 0;
+    uint32_t   tail                   = 0;
+
+    queue[tail++] = start;
+
+    while (head < tail) {
+        tCableNode at = queue[head++];
+
+        if (at.isOutput) {
+            *found = at;
+            return true;
+        }
+
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable *   cable = get_cable_slot(slot, location, i);
+
+            if ((cable == NULL) || !cable->active || walked[i]) {
+                continue;
+            }
+            tCableNode from  = cable_chain_from_node(cable);
+            tCableNode to    = cable_chain_to_node(cable);
+            tCableNode other;
+
+            if (cable_chain_node_equal(to, at)) {
+                other = from;
+            } else if (cable_chain_node_equal(from, at)) {
+                other = to;
+            } else {
+                continue;
+            }
+            walked[i] = true;
+
+            if (tail <= MAX_NUM_CABLES) {
+                queue[tail++] = other;
+            }
+        }
+    }
+    return false;
+}
+
 bool cable_chain_find_root(uint32_t slot, uint32_t location, tCableNode node, tCableNode * root) {
+    tCableNode terminal = node;
+
     for (uint32_t step = 0; step < MAX_NUM_CABLES; step++) {
-        if (node.isOutput) {
+        if (terminal.isOutput) {
             break;  // Reached the source
         }
-        tCable * feed = cable_chain_feeding_cable(slot, location, node);
+        tCable * feed = cable_chain_feeding_cable(slot, location, terminal);
 
         if (feed == NULL) {
-            break;  // Ran out of chain without ever reaching an output
+            break;  // The parent walk ran out; the undirected search below may still find a source
         }
-        node = cable_chain_from_node(feed);
+        terminal = cable_chain_from_node(feed);
+    }
+
+    if (!terminal.isOutput) {
+        tCableNode found = {0};
+
+        if (find_source_undirected(slot, location, node, &found)) {
+            terminal = found;
+        }
     }
 
     if (root != NULL) {
-        *root = node;
+        *root = terminal;
     }
-    return node.isOutput;
+    return terminal.isOutput;
 }
 
 tCableColour cable_chain_colour(uint32_t slot, uint32_t location, tCableNode node) {

@@ -122,3 +122,17 @@ desk channel numbers. Channel indices in older notes refer to the untrimmed file
 
 Dropped: the desk's main mix (inputs 29-30, ch 28/29) and bleed. New takes: `tools/capture --channels`.
 
+## DrumSynth — three level sweeps, 2026-09-20, and they did NOT settle the curve
+
+Master Level, Slave Level and Noise swept 0..127 in a rig of Keyboard -> DrumSynth -> LevAmp ->
+2-Out in Slot A, driven by `DEVSET`/`DEVNOTE`, one capture per sweep on QU-24 5/6 at 48 kHz. Hits
+extracted by onset with a 60 ms RMS window; fitted power laws 3.71 / 2.75 / 2.99 at under 0.9 dB
+rms each.
+
+**Do not fit a level law to these.** The curve was settled from the instrument's own parameter
+conversion instead (§39.3 - all five level dials share `mix_level_gain()`), and the sweeps are
+kept as the record of what peak-of-a-hit measures, which is the whole voice and not the gain word.
+See findings 2026-09-20 for why the fits looked so convincing.
+
+What is still uncaptured is the noise filter (§39.4), and a capture will not settle that either -
+it needs a native harness. `drumsynth-capture-recipe.md` has the rig and the traps.

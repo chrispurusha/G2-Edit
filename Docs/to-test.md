@@ -3,6 +3,29 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***PITCH BEND NOW REACHES MonoKey's PITCH (2026-09-20)*** - reference §35.2. It never did, so the
+  wheel was dead on any patch whose oscillators have KBT off and take their pitch from MonoKey;
+  01 Mini Emulator is that patch and Chris' Lead is not, which is why only one of them bent (CT).
+  Offline it now bends symmetrically, +-2 semitones at the patch's range, and SimpleLead is
+  unchanged. CHECK ON THE G2: the wheel through its whole travel on Mini Emulator, both directions,
+  and that the vibrato (mod wheel) moves with it - vibrato went the same way and by the same route.
+- ***OSC 3 TRACKS THE KEYBOARD ON MINI EMULATOR VARIATION 7 (2026-09-20)*** - cableChain notes §3.
+  Its pitch arrives through an input-to-input link recorded the other way round, which the chain
+  walk did not follow, so that oscillator sat at a fixed pitch - inaudible except in variation 7,
+  the one variation that turns it up (CT). Offline, variation 7 now tracks (note 60 reads 262 Hz
+  where it read 392 Hz) and is 3.4x louder, because the stuck oscillator was beating against the
+  other two. CHECK ON THE G2: variation 7 across the keyboard against the instrument, and then the
+  other variations for anything that has quietly changed - 24 connections in this patch were being
+  ignored and now are not.
+- ***DRUMSYNTH PLAYS (2026-09-19)*** - reference §39. Two oscillators, a sweeping noise filter,
+  bend and click, with the decays, the noise cutoff and - settled 2026-09-20 - the five level dials
+  all on the instrument's own conversions, and both pitch laws shared with the face. Every factory
+  preset produces a plausible hit offline. **THE NOISE FILTER IS THE UNSETTLED PART NOW** (§39.4):
+  Res may be four times too resonant at the top of the dial and the cutoff table may be the wrong
+  one, neither settleable without a native harness. CHECK AGAINST THE G2: the presets side by side,
+  listening first to whether ours RINGS where the instrument thumps, then master against slave
+  against noise against click, and whether the click is too loud. Then the bend and the noise
+  sweep, which should both fall rather than rise, and a Trig from a sequencer.
 - ***FOUR LOGIC MODULES PLAY: Invert, Gate, FlipFlop, ClkDiv (2026-09-19)*** - reference §38. The
   truth tables and the logic levels are checked offline and exact, so what needs the G2 is the
   TIMING and the edge cases: a ClkDiv at a few dividers in both Gated and Toggled (Toggled counts
