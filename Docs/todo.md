@@ -24,7 +24,7 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Add a dedicated master-clock/tempo panel
 
 MODULES AND GRAPHICS
-- DrumSynth's noise filter (reference §39.4): Res may be 4x too resonant and the cutoff table may be the wrong one - needs a native harness of the module's two DSP parts, which also settles the click and the decays
+- DrumSynth's noise path (reference §39.4): ~12 dB too loud vs the oscillators, cutoff 5 semitones high, sweep 2.1x too shallow, resonance curve the wrong shape - all measured, none to be fitted. Needs the native harness of the module's two DSP parts, which also settles the click and the decays
 - The rest of the Logic group: 8Counter, BinCounter, ADConv, DAConv and the logic Delay - the four done 2026-09-19 (reference §38) leave these five
 - Generate engine-module-status.md from `module_kind()` instead of keeping it by hand - it was wrong about eight modules within a day of them being added (2026-09-19)
 - Re-lay out the remaining families by rule (module-layout-rules.md "common face", tools/relayout.py) - Level group done 2026-09-13; next the delays and the pitch/FX group still on port coordinates
