@@ -32,3 +32,25 @@ is derived from the event that went missing: our drag flags were set by the pres
 the release, and glfwGetMouseButton() reports the last event GLFW was handed, which is the same
 stream. [NSEvent pressedMouseButtons] reports the hardware, so it is true whether or not we were
 told — and it is what the VST3 shell already uses for the same job (vst3/g2View.m).
+
+## 2a. the audio activity
+
+**APP NAP AND THE EFFICIENCY CORES.** This application draws only when something asks it to
+(`synthlib_request_redraw()`, and see the note on that), so between gestures it genuinely looks
+idle to macOS. An idle process gets napped: timers coalesced, threads deprioritised, work moved to
+the efficiency cores. A DAW never looks idle and never gets any of it - which is the shape of what
+CT saw in Activity Monitor, Ableton busy on the performance cores and the standalone not.
+
+`NSActivityLatencyCritical` is the documented way for a process to say it is doing audio: no
+napping, no timer coalescing. It is held only while the audio output is open, so an editor with the
+engine switched off still naps as it should, and `audio_output_start()` / `audio_output_stop()` are
+the two ends.
+
+Under ARC the returned token is kept alive by the strong static alone - no retain, and `endActivity`
+plus clearing the static is the whole teardown.
+
+**This is a hypothesis with a mechanism, not a diagnosis.** CoreAudio reported zero overruns while
+the break-up was audible, and a thread running late on an efficiency core should have produced some
+- so if this fixes it, the overrun count was lying and the reason for that is the next thing to
+understand.
+
