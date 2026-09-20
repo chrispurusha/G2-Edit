@@ -76,6 +76,10 @@ bool audio_output_poll_rate_change(void);
 // only thing that distinguishes the engine being late from the device glitching for its own reasons.
 uint32_t audio_output_overload_count(void);
 
+// notes §6 - what the render thread turned out to be: its QoS class, and whether macOS gave it a
+// real-time time-constraint policy. Sampled on the first callback; "not sampled" before that.
+const char * audio_output_thread_text(void);
+
 // Reads the remembered device, channels and buffer size. Call once at startup, after prefs_init().
 void audio_output_load_settings(void);
 

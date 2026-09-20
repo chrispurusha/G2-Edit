@@ -955,6 +955,9 @@ void open_experimental_menu(tCoord anchor) {
             items[i++] = (tMenuItem){
                 audioLine, (tRgb)RGB_GREY_5, NULL, 0, NULL, 0, 0.0
             };
+            items[i++] = (tMenuItem){
+                (char *)audio_output_thread_text(), (tRgb)RGB_GREY_5, NULL, 0, NULL, 0, 0.0
+            };
         }
     }
     // Which device the engine plays through, and which pair of its outputs. Both are flyouts off

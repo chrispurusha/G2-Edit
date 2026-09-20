@@ -61,7 +61,8 @@ FILTERS
 
 SOUND ENGINE
 - Sound engine across cores - design note at Docs/engine-multicore-design.md (2026-09-19, nothing built). The blocker is the per-sample note grid; the payoff is 3-4x, capped by a fixed 3.7% of a core; JUCE has no design to borrow, only Apple's audio workgroup. Settle where the deficit actually is first
-- Standalone break-up: NOT timing - CoreAudio reports ZERO overruns while it happens (48 kHz, 256/512 frames, G2 off, simple patches too), so the samples are wrong rather than late. Next suspect is headroom: 02 Big Pad peaks at 0.997 with 13 notes and the output hard-clips at 1.0 (findings 2026-09-19)
+- The Xcode DEBUG configuration is unusable for audio: -O0 puts 02 Big Pad at 111% of real time against Release's 40%, which was the whole standalone break-up (findings 2026-09-19). Decide whether the engine's files get an optimisation level in Debug, or the build warns, or it is just known
+- `reset_node_state()` runs on the AUDIO THREAD on a topology change - 0.28 ms for 02 Big Pad, 0.59 ms for 01 Mini Emulator, 5-11% of a 256-frame budget. Not the break-up, but bulk clearing inside the callback is an RT rule broken; move it to the publisher or do it incrementally
 - Engine headroom: no attenuation anywhere for polyphony, so a pad at full voices sits on the rail at the default 0 dB. Decide whether the Out module, the output stage or nothing should scale with voice count - the G2 itself does not clip here
 - Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) - CONFIRMED right (02 Big Pad asks for and gets 14, 2026-09-19) - but the G2 assigns by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"), so the topbar should show a requested/assigned pair as the original does
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
@@ -146,6 +147,13 @@ BUILD
 
 
 DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from this file, the constraint is not)
+
+- Measure performance on the ARTEFACT the owner is running, not on an offline harness. Every
+  engine measurement here is built by hand at -O2, as the plug-in is, so they all agreed with the
+  plug-in and all disagreed with the standalone the owner could hear breaking up - for a week of
+  hypotheses (buffer size, the USB thread, App Nap, efficiency cores, headroom) before anyone ran
+  the Debug build and read its own load figure. -O0 is roughly three times slower here. If a
+  measurement and a person's ears disagree, reproduce on their build first (2026-09-19).
 
 - The engine's three per-node output-leg loops (the clear at the top of `eval_node()`, the voice sum,
   the mono fan-out) must keep iterating the CONSTANT `NODE_OUTPUTS`. Replacing it with the node's

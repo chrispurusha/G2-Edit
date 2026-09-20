@@ -11077,3 +11077,77 @@ real: nothing about controllers being off their rest values.
 Still open: why CoreAudio reports no overrun while the break-up is audible. Either the samples are
 wrong - and the engine has no headroom at full polyphony, 02 Big Pad peaking at 0.997 against a
 hard clip at 1.0 - or the callback is late in a way the device does not report.
+
+2026-09-19 (final) - 117 OVERRUNS: IT IS TIMING AFTER ALL, AND THE WORK IS STILL NOT THE CAUSE
+(CT: "117 over-runs!!! Smoking gun?"). audioOutput.c notes §5.
+
+Yes. The counter earns its place: CoreAudio is reporting the IO cycle overrun 117 times while the
+break-up is audible, so the callback IS late. The earlier zero reading has to have been taken
+before the load rather than during it - the count is cumulative from when the device was opened.
+
+**That flips the conclusion back to timing, and it does NOT flip it back to the arithmetic.**
+Everything measurable is still far inside the budget at 256 frames, 48 kHz:
+
+| | % of the 5.33 ms budget |
+|---|---|
+| worst render block, all voices sounding | 30% |
+| a block containing a TOPOLOGY CHANGE (`reset_node_state()` on the audio thread) | 5% on 02 Big Pad, 11% on 01 Mini Emulator |
+| the snapshot copy | ~5% |
+| the per-frame chain rebuild (UI thread, not the callback) | 1.8% of a core |
+
+A callback that does 30% of its budget of work and still misses the deadline is not late because
+of the work. **It is being descheduled** - which is exactly what CT saw in Activity Monitor, and
+the mechanism is in misc.mm notes §2a: this application draws only on request, looks idle between
+gestures, and an idle process gets napped onto the efficiency cores.
+
+So the App Nap refusal added the same day is now the leading candidate rather than a hunch, and the
+test is direct: does the overrun count stop climbing?
+
+**The discriminator to read, if it does not.** The Experimental menu shows the engine's own peak
+render load beside the overrun count. Low load AND climbing overruns is proof of descheduling
+rather than compute, and rules out everything in the table above at a glance. High load with them
+would mean the offline numbers do not describe the real machine, and that would be its own finding.
+
+**One thing worth fixing whatever the answer:** `reset_node_state()` runs inside the audio callback
+on a topology change, clearing about a megabyte. It is not the break-up - 0.28 to 0.59 ms - but
+bulk clearing in the callback is a real-time rule broken, and it belongs on the publisher's side or
+spread over blocks. In todo.md.
+
+2026-09-19 (SETTLED) - THE STANDALONE BREAK-UP IS THE DEBUG BUILD. Reproduced and measured on the
+machine, driven through the backdoor (CT: "maybe you could run up the standalone and reproduce").
+
+`do-plugin` compiles everything at **-O2**. The Xcode **Debug** configuration is
+`GCC_OPTIMIZATION_LEVEL = 0`, i.e. **-O0**. That is the whole of the standalone-versus-plug-in
+asymmetry, and it explains every observation at once - same rate, same buffer, same patch, G2
+powered down, simple patches too.
+
+02 Big Pad, 48 kHz, 512 frames, the engine's own load figure and CoreAudio's overrun count:
+
+| build | no notes | 12 notes | overruns |
+|---|---|---|---|
+| Debug (-O0) | 48% | **111%** | **120** |
+| Release (-O2) | 32% | **40%** | **0** |
+
+At 111% the engine cannot render in real time at all, and the overrun count went from 0 to 120 the
+moment the voices stacked up - which is CT's 117. The Release build of the same patch, same notes,
+same device sits at 40% with none.
+
+**Why the earlier reasoning kept missing it.** Every measurement in this file was made with the
+offline harnesses, which are built by hand at -O2 like the plug-in - so they agreed with the
+plug-in and disagreed with what CT could hear, and each time the conclusion was "the engine is
+nowhere near the deadline". It was, in the build he was running. The lesson is in todo.md's DO NOT
+RE-TRY: a performance measurement has to be made on the ARTEFACT the person is running.
+
+**What the instrumentation settled along the way**, all of it now on the Experimental menu:
+
+- `render thread unspecified, REALTIME` - the IO thread DOES carry a time-constraint policy, in
+  both builds. So the efficiency-core theory was wrong, and the App Nap refusal added earlier is
+  not what fixed anything. It is defensible on its own terms for an application that draws only on
+  request, but it should be judged as that and not as a fix.
+- The overrun counter did exactly its job: zero while the Release-equivalent load was fine, 120 the
+  moment the Debug build went over real time. The earlier "0 overruns" reading must have been taken
+  before the voices stacked.
+
+**Still worth doing** (todo.md): the Debug configuration is unusable for anything involving audio,
+so either the sound engine's files want an optimisation level in Debug, or the Debug build should
+say so. That is CT's call, not one to make here.
