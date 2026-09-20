@@ -147,7 +147,14 @@ BUILD
 - Cross-platform build (Windows/Linux) - the render backend seam is in place, the rest is not
 
 
+- Some variations of 01 Mini Emulator do not sound like the G2 (CT 2026-09-20). The wave is ruled out (reference §6.2) and variations do reach the engine; needs a specific symptom - which variation and what is wrong
+
 DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from this file, the constraint is not)
+
+- Do NOT change OscA/OscC/OscD's pulse offsets from 0, 0.5 and 0.875 (reference §6.2). The third
+  gives a 1/16 duty, not the 10% the manual's "Sqr10" label promises, and the arithmetic looks like
+  an off-by-a-bit begging to be 0.8. It is not: a hardware measurement (2026-08-24) and the
+  instrument's own three constants (2026-09-20) independently give 0.875.
 
 - Measure performance on the ARTEFACT the owner is running, not on an offline harness. Every
   engine measurement here is built by hand at -O2, as the plug-in is, so they all agreed with the
