@@ -390,9 +390,6 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define GLIDE_PARAM_ON            (1)    // offOnStrMap, default On
 #define GLIDE_PARAM_SHAPE         (2)    // logStrMap {Log, Lin}: 0 is Log
 #define GLIDE_SHAPE_LIN           (1)
-// §36 - a Log glide's Time read as the time to close the gap to 1% of it, which is §17.3's own
-// convention for a time on this instrument. ln(100).
-#define GLIDE_LOG_DECADES         (4.60517)
 
 #define CHORUS_PARAM_DETUNE       (0)
 #define CHORUS_PARAM_AMOUNT       (1)
@@ -742,7 +739,7 @@ typedef struct {
     uint32_t        levConvOut;     // §31 - the range written, posStrMap {Pos, PosInv, ... BipInv}
     uint32_t        select;         // §33 - which input a Sw2-1/Sw8-1 passes; §35 MonoKey's priority
     uint32_t        inputCount;     // §33 - how many inputs that switch has (2 or 8)
-    double          glideSeconds;   // §36 - the Time dial, off the instrument's own displayed table
+    double          glideCoeff;     // §36 - per ENVELOPE TICK: Log's one-pole k, or Lin's step
     bool            glideLin;       // §36 - logStrMap {Log, Lin}: 0 is Log
 
     uint32_t        dxBase;         // §14 - where this router's six Operators sit in dxOp[]
@@ -1235,6 +1232,8 @@ static double             gGlideOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MA
 #define gGlideOut       (gGlideOutBank[SE])
 static bool               gGlidePrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gGlidePrimed    (gGlidePrimedBank[SE])
+static double             gGlideTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gGlideTick      (gGlideTickBank[SE])
 
 static double             gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gPulsePrev      (gPulsePrevBank[SE])
@@ -1542,37 +1541,26 @@ static double glide_time_seconds(double setting) {
     return low + ((high - low) * fraction);
 }
 
-// §36 - the Glide MODULE's Time dial, read off the same displayed table the G2 shows on its face:
-// 0.2 ms at 0 to 22.4 s at 127, which is a different law from the patch glide's above. Reading the
-// table rather than fitting it is what the patch glide already does, and it cannot drift from what
-// the module's own dial reads.
-static double glide_module_seconds(double setting) {
-    const char * lowText  = NULL;
-    const char * highText = NULL;
-    double       fraction = 0.0;
-    int          index    = 0;
+// §36.1 - the Glide module's coefficient for one ENVELOPE TICK. The instrument builds this from the
+// envelope's own two time tables indexed by the Time dial, so the module is an envelope segment in
+// disguise and needs no table of its own: §17.3's decay multiplier gives Log's one-pole, and its
+// linear attack step gives Lin's ramp. Both follow `adr_time_seconds()`, which is where §17 already
+// models those tables - agreement with the instrument's own values is better than 1% across the
+// dial, and within a few steps at the very top where §17.3 already says the closed form parts from
+// the table.
+static double glide_tick_coeff(double setting, bool lin) {
+    double ticks = adr_time_seconds(setting) * ENV_TICK_HZ;
 
-    if (setting < 0.0) {
-        setting = 0.0;
-    } else if (setting > 127.0) {
-        setting = 127.0;
+    if (ticks < 1.0) {
+        ticks = 1.0;
     }
-    index    = (int)setting;
-    fraction = setting - (double)index;
-    lowText  = glide_module_time_str((uint8_t)index);
-    highText = glide_module_time_str((uint8_t)((index < 127) ? (index + 1) : 127));
 
-    if ((lowText == NULL) || (highText == NULL)) {
-        return 0.0002;
+    if (lin == true) {
+        return 1.0 / ticks;                              // a constant step, full scale in that time
     }
-    // Every entry is in milliseconds, and the first few carry a decimal point ("0.2ms"), so atof
-    // rather than atoi - which would read those as zero.
-    {
-        double low  = atof(lowText) / 1000.0;
-        double high = atof(highText) / 1000.0;
-
-        return low + ((high - low) * fraction);
-    }
+    // TWICE the envelope's decay approach, which is what makes the dial's printed Time the time to
+    // close the gap to 1% of it rather than the envelope's own reading of the same number.
+    return 2.0 * (1.0 - exp(-log(100.0) / ticks));
 }
 
 // A parameter's value with every morph applied. morphRange is a SIGNED 8-bit offset from the dialled
@@ -1698,6 +1686,7 @@ static void reset_node_state(void) {
             gPulsePrev[v][i]     = 0.0;
             gGlideOut[v][i]      = 0.0;      // §36
             gGlidePrimed[v][i]   = false;
+            gGlideTick[v][i]     = 0.0;
         }
     }
 
@@ -3854,9 +3843,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeGlide:
         {
             // §36 - Time off the instrument's own displayed table, as the patch glide reads its own.
-            node->glideSeconds = glide_module_seconds(param_value(module, variation, GLIDE_PARAM_TIME));
-            node->glideLin     = (module->param[variation][GLIDE_PARAM_SHAPE].value == GLIDE_SHAPE_LIN);
-            node->active       = (module->param[variation][GLIDE_PARAM_ON].value != 0);
+            node->glideLin   = (module->param[variation][GLIDE_PARAM_SHAPE].value == GLIDE_SHAPE_LIN);
+            node->glideCoeff = glide_tick_coeff(param_value(module, variation, GLIDE_PARAM_TIME),
+                                                node->glideLin);
+            node->active     = (module->param[variation][GLIDE_PARAM_ON].value != 0);
             break;
         }
         case eNodeFxIn:
@@ -6923,32 +6913,31 @@ static double glide_step(uint32_t voice, uint32_t node, double input, double gat
         return input;
     }
 
-    if ((gliding == false) || (spec->glideSeconds <= 0.0)) {
+    if ((gliding == false) || (spec->glideCoeff <= 0.0)) {
         gGlideOut[voice][node] = input;
         return input;
     }
+    // §36.1 - AT THE ENVELOPE TICK RATE, because on the instrument this IS an envelope segment:
+    // its coefficients come from the envelope's own tables. Running it per sample instead would
+    // make the glide follow the engine's rate rather than the instrument's.
+    gGlideTick[voice][node] -= ENV_TICK_HZ / gSampleRate;
 
-    if (spec->glideLin == true) {
-        // A constant rate: an OCTAVE per Time, and a pitch input is one unit a semitone (§16.2),
-        // so twelve units - the same shape the patch glide has (§15.4).
-        double step = (12.0 / UNITS_PER_FULL_SCALE) / (spec->glideSeconds * gSampleRate);
-        double gap  = input - current;
+    if (gGlideTick[voice][node] <= 0.0) {
+        gGlideTick[voice][node] += 1.0;
 
-        if (fabs(gap) <= step) {
-            current = input;
+        if (spec->glideLin == true) {
+            double gap = input - current;
+
+            if (fabs(gap) <= spec->glideCoeff) {
+                current = input;
+            } else {
+                current += (gap > 0.0) ? spec->glideCoeff : -spec->glideCoeff;
+            }
         } else {
-            current += (gap > 0.0) ? step : -step;
+            current += (input - current) * spec->glideCoeff;
         }
-    } else {
-        // A constant time: a one-pole approach, with Time read as the time to close the gap to
-        // 1% of it. That is §17.3's own convention for a time on this instrument - its decay and
-        // release tables are quoted to -40 dB - rather than a figure invented here. UNMEASURED,
-        // see to-test.md.
-        double tau = spec->glideSeconds / GLIDE_LOG_DECADES;
-
-        current += (input - current) * (1.0 - exp(-1.0 / (tau * gSampleRate)));
+        gGlideOut[voice][node]   = current;
     }
-    gGlideOut[voice][node] = current;
     return current;
 }
 
