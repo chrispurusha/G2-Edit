@@ -1604,14 +1604,15 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
     } else if (strcmp(cmd, "SNDSTATUS") == 0) {
         // Reads back what the Experimental menu would show, so a test can assert on why the engine
         // is or is not making a sound without taking a screenshot of a menu.
-        char text[320] = {0};
+        char text[640] = {0};
 
         // The audio side with it: CoreAudio's own overrun count is the only thing that separates
         // "the engine was late" from "the device glitched", and the engine cannot report it - it
         // is deliberately platform-free. See audioOutput.c notes §5.
-        snprintf(text, sizeof(text), "OK\n%s\nrate=%.0f buffer=%u overloads=%u\n",
-                 sound_engine_status_text(), audio_output_sample_rate(),
-                 (unsigned)audio_output_buffer_frames(), (unsigned)audio_output_overload_count());
+        snprintf(text, sizeof(text), "OK\n%s\n%s\nrate=%.0f buffer=%u overloads=%u\n%s\n",
+                 sound_engine_status_text(), sound_engine_modulation_text(),
+                 audio_output_sample_rate(), (unsigned)audio_output_buffer_frames(),
+                 (unsigned)audio_output_overload_count(), audio_output_thread_text());
         backdoor_write_result(text);
     } else if (strcmp(cmd, "SCROLL") == 0) {
         double xFraction = 0.0;

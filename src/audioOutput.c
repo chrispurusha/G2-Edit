@@ -32,6 +32,9 @@ extern "C" {
 #pragma clang diagnostic pop
 
 #include <stdatomic.h>
+#include <pthread/qos.h>
+#include <mach/mach.h>
+#include <mach/thread_policy.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -394,6 +397,78 @@ void audio_output_select_right_channel(uint32_t channel) {
 
 // Real-time thread. Everything it calls must be lock-free and allocation-free, which is why it does
 // nothing but hand the buffer straight to the engine.
+// notes §6 - WHAT THE RENDER THREAD ACTUALLY IS. A callback doing 30% of its budget of work and
+// still overrunning is not late because of the work, so the question is whether the thread is
+// real-time at all: macOS puts a THREAD_TIME_CONSTRAINT_POLICY thread on a performance core and
+// leaves an ordinary one to the scheduler. Sampled once, on the first callback, because
+// thread_policy_get() is a syscall and has no business running per block.
+static _Atomic int gRenderQos      = -1;
+static _Atomic int gRenderRealTime = -1;        // -1 unknown, 0 no, 1 yes
+
+static void sample_render_thread_policy(void) {
+    thread_time_constraint_policy_data_t policy = {0};
+    mach_msg_type_number_t               count  = THREAD_TIME_CONSTRAINT_POLICY_COUNT;
+    boolean_t                            dflt   = FALSE;
+
+    atomic_store(&gRenderQos, (int)qos_class_self());
+
+    if (thread_policy_get(mach_thread_self(), THREAD_TIME_CONSTRAINT_POLICY,
+                          (thread_policy_t)&policy, &count, &dflt) == KERN_SUCCESS) {
+        // `dflt` true means the thread carries no time-constraint policy of its own.
+        atomic_store(&gRenderRealTime, (dflt == TRUE) ? 0 : 1);
+    } else {
+        atomic_store(&gRenderRealTime, 0);
+    }
+}
+
+const char * audio_output_thread_text(void) {
+    static char  text[64];
+    int          qos = atomic_load(&gRenderQos);
+    int          rt  = atomic_load(&gRenderRealTime);
+    const char * name;
+
+    switch (qos) {
+        case QOS_CLASS_USER_INTERACTIVE:
+        {
+            name = "user-interactive";
+            break;
+        }
+        case QOS_CLASS_USER_INITIATED:
+        {
+            name = "user-initiated";
+            break;
+        }
+        case QOS_CLASS_DEFAULT:
+        {
+            name = "default";
+            break;
+        }
+        case QOS_CLASS_UTILITY:
+        {
+            name = "utility";
+            break;
+        }
+        case QOS_CLASS_BACKGROUND:
+        {
+            name = "BACKGROUND";
+            break;
+        }
+        case QOS_CLASS_UNSPECIFIED:
+        {
+            name = "unspecified";
+            break;
+        }
+        default:
+        {
+            name = "not sampled";
+            break;
+        }
+    }
+    snprintf(text, sizeof(text), "render thread %s, %s", name,
+             (rt < 0) ? "realtime unknown" : ((rt == 1) ? "REALTIME" : "NOT realtime"));
+    return text;
+}
+
 static OSStatus render_callback(void *                       inRefCon,
                                 AudioUnitRenderActionFlags * ioActionFlags,
                                 const AudioTimeStamp *       inTimeStamp,
@@ -407,6 +482,10 @@ static OSStatus render_callback(void *                       inRefCon,
 
     if ((ioData == NULL) || (ioData->mNumberBuffers == 0)) {
         return noErr;
+    }
+
+    if (atomic_load(&gRenderRealTime) < 0) {
+        sample_render_thread_policy();   // notes §6 - once, on the first callback
     }
     // Interleaved, so there is exactly one buffer holding all the channels.
     sound_engine_render((float *)ioData->mBuffers[0].mData,
