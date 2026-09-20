@@ -11177,3 +11177,51 @@ slightly less literal than at -O0 - which is exactly the trade clang means by `-
 
 Only G2-Edit's project file changed. `do-release` builds Release and is unaffected, as are
 SynthEdit and EmuUtility.
+
+2026-09-19 - MONOKEY DID NOT RETURN TO A HELD NOTE, AND THE GLIDE IS AN ENVELOPE SEGMENT (CT: "on
+G2 itself I can press and hold a note, press a new note (which sounds), release that note and
+originally held note sounds. On Engine, original note doesn't sound"). Reference §35.1 and §36.1,
+revert record 62 and 63.
+
+### MonoKey
+
+CT's repro named the module for us - Chris' Lead was fine and has no MonoKey - and the reference
+says exactly what the instrument keeps. Its note vector holds a HELD COUNT per key with that key's
+velocity, plus the highest and lowest held notes. A note-on extends the range; a note-off rescans,
+down from the old highest and up from the old lowest, for a key whose count is still non-zero. So
+Lo and Hi always name keys still down, which is what the engine's scan already did.
+
+**Last was the one that was wrong.** The engine kept its own "last key pressed", set on note-on and
+never revisited, so after releasing the upper key it went on reporting it. On the instrument Last
+is the mono VOICE's note - and §15.2 already hands that voice back to a still-held key when the key
+above it comes up. So Last needed no record of its own; it needed to read the voice.
+
+01 Mini Emulator, offline, the oscillators' pitch through MonoKey and its Glide: hold 48 gives
+300 Hz, pressing 60 gives 642, releasing 60 returns to **300**. It stayed at 642 before.
+
+Vel went with it: per key, as the instrument keeps it, so Lo and Hi now report the velocity of the
+key they name rather than of whatever was played last.
+
+### Glide
+
+Asked the same source about the Log shape, which §36.1 had flagged as ours rather than the
+instrument's. It turns out the module has no time law at all: its host update writes two frame
+words, both indexed by the Time dial and both from the ENVELOPE's tables -
+`(0x800000 - decayMultiplier[Time]) * 2` and `linearStep[Time]`. The Glide is an envelope segment.
+
+- **Log** is a one-pole with `k = 2 x (1 - decayMultiplier[Time])`. The factor of two is why the
+  dial's printed Time is the time to close the gap to 1% rather than the envelope's own reading of
+  the same entry.
+- **Lin** is a constant step of `linearStep[Time]` per tick.
+- Both at the envelope tick rate, 24 kHz, not per sample.
+
+**No new table.** §17 already models both tables as closed forms through `adr_time_seconds()`, and
+those reproduce the instrument's own values to better than 1% across the dial (worst 1.2% at dial
+120, where §17.3 already says the closed form parts from the table). Checked as time to 99% against
+what the dial prints: 0.19 ms against 0.2, 1.02 against 1.0, 27.1 against 27, 511.4 against 511,
+22.5 s against 22.4.
+
+**The earlier guess was right about the convention and wrong about everything else.** Reading the
+printed string and dividing by ln(100) gave the same times - which is why it looked fine - but it
+took the coefficient from a display rounded to three figures instead of from the law, and ran it
+per sample instead of per tick. The accessor added for it (`glide_module_time_str()`) is gone again.

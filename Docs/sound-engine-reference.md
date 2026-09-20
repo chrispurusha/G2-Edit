@@ -1408,11 +1408,25 @@ voice: every voice sees the same values, so nothing in it reads the voice it is 
   behaviour 01 Mini Emulator's two ModADSR depend on. It reads the engine's held-key table (§15.1).
 - **Vel** is the velocity of the last key pressed.
 
-**35.1 Priority** is `monoKeyStrMap` {Last, Lo, Hi}. Lo and Hi are the lowest and highest keys
-currently held; Last OUTLIVES the key that set it, as the module's pitch output does. UNSETTLED: Lo
-and Hi are reported as raw keys, so they do not carry the patch glide that Last does, and in a Poly
-patch all three ignore which voice is asking. Neither matters to 01 Mini Emulator, which is Mono -
-see to-test.md.
+**35.1 Priority** is `monoKeyStrMap` {Last, Lo, Hi}, and the instrument keeps all three for it.
+
+Its note vector holds a HELD COUNT per key with that key's velocity, and the highest and lowest
+held notes beside them. A note-on extends the range if it is outside it; a note-off **rescans** -
+down from the old highest, up from the old lowest - for a key whose count is still non-zero. So Lo
+and Hi always name keys that are STILL DOWN, which is what the engine's scan of `gKeyHeld` does.
+
+**Last is the mono voice's own note**, not a separate record of the last key pressed. That matters
+because 15.2 hands the voice back to a held key when the key above it comes up, so Last follows it
+there. Reading a "last pressed" of its own instead is what stopped a held note returning on
+01 Mini Emulator: hold a key, play a higher one, release it, and the first should sound again - it
+did on the G2 and did not here (CT, 2026-09-19). Last still outlives the last key coming up,
+because the voice's note does (15.2).
+
+**Vel** is that key's velocity, kept per key as the instrument keeps it, so Lo and Hi report the
+velocity of the key they name rather than of whatever was played most recently.
+
+Still open: in a Poly patch all three read the voice being evaluated, which is a guess - MonoKey is
+a monophonic module and the case may not arise. Lo and Hi are raw keys and so carry no glide.
 
 ## 36. Glide
 
@@ -1425,14 +1439,29 @@ It glides while its button is on, or while the Glide On logic input is high wher
 patched into it; otherwise the input passes through. The first value a Glide ever sees arrives
 whole rather than being slewed up from zero.
 
-**36.1 THE SLEW SHAPE IS NOT SETTLED.** Lin is a constant rate - an octave per Time, so twelve
-units, the same shape §15.4 has - and that much follows from the manual. Log holds the TIME
-whatever the jump, which makes it an approach rather than a ramp, and the engine currently runs a
-one-pole with Time read as the time to close the gap to 1% of it. **That convention is ours, not
-the instrument's.** It is §17.3's own reading of a time here (the decay and release tables are
-quoted to -40 dB), but the module's own part has not been decoded: it is built from three
-Portamento parts whose bodies are lifted fixed-point, and settling them needs the translate-and-run
-harness the FltStatic and OscDual work used, not a reading. See todo.md.
+**36.1 THE SLEW IS AN ENVELOPE SEGMENT (settled 2026-09-19 against the instrument).** The Glide
+module has no time law of its own. Its host update writes two words into the DSP frame, both
+indexed by the Time dial and both taken from the ENVELOPE's own tables (17.3):
+
+- **Log**: a one-pole whose coefficient is `2 x (1 - envelope decay multiplier[Time])`. The factor
+  of two is what makes the dial's printed Time the time to close the gap to **1%** of it, rather
+  than the envelope's own reading of the same table entry.
+- **Lin**: a constant step of `envelope linear attack step[Time]` per tick - full scale in that
+  time.
+
+Both run at the envelope tick rate (24 kHz), because on the instrument this IS an envelope segment.
+The engine builds both from `adr_time_seconds()`, which is where 17 already models those tables, so
+there is no new table: it agrees with the instrument's own values to better than 1% across the
+dial, and within a few steps at the very top where 17.3 already says the closed form parts from the
+table.
+
+Checked against what the dial prints, as time to 99%: dial 0 gives 0.19 ms against 0.2, dial 8
+1.02 against 1.0, dial 32 27.1 against 27, dial 64 511.4 against 511, dial 127 22.5 s against 22.4.
+
+An earlier version read the printed table and divided by ln(100) on the reasoning that 17.3 quotes
+its times to -40 dB. That happened to be the right convention - which is why the numbers agreed -
+but it took the coefficient from a display string rounded to three figures instead of from the law,
+and it ran per sample rather than per tick.
 
 ## 37. 2-In
 
