@@ -1632,10 +1632,9 @@ so voice 0 publishes and the rest do not - the rule the LFO already used, now in
 (notes §194).
 
 **39.4 STILL UNSETTLED: the noise path, and it needs the REFERENCE MODEL, not captures.** The
-module is two stages of its own - `_kDrumParts` is `_gPartDrumSynthA` (list A, 96 kHz) and
-`_gPartDrumSynthB` (list B, 24 kHz) - so its noise source, its filter and their gains are all in
-those two Compute bodies. **Nothing here may be fitted to a capture**; the standing rule is that
-the instrument's own arithmetic decides, as it did for §§21-25.
+module is two stages of its own, one running at 96 kHz and one at 24 kHz, so its noise source,
+its filter and their gains are all inside that model. **Nothing here may be fitted to a capture**:
+the standing rule is that the instrument's own arithmetic decides, as it did for §§21-25.
 
 What the instrument already gives, read off the parameter conversion (2026-09-20), so the reference model starts from a known input:
 
@@ -1673,8 +1672,17 @@ settings, contributors isolated by zeroing the others.
 - **The noise decays too slowly**: to -20 dB in 96 ms against the G2's 76 ms, on Kick 1's Noise
   Decay of 49.
 
-A change was drafted from these numbers and REVERTED the same day (CT: "the reference is the reference"),
-which is the right call and is why they are recorded here as targets rather than as constants.
+**The harness is standing but not yet sounding (2026-09-20).** Both parts run offline. What it
+has established so far: the module's noise is an LFSR followed by a two-pole colour
+filter, its multimode filter is a state-variable one whose output is summed into the oscillator
+node, the filter TYPE is a pair of mode words rather than one selector, and the whole part has an
+on/off word. Every dial's destination is decoded. What is missing is how the 24 kHz part's
+envelopes reach the 96 kHz one - until that is closed the cutoff word cannot be traced to the
+filter's coefficient. The working notes for all of this are kept outside this repo, as ever.
+
+A change was drafted from these numbers and REVERTED the same day - the instrument's own logic is
+the reference and a capture is only its check - which is why they are recorded here as targets
+rather than as constants.
 
 **39.5 The panel lamp, added 2026-09-20.** DrumSynth's face has an LED by its Trig and nothing lit
 it: the engine published a lamp for the LFO alone, and every other module's LED stayed dark unless a
@@ -1697,7 +1705,7 @@ disagree with what the engine does:
 - **Noise Filter Freq reads a different cutoff table** from the one §22 and §23 use.
 
 Neither can be settled from the instrument alone, because the meaning of both words is in the two
-code bodies. That is a reference-model job of the kind §21-§25 each were, and it would settle
+own reference model. That is a reference-model job of the kind §21-§25 each were, and it would settle
 the filter, the cutoff scale, the click and the four decays together - a better use of a session
 than more captures. Until then the filter shape is the thing to listen to, and Res is the dial to
 distrust.

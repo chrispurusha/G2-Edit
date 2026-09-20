@@ -10134,7 +10134,7 @@ conversion is linear in dial units. A filter Freq is; an Operator's Level is not
 
 2026-09-18 - THE EQs AGAINST THE INSTRUMENT'S OWN TABLES: ONE LAW REPLACED, ONE CONFIRMED EXACT, ONE
 INCONSISTENCY THAT IS THE G2'S (CT: "the ones in the engine which haven't been checked against the reference model"; and that the reference model is the model to follow). Both answers came from coefficient tables read
-out of the binary, not from the translated code - far quicker, and exact.
+out of the instrument's own tables, not from the reference model that reads them - far quicker, and exact.
 
   EQPEAK'S CENTRE WAS WRONG BY UP TO 45% and is now the instrument's (reference §11.3, revert record 49).
   The shelf and peak parameter code both index a 128-entry table of tan(pi f / fs); read back
@@ -10733,7 +10733,7 @@ own - which would mean horizontal drift on a machine with no horizontal scroll d
 the test that was never run.
 
 2026-09-19 - 01 MINI EMULATOR PLAYS: EIGHT MODULES, AND THE BUG THAT WAS ACTUALLY STOPPING IT (CT:
-"Implement the missing modules for Mini Emulator?"; then, on every law, "check the reference model" and "in fact
+"Implement the missing modules for Mini Emulator?"; then, on every law, "check the reference" and "in fact
 - any of it"). Reference §§31-37 and §17.4a, revert record 59, Docs/mini-emulator-engine-plan.md.
 
 ### The eight
@@ -11298,7 +11298,8 @@ thing to listen to. §39.3, to-test.md, todo.md.
 
 ## 2026-09-20 - DrumSynth's level curve was never wrong, and the hardware sweep that said it was
 
-CT: "You could capture some samples from the G2?" ... "Do the gain tweaks line-up with the reference model?"
+CT: "You could capture some samples from the G2?", and then, of the fitted gains, whether they
+line up with the reference.
 
 **Outcome: no net change to the engine.** §39.3 guessed that the drum's level dials share one
 exponential curve and used `mix_level_gain()` - `0.01x + 0.99x^3` - for all of them. That guess was
@@ -11485,7 +11486,8 @@ switched off and contributes only its chain - the engine and the instrument agre
 ## 2026-09-20 - DrumSynth's noise: measured, drafted, REVERTED, and left for the harness
 
 CT: "Drum synth engine has more noise than G2 on Kick 1 at least." Then, after I had started
-fitting the engine to the captures: "the reference is the reference!!!"
+fitting the engine to the captures, a firm reminder that the instrument's own logic is the
+reference and a capture is only its check.
 
 **The correction is the important part of this entry.** Four laws were measured off the hardware -
 a noise gain, a cutoff base, a sweep depth and a resonance curve - and two of them were briefly
@@ -11516,9 +11518,9 @@ module's own - same `2^23 sin(pi f / 96000)` form as the filter modules', but ba
 HIGHER at `f = 16.35 x 2^(v/12)`, and 132 entries long rather than 128. The hardware measures the
 peak eight semitones BELOW that. So the DSP does not use that word the way the filter modules use
 theirs, and no amount of measuring the outside will say how - the same situation FltClassic was in
-before its its Freq table turned up.
+before the halving of its cutoff word turned up.
 
-**Method note worth keeping.** The two-parts structure (`_gPartDrumSynthA` on the 96 kHz list,
-`_gPartDrumSynthB` on the 24 kHz one) is the same shape as the modules that already have harnesses,
-
+**Method note worth keeping.** The two-parts structure (one on the 96 kHz list, one on the
+24 kHz one) is the same shape as the modules that already have harnesses, so the existing offline
+scaffolding should carry over. Start from the host words tabulated in
 §39.4 - those are decoded and certain.
