@@ -45,6 +45,34 @@ void setup_main_menu(void) {
     load_saved_settings();
 }
 
+// notes §2a - APP NAP AND THE EFFICIENCY CORES. This application draws only when something asks it
+// to (synthlib_request_redraw()), so between gestures it looks idle to macOS - and an idle process
+// gets napped: timers coalesced, threads deprioritised, work pushed onto the efficiency cores. A
+// DAW never looks idle and never gets this, which is the shape of CT's observation that Ableton
+// shows activity on the performance cores and the standalone does not.
+//
+// NSActivityLatencyCritical is the documented way to say "this process is doing audio": no napping
+// and no timer coalescing. Held only while the audio output is open, so an editor with the engine
+// switched off still naps as it should.
+static id<NSObject> gAudioActivity = nil;    // strong under ARC, which is what holds the token
+
+void platform_begin_audio_activity(void) {
+    if (gAudioActivity != nil) {
+        return;
+    }
+    gAudioActivity = [[NSProcessInfo processInfo]
+                      beginActivityWithOptions:(NSActivityUserInitiated | NSActivityLatencyCritical)
+                      reason:@"Sound engine is rendering audio"];
+}
+
+void platform_end_audio_activity(void) {
+    if (gAudioActivity == nil) {
+        return;
+    }
+    [[NSProcessInfo processInfo] endActivity:gAudioActivity];
+    gAudioActivity = nil;
+}
+
 void register_sleep_wake_notifications(void) {
     [[[NSWorkspace sharedWorkspace] notificationCenter]
      addObserverForName:NSWorkspaceDidWakeNotification

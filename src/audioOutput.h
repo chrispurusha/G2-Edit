@@ -67,6 +67,15 @@ void audio_output_select_level_db(int32_t db);
 uint32_t audio_output_buffer_frames(void);
 void audio_output_select_buffer_frames(uint32_t frames);
 
+// notes §4 - the device's rate can change under a running unit (Audio MIDI Setup, or another
+// application opening it first). Call once per frame from the render loop: it re-opens the output
+// where that has happened, which is what re-reads the format and tells the engine. True if it did.
+bool audio_output_poll_rate_change(void);
+
+// notes §5 - IO cycles CoreAudio itself has reported as overrun since the output was opened. The
+// only thing that distinguishes the engine being late from the device glitching for its own reasons.
+uint32_t audio_output_overload_count(void);
+
 // Reads the remembered device, channels and buffer size. Call once at startup, after prefs_init().
 void audio_output_load_settings(void);
 

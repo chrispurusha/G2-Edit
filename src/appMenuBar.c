@@ -940,6 +940,22 @@ void open_experimental_menu(tCoord anchor) {
         items[i++] = (tMenuItem){
             (char *)sound_engine_modulation_text(), (tRgb)RGB_GREY_5, NULL, 0, NULL, 0, 0.0
         };
+
+        // A third: what the DEVICE is doing, which the engine cannot report because it is
+        // deliberately platform-free. The overrun count is CoreAudio's own verdict on whether we
+        // missed the deadline (audioOutput.c notes §5) - the one number that separates "the engine
+        // was late" from "something else dropped it", and there was nowhere to read it.
+        {
+            static char audioLine[80];
+
+            snprintf(audioLine, sizeof(audioLine), "%.0f Hz, %u frames, %u overrun%s",
+                     audio_output_sample_rate(), (unsigned)audio_output_buffer_frames(),
+                     (unsigned)audio_output_overload_count(),
+                     (audio_output_overload_count() == 1u) ? "" : "s");
+            items[i++] = (tMenuItem){
+                audioLine, (tRgb)RGB_GREY_5, NULL, 0, NULL, 0, 0.0
+            };
+        }
     }
     // Which device the engine plays through, and which pair of its outputs. Both are flyouts off
     // this menu, and both remember the choice — see audioOutput.h for why the device is stored by

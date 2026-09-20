@@ -79,6 +79,7 @@ extern "C" {
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
 #include "soundEngine.h"
+#include "audioOutput.h"
 #include "paramCurves.h"
 #include "paramOverlay.h"
 #include <strings.h>
@@ -973,6 +974,10 @@ void render_frame(void) {
     database_read_lock();
 
     render_backend_clear((tRgb){0.8, 0.8, 0.8});
+
+    // notes §4 in audioOutput.c - the device may have changed rate since the last frame. Here
+    // rather than on the HAL thread that noticed: re-opening the unit is what tells the engine.
+    (void)audio_output_poll_rate_change();
 
     // notes §37
     sound_engine_update_from_patch();

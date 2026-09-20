@@ -31,11 +31,15 @@ extern "C" {
 
 #pragma clang diagnostic pop
 
+#include <stdatomic.h>
+
 #include "defs.h"
 #include "synthlibDefs.h"
 #include "prefs.h"
+#include "synthlibGlobals.h"  // synthlib_request_redraw() - the rate listener wakes the loop
 #include "audioOutput.h"
 #include "soundEngine.h"
+#include "misc.h"            // platform_begin_audio_activity() - misc.mm notes §2a
 
 // notes §1
 
@@ -411,6 +415,98 @@ static OSStatus render_callback(void *                       inRefCon,
     return noErr;
 }
 
+static void stop_listening_for_rate_changes(void);
+
+// notes §4 - THE DEVICE'S RATE CAN CHANGE UNDER US: Audio MIDI Setup, or another application
+// taking the device first. Nothing told the engine, so it went on rendering at the rate the device
+// had when the unit was opened - which since §29a also decides the oversampling factor, so a change
+// leaves it doing the wrong amount of work as well as playing at the wrong speed.
+//
+// The listener only RAISES A FLAG. It is called on a HAL thread, and re-opening the unit from there
+// would tear down the very callback that may be running; rebuilding the decimators from there would
+// race the audio thread reading them. The render loop owns the restart - one owning thread, others
+// post.
+static _Atomic bool     gRateChanged   = false;
+// notes §5 - CoreAudio's OWN verdict on whether we missed the deadline. Nothing else here can tell
+// the engine being late apart from the device glitching for its own reasons, and every measurement
+// of the render time says it is not the engine.
+static _Atomic uint32_t gOverloadCount = 0;
+
+static OSStatus device_listener(AudioObjectID                      device,
+                                UInt32                             count,
+                                const AudioObjectPropertyAddress * addresses,
+                                void *                             context) {
+    (void)device;
+    (void)context;
+
+    for (UInt32 i = 0; i < count; i++) {
+        switch (addresses[i].mSelector) {
+            case kAudioDeviceProcessorOverload:
+            {
+                atomic_fetch_add(&gOverloadCount, 1u);
+                break;
+            }
+
+            // Any of these means the format we opened with is no longer the one we are running at,
+            // and the unit has to be re-opened to find out what it is now.
+            case kAudioDevicePropertyNominalSampleRate:
+            case kAudioDevicePropertyBufferFrameSize:
+            case kAudioDevicePropertyStreamFormat:
+            {
+                atomic_store(&gRateChanged, true);
+                synthlib_request_redraw();   // the loop draws only when asked, and the loop acts
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
+        }
+    }
+
+    return noErr;
+}
+
+static AudioObjectID gRateListenerDevice = 0;
+
+// notes §4, §5
+static const UInt32  kWatchedSelectors[] = {
+    kAudioDevicePropertyNominalSampleRate,
+    kAudioDevicePropertyBufferFrameSize,
+    kAudioDevicePropertyStreamFormat,
+    kAudioDeviceProcessorOverload,
+};
+#define WATCHED_SELECTOR_COUNT    ((uint32_t)(sizeof(kWatchedSelectors) / sizeof(kWatchedSelectors[0])))
+
+static void listen_for_rate_changes(AudioObjectID device) {
+    if (gRateListenerDevice == device) {
+        return;
+    }
+    stop_listening_for_rate_changes();
+
+    for (uint32_t i = 0; i < WATCHED_SELECTOR_COUNT; i++) {
+        AudioObjectPropertyAddress address = {
+            kWatchedSelectors[i], kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain
+        };
+
+        // REPORTED, not swallowed. A listener that silently failed to attach makes the overrun
+        // count below read zero forever, which is a false negative on the one question it exists
+        // to answer.
+        OSStatus                   status  = AudioObjectAddPropertyListener(device, &address, device_listener, NULL);
+
+        if (status != noErr) {
+            LOG_ERROR("Sound engine: could not watch device property %u (%d) - "
+                      "%s\n", (unsigned)i, (int)status,
+                      (kWatchedSelectors[i] == kAudioDeviceProcessorOverload)
+                      ? "the overrun count will stay at zero whether or not it overruns"
+                      : "a change of rate, buffer or format will go unnoticed");
+        }
+    }
+
+    gRateListenerDevice = device;
+}
+
 bool audio_output_start(void) {
     AudioComponentDescription   description    = {0};
     AudioComponent              component      = NULL;
@@ -490,6 +586,8 @@ bool audio_output_start(void) {
         LOG_DEBUG("Sound engine: output device '%s', %u channels, L=out %u R=out %u\n",
                   gDevice[index].name, (unsigned)deviceChannels,
                   (unsigned)gLeftChannel + 1, (unsigned)gRightChannel + 1);
+        atomic_store(&gOverloadCount, 0);             // notes §5 - count this opening's overruns
+        listen_for_rate_changes(gDevice[index].id);   // notes §4
     }
 
     // Take the device's own rate rather than forcing one, so CoreAudio does no rate conversion on
@@ -590,11 +688,14 @@ bool audio_output_start(void) {
         return false;
     }
     gRunning = true;
+    platform_begin_audio_activity();   // misc.mm notes §2a - no App Nap while we are rendering
     LOG_DEBUG("Sound engine: audio output started at %.0f Hz\n", gSampleRate);
     return true;
 }
 
 void audio_output_stop(void) {
+    platform_end_audio_activity();   // misc.mm notes §2a
+
     if (gOutputUnit == NULL) {
         gRunning    = false;
         gSampleRate = 0.0;
@@ -612,6 +713,47 @@ void audio_output_stop(void) {
     gOutputUnit = NULL;
     gRunning    = false;
     gSampleRate = 0.0;
+}
+
+static void stop_listening_for_rate_changes(void) {
+    if (gRateListenerDevice == 0) {
+        return;
+    }
+
+    for (uint32_t i = 0; i < WATCHED_SELECTOR_COUNT; i++) {
+        AudioObjectPropertyAddress address = {
+            kWatchedSelectors[i], kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain
+        };
+
+        (void)AudioObjectRemovePropertyListener(gRateListenerDevice, &address, device_listener, NULL);
+    }
+
+    gRateListenerDevice = 0;
+}
+
+// notes §5 - how many IO cycles CoreAudio has reported as overrun since the output was opened.
+uint32_t audio_output_overload_count(void) {
+    return atomic_load(&gOverloadCount);
+}
+
+// notes §4 - called from the render loop. Re-opening the unit is what re-reads the format and tells
+// the engine, so the restart does the whole job rather than patching the rate in behind it.
+bool audio_output_poll_rate_change(void) {
+    if (atomic_exchange(&gRateChanged, false) == false) {
+        return false;
+    }
+
+    if (gRunning == false) {
+        return false;
+    }
+    audio_output_stop();
+
+    if (audio_output_start() == false) {
+        LOG_ERROR("Sound engine: the device changed rate and would not re-open\n");
+        return false;
+    }
+    LOG_DEBUG("Sound engine: device changed rate, re-opened at %.0f Hz\n", gSampleRate);
+    return true;
 }
 
 double audio_output_sample_rate(void) {

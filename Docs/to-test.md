@@ -3,6 +3,52 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***APP NAP IS NOW REFUSED WHILE THE AUDIO OUTPUT IS OPEN (2026-09-19)*** - misc.mm notes §2a.
+  THE CURRENT BEST GUESS AT THE STANDALONE BREAK-UP, from CT seeing Ableton busy on the performance
+  cores and the standalone not. This application draws only on request, so between gestures it
+  looks idle to macOS and can be napped onto the efficiency cores; a DAW never looks idle.
+  `NSActivityLatencyCritical` says "this process is doing audio". CHECK: does the break-up go, and
+  does Activity Monitor now show the standalone on the performance cores? If it does NOT help,
+  that is worth knowing too - say so and this comes back out rather than staying in on a hunch.
+  Also confirm the log shows no "could not watch device property" line, which would mean the zero
+  overrun count was a false negative all along.
+- ***OSCILLATOR PITCH TYPES NOW PLAY: Freq, Factor and Partial (2026-09-19)*** - reference §6.1a,
+  revert record 60 and 61. They were all read as Semi, so any oscillator not set to Semi was at the
+  wrong pitch - 02 Big Pad's two are Partial and were an octave high. CHECK AGAINST THE G2: 02 Big
+  Pad first, since it should now sit an octave lower; then an oscillator in each of Freq, Factor and
+  Partial, including Partial below 33 where it becomes sub-audio hertz, and Partial at 0 which
+  should be silent. OscD's table entry changed too - it has no pitch type - so check an OscD still
+  plays as it did.
+- ***TWO NEW STATUS LINES IN THE EXPERIMENTAL MENU (2026-09-19)*** - the audio device's rate, buffer
+  and CoreAudio overrun count (audioOutput.c notes §5), and every controller that is NOT at rest.
+  The second used to report aftertouch alone, so a wheel, sustain or expression pedal left standing
+  was invisible; it now names any morph group that is not zero and any bend that is not centred, or
+  says "controls at rest". Both are information only. Check they read sensibly and that the morph
+  line moves when you move a wheel or pedal.
+- ***THE STANDALONE NOW COUNTS COREAUDIO OVERRUNS (2026-09-19)*** - audioOutput.c notes §5. This is
+  the instrument for the break-up, not a fix: `kAudioDeviceProcessorOverload` is CoreAudio's own
+  verdict on whether we missed the deadline, and nothing was listening for it. WHEN YOU ARE BACK AT
+  THE MACHINE: make it break up, then read `SNDSTATUS` over the backdoor - it now reports
+  `rate= buffer= overloads=`. **If overloads is climbing, the callback really is late and the next
+  step is to find what is blocking it. If it stays at zero while you can hear the break-up, it is
+  not our render time at all** and the device, the driver or something downstream is dropping it -
+  which is what every measurement so far points at.
+- ***THE STANDALONE FOLLOWS A DEVICE RATE CHANGE (2026-09-19)*** - audioOutput.c notes §4. It read
+  the rate once when the unit opened and never again, so changing it in Audio MIDI Setup (or another
+  application opening the device first and setting it) left the engine rendering at the old rate -
+  wrong speed, and since notes §29a the wrong amount of work too. It now listens for
+  `kAudioDevicePropertyNominalSampleRate` and re-opens the output from the render loop. CHECK: play
+  something, change the rate in Audio MIDI Setup, and it should carry on at the new rate; then the
+  same with another application grabbing the device first. The plug-in is unaffected - the host
+  tells it.
+- ***PLUG-IN REMEMBERS THE LAST PATCH FOLDER AGAIN (2026-09-19)*** - plugin/g2Plugin.c. Its prefs
+  were initialised only from the editor-WIDTH hook, and both view wrappers skip that hook once the
+  instance carries its own restored width - which every reopened project has, since the editor
+  geometry went into the saved state. So nothing registered the file browser's start-directory
+  provider and the browser opened at the default folder every time (CT). Now initialised when the
+  instance is created. CHECK: open a patch from somewhere unusual in the plug-in, close the host
+  project, reopen it, and File > Open should start in that folder - and the application and the
+  plug-in should still follow each other, since they share the one key.
 - ***01 MINI EMULATOR PLAYS (2026-09-19)*** - reference §§31-37, revert record 59. The eight module
   types it lacked are in (MonoKey, Glide, LevConv, LevAdd, Sw2-1, Sw8-1, ValSw2-1, 2-In), and with
   them a bug that mattered more: an envelope's In/Gate/AM jacks were found by POSITION, which is

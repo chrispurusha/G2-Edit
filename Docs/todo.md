@@ -60,8 +60,9 @@ FILTERS
 - Re-check FltComb FB 127 and FltPhase FB 127 with the level-tracking test, as FltClassic/FltNord were
 
 SOUND ENGINE
-- Sound engine across cores: the blocker is the per-sample note grid - `for each sample { for each voice { for each node } }` cannot fork and join 384000 times a second. Both this and any real single-thread gain need per-voice rendering into whole sub-blocks, with note events quantised to a sub-block boundary (findings 2026-09-19). NOTE a single plug-in instance does not split across cores either; what looks like it is the host running other tracks in parallel-
-- Break-up with several notes: at 48 kHz the engine is 26% of a core for BigPad at 16 voices and the worst block is 18% of its deadline, so ASK WHAT RATE AND BUFFER the interface is on before chasing the DSP - 96 and 192 kHz were the real cost and are now halved (findings 2026-09-19)
+- Sound engine across cores - design note at Docs/engine-multicore-design.md (2026-09-19, nothing built). The blocker is the per-sample note grid; the payoff is 3-4x, capped by a fixed 3.7% of a core; JUCE has no design to borrow, only Apple's audio workgroup. Settle where the deficit actually is first
+- Standalone break-up: NOT timing - CoreAudio reports ZERO overruns while it happens (48 kHz, 256/512 frames, G2 off, simple patches too), so the samples are wrong rather than late. Next suspect is headroom: 02 Big Pad peaks at 0.997 with 13 notes and the output hard-clips at 1.0 (findings 2026-09-19)
+- Engine headroom: no attenuation anywhere for polyphony, so a pad at full voices sits on the rail at the default 0 dB. Decide whether the Out module, the output stage or nothing should scale with voice count - the G2 itself does not clip here
 - Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) - CONFIRMED right (02 Big Pad asks for and gets 14, 2026-09-19) - but the G2 assigns by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"), so the topbar should show a requested/assigned pair as the original does
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
 - Glide's Log shape: translate-and-run the instrument's three Portamento parts and settle it, as FltStatic and OscDual were. The engine runs a one-pole on OUR reading of the Time (reference §36.1); Lin and the Time table itself are settled
@@ -83,7 +84,6 @@ SOUND ENGINE
   reach an Out without passing a gated envelope" - phase already advances for every patch
 - Option to reset oscillator phase on note-on, for predictable bass; hardware free-runs, so not default
 - Let oscillators free-run rather than only while a note sounds - some patches depend on it; make it configurable
-- Sound engine across cores - investigated and deprioritised, kept for later
 - OscNoise computes sin, exp and sqrt every sample for every voice (engine load 13% for a two-module patch against 6-8% for Noise) - with nothing patched into Pitch or Width the coefficients are constant and could be computed once per block
 - The engine costs ~2% of a core while SILENT (SimpleLead, no notes: 0.62 s CPU per 30 s, output all zero; a 4-voice chord is 2.2 s) - every instance on an idle track pays it. The time is the whole graph running: per-sample parameter smoothing of every node's 12 values, the voice loop, the reverb. A 'sleep when silent' mode (no voice sounding and the post-mix output below a floor for a second) would recover it, but must keep LFO and oscillator phase advancing and let effect tails finish - not a quick change. (Hoisting the per-sample exp() coefficients was tried 2026-09-11 and gained nothing: the compiler already does it)
 
@@ -146,6 +146,20 @@ BUILD
 
 
 DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from this file, the constraint is not)
+
+- The engine's three per-node output-leg loops (the clear at the top of `eval_node()`, the voice sum,
+  the mono fan-out) must keep iterating the CONSTANT `NODE_OUTPUTS`. Replacing it with the node's
+  real leg count - 2 for almost every kind against the constant 6 - looks like a three-fold cut in
+  the hottest stores in the engine and measured **26% SLOWER**, reproducibly (2026-09-19, 02 Big Pad
+  at 16 voices: 26.2% of a core to 32.9%). A fixed trip count of 6 lets the compiler unroll and
+  vectorise those loops into straight-line SIMD; a variable bound forces a real loop with a branch
+  per iteration, and the branch costs more than the stores saved. Do not re-try without reading the
+  generated code first.
+- Two other "unchanged input" optimisations were measured the same day and are NOT worth their
+  state, though neither is wrong: skipping a node's parameter smoothing once its dials have reached
+  their targets is +0.6%, and caching `osc_frequency_hz()`'s exp2 per voice and node is +1.1% for
+  2 MB of banked arrays. The profile is why - `eval_node`'s per-node switch is 77% of the engine,
+  and no constant-factor trim touches it. See findings 2026-09-19.
 
 - The "sudden/random horizontal VA scroll" was the SIDE WHEEL on the owner's new mouse (CT,
   2026-09-19), not a trackpad momentum tail. Do not re-derive the trackpad theory from that symptom.

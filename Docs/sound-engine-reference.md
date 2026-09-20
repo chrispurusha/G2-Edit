@@ -154,6 +154,35 @@ Pitch only.
 
 **6.5 Not modelled.** FM on OscB and OscC; OscB's Shape modulation input; Sync.
 
+**6.1a WHAT THE TUNE DIAL MEANS: the Pitch Type drop-down (2026-09-19).** Four settings on OscA,
+OscB, OscC, OscNoise and OscDual, and the engine read all of them as Semi - it logged "PitchType %d
+not supported" and carried on, so any oscillator not set to Semi played at the wrong pitch. CT found
+it on 02 Big Pad, whose two oscillators are both Partial.
+
+All four end as a `basePitch` on the Semi scale where 64 is unity, so the keyboard tracking and
+everything downstream are untouched - a frequency ratio is an offset in semitones. The laws are the
+ones the dial itself prints (renderParams.c), shared rather than restated:
+
+| | Tune means | basePitch |
+|---|---|---|
+| 0 Semi | semitones, 64 unity | `tune` |
+| 1 Freq | 8.1758 Hz to 12.55 kHz absolute | from `osc_freq_hz()` |
+| 2 Factor | 0.0248x to 38.072x of the note | `64 + 12 log2(factor)` |
+| 3 Partial | 0 silent; 1-32 sub-audio hertz; 33-63 the ratio 1:(65-tune); 64-127 the ratio (tune-63):1 | `64 + 12 log2(ratio)` |
+
+**Freq and Partial's sub-audio end are ABSOLUTE, so they ignore the key**: Kbt is forced off for
+those rather than left to the button, which is what a fixed frequency means. Partial at 0 silences
+the oscillator.
+
+02 Big Pad's oscillators have Tune 63 in Partial, which is 1:2 - an octave below the note. They were
+playing at 63.07 on the Semi scale, a semitone below unity; they now play at 52.07.
+
+**OscD has no Pitch Type at all** - five parameters, and 3 is its "Pitch" mod dial. The engine's
+table said its pitch type was parameter 3, which read that dial as the type. Harmless while anything
+above Semi was refused and wrong the moment this section started acting on it, so that entry is -1
+now, meaning always Semi. Whether the dial is OscD's PitchVar attenuator, and so belongs in the mod
+slot, is still open - see todo.md.
+
 ## 7. Noise
 
 **7.1 Model.** White noise through a one-pole low-pass whose corner the Color dial sets; each voice has
