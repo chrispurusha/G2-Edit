@@ -1635,6 +1635,63 @@ with the key released at 80 ms. The face has one lamp and a poly patch has one o
 so voice 0 publishes and the rest do not - the rule the LFO already used, now in one place
 (notes §194).
 
+**39.4 STILL UNSETTLED: the noise path, and it needs the NATIVE HARNESS, not captures.** The
+module is two DSP parts of its own - `_kDrumParts` is `_gPartDrumSynthA` (list A, 96 kHz) and
+`_gPartDrumSynthB` (list B, 24 kHz) - so its noise source, its filter and their gains are all in
+those two Compute bodies. **Nothing here may be fitted to a capture**; the standing rule is that
+the instrument's own arithmetic decides, as it did for §§21-25.
+
+What the HOST side already gives, read off the parameter conversion (2026-09-20), so the harness
+starts from a known input:
+
+| dial | word the host sends |
+|---|---|
+| 0 Master Freq, 1 Slave Ratio, 10 Noise Type, 15 On | the raw dial |
+| 2, 3, 9, 12 - the four decays | the ENVELOPE's decay-multiplier table |
+| 4, 5, 11, 13, 14 - the five levels | one shared exponential curve (39.3) |
+| 6 Noise Filter Freq | a cutoff table of its OWN: the same `2^23 sin(pi f / 96000)` form as the filter modules' but based three semitones higher, `f = 16.35 x 2^(v/12)`, and 132 entries long rather than 128 |
+| 7 Noise Filter Res | `dial/512`, capped at a QUARTER of full scale |
+| 8 Noise Filter Sweep | `dial/128`, full scale at 127 |
+
+**Captures taken 2026-09-20 as EVIDENCE FOR the harness - what its output has to reproduce - and
+explicitly not as laws to fit.** Rig: Keyboard -> DrumSynth -> LevAmp -> 2-Out in Slot A, Kick 1's
+settings, contributors isolated by zeroing the others.
+
+- **The noise is about 12 dB too loud relative to the two oscillators.** Measured as a ratio, so it
+  carries no rig calibration in it: noise-only peak against oscillators-only peak is -21.3 dB on the
+  G2 and -9.5 dB in the engine. About 11 dB of that is already there at zero resonance, so most of
+  it is a fixed gain rather than the resonance law. **This is what CT hears** ("Drum synth engine
+  has more noise than G2 on Kick 1").
+- **The resonant peak tracks `10.3 x 2^(v/12)`**, dead straight over dials 32 to 112 (implied base
+  10.24, 10.35, 10.23, 10.35, 10.29). The engine's own peak tracks its nominal cutoff to 13.8, so
+  the peak is a faithful read of the cutoff and the difference is real: the engine sits five
+  semitones high. **That contradicts the table above by eight semitones**, which means the word is
+  not used the way the filter modules use theirs - and that is a question only the Compute can
+  answer.
+- **The Sweep dial measures one semitone a step**: 0, 2.65 and 5.30 octaves at dials 0, 32 and 64,
+  exactly linear. The engine's five-octaves-over-the-dial comes from the manual, not from the
+  instrument, and is 2.1x too shallow - but the reference has to confirm the law before it changes.
+- **The resonance curve is the wrong shape**, quite apart from the level: peak gain relative to
+  Res 0 runs 0, +0.6, +1.2, +5.0, +10.9 dB on the G2 at dials 0/32/64/96/127, against the engine's
+  0, +1.2, +3.7, +7.6, +14.4. **The earlier guess in this section - that the engine is four times
+  too resonant because the host sends a quarter scale - is DISPROVED**: quartering the dial gives
+  far too little resonance, not too much.
+- **The noise decays too slowly**: to -20 dB in 96 ms against the G2's 76 ms, on Kick 1's Noise
+  Decay of 49.
+
+A change was drafted from these numbers and REVERTED the same day (CT: "G2demo is the reference"),
+which is the right call and is why they are recorded here as targets rather than as constants.
+
+**39.5 The panel lamp, added 2026-09-20.** DrumSynth's face has an LED by its Trig and nothing lit
+it: the engine published a lamp for the LFO alone, and every other module's LED stayed dark unless a
+real G2 was attached to send one (CT). It now follows the MASTER ENVELOPE, which is what the
+instrument shows - its lamp reads a level word of the module's own DSP state, the same way an
+envelope's does, not the Trig input. So it comes on with the hit and fades out with it rather than
+following the key: offline it lights at the note-on and goes out 263 ms later on the default preset,
+with the key released at 80 ms. The face has one lamp and a poly patch has one of these per voice,
+so voice 0 publishes and the rest do not - the rule the LFO already used, now in one place
+(notes §194).
+
 **39.4 STILL UNSETTLED: the noise filter, and only the noise filter.** The whole module is two DSP
 parts of its own - one at 96 kHz, one at 24 kHz - so its filter is hand-written rather than one of
 the filter modules, and its coefficient law is inside that code. Two host-side facts are known and

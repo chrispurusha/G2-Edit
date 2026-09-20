@@ -11488,3 +11488,46 @@ Measuring the envelope directly - through the module's own VCA on a sine, as an 
 The two mixers in the chain also each got ruled out on paper first: Mix2-1A's parameters really do
 run Level1, On1, Level2, On2, Lin/Exp, so "Filter KBT" in that patch really does have BOTH channels
 switched off and contributes only its chain - the engine and the instrument agree about that.
+
+====================================================================================================
+
+## 2026-09-20 - DrumSynth's noise: measured, drafted, REVERTED, and left for the harness
+
+CT: "Drum synth engine has more noise than G2 on Kick 1 at least." Then, after I had started
+fitting the engine to the captures: "G2demo is the reference!!!"
+
+**The correction is the important part of this entry.** Four laws were measured off the hardware -
+a noise gain, a cutoff base, a sweep depth and a resonance curve - and two of them were briefly
+written into the engine as constants. That is the thing this project decided not to do: the
+instrument's own arithmetic settles a law and a capture only checks it (see the reverb, compressor,
+delay and filter entries, all of which were rebuilt on the instrument's own words). Everything was
+reverted; `git diff` on soundEngine.c now shows only the envelope-mod work from earlier the same
+day.
+
+**What the measurements say, kept in reference §39.4 as the harness's acceptance test:**
+
+- The noise is ~12 dB too loud against the two oscillators - measured as a ratio, so it carries no
+  rig calibration. That is what CT hears. About 11 dB of it survives at zero resonance, so it is
+  mostly a fixed gain, not the resonance law.
+- The resonant peak tracks `10.3 x 2^(v/12)` across the dial; ours tracks 13.75, so ours is five
+  semitones high. The control that makes this trustworthy: the ENGINE's own peak tracks its own
+  nominal cutoff to 13.8 Hz, so the peak is a faithful read of the cutoff in both.
+- The Sweep dial is one semitone a step (0 / 2.65 / 5.30 octaves at 0 / 32 / 64, exactly linear).
+  The engine's "five octaves across the dial" came from the manual, and is 2.1x too shallow.
+- The resonance curve is the wrong shape, and **the guess previously written into §39.4 - that we
+  are four times too resonant because the host sends Res at a quarter scale - is disproved.**
+  Quartering the dial gives far too little resonance.
+- The noise decays too slowly: 96 ms to -20 dB against 76 ms.
+
+**And one reading that is genuinely confusing, which is why this needs the Compute and not more
+captures.** The host's own conversion sends Noise Filter Freq through a cutoff table of the
+module's own - same `2^23 sin(pi f / 96000)` form as the filter modules', but based three semitones
+HIGHER at `f = 16.35 x 2^(v/12)`, and 132 entries long rather than 128. The hardware measures the
+peak eight semitones BELOW that. So the DSP does not use that word the way the filter modules use
+theirs, and no amount of measuring the outside will say how - the same situation FltClassic was in
+before its `_vintageFilterFreq >> 1` turned up.
+
+**Method note worth keeping.** The two-parts structure (`_gPartDrumSynthA` on the 96 kHz list,
+`_gPartDrumSynthB` on the 24 kHz one) is the same shape as the modules that already have harnesses,
+so `rx2.py` and an emulated byte memory should carry over. Start from the host words tabulated in
+§39.4 - those are decoded and certain.
