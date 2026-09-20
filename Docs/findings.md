@@ -11401,3 +11401,46 @@ latent limit had been hidden behind the bug for as long as the bug existed. Fixi
 failure adds edges to a graph, and the code downstream has only ever run on the smaller graph. A
 sweep of every test patch, old binary against new, showed no other patch changed at all - which
 located the damage immediately and is worth doing on any change to the chain walk.
+
+====================================================================================================
+
+## 2026-09-20 - The Keyboard's Gate was never broken, and OscA's "10%" pulse is 6.25% on purpose
+
+CT: "Keyboard module doesn't seem to pass on trigger from either Mac keyboard or incoming midi",
+then "Drum Synth trigger led not lighting", and "Variations don't sound like G2 in some variations.
+Possibly the wave."
+
+**The Keyboard's Gate was fine; DrumSynth was not a SOURCE.** `chain_has_source()` lists the node
+kinds that make a signal out of nothing - the oscillators, Pulse, the two noise sources, DXRouter -
+and DrumSynth was never added when the module went in. Keyboard -> DrumSynth -> LevAmp -> Out
+therefore reported "Nothing is patched into it" and published silence, with the tap thrown away,
+which is indistinguishable from a gate that never fires. `chain_is_bypassed()` carried a second copy
+of the same list; both now call one `node_is_generator()`, so a module cannot be added to one and
+missed off the other. The drum rig plays.
+
+**The panel lamp: the engine only ever lit the LFO's.** `usbComms.c` is the only writer of
+`module->led`, so away from a real G2 every LED is dark unless the engine overrides it, and the
+engine had one inline override, for the LFO. DrumSynth's now follows its master envelope - which is
+what the instrument shows, its lamp reading a level word of the module's own DSP state the way an
+envelope's does, not the Trig input. Reference §39.5; the voice-0 rule is in one place now
+(notes §194) so the next lamp inherits it.
+
+**The wave is NOT why variations sound wrong, and this is the second independent confirmation.**
+OscA's six waveforms are Sine, Tri, Saw and three pulses, and selecting one writes two words: which
+wave to run, and - for the pulses only - a threshold the phase is compared against. Those
+thresholds are 0, half scale and **0.875** of full scale. The pulse is high while the phase is past
+the threshold, so the duties are 1/2, 1/4 and **1/16**: the manual's "10% Pulse" is a nominal label
+and the instrument really makes a 6.25% pulse. The engine's `kSqrOffset` is {0.0, 0.5, 0.875} and
+has been right all along - it already matched a hardware measurement from 2026-08-24, and now
+matches the instrument's own constants.
+
+That is worth a DO-NOT-RE-TRY line because the arithmetic is a trap: duty = (1 - y)/2 makes 10%
+come out at y = 0.8, so 0.875 reads exactly like a bit-level slip, and the manual appears to agree.
+Two independent sources say otherwise.
+
+**So the variation question is still open**, and nothing structural explains it: variations do reach
+the engine (each of 01 Mini Emulator's eight builds a different node table), every per-variation
+dial in the build is read at the active variation, and the five drop-downs the build reads as MODES
+- OscShpB's waveform, Delay range, Reverb type, OscC/OscD's wave, the filter slope - are drop-downs
+on the instrument too, which by the manual cannot carry a morph or a variation. Needs a specific
+symptom: which patch, which variation, and what is wrong with the sound. todo.md.

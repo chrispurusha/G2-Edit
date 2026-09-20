@@ -436,6 +436,7 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define DRUM_TICK               (6)
 #define DRUM_CLICK_ENV          (7)
 #define DRUM_STATE_SLOTS        (8)
+#define DRUM_LED_FLOOR          (1.0 / 128.0)   // §39.5 - the lamp is out once the hit is inaudible
 
 #define CHORUS_PARAM_DETUNE     (0)
 #define CHORUS_PARAM_AMOUNT     (1)
@@ -7255,6 +7256,23 @@ static double logic_level(bool high) {
     return (high == true) ? LOGIC_HIGH_LEVEL : 0.0;
 }
 
+// The panel lamp a module shows, published for the face to read (notes §194). Only voice 0
+// publishes: a polyphonic patch runs one of these per voice and the face has one LED, and the
+// instrument shows a single lamp rather than however many voices happen to be sounding.
+static void publish_module_led(uint32_t voice, const tEngineNode * spec, bool lit) {
+    SE_LOCAL;
+
+    if (voice != 0u) {
+        return;
+    }
+    uint32_t lamp = METER_WRITTEN | ((lit == true) ? 1u : 0u);
+
+    if (atomic_exchange_explicit(&gModuleLed[spec->location][spec->moduleIndex],
+                                 lamp, memory_order_relaxed) != lamp) {
+        atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
+    }
+}
+
 // §39 - one DrumSynth sample. Trig starts every envelope; each decays at its own per-tick
 // multiplier, taken from the envelope's table. The bend sweeps the two oscillators DOWN from
 // bendOctaves above their pitch, and the noise filter sweeps DOWN from sweepOctaves above its
@@ -7287,6 +7305,9 @@ static double drum_synth_step(uint32_t voice, uint32_t node, const tEngineNode *
         st[DRUM_NOISE_ENV]  *= spec->drumDecay[2];
         st[DRUM_BEND_ENV]   *= spec->drumDecay[3];
     }
+    // §39.5 - the face's lamp follows the master envelope, as the instrument's does
+    publish_module_led(voice, spec, st[DRUM_MASTER_ENV] > DRUM_LED_FLOOR);
+
     st[DRUM_CLICK_ENV]     -= 1.0 / (DRUM_CLICK_SECONDS * gSampleRate);
 
     if (st[DRUM_CLICK_ENV] < 0.0) {
@@ -7369,17 +7390,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             value[n][0] = lfo_step(voice, n, spec);
             value[n][1] = value[n][0];
 
-            // The panel LED, lit on the positive half of the cycle - see gModuleLed. Only voice 0
-            // publishes: a polyphonic patch runs one LFO per voice and the face has one LED, and the
-            // instrument shows a single blink rather than however many voices happen to be sounding.
-            if (voice == 0u) {
-                uint32_t lamp = METER_WRITTEN | ((value[n][0] > 0.0) ? 1u : 0u);
-
-                if (atomic_exchange_explicit(&gModuleLed[spec->location][spec->moduleIndex],
-                                             lamp, memory_order_relaxed) != lamp) {
-                    atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
-                }
-            }
+            publish_module_led(voice, spec, value[n][0] > 0.0);   // lit on the positive half
             break;
         }
         case eNodeOsc:

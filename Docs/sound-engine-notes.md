@@ -3117,3 +3117,21 @@ real feedback path: the G2 closes such a loop with a delay, where the node order
 input at a lower index than its consumer and so cannot refer forward at all. In 01 Mini Emulator
 it makes no audible difference, because the switch in the loop is selecting the LFO rather than
 Osc 3.
+
+## 194. `publish_module_led()`
+
+ONE PLACE FOR A PANEL LAMP. The engine published a lamp for the LFO and nothing else, inline in
+`eval_node()`, so DrumSynth's Trig LED - and every other module's - stayed dark unless a real G2 was
+attached to send one over USB (CT, 2026-09-20). `usbComms.c` was the only writer of `module->led`,
+and `sound_engine_module_led()` overrides it when the engine has something to say; it just never had
+anything to say beyond the LFO.
+
+Voice 0 publishes and the others return immediately. A poly patch runs one of these per voice and
+the face has one lamp, and the instrument shows a single lamp rather than however many voices
+happen to be sounding. That rule was already the LFO's; it is here now so the next module to grow a
+lamp inherits it rather than restating it.
+
+What drives it is per module and is a question about the instrument, not a free choice: the LFO's
+is its own output's sign, and DrumSynth's is the master envelope (reference §39.5), which is the
+level word the instrument's own lamp reads. Neither is the Trig input, though DrumSynth's LED sits
+beside it.
