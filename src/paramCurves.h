@@ -61,6 +61,9 @@ typedef struct {
     bool    sustain;        // held while the gate is: drawn flat and orange
     int32_t timeParam;      // the parameter that sets the width - a handle drags it - or ENV_NO_PARAM
     int32_t levelParam;     // the parameter that sets the end level, or ENV_NO_PARAM
+    // §17.10 - the Mod envelopes give each time and level dial a mod amount and a jack of its own.
+    // The amount is a parameter; the jack is at the connector one past this segment's time dial.
+    int32_t timeModParam;   // the mod AMOUNT for timeParam, or ENV_NO_PARAM
 } tEnvGraphSegment;
 
 typedef struct {

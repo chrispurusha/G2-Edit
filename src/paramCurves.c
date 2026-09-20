@@ -400,11 +400,23 @@ static double env_graph_level(const tParam * p, uint32_t index) {
 static void env_graph_add(tEnvGraph * graph, double width, double level, bool sustain, int32_t timeParam, int32_t levelParam) {
     if (graph->count < ENV_GRAPH_MAX_SEGMENTS) {
         graph->segment[graph->count++] = (tEnvGraphSegment){
-            width, level, sustain, timeParam, levelParam
+            width, level, sustain, timeParam, levelParam, ENV_NO_PARAM
         };
     }
 }
 
+// §17.10 - on ModADSR and ModAHD each of the first `timeCount` dials has a mod AMOUNT that many
+// parameters further on, and a jack of its own one connector past the dial. Applied after the
+// graph is built so the two share the plain ADSR/AHD shape above rather than restating it.
+static void env_graph_add_mod_amounts(tEnvGraph * graph, int32_t timeCount) {
+    for (uint32_t i = 0; i < graph->count; i++) {
+        int32_t timeParam = graph->segment[i].timeParam;
+
+        if ((timeParam >= 0) && (timeParam < timeCount)) {
+            graph->segment[i].timeModParam = timeParam + timeCount;
+        }
+    }
+}
 
 // notes §86
 
@@ -427,6 +439,10 @@ bool env_stage_map(tModuleType type, const tParam * p, tEnvGraph * graph, bool a
             env_graph_add(graph, env_graph_time_width(p, a + 1), env_graph_level(p, a + 2), false, a + 1, a + 2);
             env_graph_add(graph, ENV_GRAPH_SUSTAIN_WIDTH, env_graph_level(p, a + 2), true, ENV_NO_PARAM, ENV_NO_PARAM);
             env_graph_add(graph, env_graph_time_width(p, a + 3), 0.0, false, a + 3, ENV_NO_PARAM);
+
+            if (mod == true) {
+                env_graph_add_mod_amounts(graph, 4);    // A, D, S, R
+            }
             break;
         }
         case moduleTypeEnvADR:
@@ -453,6 +469,10 @@ bool env_stage_map(tModuleType type, const tParam * p, tEnvGraph * graph, bool a
             env_graph_add(graph, env_graph_time_width(p, a), 1.0, false, a, ENV_NO_PARAM);
             env_graph_add(graph, env_graph_time_width(p, a + 1), 1.0, false, a + 1, ENV_NO_PARAM);
             env_graph_add(graph, env_graph_time_width(p, d), 0.0, false, d, ENV_NO_PARAM);
+
+            if (mod == true) {
+                env_graph_add_mod_amounts(graph, 3);    // A, H, D
+            }
             break;
         }
         case moduleTypeEnvD:

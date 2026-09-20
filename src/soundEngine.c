@@ -179,6 +179,7 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define ENV_PARAM_RESET          (7)   // 0 Normal, 1 Reset
 #define ENV_INPUT_GATE           (1)   // node input: 0 is the audio, 1 the Gate jack, 2 AM
 #define ENV_INPUT_AM             (2)
+#define ENV_INPUT_MOD            (3)   // §17.10 - the time-mod jacks follow, one per modulated dial
 
 #define LEVAMP_PARAM_GAIN        (0)
 #define LEVAMP_PARAM_TYPE        (1)   // 0 = lin, 1 = exp
@@ -678,7 +679,10 @@ typedef struct {
     int32_t target;     // where the segment heads, in envelope steps
     uint8_t rising;     // chooses the attack-shaped recurrence and which way the end test runs
     uint8_t sustain;    // held while the gate is
-    uint8_t pad[2];
+    int8_t  modLeg;     // §17.10 - the node input carrying this stage's time mod, or -1
+    uint8_t dial;       // its own time dial, so the mod can re-read the stage from dial + offset
+    uint8_t modAmount;  // the mod amount dial
+    uint8_t pad[7];
 } tEnvSegment;
 
 typedef struct {
@@ -2646,9 +2650,19 @@ static void env_stages_build(tEngineNode * node, tModule * module, uint32_t vari
                                               : fabs(segment->level));
         bool                     rising  = level > from;
 
-        stage->sustain = (uint8_t)segment->sustain;
-        stage->rising  = (uint8_t)rising;
-        stage->target  = (int32_t)fmin((double)ENV_TOP, round(level * ENV_FULL_SCALE_STEPS));
+        stage->sustain   = (uint8_t)segment->sustain;
+        stage->rising    = (uint8_t)rising;
+        stage->target    = (int32_t)fmin((double)ENV_TOP, round(level * ENV_FULL_SCALE_STEPS));
+        // §17.10 - what a run-time mod needs to re-read this stage's time from its own dial
+        stage->modLeg    = -1;
+        stage->dial      = 0u;
+        stage->modAmount = 0u;
+
+        if ((segment->timeParam >= 0) && (segment->timeModParam >= 0)) {
+            stage->modLeg    = (int8_t)(ENV_INPUT_MOD + segment->timeParam);
+            stage->dial      = (uint8_t)param_value(module, variation, (uint32_t)segment->timeParam);
+            stage->modAmount = (uint8_t)param_value(module, variation, (uint32_t)segment->timeModParam);
+        }
 
         if (segment->sustain != false) {
             node->envSustainStage = (int32_t)node->envStageCount;
@@ -2666,7 +2680,7 @@ static void env_stages_build(tEngineNode * node, tModule * module, uint32_t vari
             env_stage_rates(stage, seconds, map.shape, rising);
         }
         node->envStageCount++;
-        from           = level;
+        from = level;
     }
 }
 
@@ -3005,21 +3019,51 @@ static uint32_t inputs_in_module_order(tModuleType moduleType, uint32_t max, uin
     return count;
 }
 
+// §17.10 - how many time-mod jacks a module has. Only the two "Mod" envelopes carry them, and each
+// sits one connector past the dial it modulates, so the count is the number of dials that have one.
+static uint32_t env_mod_jack_count(tModuleType moduleType) {
+    switch (moduleType) {
+        case moduleTypeModADSR:
+        {
+            return 4u;      // A, D, S, R
+        }
+        case moduleTypeModAHD:
+        {
+            return 3u;      // A, H, D
+        }
+        default:
+        {
+            return 0u;
+        }
+    }
+}
+
 // §17.4 - an envelope's three inputs in the node's own order (audio In, Gate, AM), looked up by the
 // role each plays rather than by where it sits in the module's connector list. Falls back to the
 // positional order for a type the role table does not cover, which is what every envelope used to
 // get.
 static uint32_t env_input_connectors(tModuleType moduleType, uint32_t * derived) {
-    static const char * role[3] = {"VCA Inputs", "Trig & Gate Inputs", "Amp Inputs"};
-    uint32_t            count   = 0;
+    static const char * role[3]  = {"VCA Inputs", "Trig & Gate Inputs", "Amp Inputs"};
+    uint32_t            count    = 0;
 
     for (uint32_t i = 0; i < 3u; i++) {
         uint32_t index = module_index_for_role(moduleType, roleKindInput, role[i]);
 
         if (index == MODULE_ROLE_NONE) {
-            return inputs_in_module_order(moduleType, 3u, derived);
+            count = inputs_in_module_order(moduleType, 3u, derived);
+            break;
         }
         derived[count++] = index;
+    }
+
+    // §17.10 - then the time-mod jacks, which sit one connector past each dial they modulate, so
+    // node input ENV_INPUT_MOD + p carries the mod for the module's parameter p.
+    uint32_t            modCount = env_mod_jack_count(moduleType);
+
+    for (uint32_t i = 0; (i < modCount) && (count < MAX_NODE_INPUTS); i++) {
+        int found = connector_index_for_input(moduleType, 1u + i, anyConnectorType);
+
+        derived[count++] = (found >= 0) ? (uint32_t)found : 0u;
     }
 
     return count;
@@ -6332,7 +6376,37 @@ static int32_t env_segment(int32_t level, int32_t half, int32_t add, int32_t tar
     return (int32_t)(((step < 0) ? 0 : step) + target);
 }
 
-static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * spec, bool gate) {
+static double signal_in(const tEngineNode * spec, double value[][NODE_OUTPUTS], uint32_t input);
+
+// §17.10 - a stage whose time dial is being modulated, re-read at the dial the mod puts it at. A
+// control signal of 1.0 is PITCH_MOD_SEMITONES units, and at a mod amount of 64 one unit moves the
+// dial one step, so the whole amount dial scales linearly from there. Rebuilt on the envelope's own
+// tick rather than per sample, and only while a mod jack is actually patched.
+static const tEnvSegment * env_stage_modulated(const tEngineNode * spec, const tEnvSegment * stage,
+                                               double value[][NODE_OUTPUTS], tEnvSegment * scratch) {
+    if ((stage->modLeg < 0) || (spec->in[stage->modLeg] < 0)) {
+        return stage;
+    }
+    double units   = signal_in(spec, value, (uint32_t)stage->modLeg) * PITCH_MOD_SEMITONES;
+    double dial    = (double)stage->dial + (units * (double)stage->modAmount / 64.0);
+
+    dial     = fmin(127.0, fmax(0.0, dial));
+
+    if (fabs(dial - (double)stage->dial) < 0.5) {
+        return stage;                          // the mod is not moving it off its own dial
+    }
+    *scratch = *stage;
+
+    double seconds = (stage->rising != 0u)
+                     ? env_attack_seconds(dial, (uint32_t)spec->wave)
+                     : env_time_seconds(dial);
+
+    env_stage_rates(scratch, seconds, (uint32_t)spec->wave, stage->rising != 0u);
+    return scratch;
+}
+
+static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * spec, bool gate,
+                            double value[][NODE_OUTPUTS]) {
     SE_LOCAL;
 
     // §17.3 - the segments step at the envelope tick, and the level holds between ticks.
@@ -6349,7 +6423,8 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
         if (index >= spec->envStageCount) {
             q = 0;                                  // idle
         } else {
-            const tEnvSegment * stage = &spec->envStage[index];
+            tEnvSegment         scratch;
+            const tEnvSegment * stage = env_stage_modulated(spec, &spec->envStage[index], value, &scratch);
 
             if (stage->sustain != 0u) {
                 q = env_segment(q, stage->half, stage->add, stage->target);
@@ -7445,7 +7520,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             bool   gate = ((spec->envKeyGate == true) && (gVoice[voice].gate == true)) || (signal_in(spec, value, ENV_INPUT_GATE) > 0.0);
             // §17.5 - an unpatched AM is full scale
             double am   = (spec->in[ENV_INPUT_AM] >= 0) ? fmin(fmax(signal_in(spec, value, ENV_INPUT_AM), -1.0), 1.0) : 1.0;
-            double env  = env_output(spec, envelope_step(voice, n, spec, gate) * am);
+            double env  = env_output(spec, envelope_step(voice, n, spec, gate, value) * am);
 
             // Output 0 is the envelope itself, for patching at a modulation input. Output 1
             // is whatever audio is patched into the module, shaped by that envelope — the

@@ -11444,3 +11444,47 @@ dial in the build is read at the active variation, and the five drop-downs the b
 - OscShpB's waveform, Delay range, Reverb type, OscC/OscD's wave, the filter slope - are drop-downs
 on the instrument too, which by the manual cannot carry a morph or a variation. Needs a specific
 symptom: which patch, which variation, and what is wrong with the sound. todo.md.
+
+====================================================================================================
+
+## 2026-09-20 - Mini Emulator's filter modulation: the envelope's mod jacks were never wired
+
+CT: "On Mini Emulator, on pretty much all variations, the filter modulation is different engine vs.
+G2. Seems to be a chain of modules driving it though." Then: "you could capture G2 vs. Engine ...
+You might want to simplify the patch though."
+
+Done exactly that, and the simplification is the reason it was found: the chain was tested a link
+at a time on the hardware, in Slot A, against the same patch rendered offline.
+
+**Every static link was already right**, which is worth recording so none of them is suspected
+again:
+
+| link | test | G2 | engine |
+|---|---|---|---|
+| FltClassic's FIXED control input | Constant -> in, sweep, read the resonant peak | 1 unit = 1 semitone | same within 0.3 semitone |
+| FltClassic's ATTENUATED input, knob 127 | as above | 2 semitones per unit | same within 1.5 semitone at the extremes |
+| Mix1-1A "Env Amt", Level 52, Exp | Constant through it into the filter | 7 points | same within 0.4 semitone |
+| ModADSR's envelope, A 43 D 64 S 86 | its own VCA on a sine, amplitude envelope | peak at 160 ms | peak at 164 ms, same trajectory |
+
+**The fault: ModADSR's and ModAHD's time-mod jacks were not connected to anything.** The envelope
+node took three inputs - In, Gate, AM - and the four A/D/S/R mod jacks were simply absent, so the
+dial alone set every time. 01 Mini Emulator sets its Filter Env's Decay and Release THROUGH those
+jacks, from a Constant and a ValSw (the Minimoog's decay switch), at amount 64. The engine's decay
+was a flat 500 ms whatever the patch asked for; the instrument's ran from 28 ms to over five
+seconds. Reference §17.10 has the law, the measurement and the fix.
+
+**A trap inside the measurement, worth keeping.** The first decay sweep released the note after
+150 ms, so every setting longer than that measured the RELEASE instead and the sweep appeared to
+saturate at 700 ms - a plausible, wrong "the mod input clamps". Holding the note through the whole
+capture gave the real curve. When measuring a decay, make sure the gate outlasts it.
+
+**And one false lead, recorded because it looked convincing.** Tracking the cutoff through the
+resonant filter said the G2's attack peaked at 40 ms and ours at 160 ms - a 4x error that would
+have sent the search to the attack curve. It was the tracker: an 80 ms window on a filter ringing
+at high Res cannot resolve an attack, and the alignment picked different points in the two takes.
+Measuring the envelope directly - through the module's own VCA on a sine, as an amplitude envelope
+- showed the two agree within 4 ms. **Do not measure a time constant through a resonant filter.**
+
+The two mixers in the chain also each got ruled out on paper first: Mix2-1A's parameters really do
+run Level1, On1, Level2, On2, Lin/Exp, so "Filter KBT" in that patch really does have BOTH channels
+switched off and contributes only its chain - the engine and the instrument agree about that.
