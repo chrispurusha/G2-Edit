@@ -776,6 +776,47 @@ an intermediate level - EnvMulti's alone - uses the attack curve toward that lev
 reasonable reading and not one taken from the instrument. Neither the stages nor the curves have been
 heard against a G2.
 
+**17.10 The Mod envelopes' time-mod jacks, added 2026-09-20.** ModADSR and ModAHD give each of
+their time dials a mod AMOUNT and a jack of its own, and the engine had neither: the node took
+only In, Gate and AM, so every one of those jacks was ignored and the dial alone set the time.
+That is not a corner: 01 Mini Emulator sets its Filter Env's Decay and Release THROUGH them, from
+a Constant and a ValSw - the Minimoog's decay switch - so the filter's sweep was wrong in every
+variation while the envelope in isolation was exact (CT, 2026-09-20: "the filter modulation is
+different engine vs. G2 ... seems to be a chain of modules driving it").
+
+**The law.** A control signal of 1.0 is 64 units, and
+
+    effective dial = dial + units x (amount / 64)
+
+clamped to 0..127, with the time then read from the dial's own table as usual. At an amount of 64
+one unit moves the dial one step; at 127 it moves it just under two. Measured on the hardware
+(Constant -> Decay Mod, amount 64, decay to -20 dB with the note held):
+
+| mod input | G2 | engine before | engine now |
+|---|---|---|---|
+| -32 units | 28 ms | 500 ms | 32 ms |
+| -16 units | 136 ms | 500 ms | 136 ms |
+| 0 | 500 ms | 500 ms | 500 ms |
+| +16 units | 1536 ms | 500 ms | 1536 ms |
+| +32 units | 3620 ms | 500 ms | 4104 ms |
+
+The instrument's own conversion agrees: the A, D and R mod amounts reach the DSP as a word linear
+in the amount dial, and the Sustain mod amount as the dial over 128. So the law is linear in the
+amount, which is what the table above measures at one amount and what the engine implements.
+
+**Where the jacks are.** One connector past the dial each modulates, on both modules - so the node
+puts them at input `ENV_INPUT_MOD + p` for the module's parameter `p`, and `env_stage_map()` in
+paramCurves.c records each segment's mod-amount parameter beside its time parameter.
+
+**Rebuilt on the envelope's tick, not per sample**, and only while a jack is patched and actually
+moving the dial off its own setting - so an unmodulated envelope costs nothing and pays exactly
+what it did before. The stage's words are recomputed from the effective dial into a scratch
+segment, which is why nothing per voice had to be stored.
+
+**NOT yet checked on the hardware:** the Attack and Sustain mod jacks, and ModAHD's. They share
+this one path, so the decay measurement exercises the mechanism, but neither the attack's curve
+under a mod nor the sustain's own law has been measured. to-test.md.
+
 ## 18. Pulse
 
 **18.1 Width.** The Sub range's width in 96 kHz samples is the dial's displayed time (the Lo display,

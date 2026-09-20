@@ -3,6 +3,13 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***MODADSR / MODAHD TIME-MOD JACKS NOW PLAY (2026-09-20)*** - reference §17.10. They were not
+  connected to anything, so 01 Mini Emulator's filter sweep was wrong in every variation. The DECAY
+  jack is measured against the G2 and matches (28/136/500/1536 ms at -32/-16/0/+16 units). CHECK ON
+  THE G2: Mini Emulator's filter sweep by ear across the variations, which is what started this.
+  **The ATTACK and SUSTAIN jacks and all of ModAHD's are NOT measured** - they share the one code
+  path the decay proves, but neither the attack's curve under a mod nor the sustain's own law has
+  been checked. `PatchTestFiles/EnvModDecay.pch2` is the rig, ready to reload into a slot.
 - ***A DRUMSYNTH ON ITS OWN IS NO LONGER SILENT (2026-09-20)*** - the engine's "is there a source
   in this chain?" test listed the oscillators, Pulse, the noise sources and DXRouter but not
   DrumSynth, so Keyboard -> DrumSynth -> LevAmp -> Out reported "Nothing is patched into it" and
