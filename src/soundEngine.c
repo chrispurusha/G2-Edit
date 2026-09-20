@@ -4285,16 +4285,24 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 }
 
 // notes §96
+// A node that makes a signal out of nothing, so a chain containing one is not silent by
+// construction. ONE list, because the two callers below disagreeing is how DrumSynth's own rig
+// came to report "Nothing is patched into it" - notes §193.
+static bool node_is_generator(tNodeKind kind) {
+    return (kind == eNodeOsc)
+           || (kind == eNodeOscShp)
+           || (kind == eNodePulse)
+           || (kind == eNodeNoise)
+           || (kind == eNodeOscNoise)
+           || (kind == eNodeDx)
+           || (kind == eNodeDrumSynth);
+}
+
 static bool chain_has_source(const tSoundEngineParams * params) {
     uint32_t i = 0;
 
     for (i = 0; i < params->nodeCount; i++) {
-        if (  (params->node[i].kind == eNodeOsc)
-           || (params->node[i].kind == eNodeOscShp)
-           || (params->node[i].kind == eNodePulse)
-           || (params->node[i].kind == eNodeNoise)
-           || (params->node[i].kind == eNodeOscNoise)
-           || (params->node[i].kind == eNodeDx)) {
+        if (node_is_generator(params->node[i].kind) == true) {
             return true;
         }
     }
@@ -4308,13 +4316,7 @@ static bool chain_is_bypassed(const tSoundEngineParams * params) {
     uint32_t i = 0;
 
     for (i = 0; i < params->nodeCount; i++) {
-        if (  (  (params->node[i].kind == eNodeOsc)
-              || (params->node[i].kind == eNodeOscShp)
-              || (params->node[i].kind == eNodePulse)
-              || (params->node[i].kind == eNodeNoise)
-              || (params->node[i].kind == eNodeOscNoise)
-              || (params->node[i].kind == eNodeDx))
-           && (params->node[i].active == true)) {
+        if ((node_is_generator(params->node[i].kind) == true) && (params->node[i].active == true)) {
             return false;
         }
     }
