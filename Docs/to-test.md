@@ -3,6 +3,24 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***A DRUMSYNTH ON ITS OWN IS NO LONGER SILENT (2026-09-20)*** - the engine's "is there a source
+  in this chain?" test listed the oscillators, Pulse, the noise sources and DXRouter but not
+  DrumSynth, so Keyboard -> DrumSynth -> LevAmp -> Out reported "Nothing is patched into it" and
+  published silence. It looked like the Keyboard's Gate not triggering, which is what CT reported;
+  the Gate was always fine. One list now serves both that test and the all-generators-off test, so
+  the next module cannot be added to one and missed off the other. CHECK: a drum patch with no
+  oscillator in it makes a sound, and the status line says Playing.
+- ***DRUMSYNTH'S PANEL LAMP LIGHTS (2026-09-20)*** - reference §39.5, notes §194. It follows the
+  master envelope, as the instrument's does, so it comes on with the hit and fades with it rather
+  than following the key. Offline it lit at the note-on and went out 263 ms later with the key
+  released at 80 ms. CHECK: against the G2's own lamp, especially a long Master Decay (ours should
+  stay lit as long as the hit lasts) and a hit with Master Level at 0 (the envelope still runs, so
+  ours still lights - check the instrument agrees).
+- ***DRUMSYNTH TRIG EDGE (2026-09-20, CT: "seemed to trigger on key up initially. Seems OK now")***
+  - the code fires on a rising edge only and offline it fires on key DOWN, so this is unreproduced.
+  Watch for it again, and if it returns, note whether it follows a patch load or a rebuild: the
+  per-voice previous-clock state starts at zero, so a gate already high when the chain is rebuilt
+  would read as an edge.
 - ***PITCH BEND NOW REACHES MonoKey's PITCH (2026-09-20)*** - reference §35.2. It never did, so the
   wheel was dead on any patch whose oscillators have KBT off and take their pitch from MonoKey;
   01 Mini Emulator is that patch and Chris' Lead is not, which is why only one of them bent (CT).

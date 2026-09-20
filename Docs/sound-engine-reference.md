@@ -118,6 +118,14 @@ DualSaw. OscA keeps its choice as a parameter, OscC and OscD as a mode. The node
 OFFSET y (0..1): Sqr50/25/10 are y = 0, 0.5, 0.875 (duties 1/2, 1/4 and 1/16 - the manual's "10%" is
 1/16, measured 2026-08-24); OscB's is its Shape dial as a word, dial/128 with 127 = 1.
 
+**These three numbers are the instrument's own** and are not to be "corrected" - CONFIRMED a second
+way 2026-09-20. Selecting a waveform writes two words: which wave the oscillator runs, and, for the
+pulses only, a threshold the phase is compared against - 0, half scale and 0.875 of full scale,
+exactly the y above. The pulse is high while the phase is past that threshold, so the duty is
+(1 - y)/2 and the third one really is 1/16. The manual's "10%" is a nominal label, the arithmetic
+invites changing 0.875 to 0.8, and both the hardware measurement and the instrument's own constants
+say not to. See the DO NOT RE-TRY list.
+
 **6.3 The waves (measured 2026-09-17).** One cycle, phase 0..1, all peak 1:
 
 | wave | law |
@@ -1575,6 +1583,16 @@ output of a decaying hit reads the whole voice - two oscillators summed, the ben
 the output stage - not the gain word, and the two oscillators are the two that interact. The curve
 stands on the instrument's own conversion; the capture is kept in findings.md as the record of what
 peak-of-a-hit actually measures, which is not this.
+
+**39.5 The panel lamp, added 2026-09-20.** DrumSynth's face has an LED by its Trig and nothing lit
+it: the engine published a lamp for the LFO alone, and every other module's LED stayed dark unless a
+real G2 was attached to send one (CT). It now follows the MASTER ENVELOPE, which is what the
+instrument shows - its lamp reads a level word of the module's own DSP state, the same way an
+envelope's does, not the Trig input. So it comes on with the hit and fades out with it rather than
+following the key: offline it lights at the note-on and goes out 263 ms later on the default preset,
+with the key released at 80 ms. The face has one lamp and a poly patch has one of these per voice,
+so voice 0 publishes and the rest do not - the rule the LFO already used, now in one place
+(notes §194).
 
 **39.4 STILL UNSETTLED: the noise filter, and only the noise filter.** The whole module is two DSP
 parts of its own - one at 96 kHz, one at 24 kHz - so its filter is hand-written rather than one of
