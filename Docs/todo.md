@@ -61,7 +61,6 @@ FILTERS
 
 SOUND ENGINE
 - Sound engine across cores - design note at Docs/engine-multicore-design.md (2026-09-19, nothing built). The blocker is the per-sample note grid; the payoff is 3-4x, capped by a fixed 3.7% of a core; JUCE has no design to borrow, only Apple's audio workgroup. Settle where the deficit actually is first
-- The Xcode DEBUG configuration is unusable for audio: -O0 puts 02 Big Pad at 111% of real time against Release's 40%, which was the whole standalone break-up (findings 2026-09-19). Decide whether the engine's files get an optimisation level in Debug, or the build warns, or it is just known
 - `reset_node_state()` runs on the AUDIO THREAD on a topology change - 0.28 ms for 02 Big Pad, 0.59 ms for 01 Mini Emulator, 5-11% of a 256-frame budget. Not the break-up, but bulk clearing inside the callback is an RT rule broken; move it to the publisher or do it incrementally
 - Engine headroom: no attenuation anywhere for polyphony, so a pad at full voices sits on the rail at the default 0 dB. Decide whether the Out module, the output stage or nothing should scale with voice count - the G2 itself does not clip here
 - Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) - CONFIRMED right (02 Big Pad asks for and gets 14, 2026-09-19) - but the G2 assigns by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"), so the topbar should show a requested/assigned pair as the original does

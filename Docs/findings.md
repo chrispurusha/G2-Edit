@@ -11151,3 +11151,29 @@ RE-TRY: a performance measurement has to be made on the ARTEFACT the person is r
 **Still worth doing** (todo.md): the Debug configuration is unusable for anything involving audio,
 so either the sound engine's files want an optimisation level in Debug, or the Debug build should
 say so. That is CT's call, not one to make here.
+
+2026-09-19 - DEBUG NOW BUILDS AT -O1, WHICH IS ENOUGH (CT: "Could we enable some level of
+optimisation for debug, without affecting things too much?"). `GCC_OPTIMIZATION_LEVEL` in the
+project's Debug configuration, 0 to 1.
+
+Measured the same way as the diagnosis - 02 Big Pad, 48 kHz, 512 frames, twelve notes held, the
+engine's own load figure and CoreAudio's overrun count:
+
+| build | idle | 12 notes | overruns |
+|---|---|---|---|
+| Debug -O0 | 48% | 111% | 120 |
+| **Debug -O1** | **35%** | **40%** | **0** |
+| Release -O2 | 32% | 40% | 0 |
+
+-O1 lands on Release. There is nothing to gain from -O2 here and -O1 is the gentlest level, so it
+is the one to take.
+
+**It is still a Debug build.** Checked rather than assumed: 77 OSO entries, so the per-object debug
+info is all there; `DEBUG=1` and `ENABLE_LOG_DEBUG=1` are separate settings and untouched, and the
+run produced its usual 248 lines of debug logging; `ENABLE_TESTABILITY` is likewise its own
+setting. What -O1 costs is that some locals may be held in registers or folded away, so stepping is
+slightly less literal than at -O0 - which is exactly the trade clang means by `-Og`, documented as
+"Like -O1". Xcode has no setting for `-Og`, and it would buy nothing over -O1 here.
+
+Only G2-Edit's project file changed. `do-release` builds Release and is unaffected, as are
+SynthEdit and EmuUtility.
