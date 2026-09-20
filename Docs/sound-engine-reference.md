@@ -1468,3 +1468,49 @@ and it ran per sample rather than per tick.
 Added 2026-09-19. The jacks on the back of the instrument, which this engine does not have: two
 outputs, both silent. It exists as a node so a patch containing one is not reported as unmodelled
 and its face is not greyed out. 01 Mini Emulator has one, switched off in its mixer.
+
+## 38. The Logic group
+
+Added 2026-09-19: Invert, Gate, FlipFlop and ClkDiv. The rest of the group (8Counter, BinCounter,
+ADConv, DAConv, Delay) is still silent.
+
+**38.0 A logic input is HIGH above zero.** Not above a halfway threshold - the instrument's own
+logic parts test the input as a signed value greater than zero, so the smallest positive signal is
+already a HIGH. A logic HIGH OUTPUT is 64 units, which is 1.0 in the engine (§16, §30, manual
+p.233).
+
+## 38.1 Invert
+
+Two independent inverters on one face, their jacks interleaved (In 1, Out 1, In 2, Out 2). Each
+output is HIGH when its input is not. **An unpatched input reads low, so its output sits HIGH** -
+which is what an inverter with nothing on it does.
+
+## 38.2 Gate
+
+Two independent two-input gates, each with its own type from `gateTypeStrMap`
+{AND, NAND, OR, NOR, XOR, NXOR}. Gate 1 takes In1_1 and In1_2, gate 2 takes In2_1 and In2_2. The
+types are drop-downs, so they are read raw and cannot be morphed.
+
+## 38.3 FlipFlop
+
+Clk, Rst and In; the outputs are **NotQ then Q**, in the module's own connector order, and NotQ is
+always the inverse of Q (manual p.235).
+
+- **D-type**: the state on In is clocked to Q on the POSITIVE EDGE of Clk. While Rst is HIGH, Q is
+  held low and clocking is ignored until Rst goes low again.
+- **Set-Reset**: In becomes S. A positive edge on S sets Q. **Rst has priority over S.** With S and
+  Rst both low, a clock on Clk TOGGLES Q - and a constant HIGH on either stops the toggling, since
+  both have priority over Clk.
+
+## 38.4 ClkDiv
+
+Clk and Rst in, one output. The Divider dial reads **one more than it holds**, so 1 to 128
+(`ParamText::Enum`), and `divModeStrMap` chooses the mode.
+
+- **Gated**: every nth clock pulse is passed with its shape unaltered, so at a divider of 1 the
+  train passes through untouched.
+- **Toggled**: the output flips on every nth EDGE, and **both the rising and the falling edge
+  count** - so an odd divider halves the frequency again. A divider of 3 divides by one and a half
+  (manual p.236).
+- **Rst is the barred arrow**: the reset does not act at once but waits for the next positive edge
+  of Clk.

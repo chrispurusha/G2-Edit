@@ -11225,3 +11225,43 @@ what the dial prints: 0.19 ms against 0.2, 1.02 against 1.0, 27.1 against 27, 51
 printed string and dividing by ln(100) gave the same times - which is why it looked fine - but it
 took the coefficient from a display rounded to three figures instead of from the law, and ran it
 per sample instead of per tick. The accessor added for it (`glide_module_time_str()`) is gone again.
+
+2026-09-19 - FOUR LOGIC MODULES, AND THE LOGIC LEVEL RULE THAT CAME WITH THEM (CT: "more modules?
+Maybe the logic modules are easiest? ...or a big one, like Drum Synth?"). Reference §38.
+
+Logic first, and the reason is in the sizes: the logic parts are 20 to 141 lines of integer logic
+each, Drum Synth is 628 across two parts of fixed-point DSP. Logic laws are discrete, so they can
+be checked exactly offline with no ear - which matters with to-test already past a hundred - and a
+silent module is PRUNED from the chain, so nine of them are nine branches unblocked rather than
+one. Drum Synth wants its own session with the harness and a drum patch to check against.
+
+Invert, Gate, FlipFlop and ClkDiv are in. 8Counter, BinCounter, ADConv, DAConv and the logic Delay
+are not.
+
+### The one thing the reference had to settle
+
+**A logic input is HIGH above ZERO**, not above a halfway threshold: its logic parts test the input
+as a signed value greater than zero, so the smallest positive signal is already a HIGH. That
+corrected something written the same day - the Glide's Glide On input had been given a
+half-of-full-scale threshold on no evidence (§36).
+
+The rest came from the manual, which is the citable source anyway and is more precise than the
+parts are readable: the parts are driven by P-opcodes chosen per gate type, so the truth tables are
+not in the Compute body at all. What the reference did give exactly was ClkDiv's dial: its readout
+is `ParamText::Enum`, which prints the value PLUS ONE, so the Divider reads 1 to 128.
+
+### What the manual settled
+
+- **FlipFlop** (p.235): D-type clocks In to Q on the positive edge of Clk, and while Rst is high Q
+  is held low and clocking is ignored. Set-Reset turns In into S: a positive edge on S sets, Rst
+  has priority over S, and with BOTH low a clock on Clk toggles - a constant high on either stops
+  the toggling. Outputs are NotQ then Q in the module's own order.
+- **ClkDiv** (p.236): Gated passes every nth pulse with its shape unaltered; Toggled flips on every
+  nth EDGE, and both edges count, so a divider of 3 divides the frequency by one and a half. Rst is
+  the barred arrow - it waits for the next positive edge of Clk.
+
+### Checked
+
+The truth tables and levels, directly: AND/NAND/OR/NOR/XOR/NXOR all correct over the four input
+pairs; HIGH above zero (0.001 is high, 0 is not); a HIGH output is 1.0, which is 64 units. The
+edge and timing behaviour is what needs the instrument - to-test.md says which cases.

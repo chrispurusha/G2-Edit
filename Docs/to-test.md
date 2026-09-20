@@ -3,6 +3,13 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+- ***FOUR LOGIC MODULES PLAY: Invert, Gate, FlipFlop, ClkDiv (2026-09-19)*** - reference §38. The
+  truth tables and the logic levels are checked offline and exact, so what needs the G2 is the
+  TIMING and the edge cases: a ClkDiv at a few dividers in both Gated and Toggled (Toggled counts
+  BOTH edges, so an odd divider should halve the rate again), its delayed Rst (it should wait for
+  the next rising clock), and a FlipFlop in both types - especially Set-Reset toggling from Clk
+  with S and Rst low, and stopping when either is held high. An unpatched Invert input should sit
+  its output HIGH.
 - ***MONOKEY RETURNS TO A HELD NOTE, AND GLIDE IS THE INSTRUMENT'S (2026-09-19)*** - reference
   §35.1 and §36.1, revert record 62 and 63. Both found by reading the instrument after CT's repro:
   hold a key on 01 Mini Emulator, play a higher one, release it, and the first should sound again -
