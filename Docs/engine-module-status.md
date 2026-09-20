@@ -115,9 +115,9 @@ it is modelled and not pruned, which is what stops a patch containing one readin
 
 ## Logic
 
-**Plays** (1): `Pulse`
+**Plays** (5): `ClkDiv`, `FlipFlop`, `Gate`, `Invert`, `Pulse`
 
-**Silent** (9): `8Counter`, `ADConv`, `BinCounter`, `ClkDiv`, `DAConv`, `Delay`, `FlipFlop`, `Gate`, `Invert`
+**Silent** (5): `8Counter`, `ADConv`, `BinCounter`, `DAConv`, `Delay`
 
 ## Sequencers
 
