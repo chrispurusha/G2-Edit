@@ -24,6 +24,7 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Add a dedicated master-clock/tempo panel
 
 MODULES AND GRAPHICS
+- The rest of the Logic group: 8Counter, BinCounter, ADConv, DAConv and the logic Delay - the four done 2026-09-19 (reference §38) leave these five
 - Generate engine-module-status.md from `module_kind()` instead of keeping it by hand - it was wrong about eight modules within a day of them being added (2026-09-19)
 - Re-lay out the remaining families by rule (module-layout-rules.md "common face", tools/relayout.py) - Level group done 2026-09-13; next the delays and the pitch/FX group still on port coordinates
 - A drag-and-drop layout mode in the editor that snaps to the grid and writes the rows back - for what the rules cannot settle

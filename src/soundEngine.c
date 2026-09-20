@@ -391,17 +391,27 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define GLIDE_PARAM_SHAPE         (2)    // logStrMap {Log, Lin}: 0 is Log
 #define GLIDE_SHAPE_LIN           (1)
 
-#define CHORUS_PARAM_DETUNE       (0)
-#define CHORUS_PARAM_AMOUNT       (1)
-#define CHORUS_PARAM_ACTIVE       (2)
+// §38 - the Logic group. A logic input is HIGH above zero, and a logic HIGH output is 64 units,
+// which is LOGIC_HIGH_LEVEL (§16, §30).
+#define GATE_PARAM_TYPE_1       (0)      // gateTypeStrMap {AND, NAND, OR, NOR, XOR, NXOR}
+#define GATE_PARAM_TYPE_2       (1)
+#define FLIPFLOP_PARAM_TYPE     (0)      // flipFlopStrMap {D-type, RS-type}
+#define FLIPFLOP_TYPE_RS        (1)
+#define CLKDIV_PARAM_DIVIDER    (0)      // reads 1 to 128: the dial plus one
+#define CLKDIV_PARAM_MODE       (1)      // divModeStrMap {Gated, Toggled}
+#define CLKDIV_MODE_TOGGLED     (1)
+
+#define CHORUS_PARAM_DETUNE     (0)
+#define CHORUS_PARAM_AMOUNT     (1)
+#define CHORUS_PARAM_ACTIVE     (2)
 
 // Compress: threshold and reference level run 0..42, ratio 0..66.
-#define COMP_PARAM_THRESHOLD      (0)
-#define COMP_PARAM_RATIO          (1)
-#define COMP_PARAM_ATTACK         (2)
-#define COMP_PARAM_RELEASE        (3)
-#define COMP_PARAM_REFLVL         (4)
-#define COMP_PARAM_ACTIVE         (6)
+#define COMP_PARAM_THRESHOLD    (0)
+#define COMP_PARAM_RATIO        (1)
+#define COMP_PARAM_ATTACK       (2)
+#define COMP_PARAM_RELEASE      (3)
+#define COMP_PARAM_REFLVL       (4)
+#define COMP_PARAM_ACTIVE       (6)
 
 // Read off the instrument's own dial displays, not guessed. See where they are used.
 
@@ -612,6 +622,10 @@ typedef enum {
     eNodeMonoKey,        // §35 - the keyboard's last/lowest/highest key, shared by every voice
     eNodeGlide,          // §36 - a slew for control signals
     eNodeAudioIn,        // §37 - 2-In: the engine has no audio input, so silence
+    eNodeInvert,         // §38.1 - two logic inverters
+    eNodeGate,           // §38.2 - two two-input gates, each with its own type
+    eNodeFlipFlop,       // §38.3 - D-type or Set-Reset
+    eNodeClkDiv,         // §38.4 - divide a clock by 1..128, Gated or Toggled
     eNodeOut,
 } tNodeKind;
 
@@ -738,6 +752,9 @@ typedef struct {
     uint32_t        levConvIn;      // §31 - the range read,  levConvStrMap {Bip, Pos, Neg}
     uint32_t        levConvOut;     // §31 - the range written, posStrMap {Pos, PosInv, ... BipInv}
     uint32_t        select;         // §33 - which input a Sw2-1/Sw8-1 passes; §35 MonoKey's priority
+    uint32_t        gateType[2];    // §38.2 - one per gate
+    uint32_t        divider;        // §38.4 - 1 to 128
+    bool            logicToggled;   // §38.4 - Toggled rather than Gated; §38.3 RS rather than D
     uint32_t        inputCount;     // §33 - how many inputs that switch has (2 or 8)
     double          glideCoeff;     // §36 - per ENVELOPE TICK: Log's one-pole k, or Lin's step
     bool            glideLin;       // §36 - logStrMap {Log, Lin}: 0 is Log
@@ -1234,8 +1251,17 @@ static bool               gGlidePrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES]
 static double             gGlideTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gGlideTick      (gGlideTickBank[SE])
 
+// §38 - what a logic module remembers between samples: the edge detectors' last input, the latched
+// output, and the divider's count. `logicPrev` holds Clk in bit 0 and the D/S input in bit 1.
+static uint8_t            gLogicPrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gLogicPrev     (gLogicPrevBank[SE])
+static bool               gLogicStateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gLogicState    (gLogicStateBank[SE])
+static uint32_t           gLogicCountBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gLogicCount    (gLogicCountBank[SE])
+
 static double             gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gPulsePrev      (gPulsePrevBank[SE])
+#define gPulsePrev     (gPulsePrevBank[SE])
 
 // Compressor gain-reduction state, one per node.
 static double             gCompEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
@@ -1686,6 +1712,9 @@ static void reset_node_state(void) {
             gGlideOut[v][i]      = 0.0;      // §36
             gGlidePrimed[v][i]   = false;
             gGlideTick[v][i]     = 0.0;
+            gLogicPrev[v][i]     = 0u;      // §38
+            gLogicState[v][i]    = false;
+            gLogicCount[v][i]    = 0u;
         }
     }
 
@@ -1974,7 +2003,8 @@ const char * sound_engine_debug_text(void) {
         "Chorus",   "Compress", "Delay",    "Reverb", "Lfo",       "Const",  "FxIn",
         "PassThru", "Pulse",    "Shaper",   "Fade",   "MixStereo", "Noise",  "OscNoise",
         "FltMulti", "Eq",       "FltComb",  "Dx",     "Keyboard",  "ModAmt", "Switch",
-        "LevConv",  "LevAdd",   "SwSelect", "ValSw",  "MonoKey",   "Glide",  "AudioIn", "Out"
+        "LevConv",  "LevAdd",   "SwSelect", "ValSw",  "MonoKey",   "Glide",  "AudioIn",
+        "Invert",   "Gate",     "FlipFlop", "ClkDiv", "Out"
     };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
@@ -2619,6 +2649,12 @@ static uint32_t node_output_legs(tNodeKind kind) {
         {
             return 3u;   // §35 - Pitch, Gate, Vel
         }
+        case eNodeInvert:     // §38.1 - Out 1 and Out 2
+        case eNodeGate:       // §38.2 - Out1 and Out2
+        case eNodeFlipFlop:   // §38.3 - NotQ then Q, in the module's own order
+        {
+            return 2u;
+        }
         default:
         {
             return 2u;
@@ -2852,6 +2888,26 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeAudioIn;    // §37
             return true;
         }
+        case moduleTypeInvert:
+        {
+            *kind = eNodeInvert;     // §38.1
+            return true;
+        }
+        case moduleTypeGate:
+        {
+            *kind = eNodeGate;       // §38.2
+            return true;
+        }
+        case moduleTypeFlipFlop:
+        {
+            *kind = eNodeFlipFlop;   // §38.3
+            return true;
+        }
+        case moduleTypeClkDiv:
+        {
+            *kind = eNodeClkDiv;     // §38.4
+            return true;
+        }
         default:
         {
             return false;
@@ -3067,6 +3123,10 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeSwSelect:         // §33 - In 1..n, in the module's own order; Ctrl is an OUTPUT
         case eNodeValSw:            // §34 - In 1, In 2 (On) and Ctrl, likewise
+        case eNodeInvert:           // §38.1 - In 1 and In 2, which the face interleaves with the outs
+        case eNodeGate:             // §38.2 - In1_1, In1_2, In2_1, In2_2
+        case eNodeFlipFlop:         // §38.3 - Clk, Rst, In
+        case eNodeClkDiv:           // §38.4 - Clk, Rst
         {
             *connectors = derived;
             return inputs_in_module_order(moduleType, MAX_NODE_INPUTS, derived);
@@ -3838,6 +3898,25 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeMonoKey:
         {
             node->select = (uint32_t)module->param[variation][MONOKEY_PARAM_PRIORITY].value;   // §35
+            break;
+        }
+        case eNodeGate:
+        {
+            // §38.2 - two drop-downs, read raw: a drop-down cannot be morphed.
+            node->gateType[0] = (uint32_t)module->param[variation][GATE_PARAM_TYPE_1].value;
+            node->gateType[1] = (uint32_t)module->param[variation][GATE_PARAM_TYPE_2].value;
+            break;
+        }
+        case eNodeFlipFlop:
+        {
+            node->logicToggled = (module->param[variation][FLIPFLOP_PARAM_TYPE].value == FLIPFLOP_TYPE_RS);
+            break;
+        }
+        case eNodeClkDiv:
+        {
+            // §38.4 - the dial reads one more than it holds, 1 to 128.
+            node->divider      = (uint32_t)module->param[variation][CLKDIV_PARAM_DIVIDER].value + 1u;
+            node->logicToggled = (module->param[variation][CLKDIV_PARAM_MODE].value == CLKDIV_MODE_TOGGLED);
             break;
         }
         case eNodeGlide:
@@ -6903,9 +6982,10 @@ static double glide_step(uint32_t voice, uint32_t node, double input, double gat
     SE_LOCAL;
 
     double current = gGlideOut[voice][node];
-    // The button, unless something is patched into Glide On, which then decides. A logic input is
-    // high at 32 units and above - half of the 64 a logic HIGH carries (§16).
-    bool   gliding = (spec->in[1] >= 0) ? (gateIn >= (LOGIC_HIGH_LEVEL * 0.5)) : spec->active;
+    // The button, unless something is patched into Glide On, which then decides. §38 - a logic
+    // input is HIGH whenever it is above zero, which is how the instrument's own logic parts test
+    // one; there is no halfway threshold.
+    bool   gliding = (spec->in[1] >= 0) ? (gateIn > 0.0) : spec->active;
 
     if (gGlidePrimed[voice][node] == false) {
         gGlidePrimed[voice][node] = true;
@@ -7010,6 +7090,49 @@ static int32_t mono_key_note(uint32_t priority, uint32_t voice) {
     // one above it came up. A "last key pressed" of its own is what stopped a held note returning
     // when the note above it was released (CT, on 01 Mini Emulator).
     return gVoice[voice].note;       // and it outlives the key, as the voice's note does
+}
+
+// §38 - a logic input is HIGH above zero. There is no halfway threshold: that is how the
+// instrument's own logic parts test one.
+static bool logic_high(double value) {
+    return value > 0.0;
+}
+
+// §38.2 - gateTypeStrMap {AND, NAND, OR, NOR, XOR, NXOR}
+static bool gate_result(uint32_t type, bool a, bool b) {
+    switch (type) {
+        case 1:
+        {
+            return !(a && b);
+        }                                   // NAND
+        case 2:
+        {
+            return a || b;
+        }                                   // OR
+        case 3:
+        {
+            return !(a || b);
+        }                                   // NOR
+        case 4:
+        {
+            return a != b;
+        }                                   // XOR
+        case 5:
+        {
+            return a == b;
+        }                                   // NXOR
+        default:
+        {
+            return a && b;
+        }                                   // AND
+    }
+}
+
+#define LOGIC_PREV_CLOCK    (1u)
+#define LOGIC_PREV_DATA     (2u)
+
+static double logic_level(bool high) {
+    return (high == true) ? LOGIC_HIGH_LEVEL : 0.0;
 }
 
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
@@ -7215,6 +7338,89 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeAudioIn:
         {
             break;   // §37 - the engine has no audio input; both legs stay at zero
+        }
+        case eNodeInvert:
+        {
+            // §38.1 - two independent inverters. An unpatched input reads low, so its output
+            // sits HIGH, which is what an inverter with nothing on it does.
+            value[n][0] = logic_level(logic_high(a) == false);
+            value[n][1] = logic_level(logic_high(signal_in(spec, value, 1)) == false);
+            break;
+        }
+        case eNodeGate:
+        {
+            // §38.2 - two independent two-input gates, each with its own type.
+            value[n][0] = logic_level(gate_result(spec->gateType[0], logic_high(a),
+                                                  logic_high(signal_in(spec, value, 1))));
+            value[n][1] = logic_level(gate_result(spec->gateType[1],
+                                                  logic_high(signal_in(spec, value, 2)),
+                                                  logic_high(signal_in(spec, value, 3))));
+            break;
+        }
+        case eNodeFlipFlop:
+        {
+            // §38.3 - Clk, Rst, In. Outputs are NotQ then Q, in the module's own order.
+            bool    clock    = logic_high(a);
+            bool    reset    = logic_high(signal_in(spec, value, 1));
+            bool    data     = logic_high(signal_in(spec, value, 2));
+            uint8_t prev     = gLogicPrev[voice][n];
+            bool    clkRise  = (clock == true) && ((prev & LOGIC_PREV_CLOCK) == 0u);
+            bool    dataRise = (data == true) && ((prev & LOGIC_PREV_DATA) == 0u);
+
+            if (reset == true) {
+                // Rst has priority in both types, and in D-type it also holds the clock off.
+                gLogicState[voice][n] = false;
+            } else if (spec->logicToggled == true) {
+                // Set-Reset: a rising edge on S sets. With S and Rst both low a clock TOGGLES,
+                // and a constant high on either stops that - which the tests above already do.
+                if (dataRise == true) {
+                    gLogicState[voice][n] = true;
+                } else if ((data == false) && (clkRise == true)) {
+                    gLogicState[voice][n] = (gLogicState[voice][n] == false);
+                }
+            } else if (clkRise == true) {
+                gLogicState[voice][n] = data;   // D-type: clock the D input through
+            }
+            gLogicPrev[voice][n] = (uint8_t)((clock ? LOGIC_PREV_CLOCK : 0u)
+                                             | (data ? LOGIC_PREV_DATA : 0u));
+            value[n][0]          = logic_level(gLogicState[voice][n] == false); // NotQ
+            value[n][1]          = logic_level(gLogicState[voice][n]);          // Q
+            break;
+        }
+        case eNodeClkDiv:
+        {
+            // §38.4 - divide by 1..128. Gated passes every nth pulse with its shape unaltered;
+            // Toggled flips on every nth EDGE, so an odd divider halves the frequency again.
+            bool    clock   = logic_high(a);
+            bool    reset   = logic_high(signal_in(spec, value, 1));
+            uint8_t prev    = gLogicPrev[voice][n];
+            bool    wasHigh = ((prev & LOGIC_PREV_CLOCK) != 0u);
+            bool    rise    = (clock == true) && (wasHigh == false);
+            bool    fall    = (clock == false) && (wasHigh == true);
+
+            // The Rst input is the barred arrow: the reset waits for the next rising edge.
+            if ((reset == true) && (rise == true)) {
+                gLogicCount[voice][n] = 0u;
+                gLogicState[voice][n] = false;
+            } else if (spec->logicToggled == true) {
+                if ((rise == true) || (fall == true)) {
+                    gLogicCount[voice][n]++;
+
+                    if (gLogicCount[voice][n] >= spec->divider) {
+                        gLogicCount[voice][n] = 0u;
+                        gLogicState[voice][n] = (gLogicState[voice][n] == false);
+                    }
+                }
+            } else if (rise == true) {
+                gLogicCount[voice][n] = (gLogicCount[voice][n] + 1u) % spec->divider;
+            }
+            gLogicPrev[voice][n] = (uint8_t)(clock ? LOGIC_PREV_CLOCK : 0u);
+
+            // Gated passes the clock itself while the count is on the chosen pulse.
+            value[n][0]          = (spec->logicToggled == true)
+                          ? logic_level(gLogicState[voice][n])
+                          : logic_level((gLogicCount[voice][n] == 0u) && (clock == true));
+            break;
         }
         case eNodePulse:
         {
@@ -7426,6 +7632,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeFxIn:         // the FX bus's two legs
         case eNodeMonoKey:      // §35 - Pitch, Gate and Vel
         case eNodeSwSelect:     // §33 - Out and Ctrl, which are not a stereo pair
+        case eNodeInvert:       // §38.1 - two independent inverters
+        case eNodeGate:         // §38.2 - two independent gates
+        case eNodeFlipFlop:     // §38.3 - NotQ and Q
         case eNodeSwitch:       // §30 - likewise
         case eNodeAudioIn:      // §37 - silent, both legs already zero
         case eNodeOut:
