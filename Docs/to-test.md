@@ -4,14 +4,10 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 - ***APP NAP IS NOW REFUSED WHILE THE AUDIO OUTPUT IS OPEN (2026-09-19)*** - misc.mm notes §2a.
-  THE CURRENT BEST GUESS AT THE STANDALONE BREAK-UP, from CT seeing Ableton busy on the performance
-  cores and the standalone not. This application draws only on request, so between gestures it
-  looks idle to macOS and can be napped onto the efficiency cores; a DAW never looks idle.
-  `NSActivityLatencyCritical` says "this process is doing audio". CHECK: does the break-up go, and
-  does Activity Monitor now show the standalone on the performance cores? If it does NOT help,
-  that is worth knowing too - say so and this comes back out rather than staying in on a hunch.
-  Also confirm the log shows no "could not watch device property" line, which would mean the zero
-  overrun count was a false negative all along.
+  NOT the break-up fix - that was the Debug build (findings). Kept on its own merits: this
+  application draws only on request, so between gestures it looks idle to macOS. The render thread
+  was measured as REALTIME in both builds, so this is tidiness rather than a cure. If it causes any
+  trouble, take it out.
 - ***OSCILLATOR PITCH TYPES NOW PLAY: Freq, Factor and Partial (2026-09-19)*** - reference §6.1a,
   revert record 60 and 61. They were all read as Semi, so any oscillator not set to Semi was at the
   wrong pitch - 02 Big Pad's two are Partial and were an octave high. CHECK AGAINST THE G2: 02 Big
