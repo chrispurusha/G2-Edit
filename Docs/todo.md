@@ -66,8 +66,7 @@ SOUND ENGINE
 - Engine headroom: no attenuation anywhere for polyphony, so a pad at full voices sits on the rail at the default 0 dB. Decide whether the Out module, the output stage or nothing should scale with voice count - the G2 itself does not clip here
 - Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) - CONFIRMED right (02 Big Pad asks for and gets 14, 2026-09-19) - but the G2 assigns by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"), so the topbar should show a requested/assigned pair as the original does
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
-- Glide's Log shape: translate-and-run the instrument's three Portamento parts and settle it, as FltStatic and OscDual were. The engine runs a one-pole on OUR reading of the Time (reference §36.1); Lin and the Time table itself are settled
-- MonoKey Lo and Hi report raw keys, so they miss the patch glide that Last carries, and in a Poly patch none of the three knows which voice is asking (reference §35.1)
+- MonoKey in a POLY patch: all three priorities read the voice being evaluated, which is a guess - it is a monophonic module and the case may not arise (reference §35.1)
 - The sustain pedal does not hold keys in the engine (only its morph group moves); the G2 keeps a sustained key held until the pedal lifts (reference §15.5)
 - ShpStatic Inv x3/Inv x2: the engine plays exponents 1/3 and 1/2, the 2026-08-24 capture measured 0.49 and 0.65 (the picker icon draws those) - reconcile
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.md)
