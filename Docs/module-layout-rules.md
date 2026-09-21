@@ -38,8 +38,9 @@ layout cleanup (2026-07), but they apply to any module.
 
 ## Porting a module face from the original editor
 
-**The original editor's own layout tables are readable text inside
-`Original Editor/EditorResources/Nord Modular G2 Editor.rsrc`.** `strings` on
+**The original editor's own layout tables are readable text inside its resource
+file**, which is kept with the rest of the reference material OUTSIDE this repo -
+`tools/rsrc_layout.py` knows where, and `$G2_REFERENCE` overrides it. `strings` on
 that file yields one `<#Module ... #>` block per module — 119 of them — each
 listing every `<#Knob>`, `<#Input>`, `<#Output>`, `<#ButtonFlat>`,
 `<#ButtonIncDec>`, `<#ButtonText>`, `<#TextField>`, `<#Text>`, `<#Led>`,

@@ -36,8 +36,11 @@ preserved; proportion is not. Do not paste the output in blind - see the same do
 """
 import argparse, os, re, sys
 
-DEFAULT_RSRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                            "Original Editor", "EditorResources", "Nord Modular G2 Editor.rsrc")
+# The reference material lives OUTSIDE this repo (2026-09-21) and is not public; $G2_REFERENCE
+# overrides, for a machine that keeps it elsewhere.
+DEFAULT_RSRC = os.path.join(os.environ.get("G2_REFERENCE",
+                                           os.path.expanduser("~/Documents/OriginalEditor")),
+                            "EditorResources", "Nord Modular G2 Editor.rsrc")
 POSITIONAL = ("Knob", "PartSelector", "ButtonText", "ButtonFlat", "ButtonIncDec",
               "ButtonRadioEdit", "TextField", "Led", "Input", "Output", "Graph",
               "TextEdit", "Bitmap", "Line", "Text")

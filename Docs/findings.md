@@ -611,8 +611,8 @@ DONE 2026-08-29 — OPERATOR RE-LAID FROM THE ORIGINAL EDITOR'S OWN LAYOUT TABLE
 operator module representation issue? Should be more straight-forward now that we have the
 percentage Y location sorted" — and it was: the fix is the whole face converted from bottom-anchored
 negative offsets to anchorTopLeft against the new y=0-at-body-top convention.
-  THE SOURCE IS THE .rsrc, AND IT IS PLAIN TEXT. Original Editor/EditorResources/Nord Modular G2
-  Editor.rsrc holds a <#Module> block per module — 119 of them — listing every control with XPos/
+  THE SOURCE IS THE .rsrc, AND IT IS PLAIN TEXT. The original editor's resource file - kept with
+  the reference material outside this repo - holds a <#Module> block per module — 119 of them — listing every control with XPos/
   YPos, and CodeRef on each control IS the parameter index, which is the same order as our
   paramLocationList rows. So the mapping needed no guessing at all. Full procedure, the coordinate
   transform and its derivation are now in Docs/module-layout-rules.md, because the other ~40 faces
@@ -11533,3 +11533,48 @@ before the halving of its cutoff word turned up.
 24 kHz one) is the same shape as the modules that already have harnesses, so the existing offline
 scaffolding should carry over. Start from the host words tabulated in
 §39.4 - those are decoded and certain.
+
+====================================================================================================
+
+## 2026-09-21 - DrumSynth's click, settled from the module's own code
+
+CT: "Time to finish the click? ...and fix g2-edit implementation."
+
+The click was the last thing in DrumSynth that had never been measured against anything. The
+engine's version was invented: a linear DC ramp from full scale to zero over a hard-coded 2 ms.
+All three of its properties were wrong.
+
+| | the instrument | the engine, before |
+|---|---|---|
+| shape | held one tick, then a ONE-POLE decay | a linear ramp |
+| decay | x0.780851 per sample at 96 kHz - 0.1 ms to -20 dB | 2 ms, linear |
+| peak | a QUARTER of the dialled level | the full level |
+| level curve | the shared exponential | the shared exponential - already right |
+
+**Roughly twenty times too long and four times too loud.** On Kick 1, where Click sits at 79, a
+2 ms full-scale DC ramp is a broadband thump, and it is a large part of what CT originally heard
+as "more noise than the G2". Reference §39.4a.
+
+The decay coefficient is not a fit: it sits in the module's own frame as a constant, and the engine
+now applies it rate-corrected (`0.780851^(96000/rate)`) so the click lasts the same TIME whatever
+the engine runs at. After the change the engine's click decays at 0.78085 per sample, matching the
+reference sample for sample, and its level curve matches at every dial to a constant.
+
+**And a measurement lesson worth more than the fix.** The hardware capture that started this
+looked like a level curve STEEPER than the shared exponential - 0.028, 0.178, 0.660, 1.0
+normalised, against the curve's 0.019, 0.132, 0.433. It is not: the module's own code gives the
+shared curve exactly. The click is 0.1 ms, which at 48 kHz is about five samples, so the capture
+could not resolve its peak and the "curve" was sampling noise. **Do not fit a level law to an
+event shorter than the capture can resolve** - check the event's duration against the sample rate
+before believing its amplitude.
+
+Two harness bugs were found on the way, both worth remembering for the next module:
+
+- `BootDSP` uploads `_dspCentTable` from host index **64** (its `+0x100` is 64 words), not 0.
+  Uploading from 0 puts unity 64 entries out and biases every pitch. The table right above it,
+  `_dspSemiWide`, IS uploaded from 0 - the two loops use different pointer arithmetic and the
+  decompiler types them inconsistently, which is what hid it.
+- **Host-side tables are read as plain 32-bit words, not sign-extended 24-bit ones.** The shared
+  exponential curve's top entry is 0x800000, which sign-extends to -1.0 and silenced the top of
+  every level dial; the instrument's own conversion clamps it to 0x7fffff. Sign-extend FRAME
+  images, not host tables.
