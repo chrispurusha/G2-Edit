@@ -1589,7 +1589,7 @@ whole, because five of the sixteen reuse tables this engine already models:
 
 | dial | conversion |
 |---|---|
-| Master Freq | its own pitch law: 20 Hz at 0 to 784 Hz at 127 |
+| Master Freq | its own pitch law, `20 x 2^(dial/24)` - 20 Hz at 0 to 784 Hz at 127. CONFIRMED ON THE G2 2026-09-21 at five dials, all within 0.2%. Measure it with the BEND AT ZERO: the bend is still falling for the first tenth of a second and reads as a much higher pitch |
 | Slave Ratio | `2^(v/48)`, so 1 to 6.26 times the master |
 | Master, Slave, Noise Filter and Bend Decay | the ENVELOPE's decay multiplier table - the same one §36.1's glide uses |
 | Noise Filter Freq | the FILTER cutoff table |
@@ -1624,6 +1624,32 @@ output of a decaying hit reads the whole voice - two oscillators summed, the ben
 the output stage - not the gain word, and the two oscillators are the two that interact. The curve
 stands on the instrument's own conversion; the capture is kept in findings.md as the record of what
 peak-of-a-hit actually measures, which is not this.
+
+**39.4a The click, SETTLED 2026-09-21 - the engine's was the wrong shape, length and level.**
+Read out of the module's own code with everything but the click switched off, and confirmed
+against the instrument.
+
+| | the instrument | the engine, before |
+|---|---|---|
+| shape | held one envelope tick, then a ONE-POLE decay | a linear ramp |
+| decay | x0.780851 every sample at 96 kHz (tau = 42 us, -20 dB in 0.1 ms) | linear to zero over 2 ms |
+| peak | a QUARTER of the dialled level | the full dialled level |
+| level curve | the shared exponential (39.3) | the shared exponential - already right |
+
+The decay coefficient is not fitted: it is a constant sitting in the module's own frame, and the
+engine now uses it directly, rate-corrected as `0.780851^(96000/rate)` so an engine running at any
+sample rate decays in the same TIME. Measured after the change, the engine's click decays at
+0.78085 per sample and its level curve matches the reference's at every dial to a constant.
+
+So the engine was roughly twenty times too long, four times too loud, and the wrong curve shape.
+On a preset like Kick 1, where Click sits at 79, that is a large part of what CT heard as "more
+noise than the G2" - a 2 ms full-scale DC ramp is a broadband thump.
+
+**Hardware note.** The instrument measurement that prompted this (peaks 0.00163 / 0.01039 / 0.03845
+/ 0.05824 at dials 32/64/96/127, all -20 dB within 1 ms) looked like a curve STEEPER than the
+shared exponential. It is not - the module's own code gives the shared curve exactly. A 0.1 ms
+event at 48 kHz is about five samples, so the capture could not resolve its peak. **Do not fit a
+level law to an event shorter than the capture can resolve.**
 
 **39.5 The panel lamp, added 2026-09-20.** DrumSynth's face has an LED by its Trig and nothing lit
 it: the engine published a lamp for the LFO alone, and every other module's LED stayed dark unless a
@@ -1677,14 +1703,34 @@ settings, contributors isolated by zeroing the others.
   far too little resonance, not too much.
 - **The noise decays too slowly**: to -20 dB in 96 ms against the G2's 76 ms, on Kick 1's Noise
   Decay of 49.
+- **The CLICK is a second, separate suspect and has never been isolated** (CT, 2026-09-21). The
+  12 dB noise figure above is click-free - Click was zeroed on BOTH sides for it, as were the
+  oscillators for the noise take and the noise for the oscillator take - so that number stands.
+  But Kick 1 runs Click at 79, and the engine's click is invented from end to end: a LINEAR DC RAMP
+  from full scale to zero over a hard-coded 2 ms, scaled by the shared level curve and velocity,
+  added straight to the output. Nothing about it is measured. A 2 ms DC ramp is broadband, which is
+  where the residual +1.4 to +2.0 dB in the top three bands over the first 30 ms could easily be
+  coming from once the noise is right. **Isolate it**: Master, Slave and Noise at 0, Click swept,
+  on both the instrument and the engine.
 
-**The harness is standing but not yet sounding (2026-09-20).** Both parts run offline. What it
-has established so far: the module's noise is an LFSR followed by a two-pole colour
-filter, its multimode filter is a state-variable one whose output is summed into the oscillator
-node, the filter TYPE is a pair of mode words rather than one selector, and the whole part has an
-on/off word. Every dial's destination is decoded. What is missing is how the 24 kHz part's
-envelopes reach the 96 kHz one - until that is closed the cutoff word cannot be traced to the
-filter's coefficient. The working notes for all of this are kept outside this repo, as ever.
+**THE HARNESS PLAYS (2026-09-21).** The module's own code now runs offline and produces a decaying
+drum hit. What it took, beyond translating the two parts: the boot tables at their right addresses
+AND in the right memories, the pointers the linker installs between the two parts, the four dials
+that reach the DSP through custom actions rather than the plain parameter path, and - the thing
+that took four rounds to find - **the PITCH input.**
+
+DrumSynth is a VOICE module, and its oscillators are a two-state sine RESONATOR damped by the
+decay multiplier, not a phase accumulator. A resonator has to be struck, and what strikes it is a
+word derived from the Pitch input. An unpatched Pitch on the instrument carries the voice's own
+pitch, never zero - so with Pitch left at zero the module is silent and every other hypothesis
+about the silence tests plausible and negative in turn. Measured by removing one input at a time
+from the working harness: no Pitch gives nothing, no Trig gives nothing, and no velocity is worth
+about half a dB.
+
+It does NOT yet reproduce the hardware. Three inputs are still approximations - the pitch action's
+fixed-point multiply, the Slave Ratio conversion, and what the voice supplies as a resting Pitch
+(which sets the strike amplitude, and so the module's whole level). Until those are exact the
+measurements below are the target, not something to compare against.
 
 A change was drafted from these numbers and REVERTED the same day - the instrument's own logic is
 the reference and a capture is only its check - which is why they are recorded here as targets

@@ -10,6 +10,12 @@ Full detail for each is in findings.md, searchable by the wording below.
   **The ATTACK and SUSTAIN jacks and all of ModAHD's are NOT measured** - they share the one code
   path the decay proves, but neither the attack's curve under a mod nor the sustain's own law has
   been checked. `PatchTestFiles/EnvModDecay.pch2` is the rig, ready to reload into a slot.
+- ***DRUMSYNTH'S CLICK IS NOW THE INSTRUMENT'S (2026-09-21)*** - reference §39.4a. It was a linear
+  2 ms ramp at full level; it is a one-pole decay, 0.1 ms to -20 dB, at a QUARTER of the dialled
+  level. So it was about twenty times too long and four times too loud, which on a preset with
+  Click up is a broadband thump. CHECK ON THE G2: the presets with a prominent click - Kick 1 has
+  it at 79 - and whether ours still sounds "clickier" than the instrument. This is the first of
+  the DrumSynth laws to come from the module's own code rather than a capture.
 - ***A DRUMSYNTH ON ITS OWN IS NO LONGER SILENT (2026-09-20)*** - the engine's "is there a source
   in this chain?" test listed the oscillators, Pulse, the noise sources and DXRouter but not
   DrumSynth, so Keyboard -> DrumSynth -> LevAmp -> Out reported "Nothing is patched into it" and
