@@ -4076,7 +4076,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->drumLevel[0]     = mix_level_gain(param_value(module, variation, DRUM_PARAM_MASTER_LEVEL));
             node->drumLevel[1]     = mix_level_gain(param_value(module, variation, DRUM_PARAM_SLAVE_LEVEL));
             node->drumNoiseHz      = flt_cutoff_hz(param_value(module, variation, DRUM_PARAM_NOISE_FREQ));
-            node->drumNoiseRes     = dial_fraction(param_value(module, variation, DRUM_PARAM_NOISE_RES));
+            // §39.9 - the instrument sends Res as dial/512 capped at a quarter, and the filter's
+            // damping is 1 - 3.2 of that, so it FLOORS AT 0.2 rather than running to nothing.
+            node->drumNoiseRes     = 1.0 - (3.2 * fmin(0.25, param_value(module, variation,
+                                                                         DRUM_PARAM_NOISE_RES) / 512.0));
             node->drumSweepOctaves = DRUM_SWEEP_OCTAVES
                                      * dial_fraction(param_value(module, variation, DRUM_PARAM_NOISE_SWEEP));
             node->drumBendOctaves  = DRUM_SWEEP_OCTAVES
@@ -7419,7 +7422,7 @@ static double drum_synth_step(uint32_t voice, uint32_t node, const tEngineNode *
             // unstable at the top of a sweep - which is what the fifth Kick preset does. The
             // clamps are the ones nord_stage() uses on the same form (§23.1).
             double   f      = 2.0 * sin(M_PI * fmin(cutoff, gSampleRate * 0.20) / gSampleRate);
-            double   q      = 1.0 - (spec->drumNoiseRes * 0.98);
+            double   q      = spec->drumNoiseRes;   // §39.9 - the instrument's own damping
             double   low    = fmin(8.0, fmax(-8.0, state[1] + (f * state[0])));
             double   high   = noise - low - (q * state[0]);
             double   band   = flt_clip4(state[0] + (f * high));
