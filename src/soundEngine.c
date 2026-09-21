@@ -426,7 +426,11 @@ static const tMixSpec * mix_spec(tModuleType type) {
 // Click and Bend Amount are not measured yet and stay on the engine's level curve.
 
 #define DRUM_SWEEP_OCTAVES      (5.0)
-#define DRUM_CLICK_SECONDS      (0.002)
+// §39.8 - the click is a one-pole decay, not a ramp: the instrument multiplies it by this each
+// sample at 96 kHz, and its peak is a QUARTER of the dialled level.
+#define DRUM_INSTRUMENT_RATE    (96000.0)   // the rate the instrument's own coefficients are for
+#define DRUM_CLICK_DECAY_96K    (0.780851)
+#define DRUM_CLICK_PEAK         (0.25)
 
 #define DRUM_MASTER_PHASE       (0)
 #define DRUM_SLAVE_PHASE        (1)
@@ -808,6 +812,7 @@ typedef struct {
     double          drumSweepOctaves;
     double          drumBendOctaves;
     double          drumClick;
+    double          drumClickDecay;   // §39.8 - per sample at the engine's rate
     double          drumNoiseLevel;
     uint32_t        drumFilterType;
     uint32_t        inputCount;     // §33 - how many inputs that switch has (2 or 8)
@@ -4077,6 +4082,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->drumBendOctaves  = DRUM_SWEEP_OCTAVES
                                      * mix_level_gain(param_value(module, variation, DRUM_PARAM_BEND_AMOUNT));
             node->drumClick        = mix_level_gain(param_value(module, variation, DRUM_PARAM_CLICK));
+            node->drumClickDecay   = pow(DRUM_CLICK_DECAY_96K, DRUM_INSTRUMENT_RATE / gSampleRate);
             node->drumNoiseLevel   = mix_level_gain(param_value(module, variation, DRUM_PARAM_NOISE_AMOUNT));
             node->drumFilterType   = (uint32_t)module->param[variation][DRUM_PARAM_NOISE_TYPE].value;
             node->active           = (module->param[variation][DRUM_PARAM_ON].value != 0);
@@ -7383,11 +7389,7 @@ static double drum_synth_step(uint32_t voice, uint32_t node, const tEngineNode *
     // §39.5 - the face's lamp follows the master envelope, as the instrument's does
     publish_module_led(voice, spec, st[DRUM_MASTER_ENV] > DRUM_LED_FLOOR);
 
-    st[DRUM_CLICK_ENV]     -= 1.0 / (DRUM_CLICK_SECONDS * gSampleRate);
-
-    if (st[DRUM_CLICK_ENV] < 0.0) {
-        st[DRUM_CLICK_ENV] = 0.0;
-    }
+    st[DRUM_CLICK_ENV]     *= spec->drumClickDecay;
     {
         // §16.2 - a Pitch input is one unit a semitone.
         double bend   = spec->drumBendOctaves * vel * st[DRUM_BEND_ENV];
@@ -7429,7 +7431,7 @@ static double drum_synth_step(uint32_t voice, uint32_t node, const tEngineNode *
                        : ((spec->drumFilterType == 1u) ? band : low);
             out     += picked * st[DRUM_NOISE_ENV] * spec->drumNoiseLevel * vel;
         }
-        out += st[DRUM_CLICK_ENV] * spec->drumClick * vel;
+        out += st[DRUM_CLICK_ENV] * spec->drumClick * vel * DRUM_CLICK_PEAK;
         return out;
     }
 }
