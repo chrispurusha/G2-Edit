@@ -1651,6 +1651,37 @@ shared exponential. It is not - the module's own code gives the shared curve exa
 event at 48 kHz is about five samples, so the capture could not resolve its peak. **Do not fit a
 level law to an event shorter than the capture can resolve.**
 
+**39.9 The noise filter's RESONANCE, settled 2026-09-21.** Read out of the module's own code by
+instrumenting its filter: the damping is
+
+    damping = 1 - 3.2 x resWord,      resWord = dial/512, capped at a quarter
+
+so it runs 1.000, 0.800, 0.600, 0.400, 0.200 for dials 0, 32, 64, 96, 127 - **and FLOORS AT 0.2.**
+The engine had `1 - 0.98 x dial/128`, which runs down to 0.028: far more resonant at the top than
+the instrument ever gets, which is what the hardware saw (+14.4 dB of resonance at full Res
+against the instrument's +10.9). Now taken from the instrument's law.
+
+An earlier note in 39.4 guessed the engine was "four times too resonant because the host sends a
+quarter scale". The quarter scale is real, but the relation is not a simple scaling - it is this
+affine law with a floor, and the guess would have given far too LITTLE resonance. Reading the
+filter beat guessing at it.
+
+**39.10 STILL OPEN: the noise cutoff and the sweep.** Two facts are now known and neither is yet
+in the engine:
+
+- The filter's coefficient is the module's own cutoff table value used **directly**, where the
+  engine forms `2 sin(pi f / rate)` from `flt_cutoff_hz()`. Those differ by a factor of two in the
+  small-angle limit, so the engine's noise cutoff is about an octave out before any base-frequency
+  question is considered.
+- The sweep measures about **half** in the harness what it measures on the hardware (1.33 octaves
+  at dial 32 against 2.65). Since the harness IS the instrument's code, that points at the sweep's
+  envelope in the harness rather than at the law - the noise envelope multiplies the sweep, and
+  the harness's envelope handling is not yet verified.
+
+Settle both in the harness before touching the engine. The noise GAIN - the ~12 dB that started
+all this - is also still open: the harness currently puts the noise 35 dB below the oscillators
+where the hardware says 21.3, so the harness's own noise level is not right yet either.
+
 **39.5 The panel lamp, added 2026-09-20.** DrumSynth's face has an LED by its Trig and nothing lit
 it: the engine published a lamp for the LFO alone, and every other module's LED stayed dark unless a
 real G2 was attached to send one (CT). It now follows the MASTER ENVELOPE, which is what the
