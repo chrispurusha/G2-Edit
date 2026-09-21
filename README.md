@@ -18,7 +18,7 @@ Download the `.dmg` from the [releases page](https://github.com/chrispurusha/G2-
 contains two things: the editor, and an optional VST3 plug-in. The same instructions travel inside
 the `.dmg` as `Read Me First.txt`.
 
-Requirements: macOS 11.5 or later, Apple Silicon or Intel.
+Requirements: macOS 12.0 (Monterey) or later, Apple Silicon or Intel. **The minimum was macOS 11.5 up to V0.5.x and is 12.0 from the next release** - on Big Sur, stay on the earlier one.
 
 ### The editor
 

@@ -10,30 +10,6 @@ Full detail for each is in findings.md, searchable by the wording below.
   **The ATTACK and SUSTAIN jacks and all of ModAHD's are NOT measured** - they share the one code
   path the decay proves, but neither the attack's curve under a mod nor the sustain's own law has
   been checked. `PatchTestFiles/EnvModDecay.pch2` is the rig, ready to reload into a slot.
-- ***DRUMSYNTH'S CLICK IS NOW THE INSTRUMENT'S (2026-09-21)*** - reference §39.4a. It was a linear
-  2 ms ramp at full level; it is a one-pole decay, 0.1 ms to -20 dB, at a QUARTER of the dialled
-  level. So it was about twenty times too long and four times too loud, which on a preset with
-  Click up is a broadband thump. CHECK ON THE G2: the presets with a prominent click - Kick 1 has
-  it at 79 - and whether ours still sounds "clickier" than the instrument. This is the first of
-  the DrumSynth laws to come from the module's own code rather than a capture.
-- ***A DRUMSYNTH ON ITS OWN IS NO LONGER SILENT (2026-09-20)*** - the engine's "is there a source
-  in this chain?" test listed the oscillators, Pulse, the noise sources and DXRouter but not
-  DrumSynth, so Keyboard -> DrumSynth -> LevAmp -> Out reported "Nothing is patched into it" and
-  published silence. It looked like the Keyboard's Gate not triggering, which is what CT reported;
-  the Gate was always fine. One list now serves both that test and the all-generators-off test, so
-  the next module cannot be added to one and missed off the other. CHECK: a drum patch with no
-  oscillator in it makes a sound, and the status line says Playing.
-- ***DRUMSYNTH'S PANEL LAMP LIGHTS (2026-09-20)*** - reference §39.5, notes §194. It follows the
-  master envelope, as the instrument's does, so it comes on with the hit and fades with it rather
-  than following the key. Offline it lit at the note-on and went out 263 ms later with the key
-  released at 80 ms. CHECK: against the G2's own lamp, especially a long Master Decay (ours should
-  stay lit as long as the hit lasts) and a hit with Master Level at 0 (the envelope still runs, so
-  ours still lights - check the instrument agrees).
-- ***DRUMSYNTH TRIG EDGE (2026-09-20, CT: "seemed to trigger on key up initially. Seems OK now")***
-  - the code fires on a rising edge only and offline it fires on key DOWN, so this is unreproduced.
-  Watch for it again, and if it returns, note whether it follows a patch load or a rebuild: the
-  per-voice previous-clock state starts at zero, so a gate already high when the chain is rebuilt
-  would read as an edge.
 - ***PITCH BEND NOW REACHES MonoKey's PITCH (2026-09-20)*** - reference §35.2. It never did, so the
   wheel was dead on any patch whose oscillators have KBT off and take their pitch from MonoKey;
   01 Mini Emulator is that patch and Chris' Lead is not, which is why only one of them bent (CT).
@@ -48,15 +24,6 @@ Full detail for each is in findings.md, searchable by the wording below.
   other two. CHECK ON THE G2: variation 7 across the keyboard against the instrument, and then the
   other variations for anything that has quietly changed - 24 connections in this patch were being
   ignored and now are not.
-- ***DRUMSYNTH PLAYS (2026-09-19)*** - reference §39. Two oscillators, a sweeping noise filter,
-  bend and click, with the decays, the noise cutoff and - settled 2026-09-20 - the five level dials
-  all on the instrument's own conversions, and both pitch laws shared with the face. Every factory
-  preset produces a plausible hit offline. **THE NOISE FILTER IS THE UNSETTLED PART NOW** (§39.4):
-  Res may be four times too resonant at the top of the dial and the cutoff table may be the wrong
-  one, neither settleable without a native harness. CHECK AGAINST THE G2: the presets side by side,
-  listening first to whether ours RINGS where the instrument thumps, then master against slave
-  against noise against click, and whether the click is too loud. Then the bend and the noise
-  sweep, which should both fall rather than rise, and a Trig from a sequencer.
 - ***FOUR LOGIC MODULES PLAY: Invert, Gate, FlipFlop, ClkDiv (2026-09-19)*** - reference §38. The
   truth tables and the logic levels are checked offline and exact, so what needs the G2 is the
   TIMING and the edge cases: a ClkDiv at a few dividers in both Gated and Toggled (Toggled counts
@@ -178,17 +145,6 @@ Full detail for each is in findings.md, searchable by the wording below.
   own numbering and the order the engine already used - so a patch will BEHAVE the same, but the dial
   you reach for changes. STILL TO CHECK ON THE G2: that the dial the G2 calls Width is the one we now
   label Width, and that the band picture matches what you hear as Width is swept.
-- ***DRUM SYNTH GRAPH (2026-09-19)*** - moduleGraphics.c notes §91. Amplitude (green, the three voices
-  summed) and bend (orange) in the space kept free under the Preset box. Checked live through the
-  backdoor at two settings - short decays with no bend against long decays with full bend - and the
-  curves change as they should. STILL TO CHECK: that it reads well against real presets rather than
-  two made-up settings, the short ones especially, and at the zoom you work at.
-- ***DRUM SYNTH FACE RE-LAID OUT, SLAVE DIAL NOW A RATIO (2026-09-18)*** - findings 2026-09-18,
-  renderParams.c notes §19. Four band headings, M/S/NF/B prefixes dropped, rows spread; the Slave dial
-  reads x1.24 / 3:1 instead of a percentage. Checked by rendering at 1.0 and 0.59 (no overlaps, nothing
-  off the right edge) and the ratio law against the manual's own 1:1-to-6.26. STILL TO CHECK ON THE G2:
-  that the Slave readings match the panel dial for dial (especially where it flips between "N:1" and
-  "x2.51", around raw 75/76), and that the face reads well at the zoom you actually work at.
 - ***SECTION HEADINGS SIT ON A LIGHTENED BAND (2026-09-18)*** - moduleGraphics.c notes §90. Every
   tLabelLocation heading now has a background a fraction of the way from its module's OWN colour to
   white, so it follows whatever body colour the module is set to. Checked at 1.0 and 0.59 on the Drum
@@ -294,11 +250,6 @@ Full detail for each is in findings.md, searchable by the wording below.
   Gate jack (reference §17.4). Checked offline on 03 Chris' Lead: KB off on both envelopes silences it,
   KB on restores it, a Keyboard module's Gate in the jacks still plays, an LFO in the jacks gates it.
   STILL TO CHECK BY EAR: that patches with KB off and a gate patched sound as on the G2.
-- ***DRUMSYNTH PRESETS AND ITS ON BUTTON (2026-09-16)*** - the Preset box shows which of the 30 factory
-  presets the dials match ("none" if none do), and clicking it offers all 30; choosing one sets params
-  0-14 as one undo step. Param 15 is now the On button. Checked offline in the editor (values, undo,
-  redo, "none"). STILL TO CHECK ON THE G2: a chosen preset sounds and reads the same on the
-  instrument, the G2 shows the same name, and the On button mutes the module.
 - ***THE PLUG-IN'S MENUS OPEN THEIR PANELS, AND MENU CLICKS NO LONGER FALL THROUGH (2026-09-16)*** -
   two CT reports, one cause: register_app_popups() lived in graphics.c, which do-plugin does not
   compile, so in G2 Alike no floating panel was ever drawn or clicked (Settings > Synth/Patch/Perf/
@@ -869,3 +820,59 @@ Stolen-voice envelope reset (2026-09-19, reference §15.3a)
     hears it - that is now a todo item, not a to-test one.
   - A voice reused from the free or released queue deliberately still attacks from where it was
     (§17.3/§17.7). If a released-voice reuse also sounds attackless, that is a separate question.
+
+## DrumSynth - one checklist
+
+Everything below is DrumSynth, gathered 2026-09-21 so it can be worked through in one pass with
+the module in front of you. The laws marked (code) came from the instrument's own DSP code, not
+from a capture, so they are the ones most likely to be right.
+
+- ***DRUMSYNTH'S CLICK IS NOW THE INSTRUMENT'S (2026-09-21)*** - reference §39.4a. It was a linear
+  2 ms ramp at full level; it is a one-pole decay, 0.1 ms to -20 dB, at a QUARTER of the dialled
+  level. So it was about twenty times too long and four times too loud, which on a preset with
+  Click up is a broadband thump. CHECK ON THE G2: the presets with a prominent click - Kick 1 has
+  it at 79 - and whether ours still sounds "clickier" than the instrument. This is the first of
+  the DrumSynth laws to come from the module's own code rather than a capture.
+- ***A DRUMSYNTH ON ITS OWN IS NO LONGER SILENT (2026-09-20)*** - the engine's "is there a source
+  in this chain?" test listed the oscillators, Pulse, the noise sources and DXRouter but not
+  DrumSynth, so Keyboard -> DrumSynth -> LevAmp -> Out reported "Nothing is patched into it" and
+  published silence. It looked like the Keyboard's Gate not triggering, which is what CT reported;
+  the Gate was always fine. One list now serves both that test and the all-generators-off test, so
+  the next module cannot be added to one and missed off the other. CHECK: a drum patch with no
+  oscillator in it makes a sound, and the status line says Playing.
+- ***DRUMSYNTH'S PANEL LAMP LIGHTS (2026-09-20)*** - reference §39.5, notes §194. It follows the
+  master envelope, as the instrument's does, so it comes on with the hit and fades with it rather
+  than following the key. Offline it lit at the note-on and went out 263 ms later with the key
+  released at 80 ms. CHECK: against the G2's own lamp, especially a long Master Decay (ours should
+  stay lit as long as the hit lasts) and a hit with Master Level at 0 (the envelope still runs, so
+  ours still lights - check the instrument agrees).
+- ***DRUMSYNTH TRIG EDGE (2026-09-20, CT: "seemed to trigger on key up initially. Seems OK now")***
+  - the code fires on a rising edge only and offline it fires on key DOWN, so this is unreproduced.
+  Watch for it again, and if it returns, note whether it follows a patch load or a rebuild: the
+  per-voice previous-clock state starts at zero, so a gate already high when the chain is rebuilt
+  would read as an edge.
+- ***DRUMSYNTH PLAYS (2026-09-19)*** - reference §39. Two oscillators, a sweeping noise filter,
+  bend and click, with the decays, the noise cutoff and - settled 2026-09-20 - the five level dials
+  all on the instrument's own conversions, and both pitch laws shared with the face. Every factory
+  preset produces a plausible hit offline. **THE NOISE FILTER IS THE UNSETTLED PART NOW** (§39.4):
+  Res may be four times too resonant at the top of the dial and the cutoff table may be the wrong
+  one, neither settleable without a native harness. CHECK AGAINST THE G2: the presets side by side,
+  listening first to whether ours RINGS where the instrument thumps, then master against slave
+  against noise against click, and whether the click is too loud. Then the bend and the noise
+  sweep, which should both fall rather than rise, and a Trig from a sequencer.
+- ***DRUM SYNTH GRAPH (2026-09-19)*** - moduleGraphics.c notes §91. Amplitude (green, the three voices
+  summed) and bend (orange) in the space kept free under the Preset box. Checked live through the
+  backdoor at two settings - short decays with no bend against long decays with full bend - and the
+  curves change as they should. STILL TO CHECK: that it reads well against real presets rather than
+  two made-up settings, the short ones especially, and at the zoom you work at.
+- ***DRUM SYNTH FACE RE-LAID OUT, SLAVE DIAL NOW A RATIO (2026-09-18)*** - findings 2026-09-18,
+  renderParams.c notes §19. Four band headings, M/S/NF/B prefixes dropped, rows spread; the Slave dial
+  reads x1.24 / 3:1 instead of a percentage. Checked by rendering at 1.0 and 0.59 (no overlaps, nothing
+  off the right edge) and the ratio law against the manual's own 1:1-to-6.26. STILL TO CHECK ON THE G2:
+  that the Slave readings match the panel dial for dial (especially where it flips between "N:1" and
+  "x2.51", around raw 75/76), and that the face reads well at the zoom you actually work at.
+- ***DRUMSYNTH PRESETS AND ITS ON BUTTON (2026-09-16)*** - the Preset box shows which of the 30 factory
+  presets the dials match ("none" if none do), and clicking it offers all 30; choosing one sets params
+  0-14 as one undo step. Param 15 is now the On button. Checked offline in the editor (values, undo,
+  redo, "none"). STILL TO CHECK ON THE G2: a chosen preset sounds and reads the same on the
+  instrument, the G2 shows the same name, and the On button mutes the module.
