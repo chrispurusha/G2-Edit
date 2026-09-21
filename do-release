@@ -443,7 +443,11 @@ $PLUGIN_SECTION
 
 REQUIREMENTS
 
-macOS 11.5 or later, Apple Silicon or Intel.
+macOS 12.0 (Monterey) or later, Apple Silicon or Intel.
+
+NOTE: this is a CHANGE. Releases up to and including V0.5.x ran on macOS 11.5
+(Big Sur); from this one the minimum is 12.0. If you are on Big Sur, stay on
+the earlier release - this one will not launch.
 $PLUGIN_REQUIREMENT
 EOF
 
