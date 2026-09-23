@@ -1727,16 +1727,16 @@ settings, contributors isolated by zeroing the others.
 - **The Sweep dial measures one semitone a step**: 0, 2.65 and 5.30 octaves at dials 0, 32 and 64,
   exactly linear. The engine's five-octaves-over-the-dial comes from the manual, not from the
   instrument, and is 2.1x too shallow - but the reference has to confirm the law before it changes.
-- **The resonance curve is the wrong shape**, quite apart from the level: peak gain relative to
-  Res 0 runs 0, +0.6, +1.2, +5.0, +10.9 dB on the G2 at dials 0/32/64/96/127, against the engine's
-  0, +1.2, +3.7, +7.6, +14.4. **The earlier guess in this section - that the engine is four times
+- **The resonance curve is the wrong shape** (SETTLED since - §39.9), quite apart from the level:
+  peak gain relative to Res 0 runs 0, +0.6, +1.2, +5.0, +10.9 dB on the G2 at dials
+  0/32/64/96/127, against the engine's 0, +1.2, +3.7, +7.6, +14.4. **The earlier guess in this section - that the engine is four times
   too resonant because the host sends a quarter scale - is DISPROVED**: quartering the dial gives
   far too little resonance, not too much.
 - **The noise decays too slowly**: to -20 dB in 96 ms against the G2's 76 ms, on Kick 1's Noise
   Decay of 49.
-- **The CLICK is a second, separate suspect and has never been isolated** (CT, 2026-09-21). The
-  12 dB noise figure above is click-free - Click was zeroed on BOTH sides for it, as were the
-  oscillators for the noise take and the noise for the oscillator take - so that number stands.
+- **The CLICK is a second, separate suspect and has never been isolated** (CT, 2026-09-21; SETTLED
+  since - §39.4a). The 12 dB noise figure above is click-free - Click was zeroed on BOTH sides for
+  it, as were the oscillators for the noise take and the noise for the oscillator take - so that number stands.
   But Kick 1 runs Click at 79, and the engine's click is invented from end to end: a LINEAR DC RAMP
   from full scale to zero over a hard-coded 2 ms, scaled by the shared level curve and velocity,
   added straight to the output. Nothing about it is measured. A 2 ms DC ramp is broadband, which is
@@ -1761,35 +1761,8 @@ about half a dB.
 It does NOT yet reproduce the hardware. Three inputs are still approximations - the pitch action's
 fixed-point multiply, the Slave Ratio conversion, and what the voice supplies as a resting Pitch
 (which sets the strike amplitude, and so the module's whole level). Until those are exact the
-measurements below are the target, not something to compare against.
+measurements above are the target, not something to compare against.
 
 A change was drafted from these numbers and REVERTED the same day - the instrument's own logic is
 the reference and a capture is only its check - which is why they are recorded here as targets
 rather than as constants.
-
-**39.5 The panel lamp, added 2026-09-20.** DrumSynth's face has an LED by its Trig and nothing lit
-it: the engine published a lamp for the LFO alone, and every other module's LED stayed dark unless a
-real G2 was attached to send one (CT). It now follows the MASTER ENVELOPE, which is what the
-instrument shows - its lamp reads a level word of the module's own DSP state, the same way an
-envelope's does, not the Trig input. So it comes on with the hit and fades out with it rather than
-following the key: offline it lights at the note-on and goes out 263 ms later on the default preset,
-with the key released at 80 ms. The face has one lamp and a poly patch has one of these per voice,
-so voice 0 publishes and the rest do not - the rule the LFO already used, now in one place
-(notes §194).
-
-**39.4 STILL UNSETTLED: the noise filter, and only the noise filter.** The whole module is two DSP
-parts of its own - one at 96 kHz, one at 24 kHz - so its filter is hand-written rather than one of
-the filter modules, and its coefficient law is inside that code. Two host-side facts are known and
-disagree with what the engine does:
-
-- **Res reaches only a quarter of full scale**: the instrument sends `dial/512`, capped at 0.25,
-  where the engine sends `dial_fraction()` - 0 to 1 - and turns it into a damping of `1 - 0.98 res`.
-  If that word is the Chamberlin damping directly, as the equivalent word is in §23, the engine is
-  four times too resonant at the top of the dial and the drums ring where the instrument thumps.
-- **Noise Filter Freq reads a different cutoff table** from the one §22 and §23 use.
-
-Neither can be settled from the host side alone, because the meaning of both words is in the two
-own DSP code. That is a native-harness job of the kind §21-§25 each were, and it would settle
-the filter, the cutoff scale, the click and the four decays together - a better use of a session
-than more captures. Until then the filter shape is the thing to listen to, and Res is the dial to
-distrust.
