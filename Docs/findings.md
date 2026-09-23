@@ -11564,7 +11564,7 @@ Two harness bugs were found on the way, both worth remembering for the next modu
 - the DSP boot uploads the cent table from host index **64** (its `+0x100` is 64 words), not 0.
   Uploading from 0 puts unity 64 entries out and biases every pitch. The table right above it,
   `a table`, IS uploaded from 0 - the two loops use different pointer arithmetic and the
-  reference types them inconsistently, which is what hid it.
+  two are typed inconsistently, which is what hid it.
 - **Host-side tables are read as plain 32-bit words, not sign-extended 24-bit ones.** The shared
   exponential curve's top entry is 0x800000, which sign-extends to -1.0 and silenced the top of
   every level dial; the instrument's own conversion clamps it to 0x7fffff. Sign-extend FRAME
