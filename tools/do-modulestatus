@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Builds and runs tools/modulestatus — the generator behind Docs/engine-module-status.md's Plays
-# and Silent lists. See modulestatus.c for why it exists.
+# Builds and runs tools/modulestatus — the generator behind Docs/engine-module-status.md's tables.
+# See modulestatus.c for why it exists.
 #
 # A script rather than an Xcode target, for the same reason do-render is one: it links a handful of
 # the application's own sources with no GUI and no device.
