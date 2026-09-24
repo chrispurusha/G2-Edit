@@ -31,7 +31,6 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 MODULES AND GRAPHICS
 - DrumSynth's noise path (reference §39.4, §39.10): settle in the harness before touching the engine - noise cutoff (coefficient is the table value used directly, engine ~an octave out), sweep (hardware 1 semitone/step, harness gives half), noise gain (~12 dB too loud; harness's own level not right yet), noise decay slow (96 ms vs 76 ms to -20 dB). Harness still approximates the pitch multiply, the resting Pitch and has one 2-bit shift error in its Pitch-input index. Master Freq, Slave Ratio, click (§39.4a) and Res (§39.9) are settled
 - The rest of the Logic group: 8Counter, BinCounter, ADConv, DAConv and the logic Delay - the four done 2026-09-19 (reference §38) leave these five
-- Generate engine-module-status.md from `module_kind()` instead of keeping it by hand - it was wrong about eight modules within a day of them being added (2026-09-19)
 - Re-lay out the remaining families by rule (module-layout-rules.md "common face", tools/relayout.py) - Level group done 2026-09-13; next the delays and the pitch/FX group still on port coordinates
 - A drag-and-drop layout mode in the editor that snaps to the grid and writes the rows back - for what the rules cannot settle
 - Draw the jack-to-dial link as a short graphical line instead of the "-"/"--" connector label (CT) - the labels already mark every pair
