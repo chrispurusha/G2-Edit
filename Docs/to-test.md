@@ -199,6 +199,13 @@ Full detail for each is in findings.md, searchable by the wording below.
   wave is DualSaw (it was three detuned saws), the sine is the instrument's. Harmonics checked against
   captures; STILL TO CHECK by ear, a high OscB saw or a DualSaw patch especially.
 - ***FILTER GRAPH PEAK STEADY AT FULL RESONANCE (2026-09-17)*** - code-notes/moduleGraphics.c.md §68a. FltClassic at Res 127: sweep Freq, the peak should glide rather than jump.
+- ***OSCPERC PLAYS (2026-09-25)*** - reference §40. New module, from the part's own DSP program; offline
+  it matches the G2 at E4 across Decay, Click and Punch. By ear against the G2: a Trig from the Keyboard,
+  Decay 20-127, Click 0/127, Punch on (an octave-up first half cycle), and an unpatched Trig (silent).
+- ***OSCSHPB SINE3/SINE4 RUN THE PART'S OWN DSP PROGRAM (2026-09-25)*** - reference §27.3. Offline they
+  match the G2's 17 September sweep to 0.001 at every Shape; about 0.4 dB quieter than before at Shape 64
+  (level slope 0.703 for 0.642), and the top of the dial now wraps as the hardware's division does. By ear
+  against the G2: Sine3 and Sine4 at Shape 96-127.
 - ***OSCSHPB AND OSCDUAL ON THE INSTRUMENT'S LAWS (2026-09-17)*** - reference §27.5, §12.5. OscShpB matches its
   harness sample for sample (TriSaw near-exact); OscDual's sub lost its shelf (fuller bass), square/saw/sub
   polarities and saw rotation follow the instrument, mod inputs deeper. Listen, OscDual's sub especially; the old
