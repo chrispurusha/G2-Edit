@@ -11624,3 +11624,53 @@ x4 (a DSP word is a quarter of an engine unit), 6 dB up as a whole - checked aga
 picks its own; take velocity-dependent captures over MIDI (`tools/g2_note`, Cirklon2+Mirror MIDI 1,
 channel 3 for Slot A as cabled on 2026-09-25).
 
+====================================================================================================
+
+## 2026-09-25 - the reference model, and OscShpB's Sine3/Sine4 from the instrument's program
+
+CT: "This is why we should always refer to the reference. Worth doing OscShpB." then "I'd like to nail this, so
+take on the decoder."
+
+Sine3/Sine4 were the last OscShpB waves on fitted laws, because the earlier reading for their stages gave
+a quarter of the G2's level and a ratio with no ceiling. No update action explained it: all eight
+
+the reference model a reference model beside it.
+
+
+the C multiplies by the integer 90. And the C shifts its 64-bit quotient right by 2 where the DSP's 16
+
+the DIVISION's precision (64 LSB), which proves every other instruction; with them off it reproduces the G2's
+own sweep to 0.001 in level and ratio at all eleven Shapes, E4, both waves - including the "ceiling",
+which is the 16-step division wrapping once the quotient reaches 1, not a cap on the ratio.
+
+The engine now does the module's arithmetic (reference §27.3, `dsf_divide()` in waveModels.c) and matches
+the same sweep to 0.001, and E2/E6 to 0.002. Fitted constants gone: DSF_RATIO_MAX 0.905, the level slope
+0.642 (now 0.703125); Y0 is 8279556/2^23.
+
+
+
+covers parallel moves, the data ALU, IFcc, DIVISION and ASL/ASR #n; SineSym also uses Tcc, long immediates
+and one step ($040434) not yet decoded.
+
+====================================================================================================
+
+## 2026-09-25 - OscPerc, from its reference model, checked on the G2
+
+CT: "Move onto other modules? Percsynth?" OscPerc is one DSP stage (`CPartOscPerc`) behind the shared
+pitch stage. Its reference model needed three more instruction classes in the reference model - X:Y double moves, Tcc,
+
+
+
+followed by a flag-setting op. After the fix the earlier reading and the reference model agree bit for bit
+(0 of 96000 samples, every setting tried).
+
+The rest came from the reference model too: Decay is a stored table (a stored table), Click is SQUARED by
+`PercClickAction`, Punch changes one step, and an unpatched input's slot points at a
+constant - offset k in the connector is k x 2^16 (0x20 = 64 units, which is why the DrumSynth's
+unpatched Vel measured 64 units). OscPerc's unpatched Trig reads constant 0, so it never strikes.
+
+Eight G2 takes on outputs 3/4 (reference §40.3) agree with the reference model and the engine to 0.1 dB in level,
+2 ms in decay, exactly in pitch; absolute level 3.36 dB over a full-scale sine against 3.45 predicted.
+Punch shows nothing in 10 ms windows because it lasts half a cycle - its phase saturates at 1.0. And a
+new fact about the G2's output: **it is AC-coupled at about 3 Hz**, which turns a struck resonator's DC
+area into a slow tail below -45 dB (and at short Decays, -27 dB). The engine does not model it.
