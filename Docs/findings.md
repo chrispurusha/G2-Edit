@@ -11633,3 +11633,54 @@ x4 (a DSP word is a quarter of an engine unit), 6 dB up as a whole - checked aga
 picks its own; take velocity-dependent captures over MIDI (`tools/g2_note`, Cirklon2+Mirror MIDI 1,
 channel 3 for Slot A as cabled on 2026-09-25).
 
+====================================================================================================
+
+## 2026-09-25 - A DSP56300 decoder and emulator, and OscShpB's Sine3/Sine4 from the instrument's program
+
+CT: "This is why we should always refer to g2demo. Worth doing OscShpB." then "I'd like to nail this, so
+take on the decoder."
+
+Sine3/Sine4 were the last OscShpB waves on fitted laws, because G2Demo's native C for their DSF parts gave
+a quarter of the G2's level and a ratio with no ceiling. No host update action explained it: all eight
+wave parts carry the same Active opcode and nothing else. So the part's own DSP program was decoded - the
+P-frame is real DSP56300 machine code - with `~/Documents/G2DemoTables/harness/dsp563dis.py`, and run with
+the emulator `dsp563.h` beside it.
+
+**G2Demo's C mistranslates two instructions.** `move #$5a,y1` loads a FRACTION into the MSBs (0.703125);
+the C multiplies by the integer 90. And the C shifts its 64-bit quotient right by 2 where the DSP's 16
+DIVs + ASL #32 leave N'/D' unshifted. With both slips switched on the emulator reproduces G2Demo's C to
+the DIV's precision (64 LSB), which proves every other instruction; with them off it reproduces the G2's
+own sweep to 0.001 in level and ratio at all eleven Shapes, E4, both waves - including the "ceiling",
+which is the 16-step DIV wrapping once the quotient reaches 1, not a cap on the ratio.
+
+The engine now does the part's arithmetic (reference §27.3, `dsf_divide()` in waveModels.c) and matches
+the same sweep to 0.001, and E2/E6 to 0.002. Fitted constants gone: DSF_RATIO_MAX 0.905, the level slope
+0.642 (now 0.703125, `#$5a`); Y0 is the frame's 8279556/2^23.
+
+**For the next part whose G2Demo C disagrees with the hardware:** disassemble its P-frame and run it -
+`dsp563dis.py _k<Part>FrameP` and a `dsp_run()` beside the native call, as `dspcheck.c` does. The emulator
+covers parallel moves, the data ALU, IFcc, DIV and ASL/ASR #n; SineSym also uses Tcc, long immediates
+and one opcode ($040434) not yet decoded.
+
+====================================================================================================
+
+## 2026-09-25 - OscPerc, from its DSP program, checked on the G2
+
+CT: "Move onto other modules? Percsynth?" OscPerc is one DSP part (`CPartOscPerc`) behind the shared
+pitch part. Its P-frame needed three more instruction classes in the emulator - X:Y double moves, Tcc,
+IFcc.U - and one real emulator fix: **TFR leaves the condition codes alone**. The part's edge detector
+depends on it (a product's sign survives a `tfr` into the next `tst ... ifge.u`), and with TFR setting
+flags the phase was reset every sample. The DSF parts could not have caught it: there every `tfr` was
+followed by a flag-setting op. After the fix G2Demo's native C and the program agree bit for bit
+(0 of 96000 samples, every setting tried).
+
+The host side came out of G2Demo too: Decay is a stored table (`_peakRcTime`), Click is SQUARED by
+`PercClickAction`, Punch patches `asl b ifec` into one P-word, and an unpatched input's slot points at a
+constant - offset k in `Connect_Signal` is k x 2^16 (0x20 = 64 units, which is why the DrumSynth's
+unpatched Vel measured 64 units). OscPerc's unpatched Trig reads constant 0, so it never strikes.
+
+Eight G2 takes on outputs 3/4 (reference §40.3) agree with the program and the engine to 0.1 dB in level,
+2 ms in decay, exactly in pitch; absolute level 3.36 dB over a full-scale sine against 3.45 predicted.
+Punch shows nothing in 10 ms windows because it lasts half a cycle - its phase saturates at 1.0. And a
+new fact about the G2's output: **it is AC-coupled at about 3 Hz**, which turns a struck resonator's DC
+area into a slow tail below -45 dB (and at short Decays, -27 dB). The engine does not model it.

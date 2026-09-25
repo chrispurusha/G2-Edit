@@ -303,6 +303,10 @@ typedef struct {
     bool        aWaves;         // OscA's six, with three fixed pulse widths
 } tOscParams;
 
+// §40 - OscPerc: Coarse 0, Fine 1, Tune Mode 2, KBT 3, Pitch mod 4, then these, and Mute 8
+#define PERC_PARAM_DECAY            (5)
+#define PERC_PARAM_CLICK            (6)
+#define PERC_PARAM_PUNCH            (7)
 #define OSCNOISE_PARAM_WIDTH_MOD    (5)    // §8.1 - the module tables have 5 and 6 swapped
 #define OSCNOISE_PARAM_WIDTH        (6)
 
@@ -318,7 +322,10 @@ static const tOscParams kOscParams[] = {
     {moduleTypeOscD,     0, 1, 2, -1, -1,  4, -1,  0, -1, true },
     {moduleTypeOscNoise, 0, 1, 2,  3,  4,  7, -1, -1, -1, false},
     {moduleTypeOscDual,  0, 1, 2,  3,  4, 10, -1, -1, -1, false},
+    {moduleTypeOscPerc,  0, 1, 3,  4,  2,  8, -1, -1, -1, false},       // §40
 };
+
+static double perc_decay_word(double dial);
 
 static const tOscParams * osc_params(tModuleType type) {
     for (uint32_t i = 0; i < (sizeof(kOscParams) / sizeof(kOscParams[0])); i++) {
@@ -637,6 +644,7 @@ typedef enum {
     eNodeMixStereo,      // MixStereo: six mono channels, each levelled and panned, to a stereo pair
     eNodeNoise,          // Noise: white noise through the Color dial's one-pole low-pass
     eNodeOscNoise,       // §8
+    eNodeOscPerc,        // §40 - a struck, decaying resonator
     eNodeFltMulti,       // §10 - LP, BP and HP from one filter
     eNodeEq,             // §11 - EqPeak, Eq2Band, Eq3band
     eNodeFltComb,        // §13
@@ -801,6 +809,10 @@ typedef struct {
     double          drumClick;
     double          drumClickDecay;   // §39.8 - per sample at the engine's rate
     double          drumNoiseLevel;
+    // §40 - OscPerc
+    double          percDecay;         // the Decay word, per 96 kHz sample
+    double          percClick;         // Click squared, as PercClickAction sends it
+    bool            percPunch;
     uint32_t        drumFilterType;
     uint32_t        inputCount;     // §33 - how many inputs that switch has (2 or 8)
     double          glideCoeff;     // §36 - per ENVELOPE TICK: Log's one-pole k, or Lin's step
@@ -2830,6 +2842,11 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeOscNoise;
             return true;
         }
+        case moduleTypeOscPerc:
+        {
+            *kind = eNodeOscPerc;
+            return true;
+        }
         case moduleTypeFltMulti:
         {
             *kind = eNodeFltMulti;
@@ -3232,6 +3249,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeFltMulti:
         case eNodeOscNoise:
+        case eNodeOscPerc:          // §40 - Pitch, PitchVar, Trig
         {
             uint32_t count = inputs_in_module_order(moduleType, 3u, derived);
             *connectors = derived;
@@ -3894,6 +3912,19 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->active       = (param_value(module, variation, 7) != 0.0);
             break;
         }
+        case eNodeOscPerc:
+        {
+            const tOscParams * p = osc_params(module->type);
+
+            if (p == NULL) {
+                break;
+            }
+            set_osc_pitch(node, module, variation, p);
+            node->percDecay = perc_decay_word(param_value(module, variation, PERC_PARAM_DECAY));
+            node->percClick = pow(dial_fraction(param_value(module, variation, PERC_PARAM_CLICK)), 2.0);
+            node->percPunch = (module->param[variation][PERC_PARAM_PUNCH].value != 0);
+            break;
+        }
         case eNodeOscNoise:
         {
             const tOscParams * p = osc_params(module->type);
@@ -4337,6 +4368,7 @@ static bool node_is_generator(tNodeKind kind) {
            || (kind == eNodePulse)
            || (kind == eNodeNoise)
            || (kind == eNodeOscNoise)
+           || (kind == eNodeOscPerc)
            || (kind == eNodeDx)
            || (kind == eNodeDrumSynth);
 }
@@ -5377,15 +5409,94 @@ static double delay_step(uint32_t line, double input, double fbModIn, double mix
 }
 
 // §19 - StChorus. Tap positions count samples at CHORUS_TAP_RATE_HZ.
-#define CHORUS_TICK_HZ                (24000.0)  // the LFO steps at the control rate
-#define CHORUS_PHASE_HALF             (8388608)  // a signed 24-bit phase: -1..1 is one LFO cycle
-#define CHORUS_DETUNE_STEP            (8.0)      // phase step per tick per Detune step
-#define CHORUS_TAP_RATE_HZ            (96000.0)
-#define CHORUS_TAP1_MAX               (505.0)
-#define CHORUS_TAP1_SPAN              (504.0)
-#define CHORUS_TAP2_MIN               (65.0)
-#define CHORUS_TAP2_SPAN              (378.0)    // three quarters of tap 1's, the other way
-#define CHORUS_FRACTION_STEPS         (32.0)     // a tap position resolves to 1/32 sample
+#define CHORUS_TICK_HZ           (24000.0)       // the LFO steps at the control rate
+#define CHORUS_PHASE_HALF        (8388608)       // a signed 24-bit phase: -1..1 is one LFO cycle
+#define CHORUS_DETUNE_STEP       (8.0)           // phase step per tick per Detune step
+#define CHORUS_TAP_RATE_HZ       (96000.0)
+#define CHORUS_TAP1_MAX          (505.0)
+#define CHORUS_TAP1_SPAN         (504.0)
+#define CHORUS_TAP2_MIN          (65.0)
+#define CHORUS_TAP2_SPAN         (378.0)         // three quarters of tap 1's, the other way
+#define CHORUS_FRACTION_STEPS    (32.0)          // a tap position resolves to 1/32 sample
+
+// §40.2 - the Decay dial's per-sample multiplier, the instrument's own `_peakRcTime` table (Q23), read
+// out of G2Demo. It follows no single law (notes §195), so it is carried as the instrument stores it.
+static const int32_t kPercDecayWord[128] = {
+    5715092, 6482641, 6914464, 7190968, 7383210, 7524700, 7633282, 7719319,
+    7789242, 7847252, 7896206, 7938118, 7974447, 8006272, 8034415, 8059506,
+    8082041, 8102411, 8120932, 8137861, 8153408, 8167745, 8181018, 8193348,
+    8204838, 8215574, 8225630, 8235070, 8243949, 8252314, 8260206, 8267660,
+    8274708, 8281377, 8287692, 8293675, 8299343, 8304715, 8309806, 8314630,
+    8319200, 8323528, 8327625, 8331501, 8335166, 8338629, 8341900, 8344985,
+    8347895, 8350635, 8353215, 8355640, 8357919, 8360059, 8362066, 8363946,
+    8365706, 8367353, 8368892, 8370329, 8371670, 8372921, 8374086, 8375170,
+    8376179, 8377117, 8377988, 8378797, 8379547, 8380243, 8380888, 8381485,
+    8382038, 8382550, 8383024, 8383461, 8383865, 8384239, 8384584, 8384902,
+    8385196, 8385467, 8385717, 8385948, 8386160, 8386356, 8386536, 8386703,
+    8386856, 8386996, 8387126, 8387246, 8387355, 8387457, 8387550, 8387635,
+    8387714, 8387786, 8387853, 8387914, 8387970, 8388022, 8388070, 8388113,
+    8388153, 8388190, 8388224, 8388256, 8388284, 8388311, 8388335, 8388357,
+    8388377, 8388396, 8388413, 8388429, 8388444, 8388457, 8388470, 8388481,
+    8388491, 8388501, 8388509, 8388518, 8388525, 8388532, 8388538, 8388544,
+};
+
+static double perc_decay_word(double dial) {
+    double   at   = fmin(127.0, fmax(0.0, dial));
+    uint32_t i    = (uint32_t)at;
+    uint32_t next = (i < 127u) ? (i + 1u) : i;
+
+    return (kPercDecayWord[i] + ((kPercDecayWord[next] - kPercDecayWord[i]) * (at - i))) / 8388608.0;
+}
+
+// §40 - OscPerc, the part's own program: the phase step and the stores are the DSP's, at 96 kHz
+#define PERC_RATE         (96000.0)
+#define PERC_WORD         (0.25)                 // a DSP word is a quarter of the engine's unit
+#define PERC_SMOOTH       (8.0)                  // the output low-pass is 8x the resonator's k
+#define PERC_LOW          (0)                    // gLadder slots
+#define PERC_HIGH         (1)
+#define PERC_LAST_TRIG    (2)
+#define PERC_OUT          (3)
+#define PERC_PHASE        (4)
+
+static double perc_clamp(double x) {
+    return fmin(1.0 - (1.0 / 8388608.0), fmax(-1.0, x));
+}
+
+// §40 - one sample of OscPerc, in DSP words until the end. A Trig edge (up through zero) strikes the
+// resonator at twice the Trig's level and restarts the phase; Punch doubles k until the phase saturates,
+// i.e. for the first half cycle; Click crossfades the resonator's two states.
+static double perc_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double hz, double trigIn) {
+    SE_LOCAL;
+
+    double * st    = gLadder[voice][node];
+    double   scale = PERC_RATE / gSampleRate;
+    double   inc   = 2.0 * hz / gSampleRate;
+    double   k     = M_PI * inc;
+    double   phase = st[PERC_PHASE] + inc;
+    double   trig  = trigIn * PERC_WORD;
+    double   decay = pow(spec->percDecay, scale);
+    double   high;
+    double   smooth;
+
+    if ((spec->percPunch == true) && (phase < 1.0)) {
+        k *= 2.0;
+    }
+    st[PERC_PHASE]     = perc_clamp(phase);
+    st[PERC_LOW]       = perc_clamp(st[PERC_LOW] + (k * st[PERC_HIGH]));
+    high               = (st[PERC_HIGH] * decay) - (k * st[PERC_LOW]);
+
+    if ((trig > 0.0) && (st[PERC_LAST_TRIG] <= 0.0)) {
+        high           = 2.0 * trig;
+        st[PERC_PHASE] = 0.0;
+    }
+    st[PERC_LAST_TRIG] = trig;
+    st[PERC_HIGH]      = perc_clamp(high);
+    smooth             = 1.0 - pow(1.0 - fmin(1.0 - (1.0 / 8388608.0), PERC_SMOOTH * k), scale);
+    st[PERC_OUT]       = perc_clamp(st[PERC_OUT]
+                                    + (smooth * (((st[PERC_HIGH] * spec->percClick)
+                                                  + (st[PERC_LOW] * (1.0 - spec->percClick))) - st[PERC_OUT])));
+    return st[PERC_OUT] / PERC_WORD;
+}
 
 #define OSCNOISE_Q_AT_FULL_WIDTH      (3.34)     // §8.3
 #define OSCNOISE_Q_GROWTH_PER_STEP    (0.032)
@@ -7797,6 +7908,14 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                               ? fltcomb_step(voice, spec, a, signal_in(spec, value, 2), signal_in(spec, value, 1), voicePitch,
                                              cutoff, signal_in(spec, value, 3))
                               : a;
+            break;
+        }
+        case eNodeOscPerc:
+        {
+            double hz  = osc_frequency_hz(spec, voicePitch, a, signal_in(spec, value, 1));
+            double out = perc_step(voice, n, spec, hz, signal_in(spec, value, 2));
+
+            value[n][0] = (spec->active == true) ? out : 0.0;
             break;
         }
         case eNodeOscNoise:

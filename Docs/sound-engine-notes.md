@@ -3135,3 +3135,13 @@ What drives it is per module and is a question about the instrument, not a free 
 is its own output's sign, and DrumSynth's is the master envelope (reference §39.5), which is the
 level word the instrument's own lamp reads. Neither is the Trig input, though DrumSynth's LED sits
 beside it.
+
+## 195. `kPercDecayWord[]` - why OscPerc's Decay is a table
+
+OscPerc's Decay dial becomes the host's `_peakRcTime[dial]` (G2Demo's `OscPercGetDSPvalue` case 5), a
+128-word table the instrument stores rather than computes. Before carrying it, three laws were tried:
+the envelope's ADR time (the face draws this dial as one) is off by a ratio that swings 15 to 145; the
+envelope's own decay-multiplier table matches at no offset (405k words at best); and `log2(1 - p)` steps
+by -2.16, -0.97, -0.74 ... -0.98 per 8 dials, so no single exponential fits it either. The top half
+approaches a doubling of the time constant every 8 steps and the bottom does not. So it is the
+instrument's table, verbatim, interpolated between entries for morphed values as the host does.

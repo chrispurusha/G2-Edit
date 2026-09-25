@@ -16,7 +16,7 @@ which fails the run if it names a module that is not offered or not modelled.
 
 | Group | Working | Partial | Not implemented |
 |---|---|---|---|
-| **Oscillators** (§5-§8, §12, §21.3, §27) | Osc A, Osc B, Osc C, Osc D, Osc Shape A, Osc Shape B, Osc Dual, FM Operator, DX Router | Noise Osc, Noise, Drum Synth | Osc Phase Mod, Metallic Noise, Osc Percussion, Osc String, Driver, Resonator, Osc Master |
+| **Oscillators** (§5-§8, §12, §21.3, §27) | Osc A, Osc B, Osc C, Osc D, Osc Shape A, Osc Shape B, Osc Dual, Osc Percussion, FM Operator, DX Router | Noise Osc, Noise, Drum Synth | Osc Phase Mod, Metallic Noise, Osc String, Driver, Resonator, Osc Master |
 | **Filters** (§10, §13, §21-§23) | LP Filter, HP Filter, Nord Filter, Classic Filter, Static Filter, Eq 2-band, Eq 3-band, Eq Peak | Multi Filter, Comb Filter | Phase Filter, FltVoice, WahWah, Vocoder |
 | **Envelopes** (§17) | Envelope ADSR | Envelope AHD, Envelope ADR, Envelop ADDSR, Envelope H, Envelope D, Envelope Multi, Envelope Mod AHD, Envelope Mod ADSR | - |
 | **LFOs** (§28) | LFO A, LFO B, LFO C, LFO Shp A | - | Clock Generator |

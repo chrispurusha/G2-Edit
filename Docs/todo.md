@@ -98,7 +98,7 @@ MEASUREMENT PROGRAMME
 - Confirm the shaper parameter and connector ORDER on the instrument: it was read off the layout tables, and WaveWrap's mod dial and Mod jack both come before its signal ones
 - FX modules still missing from the engine: Phaser, Flanger, Vocoder, Digitizer, FreqShift, PShift, Resonator, Scratch, WahWah, NoiseGate, the EQs and the rest of the delay family
 - Control modules that promote to audio rate and cost almost nothing to add: the level maths (LevAdd, LevConv, LevMod, LevScaler, ModAmt, Invert), the switches and multiplexers, and Blue2Red/Red2Blue (the summing mixers are done; Pan, X-Fade, the faders and MixStereo are in hand)
-- Oscillators: the engine covers OscB, OscShpB, OscA and OscShpA. Eight more exist (OscC, OscD, OscDual, OscMaster, OscNoise, OscPerc, OscPM, OscString) and a patch using any of them renders silence. OscNoise, OscC and OscD are done (2026-09-12)
+- Oscillators: the engine covers OscB, OscShpB, OscA and OscShpA. Eight more exist (OscC, OscD, OscDual, OscMaster, OscNoise, OscPerc, OscPM, OscString) and a patch using any of them renders silence. OscNoise, OscC and OscD are done (2026-09-12), OscDual (09-17), OscPerc (09-25)
 - tools/harmonics.py is BROKEN: fails at import with "No module named 'wav'", so every harmonic analysis is being written from scratch each time
 - OscA's harmonic ROLL-OFF is unverified - the osca/ captures look filtered (saw reads -16 dB at h2 against an ideal -6), so a capture with a known patch is needed; waveform identities and pulse duties ARE confirmed
 - Compressor UI: draw the settings graphically (threshold, ratio, RefLvl as a transfer curve) - CT's idea 2026-09-07. The live half is DONE: the engine now drives the meter, see findings.md
@@ -262,7 +262,6 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 ## Sound engine - open at 2026-09-14 (session cut short; see findings.md 2026-09-14 OSCSHPB entry)
 
 - DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
-- OscShpB Sine3/Sine4 at Shape 120-127: the hardware is a further 0.2-0.65 dB down and its ratio 0.886 at 120 (reference §27.3) - model the top of the dial if it matters
 - OscShpB: SymMod (Shape mod input) and the Sync part not yet compared with the engine
 - OscDual (§12.5): compare the new code sample for sample with the harness (the offline part harness kept outside the repo, `harness/g2juno.c`: note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
 - OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it

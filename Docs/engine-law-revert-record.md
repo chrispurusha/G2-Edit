@@ -101,6 +101,19 @@ time and needed NO change - see §11.2.
 
 | 56 | The engine's internal rate | the device rate times a fixed 2 (and the oscillators times 4), so a 96 kHz device ran the graph at 192 kHz and a 192 kHz one at 384 kHz | capped: the smallest factor reaching 88.2 kHz for the graph and 176.4 kHz for the oscillators, so 44.1 and 48 kHz are unchanged and everything above them halves (notes §29a) | `d2b7341` `src/soundEngine.c` `set_oversampling()`, `sound_engine_set_sample_rate()` |
 
+## 2026-09-25
+
+| # | What | Old | New | Old code at |
+|---|---|---|---|---|
+| 64 | DrumSynth inputs | io 1 Pitch, io 2 Vel (moduleResources.h and `drum_synth_step()`'s call) | io 1 Vel, io 2 Pitch, as the original face and the G2 have them (§39.1) | `19305ba` `src/moduleResources.h`, `src/soundEngine.c` |
+| 65 | DrumSynth noise path | one Chamberlin on `2 sin(pi f/rate)` of `flt_cutoff_hz()`, damping `1 - 3.2 res` floored at 0.2, sweep 5 octaves x dial, white_noise() | G2Demo part A: LFSR, colour HP, two Chamberlin stages, coefficient the `_cutoff` word (+4 entries), sweep 512 env sweepWord semitones, damping `1 - 3.96 res` (§39.10) | `19305ba` `src/soundEngine.c` `drum_synth_step()` |
+| 66 | DrumSynth click | a quarter of the level, one-pole from the first sample | half the level, held one 24 kHz tick, then the one-pole (§39.4a) | `19305ba` `src/soundEngine.c` |
+| 67 | DrumSynth oscillators and bend | free-running phases, nominal pitch, bend `5 x level` octaves | restart on each hit, the resonator's frequency law capped at 4 kHz with its 8k low-pass, bend `64 x level` semitones saturating with Pitch at +-64 (§39.6) | `19305ba` `src/soundEngine.c` |
+| 68 | DrumSynth scale | the oscillators at `level x vel` (DSP word x 2) | DSP word x 4 throughout - 6 dB louder as a whole (§39.6) | `27dfc39` `src/soundEngine.c` (the x2 was the first 09-25 port) |
+| 69 | Noise Color | `kNoiseColour`, 17 measured corners and levels (18.3 kHz -> 129 Hz, -7.7 .. -14.8 dB) | the instrument's law: 20 kHz -> 12 Hz geometric, gain `1 + dial^3/65536` (§7.2a) | `19305ba` `src/soundEngine.c` `noise_colour()` |
+| 70 | OscShpB Sine3/Sine4 | r capped at 0.905 (`DSF_RATIO_MAX`), level slope 0.642, a plain division | the part's DSP program: no cap, slope 0.703125 (`#$5a`), its 16-step DIV whose wrap bounds Sine3 (§27.3) | `27dfc39` `src/waveModels.c` |
+
+
 
 52 is a rewrite rather than a constant: the four fixed per-stage words (`envAtkHalf` and the rest) and
 `env_rates_build()` went with it, replaced by a stage list on the node. Reverting means restoring that

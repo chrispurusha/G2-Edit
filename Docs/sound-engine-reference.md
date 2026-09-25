@@ -1316,22 +1316,34 @@ at the engine rate with a scaled to it (`oscillator_step()`); the model matched 
 1.8e-4 of full scale sample by sample, and the engine's output matches its level, DC and harmonics. The
 four-sample floor is the hardware's 0.013-cycle lobe at full Shape (329 Hz).
 
-**27.3 Sine3 and Sine4.** Measured 2026-09-17 on the G2 (Shape 16-127 at E4, and 64/96/127 at E2 and E6,
-G2Captures/oscshpb/sweep-2026-09-17) and set against the instrument's code:
-- the ratio r = g x (0.987 - 8 x inc96), inc96 the phase step per 96 kHz sample - the code's law, which the
-  captures follow exactly to Shape 112 at all three pitches - held under 0.905, where the hardware stops
-  (0.903 at E4 and 0.907 at E2 at full Shape, against the code's 0.96 and 0.98; E6 stays under it);
-- Sine3 = sin theta/(1 - 2r cos theta + r^2) x (1 - 0.642g): the whole harmonic series, at a level falling linearly
-  with Shape and not with pitch (0.642 is twice the part's own -0.321);
-- Sine4 = sin theta (1 - 0.642g)/(1 - 2r cos 2theta + r^2): the odd series, which is Sine3's level over 1 + r.
+**27.3 Sine3 and Sine4 - the part's own DSP program (2026-09-25).** Read from the DsfAll/DsfOdd P-frames
+(81 DSP56300 words each) with `~/Documents/G2DemoTables/harness/dsp563dis.py`, and RUN with the emulator
+`dsp563.h` beside it. With g the Shape word and inc96 the phase step per 96 kHz sample:
 
-`wave_sine3_instrument()` / `wave_sine4_instrument()`, `wave_dsf_ratio()`; the drawn shapes use the same r at
-unit peak. Against the sweep: levels within 1% (0.1 dB) to Shape 112, the ratio within 0.002 everywhere
-but Shape 120 (0.900 against 0.886); at Shape 120-127 the hardware is a further 0.2-0.65 dB down. The capture
-chain lifts harmonics 2 and up by 1.10-1.13 against the fundamental, so ratios were read against the
-instrument's Sine1 at the same setting. The code's translation lacks the level stage (it gives the series at
-a quarter, and Sine4 over 1 + r), which is why it read 12 dB low; the 08-23 fit's 0.90/0.94 were the capped
-ratio read from harmonics 2 and up.
+    r    = g x (Y0 - 8 inc96),  Y0 = 8279556/2^23 = 0.98699, clamped at 0
+    q    = DIV16( sin(theta)/16 , (1 - 2r cos theta + r^2)/4 )        Sine4: cos 2theta
+    Sine3/Sine4 = 4q (1 - 0.703125 g)                                  in engine units
+
+DIV16 is the part's own division, 27.3a. 0.703125 is `#$5a`, an immediate short, which the DSP loads as a
+FRACTION in the MSBs. At Shape 64 this gives Sine3 at 0.648 of a pure sine and Sine4 at 0.648/(1 + r).
+
+**27.3a The division.** Sixteen `DIV x0,b` on 24-bit words - the dividend's magnitude, the sign put back
+with `NEG b` under IFMI, then `ASL #32` bringing the quotient into b1 - so the quotient is N'/D' to 16
+bits. Once N'/D' reaches 1 it wraps. That wrap is Sine3's "ceiling": its harmonic ratio stops at 0.909 at
+full Shape (E4) where the ratio law says 0.958. Sine4 never gets there. `dsf_divide()` does the sixteen
+steps as the DSP does. Before 2026-09-25 the engine fitted this as a flat cap of 0.905 on r, and the
+level slope as 0.642 against the program's 0.703125.
+
+**27.3b Checked on the G2.** The emulated program and the engine both match the 2026-09-17 sweep
+(G2Captures/oscshpb/sweep-2026-09-17) to 0.001 in level and ratio at all eleven Shapes at E4, for both
+waves, and within 0.002 in ratio at E2 and E6. The sweep was taken on desk inputs 5/6, so each harmonic
+is corrected for that path's shelf (zero 69 Hz, pole 197 Hz); that shelf is also the "1.10-1.13 lift of
+harmonics 2 and up" the sweep's README describes.
+
+**G2Demo's native C is wrong here, twice**, which is why the code once read 12 dB low. It treats `#$5a`
+as the integer 90 (so the level term vanishes), and it shifts the quotient right by 2 after its 64-bit
+divide, where the DSP has no such shift. With both slips switched on, the emulator reproduces G2Demo's
+C to the DIV's 16-bit precision. That comparison is what proves the emulator.
 
 **27.5 On the instrument's phase, at the engine rate (2026-09-17).** OscShpB runs once per engine sample, like the
 basic oscillators (§6.3), against the instrument's own wave parts sample for sample (a test harness; 96 kHz):
@@ -1814,3 +1826,37 @@ measurements above are the target, not something to compare against.
 A change was drafted from these numbers and REVERTED the same day - the instrument's own logic is
 the reference and a capture is only its check - which is why they are recorded here as targets
 rather than as constants.
+
+## 40. OscPerc
+
+Added 2026-09-25 from the part's own DSP program (`_kOscPercFrameP`, 37 words, run with
+`~/Documents/G2DemoTables/harness/dsp563.h`; G2Demo's native C agrees with it bit for bit) and checked
+on the G2. Dials: Coarse 0, Fine 1, Tune Mode 2, KBT 3, Pitch mod 4 through the shared oscillator pitch
+path (§6); Decay 5, Click 6, Punch 7, Mute 8. Inputs Pitch, PitchVar, Trig.
+
+**40.1 The voice.** Per 96 kHz sample, in DSP words (the engine plays four times these):
+
+    k      = pi x inc,  inc = 2f/96000;  Punch: k doubled while the phase has not saturated (below)
+    low    = low + k high
+    high   = Decay x high - k low                                    (the new low)
+    Trig edge (new > 0, old <= 0): high = 2 x Trig, phase = 0
+    out    = out + min(1, 8k)(Click^2 high + (1 - Click^2) low - out)   - 0 when muted
+    phase  = min(phase + inc, 1); every stored word limited to +-1
+
+A two-state resonator struck by the Trig's own level (the Keyboard's Gate, 64 units, strikes at 0.5 of a
+word), crossfaded between its two states by Click, through the same 8k-tracking low-pass as the
+DrumSynth's oscillators (§39.6). **An unpatched Trig never strikes** - its edge input is wired to the
+constant 0 - which the G2 confirms (silent).
+
+**40.2 The dials.** Decay is the instrument's `_peakRcTime[dial]`, a per-sample multiplier (notes §195;
+0.681 at 0 to 0.99999 at 127). Click is SQUARED by the host (`PercClickAction`: Y3 = c^2, Y4 = 1 - c^2).
+Punch patches one opcode, `asl b ifec`: k doubles while the phase's add has not overflowed. The phase
+restarts at each hit and saturates at 1.0 after half a cycle, so Punch is an octave-up first half cycle.
+
+**40.3 Checked on the G2 (2026-09-25, outputs 3/4).** Against eight takes at E4 - Decay 32/64/100, Click
+0/64/127, Punch on and off, velocity 32 and 127 - the program and the engine match the G2's relative
+levels to 0.1 dB, its -20 dB times to 2 ms, its pitch exactly and its envelope to 0.6 dB down to -30 dB.
+The absolute level is 3.36 dB over a full-scale sine on the G2 against 3.45 predicted. Velocity changes
+nothing (the Gate is a fixed 64 units). Below about -45 dB the G2's tail decays more slowly: that is its
+analogue output's AC coupling, about 3 Hz, turning the hit's DC area into a slow tail - reproduced
+within 1-2 dB by a 3-4 Hz high-pass on the program's output, so it is not the synthesis.

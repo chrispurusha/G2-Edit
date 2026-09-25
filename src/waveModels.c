@@ -21,17 +21,19 @@
 // notes §1
 
 #include <math.h>
+#include <stdint.h>
 
 #include "waveModels.h"
 
-#define SINE2_POLY_1       (1.5704)
-#define SINE2_POLY_3       (-0.6419)
-#define SINE2_POLY_5       (0.0716)
+#define SINE2_POLY_1        (1.5704)
+#define SINE2_POLY_3        (-0.6419)
+#define SINE2_POLY_5        (0.0716)
 
-#define DSF_RATIO_SCALE    (0.987)    // §27.3
-#define DSF_RATIO_PITCH    (8.0)
-#define DSF_RATIO_MAX      (0.905)
-#define DSF_LEVEL_SLOPE    (0.642)
+#define DSF_RATIO_SCALE     (8279556.0 / 8388608.0)  // §27.3 - the part's Y[0]
+#define DSF_RATIO_PITCH     (8.0)
+#define DSF_LEVEL_SLOPE     (0x5a / 128.0)           // §27.3 - #$5a, a fraction in the MSBs
+#define DSF_DIVIDE_STEPS    (16)
+#define DSP_WORD            (8388608.0)
 
 // The instrument's Shape word: dial/128, with 127 counting as full. `shape` is dial/127 here.
 double wave_shape_word(double shape) {
@@ -101,30 +103,61 @@ double wave_sine2(double phase, double shape) {
 }
 
 // §27.3 - Sine3 and Sine4's common ratio: Shape times a factor that falls with pitch (inc96 is the phase
-// increment per 96 kHz sample, as a fraction of a cycle), held under DSF_RATIO_MAX as the hardware holds it
+// increment per 96 kHz sample, as a fraction of a cycle)
 double wave_dsf_ratio(double shape, double inc96) {
     double ratio = wave_shape_word(shape) * (DSF_RATIO_SCALE - (DSF_RATIO_PITCH * inc96));
 
-    ratio = (ratio > DSF_RATIO_MAX) ? DSF_RATIO_MAX : ratio;
     return (ratio < 0.0) ? 0.0 : ratio;
+}
+
+static int64_t dsp_wrap56(int64_t v) {
+    return (int64_t)((uint64_t)v << 8) >> 8;
+}
+
+// §27.3a - the part's division, step for step: sixteen DIVs on 24-bit words, the sign restored, then
+// ASL #32. Once the quotient reaches 1 it wraps, which is what bounds Sine3 at the top of the dial.
+static double dsf_divide(double numerator, double denominator) {
+    int32_t num   = (int32_t)floor(numerator * DSP_WORD);
+    int32_t den   = (int32_t)fmin(floor(denominator * DSP_WORD), DSP_WORD - 1.0);
+    int64_t acc   = (int64_t)((num < 0) ? -num : num) << 24;
+    int     carry = 0;
+
+    for (int step = 0; step < DSF_DIVIDE_STEPS; step++) {
+        int negative = acc < 0;
+
+        acc   = dsp_wrap56((int64_t)(((uint64_t)acc << 1) | (uint64_t)carry));
+        acc   = dsp_wrap56(negative ? (acc + ((int64_t)den << 24)) : (acc - ((int64_t)den << 24)));
+        carry = acc >= 0;
+    }
+
+    if (num < 0) {
+        acc = dsp_wrap56(-acc);
+    }
+    acc = dsp_wrap56((int64_t)((uint64_t)acc << 32));
+    return (double)((int32_t)((uint32_t)(acc >> 24) << 8) >> 8) / DSP_WORD;
+}
+
+// §27.3 - a DSF as the part computes it: sin/16 over (1 - 2r cos + r^2)/4, then the level. `cosine` is
+// cos(theta) for Sine3 and cos(2 theta) for Sine4. The result is in the engine's unit, four DSP words.
+static double dsf_instrument(double theta, double cosine, double shape, double inc96) {
+    double ratio    = wave_dsf_ratio(shape, inc96);
+    double quotient = dsf_divide(sin(theta) / 16.0, (1.0 - (2.0 * ratio * cosine) + (ratio * ratio)) / 4.0);
+
+    return 4.0 * quotient * (1.0 - (DSF_LEVEL_SLOPE * wave_shape_word(shape)));
 }
 
 // §27.3 - the instrument's Sine3: the whole harmonic series, times a level that falls with Shape
 double wave_sine3_instrument(double phase, double shape, double inc96) {
-    double ratio = wave_dsf_ratio(shape, inc96);
     double theta = 2.0 * M_PI * phase;
-    double denom = 1.0 - (2.0 * ratio * cos(theta)) + (ratio * ratio);
 
-    return sin(theta) * (1.0 - (DSF_LEVEL_SLOPE * wave_shape_word(shape))) / denom;
+    return dsf_instrument(theta, cos(theta), shape, inc96);
 }
 
 // §27.3 - and Sine4: the odd harmonics only, a further 1/(1 + r) down
 double wave_sine4_instrument(double phase, double shape, double inc96) {
-    double ratio = wave_dsf_ratio(shape, inc96);
     double theta = 2.0 * M_PI * phase;
-    double denom = 1.0 - (2.0 * ratio * cos(2.0 * theta)) + (ratio * ratio);
 
-    return sin(theta) * (1.0 - (DSF_LEVEL_SLOPE * wave_shape_word(shape))) / denom;
+    return dsf_instrument(theta, cos(2.0 * theta), shape, inc96);
 }
 
 // notes §6 - the shapes as the editor draws them, at unit peak

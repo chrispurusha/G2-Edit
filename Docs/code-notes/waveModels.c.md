@@ -107,9 +107,10 @@ as strong as the 2nd and 4th. Nothing that adds only even harmonics can produce 
 What does produce it is the Poisson kernel: a geometric harmonic series, every harmonic present
 with amplitude ratio^n. This is its closed form.
 
-REPLACED 2026-09-17 (reference §27.3): r is the instrument's g x (0.987 - 8 x inc96), held under 0.905, and
-the engine sounds the series at (1 - 0.642g) through wave_sine3_instrument(); this function is the unit-peak
-shape the editor draws. The "0.90" above was the capped ratio.
+REPLACED 2026-09-17 and again 2026-09-25 (reference §27.3): the engine sounds the part's own program through
+wave_sine3_instrument() - r = g x (0.98699 - 8 x inc96), the level (1 - 0.703125g), and the part's 16-step
+division, whose wrap is what once looked like a ratio "held under 0.905". This function is the unit-peak
+shape the editor draws, with r uncapped. The "0.90" above was that wrap read as a ratio.
 
 ## 7. `wave_sine4()`
 
