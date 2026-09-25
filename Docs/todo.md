@@ -29,7 +29,6 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Add a dedicated master-clock/tempo panel
 
 MODULES AND GRAPHICS
-- DrumSynth's noise path (reference §39.4, §39.10): settle in the harness before touching the engine - noise cutoff (coefficient is the table value used directly, engine ~an octave out), sweep (hardware 1 semitone/step, harness gives half), noise gain (~12 dB too loud; harness's own level not right yet), noise decay slow (96 ms vs 76 ms to -20 dB). Harness still approximates the pitch multiply, the resting Pitch and has one 2-bit shift error in its Pitch-input index. Master Freq, Slave Ratio, click (§39.4a) and Res (§39.9) are settled
 - The rest of the Logic group: 8Counter, BinCounter, ADConv, DAConv and the logic Delay - the four done 2026-09-19 (reference §38) leave these five
 - Re-lay out the remaining families by rule (module-layout-rules.md "common face", tools/relayout.py) - Level group done 2026-09-13; next the delays and the pitch/FX group still on port coordinates
 - A drag-and-drop layout mode in the editor that snaps to the grid and writes the rows back - for what the rules cannot settle
@@ -53,7 +52,6 @@ FILTERS
 - FltNord's FM-lin and Res-mod inputs are not modelled in the engine (its filter is the instrument's since 2026-09-14, reference §23)
 - EqPeak/Eq3band deep wide cuts above ~1 kHz: the instrument's Chamberlin form is unstable there - measure what it actually does (§11.5)
 - FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs - NOT in the host tables (the part computes the drive; its starting X frame is all zeros but for a 0.9 at X4, as FltStatic's X3), so this needs the translate-and-run harness
-- Noise: the instrument's whole module is now known exactly (reference §7.2a - LFSR, one-pole A with B = (1-A)/4, output x (1 + dial^3/65536)) and the engine still uses the measured table instead. Its level shape follows the measurement to ~1 dB over dials 0-64 and drifts to 6 dB by 127, over a constant 12 dB offset. Play the two against the G2 and adopt the model if it wins - it is exact where the table is fitted
 - Measure FltPhase against the Freq dial - notch positions are not yet tied to it
 - FltComb Deep fits only to |g| 0.5 with one section (5 dB rms at full feedback) - find its real structure (§13.4)
 - FltComb: only two per patch sound in the engine (MAX_COMB_LINES), and at a 192 kHz engine rate the lowest octave of Freq is clamped (COMB_LINE_SAMPLES); FB Mod depth unmeasured

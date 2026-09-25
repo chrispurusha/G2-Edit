@@ -196,8 +196,9 @@ slot, is still open - see todo.md.
 **7.1 Model.** White noise through a one-pole low-pass whose corner the Color dial sets; each voice has
 its own generator. Every setting's spectrum fits a one-pole within 0.5-0.7 dB.
 
-**7.2 Table.** `kNoiseColour`: corner and RMS level at 17 settings, corner interpolated geometrically
-and level in dB. Tabulated because the G2 looks the pole up in a stored table.
+**7.2 Table - SUPERSEDED 2026-09-25 by 7.2a, which the engine now plays.** The 2026-09-12 fit below
+was taken on desk inputs 5/6, whose low shelf (findings.md 2026-09-25) is what flattened its dark-end
+corners near 130 Hz and pulled its dark-end levels down.
 
 | Color | 0 | 16 | 32 | 48 | 64 | 80 | 96 | 112 | 127 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -232,8 +233,17 @@ dial 127** (ratio 1.0602 a step) - the round endpoints are what confirm 96 kHz i
 | instrument's pole, Hz | 20000 | 7855 | 3085 | 1212 | 476 | 187 | 73 | 29 | 12 |
 | measured (7.2), Hz | 18306 | 7664 | 3164 | 1353 | 615 | 323 | 194 | 143 | 129 |
 
+**ADOPTED 2026-09-25.** The dark-half disagreement below was the capture chain: desk inputs 5/6 carry
+a first-order low shelf (zero 69 Hz, pole 197 Hz; inputs 19/20 and the Fireface are flat). Put through
+that shelf and the 48 kHz band, this model reproduces all 17 measured levels to a constant -1.5 dB
+(+-0.15; the level reference), and the "12 dB offset" is the engine's unit being four DSP words. The
+engine now computes the pole as `exp(-2 pi f / rate)` with `f = 20000 (12/20000)^(dial/127)` - the
+table to 1 LSB - and the gain as `1 + dial^3/65536`, the one-pole's 1/4 cancelling the x4. So the dark
+end is now 3-6 dB louder and many octaves darker than the fitted table played. What follows is the
+2026-09-18 reasoning for waiting, kept as the record.
+
 The two agree to a few per cent while the noise is bright and diverge to a factor of TEN by the top of
-the dial. THE ENGINE STILL USES THE MEASURED TABLE, deliberately. Putting the whole model above through
+the dial. THE ENGINE STILL USED THE MEASURED TABLE, deliberately. Putting the whole model above through
 the same arithmetic gives a level curve whose SHAPE follows the measured one to about 1 dB over dials
 0-64 and then drifts apart, reaching 6 dB by 127 - the same half of the dial the corners disagree on -
 over a constant 12 dB offset that is B's own 1/4 and is presumably the output stage the capture was
@@ -1592,10 +1602,15 @@ whole, because five of the sixteen reuse tables this engine already models:
 | Master Freq | its own pitch law, `20 x 2^(dial/24)` - 20 Hz at 0 to 784 Hz at 127. CONFIRMED ON THE G2 2026-09-21 at five dials, all within 0.2%. Measure it with the BEND AT ZERO: the bend is still falling for the first tenth of a second and reads as a much higher pitch |
 | Slave Ratio | `2^(v/48)`, so 1 to 6.26 times the master |
 | Master, Slave, Noise Filter and Bend Decay | the ENVELOPE's decay multiplier table - the same one §36.1's glide uses |
-| Noise Filter Freq | the FILTER cutoff table |
-| Noise Filter Res | linear in the dial, but a QUARTER of full scale at 127 - see 39.4 |
-| Noise Filter Sweep | linear in the dial, over 5 octaves; full scale at 127 |
+| Noise Filter Freq | the `_cutoff` table, which is `_largeCutoff` FOUR entries in: `sin(pi 16.35 2^((dial+4)/12) / 96000)`, used directly as the filter coefficient - see 39.4 |
+| Noise Filter Res | `dial/512`, capped at a quarter - see 39.9 |
+| Noise Filter Sweep | `dial/128`; one semitone a dial step at full velocity and envelope - see 39.4 |
 | Master and Slave Level, Bend Amount, Click, Noise | an exponential level curve - see 39.3 |
+
+**The inputs are Trig, VEL, PITCH in that order (fixed 2026-09-25)** - the original face puts input 1
+at the bottom beside "Vel" and input 2 in the middle beside "Pitch", and the G2 agrees (a Constant
+into input 1 at 0 units silences it; into input 2 it moves the pitch a semitone a unit). The engine
+and moduleResources.h had the two the other way round.
 
 The two pitch laws are shared with the face (`drum_master_hz()`, `drum_slave_ratio()` in
 paramCurves.c), so the dial's reading and the sound cannot disagree.
@@ -1633,7 +1648,7 @@ against the instrument.
 |---|---|---|
 | shape | held one envelope tick, then a ONE-POLE decay | a linear ramp |
 | decay | x0.780851 every sample at 96 kHz (tau = 42 us, -20 dB in 0.1 ms) | linear to zero over 2 ms |
-| peak | a QUARTER of the dialled level | the full dialled level |
+| peak | HALF the dialled level at 64 units of Vel, HELD one 24 kHz envelope tick (corrected 2026-09-25: "a quarter" was read at a guessed strike of 0x100000) | the full dialled level |
 | level curve | the shared exponential (39.3) | the shared exponential - already right |
 
 The decay coefficient is not fitted: it is a constant sitting in the module's own frame, and the
@@ -1651,12 +1666,16 @@ shared exponential. It is not - the module's own code gives the shared curve exa
 event at 48 kHz is about five samples, so the capture could not resolve its peak. **Do not fit a
 level law to an event shorter than the capture can resolve.**
 
-**39.9 The noise filter's RESONANCE, settled 2026-09-21.** Read out of the module's own code by
-instrumenting its filter: the damping is
+**39.9 The noise filter's RESONANCE - CORRECTED 2026-09-25.** The damping is
 
-    damping = 1 - 3.2 x resWord,      resWord = dial/512, capped at a quarter
+    d = 1 - 4 x 0.99 x resWord,      resWord = dial/512, capped at a quarter
 
-so it runs 1.000, 0.800, 0.600, 0.400, 0.200 for dials 0, 32, 64, 96, 127 - **and FLOORS AT 0.2.**
+so it runs down to 0.01 at 127. The 0.99 is A.Y[6], which `DrumFTypeUpdateAction` writes on every
+Noise Type change (and so on every patch load); the frame image boots it to 0.8, and the 2026-09-21
+reading below took that boot value. The G2 settles it: at Res 127 a noise hit rings for ~200 ms
+before falling 20 dB, which a floor of 0.2 cannot do. What follows is the superseded reading:
+
+    damping = 1 - 3.2 x resWord   - which FLOORS AT 0.2
 The engine had `1 - 0.98 x dial/128`, which runs down to 0.028: far more resonant at the top than
 the instrument ever gets, which is what the hardware saw (+14.4 dB of resonance at full Res
 against the instrument's +10.9). Now taken from the instrument's law.
@@ -1666,21 +1685,50 @@ quarter scale". The quarter scale is real, but the relation is not a simple scal
 affine law with a floor, and the guess would have given far too LITTLE resonance. Reading the
 filter beat guessing at it.
 
-**39.10 STILL OPEN: the noise cutoff and the sweep.** Two facts are now known and neither is yet
-in the engine:
+**39.10 SETTLED 2026-09-25: the noise path, from G2Demo's part A.** Per 96 kHz sample, in DSP words
+(the engine plays four times these - see 39.6):
 
-- The filter's coefficient is the module's own cutoff table value used **directly**, where the
-  engine forms `2 sin(pi f / rate)` from `flt_cutoff_hz()`. Those differ by a factor of two in the
-  small-angle limit, so the engine's noise cutoff is about an octave out before any base-frequency
-  question is considered.
-- The sweep measures about **half** in the harness what it measures on the hardware (1.33 octaves
-  at dial 32 against 2.65). Since the harness IS the instrument's code, that points at the sweep's
-  envelope in the harness rather than at the law - the noise envelope multiplies the sweep, and
-  the harness's envelope handling is not yet verified.
+    noise  = 24-bit LFSR, taps 0xD71D87, as a signed fraction
+    colour = ((1+p)/2)(noise - lastNoise) + p colour,      p = 0.967525   (a one-pole high-pass)
+    in     = colour x env x Amount,      env = Vel word x noise envelope (0.25 at 64 units)
+    f      = min(1, cutoffWord x 2^(512 env sweepWord / 12)),      q = 0.9 d (1 - f/2)
+    stage  : low += f band;  high = in - low - 2q band;  band += f high     (each clamped to +-1)
+    two stages in cascade sharing f and q; stage 2 is fed d x (stage 1's tap)
+    taps   : Noise Type 0 = LP, 1 = BP, 2 = HP, the same tap on both stages
 
-Settle both in the harness before touching the engine. The noise GAIN - the ~12 dB that started
-all this - is also still open: the harness currently puts the noise 35 dB below the oscillators
-where the hardware says 21.3, so the harness's own noise level is not right yet either.
+So the sweep is `512 x env x sweepWord` semitones - one a dial step at full envelope, which is the
+hardware's 2.65 octaves at 32 - and the "10.3 Hz" resonant-peak law measured in 39.4 is the 20.6 Hz
+table base read as a Chamberlin coefficient without the `2 sin`. Checked on the G2 2026-09-25 (rig
+in findings.md): noise, click and oscillator energies all land within 0.8 dB of one constant, for
+all three filter types.
+
+**39.6 The oscillators and the bend, 2026-09-25, from G2Demo's part B.** Each is a two-state
+resonator on the 24 kHz tick, struck from rest on the trigger with `Vel << 1` - so every hit starts
+at phase 0 - and its output goes through a one-pole low-pass whose coefficient is 8x its own
+increment (clamped to 1). The master and slave decay words are the envelope's multiplier SQUARED
+(`DrumDecay1/2UpdateAction` square it), because only one of the resonator's states is damped; the
+amplitude therefore falls at the envelope's own rate. The Pitch input and the bend envelope share
+one accumulator:
+
+    semitones = (Pitch + bendEnv) / 2^15, saturating at +-64;   bendEnv = Vel x BendAmount at the trigger, x BendDecay per tick
+
+so full Bend at 64 units is 64 semitones.
+
+**The engine's scale:** a DSP word is a quarter of an engine unit (a full-scale oscillator is 0.25 of
+the word, 1.0 in the engine), so every DrumSynth output is its word x 4 - the strike's `Vel << 1` puts
+the oscillators at 2 x Level. Checked on the G2 2026-09-25: the master alone peaks 3.5 dB above a
+full-scale OscA sine on the same path (x4 predicts +4.5). The first port that day used x2, 6 dB low. What the decompile showed as a STALE REGISTER in the
+pitch-index line is this bend term: the accumulator already held it. **Velocity: an unpatched Vel is
+64 units**, not the key velocity - the G2 plays identically at MIDI velocities 32, 64 and 127 -
+and a DSP signal unit is 2^15 (64 units = 0x200000).
+
+**The resonator's own frequency law (closed 2026-09-25).** The increment is `k = 2 pi f / 24000`
+for the nominal pitch, SATURATING AT 1.0; a two-state resonator given k plays `24000 asin(k/2) / pi`
+- a little above nominal at kilohertz pitches - at `1/sqrt(1 - k^2/4)` of its strike, and the cap
+holds every oscillator at or below 4 kHz (the slave's k is the master's times the ratio, capped
+again). The engine plays exactly that, so full Bend and high Master Freq track G2Demo to within the
+measurement's own scatter (+-0.26 semitone at Bend 127) and stop at 4 kHz as it does, instead of
+running on to the engine's Nyquist.
 
 **39.5 The panel lamp, added 2026-09-20.** DrumSynth's face has an LED by its Trig and nothing lit
 it: the engine published a lamp for the LFO alone, and every other module's LED stayed dark unless a
@@ -1692,7 +1740,7 @@ with the key released at 80 ms. The face has one lamp and a poly patch has one o
 so voice 0 publishes and the rest do not - the rule the LFO already used, now in one place
 (notes §194).
 
-**39.4 STILL UNSETTLED: the noise path, and it needs the NATIVE HARNESS, not captures.** The
+**39.4 The noise path - SETTLED 2026-09-25, see 39.10; kept as the record of how.** The
 module is two DSP parts of its own, one running at 96 kHz and one at 24 kHz, so its noise source,
 its filter and their gains are all inside that code. **Nothing here may be fitted to a capture**:
 the standing rule is that the instrument's own arithmetic decides, as it did for §§21-25.

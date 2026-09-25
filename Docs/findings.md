@@ -11578,3 +11578,58 @@ Two harness bugs were found on the way, both worth remembering for the next modu
   exponential curve's top entry is 0x800000, which sign-extends to -1.0 and silenced the top of
   every level dial; the instrument's own conversion clamps it to 0x7fffff. Sign-extend FRAME
   images, not host tables.
+
+====================================================================================================
+
+## 2026-09-25 - DrumSynth settled from G2Demo, checked on the G2
+
+CT: "let's try and nail drum synth", with the G2 connected, and repeatedly "refer back to G2Demo".
+Every law below came out of G2Demo's two DrumSynth parts (the harness in ~/Documents/G2DemoTables);
+the captures only checked them. Reference §39.1, §39.4a, §39.6, §39.9, §39.10.
+
+**The three open harness items were not what they looked like.**
+- The "2-bit shift in the Pitch index" is correct: a DSP signal unit is 2^15, not 2^17, so 64 units
+  is 0x200000 (the velocity curve's top) and the `x4` is the accumulator shift.
+- The resting-Pitch fudge (0x20000) was a table read four entries early: `TableInit` sets
+  `_cutoff = _largeCutoff + 0x10`. Fixed, the harness plays the dial's pitch at Pitch 0, and the
+  noise cutoff table's base becomes 20.6 Hz - whose Chamberlin reading is the 10.3 Hz peak law
+  measured on 09-20.
+- The "stale register" in the Pitch index is the BEND ENVELOPE, sitting in the accumulator.
+
+**Found on the way:** Vel and Pitch were swapped in moduleResources.h and the engine (the original
+face and the G2 both put Vel on input 1); an unpatched Vel is a fixed 64 units, the key velocity
+does nothing (MIDI 32/64/127 identical); the Noise Type action writes A.Y[6] = 0.99, so the
+resonance runs to damping 0.01 (the G2 rings ~200 ms at Res 127), not 0.2; the master/slave decay
+words are SQUARED by their actions (the harness decayed 1.9x slow without it); each oscillator has a
+pitch-tracking output low-pass and restarts from rest on every hit.
+
+**The engine was out by:** noise ~15 dB too loud (what CT heard on 09-20), click ~16 dB too quiet
+and unheld, sweep about half depth, resonance too damped, bend depth 5 octaves instead of 64
+semitones, and a master/slave beat 5 ms early (free-running phases). After the change it matches
+the G2 offline: Kick 1's 5 ms envelope within 1 dB, beat nulls included, and click, master, slave,
+noise and all three filter types on one constant energy offset (+-0.8 dB).
+
+**THE RIG HAS A LOW SHELF - a trap for every capture.** The G2's outputs into the QU-24 (inputs 5/6)
+read a steady G2 sine at -8.8 dB at 20 Hz, -6.0 at 82 Hz, -3.1 at 166 Hz and flat above ~600 Hz: a
+first-order shelf, zero 69 Hz, pole 197 Hz (fit to 0.03 dB). It made the drum's 67 Hz oscillators
+read 9 dB low against its kHz-range noise and click, and looked exactly like a harness gain error.
+Compare levels across frequency only after applying it (or measure it again first).
+
+**The last gap, closed the same day:** at full Bend the engine started ~1.4 semitones high. The
+resonator's increment saturates at 1.0 and it plays `24000 asin(k/2)/pi`, not the nominal pitch, so
+the pitch is capped at 4 kHz; the engine now plays that law (reference §39.6). The "1.4 semitones"
+was partly the zero-crossing tracker on a 24 kHz staircase - average crossings over 2 ms up there.
+
+**The shelf is inputs 5/6 only.** Re-swept the same afternoon with one sine on G2 outputs 1/2 AND 3/4:
+desk inputs 19/20 are flat within 0.3 dB from 16 Hz to 2.6 kHz, inputs 5/6 carry the shelf (as fitted,
+within 0.1-0.4 dB), and the August Fireface capture's dry pulse (G2 outs 3/4) is flat to 20 Hz. So it
+is desk channels 5/6 - an input setting or the G2's outputs 1/2 - and not the G2's sound or the mixer
+generally. MEASURE ON OUTS 3/4 -> INPUTS 19/20. It also explains the Noise module: 7.2a's own law,
+held back on 2026-09-18 because the dark half disagreed with the capture, reproduces the capture
+through this shelf to a constant, and is now the engine's (reference §7.2a). And the DrumSynth moved to
+x4 (a DSP word is a quarter of an engine unit), 6 dB up as a whole - checked against a full-scale sine.
+
+**And DEVNOTE carries no velocity.** The 0x56 play-note message has no velocity field, so the G2
+picks its own; take velocity-dependent captures over MIDI (`tools/g2_note`, Cirklon2+Mirror MIDI 1,
+channel 3 for Slot A as cabled on 2026-09-25).
+

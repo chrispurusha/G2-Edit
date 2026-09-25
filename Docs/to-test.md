@@ -827,6 +827,18 @@ Everything below is DrumSynth, gathered 2026-09-21 so it can be worked through i
 the module in front of you. The laws marked (code) came from the instrument's own DSP code, not
 from a capture, so they are the ones most likely to be right.
 
+- ***DRUMSYNTH REBUILT ON G2DEMO'S NOISE PATH, BEND AND INPUTS (2026-09-25)*** - reference §39.6,
+  §39.9, §39.10. Offline it matches the G2 (Kick 1's 5 ms envelope within 1 dB, every part's energy
+  on one constant); not yet heard. Listen for: Kick 1 against the G2 - the noise ~15 dB quieter
+  than before, the click louder and held, the master/slave beat in the same place; a Constant into
+  the BOTTOM input (Vel) and the MIDDLE one (Pitch) doing what the G2 does; Res at 127 now rings.
+  Old patches with a cable into the drum's middle or bottom input now read it the way the G2 does.
+  Full Bend should start near 2.7 kHz on Kick 1's pitch, and nothing should rise above 4 kHz.
+  The whole drum is 6 dB louder than earlier today's first version: 3-4 dB above a full-scale sine,
+  as on the G2 - Kick 1 through a LevAmp at 127 now reaches the engine's output knee.
+- ***NOISE COLOR IS THE INSTRUMENT'S LAW (2026-09-25)*** - reference §7.2a. From about Color 64 up the
+  noise is now much darker (12 Hz corner at 127, was 129 Hz) and 3-6 dB louder. Compare Color 96-127
+  with the G2.
 - ***DRUMSYNTH'S CLICK IS NOW THE INSTRUMENT'S (2026-09-21)*** - reference §39.4a. It was a linear
   2 ms ramp at full level; it is a one-pole decay, 0.1 ms to -20 dB, at a QUARTER of the dialled
   level. So it was about twenty times too long and four times too loud, which on a preset with

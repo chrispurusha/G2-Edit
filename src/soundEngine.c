@@ -269,41 +269,18 @@ typedef enum {
     eFadeTwoToOne,      // In1, In2, Ctrl -> Out      Mix 0, MixMod 1
 } tFadeKind;
 
-// §7.2
-static const struct {
-    double dial;
-    double cornerHz;
-    double rmsDb;
-}                     kNoiseColour[] = {
-    {  0, 18305.6,  -7.67}, {  8, 11848.2,  -8.66}, { 16, 7664.3,  -9.63}, { 24, 4869.2, -10.18},
-    { 32,  3164.4, -10.22}, { 40,  2015.7,  -9.78}, { 48, 1352.6,  -9.37}, { 56,  905.5,  -8.86},
-    { 64,   614.9,  -8.55}, { 72,   438.8,  -8.67}, { 80,  322.6,  -9.06}, { 88,  241.8,  -9.74},
-    { 96,   193.6, -10.72}, {104,   163.8, -11.76}, {112,  142.6, -12.75}, {120,  136.2, -14.55},
-    {127,   128.8, -14.84},
-};
+// §7.2a - the instrument's Color law: a one-pole whose corner falls exponentially from 20 kHz to
+// 12 Hz, and a level compensation that rises as the dial cubed
+#define NOISE_CORNER_TOP_HZ       (20000.0)
+#define NOISE_CORNER_BOTTOM_HZ    (12.0)
+#define NOISE_COMPENSATION        (1.0 / 65536.0)
 
-// §7.2 - the gain makes uniform white noise come out at the tabulated RMS.
 static void noise_colour(double value, double sampleRate, double * pole, double * gain) {
-    const uint32_t last   = (uint32_t)(sizeof(kNoiseColour) / sizeof(kNoiseColour[0])) - 1u;
-    uint32_t       i      = 0;
+    double colour = fmin(127.0, fmax(0.0, value));
+    double corner = NOISE_CORNER_TOP_HZ * pow(NOISE_CORNER_BOTTOM_HZ / NOISE_CORNER_TOP_HZ, colour / 127.0);
 
-    if (value < 0.0) {
-        value = 0.0;
-    } else if (value > 127.0) {
-        value = 127.0;
-    }
-
-    while ((i < (last - 1u)) && (value > kNoiseColour[i + 1u].dial)) {
-        i++;
-    }
-    double         t      = (value - kNoiseColour[i].dial) / (kNoiseColour[i + 1u].dial - kNoiseColour[i].dial);
-    double         corner = exp(log(kNoiseColour[i].cornerHz)
-                                + (t * (log(kNoiseColour[i + 1u].cornerHz) - log(kNoiseColour[i].cornerHz))));
-    double         rmsDb  = kNoiseColour[i].rmsDb + (t * (kNoiseColour[i + 1u].rmsDb - kNoiseColour[i].rmsDb));
-    double         a      = exp(-2.0 * M_PI * corner / sampleRate);
-
-    *pole = a;
-    *gain = pow(10.0, rmsDb / 20.0) / sqrt((1.0 - a) / (3.0 * (1.0 + a)));
+    *pole = exp(-2.0 * M_PI * corner / sampleRate);
+    *gain = 1.0 + (NOISE_COMPENSATION * colour * colour * colour);
 }
 
 // §2.1
@@ -421,39 +398,49 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define DRUM_PARAM_CLICK           (13)
 #define DRUM_PARAM_NOISE_AMOUNT    (14)
 #define DRUM_PARAM_ON              (15)
-// §39.3 - MEASURED off the instrument 2026-09-19. NOT one shared curve and NOT the engine's
-// own level law: each is amplitude = (dial/127)^p, fitted to better than 0.9 dB rms over 45 dB.
-// Click and Bend Amount are not measured yet and stay on the engine's level curve.
+#define DRUM_PITCH_SEMIS_MAX       (64.0)    // §39.6 - Pitch and bend share one saturating word
+#define DRUM_OSC_TICK_HZ           (24000.0) // §39.6 - the oscillators' own rate
+#define DRUM_OSC_SMOOTH            (8.0)     // §39.6 - the output low-pass is 8x the increment
+// §39.4a - the click: held one envelope tick at half the dialled level, then a one-pole decay
+#define DRUM_INSTRUMENT_RATE       (96000.0) // the rate the instrument's own coefficients are for
+#define DRUM_CLICK_DECAY_96K       (0.780851)
+#define DRUM_CLICK_PEAK            (0.5)
+// §39.10 - the noise path, in the instrument's own words
+#define DRUM_DSP_TO_ENGINE         (4.0)                 // a DSP word is a quarter of the engine's unit
+#define DRUM_VEL_WORD              (0.25)                // an unpatched Vel is 64 units
+#define DRUM_STRIKE_WORD           (2.0 * DRUM_VEL_WORD) // §39.6 - the resonators are struck with Vel << 1
+#define DRUM_LFSR_TAPS             (0xD71D87u)
+#define DRUM_COLOUR_POLE_96K       (0.967525)
+#define DRUM_SWEEP_SEMIS           (512.0)   // semitones per unit of envelope x sweep word
+#define DRUM_RES_GAIN              (0.99)    // A.Y[6], written by the Noise Type action
+#define DRUM_Q_SCALE               (0.9)     // A.X[9]
+#define DRUM_CUTOFF_BASE_HZ        (16.3516) // _cutoff is _largeCutoff four entries in
 
-#define DRUM_SWEEP_OCTAVES      (5.0)
-// §39.8 - the click is a one-pole decay, not a ramp: the instrument multiplies it by this each
-// sample at 96 kHz, and its peak is a QUARTER of the dialled level.
-#define DRUM_INSTRUMENT_RATE    (96000.0)   // the rate the instrument's own coefficients are for
-#define DRUM_CLICK_DECAY_96K    (0.780851)
-#define DRUM_CLICK_PEAK         (0.25)
+#define DRUM_MASTER_PHASE          (0)
+#define DRUM_SLAVE_PHASE           (1)
+#define DRUM_MASTER_ENV            (2)
+#define DRUM_SLAVE_ENV             (3)
+#define DRUM_NOISE_ENV             (4)
+#define DRUM_BEND_ENV              (5)
+#define DRUM_TICK                  (6)
+#define DRUM_CLICK_ENV             (7)
+#define DRUM_CLICK_HOLD            (8)
+#define DRUM_MASTER_SMOOTH         (9)
+#define DRUM_SLAVE_SMOOTH          (10)
+#define DRUM_STATE_SLOTS           (11)
+#define DRUM_LED_FLOOR             (1.0 / 128.0) // §39.5 - the lamp is out once the hit is inaudible
 
-#define DRUM_MASTER_PHASE       (0)
-#define DRUM_SLAVE_PHASE        (1)
-#define DRUM_MASTER_ENV         (2)
-#define DRUM_SLAVE_ENV          (3)
-#define DRUM_NOISE_ENV          (4)
-#define DRUM_BEND_ENV           (5)
-#define DRUM_TICK               (6)
-#define DRUM_CLICK_ENV          (7)
-#define DRUM_STATE_SLOTS        (8)
-#define DRUM_LED_FLOOR          (1.0 / 128.0)   // §39.5 - the lamp is out once the hit is inaudible
-
-#define CHORUS_PARAM_DETUNE     (0)
-#define CHORUS_PARAM_AMOUNT     (1)
-#define CHORUS_PARAM_ACTIVE     (2)
+#define CHORUS_PARAM_DETUNE        (0)
+#define CHORUS_PARAM_AMOUNT        (1)
+#define CHORUS_PARAM_ACTIVE        (2)
 
 // Compress: threshold and reference level run 0..42, ratio 0..66.
-#define COMP_PARAM_THRESHOLD    (0)
-#define COMP_PARAM_RATIO        (1)
-#define COMP_PARAM_ATTACK       (2)
-#define COMP_PARAM_RELEASE      (3)
-#define COMP_PARAM_REFLVL       (4)
-#define COMP_PARAM_ACTIVE       (6)
+#define COMP_PARAM_THRESHOLD       (0)
+#define COMP_PARAM_RATIO           (1)
+#define COMP_PARAM_ATTACK          (2)
+#define COMP_PARAM_RELEASE         (3)
+#define COMP_PARAM_REFLVL          (4)
+#define COMP_PARAM_ACTIVE          (6)
 
 // Read off the instrument's own dial displays, not guessed. See where they are used.
 
@@ -805,12 +792,12 @@ typedef struct {
     // §39 - DrumSynth. The decays are per-ENVELOPE-TICK multipliers, as §36.1's glide is.
     double          drumMasterHz;
     double          drumSlaveRatio;
-    double          drumDecay[4];      // master, slave, noise, bend
-    double          drumLevel[2];      // master, slave
-    double          drumNoiseHz;
-    double          drumNoiseRes;
-    double          drumSweepOctaves;
-    double          drumBendOctaves;
+    double          drumDecay[4];     // master, slave, noise, bend
+    double          drumLevel[2];     // master, slave
+    double          drumNoiseWord;    // §39.10 - the filter coefficient at 96 kHz before the sweep
+    double          drumNoiseDamp;
+    double          drumSweepSemis;   // at full envelope and velocity
+    double          drumBendSemis;    // §39.6 - at full envelope and velocity
     double          drumClick;
     double          drumClickDecay;   // §39.8 - per sample at the engine's rate
     double          drumNoiseLevel;
@@ -3238,7 +3225,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeGate:             // §38.2 - In1_1, In1_2, In2_1, In2_2
         case eNodeFlipFlop:         // §38.3 - Clk, Rst, In
         case eNodeClkDiv:           // §38.4 - Clk, Rst
-        case eNodeDrumSynth:        // §39 - Trig, Pitch, Vel
+        case eNodeDrumSynth:        // §39 - Trig, Vel, Pitch
         {
             *connectors = derived;
             return inputs_in_module_order(moduleType, MAX_NODE_INPUTS, derived);
@@ -4071,24 +4058,26 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 node->drumDecay[d] = exp(-log(100.0) / ((ticks < 1.0) ? 1.0 : ticks));
             }
 
-            node->drumMasterHz     = drum_master_hz(param_value(module, variation, DRUM_PARAM_MASTER_FREQ));
-            node->drumSlaveRatio   = drum_slave_ratio(param_value(module, variation, DRUM_PARAM_SLAVE_RATIO));
-            node->drumLevel[0]     = mix_level_gain(param_value(module, variation, DRUM_PARAM_MASTER_LEVEL));
-            node->drumLevel[1]     = mix_level_gain(param_value(module, variation, DRUM_PARAM_SLAVE_LEVEL));
-            node->drumNoiseHz      = flt_cutoff_hz(param_value(module, variation, DRUM_PARAM_NOISE_FREQ));
-            // §39.9 - the instrument sends Res as dial/512 capped at a quarter, and the filter's
-            // damping is 1 - 3.2 of that, so it FLOORS AT 0.2 rather than running to nothing.
-            node->drumNoiseRes     = 1.0 - (3.2 * fmin(0.25, param_value(module, variation,
-                                                                         DRUM_PARAM_NOISE_RES) / 512.0));
-            node->drumSweepOctaves = DRUM_SWEEP_OCTAVES
-                                     * dial_fraction(param_value(module, variation, DRUM_PARAM_NOISE_SWEEP));
-            node->drumBendOctaves  = DRUM_SWEEP_OCTAVES
-                                     * mix_level_gain(param_value(module, variation, DRUM_PARAM_BEND_AMOUNT));
-            node->drumClick        = mix_level_gain(param_value(module, variation, DRUM_PARAM_CLICK));
-            node->drumClickDecay   = pow(DRUM_CLICK_DECAY_96K, DRUM_INSTRUMENT_RATE / gSampleRate);
-            node->drumNoiseLevel   = mix_level_gain(param_value(module, variation, DRUM_PARAM_NOISE_AMOUNT));
-            node->drumFilterType   = (uint32_t)module->param[variation][DRUM_PARAM_NOISE_TYPE].value;
-            node->active           = (module->param[variation][DRUM_PARAM_ON].value != 0);
+            node->drumMasterHz   = drum_master_hz(param_value(module, variation, DRUM_PARAM_MASTER_FREQ));
+            node->drumSlaveRatio = drum_slave_ratio(param_value(module, variation, DRUM_PARAM_SLAVE_RATIO));
+            node->drumLevel[0]   = mix_level_gain(param_value(module, variation, DRUM_PARAM_MASTER_LEVEL));
+            node->drumLevel[1]   = mix_level_gain(param_value(module, variation, DRUM_PARAM_SLAVE_LEVEL));
+            // §39.10 - the coefficient is the cutoff table's word, used directly
+            node->drumNoiseWord  = sin(M_PI * DRUM_CUTOFF_BASE_HZ
+                                       * exp2((param_value(module, variation, DRUM_PARAM_NOISE_FREQ) + 4.0) / 12.0)
+                                       / DRUM_INSTRUMENT_RATE);
+            // §39.9 - Res arrives as dial/512 capped at a quarter
+            node->drumNoiseDamp  = 1.0 - (4.0 * DRUM_RES_GAIN
+                                          * fmin(0.25, param_value(module, variation, DRUM_PARAM_NOISE_RES) / 512.0));
+            node->drumSweepSemis = DRUM_SWEEP_SEMIS * DRUM_VEL_WORD
+                                   * fmin(1.0, param_value(module, variation, DRUM_PARAM_NOISE_SWEEP) / 128.0);
+            node->drumBendSemis  = DRUM_PITCH_SEMIS_MAX
+                                   * mix_level_gain(param_value(module, variation, DRUM_PARAM_BEND_AMOUNT));
+            node->drumClick      = mix_level_gain(param_value(module, variation, DRUM_PARAM_CLICK));
+            node->drumClickDecay = pow(DRUM_CLICK_DECAY_96K, DRUM_INSTRUMENT_RATE / gSampleRate);
+            node->drumNoiseLevel = mix_level_gain(param_value(module, variation, DRUM_PARAM_NOISE_AMOUNT));
+            node->drumFilterType = (uint32_t)module->param[variation][DRUM_PARAM_NOISE_TYPE].value;
+            node->active         = (module->param[variation][DRUM_PARAM_ON].value != 0);
             break;
         }
         case eNodeGlide:
@@ -7357,27 +7346,96 @@ static void publish_module_led(uint32_t voice, const tEngineNode * spec, bool li
     }
 }
 
-// §39 - one DrumSynth sample. Trig starts every envelope; each decays at its own per-tick
-// multiplier, taken from the envelope's table. The bend sweeps the two oscillators DOWN from
-// bendOctaves above their pitch, and the noise filter sweeps DOWN from sweepOctaves above its
-// cutoff, both following their own decay (manual p.181). Velocity scales the two levels, the
-// sweep, the bend, the click and the noise, and full velocity reaches the dialled settings.
+static double drum_clamp(double x) {
+    return fmin(1.0, fmax(-1.0, x));
+}
+
+// §39.10 - one Chamberlin stage of the noise filter; state is {low, band}
+static double drum_svf_stage(double * state, double in, double f, double q, uint32_t type) {
+    double low  = drum_clamp(state[0] + (f * state[1]));
+    double high = drum_clamp(in - low - (2.0 * q * state[1]));
+    double band = drum_clamp(state[1] + (f * high));
+
+    state[0] = low;
+    state[1] = band;
+    return (type == 2u) ? high : ((type == 1u) ? band : low);
+}
+
+// §39.10 - the noise path in the DSP's words: LFSR, colour, envelope and amount, then two
+// Chamberlin stages sharing one swept coefficient. `env` is velocity times the noise envelope.
+static double drum_noise_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double env) {
+    SE_LOCAL;
+
+    double * state = gLadder[voice][node];    // low, band, low, band, last noise, colour
+    uint32_t lfsr  = (gNoiseSeed[voice][node] & 0xFFFFFFu) << 1;
+    double   pole  = pow(DRUM_COLOUR_POLE_96K, DRUM_INSTRUMENT_RATE / gSampleRate);
+    double   word  = spec->drumNoiseWord * exp2(spec->drumSweepSemis * env / 12.0);
+    double   hz    = (DRUM_INSTRUMENT_RATE / M_PI) * asin(fmin(1.0, word) * 0.5);
+    double   f     = 2.0 * sin(M_PI * fmin(hz, gSampleRate * 0.25) / gSampleRate);
+    double   q     = DRUM_Q_SCALE * spec->drumNoiseDamp * (1.0 - (f * 0.5));
+    double   noise;
+    double   colour;
+    double   tap;
+
+    lfsr                    = ((lfsr & 0x1000000u) != 0u) ? ((lfsr ^ DRUM_LFSR_TAPS) & 0xFFFFFFu) : (lfsr & 0xFFFFFFu);
+    gNoiseSeed[voice][node] = (lfsr == 0u) ? 5555u : lfsr;
+    noise                   = (double)(((int32_t)(lfsr << 8)) >> 8) / 8388608.0;
+    colour                  = drum_clamp((0.5 * (1.0 + pole) * (noise - state[4])) + (pole * state[5]));
+    state[4]                = noise;
+    state[5]                = colour;
+    tap                     = drum_svf_stage(&state[0], drum_clamp(colour * DRUM_VEL_WORD * env * spec->drumNoiseLevel), f, q,
+                                             spec->drumFilterType);
+    tap                     = drum_svf_stage(&state[2], drum_clamp(spec->drumNoiseDamp * tap), f, q, spec->drumFilterType);
+    return tap * DRUM_DSP_TO_ENGINE;
+}
+
+// §39.6 - the increment a resonator is given for a frequency, saturating as the instrument's does
+static double drum_osc_increment(double hz) {
+    return fmin(1.0, fmax(0.0, 2.0 * M_PI * hz / DRUM_OSC_TICK_HZ));
+}
+
+// §39.6 - one oscillator: the resonator's own frequency and level for its increment, through a
+// one-pole low-pass whose coefficient is eight times that increment
+static double drum_osc_step(double * phase, double * smooth, double increment) {
+    SE_LOCAL;
+
+    double hz   = DRUM_OSC_TICK_HZ * asin(increment * 0.5) / M_PI;
+    double gain = 1.0 / sqrt(1.0 - (increment * increment * 0.25));
+    double a    = 1.0 - pow(1.0 - fmin(1.0, DRUM_OSC_SMOOTH * increment), DRUM_OSC_TICK_HZ / gSampleRate);
+
+    if (increment <= 0.0) {
+        return *smooth;
+    }
+    *phase   = advance_phase(phase, hz / gSampleRate);
+    *smooth += a * ((gain * sin(*phase * 2.0 * M_PI)) - *smooth);
+    return *smooth;
+}
+
+// §39 - one DrumSynth sample. Trig restarts every envelope and both oscillators; each envelope decays
+// by its own multiplier per envelope tick. Vel (64 units unpatched) scales the strike, and with it the
+// levels, the bend, the sweep, the click and the noise.
 static double drum_synth_step(uint32_t voice, uint32_t node, const tEngineNode * spec,
                               double trig, double pitchIn, double velIn) {
     SE_LOCAL;
 
     double * st  = gDrumState[voice][node];
     bool     hit = (trig > 0.0) && ((gLogicPrev[voice][node] & LOGIC_PREV_CLOCK) == 0u);
-    double   vel = (spec->in[2] >= 0) ? fmin(fmax(velIn, 0.0), 1.0) : 1.0;
+    double   vel = (spec->in[1] >= 0) ? fmin(fmax(velIn, 0.0), 1.0) : 1.0;
 
     gLogicPrev[voice][node] = (uint8_t)((trig > 0.0) ? LOGIC_PREV_CLOCK : 0u);
 
     if (hit == true) {
-        st[DRUM_MASTER_ENV] = 1.0;
-        st[DRUM_SLAVE_ENV]  = 1.0;
-        st[DRUM_NOISE_ENV]  = 1.0;
-        st[DRUM_BEND_ENV]   = 1.0;
-        st[DRUM_CLICK_ENV]  = 1.0;
+        // §39.6 - the oscillators are resonators struck from rest, so every hit starts at phase 0
+        st[DRUM_MASTER_PHASE]  = 0.0;
+        st[DRUM_SLAVE_PHASE]   = 0.0;
+        st[DRUM_MASTER_SMOOTH] = 0.0;
+        st[DRUM_SLAVE_SMOOTH]  = 0.0;
+        st[DRUM_MASTER_ENV]    = 1.0;
+        st[DRUM_SLAVE_ENV]     = 1.0;
+        st[DRUM_NOISE_ENV]     = 1.0;
+        st[DRUM_BEND_ENV]      = 1.0;
+        st[DRUM_CLICK_ENV]     = 1.0;
+        st[DRUM_CLICK_HOLD]    = gSampleRate / ENV_TICK_HZ;
     }
     // The envelopes move on the envelope's own tick, as §36.1's glide does.
     st[DRUM_TICK]          -= ENV_TICK_HZ / gSampleRate;
@@ -7392,49 +7450,25 @@ static double drum_synth_step(uint32_t voice, uint32_t node, const tEngineNode *
     // §39.5 - the face's lamp follows the master envelope, as the instrument's does
     publish_module_led(voice, spec, st[DRUM_MASTER_ENV] > DRUM_LED_FLOOR);
 
-    st[DRUM_CLICK_ENV]     *= spec->drumClickDecay;
+    if (st[DRUM_CLICK_HOLD] > 0.0) {
+        st[DRUM_CLICK_HOLD] -= 1.0;
+    } else {
+        st[DRUM_CLICK_ENV] *= spec->drumClickDecay;
+    }
     {
-        // §16.2 - a Pitch input is one unit a semitone.
-        double bend   = spec->drumBendOctaves * vel * st[DRUM_BEND_ENV];
-        double factor = exp2(bend + (pitchIn * PITCH_MOD_SEMITONES / 12.0));
-        double master = spec->drumMasterHz * factor;
-        double slave  = master * spec->drumSlaveRatio;
+        // §39.6 - a Pitch input is one unit a semitone; the bend adds to it and the sum saturates
+        double semis  = (pitchIn * PITCH_MOD_SEMITONES) + (spec->drumBendSemis * vel * st[DRUM_BEND_ENV]);
+        double master = drum_osc_increment(spec->drumMasterHz
+                                           * exp2(fmin(DRUM_PITCH_SEMIS_MAX, fmax(-DRUM_PITCH_SEMIS_MAX, semis)) / 12.0));
+        double slave  = fmin(1.0, master * spec->drumSlaveRatio);
         double out    = 0.0;
 
-        if ((master > 0.0) && (master < (gSampleRate * 0.5))) {
-            st[DRUM_MASTER_PHASE] = advance_phase(&st[DRUM_MASTER_PHASE], master / gSampleRate);
-            out                  += sin(st[DRUM_MASTER_PHASE] * 2.0 * M_PI)
-                                    * st[DRUM_MASTER_ENV] * spec->drumLevel[0] * vel;
-        }
-
-        if ((slave > 0.0) && (slave < (gSampleRate * 0.5))) {
-            st[DRUM_SLAVE_PHASE] = advance_phase(&st[DRUM_SLAVE_PHASE], slave / gSampleRate);
-            out                 += sin(st[DRUM_SLAVE_PHASE] * 2.0 * M_PI)
-                                   * st[DRUM_SLAVE_ENV] * spec->drumLevel[1] * vel;
-        }
-        // The noise, through its own sweeping multimode filter.
-        {
-            double   sweep  = spec->drumSweepOctaves * vel * st[DRUM_NOISE_ENV];
-            double   cutoff = spec->drumNoiseHz * exp2(sweep);
-            double * state  = gLadder[voice][node];
-            double   noise  = white_noise(&gNoiseSeed[voice][node]);
-            // A Chamberlin needs its coefficient held well below the rate it runs at or it goes
-            // unstable at the top of a sweep - which is what the fifth Kick preset does. The
-            // clamps are the ones nord_stage() uses on the same form (§23.1).
-            double   f      = 2.0 * sin(M_PI * fmin(cutoff, gSampleRate * 0.20) / gSampleRate);
-            double   q      = spec->drumNoiseRes;   // §39.9 - the instrument's own damping
-            double   low    = fmin(8.0, fmax(-8.0, state[1] + (f * state[0])));
-            double   high   = noise - low - (q * state[0]);
-            double   band   = flt_clip4(state[0] + (f * high));
-            double   picked;
-
-            state[0] = band;
-            state[1] = low;
-            picked   = (spec->drumFilterType == 2u) ? high
-                       : ((spec->drumFilterType == 1u) ? band : low);
-            out     += picked * st[DRUM_NOISE_ENV] * spec->drumNoiseLevel * vel;
-        }
-        out += st[DRUM_CLICK_ENV] * spec->drumClick * vel * DRUM_CLICK_PEAK;
+        out += drum_osc_step(&st[DRUM_MASTER_PHASE], &st[DRUM_MASTER_SMOOTH], master)
+               * st[DRUM_MASTER_ENV] * spec->drumLevel[0] * vel * DRUM_STRIKE_WORD * DRUM_DSP_TO_ENGINE;
+        out += drum_osc_step(&st[DRUM_SLAVE_PHASE], &st[DRUM_SLAVE_SMOOTH], slave)
+               * st[DRUM_SLAVE_ENV] * spec->drumLevel[1] * vel * DRUM_STRIKE_WORD * DRUM_DSP_TO_ENGINE;
+        out += drum_noise_step(voice, node, spec, vel * st[DRUM_NOISE_ENV]);
+        out += st[DRUM_CLICK_ENV] * spec->drumClick * vel * DRUM_CLICK_PEAK * DRUM_DSP_TO_ENGINE;
         return out;
     }
 }
@@ -7688,10 +7722,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeDrumSynth:
         {
-            // §39 - Trig, Pitch, Vel in; one audio output.
+            // §39 - Trig, Vel, Pitch in, in the instrument's input order; one audio output.
             value[n][0] = (spec->active == true)
-                          ? drum_synth_step(voice, n, spec, a, signal_in(spec, value, 1),
-                                            signal_in(spec, value, 2))
+                          ? drum_synth_step(voice, n, spec, a, signal_in(spec, value, 2),
+                                            signal_in(spec, value, 1))
                           : 0.0;
             break;
         }

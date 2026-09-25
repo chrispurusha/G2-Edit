@@ -24,7 +24,17 @@ Keep the shape of that lesson for the next module: **before designing a capture,
 measurement is a function of.** If the quantity you can measure is downstream of more than the
 thing you want, a good fit is not evidence.
 
-## What is actually left: the noise filter (§39.4)
+## 2026-09-25: SETTLED from G2Demo, and two rig traps
+
+Everything this recipe was waiting on is settled (reference §39.6, §39.9, §39.10; findings.md
+2026-09-25). Two things about the rig that any further capture must allow for:
+
+- **Desk inputs 5/6 (G2 outs 1/2) are a low shelf**, first order, zero 69 Hz, pole 197 Hz: -6 dB at
+  the drum's 67-83 Hz. Inputs 19/20 (outs 3/4) are flat - capture there, or undo the shelf.
+- **DEVNOTE sends no velocity**, and an unpatched drum Vel ignores the key velocity anyway (it is a
+  fixed 64 units). For velocity, patch a Constant into the BOTTOM input (Vel) or use MIDI.
+
+## What was left: the noise filter (§39.4) - SETTLED 2026-09-25
 
 Two host-side facts disagree with the engine and neither can be captured out:
 
@@ -43,7 +53,8 @@ below is for, and it is already built and proven.
 
 - The G2 powered on and on USB. `system_profiler SPUSBDataType | grep -i clavia` finds it, and the
   backdoor's `COMMS` says the editor is talking to it.
-- Its outputs into the QU-24, inputs 5/6 — zero-based 4/5, which is what `--channels 4,5` means.
+- **Its OUTPUTS 3/4 into the QU-24, inputs 19/20 — zero-based 18/19, `--channels 18,19`** (2-Out Destination 1).
+  Not outputs 1/2: that path (inputs 5/6) has a low shelf, and nothing on the desk's 5/6 shows why.
 - `G2_EDIT_BACKDOOR=1` on the editor, so the sweeps can be driven rather than knob-twiddled.
 - **Check the two input pairs against each other first.** The reverb session found 5/6 sitting
   2.6 dB below 19/20 on this desk; free to exploit, and free to be caught out by.
