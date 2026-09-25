@@ -112,6 +112,7 @@ time and needed NO change - see §11.2.
 | 68 | DrumSynth scale | the oscillators at `level x vel` (DSP word x 2) | DSP word x 4 throughout - 6 dB louder as a whole (§39.6) | `27dfc39` `src/soundEngine.c` (the x2 was the first 09-25 port) |
 | 69 | Noise Color | `kNoiseColour`, 17 measured corners and levels (18.3 kHz -> 129 Hz, -7.7 .. -14.8 dB) | the instrument's law: 20 kHz -> 12 Hz geometric, gain `1 + dial^3/65536` (§7.2a) | `19305ba` `src/soundEngine.c` `noise_colour()` |
 | 70 | OscShpB Sine3/Sine4 | r capped at 0.905 (`DSF_RATIO_MAX`), level slope 0.642, a plain division | the part's DSP program: no cap, slope 0.703125 (`#$5a`), its 16-step DIV whose wrap bounds Sine3 (§27.3) | `27dfc39` `src/waveModels.c` |
+| 71 | DrumSynth noise cutoff word | `sin(pi f / 96000)` (09-25 morning) | `2 sin(pi f / 192000)` - the table exactly; same below ~2 kHz, 15% higher at dial 127 (§39.10) | the 09-25 working tree, before this row |
 
 
 

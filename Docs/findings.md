@@ -11684,3 +11684,13 @@ Eight G2 takes on outputs 3/4 (reference §40.3) agree with the program and the 
 Punch shows nothing in 10 ms windows because it lasts half a cycle - its phase saturates at 1.0. And a
 new fact about the G2's output: **it is AC-coupled at about 3 Hz**, which turns a struck resonator's DC
 area into a slow tail below -45 dB (and at short Decays, -27 dB). The engine does not model it.
+
+**Kick 4 (CT: "doesn't sound quite right on outputs 1 and 2"), same day.** Captured on outputs 1/2 and
+3/4 at once: the 1/2 path takes 15.2 dB off Kick 4's 50 Hz body, 8.3 off its 122 Hz slave and 6.6 off
+160-600 Hz against the click and noise, and the shelf model predicts 15.3 / 8.4 / 6.9 - so what CT hears
+on 1/2 is that path. Kick 4 is hit hardest because it is two low tones under a loud click and full noise.
+Against G2Demo the engine's whole kick matched within ~2 dB per band; the click exactly. On the way: the
+noise cutoff table is exactly `2 sin(pi f/192000)` (reference §39.10), not the `sin(pi f/96000)` read
+earlier - equal at low settings, 15% apart at dial 127 - now in the engine. Method trap: a band estimate
+from a few spot frequencies is fine for tones and clicks but scatters 10 dB on one short noise burst.
+

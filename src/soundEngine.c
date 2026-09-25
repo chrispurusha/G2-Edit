@@ -4093,10 +4093,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->drumSlaveRatio = drum_slave_ratio(param_value(module, variation, DRUM_PARAM_SLAVE_RATIO));
             node->drumLevel[0]   = mix_level_gain(param_value(module, variation, DRUM_PARAM_MASTER_LEVEL));
             node->drumLevel[1]   = mix_level_gain(param_value(module, variation, DRUM_PARAM_SLAVE_LEVEL));
-            // §39.10 - the coefficient is the cutoff table's word, used directly
-            node->drumNoiseWord  = sin(M_PI * DRUM_CUTOFF_BASE_HZ
-                                       * exp2((param_value(module, variation, DRUM_PARAM_NOISE_FREQ) + 4.0) / 12.0)
-                                       / DRUM_INSTRUMENT_RATE);
+            // §39.10 - the coefficient is the cutoff table's word, used directly: 2 sin(pi f/192000)
+            node->drumNoiseWord  = 2.0 * sin(M_PI * DRUM_CUTOFF_BASE_HZ
+                                             * exp2((param_value(module, variation, DRUM_PARAM_NOISE_FREQ) + 4.0) / 12.0)
+                                             / (2.0 * DRUM_INSTRUMENT_RATE));
             // §39.9 - Res arrives as dial/512 capped at a quarter
             node->drumNoiseDamp  = 1.0 - (4.0 * DRUM_RES_GAIN
                                           * fmin(0.25, param_value(module, variation, DRUM_PARAM_NOISE_RES) / 512.0));

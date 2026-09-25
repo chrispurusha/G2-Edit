@@ -1614,7 +1614,7 @@ whole, because five of the sixteen reuse tables this engine already models:
 | Master Freq | its own pitch law, `20 x 2^(dial/24)` - 20 Hz at 0 to 784 Hz at 127. CONFIRMED ON THE G2 2026-09-21 at five dials, all within 0.2%. Measure it with the BEND AT ZERO: the bend is still falling for the first tenth of a second and reads as a much higher pitch |
 | Slave Ratio | `2^(v/48)`, so 1 to 6.26 times the master |
 | Master, Slave, Noise Filter and Bend Decay | the ENVELOPE's decay multiplier table - the same one §36.1's glide uses |
-| Noise Filter Freq | the `_cutoff` table, which is `_largeCutoff` FOUR entries in: `sin(pi 16.35 2^((dial+4)/12) / 96000)`, used directly as the filter coefficient - see 39.4 |
+| Noise Filter Freq | the `_cutoff` table, which is `_largeCutoff` FOUR entries in: exactly `2 sin(pi f / 192000)` with `f = 16.35 x 2^((dial+4)/12)`, used directly as the filter coefficient, so the filter centres on f/2 - see 39.4 |
 | Noise Filter Res | `dial/512`, capped at a quarter - see 39.9 |
 | Noise Filter Sweep | `dial/128`; one semitone a dial step at full velocity and envelope - see 39.4 |
 | Master and Slave Level, Bend Amount, Click, Noise | an exponential level curve - see 39.3 |
@@ -1704,6 +1704,8 @@ filter beat guessing at it.
     colour = ((1+p)/2)(noise - lastNoise) + p colour,      p = 0.967525   (a one-pole high-pass)
     in     = colour x env x Amount,      env = Vel word x noise envelope (0.25 at 64 units)
     f      = min(1, cutoffWord x 2^(512 env sweepWord / 12)),      q = 0.9 d (1 - f/2)
+             cutoffWord = 2 sin(pi F / 192000), F = 16.35 x 2^((dial+4)/12) - the table exactly (2026-09-25;
+             read earlier as sin(pi F/96000), which drifts to 15% low at the top of the dial)
     stage  : low += f band;  high = in - low - 2q band;  band += f high     (each clamped to +-1)
     two stages in cascade sharing f and q; stage 2 is fed d x (stage 1's tap)
     taps   : Noise Type 0 = LP, 1 = BP, 2 = HP, the same tap on both stages
