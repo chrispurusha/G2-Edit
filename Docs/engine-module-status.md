@@ -16,7 +16,7 @@ which fails the run if it names a module that is not offered or not modelled.
 
 | Group | Working | Partial | Not implemented |
 |---|---|---|---|
-| **Oscillators** (§5-§8, §12, §21.3, §27) | Osc A, Osc B, Osc C, Osc D, Osc Shape A, Osc Shape B, Osc Dual, Osc Percussion, FM Operator, DX Router | Noise Osc, Noise, Drum Synth | Osc Phase Mod, Metallic Noise, Osc String, Driver, Resonator, Osc Master |
+| **Oscillators** (§5-§8, §12, §21.3, §27) | Osc A, Osc B, Osc C, Osc D, Osc Shape A, Osc Shape B, Osc Dual, Noise, Osc Percussion, Drum Synth, FM Operator, DX Router | Noise Osc | Osc Phase Mod, Metallic Noise, Osc String, Driver, Resonator, Osc Master |
 | **Filters** (§10, §13, §21-§23) | LP Filter, HP Filter, Nord Filter, Classic Filter, Static Filter, Eq 2-band, Eq 3-band, Eq Peak | Multi Filter, Comb Filter | Phase Filter, FltVoice, WahWah, Vocoder |
 | **Envelopes** (§17) | Envelope ADSR | Envelope AHD, Envelope ADR, Envelop ADDSR, Envelope H, Envelope D, Envelope Multi, Envelope Mod AHD, Envelope Mod ADSR | - |
 | **LFOs** (§28) | LFO A, LFO B, LFO C, LFO Shp A | - | Clock Generator |
@@ -32,13 +32,11 @@ which fails the run if it names a module that is not offered or not modelled.
 | **Random** | - | - | Random A, Random B, Rnd Clock A, Rnd Clock B, Rnd Trig, Rnd Pattern |
 | **Note** (§26) | - | Glide | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Pitch Tracker, Zero Crossing Counter, Level Scaler |
 | **MIDI** | - | - | CtrlSend, PCSend, NoteSend, CtrlRcv, NoteRcv, NoteZone, Automate |
-| **Total 170** | **69** | **17** | **84** |
+| **Total 170** | **72** | **15** | **83** |
 
 | Partial module | What is still open |
 |---|---|
-| Noise | a closer model is known but not adopted, pending a listening check |
-| Noise Osc | Sine3/Sine4 level still open |
-| Drum Synth | level balance between master, slave, noise and click (§39.3) |
+| Noise Osc | Q and level measured, not yet read from its own part (§8) |
 | Comb Filter | not yet checked against the instrument's own part |
 | Multi Filter | GComp not yet checked against the instrument's own part |
 | Envelop ADDSR | KB gate and Reset not read (§17.9) |
