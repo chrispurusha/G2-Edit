@@ -63,9 +63,7 @@ static const tGroupRow kGroups[] = {
 
 // Audible, but something about the law is still a guess; to-test.md carries each check.
 static const tPartialRow kPartial[] = {
-    {"Noise",             "a closer model is known but not adopted, pending a listening check"         },
-    {"Noise Osc",         "Sine3/Sine4 level still open"                                               },
-    {"Drum Synth",        "level balance between master, slave, noise and click (§39.3)"               },
+    {"Noise Osc",         "Q and level measured, not yet read from its own part (§8)"                  },
     {"Comb Filter",       "not yet checked against the instrument's own part"                          },
     {"Multi Filter",      "GComp not yet checked against the instrument's own part"                    },
     {"Envelop ADDSR",     "KB gate and Reset not read (§17.9)"                                         },

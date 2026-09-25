@@ -11694,3 +11694,16 @@ noise cutoff table is exactly `2 sin(pi f/192000)` (reference §39.10), not the 
 earlier - equal at low settings, 15% apart at dial 127 - now in the engine. Method trap: a band estimate
 from a few spot frequencies is fine for tones and clicks but scatters 10 dB on one short noise burst.
 
+**Kick 5 (CT: "very slightly more noise on our engine vs. G2"), same day.** Noise alone, 20 hits a take on
+outputs 3/4, against G2Demo and the engine. Raw totals said the G2's noise was 2.7 dB quieter, but ONLY
+where the sweep drives the coefficient to its 1.0 ceiling (Kick 5: Freq 111, Sweep 40); unsaturated
+settings matched to 0.15 dB. The drum's part-A DSP program was run in the emulator (lsl, eor, subl,
+extractu added) and is bit-identical to G2Demo's C, so the law was not it. The measurement was: a
+saturated filter rings near 16 kHz and puts ~2.7 dB of the noise's energy ABOVE 20 kHz, which the
+96 kHz renders kept and the 48 kHz recording cannot hold. Band-limited to 20 kHz and taken to 48 kHz,
+the engine's Kick 5 noise is within 0.2 dB of the G2's in level and 0.5 dB in envelope. So at a 48 kHz
+device rate (the engine's 64-tap output filter) the engine matches the G2 in-band; at a 96 kHz device
+rate it passes that ultrasonic energy straight out, and whether the G2's own outputs do too needs a
+capture above 48 kHz (the Fireface). Method lesson: compare renders and captures at the SAME bandwidth,
+and put the onset threshold well above a quiet take's floor (2% of peak aligned on floor spikes).
+
