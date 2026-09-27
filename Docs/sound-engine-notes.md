@@ -1293,7 +1293,10 @@ they were describing the same thing badly. Ask the table instead.
 `anyConnectorType` means "any". Returns -1 when there is no such input, which callers treat as
 unconnected.
 
-## 75. `voice_area_output_for_fx()`
+## 75. `voice_area_outputs_for_fx()`
+
+**Changed 2026-09-25:** a bus takes EVERY Voice-area output sent to it, summed, as the G2 mixes them;
+the first one found used to win and the rest were dropped (08 Ice Pad lost a whole branch to it).
 
 The Voice area's Out module, which is what feeds the FX area. There is no cable for this link —
 the 2-Out's "Out to" setting routes it — so the walk has to make the jump itself when it reaches
@@ -1347,6 +1350,9 @@ area looks like it has nothing patched into it and plays silence. The bus has to
 though — see voice_area_output_for_fx().
 
 ## 80. in `add_node()`
+
+**Changed 2026-09-25:** a bus takes EVERY Voice-area output sent to it, summed, as the G2 mixes them;
+the first one found used to win and the rest were dropped (08 Ice Pad lost a whole branch to it).
 
 BOTH LEGS, because the FX bus is a STEREO pair and this used to take only the left.
 The module has two audio outputs and a stereo meter; the Voice-area Out it listens to
@@ -3099,6 +3105,16 @@ loop until the node budget runs out. The patch then reported "Chain too long" an
 (2026-09-20 - it only surfaced once the cable walk started resolving the input-to-input link that
 closes this loop, cableChain notes §3).
 
+**The closing leg now carries the loop (2026-09-26).** It used to read as unpatched, which cut the
+loop open. 13 Dist Activity needs it closed: an LfoShpA's Snc clocks an S&H whose value, through a
+NoteQuant, sets that LfoShpA's own rate. The leg is recorded while building (`backMask`, with the
+module it waits for), pointed at that module's node once the build is done, and read from
+`gBackValue`, which each loop source writes after it runs. The source is built after the reader, so
+it runs later in the pass and the reader sees its previous sample - the one-sample delay the
+instrument has in any loop. A source after the voice mix writes every voice's slot. Up to
+`MAX_BACK_EDGES` (16) per patch; any beyond that read as unpatched, as before. Patches with no loop
+render bit-identical to before.
+
 So a module marks itself while its inputs are built, and a leg that arrives back at a module
 already being built reads as UNPATCHED. The loop is broken at the leg that closes it, not at a
 place that would drop the rest of the chain. Cleared at `depth == 0`, which every top-level walk
@@ -3131,7 +3147,7 @@ beside it.
 
 ## 195. `kPercDecayWord[]` - why OscPerc's Decay is a table
 
-OscPerc's Decay dial becomes the host's a stored table (the instrument's `the host` case 5), a
+OscPerc's Decay dial becomes the instrument's stored decay table (the instrument's conversion of that dial), a
 128-word table the instrument stores rather than computes. Before carrying it, three laws were tried:
 the envelope's ADR time (the face draws this dial as one) is off by a ratio that swings 15 to 145; the
 envelope's own decay-multiplier table matches at no offset (405k words at best); and `log2(1 - p)` steps
