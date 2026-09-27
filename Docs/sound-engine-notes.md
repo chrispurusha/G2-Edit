@@ -3154,3 +3154,38 @@ envelope's own decay-multiplier table matches at no offset (405k words at best);
 by -2.16, -0.97, -0.74 ... -0.98 per 8 dials, so no single exponential fits it either. The top half
 approaches a doubling of the time constant every 8 steps and the bottom does not. So it is the
 instrument's table, verbatim, interpolated between entries for morphed values as the host does.
+
+## 196. Saturation at the DSP's full scale, in `eval_node()`
+
+Every value the instrument stores or passes between parts is a 24-bit word, which saturates at +-1.0,
+four engine units (1.0 in the engine is 0x200000). The engine runs in doubles with no such limit, so a
+cable loop with gain above one grew without bound until a float overflowed. 08 Ice Pad's
+Chorus -> LevAmp -> Mixer -> Chorus loop reached 2.7e39 within 27 ms of a four-note chord, overflowed
+the chorus line to infinity, and from then on every sample was NaN, so the whole output went silent
+after a click (2026-09-27). Each node's first two outputs, and every loop's fed-back value, are now held
+to +-DSP_FULL_SCALE. That is what the instrument does, so a runaway loop distorts as it would on the G2
+instead of killing the output. The further legs (logic, Ctrl) are bounded by construction.
+
+## 197. The Voice area's Chorus runs per voice (`CHORUS_INSTANCES`)
+
+On the instrument every Voice-area module is duplicated per voice; only the FX area is shared. The
+engine used to run every Chorus once, after the voices were summed. That is harmless for a Chorus at the
+end of a chain, but wrong for one inside a loop. 08 Ice Pad feeds its Voice-area Chorus back into each
+voice's Mixer (Chorus -> LevAmp 42 -> Mixer 2-1 A -> Chorus), so every voice re-injected the SUM of all
+voices. A loop gain of about 0.7 for one voice became 0.7 x the voice count, ran away, and before §196
+turned the output to NaN (2026-09-27). A Chorus in the Voice area now has its own line per voice, at
+instance MAX_CHORUS_LINES + line x MAX_VOICES + voice; one in the FX area (post-mix) keeps a single
+instance. Each instance draws its own start phase (§19.2).
+
+An Out module saturates at twice that, +-8 units: the manual (p.35 area, "headroom") gives output
+modules an extra 6 dB of headroom per bus. Clipping them at +-4 hard-clipped chords the instrument
+passes (09 Antarktis sat at the rail on a four-note chord, 2026-09-27).
+
+## 198. The outputs are AC-coupled (`OUTPUT_COUPLING_TAU`)
+
+The G2's analogue outputs block DC. A DC step captured on the Fireface (2026-09-27, outs 1/2) decays with
+a time constant of 13.57 ms, a single pole at about 11.7 Hz. The engine now applies the same one-pole
+high-pass to each output channel, before the patch Volume, the output gain and the knee (§187). A patch
+whose voices carry DC (14 CS80project72: a MinMax half-rectifying a filter, then the Compressor lifting it)
+otherwise sends that DC to the device. On a hot patch that DC also pushes the signal into the knee, which
+the G2 does not have: its only clip is the Out's own ±8 (§196), which comes before the coupling.

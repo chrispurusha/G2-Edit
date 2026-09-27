@@ -165,6 +165,8 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define FLT_PARAM_ENV            (1)   // modulation depth for the Env input, 0..200%
 #define FLT_PARAM_KBT            (2)
 #define FLTSTATIC_PARAM_GC       (4)   // §10.4 - drive x damping
+#define FLTNORD_PARAM_FMLIN      (7)   // §23.5
+#define FLTNORD_PARAM_RESM       (9)   // §23.5
 #define FLT_PARAM_RES            (3)
 #define FLT_PARAM_SLOPE          (4)
 #define FLT_PARAM_ACTIVE         (5)
@@ -175,8 +177,6 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define ENV_PARAM_SUSTAIN        (3)
 #define ENV_PARAM_RELEASE        (4)
 #define ENV_PARAM_OUT_TYPE       (5)   // posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv
-#define ENV_PARAM_KB             (6)   // the keyboard gate, not key tracking (manual p.197)
-#define ENV_PARAM_RESET          (7)   // 0 Normal, 1 Reset
 #define ENV_INPUT_GATE           (1)   // node input: 0 is the audio, 1 the Gate jack, 2 AM
 #define ENV_INPUT_AM             (2)
 #define ENV_INPUT_MOD            (3)   // §17.10 - the time-mod jacks follow, one per modulated dial
@@ -188,7 +188,7 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define OUT_PARAM_DESTINATION    (0)
 #define FXIN_PARAM_SOURCE        (0)   // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
 #define OUT_PARAM_ACTIVE         (1)   // 2toOut's Bypass, non-zero is on
-#define OUT_PARAM_PAD            (2)   // padStrMap: 0 dB or -6 dB
+#define OUT_PARAM_PAD            (2)   // padStrMap: 0 dB or +6 dB
 
 // Glide and Bend are per-PATCH settings rather than module parameters: they live on hidden modules
 // in the Morph location, which is where the G2 keeps the things the patch-settings page edits.
@@ -369,6 +369,7 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define SWSEL_PARAM_SELECT        (0)    // Sw2-1 and Sw8-1: which input is through
 #define SWSEL_CTRL_UNITS          (4.0)  // §33 - In 1 is 0 units, In 2 is 4, ... In 8 is 28
 #define UNITS_PER_FULL_SCALE      (64.0) // §16 - a signal of 1.0 in the engine is 64 units on the G2
+#define DSP_FULL_SCALE            (4.0)  // notes §196 - a 24-bit word's range, which every stored value saturates to
 #define VALSW_PARAM_VALUE         (0)    // the Ctrl threshold, 0-64 units in whole steps
 #define VALSW_VALUE_TOP           (63)   // the top step reads 64, not 63 (render_paramType1UniPolShort)
 #define MONOKEY_PARAM_PRIORITY    (0)    // monoKeyStrMap {Last, Lo, Hi}
@@ -552,6 +553,8 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4, 9, 3, 2};
 #define MAX_DLYCLOCK_LINES         (4)  // §69.7 - per patch; more output nothing
 #define MAX_FXBUF_LINES            (4)  // §70 - Flanger, PShift, Scratch: short post-mix buffers
 #define FXBUF_SAMPLES              (16384)
+#define MAX_FXBUF_VOICE_LINES      (2)  // notes §197 - in the Voice area, per voice
+#define FXBUF_INSTANCES            (MAX_FXBUF_LINES + (MAX_FXBUF_VOICE_LINES * MAX_VOICES))
 #define MAX_STRING_LINES           (2)  // §70 - OscString, Resonator: a per-voice loop each
 #define STRING_SAMPLES             (4096)
 #define MAX_BASIC_LINES            (2)  // §70 - Vocoder: per-voice filter states
@@ -660,7 +663,8 @@ typedef enum {
 
 // Where the output starts bending rather than shearing.
 #define OUTPUT_KNEE                 (0.80)
-#define ENVELOPE_SECONDS            (0.005) // the anti-click ramp used when no EnvADSR is in the chain
+#define OUTPUT_COUPLING_TAU         (0.01357) // notes §198 - seconds: the G2's outputs, a pole at 11.7 Hz
+#define ENVELOPE_SECONDS            (0.005)   // the anti-click ramp used when no EnvADSR is in the chain
 
 // Every ladder runs its full four poles whatever slope is selected — see ladder_filter().
 #define LADDER_POLES                (6) // state available: FltLP's 36 dB setting is six poles
@@ -871,18 +875,20 @@ typedef struct {
     double          cutoffParam; // filter
     double          resonance;
     uint32_t        extraPoles;
-    uint32_t        tapStage;    // which pole is tapped: 0-based, so N poles is tapStage N-1
+    uint32_t        tapStage;        // which pole is tapped: 0-based, so N poles is tapStage N-1
     tFilterTopology topology;
-    tFilterShape    fltShape;    // multi-mode filters only; low-pass for the rest
-    double          fltGain;     // FltNord's GC attenuation; 1.0 for every other filter
+    tFilterShape    fltShape;        // multi-mode filters only; low-pass for the rest
+    double          fltGain;         // FltNord's GC attenuation; 1.0 for every other filter
     double          fltKbt;
-    double          modAmount;   // how far the Env input moves the cutoff, 0..2 (the dial's 0..200%)
+    double          fltFmAmount;     // §23.5 - FltNord's FM lin dial
+    double          fltResModAmount; // §23.5 - FltNord's Res M dial
+    double          modAmount;       // how far the Env input moves the cutoff, 0..2 (the dial's 0..200%)
 
-    double          attack;      // envelope, in seconds
+    double          attack;          // envelope, in seconds
     double          decay;
-    double          sustain;     // 0..1
+    double          sustain;         // 0..1
     double          release;
-    int32_t         envSustainQ; // §17.6 - where the bipolar output types centre
+    int32_t         envSustainQ;     // §17.6 - where the bipolar output types centre
     // §17.9 - the stage list this envelope plays, from the map every envelope module shares with its
     // own face. ADSR is the four it always was; the others are however many their map gives.
     tEnvSegment     envStage[ENV_MAX_STAGES];
@@ -1424,6 +1430,8 @@ static double                 gOutDecimateBank[SOUND_ENGINE_MAX_ENGINES][OUT_DEC
 static double                 gOutHistoryBank[SOUND_ENGINE_MAX_ENGINES][4][OUT_DECIMATE_TAPS];      // [pair*2 + channel]; one shared cursor, see the render loop
 #define gOutHistory          (gOutHistoryBank[SE])
 static uint32_t               gOutHistoryPosBank[SOUND_ENGINE_MAX_ENGINES];
+static double                 gOutCouplingBank[SOUND_ENGINE_MAX_ENGINES][4][2];                    // notes §198 - last input, last output
+#define gOutCoupling         (gOutCouplingBank[SE])
 #define gOutHistoryPos       (gOutHistoryPosBank[SE])
 
 static double                 gOscDecimateBank[SOUND_ENGINE_MAX_ENGINES][OSC_DECIMATE_TAPS];
@@ -1481,11 +1489,11 @@ typedef struct {
 } tMetNoiseState;
 static tMetNoiseState         gMetNoiseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_METNOISE_LINES];
 // §70 - the basic modules' buffers: post-mix FX (one each), per-voice loops, per-voice filter states
-static float                  gFxBufBank[SOUND_ENGINE_MAX_ENGINES][MAX_FXBUF_LINES][FXBUF_SAMPLES];
+static float                  gFxBufBank[SOUND_ENGINE_MAX_ENGINES][FXBUF_INSTANCES][FXBUF_SAMPLES];
 #define gFxBuf          (gFxBufBank[SE])
-static uint32_t               gFxBufWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_FXBUF_LINES];
+static uint32_t               gFxBufWriteBank[SOUND_ENGINE_MAX_ENGINES][FXBUF_INSTANCES];
 #define gFxBufWrite     (gFxBufWriteBank[SE])
-static double                 gFxPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_FXBUF_LINES];
+static double                 gFxPhaseBank[SOUND_ENGINE_MAX_ENGINES][FXBUF_INSTANCES];
 #define gFxPhase        (gFxPhaseBank[SE])
 static float                  gStringBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_STRING_LINES][STRING_SAMPLES];
 #define gString         (gStringBank[SE])
@@ -1519,13 +1527,17 @@ typedef struct {
     uint32_t pad;
 } tRandomAShared;
 static tRandomAShared         gRndMonoBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
-#define gRndMono      (gRndMonoBank[SE])
-static double                 gLfoTargetBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gLfoTarget    (gLfoTargetBank[SE])
+#define gRndMono     (gRndMonoBank[SE])
 static double                 gLfoHeldBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gLfoHeld      (gLfoHeldBank[SE])
+#define gLfoHeld     (gLfoHeldBank[SE])
+static double                 gLfoSlopeBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gLfoSlope    (gLfoSlopeBank[SE])
+static int32_t                gLfoSeedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gLfoSeed     (gLfoSeedBank[SE])
+static int32_t                gLfoStepBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gLfoStep     (gLfoStepBank[SE])
 static double                 gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][FILTER_STATE_SLOTS];
-#define gLadder       (gLadderBank[SE])
+#define gLadder      (gLadderBank[SE])
 
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
 // sensible rate, four lines, is enough for the delays a patch normally has and keeps this under a
@@ -1534,9 +1546,10 @@ static double                 gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][
 // notes §36
 #define DELAY_LINE_SAMPLES    (134400 * ENGINE_OVERSAMPLE)
 static float                  gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
-#define MAX_COMB_LINES        (2)        // FltCombs per patch that sound; any more pass their input dry
-#define MAX_CHORUS_LINES      (2)        // StChorus lines per patch; any more pass their input dry
-#define COMB_LINE_SAMPLES     (16384)    // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
+#define MAX_COMB_LINES        (2)                                   // FltCombs per patch that sound; any more pass their input dry
+#define MAX_CHORUS_LINES      (2)                                   // StChorus lines per patch; any more pass their input dry
+#define CHORUS_INSTANCES      (MAX_CHORUS_LINES * (1 + MAX_VOICES)) // notes §197 - FX area one each, Voice area one per voice
+#define COMB_LINE_SAMPLES     (16384)                               // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
 static float                  gCombLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES][COMB_LINE_SAMPLES];
 #define gCombLine             (gCombLineBank[SE])
 static uint32_t               gCombWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];
@@ -1559,15 +1572,15 @@ static double                 gDelayModBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_
 
 #define CHORUS_SAMPLES     (2048 * ENGINE_OVERSAMPLE)
 #define CHORUS_CHANNELS    (2)
-static float                  gChorusLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES][CHORUS_CHANNELS][CHORUS_SAMPLES];
+static float                  gChorusLineBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES][CHORUS_CHANNELS][CHORUS_SAMPLES];
 #define gChorusLine        (gChorusLineBank[SE])
-static uint32_t               gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES][CHORUS_CHANNELS];
+static uint32_t               gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES][CHORUS_CHANNELS];
 #define gChorusWrite       (gChorusWriteBank[SE])
-static int32_t                gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES];
+static int32_t                gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
 #define gChorusPhase       (gChorusPhaseBank[SE])         // §19.2 - a signed 24-bit LFO phase
-static int32_t                gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES];
+static int32_t                gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
 #define gChorusTrim        (gChorusTrimBank[SE])          // §19.2 - this instance's rate trim
-static double                 gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_CHORUS_LINES];
+static double                 gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
 #define gChorusTick        (gChorusTickBank[SE])
 static void chorus_reset(uint32_t line);
 
@@ -2029,8 +2042,10 @@ static void reset_node_state(void) {
             gLfoMonoPhase[i]     = 0.0;
             gLfoMonoRate[i]      = -1.0;
             memset(&gRndMono[i], 0, sizeof(gRndMono[i]));   // §47 - Mono starts from seed 0
-            gLfoTarget[v][i]     = 0.0;
             gLfoHeld[v][i]       = 0.0;
+            gLfoSlope[v][i]      = 0.0;
+            gLfoSeed[v][i]       = 0;
+            gLfoStep[v][i]       = 0;
             gOscHistoryPos[v][i] = 0;
             memset(gOscHistory[v][i], 0, sizeof(gOscHistory[v][i]));
 
@@ -2064,7 +2079,7 @@ static void reset_node_state(void) {
                 memset(gBasic[v][i], 0, sizeof(gBasic[v][i]));
             }
 
-            if ((v == 0) && (i < MAX_FXBUF_LINES)) {
+            if ((v == 0) && (i < FXBUF_INSTANCES)) {
                 memset(gFxBuf[i], 0, sizeof(gFxBuf[i]));
                 gFxBufWrite[i] = 0;
                 gFxPhase[i]    = 0.0;
@@ -2127,7 +2142,7 @@ static void reset_node_state(void) {
         gSmoothPrimed[i] = false;
     }
 
-    for (i = 0; i < MAX_CHORUS_LINES; i++) {
+    for (i = 0; i < CHORUS_INSTANCES; i++) {
         chorus_reset(i);
     }
 
@@ -3094,7 +3109,44 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
 static int32_t follower_coef_word(double seconds);                                                                                                // §69.4
 static int32_t dial_mod_word(double dial);                                                                                                        // §67
 static int32_t dly_dial_word(double dial);                                                                                                        // §24.2
+static double flt_nord_mod_amount(double dial);                                                                                                   // §23.5
 static void comp_words(tEngineNode * node, double thrDial, double ratioDial, double atkDial, double relDial, double lvlDial);                     // §25.1
+
+// §17.4 - each envelope's KB (keyboard gate) parameter, or -1 where the module has none
+static int env_kb_param(tModuleType type) {
+    switch (type) {
+        case moduleTypeEnvADDSR:  return 0;
+
+        case moduleTypeEnvADSR:
+        case moduleTypeEnvADR:
+        case moduleTypeEnvAHD:    return 6;
+
+        case moduleTypeModAHD:    return 7;
+
+        case moduleTypeModADSR:   return 9;
+
+        case moduleTypeEnvMulti:  return 11;
+
+        default:                  return -1;
+    }
+}
+
+// §17.4 - each envelope's Normal/Reset parameter, or -1 where the module has none
+static int env_reset_param(tModuleType type) {
+    switch (type) {
+        case moduleTypeEnvADR:    return 2;
+
+        case moduleTypeEnvAHD:    return 3;
+
+        case moduleTypeEnvADSR:   return 7;
+
+        case moduleTypeEnvMulti:  return 8;
+
+        case moduleTypeEnvADDSR:  return 10;
+
+        default:                  return -1;
+    }
+}
 
 static bool module_kind(tModule * module, tNodeKind * kind) {
     switch (module->type) {
@@ -3797,6 +3849,12 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
 
             derived[0]  = (audioIn >= 0) ? (uint32_t)audioIn : CONNECTOR_IN_A;
             derived[1]  = (controlIn >= 0) ? (uint32_t)controlIn : FLT_CONNECTOR_ENV_IN;
+
+            // §23.5 - FltNord: PitchVar, Pitch, FM lin and Res, in that order
+            if (moduleType == moduleTypeFltNord) {
+                *connectors = derived;
+                return inputs_in_module_order(moduleType, 5, derived);
+            }
 
             // §21.3 - FltClassic's second control input, Pitch, has no knob
             if (moduleType == moduleTypeFltClassic) {
@@ -5456,15 +5514,17 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             } else {
                 node->fltGain = 1.0;
             }
-            node->fltKbt      = (map.kbt >= 0)
+            node->fltKbt          = (map.kbt >= 0)
                               ? flt_kbt_amount((uint32_t)param_value(module, variation, (uint32_t)map.kbt)) : 0.0;
-            node->modAmount   = (map.env >= 0)
+            node->fltFmAmount     = (module->type == moduleTypeFltNord) ? flt_nord_mod_amount(param_value(module, variation, FLTNORD_PARAM_FMLIN)) : 0.0;
+            node->fltResModAmount = (module->type == moduleTypeFltNord) ? flt_nord_mod_amount(param_value(module, variation, FLTNORD_PARAM_RESM)) : 0.0;
+            node->modAmount       = (map.env >= 0)
                               ? (param_value(module, variation, (uint32_t)map.env) * 2.0 / 128.0) : 0.0;
-            node->active      = (param_value(module, variation, (uint32_t)map.active) != 0.0);
-            node->fltGainComp = (  (module->type == moduleTypeFltStatic)
-                                && (param_value(module, variation, FLTSTATIC_PARAM_GC) != 0.0))
-                                || (  (module->type == moduleTypeFltNord) && (map.gc >= 0)
-                                   && (param_value(module, variation, (uint32_t)map.gc) != 0.0));
+            node->active          = (param_value(module, variation, (uint32_t)map.active) != 0.0);
+            node->fltGainComp     = (  (module->type == moduleTypeFltStatic)
+                                    && (param_value(module, variation, FLTSTATIC_PARAM_GC) != 0.0))
+                                    || (  (module->type == moduleTypeFltNord) && (map.gc >= 0)
+                                       && (param_value(module, variation, (uint32_t)map.gc) != 0.0));
             break;
         }
         case eNodeDx:
@@ -5488,14 +5548,12 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 tModule * gateSource = (gateJack >= 0) ? module_feeding(module, (uint32_t)gateJack, &sourceLeg) : NULL;
                 bool      unplayed   = (gateSource != NULL) && (node->in[ENV_INPUT_GATE] < 0);
 
-                // §17.4 - KB and Reset sit at EnvADSR's own parameter numbers. The other envelope
-                // modules number theirs differently and are not read here yet, so they gate from the
-                // key as an unpatched envelope does and never reset. envOutType came from the map.
-                bool      adsr       = (module->type == moduleTypeEnvADSR);
+                // §17.4 - EnvD and EnvH have no KB: only their Trig jack starts them
+                int       kb         = env_kb_param(module->type);
+                int       reset      = env_reset_param(module->type);
 
-                node->envKeyGate = adsr ? ((module->param[variation][ENV_PARAM_KB].value != 0) || unplayed)
-                                        : true;
-                node->envReset   = adsr && (module->param[variation][ENV_PARAM_RESET].value != 0);
+                node->envKeyGate = ((kb >= 0) && (module->param[variation][kb].value != 0)) || unplayed;
+                node->envReset   = (reset >= 0) && (module->param[variation][reset].value != 0);
             }
             break;
         }
@@ -5643,9 +5701,6 @@ static void mark_post_mix_nodes(tSoundEngineParams * params) {
                         || (node->kind == eNodeDlySingle)   // §52 - one shared line, like DelayA/B
                         || (node->kind == eNodeDlyStereo)   // §65 - likewise
                         || (node->kind == eNodeMultiTap)    // §70.1
-                        || (node->kind == eNodeFlanger)     // §70.2 - one shared buffer
-                        || (node->kind == eNodePShift)      // §70.3
-                        || (node->kind == eNodeChorus)
                         || (node->kind == eNodeReverb);
 
         for (uint32_t c = 0; (c < node->inCount) && (node->postMix == false); c++) {
@@ -7773,7 +7828,7 @@ void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_
 
     // A second render in one process would otherwise start with the previous one's line and LFO
     // phase - the same trap the reverb IR clears for.
-    for (uint32_t i = 0; i < MAX_CHORUS_LINES; i++) {
+    for (uint32_t i = 0; i < CHORUS_INSTANCES; i++) {
         chorus_reset(i);
     }
 
@@ -8438,9 +8493,10 @@ static double flt_hp_stages(double * state, double input, double half, uint32_t 
     return x;
 }
 
-#define FLTNORD_H_MAX        (0x518368 / 8388608.0)    // §23.2 - h at most: 20.8 kHz
-#define FLTNORD_RES_SCALE    (0x7eb852 / 8388608.0)    // 0.99; band-reject takes half
-#define FLTNORD_LEAK         (0.9)                     // §23.3 - HP and BR take back 0.9 of their last output
+#define FLTNORD_H_MAX         (0x518368 / 8388608.0)  // §23.2 - h at most: 20.8 kHz
+#define FLTNORD_RES_SCALE     (0x7eb852 / 8388608.0)  // 0.99; band-reject takes half
+#define FLTNORD_H_WORD_MAX    (8388607.0 / 8388608.0) // §23.5 - the pitch stage's h saturates to a word
+#define FLTNORD_LEAK          (0.9)                   // §23.3 - HP and BR take back 0.9 of their last output
 
 // §23.1 - one stage: FltMulti's Chamberlin on the mean of two input samples, with the instrument's taps.
 static double nord_stage(double * s, double input, double h, double q, tFilterShape shape) {
@@ -8470,11 +8526,18 @@ static double nord_stage(double * s, double input, double h, double q, tFilterSh
     return flt_clip4(y);
 }
 
+static double flt_nord_mod_amount(double dial) {
+    return (dial >= 127.0) ? 1.0 : (dial / 128.0);
+}
+
 // §23 - FltNord: one stage, or two of the same type for 24 dB (band-reject stays one).
-static double nord_filter(double * state, double input, double half, double resDial, tFilterShape shape, bool slope24, bool gainComp) {
-    double h  = fmin(half, FLTNORD_H_MAX);
-    double r  = (resDial >= 127.0) ? 1.0 : (resDial / 128.0);
-    double d  = 1.0 - (((shape == eFilterShapeBandReject) ? 0.5 : FLTNORD_RES_SCALE) * r);
+static double nord_filter(double * state, double input, double half, double resDial, tFilterShape shape, bool slope24, bool gainComp,
+                          double fm, double resMod) {
+    double h  = fabs(fmin(half, FLTNORD_H_WORD_MAX) + fm);                           // §23.5
+    double r  = fmin(fmax(flt_nord_mod_amount(resDial) + resMod, -1.0), 1.0);        // §23.5
+
+    h = (h >= 1.0) ? 0.0 : fmin(h, FLTNORD_H_MAX);
+    double d  = fmin(1.0 - (((shape == eFilterShapeBandReject) ? 0.5 : FLTNORD_RES_SCALE) * r), 1.0);
     double qb = slope24 ? fmax(d * d, M_SQRT1_2 * d) : (d * d);
     double q  = 2.0 * qb * (1.0 - h);
     double y  = nord_stage(&state[0], flt_clip4(input * (gainComp ? d : 1.0)), h, q, shape);
@@ -9089,6 +9152,42 @@ static double lfo_rate_now(const tEngineNode * spec, double fixedIn, double varI
     return spec->rateHz * exp2(semitones / 12.0);
 }
 
+// §28.3 - the instrument's random generator: a 24-bit linear congruence, one draw per step
+#define LFO_RND_MULTIPLIER    (0xb2d9du)
+#define LFO_RND_INCREMENT     (0x361963u)
+
+static int32_t lfo_random_draw(int32_t seed) {
+    uint32_t product = (uint32_t)seed * LFO_RND_MULTIPLIER;
+    uint32_t base    = LFO_RND_INCREMENT << 8;
+    uint32_t sum     = base + (product << 9);
+    uint32_t carry   = (sum < base) ? 1u : 0u;
+
+    return (int32_t)((((product >> 23) + carry) << 31) | (sum >> 1)) >> 8;
+}
+
+// §28.3 - RndSt and Rnd: a draw as the phase rises through its middle, the step going half way to
+// it, and Rnd following the steps through a two-pole smoother at the LFO's own rate
+static double lfo_random_wave(uint32_t voice, uint32_t node, const tEngineNode * spec, double phase, double rateHz) {
+    SE_LOCAL;
+
+    if ((gLfoLastPhase[voice][node] <= 0.5) && (phase > 0.5)) {
+        gLfoSeed[voice][node]  = lfo_random_draw(gLfoSeed[voice][node]);
+        gLfoStep[voice][node] += (int32_t)floor((double)(gLfoSeed[voice][node] - gLfoStep[voice][node]) / 2.0);
+    }
+    double step  = (double)gLfoStep[voice][node] / 8388608.0;
+
+    if ((uint32_t)spec->wave == 4u) {
+        return step;
+    }
+    double x     = fmin(16.0 * rateHz / gSampleRate, 1.0);
+    double out   = fmin(fmax(gLfoHeld[voice][node] + (x * gLfoSlope[voice][node]), -1.0), 1.0);
+    double error = fmin(fmax(step - out - ((2.0 - x) * gLfoSlope[voice][node]), -1.0), 1.0);
+
+    gLfoHeld[voice][node]  = out;
+    gLfoSlope[voice][node] = fmin(fmax(gLfoSlope[voice][node] + (x * error), -1.0), 1.0);
+    return out;
+}
+
 static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double rateHz) {
     SE_LOCAL;
 
@@ -9139,8 +9238,7 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
             }                                                                                // Sine
         }
     } else {
-        // lfoWaveStrMap: Sin, Tri, Saw, Squ, RndSt, Rnd. The two random settings step a new value
-        // once per cycle; Rnd smooths between steps where RndSt jumps.
+        // lfoWaveStrMap: Sin, Tri, Saw, Squ, RndSt, Rnd
         switch ((uint32_t)spec->wave) {
             case 1:
             {
@@ -9160,15 +9258,7 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
             case 4:
             case 5:
             {
-                if (phase < gLfoLastPhase[voice][node]) {
-                    gLfoTarget[voice][node] = ((double)rand() / (double)RAND_MAX * 2.0) - 1.0;
-                }
-                wave = (spec->wave == 4) ? gLfoTarget[voice][node]
-                       : (gLfoHeld[voice][node] + ((gLfoTarget[voice][node] - gLfoHeld[voice][node]) * phase));
-
-                if (phase < gLfoLastPhase[voice][node]) {
-                    gLfoHeld[voice][node] = gLfoTarget[voice][node];
-                }
+                wave = lfo_random_wave(voice, node, spec, phase, rateHz);
                 break;
             }
             default:
@@ -9356,7 +9446,7 @@ static double fltcomb_step(uint32_t voice, const tEngineNode * spec, double inpu
 }
 
 static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input, double mod, double pitchDirect, double voicePitch,
-                          double cutoffParam, double resonance) {
+                          double cutoffParam, double resonance, double fmIn, double resIn) {
     SE_LOCAL;
 
     double control = cutoffParam;
@@ -9425,7 +9515,8 @@ static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spe
         case eFilterTopologyNord:
         {
             return nord_filter(gLadder[voice][node], input, flt_stage_half(cutoffParam, shift), resonance * 127.0,
-                               spec->fltShape, spec->tapStage >= 2u, spec->fltGainComp);
+                               spec->fltShape, spec->tapStage >= 2u, spec->fltGainComp,
+                               spec->fltFmAmount * fmIn, spec->fltResModAmount * resIn);
         }
         case eFilterTopologyClassic:
         {
@@ -10148,13 +10239,21 @@ static void multi_tap_step(const tEngineNode * spec, double input, const double 
     gDelayWrite[l] = (write + 1u) % DELAY_LINE_SAMPLES;
 }
 
+// notes §197 - the FX area's line is shared; the Voice area's is one per voice (the first two lines)
+static uint32_t fx_buf_instance(const tEngineNode * spec, uint32_t voice) {
+    if (spec->postMix == true) {
+        return (spec->line < MAX_FXBUF_LINES) ? spec->line : FXBUF_INSTANCES;
+    }
+    return (spec->line < MAX_FXBUF_VOICE_LINES) ? (MAX_FXBUF_LINES + (spec->line * MAX_VOICES) + voice) : FXBUF_INSTANCES;
+}
+
 // §70.2 - Flanger: a 0.5 ms delay swept by up to Range by a sine LFO, FB fed back, mixed half and half
-static double flanger_step(const tEngineNode * spec, double input) {
+static double flanger_step(const tEngineNode * spec, uint32_t voice, double input) {
     SE_LOCAL;
 
-    uint32_t l     = spec->line;
+    uint32_t l     = fx_buf_instance(spec, voice);
 
-    if ((l >= MAX_FXBUF_LINES) || (spec->active == false)) {
+    if ((l >= FXBUF_INSTANCES) || (spec->active == false)) {
         return input;
     }
     double * phase = &gFxPhase[l];
@@ -10172,12 +10271,12 @@ static double flanger_step(const tEngineNode * spec, double input) {
 // §70.3 - PShift and Scratch: two taps a half window apart move through the buffer at (1 - ratio) of
 // real time, each faded in and out by a triangle so they sum to one. Scratch's ratio may be negative
 // (backwards) and is silent at zero.
-static double pitch_shift_step(const tEngineNode * spec, double input, double mod) {
+static double pitch_shift_step(const tEngineNode * spec, uint32_t voice, double input, double mod) {
     SE_LOCAL;
 
-    uint32_t l      = spec->line;
+    uint32_t l      = fx_buf_instance(spec, voice);
 
-    if ((l >= MAX_FXBUF_LINES) || (spec->active == false)) {
+    if ((l >= FXBUF_INSTANCES) || (spec->active == false)) {
         return input;
     }
     double   ratio  = (spec->select == 0u) ? exp2(((spec->bx[0] / 100.0) + (mod * spec->bx[1])) / 12.0)
@@ -10725,7 +10824,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             // spec->fltGain is FltNord's GC and is 1.0 for every other filter, so this costs a
             // multiply and changes nothing where the module has no such control.
             value[n][0] = filter_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch,
-                                      cutoff, res) * spec->fltGain;
+                                      cutoff, res, signal_in(spec, value, 3), signal_in(spec, value, 4)) * spec->fltGain;
             break;
         }
         case eNodeDx:
@@ -11038,14 +11137,14 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeFlanger:
         {
-            value[n][0] = flanger_step(spec, a);
+            value[n][0] = flanger_step(spec, voice, a);
             break;
         }
         case eNodePShift:
         {
             // PShift's inputs are PitchVar then In; Scratch's In then Mod
-            value[n][0] = (spec->select == 0u) ? pitch_shift_step(spec, signal_in(spec, value, 1), a)
-                          : pitch_shift_step(spec, a, signal_in(spec, value, 1));
+            value[n][0] = (spec->select == 0u) ? pitch_shift_step(spec, voice, signal_in(spec, value, 1), a)
+                          : pitch_shift_step(spec, voice, a, signal_in(spec, value, 1));
             break;
         }
         case eNodeOscString:
@@ -11517,7 +11616,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeChorus:
         {
             if ((spec->active == true) && (spec->line < MAX_CHORUS_LINES)) {
-                chorus_step(spec->line, a, spec->depth, spec->amount, &value[n][0], &value[n][1]);
+                uint32_t instance = (spec->postMix == true) ? spec->line
+                                    : (MAX_CHORUS_LINES + (spec->line * MAX_VOICES) + voice);   // notes §197
+
+                chorus_step(instance, a, spec->depth, spec->amount, &value[n][0], &value[n][1]);
             } else {
                 value[n][0] = a;
                 value[n][1] = a;
@@ -11663,6 +11765,13 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             break;
         }
     }
+    // notes §196
+    {
+        double limit = (spec->kind == eNodeOut) ? (2.0 * DSP_FULL_SCALE) : DSP_FULL_SCALE;   // the Out's extra 6 dB
+
+        value[n][0] = fmin(fmax(value[n][0], -limit), limit);
+        value[n][1] = fmin(fmax(value[n][1], -limit), limit);
+    }
 
     // notes §192 - what the loop legs reading this node will see next sample; a node after the mix
     // runs once, so every voice sees the same
@@ -11672,7 +11781,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             uint32_t last  = (spec->postMix == true) ? (MAX_VOICES - 1u) : voice;
 
             for (uint32_t v = first; v <= last; v++) {
-                gBackValue[v][e] = value[n][paramsIn->backLeg[e]];
+                gBackValue[v][e] = fmin(fmax(value[n][paramsIn->backLeg[e]], -DSP_FULL_SCALE), DSP_FULL_SCALE);
             }
         }
     }
@@ -12119,6 +12228,14 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             for (uint32_t q = 0; q < 4; q++) {
                 double * sp = &sample[q >> 1][q & 1];
 
+                // notes §198 - the outputs are AC-coupled
+                {
+                    double y = *sp - gOutCoupling[q][0] + (exp(-1.0 / (OUTPUT_COUPLING_TAU * gSampleRate)) * gOutCoupling[q][1]);
+
+                    gOutCoupling[q][0] = *sp;
+                    gOutCoupling[q][1] = y;
+                    *sp                = y;
+                }
                 *sp                           *= VOICE_GAIN * gSlotGainNow;
                 // notes §186
                 *sp                           *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
@@ -12269,13 +12386,16 @@ static void engine_reset_state(void) {
     memset(&gOutDecimate, 0, sizeof(gOutDecimate));
     memset(&gOutHistory, 0, sizeof(gOutHistory));
     memset(&gOutHistoryPos, 0, sizeof(gOutHistoryPos));
+    memset(&gOutCoupling, 0, sizeof(gOutCoupling));
     memset(&gOscDecimate, 0, sizeof(gOscDecimate));
     memset(&gOscHistory, 0, sizeof(gOscHistory));
     memset(&gOscHistoryPos, 0, sizeof(gOscHistoryPos));
     memset(&gPhase, 0, sizeof(gPhase));
     memset(&gLfoLastPhase, 0, sizeof(gLfoLastPhase));
-    memset(&gLfoTarget, 0, sizeof(gLfoTarget));
     memset(&gLfoHeld, 0, sizeof(gLfoHeld));
+    memset(&gLfoSlope, 0, sizeof(gLfoSlope));
+    memset(&gLfoSeed, 0, sizeof(gLfoSeed));
+    memset(&gLfoStep, 0, sizeof(gLfoStep));
     memset(&gLadder, 0, sizeof(gLadder));
     memset(&gDelayLine, 0, sizeof(gDelayLine));
     memset(&gDelayWrite, 0, sizeof(gDelayWrite));

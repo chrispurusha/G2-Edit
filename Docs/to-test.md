@@ -4,6 +4,19 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***09 ANTARKTIS HOWL (2026-09-27)*** - findings 2026-09-27, reference §23.5 and §28.3. FltNord's FM lin,
+  Res and Pitch inputs, and the instrument's own RndSt/Rnd generator. Offline the level now matches
+  the G2 capture. LISTEN in the app: the howl should be gone, the Nord Filter should now play a
+  wandering random pitch sequence, and any other patch with a RndSt/Rnd LFO should move as on the G2
+  (its random sequence restarts from the same seed on each patch load).
+
+- ***14 CS80 CLICK AND DC (2026-09-27)*** - findings 2026-09-27, reference §17.4, notes §198. EnvD/EnvH
+  now fire only from their Trig jack; every envelope reads its own KB and Reset; the outputs are
+  AC-coupled at 11.7 Hz as on the G2. LISTEN: 14 should start each note without a click and without the
+  overdriven edge. Also check a patch that relies on an EnvADR, EnvAHD, EnvMulti, EnvADDSR, ModADSR or
+  ModAHD with KB on still plays, and that KB off with nothing in the Gate now leaves it silent, as on
+  the G2.
+
 ## STAGE PATCHES (User1) - which should play fully in the engine
 
 Kept current as modules land (2026-09-25). COMPLETE = every module that makes sound is in the engine
@@ -33,6 +46,9 @@ Shape mod input, which the engine ignores.
 19 DxPiano         COMPLETE
 ```
 
+- ***VOICE-AREA FX PER VOICE, SATURATION (2026-09-27)*** - notes §196-197. CHECK: 08 Ice Pad plays chords
+  as a pad (it clicked then went silent); patches with a Chorus/Flanger/PShift in the Voice area sound
+  as on the G2 (each voice its own effect); nothing latches or goes silent after heavy feedback.
 - ***WAVEWRAP JACKS (2026-09-27)*** - In is connector 0, Mod connector 1 (they were swapped). CHECK: 14
   CS80project72 now plays through its FX chain; in the editor, a cable into WaveWrap's In lands on In.
 - ***LFO FIXES FROM 05 SelfOsc LFO (2026-09-27)*** - LfoC now plays its Wave mode (it was always a sine);

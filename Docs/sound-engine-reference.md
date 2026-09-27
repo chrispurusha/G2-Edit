@@ -691,6 +691,13 @@ one departure: a jack fed by a module the engine does not play yet (the Keyboard
 often) counts as the keys, so those patches keep sounding. The Gate jack reads its source per voice,
 so an LFO gating it sounds only on a voice that is running - voice 0 at rest in drone mode.
 
+KB and Reset are read on every envelope since 2026-09-27, at each module's own parameter number: KB is
+0 on EnvADDSR, 6 on EnvADSR, EnvADR and EnvAHD, 7 on ModAHD, 9 on ModADSR and 11 on EnvMulti. Reset
+is 2 on EnvADR, 3 on EnvAHD, 7 on EnvADSR, 8 on EnvMulti and 10 on EnvADDSR. **EnvD and EnvH have no
+KB at all**: only their Trig jack starts them. Before this, every envelope except EnvADSR fired from
+the keys, so 14 CS80project72's untriggered EnvD, wired straight to an Out, put a 1-unit step on every
+note, which the G2 does not play (Fireface capture 2026-09-27).
+
 **17.4a AN ENVELOPE'S THREE INPUTS ARE FOUND BY ROLE, not by position (2026-09-19).** The engine
 took the first three input connectors as In, Gate and AM. That is EnvADSR's layout and **only**
 EnvADSR's: every other envelope orders them differently, and ModADSR puts its four mod jacks in
@@ -1062,7 +1069,18 @@ Nyquist, a small built-in lift of the top.
 **23.4 GC** is the drive × d, as FltMulti's GComp. As Res rises it lowers what goes in, so the resonant
 peak stays level rather than the passband (−40 dB at Res 127).
 
-Not modelled: the FM-lin and Res-mod inputs.
+**23.5 The inputs** (2026-09-27, from the reference model; checked against it to −45…−89 dB, driven and self-fed):
+- **Pitch** (the unscaled one) adds to PitchVar × Pitch M exactly as on FltClassic (§21.3). It was not
+  connected before.
+- **FM lin** adds FM × input straight to h, after the exponential law: h′ = |h + FM·x|. A result of
+  full scale or more gives h = 0; then the 20.8 kHz cap applies. h from the pitch stage has already
+  saturated just below 1, so only FM itself can overflow.
+- **Res** adds Res M × input to Res/128, saturating to ±1, before d = 1 − 0.99·r. d cannot exceed 1,
+  so a negative swing only opens the filter to no damping at all. GC follows the modulated d.
+
+Both amounts are dial/128, with 127 counting as 1. x is in engine units, so a ±1 (±64 unit) signal
+swings r or h by the full amount. A filter feeding its own output into Res at Res M 127 (09 Antarktis)
+is a self-oscillator whose level the loop sets.
 
 ## 24. DelayA and DelayB
 
@@ -1390,6 +1408,24 @@ The rate is therefore `(BPM/60) / clk_sync_beats(dial)`: 256 beats per cycle at 
 beat at 127, which at the reference 120 BPM is 0.0078 Hz to 32 Hz. The engine has no live master clock
 yet, so this uses the same fixed reference tempo the delay's Clk does - when one arrives, both follow
 it together.
+
+**28.3 RndSt and Rnd** (2026-09-27, from the reference model). The random waves are drawn from a 24-bit
+linear congruential generator: seed' = the low word of seed × 0xb2d9d + 0x361963, arranged as the DSP
+accumulator arranges it. The seed starts at 0 when the patch loads and is never reseeded by a note, so
+the sequence repeats from load.
+- A draw happens as the phase rises through the middle of its cycle, once per cycle. The output then
+  moves **halfway** to the draw, not onto it: step′ = step + ⌊(draw − step)/2⌋. Before the first draw
+  the wave sits at 0.
+- **RndSt** outputs the step.
+- **Rnd** follows it through a two-pole smoother clocked by the LFO's own phase increment, with
+  x = 16 f/fs (at most 1):
+
+      y += x·v        v += x·(step − y − (2 − x)·v)
+
+  So the glide takes a fixed fraction of a cycle at any rate.
+
+The old model drew from `rand()` on the wrap and jumped straight to the value. An LFO feeding its own
+Rate input (09 Antarktis) then parked at −1 with its rate at the floor, and never drew again.
 
 ## 29. ModAmt
 
