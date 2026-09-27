@@ -918,11 +918,12 @@ bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader di
         }
         case moduleTypeWaveWrap:
         {
-            // THE ONLY SHAPER WHOSE MOD JACK COMES FIRST, so its signal is on leg 1.
+            // In is connector 0 and Mod connector 1, as for every shaper (the instrument's connector
+            // routing; the module table had them the other way round until 2026-09-27)
             out->kind      = eShaperWaveWrap;
             out->amount    = dial(module, variation, WRAP_PARAM_AMOUNT) / 127.0;
             out->mod       = dial(module, variation, WRAP_PARAM_AMOUNT_MOD) / 127.0;
-            out->signalLeg = 1;
+            out->signalLeg = 0;
             out->active    = (dial(module, variation, WRAP_PARAM_ACTIVE) != 0.0);
             return true;
         }

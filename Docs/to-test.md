@@ -33,6 +33,11 @@ Shape mod input, which the engine ignores.
 19 DxPiano         COMPLETE
 ```
 
+- ***WAVEWRAP JACKS (2026-09-27)*** - In is connector 0, Mod connector 1 (they were swapped). CHECK: 14
+  CS80project72 now plays through its FX chain; in the editor, a cable into WaveWrap's In lands on In.
+- ***LFO FIXES FROM 05 SelfOsc LFO (2026-09-27)*** - LfoC now plays its Wave mode (it was always a sine);
+  every LFO's Saw now falls, as the instrument's. CHECK: 05 by ear against the G2 at LFO 58-200 Hz; any
+  patch using LfoA/B/C Saw. Open: 05 is ~6 dB louder than the G2 (Compressor/FX chain, not the filter).
 - ***BASIC VERSIONS OF EVERY REMAINING MODULE (2026-09-27)*** - reference §70; all 170 types now modelled,
   52 Partial (engine-module-status.md is the refinement queue). CHECK: patches using them play without
   runaway or silence; tell me which sound most wrong, and those get the instrument's parts first.

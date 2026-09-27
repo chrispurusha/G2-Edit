@@ -4023,8 +4023,8 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeShaper:
         {
-            // One jack or two, in the module's OWN order: WaveWrap's Mod comes first and every
-            // other shaper's comes second, and ShpStatic and Rect have no Mod jack at all. Asking
+            // One jack or two, in the module's OWN order: In first and Mod second, and ShpStatic and
+            // Rect have no Mod jack at all. Asking
             // the resources for the nth input keeps all three cases out of a table here.
             uint32_t leg   = 0;
             uint32_t count = 0;
@@ -4656,6 +4656,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->rateHz     = lfo_rate_hz(range, param_value(module, variation, (uint32_t)p->rate));
             node->wave       = (p->waveform >= 0)
                              ? (tOscWave)param_value(module, variation, (uint32_t)p->waveform) : eOscWaveSine;
+
+            if (module->type == moduleTypeLfoC) {
+                node->wave = (tOscWave)module->mode[0].value;   // §28 - LfoC's waveform is a mode (lfoWaveStrMap)
+            }
             node->polarity   = (p->polarity >= 0)
                              ? (uint32_t)param_value(module, variation, (uint32_t)p->polarity) : 0;
             node->shape      = (p->shape >= 0)
@@ -9145,7 +9149,7 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
             }
             case 2:
             {
-                wave = (2.0 * phase) - 1.0;
+                wave = 1.0 - (2.0 * phase);   // §28 - the instrument's saw falls (its part negates the phase)
                 break;
             }
             case 3:
@@ -9954,12 +9958,11 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
         }
         case moduleTypeFlanger:
         {
-            // §70.2 - Rate 62.9 s a cycle to 24.4 Hz, exponential; Range to 5 ms of sweep; FB (v - 64)/64
-            double rate = param_value(module, variation, 0);
-
-            bx[0]        = (1.0 / 62.9) * pow(24.4 * 62.9, rate / 127.0);
-            bx[1]        = 0.005 * param_value(module, variation, 1) / 127.0;
-            bx[2]        = 0.9 * (param_value(module, variation, 2) - 64.0) / 64.0;
+            // §70.2 - from the parts: Rate the display's law (paramCurves), Range v x 0xdbec of a sweep of up
+            // to 436 samples above a 74-sample offset, Feedback v x 7000000/127 (unipolar, 0.834 at 127)
+            bx[0]        = flanger_rate_hz(param_value(module, variation, 0));
+            bx[1]        = 436.0 * param_value(module, variation, 1) / 127.0 / G2_ENGINE_SAMPLE_RATE;
+            bx[2]        = (param_value(module, variation, 2) * 7000000.0 / 127.0) / 8388608.0;
             node->active = (module->param[variation][3].value != 0);
             break;
         }
@@ -10155,7 +10158,8 @@ static double flanger_step(const tEngineNode * spec, double input) {
         return input;
     }
     double * phase = &gFxPhase[l];
-    double   delay = (0.0005 + (spec->bx[1] * 0.5 * (1.0 + sin(2.0 * M_PI * *phase)))) * gSampleRate;
+    double   tri   = 1.0 - fabs((2.0 * *phase) - 1.0);   // §70.2 - the part's LFO is a triangle
+    double   delay = ((74.0 / G2_ENGINE_SAMPLE_RATE) + (spec->bx[1] * tri)) * gSampleRate;
     double   wet   = ring_read(gFxBuf[l], FXBUF_SAMPLES, gFxBufWrite[l], delay);
     uint32_t write = (gFxBufWrite[l] + 1u) % FXBUF_SAMPLES;
 
@@ -11487,8 +11491,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeShaper:
         {
-            // `a` is input leg 0. WaveWrap is the one shaper whose Mod jack comes first, so for it
-            // the signal is on leg 1 and the modulation on leg 0 - spec->shaper.signalLeg says which.
+            // `a` is input leg 0; spec->shaper.signalLeg says which leg carries the signal.
             double sig = (spec->shaper.signalLeg == 0) ? a : signal_in(spec, value, 1);
             double mod = (spec->shaper.signalLeg == 0) ? signal_in(spec, value, 1) : a;
 

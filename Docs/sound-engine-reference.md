@@ -2250,8 +2250,11 @@ been compared with the instrument yet.
   mod input x its amount (64 = one engine unit a full dial). Quad's Time/Clk uses the clock-sync law,
   and its Main output reads the Range's full time. Eight's taps are at 1..8 x the Time spacing, and the
   Range is the total to tap 8. The instrument's own delay-base and tap parts are not yet read.
-- **70.2 Flanger**: a 0.5 ms delay swept by a sine over up to 5 ms (Range) at 62.9 s a cycle to 24.4 Hz
-  (Rate, exponential), with Feedback (v - 64)/64 x 0.9, mixed half and half with the input.
+- **70.2 Flanger** (laws from the parts, 2026-09-27): a triangle LFO at the Rate display's law
+  (v x 384000/2^24 Hz, so 0.01 to 2.91 Hz; the manual's 24.4 Hz is wrong) sweeps the delay from a
+  74-sample offset over up to 436 samples (Range, v x 0xdbec). Feedback is unipolar, v x 7000000/127
+  (0.834 at 127). Not yet the part's: its 512-sample ring with the 4-point interpolator, and its exact
+  dry/wet sums.
 - **70.3 PShift / Scratch**: two taps half a window apart, crossfaded by triangles. The window is the
   Delay setting (12.5 to 100 ms). PShift's ratio is 25 cents a Semi step plus Fine plus Shift mod, in
   semitones. Scratch's is (v - 64)/63 x 4 plus Mod, so it runs backwards below 64 and is silent at 64.
