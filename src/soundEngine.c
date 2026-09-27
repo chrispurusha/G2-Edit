@@ -550,6 +550,12 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4, 9, 3, 2};
 #define MAX_METNOISE_LINES         (4)  // §66 - per patch; more run silent
 #define MAX_FLTPHASE_LINES         (4)  // §67 - per patch; more pass their input through
 #define MAX_DLYCLOCK_LINES         (4)  // §69.7 - per patch; more output nothing
+#define MAX_FXBUF_LINES            (4)  // §70 - Flanger, PShift, Scratch: short post-mix buffers
+#define FXBUF_SAMPLES              (16384)
+#define MAX_STRING_LINES           (2)  // §70 - OscString, Resonator: a per-voice loop each
+#define STRING_SAMPLES             (4096)
+#define MAX_BASIC_LINES            (2)  // §70 - Vocoder: per-voice filter states
+#define BASIC_STATES               (96)
 #define DLYCLOCK_SLOTS             (128)
 #define FLTPHASE_W_FREQ            (0)  // §67 - the node's words: the pitch stage's X2
 #define FLTPHASE_W_PITCHM          (1)  // Y0
@@ -784,6 +790,23 @@ typedef enum {
     eNodeDigitizer,      // §69.8 - sample and hold at an exponential rate, then a bit mask
     eNodeWahWah,         // §69.9 - a state-variable band-pass swept along sweep squared
     eNodeNoteDet,        // §69.11 - Gate and Vel of one key, from the held-key table
+    eNodeMultiTap,       // §70.1 - DelayDual, DelayQuad, DlyEight: taps on one line
+    eNodeFlanger,        // §70.2 - an LFO-swept short delay with feedback
+    eNodePShift,         // §70.3 - PShift and Scratch: two crossfaded moving taps
+    eNodeOscString,      // §70.4 - a tuned delay loop with decay and damping
+    eNodeResonator,      // §70.4 - OscString's loop, with a pickup position
+    eNodeDriver,         // §70.5 - a soft nonlinearity
+    eNodeNoiseGate,      // §70.6 - a follower opening a gate above the threshold
+    eNodePitchTrack,     // §70.7 - PitchTrack and ZeroCnt: the period between rising zero crossings
+    eNodeVocoder,        // §70.8 - sixteen analysis bands driving sixteen synthesis bands
+    eNodeRndPattern,     // §70.9 - a clocked random pattern reseeded every Loop steps
+    eNodeSeqCtr,         // §70.10 - the step Ctrl picks, with a crossfade
+    eNodeMux8to1X,       // §70.11 - Mux8-1 with a crossfade between neighbours
+    eNodeLevScaler,      // §70.12 - a gain from the key's distance to a breakpoint
+    eNodeStatus,         // §70.13 - Patch Active, Var Active, Voice No.
+    eNodeDevice,         // §70.13 - the performance controls
+    eNodeCtrlRcv,        // §70.13 - no MIDI CC stream reaches the engine: both outputs 0
+    eNodeSink,           // §70.13 - MIDI senders and routers: nothing to render
     eNodeOut,
 } tNodeKind;
 
@@ -876,6 +899,7 @@ typedef struct {
     int32_t         metWords[4];     // §66 - Freq base, Freq mod, Colour base, Colour mod
     int32_t         phaseWords[9];   // §67 - FLTPHASE_W_*
     uint32_t        outCount;        // §68.1 - a Sw1-n's outputs before its Ctrl
+    double          bx[18];          // §70 - the basic modules' dial values, by module
     double          rndStep;         // §47 - RandomA: the one-pole's coefficient, from Step
     double          rndScale;        // §47 - and the draw's pre-scale, from the same Step
     double          rndEdge;         // §47 - the Edge word
@@ -1456,6 +1480,19 @@ typedef struct {
     bool    ready;
 } tMetNoiseState;
 static tMetNoiseState         gMetNoiseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_METNOISE_LINES];
+// §70 - the basic modules' buffers: post-mix FX (one each), per-voice loops, per-voice filter states
+static float                  gFxBufBank[SOUND_ENGINE_MAX_ENGINES][MAX_FXBUF_LINES][FXBUF_SAMPLES];
+#define gFxBuf          (gFxBufBank[SE])
+static uint32_t               gFxBufWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_FXBUF_LINES];
+#define gFxBufWrite     (gFxBufWriteBank[SE])
+static double                 gFxPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_FXBUF_LINES];
+#define gFxPhase        (gFxPhaseBank[SE])
+static float                  gStringBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_STRING_LINES][STRING_SAMPLES];
+#define gString         (gStringBank[SE])
+static uint32_t               gStringWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_STRING_LINES];
+#define gStringWrite    (gStringWriteBank[SE])
+static double                 gBasicBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_BASIC_LINES][BASIC_STATES];
+#define gBasic          (gBasicBank[SE])
 // §69.7 - each DlyClock's ring and write position, per voice
 typedef struct {
     double   slot[DLYCLOCK_SLOTS];
@@ -2016,6 +2053,21 @@ static void reset_node_state(void) {
 
             if (i < MAX_SEQ_LINES) {
                 gSeq[v][i].ready = false;   // §58 - started afresh, from its own frame, at its next sample
+            }
+
+            if (i < MAX_STRING_LINES) {
+                memset(gString[v][i], 0, sizeof(gString[v][i]));
+                gStringWrite[v][i] = 0;
+            }
+
+            if (i < MAX_BASIC_LINES) {
+                memset(gBasic[v][i], 0, sizeof(gBasic[v][i]));
+            }
+
+            if ((v == 0) && (i < MAX_FXBUF_LINES)) {
+                memset(gFxBuf[i], 0, sizeof(gFxBuf[i]));
+                gFxBufWrite[i] = 0;
+                gFxPhase[i]    = 0.0;
             }
 
             if (i < MAX_DLYCLOCK_LINES) {
@@ -3006,8 +3058,15 @@ static uint32_t node_output_legs(tNodeKind kind) {
             return 8u;
         }
         case eNodeNoteDet:             // §69.11 - Gate, Vel, RVel
+        case eNodePitchTrack:          // §70.7 - Period, Gate, Pitch
+        case eNodeStatus:              // §70.13
         {
             return 3u;
+        }
+        case eNodeMultiTap:            // §70.1 - up to eight taps
+        case eNodeDevice:              // §70.13 - seven controls
+        {
+            return 8u;
         }
         case eNodeSeq16:
         {
@@ -3031,6 +3090,7 @@ static uint32_t node_output_legs(tNodeKind kind) {
 }
 
 static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial, double fbModDial, double mixModDial); // §24.2
+static void basic_build(tEngineNode * node, tModule * module, uint32_t variation);                                                                // §70
 static int32_t follower_coef_word(double seconds);                                                                                                // §69.4
 static int32_t dial_mod_word(double dial);                                                                                                        // §67
 static int32_t dly_dial_word(double dial);                                                                                                        // §24.2
@@ -3406,7 +3466,105 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeWahWah;     // §69.9
             return true;
         }
+        case moduleTypeRndClkB:     // §70.9 - RndClkA's node, its dials where RndClkB keeps them
+        {
+            *kind = eNodeRndClkA;
+            return true;
+        }
+        case moduleTypeDelayDual:
+        case moduleTypeDelayQuad:
+        case moduleTypeDlyEight:
+        {
+            *kind = eNodeMultiTap;   // §70.1
+            return true;
+        }
+        case moduleTypeFlanger:
+        {
+            *kind = eNodeFlanger;   // §70.2
+            return true;
+        }
+        case moduleTypePShift:
+        case moduleTypeScratch:
+        {
+            *kind = eNodePShift;   // §70.3
+            return true;
+        }
+        case moduleTypeOscString:
+        {
+            *kind = eNodeOscString;   // §70.4
+            return true;
+        }
+        case moduleTypeResonator:
+        {
+            *kind = eNodeResonator;   // §70.4
+            return true;
+        }
+        case moduleTypeDriver:
+        {
+            *kind = eNodeDriver;   // §70.5
+            return true;
+        }
+        case moduleTypeNoiseGate:
+        {
+            *kind = eNodeNoiseGate;   // §70.6
+            return true;
+        }
+        case moduleTypePitchTrack:
+        case moduleTypeZeroCnt:
+        {
+            *kind = eNodePitchTrack;   // §70.7
+            return true;
+        }
+        case moduleTypeVocoder:
+        {
+            *kind = eNodeVocoder;   // §70.8
+            return true;
+        }
+        case moduleTypeRndPattern:
+        {
+            *kind = eNodeRndPattern;   // §70.9
+            return true;
+        }
+        case moduleTypeSeqCtr:
+        {
+            *kind = eNodeSeqCtr;   // §70.10
+            return true;
+        }
+        case moduleTypeMux8to1X:
+        {
+            *kind = eNodeMux8to1X;   // §70.11
+            return true;
+        }
+        case moduleTypeLevScaler:
+        {
+            *kind = eNodeLevScaler;   // §70.12
+            return true;
+        }
+        case moduleTypeStatus:
+        {
+            *kind = eNodeStatus;   // §70.13
+            return true;
+        }
+        case moduleTypeDevice:
+        {
+            *kind = eNodeDevice;   // §70.13
+            return true;
+        }
+        case moduleTypeCtrlRcv:
+        {
+            *kind = eNodeCtrlRcv;   // §70.13
+            return true;
+        }
+        case moduleTypeCtrlSend:
+        case moduleTypePCSend:
+        case moduleTypeAutomate:
+        case moduleTypeNoteZone:
+        {
+            *kind = eNodeSink;   // §70.13
+            return true;
+        }
         case moduleTypeNoteDet:
+        case moduleTypeNoteRcv:      // §70.13 - NoteDet's, whatever the channel
         {
             *kind = eNodeNoteDet;    // §69.11
             return true;
@@ -3811,6 +3969,23 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeDlyClock:         // §69.7 - In, Clk
         case eNodeDigitizer:        // §69.8 - In, Rate mod
         case eNodeWahWah:           // §69.9 - In, Sweep
+        case eNodeMultiTap:
+        case eNodeFlanger:
+        case eNodePShift:
+        case eNodeOscString:
+        case eNodeResonator:
+        case eNodeDriver:
+        case eNodeNoiseGate:
+        case eNodePitchTrack:
+        case eNodeVocoder:
+        case eNodeRndPattern:
+        case eNodeSeqCtr:
+        case eNodeMux8to1X:
+        case eNodeLevScaler:
+        case eNodeStatus:
+        case eNodeDevice:
+        case eNodeCtrlRcv:
+        case eNodeSink:
         case eNodeCompLev:          // §48 - A
         case eNodeNoteQuant:        // §49 - In
         case eNodeFlipFlop:         // §38.3 - Clk, Rst, In
@@ -4670,6 +4845,23 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->active        = (module->param[variation][3].value != 0);
             break;
         }
+        case eNodeMultiTap:
+        case eNodeFlanger:
+        case eNodePShift:
+        case eNodeOscString:
+        case eNodeResonator:
+        case eNodeDriver:
+        case eNodeNoiseGate:
+        case eNodePitchTrack:
+        case eNodeVocoder:
+        case eNodeRndPattern:
+        case eNodeSeqCtr:
+        case eNodeMux8to1X:
+        case eNodeLevScaler:
+        {
+            basic_build(node, module, variation);   // §70
+            break;
+        }
         case eNodeNoteDet:
         {
             node->select = (uint32_t)module->param[variation][0].value % MIDI_KEY_COUNT;   // §69.11
@@ -4830,6 +5022,14 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
             node->rndStep  = word / 8388608.0;
             node->rndScale = floor(fmin(sqrt(8388608.0 / word), 8192.0) * 2048.0) / 8388608.0;
+
+            if (module->type == moduleTypeRndClkB) {
+                // §70.9 - Step 0, OutType 1, on 2, Mode 3, StepM 4 (not yet read), Character a mode
+                node->lfoMono  = false;
+                node->polarity = (uint32_t)module->param[variation][1].value;
+                node->active   = (module->param[variation][2].value != 0);
+                break;
+            }
             node->lfoMono  = (module->param[variation][1].value != 0);
             node->polarity = (uint32_t)module->param[variation][3].value;
             node->active   = (module->param[variation][4].value != 0);
@@ -5438,6 +5638,9 @@ static void mark_post_mix_nodes(tSoundEngineParams * params) {
                         || (node->kind == eNodeDelay)
                         || (node->kind == eNodeDlySingle)   // §52 - one shared line, like DelayA/B
                         || (node->kind == eNodeDlyStereo)   // §65 - likewise
+                        || (node->kind == eNodeMultiTap)    // §70.1
+                        || (node->kind == eNodeFlanger)     // §70.2 - one shared buffer
+                        || (node->kind == eNodePShift)      // §70.3
                         || (node->kind == eNodeChorus)
                         || (node->kind == eNodeReverb);
 
@@ -5623,10 +5826,20 @@ static void build_snapshot(tSoundEngineParams * out) {
         uint32_t metals     = 0;
         uint32_t phases     = 0;
         uint32_t registers  = 0;
+        uint32_t fxbufs     = 0;
+        uint32_t strings    = 0;
+        uint32_t basics     = 0;
 
         for (i = 0; i < snapshot.nodeCount; i++) {
-            if ((snapshot.node[i].kind == eNodeDelay) || (snapshot.node[i].kind == eNodeDlySingle)) {
+            if (  (snapshot.node[i].kind == eNodeDelay) || (snapshot.node[i].kind == eNodeDlySingle)
+               || (snapshot.node[i].kind == eNodeMultiTap)) {
                 snapshot.node[i].line = lines++;
+            } else if ((snapshot.node[i].kind == eNodeFlanger) || (snapshot.node[i].kind == eNodePShift)) {
+                snapshot.node[i].line = fxbufs++;
+            } else if ((snapshot.node[i].kind == eNodeOscString) || (snapshot.node[i].kind == eNodeResonator)) {
+                snapshot.node[i].line = strings++;
+            } else if (snapshot.node[i].kind == eNodeVocoder) {
+                snapshot.node[i].line = basics++;
             } else if (snapshot.node[i].kind == eNodeDlyStereo) {
                 snapshot.node[i].line = lines;   // §65 - two lines, this and the next
                 lines                += 2u;
@@ -9679,6 +9892,548 @@ static uint32_t mux_select(double ctrl) {
 
 static double logic_level(bool high);
 
+// §70 - a dial's value as its own display prints it (ms and s as seconds, dB, Hz), for the basic
+// modules whose laws are only known from those strings
+static double param_display_number(tModuleType type, uint32_t paramIndex, uint32_t value) {
+    uint32_t seen = 0;
+
+    for (uint32_t r = 0; r < array_size_param_location_list(); r++) {
+        if (paramLocationList[r].moduleType != type) {
+            continue;
+        }
+
+        if (seen++ != paramIndex) {
+            continue;
+        }
+        const char ** map    = paramLocationList[r].strMap;
+
+        if ((map == NULL) || (value >= array_size_str_map(map))) {
+            return 0.0;
+        }
+        char *        end    = NULL;
+        double        number = strtod(map[value], &end);
+
+        if ((end != NULL) && (strncmp(end, "ms", 2) == 0)) {
+            return number / 1000.0;
+        }
+
+        if ((end != NULL) && (strncmp(end, "kHz", 3) == 0)) {
+            return number * 1000.0;
+        }
+        return number;
+    }
+
+    return 0.0;
+}
+
+// §70 - the basic modules' dials into bx[] (and a few named fields), module by module
+static void basic_build(tEngineNode * node, tModule * module, uint32_t variation) {
+    double * bx = node->bx;
+
+    memset(bx, 0, sizeof(node->bx));
+    node->active = true;
+
+    switch (module->type) {
+        case moduleTypeDelayDual:
+        case moduleTypeDelayQuad:
+        case moduleTypeDlyEight:
+        {
+            // §70.1 - Dual: Time 0/2, mod 1/3; Quad: Time 0/2/4/6, mod 1/3/5/7, Time/Clk 8; Eight: Time 0
+            uint32_t taps = (module->type == moduleTypeDelayDual) ? 2u : ((module->type == moduleTypeDelayQuad) ? 4u : 1u);
+
+            node->timeSeconds = delay_range_max_seconds(module->type, module->mode[0].value);
+            node->select      = (module->type == moduleTypeDelayDual) ? 0u : ((module->type == moduleTypeDelayQuad) ? 1u : 2u);
+
+            for (uint32_t k = 0; k < taps; k++) {
+                bx[k]      = param_value(module, variation, 2u * k);
+                bx[4u + k] = (taps > 1u) ? param_value(module, variation, (2u * k) + 1u) : 0.0;
+            }
+
+            bx[8]             = (module->type == moduleTypeDelayQuad) && (module->param[variation][8].value != 0);
+            break;
+        }
+        case moduleTypeFlanger:
+        {
+            // §70.2 - Rate 62.9 s a cycle to 24.4 Hz, exponential; Range to 5 ms of sweep; FB (v - 64)/64
+            double rate = param_value(module, variation, 0);
+
+            bx[0]        = (1.0 / 62.9) * pow(24.4 * 62.9, rate / 127.0);
+            bx[1]        = 0.005 * param_value(module, variation, 1) / 127.0;
+            bx[2]        = 0.9 * (param_value(module, variation, 2) - 64.0) / 64.0;
+            node->active = (module->param[variation][3].value != 0);
+            break;
+        }
+        case moduleTypePShift:
+        {
+            // §70.3 - Semi 25 cents a step, Fine a quarter of that, Shift mod in semitones, Delay the window
+            bx[0]        = ((param_value(module, variation, 0) - 64.0) * 25.0) + ((param_value(module, variation, 1) - 64.0) * 25.0 / 64.0);
+            bx[1]        = 64.0 * param_value(module, variation, 2) / 127.0;
+            bx[2]        = 0.0125 * pow(2.0, (double)module->param[variation][3].value);
+            node->active = (module->param[variation][4].value != 0);
+            node->select = 0u;
+            break;
+        }
+        case moduleTypeScratch:
+        {
+            // §70.3 - Ratio: silent at 64, up to 4x forwards or backwards; Mod adds; Delay the window
+            bx[0]        = 4.0 * (param_value(module, variation, 0) - 64.0) / 63.0;
+            bx[1]        = 4.0 * param_value(module, variation, 1) / 127.0;
+            bx[2]        = 0.0125 * pow(2.0, (double)module->param[variation][2].value);
+            node->active = (module->param[variation][3].value != 0);
+            node->select = 1u;
+            break;
+        }
+        case moduleTypeOscString:
+        case moduleTypeResonator:
+        {
+            // §70.4 - the oscillators' pitch dials; Decay a T60 of 20 ms to 10 s; Damp a one-pole in the loop
+            static const tOscParams kString = {moduleTypeOscString, 0, 1, 2, 3, 4, 7, -1, -1, -1, false};
+
+            set_osc_pitch(node, module, variation, &kString);
+            bx[0] = 0.02 * pow(500.0, param_value(module, variation, 5) / 127.0);
+            bx[1] = 1.0 - (0.9 * param_value(module, variation, 6) / 127.0);
+            bx[2] = (module->type == moduleTypeResonator) ? (param_value(module, variation, 8) / 127.0) : 0.0;
+            break;
+        }
+        case moduleTypeDriver:
+        {
+            bx[0] = param_value(module, variation, 0) / 127.0;   // §70.5 - Stiffness
+            bx[1] = param_value(module, variation, 1) / 127.0;   // Embouchure
+            break;
+        }
+        case moduleTypeNoiseGate:
+        {
+            // §70.6 - Threshold, Attack and Release as their displays print them
+            bx[0]        = pow(10.0, param_display_number(module->type, 0, module->param[variation][0].value) / 20.0);
+            bx[1]        = fmax(1.0e-5, param_display_number(module->type, 1, module->param[variation][1].value));
+            bx[2]        = fmax(1.0e-5, param_display_number(module->type, 2, module->param[variation][2].value));
+            node->active = (module->param[variation][3].value != 0);
+            break;
+        }
+        case moduleTypePitchTrack:
+        case moduleTypeZeroCnt:
+        {
+            // §70.7 - PitchTrack's Threshold reads NoiseGate's table (the same string map)
+            bx[0]        = (module->type == moduleTypePitchTrack)
+                           ? pow(10.0, param_display_number(moduleTypeNoiseGate, 0, module->param[variation][0].value) / 20.0) : 0.0;
+            node->select = (module->type == moduleTypeZeroCnt) ? 1u : 0u;
+            break;
+        }
+        case moduleTypeVocoder:
+        {
+            // §70.8 - BandSel 1-16 (0 Off, 1-16 the analysis band routed there), Emphasis 16, Monitor 17
+            for (uint32_t k = 0; k < 16u; k++) {
+                bx[k] = (double)module->param[variation][k].value;
+            }
+
+            bx[16] = (module->param[variation][16].value != 0);
+            bx[17] = (module->param[variation][17].value != 0);
+            break;
+        }
+        case moduleTypeRndPattern:
+        {
+            // §70.9 - PatA 0, PatB 1, Step 2, Loop 3 ((v + 1) x 8 steps), StepM 4, OutType 5, on 6; Wave a mode
+            int32_t v    = (int32_t)param_value(module, variation, 2);
+            double  word = (v >= 127) ? 8388607.0 : fmin(8388607.0, (512.0 * v * v) + 512.0);
+
+            node->rndStep  = word / 8388608.0;
+            node->rndScale = floor(fmin(sqrt(8388608.0 / word), 8192.0) * 2048.0) / 8388608.0;
+            node->polarity = (uint32_t)module->param[variation][5].value;
+            node->active   = (module->param[variation][6].value != 0);
+            bx[0]          = param_value(module, variation, 0);
+            bx[1]          = param_value(module, variation, 1);
+            bx[2]          = 8.0 * ((double)module->param[variation][3].value + 1.0);
+            bx[3]          = (double)module->mode[0].value;
+            break;
+        }
+        case moduleTypeSeqCtr:
+        {
+            // §70.10 - steps 0-15 (SeqVal's law), events 16-31 as a bit mask, T/G 32, Pol 33, XFade 34
+            bool bipolar = (module->param[variation][33].value == 0);
+
+            node->select = 0u;
+
+            for (uint32_t k = 0; k < 16u; k++) {
+                double v = param_value(module, variation, k);
+
+                bx[k]         = bipolar ? ((v >= 127.0) ? 1.0 : ((v - 64.0) / 64.0)) : ((v >= 127.0) ? 1.0 : (v / 128.0));
+                node->select |= (module->param[variation][16u + k].value != 0) ? (1u << k) : 0u;
+            }
+
+            bx[16]       = 0.25 * (double)((module->param[variation][34].value < 3u) ? module->param[variation][34].value : 4u);
+            break;
+        }
+        case moduleTypeMux8to1X:
+        {
+            bx[0] = param_value(module, variation, 0) / 127.0;   // §70.11 - X-fade: the share of a step spent fading
+            break;
+        }
+        case moduleTypeLevScaler:
+        {
+            // §70.12 - L 0 and R 2 (-8..+8 dB an octave), BP 1 (a key), Kbt 3
+            bx[0] = 8.0 * (param_value(module, variation, 0) - 64.0) / 64.0;
+            bx[1] = param_value(module, variation, 1);
+            bx[2] = 8.0 * (param_value(module, variation, 2) - 64.0) / 64.0;
+            bx[3] = (module->param[variation][3].value != 0);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+
+// §70 - a linearly interpolated read `delay` samples behind the write position
+static double ring_read(const float * ring, uint32_t size, uint32_t write, double delay) {
+    double   d    = fmin(fmax(delay, 1.0), (double)(size - 2u));
+    uint32_t i    = (uint32_t)d;
+    double   frac = d - (double)i;
+    double   a    = ring[(write + size - i) % size];
+    double   b    = ring[(write + size - i - 1u) % size];
+
+    return a + ((b - a) * frac);
+}
+
+// §70.1 - taps on one of the shared delay lines. out[] gets Dual's two, Quad's Main then its four,
+// or Eight's eight.
+static void multi_tap_step(const tEngineNode * spec, double input, const double mods[4], double out[NODE_OUTPUTS]) {
+    SE_LOCAL;
+
+    uint32_t       l     = spec->line;
+
+    if (l >= MAX_DELAY_LINES) {
+        return;
+    }
+    const double * bx    = spec->bx;
+    uint32_t       write = gDelayWrite[l];
+    double         maxS  = spec->timeSeconds;
+
+    gDelayLine[l][write] = (float)input;
+
+    if (spec->select == 2u) {
+        double spacing = delay_time_seconds(maxS / 8.0, bx[0]);
+
+        for (uint32_t k = 0; k < 8u; k++) {
+            out[k] = ring_read(gDelayLine[l], DELAY_LINE_SAMPLES, write, spacing * (double)(k + 1u) * gSampleRate);
+        }
+    } else {
+        uint32_t taps  = (spec->select == 0u) ? 2u : 4u;
+        uint32_t first = (spec->select == 0u) ? 0u : 1u;
+
+        for (uint32_t k = 0; k < taps; k++) {
+            double seconds = 0.0;
+
+            if (bx[8] != 0.0) {
+                seconds = clk_sync_beats(bx[k]) * (60.0 / ENGINE_REFERENCE_BPM);
+
+                while ((seconds > maxS) && (seconds > 0.0)) {
+                    seconds *= 0.5;
+                }
+            } else {
+                double dial = fmin(127.0, fmax(0.0, bx[k] + (mods[k] * UNITS_PER_FULL_SCALE * bx[4u + k] / 64.0)));
+
+                seconds = delay_time_seconds(maxS, dial);
+            }
+            out[first + k] = ring_read(gDelayLine[l], DELAY_LINE_SAMPLES, write, seconds * gSampleRate);
+        }
+
+        if (spec->select == 1u) {
+            out[0] = ring_read(gDelayLine[l], DELAY_LINE_SAMPLES, write, maxS * gSampleRate);
+        }
+    }
+    gDelayWrite[l] = (write + 1u) % DELAY_LINE_SAMPLES;
+}
+
+// §70.2 - Flanger: a 0.5 ms delay swept by up to Range by a sine LFO, FB fed back, mixed half and half
+static double flanger_step(const tEngineNode * spec, double input) {
+    SE_LOCAL;
+
+    uint32_t l     = spec->line;
+
+    if ((l >= MAX_FXBUF_LINES) || (spec->active == false)) {
+        return input;
+    }
+    double * phase = &gFxPhase[l];
+    double   delay = (0.0005 + (spec->bx[1] * 0.5 * (1.0 + sin(2.0 * M_PI * *phase)))) * gSampleRate;
+    double   wet   = ring_read(gFxBuf[l], FXBUF_SAMPLES, gFxBufWrite[l], delay);
+    uint32_t write = (gFxBufWrite[l] + 1u) % FXBUF_SAMPLES;
+
+    gFxBuf[l][write] = (float)(input + (spec->bx[2] * wet));
+    gFxBufWrite[l]   = write;
+    *phase           = fmod(*phase + (spec->bx[0] / gSampleRate), 1.0);
+    return 0.5 * (input + wet);
+}
+
+// §70.3 - PShift and Scratch: two taps a half window apart move through the buffer at (1 - ratio) of
+// real time, each faded in and out by a triangle so they sum to one. Scratch's ratio may be negative
+// (backwards) and is silent at zero.
+static double pitch_shift_step(const tEngineNode * spec, double input, double mod) {
+    SE_LOCAL;
+
+    uint32_t l      = spec->line;
+
+    if ((l >= MAX_FXBUF_LINES) || (spec->active == false)) {
+        return input;
+    }
+    double   ratio  = (spec->select == 0u) ? exp2(((spec->bx[0] / 100.0) + (mod * spec->bx[1])) / 12.0)
+                      : (spec->bx[0] + (mod * spec->bx[1]));
+    double   window = fmin(spec->bx[2] * gSampleRate, (double)(FXBUF_SAMPLES - 4u));
+    double * phase  = &gFxPhase[l];
+    uint32_t write  = (gFxBufWrite[l] + 1u) % FXBUF_SAMPLES;
+    double   p1     = *phase;
+    double   p2     = fmod(p1 + 0.5, 1.0);
+    double   out    = 0.0;
+
+    gFxBuf[l][write] = (float)input;
+    gFxBufWrite[l]   = write;
+    out              = ((1.0 - fabs((2.0 * p1) - 1.0)) * ring_read(gFxBuf[l], FXBUF_SAMPLES, write, 1.0 + (p1 * window)))
+                       + ((1.0 - fabs((2.0 * p2) - 1.0)) * ring_read(gFxBuf[l], FXBUF_SAMPLES, write, 1.0 + (p2 * window)));
+    *phase           = fmod(p1 + ((1.0 - ratio) / window) + 1.0, 1.0);
+
+    if (spec->select == 1u) {
+        out *= fmin(1.0, 4.0 * fabs(ratio));
+    }
+    return out;
+}
+
+static double osc_frequency_hz(const tEngineNode * spec, double voicePitch, double pitchDirect, double pitchVar);
+
+// §70.4 - OscString and Resonator: y = excitation + g x lowpass(the loop one period back), g from the
+// Decay's T60; Resonator's Out2 reads the loop at the Pos share of the period
+static void string_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double excite, double pitchIn, double pitchVar,
+                        double voicePitch, double out[2]) {
+    SE_LOCAL;
+
+    uint32_t l      = spec->line;
+
+    if ((l >= MAX_STRING_LINES) || (spec->active == false)) {
+        out[0] = 0.0;
+        out[1] = 0.0;
+        return;
+    }
+    float *  ring   = gString[voice][l];
+    uint32_t write  = gStringWrite[voice][l];
+    double   hz     = fmin(fmax(osc_frequency_hz(spec, voicePitch, pitchIn, pitchVar), gSampleRate / (STRING_SAMPLES - 4.0)), gSampleRate / 4.0);
+    double   period = gSampleRate / hz;
+    double   gain   = pow(10.0, -3.0 * (period / gSampleRate) / spec->bx[0]);
+    double * lp     = &gLadder[voice][n][0];
+    double   back   = ring_read(ring, STRING_SAMPLES, write, period);
+    double   y      = 0.0;
+
+    *lp                   += spec->bx[1] * (back - *lp);
+    y                      = fmin(4.0, fmax(-4.0, excite + (gain * *lp)));       // the DSP's full scale
+    write                  = (write + 1u) % STRING_SAMPLES;
+    ring[write]            = (float)y;
+    gStringWrite[voice][l] = write;
+    out[0]                 = y;
+    out[1]                 = ring_read(ring, STRING_SAMPLES, write, 1.0 + (spec->bx[2] * period));
+}
+
+// §70.6 - NoiseGate: a peak follower (instant rise, Release fall) opens the gain towards 1 at the
+// Attack rate while above the threshold and closes it at the Release rate below. state: 0 envelope, 1 gain.
+static void noise_gate_step(double state[2], const tEngineNode * spec, double input, double out[2]) {
+    SE_LOCAL;
+
+    double mag  = fabs(input);
+    double rel  = exp(-1.0 / (spec->bx[2] * gSampleRate));
+    double atk  = exp(-1.0 / (spec->bx[1] * gSampleRate));
+    double open = (state[0] > spec->bx[0]) ? 1.0 : 0.0;
+
+    state[0] = (mag > state[0]) ? mag : (state[0] * rel);
+    state[1] = open + ((state[1] - open) * ((open > state[1]) ? atk : rel));
+    out[0]   = (spec->active == true) ? (input * state[1]) : input;
+    out[1]   = state[0];
+}
+
+// §70.7 - the period between rising zero crossings as a pitch, E4 at 0 units; PitchTrack also pulses
+// Period at each measurement and raises Gate above the threshold. state: 0 samples since the last
+// crossing, 1 last sample, 2 pitch, 3 envelope, 4 the share of a sample the last crossing came early.
+static void pitch_track_step(double state[5], const tEngineNode * spec, double input, double out[3]) {
+    SE_LOCAL;
+
+    bool fresh = false;
+
+    state[0] += 1.0;
+
+    if ((state[1] < 0.0) && (input >= 0.0)) {
+        // the crossing interpolated between the two samples, so the period is not whole samples
+        double before = input / (input - state[1]);
+
+        if (state[0] - before > 2.0) {
+            double hz = gSampleRate / (state[0] - before + state[4]);
+
+            state[2] = (12.0 * log2(hz / 329.6275569)) / UNITS_PER_FULL_SCALE;
+            fresh    = true;
+        }
+        state[0] = 0.0;
+        state[4] = before;
+    }
+    state[1]  = input;
+    state[3]  = fmax(fabs(input), state[3] * exp(-1.0 / (0.02 * gSampleRate)));
+
+    if (spec->select == 1u) {
+        out[0] = state[2];
+        return;
+    }
+    out[0]    = logic_level(fresh);
+    out[1]    = logic_level(state[3] > spec->bx[0]);
+    out[2]    = state[2];
+}
+
+// §70.8 - Vocoder: sixteen band-passes (Q 5, 100 Hz to 8 kHz, log spaced) on Ctrl (analysis, with
+// optional pre-emphasis) and on In (synthesis); each synthesis band is scaled by the 10 ms envelope of
+// the analysis band routed to it. state per band: analysis 2, synthesis 2, envelope 1; then emphasis 1.
+static double vocoder_step(uint32_t voice, const tEngineNode * spec, double ctrl, double input) {
+    SE_LOCAL;
+
+    static double kB0[16], kA1[16], kA2[16];
+    static bool   ready = false;
+
+    if (ready == false) {
+        for (uint32_t k = 0; k < 16u; k++) {
+            double w     = 2.0 * M_PI * 100.0 * pow(80.0, (double)k / 15.0) / G2_ENGINE_SAMPLE_RATE;
+            double alpha = sin(w) / (2.0 * 5.0);
+            double a0    = 1.0 + alpha;
+
+            kB0[k] = alpha / a0;
+            kA1[k] = -2.0 * cos(w) / a0;
+            kA2[k] = (1.0 - alpha) / a0;
+        }
+
+        ready = true;
+    }
+
+    if (spec->line >= MAX_BASIC_LINES) {
+        return 0.0;
+    }
+
+    if (spec->bx[17] != 0.0) {
+        return ctrl;
+    }
+    double * st  = gBasic[voice][spec->line];
+    double   env = exp(-1.0 / (0.01 * gSampleRate));
+    double   x   = ctrl;
+    double   out = 0.0;
+
+    if (spec->bx[16] != 0.0) {
+        x      = ctrl - (0.95 * st[80]);
+        st[80] = ctrl;
+    }
+    double   ys[16];
+
+    for (uint32_t k = 0; k < 16u; k++) {
+        double * a  = &st[5u * k];
+        double   ya = (kB0[k] * x) + a[0];
+
+        ys[k] = (kB0[k] * input) + a[2];
+        a[0]  = (-kA1[k] * ya) + a[1];
+        a[1]  = (-kB0[k] * x) - (kA2[k] * ya);
+        a[2]  = (-kA1[k] * ys[k]) + a[3];
+        a[3]  = (-kB0[k] * input) - (kA2[k] * ys[k]);
+        a[4]  = fmax(fabs(ya), a[4] * env);
+    }
+
+    for (uint32_t k = 0; k < 16u; k++) {
+        uint32_t route = (uint32_t)spec->bx[k];
+
+        if ((route >= 1u) && (route <= 16u)) {
+            out += ys[k] * st[(5u * (route - 1u)) + 4u] * 4.0;
+        }
+    }
+
+    return out;
+}
+
+static void random_draw(double state[2], uint32_t * seed, const tEngineNode * spec);
+static double random_level_shift(const tEngineNode * spec, double value);
+
+// §70.9 - RndPattern: on each rising Clk a draw from the random generator; every Loop steps (and on
+// Rst) the generator is reseeded from PatA and PatB (plus their inputs), so the pattern repeats. Wave
+// (mode 0) 1 passes the clock as +-64 units by the draw's sign, as RndTrig. state: gLadder 0-1 the draw,
+// 2 the step count.
+static double rnd_pattern_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double clock, double rst, double aIn,
+                               double bIn) {
+    SE_LOCAL;
+
+    double * st  = gLadder[voice][n];
+    bool     clk = (clock > 0.0);
+    bool     res = (rst > 0.0);
+
+    if (res && ((gLogicPrev[voice][n] & LOGIC_PREV_DATA) == 0u)) {
+        st[2] = 0.0;
+    }
+
+    if (clk && ((gLogicPrev[voice][n] & LOGIC_PREV_CLOCK) == 0u)) {
+        if (st[2] <= 0.0) {
+            double a = fmin(127.0, fmax(0.0, spec->bx[0] + (aIn * UNITS_PER_FULL_SCALE)));
+            double b = fmin(127.0, fmax(0.0, spec->bx[1] + (bIn * UNITS_PER_FULL_SCALE)));
+
+            gNoiseSeed[voice][n] = ((uint32_t)a * 128u + (uint32_t)b) * 0x9E37u & 0xFFFFFFu;
+            st[0]                = 0.0;
+        }
+        random_draw(st, &gNoiseSeed[voice][n], spec);
+        st[2] = fmod(st[2] + 1.0, spec->bx[2]);
+    }
+    gLogicPrev[voice][n] = (uint8_t)((clk ? LOGIC_PREV_CLOCK : 0u) | (res ? LOGIC_PREV_DATA : 0u));
+
+    if (spec->active == false) {
+        return 0.0;
+    }
+
+    if (spec->bx[3] != 0.0) {
+        return clk ? ((st[1] >= 0.0) ? 1.0 : -1.0) : 0.0;
+    }
+    return random_level_shift(spec, st[1]);
+}
+
+// §70.10 - SeqCtr: Ctrl's units / 4 pick the step (0 to 16 of them over 0-64 units); the last XFade share
+// of each step fades linearly into the next. Val adds the Val input; Trig is high while on a step whose
+// event is set, or while the Trig input is.
+static void seq_ctr_step(const tEngineNode * spec, double ctrl, double valIn, double trigIn, double out[2]) {
+    double   pos  = fmin(fmax(ctrl * UNITS_PER_FULL_SCALE / 4.0, 0.0), 15.999);
+    uint32_t step = (uint32_t)pos;
+    double   frac = pos - (double)step;
+    double   x    = spec->bx[16];
+    double   val  = spec->bx[step];
+
+    if ((x > 0.0) && (step < 15u) && (frac > (1.0 - x))) {
+        double t = (frac - (1.0 - x)) / x;
+
+        val += (spec->bx[step + 1u] - val) * t;
+    }
+    out[0] = val + valIn;
+    out[1] = logic_level((((spec->select >> step) & 1u) != 0u) || (trigIn > 0.0));
+}
+
+// §70.11 - Mux8-1X: Mux8-1's step (§68.3) as a continuous position; the last X-fade share of each
+// step fades into the next input
+static double mux8x_step(const tEngineNode * spec, double ctrl, const double in[8]) {
+    double   pos  = fmin(fmax(ctrl * UNITS_PER_FULL_SCALE / 4.0, 0.0), 7.0);
+    uint32_t k    = (uint32_t)pos;
+    double   frac = pos - (double)k;
+    double   x    = spec->bx[0];
+
+    if ((k >= 7u) || (x <= 0.0) || (frac <= (1.0 - x))) {
+        return in[(k > 7u) ? 7u : k];
+    }
+    double   t    = (frac - (1.0 - x)) / x;
+
+    return in[k] + ((in[k + 1u] - in[k]) * t);
+}
+
+// §70.12 - LevScaler: dB = L x octaves below the breakpoint, or R x octaves above; Level is that gain
+// (1.0 = 64 units at 0 dB) and Out is In x it. The key is the voice's (Kbt) or the Note input (E4 = 0).
+static void lev_scaler_step(const tEngineNode * spec, double noteIn, double input, double voicePitch, double out[2]) {
+    double note = ((spec->bx[3] != 0.0) && (voicePitch >= 0.0)) ? voicePitch : (KEYBOARD_PITCH_ZERO + (noteIn * UNITS_PER_FULL_SCALE));
+    double oct  = (note - spec->bx[1]) / 12.0;
+    double db   = (oct < 0.0) ? (-spec->bx[0] * oct) : (spec->bx[2] * oct);
+    double gain = fmin(4.0, pow(10.0, db / 20.0));
+
+    out[0] = gain;
+    out[1] = input * gain;
+}
+
 // §68.6 - both counters step on a rising Clk (above zero now, not before) and are held at zero while
 // Rst is high, the reset read after the step. The 8Counter wraps after its eighth output.
 static void counter_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double clock, double rst, double out[NODE_OUTPUTS]) {
@@ -10270,6 +11025,111 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
 
             break;
         }
+        case eNodeMultiTap:
+        {
+            double mods[4] = {signal_in(spec, value, 1), signal_in(spec, value, 2), signal_in(spec, value, 3), signal_in(spec, value, 4)};
+
+            multi_tap_step(spec, a, mods, value[n]);
+            break;
+        }
+        case eNodeFlanger:
+        {
+            value[n][0] = flanger_step(spec, a);
+            break;
+        }
+        case eNodePShift:
+        {
+            // PShift's inputs are PitchVar then In; Scratch's In then Mod
+            value[n][0] = (spec->select == 0u) ? pitch_shift_step(spec, signal_in(spec, value, 1), a)
+                          : pitch_shift_step(spec, a, signal_in(spec, value, 1));
+            break;
+        }
+        case eNodeOscString:
+        case eNodeResonator:
+        {
+            string_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch, value[n]);
+
+            if (spec->kind == eNodeOscString) {
+                value[n][1] = value[n][0];
+            }
+            break;
+        }
+        case eNodeDriver:
+        {
+            // §70.5 - a guess: the two inputs, the second weighted by Embouchure, through a tanh whose
+            // drive rises with Stiffness
+            double drive = 1.0 + (8.0 * spec->bx[0]);
+
+            value[n][0] = tanh((a + (signal_in(spec, value, 1) * (0.5 + spec->bx[1]))) * drive) / drive;
+            break;
+        }
+        case eNodeNoiseGate:
+        {
+            noise_gate_step(gLadder[voice][n], spec, a, value[n]);
+            break;
+        }
+        case eNodePitchTrack:
+        {
+            pitch_track_step(gLadder[voice][n], spec, a, value[n]);
+            break;
+        }
+        case eNodeVocoder:
+        {
+            value[n][0] = vocoder_step(voice, spec, a, signal_in(spec, value, 1));
+            break;
+        }
+        case eNodeRndPattern:
+        {
+            value[n][0] = rnd_pattern_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2),
+                                           signal_in(spec, value, 3));
+            break;
+        }
+        case eNodeSeqCtr:
+        {
+            seq_ctr_step(spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), value[n]);
+            break;
+        }
+        case eNodeMux8to1X:
+        {
+            double in8[8];
+
+            for (uint32_t k = 0; k < 8u; k++) {
+                in8[k] = signal_in(spec, value, k);
+            }
+
+            value[n][0] = mux8x_step(spec, signal_in(spec, value, 8), in8);
+            break;
+        }
+        case eNodeLevScaler:
+        {
+            lev_scaler_step(spec, a, signal_in(spec, value, 1), voicePitch, value[n]);
+            break;
+        }
+        case eNodeStatus:
+        {
+            // §70.13 - Voice No. is 4 units a voice, so it picks SeqCtr's steps one per voice
+            value[n][0] = LOGIC_HIGH_LEVEL;
+            value[n][1] = LOGIC_HIGH_LEVEL;
+            value[n][2] = (spec->postMix == true) ? 0.0 : ((double)voice * 4.0 / UNITS_PER_FULL_SCALE);
+            break;
+        }
+        case eNodeDevice:
+        {
+            // §70.13 - Wheel, Aftertouch, Control pedal, Sustain, Pitch stick, Global wheels 1 and 2
+            value[n][0] = (double)atomic_load(&gMorphMilli[MORPH_GROUP_WHEEL]) / 1000.0;
+            value[n][1] = (double)atomic_load(&gMorphMilli[MORPH_GROUP_AFTERTOUCH]) / 1000.0;
+            value[n][2] = (double)atomic_load(&gMorphMilli[5]) / 1000.0;
+            value[n][3] = logic_level(atomic_load(&gSustainPedal));
+            value[n][4] = (double)atomic_load(&gBendMilli) / 1000.0;
+            value[n][5] = (double)atomic_load(&gMorphMilli[7]) / 1000.0;
+            value[n][6] = 0.0;
+            break;
+        }
+        case eNodeCtrlRcv:
+        case eNodeSink:
+        {
+            break;
+        }
         case eNodeNoteDet:
         {
             // §69.11 - Vel on MonoKey's scale (§35); release velocity is not kept, so RVel reads 0
@@ -10774,6 +11634,14 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeADConv:
         case eNodeDlyShiftReg:  // §69.6
         case eNodeNoteDet:      // §69.11
+        case eNodeMultiTap:     // §70 - separate outputs, none a stereo pair
+        case eNodeNoiseGate:
+        case eNodePitchTrack:
+        case eNodeResonator:
+        case eNodeLevScaler:
+        case eNodeStatus:
+        case eNodeDevice:
+        case eNodeCtrlRcv:
         case eNodeAudioIn:      // §37 - silent, both legs already zero
         case eNodeOut:
         {

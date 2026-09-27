@@ -16,23 +16,23 @@ which fails the run if it names a module that is not offered or not modelled.
 
 | Group | Working | Partial | Not implemented |
 |---|---|---|---|
-| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66) | Osc A, Osc B, Osc C, Osc D, Osc Shape A, Osc Shape B, Osc Dual, Noise, Metallic Noise, Osc Percussion, Drum Synth, FM Operator, DX Router, Osc Master | Osc Phase Mod, Noise Osc | Osc String, Driver, Resonator |
-| **Filters** (§10, §13, §21-§23, §56, §67, §69) | LP Filter, HP Filter, Nord Filter, Classic Filter, Phase Filter, Static Filter, WahWah, Eq 2-band, Eq 3-band, Eq Peak | Multi Filter, Comb Filter, FltVoice | Vocoder |
+| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Shape A, Osc Shape B, Osc Dual, Noise, Metallic Noise, Osc Percussion, Drum Synth, FM Operator, DX Router, Osc Master | Osc Phase Mod, Noise Osc, Osc String, Driver, Resonator | - |
+| **Filters** (§10, §13, §21-§23, §56, §67, §69, §70) | LP Filter, HP Filter, Nord Filter, Classic Filter, Phase Filter, Static Filter, WahWah, Eq 2-band, Eq 3-band, Eq Peak | Multi Filter, Comb Filter, FltVoice, Vocoder | - |
 | **Envelopes** (§17) | Envelope ADSR | Envelope AHD, Envelope ADR, Envelop ADDSR, Envelope H, Envelope D, Envelope Multi, Envelope Mod AHD, Envelope Mod ADSR | - |
 | **LFOs** (§28, §42, §50, §54) | LFO A, LFO B, LFO C, LFO Shp A | Clock Generator | - |
 | **Mixers** (§3) | Mixer 1-1 A, Mixer 1-1 S, Mixer 2-1 A, Mixer 4-1 A, Mixer 4-1 B, Mixer 4-1 C, Mixer 4-1 S, Mixer 2-1 B, Mixer 8-1 A, Mixer 8-1 B, MixFader, MixStereo, Fade 1-2, Fade 2-1, X-Fade, Pan | - | - |
-| **Level** (§16, §29, §43, §44, §48, §68, §69) | Constant, ConstSwM, ConstSwT, CompLev, CompSig, LevAdd, LevAmp, LevConv, LevMod, LevMult, MinMax, EnvFollow, Red2Blue, Blue2Red | ModAmt | NoiseGate |
+| **Level** (§16, §29, §43, §44, §48, §68, §69, §70) | Constant, ConstSwM, ConstSwT, CompLev, CompSig, LevAdd, LevAmp, LevConv, LevMod, LevMult, MinMax, EnvFollow, Red2Blue, Blue2Red | ModAmt, NoiseGate | - |
 | **Shapers** (§3.4) | Saturate, Clip, OverDrive, ShpExp, WaveWrap, ShpStatic, Rect | - | - |
-| **Delays** (§24, §52, §65, §69) | Delay A, Delay B, Delay Stereo, Delay Clock, DlyShiftReg | Delay Single A, Delay Single B | Delay Dual, Delay Quad, Delay Eight |
-| **Effects** (§11, §19, §20, §25, §55, §57, §69) | Compressor, Digitizer, Phaser, Reverb | FreqShift, Chorus | Flanger, PShift, Scratch |
-| **In/Out** (§16, §69) | 2 Outputs, 4 Outputs, 2 Inputs, FX Input, Keyboard, Monophonic Keyboard, Name Bar | 4 Inputs, Note Detector | Device, Status |
-| **Switches** (§30, §45, §68) | SwOnOffM, Sw2-1, Sw2-1M, Sw4-1, Sw8-1, Sw1-2, Sw1-2M, Sw1-4, Sw1-8, Mux8-1, Mux1-8, S&H, T&H, WindSw | SwOnOffT, ValSw2-1, ValSw1-2 | Mux8-1X |
+| **Delays** (§24, §52, §65, §69, §70) | Delay A, Delay B, Delay Stereo, Delay Clock, DlyShiftReg | Delay Single A, Delay Single B, Delay Dual, Delay Quad, Delay Eight | - |
+| **Effects** (§11, §19, §20, §25, §55, §57, §69, §70) | Compressor, Digitizer, Phaser, Reverb | FreqShift, Flanger, Chorus, PShift, Scratch | - |
+| **In/Out** (§16, §69, §70) | 2 Outputs, 4 Outputs, 2 Inputs, FX Input, Keyboard, Monophonic Keyboard, Name Bar | 4 Inputs, Device, Status, Note Detector | - |
+| **Switches** (§30, §45, §68, §70) | SwOnOffM, Sw2-1, Sw2-1M, Sw4-1, Sw8-1, Sw1-2, Sw1-2M, Sw1-4, Sw1-8, Mux8-1, Mux1-8, S&H, T&H, WindSw | SwOnOffT, ValSw2-1, ValSw1-2, Mux8-1X | - |
 | **Logic** (§38, §46, §68) | Invert, Pulse, Gate, FlipFlop, ClkDiv, 8Counter, BinCounter, ADConv, DAConv | Delay | - |
-| **Sequencers** (§58, §69) | Sequencer Level | Sequencer Event, Sequencer Values, Sequencer Note | Sequencer Controlled |
-| **Random** (§47, §64, §69) | Random A, Random B, Rnd Clock A, Rnd Trig | - | Rnd Clock B, Rnd Pattern |
-| **Note** (§26, §41, §49, §69) | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler | Glide | Pitch Tracker, Zero Crossing Counter, Level Scaler |
-| **MIDI** | - | NoteSend | CtrlSend, PCSend, CtrlRcv, NoteRcv, NoteZone, Automate |
-| **Total 170** | **114** | **30** | **26** |
+| **Sequencers** (§58, §69, §70) | Sequencer Level | Sequencer Event, Sequencer Values, Sequencer Note, Sequencer Controlled | - |
+| **Random** (§47, §64, §69, §70) | Random A, Random B, Rnd Clock A, Rnd Trig | Rnd Clock B, Rnd Pattern | - |
+| **Note** (§26, §41, §49, §69, §70) | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler | Glide, Pitch Tracker, Zero Crossing Counter, Level Scaler | - |
+| **MIDI** (§70) | CtrlSend, PCSend, NoteZone, Automate | NoteSend, CtrlRcv, NoteRcv | - |
+| **Total 170** | **118** | **52** | **0** |
 
 | Partial module | What is still open |
 |---|---|
@@ -40,6 +40,28 @@ which fails the run if it names a module that is not offered or not modelled.
 | ValSw1-2 | switches at the threshold (manual); its part tests equality within 1/2 unit (§68.2) |
 | 4 Inputs | silent (the jacks); a Bus source is not bridged (§69.12) |
 | Note Detector | release velocity is not kept, so RVel reads 0 (§69.11) |
+| Delay Dual | basic: taps on a shared line; the reference model not read (§70.1) |
+| Delay Quad | basic: taps on a shared line; the reference model not read (§70.1) |
+| Delay Eight | basic: taps on a shared line; the reference model not read (§70.1) |
+| Flanger | basic: a swept delay from the manual (§70.2) |
+| PShift | basic: two crossfaded taps (§70.3) |
+| Scratch | basic: two crossfaded taps, ratio law guessed (§70.3) |
+| Osc String | basic: a tuned loop; decay and damp laws guessed (§70.4) |
+| Resonator | basic: OscString's loop; Alg and inputs guessed (§70.4) |
+| Driver | a guess: not in the manual in hand (§70.5) |
+| NoiseGate | basic: follower and gate from the manual (§70.6) |
+| Pitch Tracker | basic: zero crossings, not the instrument's tracker (§70.7) |
+| Zero Crossing Counter | basic: zero crossings (§70.7) |
+| Vocoder | basic: 16 band-passes, band centres guessed (§70.8) |
+| Rnd Clock B | basic: RndClkA's node; StepM and Character not read (§70.9) |
+| Rnd Pattern | basic: reseeded LCG pattern; not the instrument's (§70.9) |
+| Sequencer Controlled | basic: step and crossfade from the manual; T/G not read (§70.10) |
+| Mux8-1X | basic: linear crossfade; the reference model not run (§70.11) |
+| Level Scaler | basic: dB per octave from the manual (§70.12) |
+| Device | global wheel 2 reads 0 (§70.13) |
+| Status | Voice No. law guessed (§70.13) |
+| CtrlRcv | no MIDI CC reaches the engine: outputs 0 (§70.13) |
+| NoteRcv | NoteDet whatever the channel (§70.13) |
 | Noise Osc | Q and level measured, not yet read from the reference model (§8) |
 | Comb Filter | not yet checked against the reference model |
 | Multi Filter | GComp not yet checked against the reference model |
@@ -67,18 +89,18 @@ which fails the run if it names a module that is not offered or not modelled.
 | Delay Single A | the tap's interpolator is ours, not the instrument's table (§52) |
 | Delay Single B | the tap's interpolator is ours, not the instrument's table (§52) |
 
-## What is left (2026-09-27, 26 modules)
+## What is left (2026-09-27): refinement, not coverage
 
-The Not implemented column by what each module would take. The groups are editorial and are not
-regenerated; update them by hand as modules land.
+Every module type the palette offers is now modelled at least at a basic level (§70, CT: "as many modules
+at a basic level, then iteratively improve"). The Partial table above is the refinement queue. The groups
+below say what refining each will take; update them by hand as modules move to Working.
 
 | Kind | Modules |
 |---|---|
-| **Makes no sound, or lives on the MIDI side** (8) | Device, Status, CtrlSend, PCSend, Automate (nothing to render); CtrlRcv, NoteRcv, NoteZone (incoming MIDI, which the engine could supply from its own note stream, as NoteDet does, §69.11) |
-| **the reference model to port, several per module** (12) | Rnd Clock B, Rnd Pattern (parts that share registers, §69 - need the whole module in the harness), NoiseGate (a follower, the simple envelope's parts and a VCA), Delay Dual / Quad / Eight (the delay-base and tap stages), PShift, Scratch (the pitch-shift tap and crossfade parts), Flanger, Osc String (Karplus), Pitch Tracker, Vocoder |
-
-| **Needs the reference model run, not read** (1) | Mux8-1X (§68.3) |
-| **No part in the reference** (4) | Driver, Resonator, Zero Crossing Counter, Level Scaler - later additions; they would need captures |
+| **Basic versions to replace with the reference model** | Delay Dual / Quad / Eight (delay-base and tap stages), PShift, Scratch (pitch-shift parts), Flanger, NoiseGate (follower, simple-envelope and VCA stages), Osc String (Karplus parts), Pitch Tracker, Vocoder, Rnd Clock B and Rnd Pattern (parts sharing registers - run the whole module in the harness), Sequencer Controlled (bit-field instructions), Mux8-1X (run the reference model) |
+| **Basic versions with no part in the reference** | Driver, Resonator, Zero Crossing Counter, Level Scaler - need captures from the G2 |
+| **Limited by what reaches the engine** | CtrlRcv (no MIDI CC stream), NoteRcv (no channels), Device (global wheel 2), 4 Inputs (Bus not bridged) |
+| **Nothing to render** | CtrlSend, PCSend, Automate, NoteZone (counted Working) |
 
 ## Notes
 
@@ -92,14 +114,3 @@ modelled and not pruned, which is what stops a patch containing one reading as u
 The palette offers 170 of the 210 types in `types.h`; the rest the G2 does not offer from its own
 menus. `Operator` and `Name` sit outside `module_kind()` - an Operator plays only as part of the
 DXRouter that owns it (§14), and a Name module is text.
-
-## The two target patches
-
-Neither is a factory patch - both are CT's own, and the copies in `PatchTestFiles/` are the only
-reference to them.
-
-- **02 Big Pad** (`PatchTestFiles/BigPad.pch2`) - complete since 2026-09-19; its last
-  two, `ModAmt` and `SwOnOffT`, are both Partial.
-- **01 Mini Emulator** (`PatchTestFiles/MiniEmulator.pch2`) - needs eight more:
-  `MonoKey`, `Glide`, `LevConv`, `LevAdd`, `Sw2-1`, `Sw8-1`, `ValSw2-1`, `2-In`. Their laws are
-  worked out in `mini-emulator-engine-plan.md`.

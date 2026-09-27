@@ -33,6 +33,9 @@ Shape mod input, which the engine ignores.
 19 DxPiano         COMPLETE
 ```
 
+- ***BASIC VERSIONS OF EVERY REMAINING MODULE (2026-09-27)*** - reference §70; all 170 types now modelled,
+  52 Partial (engine-module-status.md is the refinement queue). CHECK: patches using them play without
+  runaway or silence; tell me which sound most wrong, and those get the reference model first.
 - ***SINGLE-PART MODULES (2026-09-27)*** - reference §69: SeqLev, RandomB, NoteDet, 4-In, CompSig, LevMod, EnvFollow, PartQuant,
   DlyShiftReg, DlyClock, Digitizer, WahWah; checked in patches built in code (WahWah exactly).
   CHECK ON THE G2 by ear: WahWah swept by an LFO, Digitizer at a low rate and 4 bits, LevMod's Balance
