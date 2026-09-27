@@ -18,7 +18,7 @@ which fails the run if it names a module that is not offered or not modelled.
 |---|---|---|---|
 | **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Shape A, Osc Shape B, Osc Dual, Noise, Metallic Noise, Osc Percussion, Drum Synth, FM Operator, DX Router, Osc Master | Osc Phase Mod, Noise Osc, Osc String, Driver, Resonator | - |
 | **Filters** (§10, §13, §21-§23, §56, §67, §69, §70) | LP Filter, HP Filter, Nord Filter, Classic Filter, Phase Filter, Static Filter, WahWah, Eq 2-band, Eq 3-band, Eq Peak | Multi Filter, Comb Filter, FltVoice, Vocoder | - |
-| **Envelopes** (§17) | Envelope ADSR | Envelope AHD, Envelope ADR, Envelop ADDSR, Envelope H, Envelope D, Envelope Multi, Envelope Mod AHD, Envelope Mod ADSR | - |
+| **Envelopes** (§17) | Envelope ADSR, Envelope AHD, Envelope ADR, Envelop ADDSR, Envelope H, Envelope D, Envelope Mod AHD, Envelope Mod ADSR | Envelope Multi | - |
 | **LFOs** (§28, §42, §50, §54) | LFO A, LFO B, LFO C, LFO Shp A | Clock Generator | - |
 | **Mixers** (§3) | Mixer 1-1 A, Mixer 1-1 S, Mixer 2-1 A, Mixer 4-1 A, Mixer 4-1 B, Mixer 4-1 C, Mixer 4-1 S, Mixer 2-1 B, Mixer 8-1 A, Mixer 8-1 B, MixFader, MixStereo, Fade 1-2, Fade 2-1, X-Fade, Pan | - | - |
 | **Level** (§16, §29, §43, §44, §48, §68, §69, §70) | Constant, ConstSwM, ConstSwT, CompLev, CompSig, LevAdd, LevAmp, LevConv, LevMod, LevMult, MinMax, EnvFollow, Red2Blue, Blue2Red | ModAmt, NoiseGate | - |
@@ -32,7 +32,7 @@ which fails the run if it names a module that is not offered or not modelled.
 | **Random** (§47, §64, §69, §70) | Random A, Random B, Rnd Clock A, Rnd Trig | Rnd Clock B, Rnd Pattern | - |
 | **Note** (§26, §41, §49, §69, §70) | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler | Glide, Pitch Tracker, Zero Crossing Counter, Level Scaler | - |
 | **MIDI** (§70) | CtrlSend, PCSend, NoteZone, Automate | NoteSend, CtrlRcv, NoteRcv | - |
-| **Total 170** | **118** | **52** | **0** |
+| **Total 170** | **125** | **45** | **0** |
 
 | Partial module | What is still open |
 |---|---|
@@ -65,13 +65,6 @@ which fails the run if it names a module that is not offered or not modelled.
 | Noise Osc | Q and level measured, not yet read from the reference model (§8) |
 | Comb Filter | not yet checked against the reference model |
 | Multi Filter | GComp not yet checked against the reference model |
-| Envelop ADDSR | KB gate and Reset not read (§17.9) |
-| Envelope ADR | KB gate and Reset not read (§17.9) |
-| Envelope AHD | KB gate and Reset not read (§17.9) |
-| Envelope D | KB gate and Reset not read (§17.9) |
-| Envelope H | KB gate and Reset not read (§17.9) |
-| Envelope Mod ADSR | KB gate and Reset not read (§17.9) |
-| Envelope Mod AHD | KB gate and Reset not read (§17.9) |
 | Envelope Multi | rise to an intermediate level is a guess (§17.9) |
 | ModAmt | Enable button unconfirmed (§29.4) |
 | Chorus | a third chorus in one patch passes dry (pool of 2 lines) |
@@ -101,6 +94,12 @@ below say what refining each will take; update them by hand as modules move to W
 | **Basic versions with no part in the reference** | Driver, Resonator, Zero Crossing Counter, Level Scaler - need captures from the G2 |
 | **Limited by what reaches the engine** | CtrlRcv (no MIDI CC stream), NoteRcv (no channels), Device (global wheel 2), 4 Inputs (Bus not bridged) |
 | **Nothing to render** | CtrlSend, PCSend, Automate, NoteZone (counted Working) |
+
+**Moved to Working on 2026-09-27 (end of session):** the seven envelopes other than Multi. Each now reads
+its own KB and Reset, and EnvD and EnvH have no KB at all (§17.4). Also improved without a change of
+status: Nord Filter's FM lin, Res and Pitch inputs (§23.5), the LFOs' RndSt and Rnd (§28.3), and the
+outputs' AC coupling (notes §198). Still open from that session: 14 CS80project72 lacks the G2's 527 Hz
+partial (todo.md).
 
 ## Notes
 
