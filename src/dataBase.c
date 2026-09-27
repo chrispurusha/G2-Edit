@@ -344,9 +344,25 @@ void init_patch(uint32_t slot) {
             }
         }
     }
-    gNote2Size[slot]                  = 0;
-    gControllerCount[slot]            = 0; // Seems to default to 2, so might need to set up defaults
-    gPatchNotesSize[slot]             = 0;
+
+    // The patch Volume the top bar shows and the engine plays (reference §63): a new patch has one too,
+    // at the level the instrument's own new patches carry, and switched on
+    {
+        tModule * volumeModule = get_module_slot(slot, (uint32_t)locationMorph, patchModuleVolume);
+
+        volumeModule->active = true;
+        volumeModule->key    = (tModuleKey){
+            slot, (uint32_t)locationMorph, patchModuleVolume
+        };
+
+        for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
+            volumeModule->param[variation][VOLUME_LEVEL].value = 100;
+            volumeModule->param[variation][VOLUME_MUTE].value  = 1;
+        }
+    }
+    gNote2Size[slot]       = 0;
+    gControllerCount[slot] = 0;            // Seems to default to 2, so might need to set up defaults
+    gPatchNotesSize[slot]  = 0;
     memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
     memset(gNote2[slot], 0, sizeof(gNote2[0]));
     memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));

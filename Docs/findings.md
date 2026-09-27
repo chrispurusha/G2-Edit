@@ -11581,17 +11581,17 @@ Two harness bugs were found on the way, both worth remembering for the next modu
 
 ====================================================================================================
 
-## 2026-09-25 - DrumSynth settled from the instrument's code, checked on the G2
+## 2026-09-25 - DrumSynth settled from the instrument's own code, checked on the G2
 
-CT: "let's try and nail drum synth", with the G2 connected, and repeatedly "refer back to the instrument's code".
-Every law below came out of the instrument's two DrumSynth parts (a harness kept outside the repo);
+CT: "let's try and nail drum synth", with the G2 connected, and repeatedly to refer back to the instrument's own code.
+Every law below came out of the instrument's two DrumSynth parts, run offline in a harness kept outside the repo;
 the captures only checked them. Reference §39.1, §39.4a, §39.6, §39.9, §39.10.
 
 **The three open harness items were not what they looked like.**
 - The "2-bit shift in the Pitch index" is correct: a DSP signal unit is 2^15, not 2^17, so 64 units
   is 0x200000 (the velocity curve's top) and the `x4` is the accumulator shift.
 - The resting-Pitch fudge (0x20000) was a table read four entries early: `TableInit` sets
-  `_cutoff = a table + 0x10`. Fixed, the harness plays the dial's pitch at Pitch 0, and the
+  the pitch and noise tables are read four entries higher than the filter modules' table. Fixed, the harness plays the dial's pitch at Pitch 0, and the
   noise cutoff table's base becomes 20.6 Hz - whose Chamberlin reading is the 10.3 Hz peak law
   measured on 09-20.
 - The "stale register" in the Pitch index is the BEND ENVELOPE, sitting in the accumulator.
@@ -11640,15 +11640,14 @@ channel 3 for Slot A as cabled on 2026-09-25).
 CT: "This is why we should always refer to the reference. Worth doing OscShpB." then "I'd like to nail this, so
 take on the decoder."
 
-Sine3/Sine4 were the last OscShpB waves on fitted laws, because the earlier reading for their DSF parts gave
+Sine3/Sine4 were the last OscShpB waves on fitted laws, because the earlier reading of their DSF parts gave
 a quarter of the G2's level and a ratio with no ceiling. No host update action explained it: all eight
 wave parts carry the same Active opcode and nothing else. So the part's own DSP program was decoded - the
-DSP program is real DSP56300 machine code - with a harness kept outside the repo, and run with
-the emulator an emulator beside it.
+DSP program is real DSP56300 machine code - with a disassembler and an emulator kept outside the repo.
 
-**the earlier reading mistranslates two instructions.** `move #$5a,y1` loads a FRACTION into the MSBs (0.703125);
+**The earlier reading gets two instructions wrong.** `move #$5a,y1` loads a FRACTION into the MSBs (0.703125);
 the C multiplies by the integer 90. And the C shifts its 64-bit quotient right by 2 where the DSP's 16
-DIVs + ASL #32 leave N'/D' unshifted. With both slips switched on the emulator reproduces the earlier reading to
+DIVs + ASL #32 leave N'/D' unshifted. With both slips switched on the emulator reproduces the translation to
 the DIV's precision (64 LSB), which proves every other instruction; with them off it reproduces the G2's
 own sweep to 0.001 in level and ratio at all eleven Shapes, E4, both waves - including the "ceiling",
 which is the 16-step DIV wrapping once the quotient reaches 1, not a cap on the ratio.
@@ -11657,8 +11656,8 @@ The engine now does the part's arithmetic (reference §27.3, `dsf_divide()` in w
 the same sweep to 0.001, and E2/E6 to 0.002. Fitted constants gone: DSF_RATIO_MAX 0.905, the level slope
 0.642 (now 0.703125, `#$5a`); Y0 is the frame's 8279556/2^23.
 
-**For the next part whose the instrument's code C disagrees with the hardware:** disassemble its DSP program and run it -
-a disassembler the part's program` and a `dsp_run()` beside the native call, as a check harness does. The emulator
+**For the next part whose translated code disagrees with the hardware:** disassemble its DSP program and run it -
+disassemble it and run it beside the translation, sample for sample. The emulator
 covers parallel moves, the data ALU, IFcc, DIV and ASL/ASR #n; SineSym also uses Tcc, long immediates
 and one opcode ($040434) not yet decoded.
 
@@ -11666,7 +11665,7 @@ and one opcode ($040434) not yet decoded.
 
 ## 2026-09-25 - OscPerc, from its DSP program, checked on the G2
 
-CT: "Move onto other modules? Percsynth?" OscPerc is one DSP part (`CPartOscPerc`) behind the shared
+CT: "Move onto other modules? Percsynth?" OscPerc is one DSP part behind the shared
 pitch part. Its DSP program needed three more instruction classes in the emulator - X:Y double moves, Tcc,
 IFcc.U - and one real emulator fix: **TFR leaves the condition codes alone**. The part's edge detector
 depends on it (a product's sign survives a `tfr` into the next `tst ... ifge.u`), and with TFR setting
@@ -11674,8 +11673,8 @@ flags the phase was reset every sample. The DSF parts could not have caught it: 
 followed by a flag-setting op. After the fix the earlier reading and the program agree bit for bit
 (0 of 96000 samples, every setting tried).
 
-The host side came out of the instrument's code too: Decay is a stored table (a stored table), Click is SQUARED by
-`PercClickAction`, Punch patches `asl b ifec` into one P-word, and an unpatched input's slot points at a
+The host side came out of the instrument's code too: Decay is a stored table, Click is SQUARED by
+the host's Click action, Punch patches `asl b ifec` into one P-word, and an unpatched input's slot points at a
 constant - offset k in the connector is k x 2^16 (0x20 = 64 units, which is why the DrumSynth's
 unpatched Vel measured 64 units). OscPerc's unpatched Trig reads constant 0, so it never strikes.
 
@@ -11707,3 +11706,186 @@ rate it passes that ultrasonic energy straight out, and whether the G2's own out
 capture above 48 kHz (the Fireface). Method lesson: compare renders and captures at the SAME bandwidth,
 and put the onset threshold well above a quiet take's floor (2% of peak aligned on floor spikes).
 
+## 2026-09-25 - Stage patches (User1): S&H, KeyQuant, and a bus that dropped outputs
+
+CT: "I'd concentrate on my User1 patches. They're my stage patches." The 19 User1 patches were read off
+the G2 itself (category User1 in the name cache; each loaded into Slot A and saved, the test rig put back).
+8 already had every module the engine plays. By patches unblocked: S&H 6, KeyQuant 4, Phaser 3, then
+single-patch modules.
+
+**S&H** (reference §38.5) and **KeyQuant** (§41) are in, each from the part's own program; KeyQuant is
+bit-identical to it over 231,120 cases. S&H alone changed nothing in five of its six patches - its output
+feeds KeyQuant, NoteQuant, CompLev or OscB's Shape mod input - so it needs those to be heard.
+
+**And an engine bug the survey exposed:** an FX bus took only the FIRST Voice-area 2-Out sent to it.
+08 Ice Pad has two on Fx 1/2, and its whole S&H/KeyQuant/filter branch was never built (29 nodes; 44
+now). Now every output on a bus is summed (notes §75, §80). 18 patches in the library send more than
+one 2-Out to one destination. After both: Ice Pad is 7.7 dB louder with its second branch, 15 Randee dz,
+09 Antarktis and 10 Troll change as S&H/KeyQuant take effect, and the eight complete stage patches
+render bit-identical to before.
+
+Also found on the way: loading the library logs `Mix4-1S: count from G2 = 8, our structures = 9` - a
+parameter-count mismatch in the module tables (todo.md).
+
+## 2026-09-25 - Stage patches: MinMax, ConstSwT, Sw1-8, logic Delay, RandomA; LFO Mono
+
+Five modules from the instrument's parts (reference §43-§47), which complete 07 Unstable Lead,
+14 CS80project72 (silent before: its voices run through Sw1-8 and MinMax) and 16 Sweep Lots (twelve
+RandomA modulating filters, shapes and pans, all stuck at zero before). 11 of the 19 stage patches
+are now complete.
+
+**RandomA** took a detour worth recording. The part's arithmetic is a one-pole in a fine domain
+scaled up by 2^13 and folded; read alone that makes every Step setting white noise. The missing piece
+is the host: Step writes TWO words, the coefficient p and a pre-scale of 2^-12/sqrt(p) on the draw,
+which is what keeps the spread the same while small Steps become a slow reflected walk. The engine's
+draws match the part over 200,000 draws at all four Steps.
+
+**LFO Mono (§42)**: CT reported 05 SelfOsc LFO's LFO "seems to vary". The Mono/Poly selector was
+ignored everywhere - every voice had its own LFO from a random phase. Now Mono is one shared phase.
+But 05 is a one-voice patch, and a probe of the engine's own phase showed its LFO already kept exact
+time across notes and gaps (10.3011 Hz, phase checked at 0.001, 1.731 and 2.000 s), so the fix does
+not change 05; it changes 02 Big Pad and 17 Mighty Nord, whose Mono LFOs used to sweep each chord note
+out of step. What 05 does have: its FltNord Freq is 0 with the Wheel morphing it to 127, and the LFO's
+negative half is clamped at dial 0, so the sweep's shape changes with the wheel. Not yet established
+what CT hears varying.
+
+`NODE_OUTPUTS` is 9 (Sw1-8 has nine outputs) and `MORPH_MASK_WORDS` 4 (the node grew past 192 words).
+
+## 2026-09-25 (late) - CompLev, NoteQuant, LFO rate inputs, OscMaster, DlySingleA/B
+
+Reference §48-§52. 12 of the 19 stage patches are complete (08 Ice Pad joins). NoteQuant is
+bit-identical to its part over 13.7 million cases. A gap found on the way: **no LFO read any of its
+inputs** - Rate inputs, Rate M and KBT did nothing (§50) - which is what OscMaster in Ice Pad needed.
+DlySingle's time law is DelayA/B's (Time x step), not the L(v+1)/128 a first reading of the tap
+part's wrap suggested; the readout and the TimeMod scaling agree with Time x step once the
+parameter's x256 is counted. Its interpolator is ours (cubic), not the part's table. 13 Dist Activity
+is still silent: its oscillator is an OscPM.
+
+## 2026-09-26 - OscPM, cable loops, LFO Snc: 13 Dist Activity plays
+
+OscPM from its parts (reference §53); 13 Dist Activity (three OscPMs phase-modulating each other) was
+still silent after it, for two reasons found with a per-node peak probe on a scratch copy of the engine:
+the patch closes a loop (LfoShpA's Snc clocks an S&H that sets that LfoShpA's rate through a NoteQuant)
+which the builder cut open, and Snc carried the waveform. Loops now run with a one-sample delay (notes
+§192) and Snc is the counter's 50% square (§54). 13 of the 19 stage patches are complete.
+
+The phase-mod part is the DX Operators' too, and gives 8 cycles per full-scale input where the engine's
+DX FM guess is 1 (todo.md).
+
+## 2026-09-26 - Phaser, FltVoice, FreqShift
+
+All three from their parts (reference §55-§57). 09 Antarktis and 10 Troll are complete; 12 Deli Noise
+already was, since its FreqShift's outputs are not cabled. 15 of the 19 stage patches are complete:
+the rest need the sequencer family (15, 18) or have audio input only (11 is fed from the 2-In, which
+the engine does not have). Checks without hardware: the Phaser chain is exactly allpass (unity on
+white noise for both types); FreqShift puts a 1 kHz tone at 1196 Hz with the other sideband 37 dB
+down, and its Hi/Lo ranges match the readout to 0.1 Hz. FreqShift's Sub range word disagrees with the
+readout by 12x - open.
+
+## 2026-09-26 - Sequencer steps measured on the Fireface: instant, 2 ticks late
+
+First captures on the new rig (G2 outs 3/4 -> Fireface inputs 5/6, 192 kHz, USB isolator; the audio
+band is below -100 dB per bin). A SeqVal (16 steps, a ramp of 8 x step) clocked by an OscA square at
+987.77 Hz, the square on the other output as the reference edge; then clocked by an LfoA square
+(control rate) instead. The step sequencers' shared part was transcribed first, and predicted both:
+- **No smoothing.** A step change rises in the converters' own step time (2.5-3.7 samples at 192 kHz,
+  the same as a hard square edge) - the value jumps within one sample.
+- **Two ticks of latency, at the clock's own rate.** Clocked by an audio-rate signal the part runs at
+  96 kHz and the step lands 4.07 samples at 192k (21.2 us = 2 x 10.4) after the clock's rising edge,
+  spread over exactly one 96 kHz sample. Clocked by a control-rate signal it runs at 24 kHz: 15.9-16.0
+  samples (83.3 us = 2 x 41.7), with no spread since the LFO ticks on the same grid.
+- The ramp steps are linear, 127 reading double a step above 112. (The G2's output is AC-coupled, so at
+  the slow clock the levels drain away between steps and only the edges are measurable.)
+- LfoA Hi at Rate 40 ran at 2.57 Hz on the G2; the engine's law gives 2.5753 - agreed.
+
+## 2026-09-26 - Kick 5's extra noise is the G2's output converter, not the DrumSynth
+
+CT heard slightly more noise from the engine's Kick 5 than from the G2. At 192 kHz on the Fireface,
+the band energy of 19 hits relative to the kick's body, engine minus G2: 2-8 kHz +0.1 dB, 8-16 kHz
++0.4, 16-20 kHz +0.8, 20-24 kHz +0.7, 24-32 kHz +1.9, 32-40 kHz +4.4, 40-48 kHz +6.3. (A first take was
+contaminated: pointing the rig's second 2-Out at Out 3/4 summed an OscPerc in. Check every Out's
+destination before a capture.)
+
+**The G2's output path, measured with pure OscA sines** into a 2-Out on Out 3/4: 4.2 kHz -0.02 dB,
+8.4 kHz -0.12, 12.6 kHz -0.29, 16.8 kHz -0.60, 21.1 kHz -1.08, 25.1 kHz -1.70, 29.8 kHz -2.65, 35.5 kHz
+-4.07, 42.2 kHz -6.06 (re 1 kHz; the Fireface is flat to far above this at 192 kHz). That droop is the
+whole Kick 5 difference, band for band - the DrumSynth's noise matches; the engine simply has no
+output converter. Whether the engine should model this roll-off is an open decision (todo.md).
+
+## 2026-09-26 - Sequencers, ClkGen, NoteSend: 18 Unreal Dreams plays itself
+
+The step sequencers (reference §58) and ClkGen (§59) are the instrument's parts ported word for word
+and checked against literal transcriptions (0 differences in 1.2 M and 12 M samples). ClkGen's four
+comparisons that read "x < 0" had been mis-transcribed as "x >= 0" at first, which silenced its 1/16
+output - `(x ^ 0x80000000) < 0x80000000` is the NEGATIVE test. 18 Unreal Dreams also needed its
+Voice-area 2-Out to reach the FX area through Bus 1/2 and a 2-In (§61), and NoteSend routed to its own
+slot (§62): its FX-area sequencers play its own voices. With no key pressed it now plays. 16 of the 19
+stage patches are complete; 15 Randee dz needs MetNoise, DlyStereo, RndClkA and RndTrig, and 11
+Cosmic Dream FltPhase (and its Phasers hear only the 2-In from the jacks).
+
+## 2026-09-26 - Patch Volume in the engine; the G2's volume readout is not its gain
+
+The engine ignored the patch Volume, and in engine mode the top bar had no dial: `init_patch()` made
+only the Morph module, not the Volume settings module the dial reads. Both fixed (reference §63). The
+gain law, from the host: the mixers' exp curve. Measured on the G2 through the Fireface, Volume 100 /
+64 / 32 read -6.18 / -17.60 / -34.60 dB against 127 - the curve to 0.13 dB. The printed-scale dB the
+top bar shows (-7.7 / -23.3 at 100 / 64) does not match the audio; left as is, since it is what the
+instrument displays. Every stage patch with Volume under 127 is now quieter in the engine by exactly
+that much (02 Big Pad -4.4 dB, 19 DxPiano -6.2). The backdoor gained `DEVSET MORPH <index> <param>
+<value>` for patch settings, and its NEWPATCH now builds the slot as File > New does.
+
+## 2026-09-26 - The outs 1/2 low shelf was the QU, not the G2
+
+With all four G2 outputs on the Fireface (outs 1-4 -> inputs 5-8), one OscA sine to Out 1/2 and Out
+3/4 at once, stepped 20.6 Hz - 1.3 kHz: out 1 matches outs 3 and 4 within 0.02 dB everywhere, all
+three dropping 0.28 dB at 20.6 Hz (the output coupling). The first-order shelf (zero 69 Hz, pole
+197 Hz) seen on outs 1/2 earlier belonged to the QU's inputs 5/6. (Out 2 read silent in the first
+take - a loose connection on the rig; re-taken: all four outputs agree within 0.03 dB from 20.6 Hz to
+1.3 kHz, and within 0.04 dB of each other in absolute level.)
+
+## 2026-09-27 - DlyStereo, MetNoise, RndClkA, RndTrig: 15 Randee dz complete
+
+All four are from the instrument's own parts (reference §64-§66), so 15 Randee dz is complete and
+plays itself from its ClkGen. That leaves 11 Cosmic Dream (Phase Filter) as the only stage patch the
+engine cannot yet play whole. DlyStereo is DelayB's tap twice over, with cross-feedback. MetNoise is
+five parts: two mod parts, which turn a dial plus its input into a word; a coefficient part; six
+squares at fixed ratios (1 : 1.34 : 1.50 : 1.79 : 2.32 : 2.47) on a squared frequency word; and eight
+identical one-pole high-passes, x4. A standalone run puts the spectral peaks where the ratios say:
+Colour 0 at the Freq-64 fundamentals, 354-878 Hz. Not yet captured.
+
+## 2026-09-27 - FltPhase from its parts: all 19 stage patches now play whole
+
+FltPhase is six state-variable allpass stages run in the DSP's accumulator, tapped after the Notches
+count (all six always run), with a Type-selected feedback word and dry-mix word (Notch 0/1, Peak
+0.9995/-0.2, Deep 0.9995/0.6). A clean model was built from the program listing. It is identical to
+the instrument's two parts over six million samples, and a deliberate one-LSB error in the frequency
+word, or a tap one stage late, is caught within 12 samples. The Freq table is 2 sin(pi fc/96k) for
+fc = 100 x 160^(v/127) Hz (within 3 LSB); the semitone and cent tables are exact closed forms. With
+11 Cosmic Dream done, every module in CT's 19 User1 stage patches that makes sound is modelled.
+
+## 2026-09-27 - Eighteen switch, counter and converter modules; two traps
+
+Built from the instrument's parts (reference §68) and each checked in a small patch assembled in code
+(a clock or constant into the module, the module into a 2-Out, an oscillator on the Out's other leg).
+Two traps, both general:
+- **A multi-output node must be listed in eval_node()'s stereo-pair switch**, or output 1 is
+  overwritten with output 0 after the node runs. ADConv lost D1 this way, so the AD/DA round trip
+  was wrong at exactly the odd units. Any new node kind with separate outputs needs that line.
+- **node_is_generator() is the list of what makes a chain audible.** MetNoise (§66) was missing, so a
+  patch whose only source was a MetNoise would have reported "Nothing is patched into it". Added.
+  Logic and constant chains are still not sources (todo).
+ValSw's parts test |Ctrl - value| <= 1/2 unit, which is equality, where the manual says "lower limit".
+The engine keeps the manual's reading until the G2 is asked (to-test).
+
+## 2026-09-27 - Twelve more modules (§69); 26 not implemented
+
+SeqLev, RandomB, NoteDet, 4-In, CompSig, LevMod, EnvFollow, PartQuant, DlyShiftReg, DlyClock, Digitizer
+and WahWah, each checked in a patch built in code. WahWah is also identical word for word to its part,
+through the same native-harness method as FltPhase. Two table checks were worth recording.
+EnvFollow's tables are the one-pole reaching 1% in the labelled time at 96 kHz (release to 1 LSB,
+attack to 0.2%). Digitizer's rate is exactly 32.70 Hz x 2^(v/12), confirmed by counting its hold
+changes. The the reference module names do not always match the palette's: its "SeqCtrl" is SeqLev (the
+16-step part) and its "SeqVolt" is SeqCtr. The remaining 26 are grouped by what they need in
+engine-module-status.md.
+Harness conversion trap: the converter drops a closing parenthesis on a connector at slot 0
+(`*(int *)**(int **)(this + 0x20)`); patch the output to W(W(W(self + 0x20))).

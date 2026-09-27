@@ -43,26 +43,30 @@ typedef struct {
 } tPartialRow;
 
 static const tGroupRow kGroups[] = {
-    {palGroupOsc,    "Oscillators", "§5-§8, §12, §21.3, §27"},
-    {palGroupFilter, "Filters",     "§10, §13, §21-§23"     },
+    {palGroupOsc,    "Oscillators", "§5-§8, §12, §21.3, §27, §51, §53, §66"},
+    {palGroupFilter, "Filters",     "§10, §13, §21-§23, §56, §67, §69"},
     {palGroupEnv,    "Envelopes",   "§17"                   },
-    {palGroupLfo,    "LFOs",        "§28"                   },
+    {palGroupLfo,    "LFOs",        "§28, §42, §50, §54"    },
     {palGroupMixer,  "Mixers",      "§3"                    },
-    {palGroupLevel,  "Level",       "§16, §29"              },
+    {palGroupLevel,  "Level",       "§16, §29, §43, §44, §48, §68, §69"},
     {palGroupShaper, "Shapers",     "§3.4"                  },
-    {palGroupDelay,  "Delays",      "§24"                   },
-    {palGroupFx,     "Effects",     "§11, §19, §20, §25"    },
-    {palGroupIo,     "In/Out",      "§16"                   },
-    {palGroupSwitch, "Switches",    "§30"                   },
-    {palGroupLogic,  "Logic",       "§38"                   },
-    {palGroupSeq,    "Sequencers",  ""                      },
-    {palGroupRnd,    "Random",      ""                      },
-    {palGroupNote,   "Note",        "§26"                   },
+    {palGroupDelay,  "Delays",      "§24, §52, §65, §69"           },
+    {palGroupFx,     "Effects",     "§11, §19, §20, §25, §55, §57, §69"},
+    {palGroupIo,     "In/Out",      "§16, §69"                   },
+    {palGroupSwitch, "Switches",    "§30, §45, §68"              },
+    {palGroupLogic,  "Logic",       "§38, §46, §68"              },
+    {palGroupSeq,    "Sequencers",  "§58, §69"                   },
+    {palGroupRnd,    "Random",      "§47, §64, §69"                },
+    {palGroupNote,   "Note",        "§26, §41, §49, §69"         },
     {palGroupMidi,   "MIDI",        ""                      },
 };
 
 // Audible, but something about the law is still a guess; to-test.md carries each check.
 static const tPartialRow kPartial[] = {
+    {"ValSw2-1",          "switches at the threshold (manual); its part tests equality within 1/2 unit (§68.2)"},
+    {"ValSw1-2",          "switches at the threshold (manual); its part tests equality within 1/2 unit (§68.2)"},
+    {"4 Inputs",          "silent (the jacks); a Bus source is not bridged (§69.12)"},
+    {"Note Detector",     "release velocity is not kept, so RVel reads 0 (§69.11)"},
     {"Noise Osc",         "Q and level measured, not yet read from its own part (§8)"                  },
     {"Comb Filter",       "not yet checked against the instrument's own part"                          },
     {"Multi Filter",      "GComp not yet checked against the instrument's own part"                    },
@@ -78,6 +82,17 @@ static const tPartialRow kPartial[] = {
     {"Chorus",            "a third chorus in one patch passes dry (pool of 2 lines)"                   },
     {"SwOnOffT",          "untested on hardware (§30)"                                                 },
     {"Glide",             "Lin and the Time table are the instrument's; the Log shape is ours (§36.1)" },
+    {"Delay",             "the time Mod input is not read (§46)"                                       },
+    {"Osc Phase Mod",     "Tri's corner correction and the Sync input not modelled (§53)"          },
+    {"FreqShift",         "Sub range: the part's word and the readout disagree 12x (§57)"          },
+    {"FltVoice",          "the fine-pitch table offset is read as none, not decoded (§56)"         },
+    {"Sequencer Note",    "the record inputs are not modelled; steps at 96 kHz whatever the clock's rate (§58)" },
+    {"Sequencer Event",   "steps at 96 kHz whatever the clock's rate (§58)"                             },
+    {"Sequencer Values",  "steps at 96 kHz whatever the clock's rate (§58)"                             },
+    {"Clock Generator",   "Master follows a fixed 120 BPM, not the global clock (§59)"                  },
+    {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },
+    {"Delay Single A",    "the tap's interpolator is ours, not the instrument's table (§52)"          },
+    {"Delay Single B",    "the tap's interpolator is ours, not the instrument's table (§52)"          },
 };
 
 #define PARTIAL_COUNT (sizeof(kPartial) / sizeof(kPartial[0]))

@@ -106,13 +106,15 @@ time and needed NO change - see §11.2.
 | # | What | Old | New | Old code at |
 |---|---|---|---|---|
 | 64 | DrumSynth inputs | io 1 Pitch, io 2 Vel (moduleResources.h and `drum_synth_step()`'s call) | io 1 Vel, io 2 Pitch, as the original face and the G2 have them (§39.1) | `19305ba` `src/moduleResources.h`, `src/soundEngine.c` |
-| 65 | DrumSynth noise path | one Chamberlin on `2 sin(pi f/rate)` of `flt_cutoff_hz()`, damping `1 - 3.2 res` floored at 0.2, sweep 5 octaves x dial, white_noise() | the instrument's code part A: LFSR, colour HP, two Chamberlin stages, coefficient the `_cutoff` word (+4 entries), sweep 512 env sweepWord semitones, damping `1 - 3.96 res` (§39.10) | `19305ba` `src/soundEngine.c` `drum_synth_step()` |
+| 65 | DrumSynth noise path | one Chamberlin on `2 sin(pi f/rate)` of `flt_cutoff_hz()`, damping `1 - 3.2 res` floored at 0.2, sweep 5 octaves x dial, white_noise() | the instrument's part A: LFSR, colour HP, two Chamberlin stages, coefficient the host cutoff word (+4 entries), sweep 512 env sweepWord semitones, damping `1 - 3.96 res` (§39.10) | `19305ba` `src/soundEngine.c` `drum_synth_step()` |
 | 66 | DrumSynth click | a quarter of the level, one-pole from the first sample | half the level, held one 24 kHz tick, then the one-pole (§39.4a) | `19305ba` `src/soundEngine.c` |
 | 67 | DrumSynth oscillators and bend | free-running phases, nominal pitch, bend `5 x level` octaves | restart on each hit, the resonator's frequency law capped at 4 kHz with its 8k low-pass, bend `64 x level` semitones saturating with Pitch at +-64 (§39.6) | `19305ba` `src/soundEngine.c` |
 | 68 | DrumSynth scale | the oscillators at `level x vel` (DSP word x 2) | DSP word x 4 throughout - 6 dB louder as a whole (§39.6) | `27dfc39` `src/soundEngine.c` (the x2 was the first 09-25 port) |
 | 69 | Noise Color | `kNoiseColour`, 17 measured corners and levels (18.3 kHz -> 129 Hz, -7.7 .. -14.8 dB) | the instrument's law: 20 kHz -> 12 Hz geometric, gain `1 + dial^3/65536` (§7.2a) | `19305ba` `src/soundEngine.c` `noise_colour()` |
 | 70 | OscShpB Sine3/Sine4 | r capped at 0.905 (`DSF_RATIO_MAX`), level slope 0.642, a plain division | the part's DSP program: no cap, slope 0.703125 (`#$5a`), its 16-step DIV whose wrap bounds Sine3 (§27.3) | `27dfc39` `src/waveModels.c` |
 | 71 | DrumSynth noise cutoff word | `sin(pi f / 96000)` (09-25 morning) | `2 sin(pi f / 192000)` - the table exactly; same below ~2 kHz, 15% higher at dial 127 (§39.10) | the 09-25 working tree, before this row |
+| 72 | FX bus feed | the FIRST Voice-area output sent to the bus | every one, summed (notes §75, §80) | `30f9320` `src/soundEngine.c` `voice_area_output_for_fx()` |
+| 73 | LFO Mono/Poly | ignored: every voice its own LFO from a random phase | Mono is one shared phase advanced once a sample (§42) | `30f9320` `src/soundEngine.c` `lfo_step()` |
 
 
 

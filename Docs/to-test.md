@@ -3,6 +3,81 @@ G2-Edit - TO TEST
 Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
+
+## STAGE PATCHES (User1) - which should play fully in the engine
+
+Kept current as modules land (2026-09-25). COMPLETE = every module that makes sound is in the engine
+(Status, Device, CtrlSend and NoteSend make none). A complete patch can still differ where a module is
+Partial (engine-module-status.md) or an input is not modelled - 07 Unstable Lead's S&H drives OscB's
+Shape mod input, which the engine ignores.
+
+```
+01 Mini Emulator   COMPLETE
+02 Big Pad         COMPLETE
+03 Chris Lead      COMPLETE
+04 Chris Pad       COMPLETE
+05 SelfOsc LFO     COMPLETE
+06 Noise Sweep     COMPLETE
+07 Unstable Lead   COMPLETE (09-25 late)
+08 Ice Pad         COMPLETE (09-25 late)
+09 Antarktis       COMPLETE (09-26)
+10 Troll           COMPLETE (09-26)
+11 Cosmic Dream    COMPLETE (09-27)
+12 Deli Noise      COMPLETE - its FreqShift's outputs are not cabled (FreqShift now built anyway)
+13 Dist Activity   COMPLETE (09-26) - a slow swell: its gate LFO runs at 1/16 Hz
+14 CS80project72   COMPLETE (09-25 late) - was silent
+15 Randee dz       COMPLETE (09-27) - plays itself from its ClkGen and sequencers
+16 Sweep Lots      COMPLETE (09-25 late) - its 12 RandomA were stuck at 0
+17 Mighty Nord     COMPLETE
+18 Unreal Dreams   COMPLETE (09-26) - plays itself from its sequencers through NoteSend
+19 DxPiano         COMPLETE
+```
+
+- ***SINGLE-PART MODULES (2026-09-27)*** - reference §69: SeqLev, RandomB, NoteDet, 4-In, CompSig, LevMod, EnvFollow, PartQuant,
+  DlyShiftReg, DlyClock, Digitizer, WahWah; checked in patches built in code (WahWah word for word).
+  CHECK ON THE G2 by ear: WahWah swept by an LFO, Digitizer at a low rate and 4 bits, LevMod's Balance
+  from clean through AM to ring.
+- ***SWITCHES, COUNTERS, CONVERTERS (2026-09-27)*** - reference §68: SwOnOffM, Sw2-1M, Sw4-1, Sw1-2,
+  Sw1-2M, Sw1-4, ValSw1-2, Mux8-1, Mux1-8, T&H, WindSw, ConstSwM, 8Counter, BinCounter, ADConv, DAConv,
+  Red2Blue, Blue2Red. Checked in patches built in code, not on the G2. CHECK ON THE G2 (one minute,
+  settles §68.2): ValSw2-1 with its value at 10, Ctrl from a ConstSwT - is In 2 chosen at Ctrl 10
+  only (the part's equality test), or at 10 and above (the manual's threshold)?
+- ***FLTPHASE (2026-09-27)*** - reference §67, word for word with the instrument's parts. CHECK ON THE
+  G2: 11 Cosmic Dream untouched (two FltPhases, Peak and Deep), engine against the G2, by ear. KBT is
+  the one path the parts check did not cover.
+- ***DLYSTEREO, METNOISE, RNDCLKA, RNDTRIG (2026-09-26/27)*** - reference §64-§66, from the instrument's
+  parts; none captured yet. CHECK ON THE G2: 15 Randee dz untouched, engine against the G2, by ear -
+  the random triggers' density, the stereo delay's cross-feedback, the metallic hats' colour. A
+  Fireface capture of MetNoise alone (Freq 0/64/127, Colour 0/64/127) would check §66's pitch and
+  filter laws directly.
+- ***PATCH VOLUME IN THE ENGINE (2026-09-26)*** - reference §63, law measured on the G2. CHECK: the top
+  bar's Volume dial in engine mode (app without a G2, and the plug-in) shows on a new patch and turns
+  the level down smoothly; a patch with Volume below 127 now plays quieter to match the G2.
+- ***SEQUENCERS, CLKGEN, NOTESCALER, NOTESEND, 2-IN FROM A BUS (2026-09-26)*** - reference §58-§62. The
+  sequencer part is measured on the G2 (instant steps, 2 ticks late); ClkGen is from its part. CHECK
+  ON THE G2: 18 Unreal Dreams untouched - does the engine's self-playing sequence match (notes, timing,
+  the 120 BPM master tempo)? 15 Randee dz's sequencing, once its last four modules are in.
+- ***PHASER, FLTVOICE, FREQSHIFT (2026-09-26)*** - reference §55-§57, from the instrument's parts.
+  CHECK ON THE G2: 09 Antarktis (Phaser Type I, Rate 14) and 10 Troll (FltVoice A/E/O swept by an LFO)
+  by ear. FreqShift's Sub range disagrees with its readout 12x (§57) - a capture at Sub, dial 127,
+  would settle it.
+- ***OSCPM, LOOPS CLOSED, LFO SNC (2026-09-26)*** - reference §53, §54, notes §192. A cable loop now
+  runs with a one-sample delay instead of being cut, and LfoB/LfoShpA's Snc is a 50% square, not a copy
+  of the wave. CHECK ON THE G2: 13 Dist Activity - the engine's version is silent for ~4 s then swells
+  over ~16 s (its LfoShpA is slowed x16 by a Constant on its Rate input); does the G2 do the same?
+- ***LFO RATE INPUTS, COMPLEV, NOTEQUANT, OSCMASTER, DLYSINGLE (2026-09-25 late)*** - reference
+  §48-§52. Every LFO's rate inputs and KBT were ignored until now (§50) - any patch that modulates an
+  LFO's rate changes. CHECK ON THE G2: 08 Ice Pad (OscMaster drives an LfoC; two DlySingleB), and
+  09 Antarktis / 10 Troll / 13 Dist Activity where NoteQuant and CompLev now act.
+- ***LFO MONO NOW SHARED (2026-09-25)*** - reference §42. A Mono LFO used to run per voice from a
+  random phase, so chord notes swept out of step. CHECK ON THE G2: 02 Big Pad and 17 Mighty Nord with
+  a chord held - the Mono LFO's sweep should move all notes together. 05 SelfOsc LFO (one voice) is
+  unchanged: its LFO keeps exact time; CT heard it "vary" - its Freq is morphed by the Wheel (0 to +127)
+  and the LFO's lower half is clamped at dial 0, so the sweep changes with the wheel. Say what varies.
+- ***MINMAX, CONSTSWT, SW1-8, LOGIC DELAY, RANDOMA (2026-09-25)*** - reference §43-§47, from the
+  instrument's parts. CHECK ON THE G2: 07 Unstable Lead, 14 CS80project72 and 16 Sweep Lots by ear
+  against the G2. RandomA's rate, Step and Edge feel; logic Delay's Mod input and RandomA's Pitch
+  input are not read.
 - ***MODADSR / MODAHD TIME-MOD JACKS NOW PLAY (2026-09-20)*** - reference §17.10. They were not
   connected to anything, so 01 Mini Emulator's filter sweep was wrong in every variation. The DECAY
   jack is measured against the G2 and matches (28/136/500/1536 ms at -32/-16/0/+16 units). CHECK ON
@@ -199,6 +274,9 @@ Full detail for each is in findings.md, searchable by the wording below.
   wave is DualSaw (it was three detuned saws), the sine is the instrument's. Harmonics checked against
   captures; STILL TO CHECK by ear, a high OscB saw or a DualSaw patch especially.
 - ***FILTER GRAPH PEAK STEADY AT FULL RESONANCE (2026-09-17)*** - code-notes/moduleGraphics.c.md §68a. FltClassic at Res 127: sweep Freq, the peak should glide rather than jump.
+- ***STAGE PATCHES: S&H, KEYQUANT, AND EVERY OUTPUT ON AN FX BUS (2026-09-25)*** - reference §38.5, §41,
+  notes §75. Play 08 Ice Pad (its second branch now sounds, +7.7 dB), 15 Randee dz, 09 Antarktis and
+  10 Troll against the G2; check KeyQuant's Closest/Evenly on a held S&H sequence.
 - ***OSCPERC PLAYS (2026-09-25)*** - reference §40. New module, from the part's own DSP program; offline
   it matches the G2 at E4 across Decay, Click and Punch. By ear against the G2: a Trig from the Keyboard,
   Decay 20-127, Click 0/127, Punch on (an octave-up first half cycle), and an unpatched Trig (silent).

@@ -556,9 +556,8 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "NEWPATCH") == 0) {
-        // notes §8
-        database_delete_modules_by_slot(gSlot);
-        database_delete_cables_by_slot(gSlot);
+        // notes §8 - as File > New: an empty slot with its patch settings (the Volume among them)
+        init_patch(gSlot);
         gLocation = (uint32_t)locationVa;
 
         if (device_ready()) {
@@ -977,18 +976,21 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         uint32_t  value      = 0;
 
         if (sscanf(arg, "%7s %u %u %u", loc, &index, &param, &value) != 4) {
-            backdoor_write_result("ERROR: expected 'DEVSET <VA|FX> <index> <param> <value>'\n");
+            backdoor_write_result("ERROR: expected 'DEVSET <VA|FX|MORPH> <index> <param> <value>'\n");
             return;
         }
-        uint32_t  location   = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        // MORPH reaches the patch settings (index 2 is Volume, reference §63)
+        uint32_t  location   = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx
+                               : (((loc[0] == 'M') || (loc[0] == 'm')) ? (uint32_t)locationMorph : (uint32_t)locationVa);
         tModule * module     = get_module_slot(gSlot, location, index);
 
-        if ((module == NULL) || (module->type == 0)) {
+        // patch settings have no module type; they only need to exist
+        if ((module == NULL) || ((location == (uint32_t)locationMorph) ? (module->active == false) : (module->type == 0))) {
             backdoor_write_result("ERROR: no module at that loc/index\n");
             return;
         }
         // notes §19
-        uint32_t  paramCount = module_param_count(module->type);
+        uint32_t  paramCount = (location == (uint32_t)locationMorph) ? MAX_NUM_PARAMETERS : module_param_count(module->type);
 
         if (param >= paramCount) {
             char     msg[160];

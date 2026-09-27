@@ -29,6 +29,7 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Add a dedicated master-clock/tempo panel
 
 MODULES AND GRAPHICS
+- Mix4-1S: the G2 sends 8 parameters where the module tables hold 9 (logged loading the patch library, 2026-09-25)
 - The rest of the Logic group: 8Counter, BinCounter, ADConv, DAConv and the logic Delay - the four done 2026-09-19 (reference §38) leave these five
 - Re-lay out the remaining families by rule (module-layout-rules.md "common face", tools/relayout.py) - Level group done 2026-09-13; next the delays and the pitch/FX group still on port coordinates
 - A drag-and-drop layout mode in the editor that snaps to the grid and writes the rows back - for what the rules cannot settle
@@ -266,6 +267,13 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - OscDual (§12.5): compare the new code sample for sample with the harness (the offline part harness kept outside the repo, `the harness`: note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
 - OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
 - OscB: Shape mod input, Sync and FM (FmLin) not modelled (reference §6.5)
+- DX FM depth (§14.3, a guess of 1 cycle per full-scale input): the Operators share OscPM's phase-mod part, which gives 8 cycles at full amount (§53) - decode the DXRouter's amount words and correct
+- OscPM: Tri corner correction and the Sync input (§53)
+- Pulse ignores its Type (Plus/Minus); logic Delay ignores its Mod input (§46)
+- Converter emulation ON/OFF option (CT 09-26): the G2's analogue output roll-off (-0.6 dB at 16.8 kHz, -1.1 at 21 kHz, -6 at 42 kHz, findings 09-26) as a switchable output stage. NO low shelf: outs 1/2 measured flat against 3/4 to 0.02 dB (findings 09-26) - the old shelf was the QU's inputs
+- Mux8-1X (reference §68.3): its crossfade program shifts the weights in ways the reading of it does not show - run the part's program in the DSP emulator and port that
+- ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither
+- Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play
 - Compressor: new §25 port needs an ear (to-test)
 - 03 Chris' Lead coverage left: OscShpB waves (above), native check of Mix4-1C/Mix4-1S, clock-synced DelayB uses a fixed 120 BPM
 

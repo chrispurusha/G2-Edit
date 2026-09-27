@@ -24,7 +24,7 @@ Keep the shape of that lesson for the next module: **before designing a capture,
 measurement is a function of.** If the quantity you can measure is downstream of more than the
 thing you want, a good fit is not evidence.
 
-## 2026-09-25: SETTLED from the instrument's code, and two rig traps
+## 2026-09-25: SETTLED from the instrument's own code, and two rig traps
 
 Everything this recipe was waiting on is settled (reference §39.6, §39.9, §39.10; findings.md
 2026-09-25). Two things about the rig that any further capture must allow for:
