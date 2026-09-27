@@ -551,8 +551,9 @@ static void build_state_record(tG2Plugin * g2) {
     used += (size_t)snprintf(text + used, sizeof(text) - used, "perfmode=%u\nselected=%u\n",
                              (unsigned)gGlobalSettings.perfMode, (unsigned)gSlot);
     // notes §10 - the editor's mouse mode and the engine's drone mode too.
-    used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndrone=%d\n",
-                             (int)synthlib_dial_mode(), (sound_engine_drone_mode() == true) ? 1 : 0);
+    used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndrone=%d\ndac=%d\n",
+                             (int)synthlib_dial_mode(), (sound_engine_drone_mode() == true) ? 1 : 0,
+                             (sound_engine_dac_emulation() == true) ? 1 : 0);
     // notes §10 - the performance's name, which its image does not carry
     used += (size_t)snprintf(text + used, sizeof(text) - used, "perfname=%s\n", gGlobalSettings.perfName);
 
@@ -613,6 +614,7 @@ typedef struct {
     int32_t selected;
     int32_t dialMode;
     int32_t drone;
+    int32_t dac;
 
     // Per slot: each slot holds its own patch and so its own divider. -1 is "the record did not say".
     // Written 2026-09-16 only; a record with patch data carries the dividers in that instead.
@@ -641,6 +643,8 @@ static void parse_state_line(tG2State * state, char * line) {
         state->dialMode = atoi(value);
     } else if (strcmp(key, "drone") == 0) {
         state->drone = atoi(value);
+    } else if (strcmp(key, "dac") == 0) {
+        state->dac = atoi(value);
     } else if (strcmp(key, "perfname") == 0) {
         state->havePerfName = true;
         snprintf(state->perfName, sizeof(state->perfName), "%s", value);
@@ -687,6 +691,7 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     state->selected = -1;
     state->dialMode = -1;
     state->drone    = -1;
+    state->dac      = -1;
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         state->split[slot] = -1;
@@ -765,6 +770,7 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
         }
     }
     sound_engine_set_drone_mode(state->drone != 0);     // notes §10 - absent (-1) is the default, on
+    sound_engine_set_dac_emulation(state->dac != 0);    // the same: absent is on
     free(state);
 
     if (g2->active == true) {

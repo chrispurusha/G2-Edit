@@ -56,6 +56,11 @@ void init_database(void);
 // Resets a slot to a brand-new empty patch, including the pane divider position.
 void set_patch_name_from_filename(uint32_t slot, const char * filepath);
 void init_patch(uint32_t slot);
+#define NEW_PATCH_VOLUME        (100)    // the level the instrument's own new patches carry
+#define MISSING_PATCH_VOLUME    (127)    // a loaded patch that carries no Volume plays at full level
+
+// Gives a slot whose patch carries no Volume one at this level, switched on.
+void ensure_patch_volume(uint32_t slot, uint32_t level);
 void clear_slot_data(uint32_t slot);
 
 #endif // __DATABASE_H__

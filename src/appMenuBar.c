@@ -426,6 +426,11 @@ static void action_toggle_drone(int index) {
     (void)index;
     sound_engine_set_drone_mode(sound_engine_drone_mode() == false);
 }
+
+static void action_toggle_plugin_dac(int index) {
+    (void)index;
+    sound_engine_set_dac_emulation(sound_engine_dac_emulation() == false);
+}
 #endif
 
 void open_settings_menu(tCoord anchor) {
@@ -441,16 +446,21 @@ void open_settings_menu(tCoord anchor) {
         {"MIDI Controller List", (tRgb)RGB_GREY_3, action_open_midi_cc_list,   0, NULL, 0, 0.0},
 #ifdef SYNTHLIB_PLUGIN_BUILD
         {"Drone Mode",           (tRgb)RGB_GREY_3, action_toggle_drone,        0, NULL, 0, 0.0},
+        {"G2 Output Filter",     (tRgb)RGB_GREY_3, action_toggle_plugin_dac,   0, NULL, 0, 0.0},
 #endif
         {NULL,                   (tRgb)RGB_BLACK,  NULL,                       0, NULL, 0, 0.0},
     };
 
 #ifdef SYNTHLIB_PLUGIN_BUILD
-    tMenuItem *      drone   = &items[(sizeof(items) / sizeof(items[0])) - 2];
+    tMenuItem *      drone   = &items[(sizeof(items) / sizeof(items[0])) - 3];
+    tMenuItem *      dac     = &items[(sizeof(items) / sizeof(items[0])) - 2];
     bool             on      = sound_engine_drone_mode();
+    bool             dacOn   = sound_engine_dac_emulation();
 
     drone->label  = on ? "* Drone Mode" : "  Drone Mode";
     drone->colour = on ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
+    dac->label    = dacOn ? "* G2 Output Filter" : "  G2 Output Filter";
+    dac->colour   = dacOn ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
 #endif
     open_context_menu(anchor, items, 0, 0.0);
 }
@@ -752,6 +762,11 @@ static void action_select_audio_device(int index) {
 static const int32_t kOutputLevels[]                                          = {0, -3, -6, -9, -12, -18, -24};
 
 #ifndef SYNTHLIB_PLUGIN_BUILD    // needs the application's audio-device and MIDI-input layers
+
+static void action_toggle_dac_emulation(int index) {
+    (void)index;
+    audio_output_select_dac_emulation(sound_engine_dac_emulation() == false);
+}
 
 static void action_select_output_level(int index) {
     if ((index >= 0) && (index < (int)(sizeof(kOutputLevels) / sizeof(kOutputLevels[0])))) {
@@ -1078,6 +1093,12 @@ void open_experimental_menu(tCoord anchor) {
                 "Output Level", (tRgb)RGB_GREY_3, NULL, 0, levels, 0, 0.0
             };
         }
+        // notes §13 - the G2's output roll-off, on by default
+        items[i++] = (tMenuItem){
+            sound_engine_dac_emulation() ? "* G2 Output Filter" : "  G2 Output Filter",
+            sound_engine_dac_emulation() ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3,
+            action_toggle_dac_emulation, 0, NULL, 0, 0.0
+        };
 
         // A stereo device has nothing to choose. Multi-column past eight, or a 32-output interface
         // runs off the bottom of the screen.

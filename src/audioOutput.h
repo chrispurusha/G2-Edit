@@ -62,6 +62,8 @@ uint32_t audio_output_selected_device_channels(void);
 
 // notes §3
 int32_t audio_output_level_db(void);
+// The G2 output-stage roll-off in the engine (sound_engine_set_dac_emulation), remembered in prefs.
+void audio_output_select_dac_emulation(bool on);
 void audio_output_select_level_db(int32_t db);
 
 uint32_t audio_output_buffer_frames(void);

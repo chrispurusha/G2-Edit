@@ -225,6 +225,7 @@ typedef enum {
 #define PULSE_PARAM_TIME       (0)
 #define PULSE_PARAM_TIMEMOD    (1)
 #define PULSE_PARAM_RANGE      (2)
+#define PULSE_DIAL_TOP         (127.0)
 
 // What counts as a logic high. The G2's logic signals are full-scale 0/1, so anything near the
 // middle separates them; the envelope that drives this in the measurement patch sweeps the whole
@@ -372,11 +373,13 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define DSP_FULL_SCALE            (4.0)  // notes §196 - a 24-bit word's range, which every stored value saturates to
 #define VALSW_PARAM_VALUE         (0)    // the Ctrl threshold, 0-64 units in whole steps
 #define VALSW_VALUE_TOP           (63)   // the top step reads 64, not 63 (render_paramType1UniPolShort)
+#define VALSW_MATCH_UNITS         (0.5)  // §34 - Ctrl selects On while within half a unit of the value
 #define MONOKEY_PARAM_PRIORITY    (0)    // monoKeyStrMap {Last, Lo, Hi}
 #define GLIDE_PARAM_TIME          (0)
 #define GLIDE_PARAM_ON            (1)    // offOnStrMap, default On
 #define GLIDE_PARAM_SHAPE         (2)    // logStrMap {Log, Lin}: 0 is Log
 #define GLIDE_SHAPE_LIN           (1)
+#define GLIDE_LIN_STEP_SCALE      (0.1)  // §36.1 - Lin steps a tenth of the envelope's attack step
 
 // §38 - the Logic group. A logic input is HIGH above zero, and a logic HIGH output is 64 units,
 // which is LOGIC_HIGH_LEVEL (§16, §30).
@@ -501,6 +504,7 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4, 9, 3, 2};
 #define CONSTSW_PARAM_BIP_UNI      (2)
 #define SW1TO8_OUTS                (8) // §45 - Out 1..8, then Ctrl
 #define LOGICDLY_PARAM_TIME        (0) // §46 - Time 0, TimeMod 1, Range 2; the type is mode 0
+#define LOGICDLY_PARAM_TIMEMOD     (1)
 #define LOGICDLY_PARAM_RANGE       (2)
 #define LOGICDLY_MODE_TYPE         (0) // logicDelayModeStrMap: Pos, Neg, Cycle
 #define LOGICDLY_TYPE_NEG          (1u)
@@ -664,6 +668,8 @@ typedef enum {
 // Where the output starts bending rather than shearing.
 #define OUTPUT_KNEE                 (0.80)
 #define OUTPUT_COUPLING_TAU         (0.01357) // notes §198 - seconds: the G2's outputs, a pole at 11.7 Hz
+#define DAC_FILTER_HZ               (33500.0) // notes §199 - the G2's output stage: a two-pole low-pass
+#define DAC_FILTER_Q                (0.66)
 #define ENVELOPE_SECONDS            (0.005)   // the anti-click ramp used when no EnvADSR is in the chain
 
 // Every ladder runs its full four poles whatever slope is selected — see ladder_filter().
@@ -743,7 +749,7 @@ typedef enum {
     eNodeLevConv,        // §31 - reads one range and writes another
     eNodeLevAdd,         // §32 - adds its dial to In
     eNodeSwSelect,       // §33 - Sw2-1 and Sw8-1: one of n inputs, plus a Ctrl output
-    eNodeValSw,          // §34 - ValSw2-1: In 2 once Ctrl reaches the threshold
+    eNodeValSw,          // §34 - ValSw2-1: In 2 while Ctrl equals the value
     eNodeMonoKey,        // §35 - the keyboard's last/lowest/highest key, shared by every voice
     eNodeGlide,          // §36 - a slew for control signals
     eNodeAudioIn,        // §37 - 2-In: the engine has no audio input, so silence
@@ -775,7 +781,7 @@ typedef enum {
     eNodeDlyStereo,      // §65 - two DelayB lines from one input, each feeding back itself and the other
     eNodeMetNoise,       // §66 - six squares at fixed ratios, through eight one-pole high-passes
     eNodeFltPhase,       // §67 - six state-variable allpass stages, tapped after 1-6, with feedback and dry mix
-    eNodeValSw12,        // §68.2 - In to Out 2 once Ctrl reaches the value, else Out 1
+    eNodeValSw12,        // §68.2 - In to Out 2 while Ctrl equals the value, else Out 1
     eNodeMux8to1,        // §68.3 - the input Ctrl picks, 4 units a step
     eNodeMux1to8,        // §68.3 - In on the output Ctrl picks
     eNodeTandH,          // §68.4 - follows In while Ctrl is high, holds it while low
@@ -900,6 +906,9 @@ typedef struct {
 
     double          gain;            // LevAmp
     double          pulseSeconds;    // Pulse gate width, and the logic Delay's time
+    double          pulseDial;       // §18.3 - the Time dial and its Range, for a Time Mod input to move
+    double          pulseTimeMod;    // the TimeMod dial: dial steps per 64 units of Mod
+    uint32_t        pulseRange;
     double          timeSecondsR;    // §65 - DlyStereo's second line
     int32_t         dlyStereoFb[4];  // §65 - FB L, FB R, X-FB L, X-FB R words
     int32_t         metWords[4];     // §66 - Freq base, Freq mod, Colour base, Colour mod
@@ -1336,15 +1345,23 @@ static uint32_t             gOversampleBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0)
 static uint32_t             gOscOversampleBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 4 / ENGINE_OVERSAMPLE};
 #define gOscOversample           (gOscOversampleBank[SE])
 
-// The tempo a clock-synced module works to. The engine does not run the patch's master clock, so
-// anything set to Clk needs a reference; 120 BPM is the obvious one and makes 1/4 exactly half a
-// second. See the delay's Clk branch — this is a stand-in, not the hardware's tempo.
-#define ENGINE_REFERENCE_BPM    (120.0)
+// notes §200 - the tempo when the G2's master clock is not known (a lone patch file, no G2)
+#define ENGINE_REFERENCE_BPM     (120.0)
+#define MASTER_CLOCK_BPM_MIN     (30u)
+#define MASTER_CLOCK_BPM_MAX     (240u)
+
+// notes §200 - the tempo every Clk-synced module and a Master-sourced ClkGen follow: the G2's master clock
+static double engine_master_bpm(void) {
+    uint32_t bpm = gGlobalSettings.masterClock;
+
+    return ((bpm >= MASTER_CLOCK_BPM_MIN) && (bpm <= MASTER_CLOCK_BPM_MAX)) ? (double)bpm : ENGINE_REFERENCE_BPM;
+}
+
 
 static double               gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
-#define gDeviceRate             (gDeviceRateBank[SE])
+#define gDeviceRate    (gDeviceRateBank[SE])
 static double               gSampleRateBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
-#define gSampleRate             (gSampleRateBank[SE])
+#define gSampleRate    (gSampleRateBank[SE])
 
 // notes §30
 typedef struct {
@@ -1432,6 +1449,16 @@ static double                 gOutHistoryBank[SOUND_ENGINE_MAX_ENGINES][4][OUT_D
 static uint32_t               gOutHistoryPosBank[SOUND_ENGINE_MAX_ENGINES];
 static double                 gOutCouplingBank[SOUND_ENGINE_MAX_ENGINES][4][2];                    // notes §198 - last input, last output
 #define gOutCoupling         (gOutCouplingBank[SE])
+static double                 gDacStateBank[SOUND_ENGINE_MAX_ENGINES][4];                          // notes §199 - the past input
+static double                 gDacStateOutBank[SOUND_ENGINE_MAX_ENGINES][4][2];                    // and two past outputs
+#define gDacState            (gDacStateBank[SE])
+#define gDacStateOut         (gDacStateOutBank[SE])
+static double                 gDacCoefBank[SOUND_ENGINE_MAX_ENGINES][4];                           // b0, b1, a1, a2
+static double                 gDacCoefRateBank[SOUND_ENGINE_MAX_ENGINES];
+#define gDacCoef             (gDacCoefBank[SE])
+#define gDacCoefRate         (gDacCoefRateBank[SE])
+static _Atomic bool           gDacEmulationBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = true};
+#define gDacEmulation        (gDacEmulationBank[SE])
 #define gOutHistoryPos       (gOutHistoryPosBank[SE])
 
 static double                 gOscDecimateBank[SOUND_ENGINE_MAX_ENGINES][OSC_DECIMATE_TAPS];
@@ -1864,6 +1891,45 @@ bool sound_engine_drone_mode(void) {
     return atomic_load(&gDroneMode);
 }
 
+void sound_engine_set_dac_emulation(bool on) {
+    SE_LOCAL;
+
+    atomic_store(&gDacEmulation, on);
+}
+
+bool sound_engine_dac_emulation(void) {
+    SE_LOCAL;
+
+    return atomic_load(&gDacEmulation);
+}
+
+// notes §199 - Vicanek's matched second-order low-pass: the analogue poles exactly, the zeros chosen
+// so the magnitude matches the analogue one at DC, at the corner and at Nyquist
+static void dac_filter_design(double rate) {
+    SE_LOCAL;
+
+    double w0   = 2.0 * M_PI * DAC_FILTER_HZ / rate;
+    double zeta = 1.0 / (2.0 * DAC_FILTER_Q);
+    double r    = exp(-zeta * w0);
+    double a1   = -2.0 * r * cos(sqrt(1.0 - (zeta * zeta)) * w0);
+    double a2   = r * r;
+    double A0   = (1.0 + a1 + a2) * (1.0 + a1 + a2);
+    double A1   = (1.0 - a1 + a2) * (1.0 - a1 + a2);
+    double A2   = -4.0 * a2;
+    double phi1 = sin(w0 * 0.5) * sin(w0 * 0.5);
+    double phi0 = 1.0 - phi1;
+    double phi2 = 4.0 * phi0 * phi1;
+    double R1   = ((A0 * phi0) + (A1 * phi1) + (A2 * phi2)) * DAC_FILTER_Q * DAC_FILTER_Q;
+    double B1   = (R1 - (A0 * phi0)) / phi1;
+    double b0   = 0.5 * (sqrt(A0) + sqrt(fmax(B1, 0.0)));
+
+    gDacCoef[0]  = b0;
+    gDacCoef[1]  = sqrt(A0) - b0;
+    gDacCoef[2]  = a1;
+    gDacCoef[3]  = a2;
+    gDacCoefRate = rate;
+}
+
 #define SUSTAIN_PEDAL_DOWN    (0.5)   // CC64 at 64 and above, as MIDI has it
 
 bool sound_engine_set_morph(uint32_t group, double amount) {
@@ -1932,7 +1998,7 @@ static double glide_tick_coeff(double setting, bool lin) {
     }
 
     if (lin == true) {
-        return 1.0 / ticks;                              // a constant step, full scale in that time
+        return GLIDE_LIN_STEP_SCALE * DSP_FULL_SCALE / ticks;    // §36.1 - a constant step
     }
     // TWICE the envelope's decay approach, which is what makes the dial's printed Time the time to
     // close the gap to 1% of it rather than the envelope's own reading of the same number.
@@ -3993,7 +4059,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeSandH:            // §38.5 - In, Ctrl
         case eNodeMinMax:           // §43 - A, B
         case eNodeSw1to8:           // §45 - In
-        case eNodeLogicDelay:       // §46 - In, then the time Mod input, which is not read
+        case eNodeLogicDelay:       // §46 - In, then the time Mod input
         case eNodeRandomA:          // §47 - Pitch, which moves the rate as an LFO's does (§50)
         case eNodeOscMaster:        // §51 - Pitch, PitchVar
         case eNodeDlySingle:        // §52 - In, then B's Time mod
@@ -4667,7 +4733,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 if (clocked == true) {
                     // notes §85
                     node->timeSeconds = clk_sync_beats(param_value(module, variation, DELAY_PARAM_TIME))
-                                        * (60.0 / ENGINE_REFERENCE_BPM);
+                                        * (60.0 / engine_master_bpm());
 
                     // notes §86
                     while ((node->timeSeconds > maxTime) && (node->timeSeconds > 0.0)) {
@@ -4872,7 +4938,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeValSw12:
         {
-            // §68.2 - ValSw2-1's threshold (§34)
+            // §68.2 - ValSw2-1's value (§34)
             double raw = param_value(module, variation, VALSW_PARAM_VALUE);
 
             node->constant = ((raw >= (double)VALSW_VALUE_TOP) ? 64.0 : raw) / UNITS_PER_FULL_SCALE;
@@ -4968,8 +5034,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeLogicDelay:
         {
             // §46 - the same time law and ranges as Pulse (§18)
-            node->pulseSeconds = pulse_time_seconds(param_value(module, variation, LOGICDLY_PARAM_TIME),
-                                                    (uint32_t)module->param[variation][LOGICDLY_PARAM_RANGE].value);
+            node->pulseDial    = param_value(module, variation, LOGICDLY_PARAM_TIME);
+            node->pulseRange   = (uint32_t)module->param[variation][LOGICDLY_PARAM_RANGE].value;
+            node->pulseTimeMod = param_value(module, variation, LOGICDLY_PARAM_TIMEMOD);
+            node->pulseSeconds = pulse_time_seconds(node->pulseDial, node->pulseRange);
             node->select       = (uint32_t)module->mode[LOGICDLY_MODE_TYPE].value;
             break;
         }
@@ -5050,7 +5118,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 double seconds = 0.0;
 
                 if (clocked == true) {
-                    seconds = clk_sync_beats(dial) * (60.0 / ENGINE_REFERENCE_BPM);   // notes §85
+                    seconds = clk_sync_beats(dial) * (60.0 / engine_master_bpm());   // notes §85
 
                     while ((seconds > maxTime) && (seconds > 0.0)) {
                         seconds *= 0.5;                                               // notes §86
@@ -5139,8 +5207,8 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             if (line < MAX_CLKGEN_LINES) {
                 tClkGenConfig * cfg   = &params->clkGen[line];
                 uint32_t        index = (uint32_t)param_value(module, variation, CLKGEN_PARAM_TEMPO);
-                // §59 - Master follows the instrument's global clock, which the engine takes as its reference tempo
-                double          bpm   = (module->param[variation][CLKGEN_PARAM_SOURCE].value != 0) ? ENGINE_REFERENCE_BPM
+                // §59 - Master follows the instrument's global clock
+                double          bpm   = (module->param[variation][CLKGEN_PARAM_SOURCE].value != 0) ? engine_master_bpm()
                                         : ((index < 32u) ? (24.0 + (2.0 * index))
                                            : ((index < 96u) ? (56.0 + index) : ((2.0 * index) - 40.0)));
 
@@ -5273,7 +5341,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeValSw:
         {
-            // §34 - the threshold in units, its top step reading 64 rather than 63.
+            // §34 - the value in units, its top step reading 64 rather than 63.
             double raw = param_value(module, variation, VALSW_PARAM_VALUE);
 
             node->constant = ((raw >= (double)VALSW_VALUE_TOP) ? 64.0 : raw) / UNITS_PER_FULL_SCALE;
@@ -5559,8 +5627,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodePulse:
         {
-            node->pulseSeconds = pulse_time_seconds(param_value(module, variation, PULSE_PARAM_TIME),
-                                                    (uint32_t)param_value(module, variation, PULSE_PARAM_RANGE));
+            node->pulseDial    = param_value(module, variation, PULSE_PARAM_TIME);
+            node->pulseRange   = (uint32_t)param_value(module, variation, PULSE_PARAM_RANGE);
+            node->pulseTimeMod = param_value(module, variation, PULSE_PARAM_TIMEMOD);
+            node->pulseSeconds = pulse_time_seconds(node->pulseDial, node->pulseRange);
             break;
         }
         case eNodeLevAmp:
@@ -6725,8 +6795,28 @@ static double delay_step(uint32_t line, double input, double fbModIn, double mix
     return (double)out / 2097152.0;
 }
 
+// §52.1 - the delay tap's read: four-point Lagrange, `back` samples behind the sample just written
+static double delay_ring_lagrange(const float * mem, uint32_t written, double back) {
+    double   d     = fmin(fmax(back, 0.0), (double)(DELAY_LINE_SAMPLES - 3));
+    uint32_t whole = (uint32_t)d;
+    double   t     = d - (double)whole;
+    double   y[4];
+
+    // whole - 1 .. whole + 2 behind; nothing is newer than the sample just written, which stands in
+    for (uint32_t k = 0; k < 4u; k++) {
+        uint32_t age = (whole + k > 0u) ? (whole + k - 1u) : 0u;
+
+        y[k] = (double)mem[(written + DELAY_LINE_SAMPLES - age) % DELAY_LINE_SAMPLES];
+    }
+
+    return (y[0] * (-t * (t - 1.0) * (t - 2.0) / 6.0))
+           + (y[1] * ((t + 1.0) * (t - 1.0) * (t - 2.0) / 2.0))
+           + (y[2] * (-(t + 1.0) * t * (t - 2.0) / 2.0))
+           + (y[3] * ((t + 1.0) * t * (t - 1.0) / 6.0));
+}
+
 // §52 - DlySingleA/B: the input goes in, and comes out Time x step samples later; Time M adds
-// In x TimeMod dial steps. The tap reads between samples, here with a cubic (Hermite) interpolator.
+// In x TimeMod dial steps.
 static double dly_single_step(uint32_t line, double input, double modIn, const tEngineNode * spec) {
     SE_LOCAL;
 
@@ -6736,29 +6826,12 @@ static double dly_single_step(uint32_t line, double input, double modIn, const t
     uint32_t write = gDelayWrite[line];
     float *  mem   = gDelayLine[line];
     double   dial  = fmax(0.0, fmin(127.0, spec->constant + (spec->modAmount * modIn)));
-    double   back  = fmin(dial * spec->timeSeconds * gSampleRate, (double)(DELAY_LINE_SAMPLES - 3));
-    uint32_t whole = (uint32_t)back;
-    double   t     = back - (double)whole;
+    double   back  = dial * spec->timeSeconds * gSampleRate;
 
     mem[write]        = (float)input;
     gDelayWrite[line] = (write + 1u) % DELAY_LINE_SAMPLES;
 
-    // the four samples around the read point, whole - 1 .. whole + 2 back; 0 back is this input,
-    // and the one before it does not exist yet, so it stands in for itself
-    double   y[4];
-
-    for (uint32_t k = 0; k < 4u; k++) {
-        uint32_t age = (whole + k > 0u) ? (whole + k - 1u) : 0u;
-
-        y[k] = (double)mem[(write + DELAY_LINE_SAMPLES - age) % DELAY_LINE_SAMPLES];
-    }
-
-    // y[0] is `whole - 1` back; interpolate between y[1] (whole) and y[2] (whole + 1)
-    double   c1    = 0.5 * (y[2] - y[0]);
-    double   c2    = y[0] - (2.5 * y[1]) + (2.0 * y[2]) - (0.5 * y[3]);
-    double   c3    = (0.5 * (y[3] - y[0])) + (1.5 * (y[1] - y[2]));
-
-    return y[1] + (t * (c1 + (t * (c2 + (t * c3)))));
+    return delay_ring_lagrange(mem, write, back);
 }
 
 // §65 - DlyStereo: DelayB's tap (§24) on two lines fed from the one input; each line's feedback is
@@ -7326,24 +7399,41 @@ static double shaper_step(double input, double modulation, const tEngineNode * s
     return shaper_transfer(&spec->shaper, spec->shaper.amount + (spec->shaper.mod * modulation), input);
 }
 
-// notes §106
-// TimeMod is NOT implemented: the module has a modulation input for its width and this ignores it,
-// which is honest rather than inventing a law for it. Nothing measured so far uses it.
-static double pulse_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
+// §18.3 - the time in samples, with a Time Mod input moving the dial by Mod x TimeMod steps
+static uint32_t pulse_time_samples(const tEngineNode * spec, double modIn) {
+    SE_LOCAL;
+
+    double seconds = spec->pulseSeconds;
+
+    if (spec->in[1] >= 0) {
+        seconds = pulse_time_seconds(fmin(fmax(spec->pulseDial + (modIn * spec->pulseTimeMod), 0.0), PULSE_DIAL_TOP),
+                                     spec->pulseRange);
+    }
+    double samples = seconds * gSampleRate;
+
+    return (samples < 1.0) ? 1u : (uint32_t)samples;
+}
+
+// notes §106 - gPulseCount is the samples since the rising edge plus one, 0 while idle, so a Time
+// Mod input moving during the pulse moves where it ends
+static double pulse_step(uint32_t voice, uint32_t node, double input, double modIn, const tEngineNode * spec) {
     SE_LOCAL;
 
     double   prev    = gPulsePrev[voice][node];
-    double   width   = spec->pulseSeconds * gSampleRate;
-    uint32_t samples = (width < 1.0) ? 1U : (uint32_t)width;
+    uint32_t samples = pulse_time_samples(spec, modIn);
 
     gPulsePrev[voice][node] = input;
 
     if ((prev <= PULSE_THRESHOLD) && (input > PULSE_THRESHOLD)) {
-        gPulseCount[voice][node] = samples;
+        gPulseCount[voice][node] = 1u;
     }
 
     if (gPulseCount[voice][node] > 0) {
-        gPulseCount[voice][node]--;
+        if (gPulseCount[voice][node] > samples) {
+            gPulseCount[voice][node] = 0;
+            return 0.0;
+        }
+        gPulseCount[voice][node]++;
         return 1.0;
     }
     return 0.0;
@@ -9306,8 +9396,9 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
 #define FLT_CONTROL_MIN          (0.0)
 #define FLT_CONTROL_MAX          (127.0)
 
-#define FLTMULTI_DAMPING_SPAN    (0.99)   // §10.2
-#define FLTMULTI_DAMPING_TOP     (0.01)   // §10.2 - the instrument's own value at Res 127
+#define FLTMULTI_DAMPING_SPAN    (0.99)                 // §10.2
+#define FLTMULTI_DAMPING_TOP     (0.01)                 // §10.2 - the instrument's own value at Res 127
+#define FLTMULTI_H_MAX           (0x518368 / 8388608.0) // §10.2 - the coefficient's ceiling, 20.8 kHz at 96 kHz
 
 static double fltmulti_damping(double resDial) {
     return (resDial >= 127.0) ? FLTMULTI_DAMPING_TOP : (1.0 - (FLTMULTI_DAMPING_SPAN * resDial / 128.0));
@@ -9331,7 +9422,8 @@ static void fltmulti_step(uint32_t voice, uint32_t node, const tEngineNode * spe
     control  = fmin(fmax(control, FLT_CONTROL_MIN), FLT_CONTROL_MAX);
 
     double * state     = gLadder[voice][node];            // low, band, the low before last
-    double   cutoff    = fmin(flt_cutoff_hz(control), gSampleRate * 0.45);
+    double   topHz     = (OSC_INSTRUMENT_RATE / M_PI) * asin(FLTMULTI_H_MAX);
+    double   cutoff    = fmin(fmin(flt_cutoff_hz(control), topHz), gSampleRate * 0.45);
     double   tuning    = 2.0 * sin(M_PI * cutoff / gSampleRate);
     double   damping   = fltmulti_damping(resonance * 127.0);
     double   bandScale = 1.0 - (0.5 * tuning);
@@ -10045,6 +10137,7 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
             }
 
             bx[8]             = (module->type == moduleTypeDelayQuad) && (module->param[variation][8].value != 0);
+            bx[9]             = engine_master_bpm();
             break;
         }
         case moduleTypeFlanger:
@@ -10219,7 +10312,7 @@ static void multi_tap_step(const tEngineNode * spec, double input, const double 
             double seconds = 0.0;
 
             if (bx[8] != 0.0) {
-                seconds = clk_sync_beats(bx[k]) * (60.0 / ENGINE_REFERENCE_BPM);
+                seconds = clk_sync_beats(bx[k]) * (60.0 / bx[9]);
 
                 while ((seconds > maxS) && (seconds > 0.0)) {
                     seconds *= 0.5;
@@ -10229,7 +10322,7 @@ static void multi_tap_step(const tEngineNode * spec, double input, const double 
 
                 seconds = delay_time_seconds(maxS, dial);
             }
-            out[first + k] = ring_read(gDelayLine[l], DELAY_LINE_SAMPLES, write, seconds * gSampleRate);
+            out[first + k] = delay_ring_lagrange(gDelayLine[l], write, seconds * gSampleRate);    // §52.1
         }
 
         if (spec->select == 1u) {
@@ -10565,12 +10658,11 @@ static double logic_level(bool high) {
 
 // §46 - Pos and Neg run a counter while the input is in the state whose leading edge is delayed,
 // and pass that state on once it has run the time out; Cycle shifts one whole pulse by the time.
-static double logic_delay_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double input) {
+static double logic_delay_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double input, double modIn) {
     SE_LOCAL;
 
     bool       high    = logic_high(input);
-    double     width   = spec->pulseSeconds * gSampleRate;
-    uint32_t   delay   = (width < 1.0) ? 1u : (uint32_t)width;
+    uint32_t   delay   = pulse_time_samples(spec, modIn);    // §18.3
     uint32_t * count   = &gPulseCount[voice][n];
     bool       wasHigh = ((gLogicPrev[voice][n] & LOGIC_PREV_CLOCK) != 0u);
     double *   fellAt  = &gLadder[voice][n][0];  // Cycle: samples from the rise to the fall, 0 until it falls
@@ -10879,7 +10971,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             double mod = signal_in(spec, value, 1);
 
             if (spec->active == false) {
-                value[n][0] = a;
+                value[n][0] = (spec->modAmtOneMinus == true) ? a : 0.0;    // §29.4 - off: 1-m passes In, m is silent
             } else if (spec->modAmtOneMinus == true) {
                 value[n][0] = a * ((1.0 - gain) + (gain * mod));
             } else {
@@ -10929,10 +11021,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeValSw:
         {
-            // §34 - In 2 once Ctrl has REACHED the threshold, In 1 below it.
+            // §34 - In 2 while Ctrl EQUALS the value, In 1 otherwise
             double ctrl = signal_in(spec, value, 2);
 
-            value[n][0] = (ctrl >= spec->constant) ? signal_in(spec, value, 1) : a;
+            value[n][0] = (fabs(ctrl - spec->constant) <= (VALSW_MATCH_UNITS / UNITS_PER_FULL_SCALE)) ? signal_in(spec, value, 1) : a;
             break;
         }
         case eNodeMonoKey:
@@ -11037,8 +11129,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeValSw12:
         {
-            // §68.2 - Out 2 once Ctrl has reached the value, Out 1 below it
-            value[n][(signal_in(spec, value, 1) >= spec->constant) ? 1 : 0] = a;
+            // §68.2 - Out 2 while Ctrl equals the value, Out 1 otherwise
+            value[n][(fabs(signal_in(spec, value, 1) - spec->constant) <= (VALSW_MATCH_UNITS / UNITS_PER_FULL_SCALE)) ? 1 : 0] = a;
             break;
         }
         case eNodeMux8to1:
@@ -11422,7 +11514,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeLogicDelay:
         {
-            value[n][0] = logic_delay_step(voice, n, spec, a);
+            value[n][0] = logic_delay_step(voice, n, spec, a, signal_in(spec, value, 1));
             break;
         }
         case eNodeRandomA:
@@ -11495,7 +11587,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodePulse:
         {
-            value[n][0] = pulse_step(voice, n, a, spec);
+            value[n][0] = pulse_step(voice, n, a, signal_in(spec, value, 1), spec);
             break;
         }
         case eNodeFltMulti:
@@ -12236,6 +12328,20 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     gOutCoupling[q][1] = y;
                     *sp                = y;
                 }
+
+                // notes §199 - and roll off at the top, as its converter and output stage do
+                if (atomic_load(&gDacEmulation) == true) {
+                    if (gDacCoefRate != gSampleRate) {
+                        dac_filter_design(gSampleRate);
+                    }
+                    double y = (gDacCoef[0] * *sp) + (gDacCoef[1] * gDacState[q])
+                               - (gDacCoef[2] * gDacStateOut[q][0]) - (gDacCoef[3] * gDacStateOut[q][1]);
+
+                    gDacState[q]       = *sp;
+                    gDacStateOut[q][1] = gDacStateOut[q][0];
+                    gDacStateOut[q][0] = y;
+                    *sp                = y;
+                }
                 *sp                           *= VOICE_GAIN * gSlotGainNow;
                 // notes §186
                 *sp                           *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
@@ -12387,6 +12493,9 @@ static void engine_reset_state(void) {
     memset(&gOutHistory, 0, sizeof(gOutHistory));
     memset(&gOutHistoryPos, 0, sizeof(gOutHistoryPos));
     memset(&gOutCoupling, 0, sizeof(gOutCoupling));
+    memset(&gDacState, 0, sizeof(gDacState));
+    memset(&gDacStateOut, 0, sizeof(gDacStateOut));
+    gDacCoefRate = 0.0;
     memset(&gOscDecimate, 0, sizeof(gOscDecimate));
     memset(&gOscHistory, 0, sizeof(gOscHistory));
     memset(&gOscHistoryPos, 0, sizeof(gOscHistoryPos));
@@ -12453,6 +12562,7 @@ static void engine_reset_state(void) {
     gPatchSlot        = -1;
     gDroneMode        = true;
     gDroneSeen        = true;
+    gDacEmulation     = true;
 }
 #endif
 

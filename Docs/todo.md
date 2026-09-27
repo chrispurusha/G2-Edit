@@ -5,7 +5,8 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 CT (Priority order)
-- Emulate the G2 DAC circuitry's apparent filtering at the high frequencies, which we found in noise on one of the drum synth kick presets. Menu item optional enable/disable of that emulation.
+- At a 176.4/192 kHz device the engine's noise is ~3 dB low (white drawn per graph sample, not per 96 kHz one) and DrumSynth's noise filter goes 3-20 dB dark (its Chamberlin retuned off 96 kHz) - findings 2026-09-27
+- Fireface loopback at 192 kHz (an output cabled to an input, sine sweep to 48 kHz) to confirm the G2 output droop is not partly the interface's (sound-engine-notes §199)
 - Plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol.
 - Assess items below, which may have already been completed or partially completed.
 - Plan a mode switch (button on the far right of the current menu bar) to a mode representing the G2 keyboard's front panel, and back again to editor mode.
