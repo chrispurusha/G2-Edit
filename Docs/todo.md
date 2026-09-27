@@ -271,6 +271,8 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - OscPM: Tri corner correction and the Sync input (§53)
 - Pulse ignores its Type (Plus/Minus); logic Delay ignores its Mod input (§46)
 - Converter emulation ON/OFF option (CT 09-26): the G2's analogue output roll-off (-0.6 dB at 16.8 kHz, -1.1 at 21 kHz, -6 at 42 kHz, findings 09-26) as a switchable output stage. NO low shelf: outs 1/2 measured flat against 3/4 to 0.02 dB (findings 09-26) - the old shelf was the QU's inputs
+- 14 CS80project72: the G2's strongest partial, 527 Hz, is missing from the engine (1061/2112/3161 match; Fireface capture 09-27, findings 09-27)
+- Voice-area delays and Reverb per voice (findings 2026-09-27): allocate each voice's line at build time, sized by Range (the instrument's 513 .. 259212 samples); fit polyphony to a memory budget as the voice placer does
 - Mux8-1X (reference §68.3): its crossfade program shifts the weights in ways the reading of it does not show - run the part's program in the DSP emulator and port that
 - ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither
 - Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play

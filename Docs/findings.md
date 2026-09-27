@@ -11932,3 +11932,59 @@ scales, so **In is connector 0**. A working stage patch that cables OverDrive in
 same. Fixed in the module table (the rows swapped, each keeping its drawn position) and in the shaper's
 signal leg. 14 now plays (rms 0.057 where it was 0.009). The probe (scratchpad nodepeak.c over a copy of
 soundEngine.c) is the fastest way to find where a patch goes quiet.
+
+## 2026-09-27 - 08 Ice Pad: a few seconds of sound, a click, then silence (NaN from a Voice-area loop)
+
+CT: 08 plays briefly, clicks, then goes silent (the editor's engine). A single held note never showed
+it; a four-note chord produced the first non-finite sample 27 ms in, and it came from the Voice area's
+Chorus. The Chorus sits in a loop (Chorus -> LevAmp 42 -> Mixer 2-1 A -> Chorus), about 0.7 gain for one
+voice. The engine ran every Chorus once, after the voices were summed, so each voice re-injected the sum
+of all of them: 0.7 x the voice count, which runs away. It reached 2.7e39, overflowed the chorus line, and
+NaN then silenced everything. Two fixes:
+- **Notes §196:** every node's outputs and loop values saturate at the DSP's full scale (+-4 units),
+  as the instrument's 24-bit words do. A runaway loop then distorts rather than killing the output.
+- **Notes §197:** a Voice-area Chorus, Flanger, PShift or Scratch runs per voice, as on the instrument
+  (CT: "pretty much anything dropped into the VA area should be per voice").
+08 now swells as a pad (rms ~0.1 on a chord), and every patch on disk passes a chord test with no
+non-finite output.
+**Still shared across voices:** the Voice area's delays (DelayA/B, DlySingle, DlyStereo, Dual/Quad/
+Eight) and Reverb. The instrument gives each voice its own delay memory, sized to the Range: the delay
+base part's line length in samples is 513 (5 ms) ... 259212 (2.7 s), at an address offset by the voice's
+own external-memory base. The voice placer then fits polyphony to what that memory allows. Next: allocate
+Voice-area delay lines per voice at build time, sized by Range.
+
+## 2026-09-27 - 09 Antarktis howled: three missing pieces on its self-oscillating Nord Filter and its random LFO
+
+CT heard feedback howling on 09. A Fireface capture (chord 48/55/60/64, 3 s, Slot A restored) against the
+engine showed the engine 10 dB louder, dominated by 412 Hz. The patch plays Nord Filter 1 as an
+oscillator: its own output into its Res input at Res M 127, pinged by LFO C 4, and pitched through Mixer 6
+by a Key Quantiser on the same LFO. That LFO is RndSt, feeding its own Rate input. Three fixes, each
+taken from the instrument's DSP code:
+- **Reference §23.5:** FltNord's FM-lin and Res inputs were not modelled, and its unscaled Pitch input
+  was never connected. Now they are, checked against the instrument's own coefficient part to −45…−89 dB,
+  including a self-fed Res loop, which oscillates at the same 415 Hz in both.
+- **Reference §28.3:** RndSt/Rnd used `rand()` on the phase wrap. The instrument's generator is a 24-bit
+  LCG, drawn as the phase rises through mid-cycle, and the step moves only halfway to each draw. Rnd has
+  its own two-pole smoother. The old model parked the self-modulated LFO at −1 with its rate at the floor.
+After the fixes the level matches the G2 (−26.0 against −25.5 dB rms). The notes still differ, as they
+must: the patch's pitches come from free-running random and slow LFOs quantised into sequences, and the
+capture caught a G2 that had been running for minutes.
+
+## 2026-09-27 - 14 CS80project72's click and distortion: an EnvD that should never fire, and DC
+
+CT: a click at the start of every note, and possibly distortion. A Fireface capture of 14 (notes 60/64/67,
+Slot A restored) shows no step at any onset on the G2, and a level of −24…−25 dB rms. The engine started
+every note with a 1-unit step and ran at −7 dB with a large DC component. Three causes:
+- **The click (reference §17.4):** VA module 69 is an Envelope D wired straight to a 2-Outputs, with
+  nothing on its Trig. The instrument's EnvD and EnvH have no KB (keyboard gate) at all, so they never
+  fire without a trigger. The engine read KB only on EnvADSR and gated every other envelope from the keys.
+  KB and Reset are now read at each envelope's own parameter number.
+- **A regression from the Nord Filter work above (reference §23.5):** a large Pitch mod took h past 1, and
+  the new FM-lin overflow rule then zeroed it, freezing the filter on a DC value. The instrument's pitch
+  part saturates h just below 1 first, so the sum cannot overflow without FM. Fixed and rechecked
+  against the instrument's code over the pitch-mod range.
+- **Genuine DC (notes §198):** MinMax 19 half-rectifies a filter's output, and the FX Compressor lifts the
+  resulting DC. The G2 carries the same DC internally, but its outputs are AC-coupled at ~11.7 Hz; the
+  engine now is too. That DC had also been pushing the output into the engine's soft knee.
+Now 14 plays at −21…−24 dB, no onset step, peaks near 0.3, with the G2's 1061/2112/3161 Hz partials.
+**Still open:** the G2's strongest partial, 527 Hz, is missing from the engine.
