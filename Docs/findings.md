@@ -11889,3 +11889,13 @@ changes. The the reference module names do not always match the palette's: its "
 engine-module-status.md.
 Harness conversion trap: the converter drops a closing parenthesis on a connector at slot 0
 (`*(int *)**(int **)(this + 0x20)`); patch the output to W(W(W(self + 0x20))).
+
+## 2026-09-27 - Every module type modelled (§70 basic versions): 118 working, 52 partial
+
+At CT's request, the 26 remaining modules got basic versions from the manual (§70) rather than waiting
+for the instrument's parts. Each is listed Partial with what is basic about it, so the Partial table is
+now the refinement queue. Checks: a smoke render of every new module (no NaN, nothing silent where it
+should sound); ZeroCnt reads a C4 oscillator as -3.996 units (-4 expected); all 55 patch files on disk
+render with no NaN and no clipping (Corrupt.pch2 still refuses to load, as it should). OscString's
+loop needed the DSP's +-4 saturation: a continuous excitation at the string's own pitch otherwise grows
+without bound.

@@ -2238,3 +2238,49 @@ identical word for word to its part.
 - **Not yet: Rnd Clock B and Rnd Pattern.** Their RndState and RndLoop parts hand values to each other
   through shared registers and read a host word not yet identified, so they need the whole module run
   in the harness, not part by part.
+
+## 70. Basic versions of the remaining modules
+
+Added 2026-09-27 at CT's request, breadth first: every remaining module at a basic level, to be refined
+one by one later. Each follows the manual's description, and uses the instrument's laws where they
+were cheap to take; engine-module-status.md lists each as Partial with what is basic about it. None has
+been compared with the instrument yet.
+- **70.1 DelayDual / DelayQuad / DlyEight** read taps off one shared delay line, with the seven-way
+  Range and the delay time law (paramCurves notes §19-20). Dual and Quad move each tap's dial by its
+  mod input x its amount (64 = one engine unit a full dial). Quad's Time/Clk uses the clock-sync law,
+  and its Main output reads the Range's full time. Eight's taps are at 1..8 x the Time spacing, and the
+  Range is the total to tap 8. The instrument's own delay-base and tap parts are not yet read.
+- **70.2 Flanger**: a 0.5 ms delay swept by a sine over up to 5 ms (Range) at 62.9 s a cycle to 24.4 Hz
+  (Rate, exponential), with Feedback (v - 64)/64 x 0.9, mixed half and half with the input.
+- **70.3 PShift / Scratch**: two taps half a window apart, crossfaded by triangles. The window is the
+  Delay setting (12.5 to 100 ms). PShift's ratio is 25 cents a Semi step plus Fine plus Shift mod, in
+  semitones. Scratch's is (v - 64)/63 x 4 plus Mod, so it runs backwards below 64 and is silent at 64.
+- **70.4 OscString / Resonator**: a tuned loop, y = In + g x lowpass(y one period back), pitched as the
+  oscillators are (§6). Decay sets a T60 of 20 ms to 10 s and Damp the one-pole. The loop saturates at
+  the DSP's full scale. Resonator's Out2 reads the loop at the Pos share of the period; its Alg is not
+  read. Its inputs are taken as In, Pitch and PitchVar, which is a guess.
+- **70.5 Driver**: a guess. The manual edition in hand has no Driver, so it is (In1 + In2 x Embouchure)
+  through a tanh driven by Stiffness.
+- **70.6 NoiseGate**: a peak follower (Release fall) opens the gain at the Attack rate above the
+  Threshold and closes it at the Release rate below. The times and dB are read from the dials' own
+  displays. Env is the follower.
+- **70.7 PitchTrack / ZeroCnt**: the period between rising zero crossings, interpolated to a fraction
+  of a sample, as a pitch (E4 = 0 units). PitchTrack pulses Period at each measurement and raises Gate
+  while a 20 ms follower is above the Threshold.
+- **70.8 Vocoder**: sixteen band-passes (Q 5, log spaced from 100 Hz to 8 kHz) on Ctrl and on In. Each
+  synthesis band is scaled by a 10 ms envelope of the analysis band its BandSel routes there. Emphasis
+  pre-emphasises Ctrl; Monitor outputs Ctrl.
+- **70.9 RndClkB** runs on RndClkA's node (§64) with its own dial positions; StepM and Character are
+  not read. **RndPattern** draws on each clock and reseeds from PatA and PatB (plus inputs) every
+  (Loop + 1) x 8 steps. Wave passes the clock as +-64 units.
+- **70.10 SeqCtr**: Ctrl's units / 4 pick the step, and the last XFade share of each step fades into the
+  next. Trig is high on a step whose event is set; T/G is not read.
+- **70.11 Mux8-1X**: Mux8-1's step as a continuous position, with the last X-fade share of each step
+  fading into the next input.
+- **70.12 LevScaler**: dB = L x octaves below the breakpoint, or R x octaves above. Level is that gain
+  (64 units at 0 dB), and Out = In x Level. The key comes from the voice (Kbt) or from the Note input.
+- **70.13 The MIDI and panel modules.** Status gives Patch and Var Active high, and Voice No. at 4 units
+  a voice. Device gives the wheel, aftertouch, control pedal (morph group 5), sustain, pitch stick and
+  global wheel 1 (group 7); global wheel 2 reads 0. NoteRcv is NoteDet whatever the channel. CtrlRcv
+  outputs 0, because no MIDI CC stream reaches the engine. CtrlSend, PCSend, Automate and NoteZone
+  render nothing.
