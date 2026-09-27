@@ -3502,8 +3502,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeNoteScaler,  connectorDirOut, connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocLeft },    // 72 Out
     // 73 Unknown
     // 74 WaveWrap
+    {moduleTypeWaveWrap,    connectorDirIn,  connectorTypeControl, {{-17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocRight},    // 74 In - connector 0 (findings 2026-09-27)
     {moduleTypeWaveWrap,    connectorDirIn,  connectorTypeControl, {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocRight},    // 74 Mod
-    {moduleTypeWaveWrap,    connectorDirIn,  connectorTypeControl, {{-17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocRight},    // 74 In
     {moduleTypeWaveWrap,    connectorDirOut, connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocLeft },    // 74 Out
     // 75 NoteQuant
     {moduleTypeNoteQuant,   connectorDirIn,  connectorTypeControl, {{ -3,    3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocRight},    // 75 In

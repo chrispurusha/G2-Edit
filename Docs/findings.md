@@ -11887,3 +11887,35 @@ should sound); ZeroCnt reads a C4 oscillator as -3.996 units (-4 expected); all 
 render with no NaN and no clipping (Corrupt.pch2 still refuses to load, as it should). OscString's
 loop needed the DSP's +-4 saturation: a continuous excitation at the string's own pitch otherwise grows
 without bound.
+
+## 2026-09-27 - 05 SelfOsc LFO against the G2 (Fireface): two LFO bugs, and the filter is right
+
+CT: 05 breaks up around a 58 Hz LFO and turns metallic above 100 Hz, on the G2 as well as in the engine.
+Captured on the Fireface (192 kHz, G2 outs 1/2) and rendered through the engine:
+- **LFO C played every waveform as a sine.** Its waveform is a MODE (mode 0), and the engine's LFO map
+  had no waveform for it. Patch 05 uses Saw. Fixed: LfoC reads mode 0.
+- **The LFOs' saw fell the wrong way.** The instrument's LfoSaw part outputs the negated phase, a
+  falling ramp with an upward flyback. A switched ConstSwT proved the G2 -> Fireface path does not
+  invert, and the captured flybacks jump upward. The engine rose. Fixed for LfoA/B/C.
+- **LFO rate is right** to 196 Hz (Rate Hi 64-115: 10.3, 29.1, 58, 98, 196 Hz, spectral peaks within the
+  2.9 Hz FFT bin). Counting flybacks under-read the high rates: the output path is AC-coupled hard enough
+  that a 10 Hz saw arrives as spikes decaying in about 40 ms. Read the rate from the spectrum.
+- **The filter is right.** The self-oscillating Nord filter (Res 127) matches the reference model
+  to 0.2 dB at every drive (it rings rather than limits). On the hardware, with the LFO off, its pitch
+  matches within 0.3% at Freq 60-105 and every harmonic is below -70 dB on both. Noise matches the module's LFSR, colour pole and cube-law gain.
+- With both fixes, the FM sideband structure at LFO 58-200 Hz follows the G2's peak for peak.
+- **Open:** the whole of 05 plays about 6 dB louder than the G2, and its static self-oscillation line
+  is less pure. The filter and noise are ruled out, which leaves the Compressor and the FX chain.
+  AC coupling and the converters are a caution on levels and low-frequency shapes, not on a 2.5 kHz tone.
+
+## 2026-09-27 - 14 CS80project72 only clicked: WaveWrap's jacks were the wrong way round
+
+CT: 14 "just makes a clicking sound". A per-node level probe showed the voice sound reaching the FX bus
+(0.575) and dying at WaveWrap. Everything after it (Delay, Chorus, Compressor, Reverb, the filter
+mixers) was silent, leaving only an Envelope D wired straight to Out 1/2, which is the click. The
+module table listed WaveWrap's Mod jack as connector 0 and In as 1, and the engine followed it. The
+instrument routes connector 0 to the module's signal slot and connector 1 to the slot the Amount Mod dial
+scales, so **In is connector 0**. A working stage patch that cables OverDrive into connector 0 says the
+same. Fixed in the module table (the rows swapped, each keeping its drawn position) and in the shaper's
+signal leg. 14 now plays (rms 0.057 where it was 0.009). The probe (scratchpad nodepeak.c over a copy of
+soundEngine.c) is the fastest way to find where a patch goes quiet.
