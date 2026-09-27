@@ -4,6 +4,19 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***STAGE-PATCH PARTIALS SETTLED FROM THE REFERENCE MODEL (2026-09-27)*** - findings 2026-09-27 (evening). LISTEN:
+  15 Randee dz now runs at the G2's master clock (top-bar tempo), not a fixed 120 BPM - change the tempo
+  and it should follow. 07 Unstable Lead's two Lin Glides are now 2.5x slower (the instrument's tenth-step).
+  01 Mini Emulator's three ValSw2-1 now switch only while Ctrl EQUALS the value. A Multi Filter's cutoff
+  now stops at 20.8 kHz. A ModAmt with Enable off and m/1-m off is now silent (none of the stage patches
+  has that combination).
+- ***G2 OUTPUT FILTER (2026-09-27)*** - sound-engine-notes §199, findings 2026-09-27. The engine now rolls
+  off its top end as the G2's outputs do (-1 dB at 21 kHz, -6 dB at 42 kHz). LISTEN to Kick 5 in the app
+  against the G2: the engine's extra hiss should be gone. Toggle: Experimental > G2 Output Filter (app,
+  remembered), Settings > G2 Output Filter (plug-in, saved with the project).
+- ***PATCH VOLUME ON OLD FILES (2026-09-27)*** - code-notes/protocol.c.md §23. A patch file saved by the
+  editor before 2026-09-27 carries no Volume; it now loads at 127 (0 dB), on. Open e.g. ReverbMeasure.pch2
+  with the engine on: the top-bar Volume dial should show 0.0dB and the patch should play.
 - ***09 ANTARKTIS HOWL (2026-09-27)*** - findings 2026-09-27, reference §23.5 and §28.3. FltNord's FM lin,
   Res and Pitch inputs, and the instrument's own RndSt/Rnd generator. Offline the level now matches
   the G2 capture. LISTEN in the app: the howl should be gone, the Nord Filter should now play a
@@ -903,10 +916,8 @@ CROSS-PROJECT
   unwritable folder shows the alert rather than failing silently.
 
 ModAmt and SwOnOffT in the sound engine (2026-09-19, reference §29/§30)
-  - ModAmt's ENABLE BUTTON is a guess: the engine passes In through unchanged when it is off. Not
-    confirmed on the instrument, and the 02 Big Pad test patch has it off on BOTH its ModAmts, so
-    this decides how that patch sounds. The other reading is that Enable off mutes the output.
-    Worth settling from the G2's panel before trusting Big Pad's balance.
+  - ModAmt's ENABLE BUTTON, SETTLED 2026-09-27 from the reference model (reference §29.4): off passes In when
+    m/1-m is on and is SILENT when it is off. Big Pad's two are both m/1-m on, so it is unchanged.
   - ModAmt's m/1-m and the Depth taper are settled (manual p.232, and the Exp curve is the mixers'
     own §3.2 law to 6e-8) - these need only a listening check, not a measurement.
   - SwOnOffT closed with NOTHING patched to In should send 64 units; open should send nothing, and

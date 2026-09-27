@@ -63,13 +63,8 @@ static const tGroupRow kGroups[] = {
 
 // Audible, but something about the law is still a guess; to-test.md carries each check.
 static const tPartialRow kPartial[] = {
-    {"ValSw2-1",          "switches at the threshold (manual); its part tests equality within 1/2 unit (§68.2)"},
-    {"ValSw1-2",          "switches at the threshold (manual); its part tests equality within 1/2 unit (§68.2)"},
     {"4 Inputs",          "silent (the jacks); a Bus source is not bridged (§69.12)"},
     {"Note Detector",     "release velocity is not kept, so RVel reads 0 (§69.11)"},
-    {"Delay Dual",        "basic: taps on a shared line; the reference model not read (§70.1)"},
-    {"Delay Quad",        "basic: taps on a shared line; the reference model not read (§70.1)"},
-    {"Delay Eight",       "basic: taps on a shared line; the reference model not read (§70.1)"},
     {"Flanger",           "basic: a swept delay from the manual (§70.2)"},
     {"PShift",            "basic: two crossfaded taps (§70.3)"},
     {"Scratch",           "basic: two crossfaded taps, ratio law guessed (§70.3)"},
@@ -91,23 +86,17 @@ static const tPartialRow kPartial[] = {
     {"NoteRcv",           "NoteDet whatever the channel (§70.13)"},
     {"Noise Osc",         "Q and level measured, not yet read from the reference model (§8)"                  },
     {"Comb Filter",       "not yet checked against the reference model"                          },
-    {"Multi Filter",      "GComp not yet checked against the reference model"                    },
     {"Envelope Multi",    "rise to an intermediate level is a guess (§17.9)"                           },
-    {"ModAmt",            "Enable button unconfirmed (§29.4)"                                          },
     {"Chorus",            "a third chorus in one patch passes dry (pool of 2 lines)"                   },
-    {"SwOnOffT",          "untested on hardware (§30)"                                                 },
-    {"Glide",             "Lin and the Time table are the instrument's; the Log shape is ours (§36.1)" },
-    {"Delay",             "the time Mod input is not read (§46)"                                       },
+    {"SwOnOffT",          "Out and the unpatched 64 units are the module's; Ctrl's closed level, a word 0x20000, not decoded (§30)"},
     {"Osc Phase Mod",     "Tri's corner correction and the Sync input not modelled (§53)"          },
     {"FreqShift",         "Sub range: the module's word and the readout disagree 12x (§57)"          },
     {"FltVoice",          "the fine-pitch table offset is read as none, not decoded (§56)"         },
     {"Sequencer Note",    "the record inputs are not modelled; steps at 96 kHz whatever the clock's rate (§58)" },
     {"Sequencer Event",   "steps at 96 kHz whatever the clock's rate (§58)"                             },
     {"Sequencer Values",  "steps at 96 kHz whatever the clock's rate (§58)"                             },
-    {"Clock Generator",   "Master follows a fixed 120 BPM, not the global clock (§59)"                  },
+    {"Clock Generator",   "Master follows the G2 master clock; its Run/Stop is not modelled (notes §200)"},
     {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },
-    {"Delay Single A",    "the tap's interpolator is ours, not the instrument's table (§52)"          },
-    {"Delay Single B",    "the tap's interpolator is ours, not the instrument's table (§52)"          },
 };
 
 #define PARTIAL_COUNT (sizeof(kPartial) / sizeof(kPartial[0]))

@@ -1796,6 +1796,9 @@ A RISING EDGE WHILE THE GATE IS STILL HIGH RESTARTS IT rather than being ignored
 instrument does, and it matters only for an input faster than the width — the measurement patch
 fires one edge per note, so nothing there depends on it.
 
+The width is re-read every sample, so a Time Mod input that moves during the pulse moves where it ends
+(reference §18.3, 2026-09-27).
+
 ------------------------------------------------------------------------------------------------
 The Shaper group overview that stood here moved with the code to `code-notes/paramCurves.c.md` §30
 on 2026-09-13.
@@ -3189,3 +3192,40 @@ high-pass to each output channel, before the patch Volume, the output gain and t
 whose voices carry DC (14 CS80project72: a MinMax half-rectifying a filter, then the Compressor lifting it)
 otherwise sends that DC to the device. On a hot patch that DC also pushes the signal into the knee, which
 the G2 does not have: its only clip is the Out's own ±8 (§196), which comes before the coupling.
+
+## 199. The G2's output roll-off (`DAC_FILTER_HZ`, `DAC_FILTER_Q`)
+
+The G2's analogue outputs droop at the top. Measured 2026-09-26 with pure OscA sines on Out 3/4 into the
+Fireface at 192 kHz, re 1 kHz: 4.2 kHz -0.02 dB, 8.4 -0.12, 12.6 -0.29, 16.8 -0.60, 21.1 -1.08, 25.1
+-1.70, 29.8 -2.65, 35.5 -4.07, 42.2 -6.06 (findings.md 2026-09-26). A two-pole low-pass at 33.5 kHz, Q
+0.66, fits all nine within 0.07 dB - an ordinary reconstruction filter after a 96 kHz converter. It is
+circuitry, not synthesis, so there is no instrument code to read it from; this is the one place the
+engine fits a capture, and the capture is of the output path alone.
+
+It is applied per output channel beside the AC coupling (§198), before the patch Volume, the trim and
+the knee. The digital filter is Vicanek's matched second-order low-pass ("Matched Second Order Digital
+Filters", 2016): the analogue poles exactly, and zeros chosen to match the analogue magnitude at DC, the
+corner and Nyquist. A bilinear design would put a zero at Nyquist, which near a 33.5 kHz corner at a
+96 kHz graph is wrong by tens of dB. Against the analogue model: 0.04-0.06 dB everywhere at 176.4 and
+192 kHz; at 88.2 and 96 kHz within 0.13 dB up to 20 kHz, growing to 1.6-1.9 dB at the last few kHz
+below Nyquist - above hearing, and at 44.1/48 kHz devices removed by the decimator anyway.
+
+Checked 2026-09-27 on Kick 5 (the preset whose extra top end prompted it) against the G2 capture of
+2026-09-26, band energies re 0-20 kHz over the first 43 ms windows of 19 hits: at 96 kHz the engine now
+matches in every band from 2 to 48 kHz within 1.3 dB, where without the filter it was 5.6 dB too bright
+at 40-48 kHz. Whether the Fireface's own input filter contributes to the measured droop at 192 kHz has
+not been checked (a loopback would settle it).
+
+Nothing in the engine was double-counting this droop: the captures behind the engine's laws were either
+ratios through the same output path (oscillator waves against a Sine, FltComb against the dry noise) or
+have since been replaced by the instrument's own arithmetic.
+
+## 200. The master clock (`engine_master_bpm()`)
+
+Every module set to Clk - DelayA/B and DlySingle's Time/Clk, DelayQuad's Time/Clk, DlyStereo - and a
+ClkGen whose Source is Master work to the G2's one master clock, the tempo the top bar shows
+(`gGlobalSettings.masterClock`, 30-240 BPM). Until 2026-09-27 the engine used a fixed 120 BPM for all of
+them, so 15 Randee dz, whose two ClkGens are both on Master, played at 120 whatever the G2 was set to.
+The snapshot now reads the master clock when it is built, and a tempo change reaches the sound on the
+next rebuild (every redraw). A patch file loaded with no G2 and no performance has no master clock
+(0), and plays at 120 as before. The master clock's Run/Stop is not modelled.

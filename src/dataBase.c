@@ -306,6 +306,27 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
     LOG_DEBUG("Patch name from file: '%s'\n", patchName);
 }
 
+// notes §7 - the patch Volume the top bar shows and the engine plays (reference §63)
+void ensure_patch_volume(uint32_t slot, uint32_t level) {
+    if (slot >= MAX_SLOTS) {
+        return;
+    }
+    tModule * volumeModule = get_module_slot(slot, (uint32_t)locationMorph, patchModuleVolume);
+
+    if (volumeModule->active == true) {
+        return;
+    }
+    volumeModule->active = true;
+    volumeModule->key    = (tModuleKey){
+        slot, (uint32_t)locationMorph, patchModuleVolume
+    };
+
+    for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
+        volumeModule->param[variation][VOLUME_LEVEL].value = level;
+        volumeModule->param[variation][VOLUME_MUTE].value  = 1;
+    }
+}
+
 // notes §3
 void init_patch(uint32_t slot) {
     memset(&gPatchDescr[slot], 0, sizeof(gPatchDescr[0]));
@@ -345,24 +366,10 @@ void init_patch(uint32_t slot) {
         }
     }
 
-    // The patch Volume the top bar shows and the engine plays (reference §63): a new patch has one too,
-    // at the level the instrument's own new patches carry, and switched on
-    {
-        tModule * volumeModule = get_module_slot(slot, (uint32_t)locationMorph, patchModuleVolume);
-
-        volumeModule->active = true;
-        volumeModule->key    = (tModuleKey){
-            slot, (uint32_t)locationMorph, patchModuleVolume
-        };
-
-        for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
-            volumeModule->param[variation][VOLUME_LEVEL].value = 100;
-            volumeModule->param[variation][VOLUME_MUTE].value  = 1;
-        }
-    }
-    gNote2Size[slot]       = 0;
-    gControllerCount[slot] = 0;            // Seems to default to 2, so might need to set up defaults
-    gPatchNotesSize[slot]  = 0;
+    ensure_patch_volume(slot, NEW_PATCH_VOLUME);
+    gNote2Size[slot]                  = 0;
+    gControllerCount[slot]            = 0; // Seems to default to 2, so might need to set up defaults
+    gPatchNotesSize[slot]             = 0;
     memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
     memset(gNote2[slot], 0, sizeof(gNote2[0]));
     memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));

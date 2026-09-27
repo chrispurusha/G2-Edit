@@ -92,3 +92,10 @@ nonzero for assigned-to-a-fixed-source mode (see render_morph_groups()'s isKnob 
 default every group to its fixed source (Wheel, Vel, Keyb, ... per morphStrMap[i]) rather
 than leaving all 8 as unnamed knobs, across every variation so it holds regardless of
 which one is active.
+
+## 7. `ensure_patch_volume()`
+
+The patch Volume lives on a hidden module in the Morph location, and the top bar draws its dial
+only while that module is active. A new patch gets the level the instrument's own new patches carry;
+a loaded one that has none gets the full level (protocol notes §23). It never touches a Volume that
+is already there.

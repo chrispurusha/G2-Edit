@@ -1535,6 +1535,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
         bitOffset += SIGNED_BYTE_TO_BIT(count);
     }
 done:
+    ensure_patch_volume(slot, MISSING_PATCH_VOLUME);    // notes §23
     // ONE EXIT, so the unlock cannot be skipped. The three aborts above used to return straight out
     // of the middle of the parse; with a lock held that is not an early return, it is a deadlock the
     // next time anything asks to draw.
@@ -1697,6 +1698,11 @@ int parse_perf(uint8_t * buff, int length) {
         }
         bitOffset += SIGNED_BYTE_TO_BIT(count);
     }
+
+    for (slot = 0; slot < MAX_SLOTS; slot++) {
+        ensure_patch_volume(slot, MISSING_PATCH_VOLUME);    // notes §23
+    }
+
     return EXIT_SUCCESS;
 }
 

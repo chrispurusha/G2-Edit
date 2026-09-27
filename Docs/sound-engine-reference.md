@@ -302,7 +302,12 @@ voice, run at the engine rate:
     high = drive - low - q·band'   q = 2d²(1 - F/2),      d  = 1 - 0.99·Res/128
     band = band' + F·high          drive = input, × d with GComp on
 
-(' is the previous sample.) The (1 - F/2) in q is what keeps it stable at every cutoff and
+(' is the previous sample.) **The cutoff stops at 20.8 kHz** (settled 2026-09-27 from the coefficient stage): the module clamps the half-coefficient F/2 at 0.6368 before it computes q, so a Freq, a key track or a
+Pitch input that asks for more gets 20.8 kHz - the same ceiling as FltNord (§23.2). Before, the engine went
+on to 0.45 of the graph rate (revert record row 77). **GComp** is the module's drive word: d with GComp on,
+1 with it off - the module holds both and GComp chooses.
+
+The (1 - F/2) in q is what keeps it stable at every cutoff and
 resonance - the largest pole radius over the whole range is 0.999998. The outputs are taken with a
 half-sample correction the instrument builds in: the input there is the mean of two samples, which
 the engine moves to the outputs instead (identical response, no marginal pole). With b = 1 - F/2:
@@ -837,6 +842,13 @@ under a mod nor the sustain's own law has been measured. to-test.md.
 over ten) less two samples: a cubic in ln over dial/127 (`pulse_time_seconds()`, notes §73). Within two
 samples of all 17 widths measured on the instrument (8 at dial 0 to 96083 at 127). Lo and Hi are ten
 and a hundred times Sub (manual). The old fit was 4% out at worst and could not reach dial 0.
+
+**18.3 Time Mod (2026-09-27, from the time stage both modules share).** The Time M input moves the Time
+dial by Mod x TimeMod steps - 64 units of Mod with TimeMod at 127 is the whole dial - and the sum is held
+to the dial's range, then read through the same time law, so a modulated time is the law at a moved dial
+position (the module interpolates its own table between dial steps). Pulse compares the time since its
+rising edge with the current time, so a Mod that moves during a pulse moves where it ends. The Logic
+Delay (§46) runs its time through the same part. Unpatched, both are exactly as before.
 
 ## 19. StChorus
 
@@ -1446,10 +1458,11 @@ modulation is crossfaded in: `Out = In x ((1 - Depth) + (Depth x Mod))` (manual 
 per-voice morph offset every other level dial gets; the three drop-downs are read raw, because a
 drop-down cannot carry a morph (manual p.20).
 
-**29.4 Enable is UNSETTLED.** The engine treats Enable off as a bypass that passes In through
-unchanged. That is the usual reading of the G2's Enable buttons but it has NOT been confirmed on the
-instrument, and it matters: the 02 Big Pad test patch has Enable off on both of its ModAmts. The
-alternative - Enable off silencing the output - would sound very different. See to-test.md.
+**29.4 Enable off, SETTLED 2026-09-27 from the reference model.** Enable changes the module's last step, and what it swaps in depends on m/1-m: with m/1-m ON the output becomes In (the module is
+bypassed), with it OFF the output is cleared (silent). Enable on runs the module. So "off" is a bypass
+only for the crossfade form - the plain multiplier with Enable off makes nothing, which is also what it
+makes at Depth 0. Until 2026-09-27 the engine passed In in both (revert record row 79). The stage
+patches are unaffected: 02 Big Pad's two ModAmts with Enable off both have m/1-m on.
 
 ## 30. SwOnOffT
 
@@ -1459,6 +1472,12 @@ Closed, the output is the input; open, it is nothing. With **nothing patched to 
 sends 64 units, which is 1.0 in the engine (§16), so the module doubles as a manual constant. The
 Ctrl output carries the switch state as a logic signal on the same scale - 1.0 closed, 0 open
 (manual p.222, and the Logic group's definition of a logic HIGH on p.233).
+
+**Checked 2026-09-27 against the reference model:** closed passes In, open clears Out and Ctrl
+together, and an unpatched In reads a 64-unit constant - all as above. OPEN: the host sets Ctrl's closed
+value as the word 0x20000, which as a plain 24-bit word would be 4 units rather than 64; the same
+word appears in the other switches' source/destination updates. A logic input reads either as high,
+so it matters only where Ctrl feeds a level. None of the stage patches uses Ctrl.
 
 ## 31. LevConv
 
@@ -1493,9 +1512,16 @@ Switch parameters) - `select x 4 / 64` in engine terms. 01 Mini Emulator drives 
 
 ## 34. ValSw2-1
 
-Added 2026-09-19. In 1 normally, In 2 once the Ctrl input REACHES the threshold. The threshold dial
-counts whole units 0 to 64, and its top step reads 64 rather than 63 - the same law the face prints
-(`render_paramType1UniPolShort`).
+Added 2026-09-19. In 1 normally, In 2 (the On input, and the lamp lit) while Ctrl EQUALS the value -
+within half a unit either side. The value dial counts whole units 0 to 64, and its top step reads 64
+rather than 63 - the same law the face prints (`render_paramType1UniPolShort`).
+
+**SETTLED 2026-09-27 from the reference model**, run rather than read: it subtracts the value
+from Ctrl, compares the magnitude with a word of half a unit, and selects On only when
+it is not larger. The manual's "lower limit" describes a threshold; the instrument has none. Until
+2026-09-27 the engine followed the manual (revert record row 74): In 2 from the value upward. With a
+stepped Ctrl the two agree only at the value itself - above it the manual's switch stays on and the
+instrument's goes back off.
 
 ## 35. MonoKey
 
@@ -1560,8 +1586,15 @@ indexed by the Time dial and both taken from the ENVELOPE's own tables (17.3):
 - **Log**: a one-pole whose coefficient is `2 x (1 - envelope decay multiplier[Time])`. The factor
   of two is what makes the dial's printed Time the time to close the gap to **1%** of it, rather
   than the envelope's own reading of the same table entry.
-- **Lin**: a constant step of `envelope linear attack step[Time]` per tick - full scale in that
-  time.
+- **Lin**: a constant step of **a tenth** of `envelope linear attack step[Time]` per tick. The step
+  is a fraction of the 24-bit word's full scale, which is four of the engine's units (256 units), so
+  in the engine's terms it is 0.4 / (Time x 24 kHz): 64 units take 2.5 x the dial's Time, an octave
+  of pitch (12 units) 0.47 x. SETTLED 2026-09-27 from the reference model, run step by step: the step is multiplied by a word the instrument sets from Shape, -1.0 for Log and -0.1
+  for Lin. Before, the engine stepped full scale in the dial's Time, 2.5 x too fast (revert record
+  row 78).
+
+The Log step is c x |gap| plus one least significant bit, so it lands exactly rather than
+approaching forever; and both shapes stop ON the target once the gap is no larger than a step.
 
 Both run at the envelope tick rate (24 kHz), because on the instrument this IS an envelope segment.
 The engine builds both from `adr_time_seconds()`, which is where 17 already models those tables, so
@@ -1951,7 +1984,7 @@ Added 2026-09-25 from the reference model. Time uses Pulse's law and ranges (§1
   At load In is low, so Out is high for one delay time, as on the instrument.
 - **Cycle**: one whole pulse is shifted by the time; a pulse arriving while one is being delayed is
   ignored ("can only delay one single pulse", manual).
-- The time Mod input is not read yet.
+- The time Mod input moves the time as Pulse's does (§18.3).
 
 ## 47. RandomA
 
@@ -2008,8 +2041,17 @@ Added 2026-09-25. A bare delay line, no feedback or mix: Out is In, Time x step 
 step = round(range x 96 kHz / 127) over the seven ranges 5 ms to 2.7 s - the law the Time readout
 shows and DelayA/B follow (§24.1). DlySingleB's Time M adds In x TimeMod dial steps (TimeMod read
 raw, clamped to 0-127), from the tap stage's words: full TimeMod at 64 units sweeps the whole range,
-positive longer. The instrument's tap interpolates between samples from a table; the engine uses a
-cubic (Hermite) interpolator, which is ours. Takes a line from DelayA/B's pool of four.
+positive longer. Takes a line from DelayA/B's pool of four.
+
+**52.1 The taps, from the reference model (2026-09-27).** DlySingleA's tap is the same program as DelayA's
+(§24): a whole sample, Time x step back - the engine is exact there. DlySingleB's, and every tap of
+DelayDual and DelayQuad, is the MODULATED tap: it adds the Time M word x the input to the Time word,
+clamps to the dial's range, and reads between samples with a four-point Lagrange interpolator (the
+fraction's top nine bits pick one of 512 coefficient sets, which are Lagrange's to the word). The
+engine now reads those taps with Lagrange (`delay_ring_lagrange()`); DlySingle used a Hermite cubic and
+Dual/Quad a linear read until then (revert record row 80). DlyEight's taps are whole samples at k x Time/8
+for k = 1..8 (its Time word is the dial / 8), so tap 8 sits at the dialled Time; DelayQuad's Main output
+is the far end of the line, the full Range.
 
 ## 53. OscPM
 
@@ -2200,9 +2242,8 @@ Added 2026-09-27 from the reference model, each checked in a small patch built i
   Sw1-8 (§45) with two or four outputs, Ctrl coming after them. Every Ctrl is 4 units a step (the
   host writes 0x20000 a step), and on a momentary switch 4 units when held.
 - **68.2 ValSw1-2** sends In to Out 2 once Ctrl reaches the value, and to Out 1 below it, as ValSw2-1
-  does (§34). **Open question:** both parts actually test |Ctrl - value| <= 1/2 unit (`cmpm` against a
-  word 0x4000), which would make them switch at EQUALITY, not at "the lower limit" the manual
-  describes. The engine follows the manual until the G2 settles it (to-test).
+  does (§34). **It switches at EQUALITY** (settled 2026-09-27, as §34): the module tests |Ctrl - value| <= 1/2
+  unit, not the manual's "lower limit" (revert record row 75).
 - **68.3 Mux8-1 / Mux1-8.** The step is Ctrl's word >> 17 (4 units a step), clamped to 0..7. Mux8-1
   passes the chosen input and Mux1-8 puts In on the chosen output, both at a gain of exactly one.
   **Mux8-1X is not built**: the reference model shifts the crossfade weights in ways the reading of it does not
@@ -2275,7 +2316,7 @@ been compared with the instrument yet.
   Range and the delay time law (paramCurves notes §19-20). Dual and Quad move each tap's dial by its
   mod input x its amount (64 = one engine unit a full dial). Quad's Time/Clk uses the clock-sync law,
   and its Main output reads the Range's full time. Eight's taps are at 1..8 x the Time spacing, and the
-  Range is the total to tap 8. The instrument's own delay-base and tap stages are not yet read.
+  Range is the total to tap 8. The taps are the instrument's (§52.1, 2026-09-27).
 - **70.2 Flanger** (laws from the reference model, 2026-09-27): a triangle LFO at the Rate display's law
   (v x 384000/2^24 Hz, so 0.01 to 2.91 Hz; the manual's 24.4 Hz is wrong) sweeps the delay from a
   74-sample offset over up to 436 samples (Range, v x 0xdbec). Feedback is unipolar, v x 7000000/127

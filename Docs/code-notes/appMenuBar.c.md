@@ -130,3 +130,11 @@ by itself, so the menu it was reached from cannot constrain the choice anyway.
 The plug-in gets both headings too (`plugin/g2Menu.c`), where `sDeviceCapable` is false and every bank
 item drops out: Patch keeps Open, Open Recent, Save Back, Save As and New, and Performance keeps Open,
 Open Recent, Save Back and Save As. There is no New Performance, because there is no action for one.
+
+## 13. G2 Output Filter (Experimental menu; Settings in the plug-in)
+
+Switches the engine's model of the G2's converter and output stage (sound-engine-notes §199): a
+two-pole roll-off that the instrument's own outputs have and a plain audio interface does not. On by
+default, since that is what the G2 sounds like; off is the engine's own flat output, for comparing the
+two or for a patch that wants the top end. The application remembers it in prefs
+(`engineDacEmulation`), the plug-in in its project state (`dac=`).

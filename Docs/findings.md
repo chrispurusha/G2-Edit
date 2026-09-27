@@ -11974,3 +11974,72 @@ every note with a 1-unit step and ran at −7 dB with a large DC component. Thre
   engine now is too. That DC had also been pushing the output into the engine's soft knee.
 Now 14 plays at −21…−24 dB, no onset step, peaks near 0.3, with the G2's 1061/2112/3161 Hz partials.
 **Still open:** the G2's strongest partial, 527 Hz, is missing from the engine.
+
+## 2026-09-27 - The G2 output filter in the engine; Kick 5 matches at 96 kHz, not at 192 kHz
+
+The G2's output droop (2026-09-26's sine points) is a two-pole low-pass at 33.5 kHz, Q 0.66 (0.07 dB
+fit), now modelled as sound-engine-notes §199 with a menu toggle. Kick 5, engine against the 2026-09-26
+G2 capture (ff_k5, 192 kHz Fireface), band energy re 0-20 kHz with the SAME 43 ms windows at every rate
+(the older `bands` tool used 21 ms at 192 kHz and 43 ms below, which made rates incomparable):
+
+    band kHz          2-8    8-16  16-20  20-24  24-32  32-40  40-48
+    G2               -42.0  -41.4  -45.0  -44.7  -44.3  -50.0  -53.3
+    engine 96k       -41.6  -40.8  -44.5  -44.7  -43.0  -45.8  -47.3
+    engine 96k+DAC   -41.7  -41.1  -45.2  -46.0  -45.3  -49.9  -52.7
+    engine 48k+DAC   -41.9  -41.3  -45.2   (decimator edge)
+    engine 192k+DAC  -45.4  -47.9  -56.0  -59.9  -62.3  -70.0  -77.6
+
+At 96 and 48 kHz the filter closes the gap to within 1.3 dB everywhere. BUT IT IS NOT AUDIBLE ON THIS
+KICK: below 20 kHz the engine was already within 0.6 dB of the G2 without it (48 kHz device: +0.1, +0.4,
++0.6 dB in 2-8, 8-16, 16-20 kHz; with it +0.1, +0.1, -0.2). The large differences were all above 32 kHz.
+So the filter is correct, but it is not the explanation for the extra noise CT heard - if that is still
+heard, look at the hit level and velocity, not at the output stage. An A/B with the toggle settles it. At a 192 kHz device the engine
+is far too dark - a separate bug (todo.md): every noise source draws one white sample per GRAPH sample,
+so at a 192 kHz graph the audible band carries half the density (-3 dB), and DrumSynth's noise filter is
+the instrument's 96 kHz Chamberlin retuned for 192 kHz, whose warping and (1 - f/2) damping term differ.
+
+Audit, for double-counting: no law in the engine was fitted to captures that include this droop. The
+oscillator waves were calibrated against a Sine at each pitch, FltComb against its own dry noise; the
+Reverb, Delay, Noise, filters, EQs, OscDual and DrumSynth are the instrument's own arithmetic now.
+
+## 2026-09-27 (evening) - the stage patches' Partial modules, settled from the reference model
+
+Which Partial modules CT's 19 stage patches (User1) actually use, and with what settings, decided the
+order. Six were settled from the modules' own reference model and updates (reference sections named):
+
+- **Clock Generator (15 Randee dz):** both ClkGens are on Source = Master; the engine played them, and
+  every Clk-synced delay, at a fixed 120 BPM. Now the G2's master clock (notes §200). Checked offline:
+  the pattern period follows 120/BPM (0.500 s at 120, 0.375 s at 160).
+- **Glide Lin (07 Unstable Lead):** the module multiplies its step by a word the instrument sets from Shape
+  - -1.0 for Log, -0.1 for Lin. Log is exactly the engine's one-pole; Lin steps a tenth of the envelope's
+  attack step in 24-bit full scale, 0.4x the engine's old step (§36.1).
+- **ValSw2-1 / ValSw1-2 (01 Mini Emulator):** The reference model switches at |Ctrl - value| <= 1/2 unit -
+  equality, not the manual's threshold (§34, §68.2).
+- **Multi Filter (07, 08):** the coefficient stage confirms q and GComp; it also clamps the cutoff at
+  20.8 kHz, which the engine did not (§10.2).
+- **ModAmt (5 patches):** Enable off is a bypass only with m/1-m on; with it off the part clears the
+  output (§29.4). No stage patch has that combination.
+- **SwOnOffT (4 patches):** Out and the unpatched 64-unit constant confirmed; Ctrl's closed word (0x20000)
+  is open, and no stage patch uses Ctrl (§30).
+
+Also found: the delay tap's interpolator (DlySingleB, DelayDual/Quad) is exactly four-point Lagrange on
+a 512-phase table - the form StChorus already uses. Not yet applied; 08 Ice Pad's DlySingleBs sit on whole
+samples, so it does not affect the stage patches. Engine status 130 Working / 40 Partial. All 19 stage
+patches render with finite, non-silent output after the changes. Revert record rows 74-79.
+
+
+## 2026-09-27 (late) - delay taps and Time Mod from the reference model; a bit-exact regression check
+
+- **Delays (§52.1):** DlySingleA's tap is DelayA's program - a whole sample, already exact. The modulated
+  tap (DlySingleB, every Dual/Quad tap) interpolates with four-point Lagrange; the engine had a Hermite
+  cubic and a linear read. DlyEight: whole samples at k x Time/8. Quad's Main: the full Range. A first
+  reading of the tap's addressing as "(v + 1)/128 x Range" was wrong - DlyTapSimple's program is exactly DelayA's, whose step law is hardware-checked - and was dropped before it reached the code.
+- **Pulse and Logic Delay Time Mod (§18.3):** the shared time stage moves the dial by Mod x TimeMod steps
+  and reads the time law there. Pulse now follows a moving width.
+- **Checked bit-exact:** with the output filter off, SimpleLead, BigPad, MiniEmulator, Dx, PulseMeasure,
+  ChorusSaw, FxMeasure and 18 of the 19 stage patches render byte-identical to 301e555; 07 Unstable Lead
+  differs, as its Lin Glides should. (15's master-clock change and 01's ValSw only show with a set tempo
+  and Ctrl values in the switching band.)
+- Parked, with reasons: FltComb (581-line part; the stage patch's settings already fit the capture to its
+  floor), EnvMulti (a segment state machine that wants a harness run), Chorus pool (a memory limit, not a
+  law). Engine status 136 Working / 34 Partial.

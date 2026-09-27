@@ -57,6 +57,7 @@ extern "C" {
 #define PREF_KEY_CHANNEL     "audioOutputFirstChannel"   // superseded; read once to migrate
 #define PREF_KEY_BUFFER      "audioOutputBufferFrames"
 #define PREF_KEY_LEVEL       "audioOutputLevelDb"
+#define PREF_KEY_DAC         "engineDacEmulation"
 
 typedef struct {
     AudioObjectID id;
@@ -294,6 +295,7 @@ void audio_output_load_settings(void) {
     if (uid != NULL) {
         strncpy(gSelectedUid, uid, sizeof(gSelectedUid) - 1);
     }
+    sound_engine_set_dac_emulation(prefs_get_int(PREF_KEY_DAC, 1) != 0);
     // notes §3
     gLevelDb      = (int32_t)prefs_get_int(PREF_KEY_LEVEL, 0);
 
@@ -375,6 +377,11 @@ void audio_output_select_level_db(int32_t db) {
     gLevelDb = db;
     prefs_set_int(PREF_KEY_LEVEL, (long)db);
     sound_engine_set_output_level_db((double)db);
+}
+
+void audio_output_select_dac_emulation(bool on) {
+    prefs_set_int(PREF_KEY_DAC, on ? 1 : 0);
+    sound_engine_set_dac_emulation(on);
 }
 
 void audio_output_select_buffer_frames(uint32_t frames) {

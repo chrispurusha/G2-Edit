@@ -135,3 +135,17 @@ above; 9 and 10 go together, since the recurrences use the new constants. 12-23 
 formula each - but reverting 20 also brings back two bugs (the π tuning error and FilterType never
 read), so revert only its damping if that is what is in question. 29 is a whole module, not a
 constant: restore the block, `reverb_step()`, the IR renderer and the node fields together.
+
+## 2026-09-27
+
+| # | What | Old | New | Old code at |
+|---|---|---|---|---|
+| 74 | ValSw2-1 switching | In 2 once Ctrl >= the value (the manual's "lower limit"): `(ctrl >= spec->constant) ? in2 : in1` | In 2 only while \|Ctrl - value\| <= 1/2 unit - the reference model (§34) | `301e555` `src/soundEngine.c`, eNodeValSw in `eval_node()` |
+| 75 | ValSw1-2 switching | Out 2 once Ctrl >= the value | Out 2 only while \|Ctrl - value\| <= 1/2 unit (§68.2) | `301e555` `src/soundEngine.c`, eNodeValSw12 in `eval_node()` |
+| 76 | Clk-synced times and ClkGen's Master source | a fixed 120 BPM (`ENGINE_REFERENCE_BPM`) | the G2's master clock, 120 only when none is known (notes §200) | `301e555` `src/soundEngine.c` |
+| 77 | FltMulti cutoff ceiling | `fmin(flt_cutoff_hz(control), gSampleRate * 0.45)` - 43 kHz at a 96 kHz graph | also at most 20.8 kHz, the coefficient stage's clamp (§10.2) | `301e555` `src/soundEngine.c` `fltmulti_step()` |
+| 78 | Glide Lin step | `1.0 / ticks` - full scale (the engine's 1.0, 64 units) in the dial's Time | `0.1 x 4.0 / ticks` - a tenth of the attack step in 24-bit full scale (§36.1) | `301e555` `src/soundEngine.c` `glide_tick_coeff()` |
+| 79 | ModAmt Enable off | passes In, whatever m/1-m says | passes In with m/1-m on; silent with it off - the module's own switch (§29.4) | `301e555` `src/soundEngine.c`, eNodeModAmt in `eval_node()` |
+| 80 | DlySingleB / DelayDual / DelayQuad tap interpolation | DlySingle: Hermite cubic; Dual/Quad: `ring_read()` linear | four-point Lagrange, the tap stage's own table (§52.1) | `301e555` `src/soundEngine.c` `dly_single_step()`, `multi_tap_step()` |
+| 81 | Pulse and Logic Delay Time Mod | the input ignored; the width fixed at edge time | Time + Mod x TimeMod dial steps, through the time law, re-read every sample (§18.3) | `301e555` `src/soundEngine.c` `pulse_step()`, `logic_delay_step()` |
+

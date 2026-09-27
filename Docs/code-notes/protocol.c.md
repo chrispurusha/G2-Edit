@@ -253,3 +253,12 @@ etc.) are plain ASCII followed by a single 0x00 separator byte, then the binary 
 header text itself never contains a null byte, so the first 0x00 in the file unambiguously marks
 where the body starts. Fills outContent (caller-owned, size outContentSize) rather than
 allocating, matching this codebase's static-buffer convention (see sBankUploadContent).
+
+## 23. `parse_patch()` and `parse_perf()` - a patch with no Volume
+
+A patch the editor saved before 2026-09-27 carries no Volume at all: new patches then had none,
+and the writer writes only what the database holds. Left alone, the slot's Volume stays inactive, so
+the top bar draws no dial and the engine reads the empty module as Level 0, off - silence with no
+control to lift it (reference §63). Such a patch is given the full level, switched on. A patch from
+the G2 always carries one, so this changes nothing for it; a USB parse of a single section may fill
+the default in first, and the section that carries the real Volume overwrites it.
