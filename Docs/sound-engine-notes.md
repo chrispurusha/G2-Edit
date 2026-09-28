@@ -3230,6 +3230,10 @@ Nothing in the engine was double-counting this droop: the captures behind the en
 ratios through the same output path (oscillator waves against a Sine, FltComb against the dry noise) or
 have since been replaced by the instrument's own arithmetic.
 
+**Off by default (CT, 2026-09-28).** A switch, not a default: Experimental > G2 Output Filter in the app,
+Settings > G2 Output Filter in the plug-in, each remembered in its own prefs file (the plug-in's beside
+the dial mode; a project that saved a setting still overrides it). The engine starts with it off.
+
 ## 200. The master clock (`engine_master_bpm()`)
 
 Every module set to Clk - DelayA/B and DlySingle's Time/Clk, DelayQuad's Time/Clk, DlyStereo - and a

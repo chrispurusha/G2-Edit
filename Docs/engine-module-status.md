@@ -16,10 +16,10 @@ which fails the run if it names a module that is not offered or not modelled.
 
 | Group | Working | Partial | Not implemented |
 |---|---|---|---|
-| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Phase Mod, Osc Shape A, Osc Shape B, Osc Dual, Noise Osc, Noise, Metallic Noise, Osc Percussion, Drum Synth, FM Operator, DX Router, Osc Master | Osc String, Driver, Resonator | - |
+| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Phase Mod, Osc Dual, Noise Osc, Noise, Metallic Noise, Osc Percussion, Drum Synth, FM Operator, DX Router, Osc Master | Osc Shape A, Osc Shape B, Osc String, Driver, Resonator | - |
 | **Filters** (§10, §13, §21-§23, §56, §67, §69, §70) | LP Filter, HP Filter, Nord Filter, Classic Filter, Multi Filter, Phase Filter, Static Filter, FltVoice, WahWah, Eq 2-band, Eq 3-band, Eq Peak | Comb Filter, Vocoder | - |
 | **Envelopes** (§17) | Envelope ADSR, Envelope AHD, Envelope ADR, Envelop ADDSR, Envelope H, Envelope D, Envelope Mod AHD, Envelope Mod ADSR | Envelope Multi | - |
-| **LFOs** (§28, §42, §50, §54) | LFO A, LFO B, LFO C, LFO Shp A, Clock Generator | - | - |
+| **LFOs** (§28, §42, §50, §54) | LFO A, LFO B, LFO C, Clock Generator | LFO Shp A | - |
 | **Mixers** (§3) | Mixer 1-1 A, Mixer 1-1 S, Mixer 2-1 A, Mixer 4-1 A, Mixer 4-1 B, Mixer 4-1 C, Mixer 4-1 S, Mixer 2-1 B, Mixer 8-1 A, Mixer 8-1 B, MixFader, MixStereo, Fade 1-2, Fade 2-1, X-Fade, Pan | - | - |
 | **Level** (§16, §29, §43, §44, §48, §68, §69, §70) | Constant, ConstSwM, ConstSwT, CompLev, CompSig, LevAdd, LevAmp, LevConv, LevMod, LevMult, MinMax, ModAmt, EnvFollow, Red2Blue, Blue2Red | NoiseGate | - |
 | **Shapers** (§3.4) | Saturate, Clip, OverDrive, ShpExp, WaveWrap, ShpStatic, Rect | - | - |
@@ -32,7 +32,7 @@ which fails the run if it names a module that is not offered or not modelled.
 | **Random** (§47, §64, §69, §70) | Random A, Random B, Rnd Clock A, Rnd Trig | Rnd Clock B, Rnd Pattern | - |
 | **Note** (§26, §41, §49, §69, §70) | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide, Zero Crossing Counter | Pitch Tracker, Level Scaler | - |
 | **MIDI** (§70) | CtrlSend, PCSend, NoteZone, Automate | NoteSend, CtrlRcv, NoteRcv | - |
-| **Total 170** | **144** | **26** | **0** |
+| **Total 170** | **141** | **29** | **0** |
 
 | Partial module | What is still open |
 |---|---|
@@ -62,6 +62,9 @@ which fails the run if it names a module that is not offered or not modelled.
 | Sequencer Event | steps at 96 kHz whatever the clock's rate (§58) |
 | Sequencer Values | steps at 96 kHz whatever the clock's rate (§58) |
 | NoteSend | plays this slot only; notes to other slots and MIDI are dropped (§62) |
+| Osc Shape A | its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7) |
+| Osc Shape B | its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7) |
+| LFO Shp A | its per-waveform Phase offsets and the Dir input are not modelled (§28.4) |
 
 ## What is left (2026-09-27): refinement, not coverage
 
@@ -74,6 +77,7 @@ below say what refining each will take; update them by hand as modules move to W
 | **Basic versions to replace with the instrument's parts** | Delay Dual / Quad / Eight (delay-base and tap parts), PShift, Scratch (pitch-shift parts), Flanger, NoiseGate (follower, simple-envelope and VCA parts), Osc String (Karplus parts), Pitch Tracker, Vocoder, Rnd Clock B and Rnd Pattern (parts sharing registers - run the whole module in the harness), Sequencer Controlled (bit-field instructions), Mux8-1X (run its program) |
 | **Basic versions with no part in the reference** | Driver, Resonator, Zero Crossing Counter, Level Scaler - need captures from the G2 |
 | **Limited by what reaches the engine** | CtrlRcv (no MIDI CC stream), NoteRcv (no channels), Device (global wheel 2), 4 Inputs (Bus not bridged) |
+| **Jack laws not fully decoded** | Osc Shape A/B (Shape below 0), LFO Shp A (Phase offsets, Dir) - the rest of the jacks added 2026-09-28 are the parts' own and stay Working; their hardware check is in to-test.md |
 | **Nothing to render** | CtrlSend, PCSend, Automate, NoteZone (counted Working) |
 
 **Moved to Working on 2026-09-27 (end of session):** the seven envelopes other than Multi. Each now reads

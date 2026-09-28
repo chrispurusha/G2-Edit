@@ -166,3 +166,4 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 | 97 | LfoB / LfoShpA Rst, Phase, Phase M, Shape M | all ignored | Rst clears the counter to phase 0.5; Phase and Phase M offset the read; LfoB's Sine/Tri a quarter cycle behind LfoA's (§28.4) | `2b94849` `src/soundEngine.c` `lfo_step()`, `lfo_phase_build()` |
 | 98 | NoteSend and what drives it | pruned: nothing reached it from the Outs | added as a root after the Outs (§62.1) | `4d1ec2d` `src/soundEngine.c` `build_snapshot()` |
 | 99 | LFO Sine (LFO A/B/C, LfoShpA Sine) | libm `sin(2 pi phase)` | the instrument's sine polynomial at the same phase, within -77 dB (§28.5) | `4d1ec2d` `src/soundEngine.c` `lfo_step()` |
+| 100 | Key pitch seen by post-mix (FX-area) nodes | 0.0, MIDI note 0 | E4 (64), the pitch zero: KBT moves nothing there (§16.2a) | `4d1ec2d` `src/soundEngine.c` the post-mix `eval_node()` call |

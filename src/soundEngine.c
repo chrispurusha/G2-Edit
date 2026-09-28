@@ -1503,7 +1503,7 @@ static double                 gDacCoefBank[SOUND_ENGINE_MAX_ENGINES][4];        
 static double                 gDacCoefRateBank[SOUND_ENGINE_MAX_ENGINES];
 #define gDacCoef             (gDacCoefBank[SE])
 #define gDacCoefRate         (gDacCoefRateBank[SE])
-static _Atomic bool           gDacEmulationBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = true};
+static _Atomic bool           gDacEmulationBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = false};
 #define gDacEmulation        (gDacEmulationBank[SE])
 #define gOutHistoryPos       (gOutHistoryPosBank[SE])
 
@@ -12682,7 +12682,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 if (params.node[n].postMix == false) {
                     continue;
                 }
-                eval_node(0, n, &params, value, 0.0);
+                eval_node(0, n, &params, value, KEYBOARD_PITCH_ZERO);    // §16.2a - no key after the mix: E4, 0 units
             }
 
             if (params.tap >= 0) {

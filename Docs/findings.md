@@ -12156,3 +12156,15 @@ them added the pitches and band balance match. Open: the engine is ~9 dB louder 
 at 32 voices); the rig's calibration since outs 1/2 were re-patched is not checked, so no law was
 touched. Also: the plug-in's G2 Output Filter setting is now kept in its prefs file beside the dial
 mode (a project that stored one still overrides it, as with the dial mode).
+
+## 2026-09-28 (night) - 15 Randee dz captured: the FX area's keyless pitch, and SeqNote's record inputs
+
+CT: 15 is missing a tonal bass, occasionally heard. Captured on the G2 (slot A, variation 7, clock
+running): 60-250 Hz 10-16 dB fuller than the engine, with a line at 88 Hz. Two causes:
+- **FX-area key** (reference §16.2a): post-mix nodes were given key 0.0 (MIDI note 0), so the FX bass
+  oscillators (KBT on) were subsonic. Now E4. The 120-250 Hz octave now matches.
+- **SeqNote's record inputs** (§58): RecVal from the FX-In audio, RecEnable from a RndTrig, so on the G2
+  the bass sequence is re-recorded now and then - the occasional low notes. Not modelled yet: the record
+  part writes into the Seq16's step words, which the engine rebuilds from the dials every sample.
+Also on 18: the G2 gives it 15 voices of the 32 it asks; CT set 8 for the engine. Multi-core voices and
+following the G2's own voice count are in todo.md.
