@@ -459,14 +459,24 @@ rm -f "$DMG"
 
 echo "==> creating $DMG"
 
-# Volume names are capped at 27 characters on HFS+.
-hdiutil create \
-    -volname "${${VOL_NAME}[1,15]} $VERSION_CLEAN" \
-    -srcfolder "$STAGE" \
-    -fs HFS+ \
-    -format UDZO \
-    -ov \
-    "$DMG" >/dev/null
+# macOS 27 deprecates `hdiutil create` in favour of `diskutil image create from`. That makes an APFS
+# volume where hdiutil made HFS+ - readable on macOS 10.13 and later, below every minimum here - and the
+# older systems that lack it keep the hdiutil line, whose volume names are capped at 27 characters.
+if diskutil image create from -h >/dev/null 2>&1; then
+    diskutil image create from \
+        --format UDZO \
+        --volumeName "${${VOL_NAME}[1,15]} $VERSION_CLEAN" \
+        "$STAGE" \
+        "$DMG" >/dev/null
+else
+    hdiutil create \
+        -volname "${${VOL_NAME}[1,15]} $VERSION_CLEAN" \
+        -srcfolder "$STAGE" \
+        -fs HFS+ \
+        -format UDZO \
+        -ov \
+        "$DMG" >/dev/null
+fi
 
 echo
 echo "done: $DMG ($(du -h "$DMG" | cut -f1))"

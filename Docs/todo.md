@@ -17,6 +17,10 @@ General
 - Separate zoom for VA and FX. Possibly scaling/zooming for top-bar too.
 - Module wave/filter graphs, what is left of the original's 43: LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two). PulseOsc and LfoD carry one in the original but are NOT module types we have - they are among the unfilled slots below, so they cannot be drawn until the modules exist
 - CPU: three quarters of it is `eval_node`'s per-node switch, run once per node per voice per oversampled sample (profile in findings 2026-09-19). The cheap wins are taken; skipping a node whose inputs are constant needs the sub-block restructure above to be worth the test that decides it
+- Drop the engine's fixed per-patch pools (every MAX_*_LINES in soundEngine.c: StChorus 2, FreqShift 2, Seq 8, ClkGen/MetNoise/FltPhase/DlyClock 4, delay lines, FX buffers, OscString, Vocoder - past the limit a module plays silent or bypassed): a laptop has the room, so play every instance; mind the plug-in's per-instance banks
+- Estimate whether a patch fits the G2's DSP/memory budget and WARN when it is over - never limit the emulation to match; resource model decoded, per-module record and voice placer open (g2-budget-estimate-design.md)
+- Diavolo Sync patch is brighter on the G2 than in the engine (CT 2026-09-28) - capture both; G2 outputs 1/2 are on the Fireface again
+- LfoShpA: its per-waveform Phase offsets and the Dir input (§28.4); the shape oscillators' waves below Shape 0 (§6.7)
 - `DELAY_LINE_SAMPLES` is sized 2.8 s at a 96 kHz graph, so at a 192 kHz device the longest Time is truncated to 1.4 s - pre-existing, and worse before the rate cap
 
 USER REQUESTS (reported 2026-08-22; none blocking)
@@ -264,10 +268,8 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 ## Sound engine - open at 2026-09-14 (session cut short; see findings.md 2026-09-14 OSCSHPB entry)
 
 - DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
-- OscShpB: SymMod (Shape mod input) and the Sync stage not yet compared with the engine
 - OscDual (§12.5): compare the new code sample for sample with the harness (the offline part harness kept outside the repo, `the harness`: note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
 - OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
-- OscB: Shape mod input, Sync and FM (FmLin) not modelled (reference §6.5)
 - DX FM depth (§14.3, a guess of 1 cycle per full-scale input): the Operators share OscPM's phase-mod part, which gives 8 cycles at full amount (§53) - decode the DXRouter's amount words and correct
 - OscPM: Tri corner correction and the Sync input (§53)
 - Pulse ignores its Type (Plus/Minus); logic Delay ignores its Mod input (§46)

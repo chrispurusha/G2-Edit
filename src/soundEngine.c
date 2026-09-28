@@ -313,18 +313,16 @@ typedef struct {
 
 static const tOscParams kOscParams[] = {
     //  type             tune cent kbt pmod ptype on  wparam wmode shape aWaves
-    {moduleTypeOscB,     0, 1, 2,  3,  4,  9,  8, -1,  6, false},
-    {moduleTypeOscA,     0, 1, 2,  3,  6,  5,  4, -1, -1, true },
-    {moduleTypeOscC,     0, 1, 2,  7,  3,  5, -1,  0, -1, true },             // FmM 4, FM type 6: FM not modelled, as on OscB
-    // OscD has NO Pitch Type menu - five parameters, and 3 is its "Pitch" mod dial. This said 3,
-    // which read that dial as the type; harmless while anything above Semi was refused, and wrong
-    // the moment §6.1a started acting on it. -1 is "always Semi". Whether that dial is the PitchVar
-    // attenuator, and so belongs in pmod, is the open question in todo.md - not assumed here.
-    {moduleTypeOscD,     0, 1, 2, -1, -1,  4, -1,  0, -1, true },
-    {moduleTypeOscNoise, 0, 1, 2,  3,  4,  7, -1, -1, -1, false},
-    {moduleTypeOscDual,  0, 1, 2,  3,  4, 10, -1, -1, -1, false},
-    {moduleTypeOscPerc,  0, 1, 3,  4,  2,  8, -1, -1, -1, false},       // §40
-    {moduleTypeOscPM,    0, 1, 2,  6,  3,  5, -1,  0, -1, false},       // §53 - PhM 4
+    {moduleTypeOscB,     0, 1, 2,  3, 4,  9,  8, -1,  6, false},
+    {moduleTypeOscA,     0, 1, 2,  3, 6,  5,  4, -1, -1, true },
+    {moduleTypeOscC,     0, 1, 2,  7, 3,  5, -1,  0, -1, true },              // FmM 4, FM type 6: FM not modelled, as on OscB
+    // §6.1a - OscD's parameter 3 IS its Tune Mode (the instrument's own parameter list); it has no
+    // Pitch M dial, its one Pitch input being unattenuated
+    {moduleTypeOscD,     0, 1, 2, -1, 3,  4, -1,  0, -1, true },
+    {moduleTypeOscNoise, 0, 1, 2,  3, 4,  7, -1, -1, -1, false},
+    {moduleTypeOscDual,  0, 1, 2,  3, 4, 10, -1, -1, -1, false},
+    {moduleTypeOscPerc,  0, 1, 3,  4, 2,  8, -1, -1, -1, false},        // §40
+    {moduleTypeOscPM,    0, 1, 2,  6, 3,  5, -1,  0, -1, false},        // §53 - PhM 4
 };
 
 static double perc_decay_word(double dial);
@@ -452,6 +450,7 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define COMP_PARAM_ATTACK          (2)
 #define COMP_PARAM_RELEASE         (3)
 #define COMP_PARAM_REFLVL          (4)
+#define COMP_PARAM_SIDECHAIN       (5)  // §25.2 - detect on the side-chain input instead of In
 #define COMP_PARAM_ACTIVE          (6)
 
 // Read off the instrument's own dial displays, not guessed. See where they are used.
@@ -490,13 +489,26 @@ typedef struct {
     int mono;       // polyMonoStrMap: 1 is Mono, one LFO shared by every voice (§42)
     int rateMod;    // §50 - Rate M, the attenuator on the second rate input
     int kbt;        // §50 - offTo100KbStrMap: Off, 25, 50, 75, 100%
+    int phase;      // §28.4 - the Phase dial
+    int phaseMod;   // §28.4 - Phase M, on the Phase M input
+    int shapeMod;   // §28.4 - Shape M, on the Shape M input (LfoShpA)
 } tLfoParams;
 
 // LfoB's rate dial is an ordinary dial rather than the LFORate type, but it indexes the same sweeps.
-static const tLfoParams kLfoA    = {0, 7, 4, 6, -1, 5, 1, 3, 2};
-static const tLfoParams kLfoB    = {0, 2, 4, 8, -1, 7, 5, 1, 3};
-static const tLfoParams kLfoC    = {0, 3, -1, 2, -1, 4, 1, -1, -1};
-static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4, 9, 3, 2};
+static const tLfoParams kLfoA    = {0, 7, 4, 6, -1, 5, 1, 3, 2, -1, -1, -1};
+static const tLfoParams kLfoB    = {0, 2, 4, 8, -1, 7, 5, 1, 3, 6, 9, -1};
+static const tLfoParams kLfoC    = {0, 3, -1, 2, -1, 4, 1, -1, -1, -1, -1, -1};
+static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4, 9, 3, 2, 7, 6, 8};
+
+// §28.4 - the counter stage's inputs after the two rate inputs: Rst, then LfoB's Phase M, or
+// LfoShpA's Shape M and Phase M
+#define LFO_IN_RESET               (2u)
+#define LFOB_IN_PHASE_MOD          (3u)
+#define LFOSHPA_IN_SHAPE_MOD       (3u)
+#define LFOSHPA_IN_PHASE_MOD       (4u)
+#define LFO_MAX_INPUTS             (5u)
+#define LFO_RESET_PHASE            (0.5)    // §28.4 - the counter's word 0
+#define LFO_RST_PREV_HIGH          (1u)     // gLogicPrev bit: the Rst input was above zero
 
 #define CONST_PARAM_VALUE          (0)
 #define CONST_PARAM_BIP_UNI        (1) // bipUniStrMap: 0 is Bipolar, 1 Unipolar - §16.1
@@ -538,8 +550,9 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4, 9, 3, 2};
 #define FLTVOICE_PARAM_FREQMOD     (7)
 #define FLTVOICE_PARAM_RES         (8)
 #define FLTVOICE_PARAM_ACTIVE      (9)
-#define FLTVOICE_VOWELS            (9)  // vowelStrMap: A, E, I, O, U, Y, AA, AE, OE
-#define FREQSHIFT_PARAM_SHIFT      (0)  // §57 - FreqShift, Mod, Range, Bypass
+#define FLTVOICE_VOWELS            (9)    // vowelStrMap: A, E, I, O, U, Y, AA, AE, OE
+#define FLTVOICE_FINE_OFFSET       (-0.5) // §56.1 - the fine table starts at -50 cents, and the module reads it from there
+#define FREQSHIFT_PARAM_SHIFT      (0)    // §57 - FreqShift, Mod, Range, Bypass
 #define FREQSHIFT_PARAM_MOD        (1)
 #define FREQSHIFT_PARAM_RANGE      (2)
 #define FREQSHIFT_PARAM_ACTIVE     (3)
@@ -651,13 +664,23 @@ typedef enum {
 } tOscWave;
 
 // §6.3
-#define OSC_INSTRUMENT_RATE         (96000.0)
-#define OSC_EDGE_SAMPLES            (2.0)
-#define OSC_CORNER_LIMIT_MULTI      (2.0)  // OscA, OscB
-#define OSC_CORNER_LIMIT_PARTS      (1.0)  // OscC, OscD
+#define OSC_INSTRUMENT_RATE       (96000.0)
+#define OSC_SYNC_PHASE            (0.55)   // §6.6 - the sync stage's reset word, -0.9, in the engine's phase
+#define OSC_PM_SYNC_PHASE         (0.05)   // §53 - the same word in OscPM's phase over 0..1
+#define OSC_SYNC_PREV_HIGH        (4u)     // gLogicPrev bit: the Sync input was above zero
+#define OSCPM_SYNC_SLOT           (1)      // §53 - OscPM's inputs: PitchVar, Sync, Phase M, Pitch
+#define OSC_EDGE_SAMPLES          (2.0)
+#define OSC_CORNER_LIMIT_MULTI    (2.0)    // OscA, OscB
+#define OSC_CORNER_LIMIT_PARTS    (1.0)    // OscC, OscD
 
 // notes §16
-#define OSCB_TUNE_UNITY             (64.0)
+#define OSCB_TUNE_UNITY           (64.0)
+// §6.8 - linear-FM: Lin adds 2 x amount x input words a sample (a unit is 1/4 of a word, a word is
+// 48 kHz of increment); Trk 64 x amount x input x the key increment, and the Pitch stage makes the
+// oscillator's increment 32 x Coarse x Fine words of it, 0x1c20d/2^23 and 1/2 at unity
+#define FM_LIN_HZ                   (OSC_INSTRUMENT_RATE / 4.0)
+#define FM_TRK_SCALE                (8388608.0 / 0x1c20d)
+#define FM_MAX_DEVIATION_HZ         (OSC_INSTRUMENT_RATE / 2.0)
 #define MIDI_NOTE_A440              (69.0)
 #define MIDI_NOTE_MIDDLE_C          (60.0)
 #define KBT_REFERENCE_NOTE          (64.0)    // §21.3 - the instrument's pitch zero, E4: where KBT moves nothing
@@ -799,7 +822,7 @@ typedef enum {
     eNodeDlyClock,       // §69.7 - the value clocked in N clocks ago
     eNodeDigitizer,      // §69.8 - sample and hold at an exponential rate, then a bit mask
     eNodeWahWah,         // §69.9 - a state-variable band-pass swept along sweep squared
-    eNodeNoteDet,        // §69.11 - Gate and Vel of one key, from the held-key table
+    eNodeNoteDet,        // §69.11 - Gate, Vel and RVel of one key, from the held-key table
     eNodeMultiTap,       // §70.1 - DelayDual, DelayQuad, DlyEight: taps on one line
     eNodeFlanger,        // §70.2 - an LFO-swept short delay with feedback
     eNodePShift,         // §70.3 - PShift and Scratch: two crossfaded moving taps
@@ -847,6 +870,10 @@ typedef struct {
     uint32_t  srcOut[MAX_NODE_INPUTS];
     uint32_t  srcLeg[MAX_NODE_INPUTS];     // which of the source's NODE_OUTPUTS legs that output is
     uint32_t  inCount;
+    int8_t    syncSlot;                    // §6.6 - which input is the Sync jack, -1 for none
+    int8_t    shapeModSlot;                // §6.7 - which input is the Shape Mod jack, -1 for none
+    int8_t    fmSlot;                      // §6.8 - which input is the FM jack, -1 for none
+    bool      fmTrack;                     // §6.8 - FM Trk rather than FM Lin
     bool      active;                      // the module's own power button
     // notes §192 - a leg that closes a loop reads its source's value from the previous sample
     uint32_t  backMask;                    // which legs
@@ -865,14 +892,22 @@ typedef struct {
     double    oscCornerLimit;          // §6.3
     double    basePitch;
     double    shape;
-    double    rateHz;        // LFO speed
-    uint32_t  polarity;      // LFO output range, posStrMap order
-    bool      shpWave;       // LFO uses LfoShpA's waveform set rather than the plain one
-    bool      lfoMono;       // §42 - reads the shared phase in gLfoMonoPhase, not the voice's own
-    double    lfoRateMod;    // §50 - the second rate input's attenuation
-    double    lfoKbt;        // §50 - how much of the key's distance from E4 the rate follows
-    bool      lfoHasSync;    // §54 - a second output, Snc
-    uint8_t   vowel[3];      // §56 - FltVoice's three vowels
+    double    shapeModAmount; // §6.7 - the Shape M dial as a word fraction
+    double    fmAmount;       // §6.8 - the FM dial through its attenuator curve
+    double    rateHz;         // LFO speed
+    uint32_t  polarity;       // LFO output range, posStrMap order
+    bool      shpWave;        // LFO uses LfoShpA's waveform set rather than the plain one
+    bool      lfoMono;        // §42 - reads the shared phase in gLfoMonoPhase, not the voice's own
+    double    lfoRateMod;     // §50 - the second rate input's attenuation
+    double    lfoKbt;         // §50 - how much of the key's distance from E4 the rate follows
+    bool      lfoHasSync;     // §54 - a second output, Snc
+    bool      lfoHasReset;    // §28.4 - a Rst input
+    int8_t    lfoPhaseSlot;   // §28.4 - the Phase M input, -1 for none
+    int8_t    lfoShapeSlot;   // §28.4 - the Shape M input, -1 for none
+    double    lfoPhase;       // §28.4 - the read point's offset from the counter, in cycles
+    double    lfoPhaseMod;    // §28.4 - Phase M, cycles per input unit
+    double    lfoShapeMod;    // §28.4 - Shape M, shape per input unit
+    uint8_t   vowel[3];       // §56 - FltVoice's three vowels
     uint8_t   vowelPad[5];
 
     // The filter's Freq DIAL VALUE (0..127, fractional), not a frequency. Kept in dial units because
@@ -1072,6 +1107,7 @@ typedef struct {
     double        vibratoHz;
     tGlideMode    glideMode;                // patch-wide, not per node
     double        glideSeconds;
+    double        octaveSemis;              // §63a - the patch's Octave Shift, in semitones
     double        bendSemitones;            // 0 when the patch has bend switched off
     uint64_t      topology;                 // changes shape => the audio thread resets its per-node state
     uint32_t      voiceCount;               // how many voices this patch may sound at once, 1 for Mono/Legato
@@ -1357,10 +1393,17 @@ static double engine_master_bpm(void) {
     return ((bpm >= MASTER_CLOCK_BPM_MIN) && (bpm <= MASTER_CLOCK_BPM_MAX)) ? (double)bpm : ENGINE_REFERENCE_BPM;
 }
 
+// notes §200 - whether the master clock runs; with none known (no G2, no performance) it is taken as running
+static bool engine_master_running(void) {
+    uint32_t bpm = gGlobalSettings.masterClock;
 
-static double               gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
+    return ((bpm >= MASTER_CLOCK_BPM_MIN) && (bpm <= MASTER_CLOCK_BPM_MAX)) ? (gGlobalSettings.masterClockRunning != 0) : true;
+}
+
+
+static double gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
 #define gDeviceRate    (gDeviceRateBank[SE])
-static double               gSampleRateBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
+static double gSampleRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
 #define gSampleRate    (gSampleRateBank[SE])
 
 // notes §30
@@ -1416,7 +1459,10 @@ static uint8_t                gKeyHeldBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_CO
 // §35 - the velocity each held key was played at, as the instrument keeps one beside its held
 // count. Audio thread only, like gKeyHeld above.
 static uint8_t                gKeyVelocityBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_COUNT];
-#define gKeyVelocity    (gKeyVelocityBank[SE])
+#define gKeyVelocity              (gKeyVelocityBank[SE])
+#define NOTEDET_VELOCITY_SCALE    (128.0)                       // §69.11
+static uint8_t                gKeyReleaseVelocityBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_COUNT];
+#define gKeyReleaseVelocity       (gKeyReleaseVelocityBank[SE]) // §69.11 - NoteDet's RVel, held from note-off to note-off
 
 // notes §32
 static _Atomic uint32_t       gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
@@ -2544,6 +2590,7 @@ static void reset_voices(void) {
 
     gVoiceClock = (uint64_t)MAX_VOICES;
     memset(gKeyVelocity, 0, sizeof(gKeyVelocity));   // §35
+    memset(gKeyReleaseVelocity, 0, sizeof(gKeyReleaseVelocity));
     memset(gKeyHeld, 0, sizeof(gKeyHeld));
 }
 
@@ -2781,7 +2828,8 @@ static void voice_note_off(int32_t note, uint8_t release) {
     if (note >= MIDI_KEY_COUNT) {
         return;
     }
-    gKeyHeld[note] = 0;
+    gKeyHeld[note]            = 0;
+    gKeyReleaseVelocity[note] = release;
 
     int32_t highest = highest_key_held();
     bool    mono    = atomic_load(&gEngineMono);
@@ -3887,6 +3935,126 @@ static uint32_t env_input_connectors(tModuleType moduleType, uint32_t * derived)
     return count;
 }
 
+// §6.7 - the oscillators carrying the reference model: their Shape Mod jack, which is
+// the fifth input on all three, and the Shape M dial that scales it
+typedef struct {
+    tModuleType type;
+    uint32_t    shapeModParam;
+} tShapeModSpec;
+
+#define SHAPE_MOD_INPUT    (4u)
+#define SHAPE_WORD_MAX     (8388607.0 / 8388608.0)
+#define SHAPE_WORD_MIN     (-1.0)
+
+static const tShapeModSpec kShapeModSpec[] = {
+    {moduleTypeOscB,    7u},
+    {moduleTypeOscShpA, 8u},
+    {moduleTypeOscShpB, 7u},
+};
+
+// §6.8 - the oscillators carrying the reference model: the FM jack's input number, the
+// FM amount dial and the FM Lin/Trk menu, in the patch's own parameter order
+typedef struct {
+    tModuleType type;
+    uint32_t    fmInput;
+    uint32_t    fmAmountParam;
+    uint32_t    fmTypeParam;
+} tFmSpec;
+
+static const tFmSpec       kFmSpec[]       = {
+    {moduleTypeOscB,    3u, 5u, 10u},
+    {moduleTypeOscC,    2u, 4u,  6u},
+    {moduleTypeOscShpA, 3u, 5u,  6u},
+    {moduleTypeOscShpB, 3u, 5u,  9u},
+};
+
+static const tFmSpec * fm_spec(tModuleType moduleType) {
+    for (uint32_t i = 0; i < (sizeof(kFmSpec) / sizeof(kFmSpec[0])); i++) {
+        if (kFmSpec[i].type == moduleType) {
+            return &kFmSpec[i];
+        }
+    }
+
+    return NULL;
+}
+
+static int fm_connector_index(tModuleType moduleType) {
+    const tFmSpec * spec = fm_spec(moduleType);
+
+    return (spec != NULL) ? connector_index_for_input(moduleType, spec->fmInput, anyConnectorType) : -1;
+}
+
+static const tShapeModSpec * shape_mod_spec(tModuleType moduleType) {
+    for (uint32_t i = 0; i < (sizeof(kShapeModSpec) / sizeof(kShapeModSpec[0])); i++) {
+        if (kShapeModSpec[i].type == moduleType) {
+            return &kShapeModSpec[i];
+        }
+    }
+
+    return NULL;
+}
+
+static int shape_mod_connector_index(tModuleType moduleType) {
+    return (shape_mod_spec(moduleType) != NULL)
+           ? connector_index_for_input(moduleType, SHAPE_MOD_INPUT, anyConnectorType) : -1;
+}
+
+// §6.7 - the Shape M dial as the module's word: v/128, with 127 counting as full
+static double shape_mod_amount(tModule * module, uint32_t variation) {
+    const tShapeModSpec * spec = shape_mod_spec(module->type);
+
+    return (spec != NULL) ? wave_shape_word(param_value(module, variation, spec->shapeModParam) / 127.0) : 0.0;
+}
+
+// §6.8 - the FM dial through the attenuator curve the module's word takes, and the Lin/Trk menu
+static void set_osc_fm(tEngineNode * node, tModule * module, uint32_t variation) {
+    const tFmSpec * spec = fm_spec(module->type);
+
+    node->fmAmount = (spec != NULL) ? type_ii_attenuator(param_value(module, variation, spec->fmAmountParam)) : 0.0;
+    node->fmTrack  = (spec != NULL) && (module->param[variation][spec->fmTypeParam].value != 0u);
+}
+
+// §28.4 - the counter stage: the Phase dial is a word of v/64 on top of a per-waveform offset, Phase M
+// v/128 (127 full) times four, Shape M v/128 times eight. A word is half a cycle; a unit a quarter word.
+static void lfo_phase_build(tEngineNode * node, tModule * module, uint32_t variation, const tLfoParams * p) {
+    bool isB    = (module->type == moduleTypeLfoB);
+    bool isShpA = (module->type == moduleTypeLfoShpA);
+
+    node->lfoHasReset  = isB || isShpA;
+    node->lfoPhaseSlot = isB ? (int8_t)LFOB_IN_PHASE_MOD : (isShpA ? (int8_t)LFOSHPA_IN_PHASE_MOD : (int8_t)-1);
+    node->lfoShapeSlot = isShpA ? (int8_t)LFOSHPA_IN_SHAPE_MOD : (int8_t)-1;
+    node->lfoPhase     = (p->phase >= 0) ? (param_value(module, variation, (uint32_t)p->phase) / 128.0) : 0.0;
+    node->lfoPhaseMod  = (p->phaseMod >= 0)
+                         ? (wave_shape_word(param_value(module, variation, (uint32_t)p->phaseMod) / 127.0) / 2.0) : 0.0;
+    node->lfoShapeMod  = (p->shapeMod >= 0)
+                         ? wave_shape_word(param_value(module, variation, (uint32_t)p->shapeMod) / 127.0) : 0.0;
+
+    // LfoB's Sine and Tri read half a word behind LfoA's for the same counter; its Saw and Sqr do not
+    if (isB && ((uint32_t)node->wave < 2u)) {
+        node->lfoPhase -= 0.25;
+    }
+}
+
+// §6.6 - the connector index of a module's Sync input, -1 when it has none
+static int sync_connector_index(tModuleType moduleType) {
+    uint32_t index = 0;
+
+    for (uint32_t entry = 0; entry < array_size_connector_location_list(); entry++) {
+        const tConnectorLocation * loc = &connectorLocationList[entry];
+
+        if (loc->moduleType != moduleType) {
+            continue;
+        }
+
+        if ((loc->direction == connectorDirIn) && (loc->label != NULL) && (strcmp(loc->label, "Sync") == 0)) {
+            return (int)index;
+        }
+        index++;
+    }
+
+    return -1;
+}
+
 static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool stereoMix, const uint32_t ** connectors) {
     // Derived from the module resources rather than written out — see connector_index_for_input().
     // Static because the chain is built on one thread; the contents are rewritten per call.
@@ -3938,21 +4106,37 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeOsc:
         case eNodeOscShp:
         {
-            // §6.3
+            // §6.3; §6.6 - the Sync jack, where there is one, follows; §6.7 - then Shape Mod; §6.8 - then FM
             static const uint32_t oscCIn[]    = {3, 0};
-            static const uint32_t oscDualIn[] = {0, 1, 3, 4};    // §12.1 - Sync is not modelled
+            static const uint32_t oscDualIn[] = {0, 1, 3, 4};
+            const uint32_t *      base        = oscIn;
+            uint32_t              count       = (moduleType == moduleTypeOscD) ? 1u : 2u;
+            int                   sync        = sync_connector_index(moduleType);
+            int                   shapeMod    = shape_mod_connector_index(moduleType);
+            int                   fm          = fm_connector_index(moduleType);
 
             if (moduleType == moduleTypeOscDual) {
-                *connectors = oscDualIn;
-                return 4;
+                base  = oscDualIn;
+                count = 4u;
+            } else if (moduleType == moduleTypeOscC) {
+                base  = oscCIn;
+                count = 2u;
+            }
+            memcpy(derived, base, count * sizeof(uint32_t));
+
+            if (sync >= 0) {
+                derived[count++] = (uint32_t)sync;
             }
 
-            if (moduleType == moduleTypeOscC) {
-                *connectors = oscCIn;
-                return 2;
+            if (shapeMod >= 0) {
+                derived[count++] = (uint32_t)shapeMod;
             }
-            *connectors = oscIn;
-            return (moduleType == moduleTypeOscD) ? 1 : 2;
+
+            if (fm >= 0) {
+                derived[count++] = (uint32_t)fm;
+            }
+            *connectors = derived;
+            return count;
         }
         case eNodeLevMult:
         case eNodeModAmt:    // §29 - In, then the Mod input the Depth dial scales
@@ -3999,10 +4183,10 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             *connectors = oneIn;
             return 1;
         }
-        case eNodeCompress:
+        case eNodeCompress:         // §25.2 - In L, In R, then the side-chain
         {
-            *connectors = oneIn;
-            return 1;
+            *connectors = derived;
+            return inputs_in_module_order(moduleType, 3u, derived);
         }
         case eNodeReverb:
         {
@@ -4063,7 +4247,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeRandomA:          // §47 - Pitch, which moves the rate as an LFO's does (§50)
         case eNodeOscMaster:        // §51 - Pitch, PitchVar
         case eNodeDlySingle:        // §52 - In, then B's Time mod
-        case eNodeOscPM:            // §53 - PitchVar, Sync (not read), Phase M, Pitch
+        case eNodeOscPM:            // §53 - PitchVar, Sync, Phase M, Pitch
         case eNodeFltVoice:         // §56 - In, Vowel, FreqMod
         case eNodeFreqShift:        // §57 - Mod, In
         case eNodeSeq16:            // §58 - Clk, Rst, Loop, Park, then the two rows' inputs
@@ -4176,7 +4360,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeLfo:              // §50 - the rate inputs: fixed, then the one Rate M scales
         {
-            uint32_t count = inputs_in_module_order(moduleType, 2u, derived);
+            uint32_t count = inputs_in_module_order(moduleType, LFO_MAX_INPUTS, derived);
             *connectors = derived;
             return count;
         }
@@ -4643,6 +4827,19 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     node->moduleIndex = module->key.index;
     node->location    = module->key.location;
     node->inCount     = inCount;
+    {
+        // counted back from the end, in the order input_connectors() appends them
+        bool     oscKind     = ((kind == eNodeOsc) || (kind == eNodeOscShp));
+        bool     hasFm       = oscKind && (fm_connector_index(module->type) >= 0);
+        bool     hasShapeMod = oscKind && (shape_mod_connector_index(module->type) >= 0);
+        bool     hasSync     = oscKind && (sync_connector_index(module->type) >= 0);
+        uint32_t next        = inCount;
+
+        node->fmSlot       = hasFm ? (int8_t)(--next) : (int8_t)-1;
+        node->shapeModSlot = hasShapeMod ? (int8_t)(--next) : (int8_t)-1;
+        node->syncSlot     = hasSync ? (int8_t)(--next)
+                             : (int8_t)((kind == eNodeOscPM) ? OSCPM_SYNC_SLOT : -1);
+    }
     node->active      = true;
 
     {
@@ -4685,21 +4882,23 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             } else {
                 node->wave = (tOscWave)module->mode[SHPB_MODE_WAVEFORM].value;
             }
-            node->oscKbt    = (param_value(module, variation,
-                                           isShpA ? SHPA_PARAM_KBT : SHPB_PARAM_KBT) != 0.0);
-            node->basePitch = param_value(module, variation,
-                                          isShpA ? SHPA_PARAM_TUNE : SHPB_PARAM_TUNE)
-                              + (osc_fine_cents(param_value(module, variation,
-                                                            isShpA ? SHPA_PARAM_CENT
+            node->oscKbt         = (param_value(module, variation,
+                                                isShpA ? SHPA_PARAM_KBT : SHPB_PARAM_KBT) != 0.0);
+            node->basePitch      = param_value(module, variation,
+                                               isShpA ? SHPA_PARAM_TUNE : SHPB_PARAM_TUNE)
+                                   + (osc_fine_cents(param_value(module, variation,
+                                                                 isShpA ? SHPA_PARAM_CENT
                                                             : SHPB_PARAM_CENT)) / 100.0);
             // notes §82
-            node->shape     = param_value(module, variation,
-                                          isShpA ? SHPA_PARAM_SHAPE : SHPB_PARAM_SHAPE) / 127.0;
-            node->modAmount = type_ii_attenuator(param_value(module, variation,
-                                                             isShpA ? SHPA_PARAM_PITCH_MOD
+            node->shape          = param_value(module, variation,
+                                               isShpA ? SHPA_PARAM_SHAPE : SHPB_PARAM_SHAPE) / 127.0;
+            node->modAmount      = type_ii_attenuator(param_value(module, variation,
+                                                                  isShpA ? SHPA_PARAM_PITCH_MOD
                                                              : SHPB_PARAM_PITCH_MOD));
-            node->active    = (param_value(module, variation,
-                                           isShpA ? SHPA_PARAM_ACTIVE : SHPB_PARAM_ACTIVE) != 0.0);
+            node->active         = (param_value(module, variation,
+                                                isShpA ? SHPA_PARAM_ACTIVE : SHPB_PARAM_ACTIVE) != 0.0);
+            node->shapeModAmount = shape_mod_amount(module, variation);
+            set_osc_fm(node, module, variation);
             break;
         }
         case eNodeChorus:
@@ -4717,6 +4916,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                        param_value(module, variation, COMP_PARAM_ATTACK), param_value(module, variation, COMP_PARAM_RELEASE),
                        param_value(module, variation, COMP_PARAM_REFLVL));
             node->active = (param_value(module, variation, COMP_PARAM_ACTIVE) != 0.0);
+            node->select = (module->param[variation][COMP_PARAM_SIDECHAIN].value != 0) ? 1u : 0u;
             break;
         }
         case eNodeDelay:
@@ -4794,6 +4994,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->lfoHasSync = (module->type == moduleTypeLfoB) || (module->type == moduleTypeLfoShpA);
             node->lfoRateMod = (p->rateMod >= 0) ? type_ii_attenuator(param_value(module, variation, (uint32_t)p->rateMod)) : 0.0;
             node->lfoKbt     = (p->kbt >= 0) ? ((double)module->param[variation][p->kbt].value * 0.25) : 0.0;
+            lfo_phase_build(node, module, variation, p);
             break;
         }
         case eNodeFltMulti:
@@ -5205,17 +5406,21 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             }
 
             if (line < MAX_CLKGEN_LINES) {
-                tClkGenConfig * cfg   = &params->clkGen[line];
-                uint32_t        index = (uint32_t)param_value(module, variation, CLKGEN_PARAM_TEMPO);
+                tClkGenConfig * cfg    = &params->clkGen[line];
+                uint32_t        index  = (uint32_t)param_value(module, variation, CLKGEN_PARAM_TEMPO);
                 // §59 - Master follows the instrument's global clock
-                double          bpm   = (module->param[variation][CLKGEN_PARAM_SOURCE].value != 0) ? engine_master_bpm()
+                double          bpm    = (module->param[variation][CLKGEN_PARAM_SOURCE].value != 0) ? engine_master_bpm()
                                         : ((index < 32u) ? (24.0 + (2.0 * index))
                                            : ((index < 96u) ? (56.0 + index) : ((2.0 * index) - 40.0)));
 
                 cfg->tempo  = (int32_t)floor(bpm * 279.625);
                 cfg->sync   = (int32_t)module->param[variation][CLKGEN_PARAM_SYNC].value;
                 cfg->swing  = (int32_t)module->param[variation][CLKGEN_PARAM_SWING].value;
-                cfg->active = (uint8_t)(module->param[variation][CLKGEN_PARAM_ACTIVE].value != 0);
+                // §59 - on Master it reads the master clock's own count, so a stopped master stops it
+                bool            master = (module->param[variation][CLKGEN_PARAM_SOURCE].value != 0);
+
+                cfg->active = (uint8_t)(  (module->param[variation][CLKGEN_PARAM_ACTIVE].value != 0)
+                                       && ((master == false) || (engine_master_running() == true)));
             }
             break;
         }
@@ -5511,6 +5716,8 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             }
             node->oscCornerLimit = ((module->type == moduleTypeOscC) || (module->type == moduleTypeOscD))
                                    ? OSC_CORNER_LIMIT_PARTS : OSC_CORNER_LIMIT_MULTI;
+            node->shapeModAmount = shape_mod_amount(module, variation);
+            set_osc_fm(node, module, variation);
             break;
         }
         case eNodeFilter:
@@ -5817,6 +6024,14 @@ static void build_snapshot(tSoundEngineParams * out) {
     {
         tModule * glide = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleGlide);
         tModule * bend  = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleBend);
+
+        // §63a - the patch's Octave Shift transposes the keyboard, stored 0..4 with 2 as none
+        {
+            tModule * sustain = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleSustain);
+            uint32_t  shift   = (sustain != NULL) ? sustain->param[0][OCTAVE_SHIFT].value : OCTAVE_SHIFT_ZERO;
+
+            snapshot.octaveSemis = 12.0 * ((double)((shift <= 4u) ? shift : OCTAVE_SHIFT_ZERO) - OCTAVE_SHIFT_ZERO);
+        }
 
         if (glide != NULL) {
             uint32_t mode = glide->param[0][GLIDE_TYPE].value;
@@ -7336,9 +7551,17 @@ static double perc_step(uint32_t voice, uint32_t node, const tEngineNode * spec,
     return st[PERC_OUT] / PERC_WORD;
 }
 
-#define OSCNOISE_Q_AT_FULL_WIDTH      (3.34)     // §8.3
-#define OSCNOISE_Q_GROWTH_PER_STEP    (0.032)
-#define OSCNOISE_LEVEL                (0.5957)   // -4.5 dB RMS, §8.4
+// §8 - the module's own words, as fractions of the 24-bit word
+#define OSCNOISE_Q23              (8388608.0)
+#define OSCNOISE_LFSR_TAPS        (0xd71d87u)
+#define OSCNOISE_TILT_POLE        (0x7bd7db / OSCNOISE_Q23)       // §8.2 - a one-pole at ~500 Hz
+#define OSCNOISE_H_MAX            (0x518368 / OSCNOISE_Q23 / 2.0) // §8.3 - the pitch ceiling, 9.73 kHz
+#define OSCNOISE_Q_BASE           (0x790000 / OSCNOISE_Q23)       // §8.4 - damping from Width
+#define OSCNOISE_Q_WIDTH          (0x330000 / OSCNOISE_Q23)
+#define OSCNOISE_DAMP_SPAN        (0x7eb852 / OSCNOISE_Q23)
+#define OSCNOISE_GAIN_DAMP_MAX    (0x140000 / OSCNOISE_Q23)       // §8.5 - the input gain's damping term
+#define OSCNOISE_SECTIONS         (3)
+#define gOscNoiseState            gDrumState                      // a node is one kind: OscNoise uses the drum synth's words
 
 static double white_noise(uint32_t * seed) {
     uint32_t x = *seed;
@@ -7348,12 +7571,6 @@ static double white_noise(uint32_t * seed) {
     x    ^= x << 5;
     *seed = x;
     return ((double)x / 2147483648.0) - 1.0;
-}
-
-static double oscnoise_q(double widthFraction) {
-    double dial = fmin(127.0, fmax(0.0, widthFraction * 128.0));
-
-    return OSCNOISE_Q_AT_FULL_WIDTH * exp(OSCNOISE_Q_GROWTH_PER_STEP * (127.0 - dial));
 }
 
 // §4.2, §4.3
@@ -7620,11 +7837,18 @@ static void comp_words(tEngineNode * node, double thrDial, double ratioDial, dou
 // §25.2 - one sample, in the instrument's integer arithmetic: an instant peak with an exponential
 // release, a piecewise-linear log2, the ratio's gain reduction and the Level limiter each smoothed,
 // and the larger of the two back through the gain table, then the make-up gain.
-static double compress_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
+// §25.2 - one detector and one gain for both channels; the detector hears the larger of L and R, or the
+// side-chain when its switch is on. Returns L and writes R.
+static double compress_step(uint32_t voice, uint32_t node, double inputL, double inputR, double sideChain,
+                            const tEngineNode * spec, double * outputR) {
     SE_LOCAL;
 
-    int32_t  in     = dly_sat((int64_t)floor(input * 2097152.0));
-    int64_t  det    = (in < 0) ? -(int64_t)in : (int64_t)in;
+    int32_t  in     = dly_sat((int64_t)floor(inputL * 2097152.0));
+    int32_t  inR    = dly_sat((int64_t)floor(inputR * 2097152.0));
+    int32_t  sc     = dly_sat((int64_t)floor(sideChain * 2097152.0));
+    int32_t  loud   = ((in < 0 ? -(int64_t)in : (int64_t)in) < (inR < 0 ? -(int64_t)inR : (int64_t)inR)) ? inR : in;
+    int32_t  heard  = (spec->select != 0u) ? sc : loud;
+    int64_t  det    = (heard < 0) ? -(int64_t)heard : (int64_t)heard;
     int32_t  env    = (int32_t)gCompEnv[voice][node];
     int32_t  atk    = (int32_t)spec->attackCoeff;
     int32_t  rls    = (int32_t)spec->releaseCoeff;
@@ -7688,6 +7912,8 @@ static double compress_step(uint32_t voice, uint32_t node, double input, const t
     int32_t  gain   = dly_sat((int64_t)kCompGain[2 * k] + ((-(int64_t)dly_sat(frac) * kCompGain[(2 * k) + 1]) >> 23));
     int32_t  level  = dly_sat(((int64_t)gain * (int32_t)spec->compMakeup) >> 23);
     int32_t  out    = dly_sat(((int64_t)level * in) >> 16);
+
+    *outputR              = (double)dly_sat(((int64_t)level * inR) >> 16) / 2097152.0;
 
     // notes §122 - the meter shows the gain reduction
     {
@@ -7941,6 +8167,10 @@ static double advance_phase(double * phase, double dt) {
     while (current >= 1.0) {
         current -= 1.0;
     }
+
+    while (current < 0.0) {    // §6.8 - through-zero FM
+        current += 1.0;
+    }
     *phase = current;
     return current;
 }
@@ -8079,7 +8309,7 @@ static double fltvoice_step(uint32_t voice, uint32_t n, const tEngineNode * spec
                                       + (vowelIn * spec->modAmount * 2.0));
     double          semi = phaser_sat((((spec->shape >= 127.0) ? 1.0 : ((spec->shape - 64.0) / 64.0)) / 1.0)
                                       + (freqIn * spec->depth * 2.0)) * 32.0;
-    double          mult = exp2(semi / 12.0);
+    double          mult = exp2((semi + FLTVOICE_FINE_OFFSET) / 12.0);    // §56.1
     const int32_t * mid  = kFltVoiceVowels[spec->vowel[1]];
     const int32_t * side = kFltVoiceVowels[spec->vowel[(pos < 0.0) ? 0 : 2]];
     double          span = fabs(pos);
@@ -8495,9 +8725,14 @@ static void freqshift_step(uint32_t voice, const tEngineNode * spec, double inpu
     *up    = phaser_sat((c1 * h[0]) - (s1 * h[1])) * 4.0;
 }
 
-static double osc_pm_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double hz, double phaseMod) {
+static double osc_corner(double distance, double inc96, double squareLimit);
+
+static double osc_pm_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double hz, double phaseMod, bool sync) {
     SE_LOCAL;
 
+    if (sync == true) {    // §6.6 - the accumulator restarts from the sync word, then takes this sample's step
+        gPhase[voice][n] = OSC_PM_SYNC_PHASE;
+    }
     static const double c1 = (double)0x64803500 / 1073741824.0;
     static const double c3 = -(double)0x29159580 / 1073741824.0;
     static const double c5 = (double)0x4955480 / 1073741824.0;
@@ -8507,7 +8742,12 @@ static double osc_pm_step(uint32_t voice, uint32_t n, const tEngineNode * spec, 
     double              x  = (2.0 * fabs(p)) - 1.0;
 
     if ((uint32_t)spec->wave != 0u) {
-        return x;
+        // §53 - the triangle part OscC and OscD use: its corners rounded as theirs are (§6.3)
+        double c     = at - floor(at);
+        double inc96 = hz / OSC_INSTRUMENT_RATE;
+        double top   = (c < 0.5) ? c : (c - 1.0);
+
+        return x + osc_corner(c - 0.5, inc96, OSC_CORNER_LIMIT_PARTS) - osc_corner(top, inc96, OSC_CORNER_LIMIT_PARTS);
     }
     double              x2 = x * x;
 
@@ -8651,53 +8891,47 @@ static double cascade_hp_filter(double * state, double input, double g, uint32_t
     return x;
 }
 
-// notes §146
-static double svf_filter(double * state, double input, double f, double q, tFilterShape shape) {
-    double low  = state[0];
-    double band = state[1];
-    double high = input - low - (q * band);
-
-    band    += f * high;
-    low     += f * band;
-
-    state[0] = low;
-    state[1] = band;
-
-    switch (shape) {
-        case eFilterShapeBandPass:
-        {
-            return band;
-        }
-        case eFilterShapeHighPass:
-        {
-            return high;
-        }
-        case eFilterShapeBandReject:
-        {
-            return low + high;
-        }
-        default:
-        {
-            return low;
-        }
-    }
+// §8.2 - two unity-peak band-passes in series, then the measured level.
+static double oscnoise_word(double v) {
+    return fmin(1.0, fmax(-1.0, v));
 }
 
-// §8.2 - two unity-peak band-passes in series, then the measured level.
-static double oscnoise_step(uint32_t voice, uint32_t node, double hz, double widthFraction) {
+// §8 - LFSR noise, a one-pole tilt, then three gain-compensated Chamberlin band-passes at the pitch,
+// all in the instrument's own words (a fraction of the 24-bit word, which saturates at +-1)
+static double oscnoise_step(uint32_t voice, uint32_t node, double hz, double width) {
     SE_LOCAL;
 
-    double * resonators = gLadder[voice][node];       // four of its six slots
-    double   q          = oscnoise_q(widthFraction);
-    double   centre     = fmin(fmax(hz, 1.0), gSampleRate / 8.0);
-    double   f          = 2.0 * sin(M_PI * centre / gSampleRate);
-    double   white      = white_noise(&gNoiseSeed[voice][node]);
-    double   first      = svf_filter(&resonators[0], white, f, 1.0 / q, eFilterShapeBandPass) / q;
-    double   second     = svf_filter(&resonators[2], first, f, 1.0 / q, eFilterShapeBandPass) / q;
-    double   bandwidth  = M_PI * centre / (4.0 * q);   // noise bandwidth of the pair
-    double   gain       = OSCNOISE_LEVEL / sqrt((1.0 / 3.0) * bandwidth / (gSampleRate * 0.5));
+    double * st    = gOscNoiseState[voice][node];     // tilt, then (input before, low, band) per section
+    uint32_t lfsr  = (gNoiseSeed[voice][node] & 0xFFFFFFu) << 1;
+    double   pole  = pow(OSCNOISE_TILT_POLE, OSC_INSTRUMENT_RATE / gSampleRate);
+    double   topHz = OSCNOISE_H_MAX * OSC_INSTRUMENT_RATE / M_PI;
+    double   h     = M_PI * fmin(fmax(hz, 0.0), topHz) / gSampleRate;
+    double   w     = fmin(1.0, fmax(0.0, width));
+    double   q     = OSCNOISE_Q_BASE - (OSCNOISE_Q_WIDTH * w * w);
+    double   d     = oscnoise_word(1.0 - (OSCNOISE_DAMP_SPAN * q));
+    double   d2    = d * d;
+    double   gain  = 2.0 * (d2 + (fmin(d, OSCNOISE_GAIN_DAMP_MAX) / 16.0));
+    double   fb    = d2 * (1.0 - h);
+    double   x;
 
-    return second * gain;
+    lfsr                    = ((lfsr & 0x1000000u) != 0u) ? ((lfsr ^ OSCNOISE_LFSR_TAPS) & 0xFFFFFFu) : (lfsr & 0xFFFFFFu);
+    gNoiseSeed[voice][node] = (lfsr == 0u) ? 5555u : lfsr;
+    st[0]                   = oscnoise_word((pole * st[0]) + (((1.0 - pole) / 4.0) * ((double)(((int32_t)(lfsr << 8)) >> 8) / OSCNOISE_Q23)));
+    x                       = st[0];
+
+    for (uint32_t k = 0; k < OSCNOISE_SECTIONS; k++) {
+        double * sec  = &st[1u + (3u * k)];
+        double   pre  = gain * (x + sec[0]) * 0.5;
+        double   low  = oscnoise_word(sec[1] + (h * sec[2]));
+        double   high = oscnoise_word(pre - low - (fb * sec[2]));
+
+        sec[0] = x;
+        sec[1] = low;
+        sec[2] = oscnoise_word(sec[2] + (4.0 * h * high));
+        x      = oscnoise_word(sec[2] * (1.0 - h));
+    }
+
+    return oscnoise_word(4.0 * x) * DSP_FULL_SCALE;
 }
 
 #define FLTCLASSIC_Q23           (8388608.0)                         // §21.4 - one is a quarter of the engine's range
@@ -9130,7 +9364,7 @@ static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * sp
         }
         case eOscWaveSquare:
         {
-            return osc_offset_pulse(phase, edge, fmin(fmax(shape, 0.0), 1.0));
+            return osc_offset_pulse(phase, edge, fmin(fmax(shape, SHAPE_WORD_MIN), 1.0));    // §6.7
         }
         case eOscWaveDualSaw:
         {
@@ -9168,8 +9402,19 @@ static double osc_frequency_hz(const tEngineNode * spec, double voicePitch, doub
 }
 
 // notes §154
+// §6.8 - linear-FM: FM Lin adds a deviation of its own; FM Trk one in proportion to the key's pitch,
+// which is the oscillator's frequency without its Tune offset. The sum is saturated to a phase word.
+static double osc_fm_hz(const tEngineNode * spec, double frequency, double fmIn) {
+    double deviation = spec->fmAmount * fmIn
+                       * ((spec->fmTrack == true)
+                          ? ((FM_TRK_SCALE * frequency) / exp2((spec->basePitch - OSCB_TUNE_UNITY) / 12.0))
+                          : FM_LIN_HZ);
+
+    return fmin(fmax(deviation, -FM_MAX_DEVIATION_HZ), FM_MAX_DEVIATION_HZ);
+}
+
 static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double voicePitch,
-                              double pitchDirect, double pitchVar, double shape) {
+                              double pitchDirect, double pitchVar, double shape, bool sync, double fmIn) {
     SE_LOCAL;
     double   frequency = 0.0;
     double   dt        = 0.0;
@@ -9183,18 +9428,32 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
     if (frequency > (gSampleRate * 0.5)) {
         return 0.0;
     }
-    double   inc96     = frequency / OSC_INSTRUMENT_RATE;
+
+    if (fmIn != 0.0) {
+        frequency += osc_fm_hz(spec, frequency, fmIn);    // §6.8 - may run backwards: linear FM passes zero
+    }
+    double   inc96     = fabs(frequency) / OSC_INSTRUMENT_RATE;
 
     // §6.3 - the basic waves are drawn for a 96 kHz sample and need no oversampling of their own
     if ((spec->kind == eNodeOsc) || (spec->kind == eNodeOscShp)) {
         dt  = frequency / gSampleRate;
-        sum = osc_waveform(voice, node, spec, advance_phase(&gPhase[voice][node], dt), dt, inc96, shape);
+        double phase = advance_phase(&gPhase[voice][node], dt);
+
+        if (sync == true) {    // §6.6
+            phase               = fmod(OSC_SYNC_PHASE + fabs(dt), 1.0);
+            gPhase[voice][node] = phase;
+        }
+        sum = osc_waveform(voice, node, spec, phase, dt, inc96, shape);
     } else {
         dt = frequency / (gSampleRate * (double)gOscOversample);
 
         for (step = 0; step < gOscOversample; step++) {
             double phase = advance_phase(&gPhase[voice][node], dt);
 
+            if ((sync == true) && (step == 0u)) {    // §6.6
+                phase               = fmod(OSC_SYNC_PHASE + fabs(dt), 1.0);
+                gPhase[voice][node] = phase;
+            }
             gOscHistory[voice][node][gOscHistoryPos[voice][node]] = (float)osc_waveform(voice, node, spec, phase, dt, inc96, shape);
             gOscHistoryPos[voice][node]                           = (gOscHistoryPos[voice][node] + 1) % OSC_DECIMATE_TAPS;
         }
@@ -9278,12 +9537,16 @@ static double lfo_random_wave(uint32_t voice, uint32_t node, const tEngineNode *
     return out;
 }
 
-static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double rateHz) {
+static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double rateHz,
+                       double readOffset, double shapeNow) {
     SE_LOCAL;
 
-    double phase = (spec->lfoMono == true) ? gLfoMonoPhase[node]
-                                           : advance_phase(&gPhase[voice][node], rateHz / gSampleRate);
-    double wave  = 0.0;
+    double counter = (spec->lfoMono == true) ? gLfoMonoPhase[node]
+                                             : advance_phase(&gPhase[voice][node], rateHz / gSampleRate);
+    double phase   = counter + readOffset;    // §28.4 - the waves read ahead of the counter
+    double wave    = 0.0;
+
+    phase = phase - floor(phase);
 
     if (spec->active == false) {
         return 0.0;
@@ -9304,21 +9567,21 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
             }                                                                          // TriBell
             case 3:
             {
-                wave = osc_triangle(phase, 0.5 + (0.49 * spec->shape));
+                wave = osc_triangle(phase, 0.5 + (0.49 * shapeNow));
                 break;
             }                                                                           // Saw>Tri
             // notes §158
             case 4:                                                                     // Sqr2Tri
             {
                 double tri = osc_triangle(phase, 0.5);
-                double dry = 1.0 + (20.0 * spec->shape);
+                double dry = 1.0 + (20.0 * shapeNow);
 
                 wave = tanh(tri * dry) / tanh(dry);
                 break;
             }
             case 5:
             {
-                wave = (phase < (0.5 + (0.49 * spec->shape))) ? 1.0 : -1.0;
+                wave = (phase < (0.5 + (0.49 * shapeNow))) ? 1.0 : -1.0;
                 break;
             }                                                                                // Pulse
             default:
@@ -9348,7 +9611,7 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
             case 4:
             case 5:
             {
-                wave = lfo_random_wave(voice, node, spec, phase, rateHz);
+                wave = lfo_random_wave(voice, node, spec, counter, rateHz);
                 break;
             }
             default:
@@ -9358,7 +9621,7 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
             }
         }
     }
-    gLfoLastPhase[voice][node] = phase;
+    gLfoLastPhase[voice][node] = counter;
 
     {
         double unipolar = (wave + 1.0) * 0.5;
@@ -9759,6 +10022,8 @@ static void keyboard_step(uint32_t voice, double voicePitch, double * out) {
 // On input gates it: high (or nothing patched, with the button on) glides, otherwise In goes
 // straight through. The first value a Glide ever sees arrives whole rather than being slewed up
 // from zero, which is what `primed` is for.
+#define GLIDE_PREV_ON    (1u)    // gLogicPrev bit: Glide On as the part saw it last
+
 static double glide_step(uint32_t voice, uint32_t node, double input, double gateIn,
                          const tEngineNode * spec) {
     SE_LOCAL;
@@ -9767,7 +10032,12 @@ static double glide_step(uint32_t voice, uint32_t node, double input, double gat
     // The button, unless something is patched into Glide On, which then decides. §38 - a logic
     // input is HIGH whenever it is above zero, which is how the instrument's own logic parts test
     // one; there is no halfway threshold.
-    bool   gliding = (spec->in[1] >= 0) ? (gateIn > 0.0) : spec->active;
+    bool   onNow   = (spec->in[1] >= 0) ? (gateIn > 0.0) : spec->active;
+    // §36.2 - the module decides with the Glide On it saw LAST time, and only then keeps this one: a
+    // note whose Gate turns the glide on arrives whole
+    bool   gliding = ((gLogicPrev[voice][node] & GLIDE_PREV_ON) != 0u);
+
+    gLogicPrev[voice][node]  = (uint8_t)((gLogicPrev[voice][node] & ~GLIDE_PREV_ON) | (onNow ? GLIDE_PREV_ON : 0u));
 
     if (gGlidePrimed[voice][node] == false) {
         gGlidePrimed[voice][node] = true;
@@ -10442,7 +10712,30 @@ static void noise_gate_step(double state[2], const tEngineNode * spec, double in
     out[1]   = state[0];
 }
 
-// §70.7 - the period between rising zero crossings as a pitch, E4 at 0 units; PitchTrack also pulses
+#define PITCH_TRACK_ZERO_HZ    (82.4068892)   // §70.7 - the counter's 0 units is E2
+
+// §70.7a - ZeroCnt, as its parts run it: the input read once a 24 kHz tick, the ticks between rising
+// crossings (the last reading <= 0, this one > 0) counted whole, and the count read as a pitch.
+// state: 0 ticks since the last crossing, 1 last reading, 2 pitch, 3 the tick accumulator.
+static void zero_count_step(double state[5], double input, double out[3]) {
+    SE_LOCAL;
+
+    state[3] -= ENV_TICK_HZ / gSampleRate;
+
+    if (state[3] <= 0.0) {
+        state[3] += 1.0;
+        state[0] += 1.0;
+
+        if ((state[1] <= 0.0) && (input > 0.0)) {
+            state[2] = (12.0 * log2((ENV_TICK_HZ / state[0]) / PITCH_TRACK_ZERO_HZ)) / UNITS_PER_FULL_SCALE;
+            state[0] = 0.0;
+        }
+        state[1]  = input;
+    }
+    out[0]    = state[2];
+}
+
+// §70.7 - the period between rising zero crossings as a pitch, E2 at 0 units; PitchTrack also pulses
 // Period at each measurement and raises Gate above the threshold. state: 0 samples since the last
 // crossing, 1 last sample, 2 pitch, 3 envelope, 4 the share of a sample the last crossing came early.
 static void pitch_track_step(double state[5], const tEngineNode * spec, double input, double out[3]) {
@@ -10450,6 +10743,10 @@ static void pitch_track_step(double state[5], const tEngineNode * spec, double i
 
     bool fresh = false;
 
+    if (spec->select == 1u) {
+        zero_count_step(state, input, out);
+        return;
+    }
     state[0] += 1.0;
 
     if ((state[1] < 0.0) && (input >= 0.0)) {
@@ -10459,7 +10756,7 @@ static void pitch_track_step(double state[5], const tEngineNode * spec, double i
         if (state[0] - before > 2.0) {
             double hz = gSampleRate / (state[0] - before + state[4]);
 
-            state[2] = (12.0 * log2(hz / 329.6275569)) / UNITS_PER_FULL_SCALE;
+            state[2] = (12.0 * log2(hz / PITCH_TRACK_ZERO_HZ)) / UNITS_PER_FULL_SCALE;
             fresh    = true;
         }
         state[0] = 0.0;
@@ -10468,10 +10765,6 @@ static void pitch_track_step(double state[5], const tEngineNode * spec, double i
     state[1]  = input;
     state[3]  = fmax(fabs(input), state[3] * exp(-1.0 / (0.02 * gSampleRate)));
 
-    if (spec->select == 1u) {
-        out[0] = state[2];
-        return;
-    }
     out[0]    = logic_level(fresh);
     out[1]    = logic_level(state[3] > spec->bx[0]);
     out[2]    = state[2];
@@ -10847,6 +11140,74 @@ static double drum_synth_step(uint32_t voice, uint32_t node, const tEngineNode *
     }
 }
 
+// §6.7 - shape-modulation: the Shape word plus four times input x Shape M, saturated. An input of 1.0 is
+// a quarter of full scale, so the factor of four makes it input x Shape M in word terms.
+static double osc_shape_modulated(const tEngineNode * spec, double shape, double input) {
+    bool   dialFraction = (spec->kind == eNodeOscShp);    // the shape oscillators keep dial/127
+    double word         = (dialFraction ? wave_shape_word(shape) : shape) + (input * spec->shapeModAmount);
+
+    word = fmin(fmax(word, SHAPE_WORD_MIN), SHAPE_WORD_MAX);
+
+    if (dialFraction == false) {
+        return word;
+    }
+    word = fmax(word, 0.0);    // §6.7 - the shape waves below zero are not decoded
+
+    return (word >= SHAPE_WORD_MAX) ? 1.0 : ((word * 128.0) / 127.0);
+}
+
+// §28.4 - a rising edge on Rst clears the counter to its word 0 (half way round the engine's phase)
+static void lfo_reset_edge(uint32_t voice, uint32_t n, const tEngineNode * spec, double value[][NODE_OUTPUTS], double rateHz) {
+    SE_LOCAL;
+
+    bool high    = (signal_in(spec, value, LFO_IN_RESET) > 0.0);
+    bool wasHigh = ((gLogicPrev[voice][n] & LFO_RST_PREV_HIGH) != 0u);
+
+    gLogicPrev[voice][n] = (uint8_t)((gLogicPrev[voice][n] & ~LFO_RST_PREV_HIGH) | (high ? LFO_RST_PREV_HIGH : 0u));
+
+    if ((high == false) || (wasHigh == true)) {
+        return;
+    }
+
+    if (spec->lfoMono == true) {
+        gLfoMonoPhase[n] = LFO_RESET_PHASE;
+    } else {
+        gPhase[voice][n] = LFO_RESET_PHASE - (rateHz / gSampleRate);    // lfo_step advances it onto 0.5
+    }
+}
+
+// §28.4 - the Phase dial plus Phase M, in cycles
+static double lfo_read_offset(const tEngineNode * spec, double value[][NODE_OUTPUTS]) {
+    double offset = spec->lfoPhase;
+
+    if (spec->lfoPhaseSlot >= 0) {
+        offset += spec->lfoPhaseMod * signal_in(spec, value, (uint32_t)spec->lfoPhaseSlot);
+    }
+    return offset;
+}
+
+// §28.4 - LfoShpA's Shape plus Shape M, saturated
+static double lfo_shape_now(const tEngineNode * spec, double value[][NODE_OUTPUTS], double shape) {
+    if (spec->lfoShapeSlot < 0) {
+        return shape;
+    }
+    return fmin(fmax(shape + (spec->lfoShapeMod * signal_in(spec, value, (uint32_t)spec->lfoShapeSlot)), 0.0), 1.0);
+}
+
+// §6.6 - a rising crossing of the Sync input: the last sample at or below zero, this one above
+static bool osc_sync_edge(uint32_t voice, uint32_t n, const tEngineNode * spec, double value[][NODE_OUTPUTS]) {
+    SE_LOCAL;
+
+    if ((spec->syncSlot < 0) || (spec->in[spec->syncSlot] < 0)) {
+        return false;
+    }
+    bool high    = (signal_in(spec, value, (uint32_t)spec->syncSlot) > 0.0);
+    bool wasHigh = ((gLogicPrev[voice][n] & OSC_SYNC_PREV_HIGH) != 0u);
+
+    gLogicPrev[voice][n] = (uint8_t)((gLogicPrev[voice][n] & ~OSC_SYNC_PREV_HIGH) | (high ? OSC_SYNC_PREV_HIGH : 0u));
+    return (high == true) && (wasHigh == false);
+}
+
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
                       double value[][NODE_OUTPUTS], double voicePitch) {
     SE_LOCAL;
@@ -10881,7 +11242,11 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             double rate = lfo_rate_now(spec, a, signal_in(spec, value, 1), voicePitch);
 
             gLfoMonoRate[n] = rate;
-            value[n][0]     = lfo_step(voice, n, spec, rate);
+
+            if (spec->lfoHasReset == true) {
+                lfo_reset_edge(voice, n, spec, value, rate);
+            }
+            value[n][0]     = lfo_step(voice, n, spec, rate, lfo_read_offset(spec, value), lfo_shape_now(spec, value, spec->shape));
 
             // §54 - LfoB and LfoShpA's Snc: HIGH through the second half of the counter's cycle
             if (spec->lfoHasSync == true) {
@@ -10906,8 +11271,16 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 shape               += OSCDUAL_PW_DEPTH * spec->dualPwMod * signal_in(spec, value, 2);
                 gLadder[voice][n][5] = sawPhase - floor(sawPhase);
             }
+
+            if ((spec->shapeModSlot >= 0) && (spec->in[spec->shapeModSlot] >= 0)) {
+                shape = osc_shape_modulated(spec, shape, signal_in(spec, value, (uint32_t)spec->shapeModSlot));
+            }
+            double fmIn = ((spec->fmSlot >= 0) && (spec->in[spec->fmSlot] >= 0))
+                          ? signal_in(spec, value, (uint32_t)spec->fmSlot) : 0.0;
+
             value[n][0] = (spec->active == true)
-                              ? oscillator_step(voice, n, spec, voicePitch, a, signal_in(spec, value, 1), shape)
+                              ? oscillator_step(voice, n, spec, voicePitch, a, signal_in(spec, value, 1), shape,
+                                                osc_sync_edge(voice, n, spec, value), fmIn)
                               : 0.0;
             break;
         }
@@ -10971,21 +11344,22 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             double mod = signal_in(spec, value, 1);
 
             if (spec->active == false) {
-                value[n][0] = (spec->modAmtOneMinus == true) ? a : 0.0;    // §29.4 - off: 1-m passes In, m is silent
-            } else if (spec->modAmtOneMinus == true) {
-                value[n][0] = a * ((1.0 - gain) + (gain * mod));
+                value[n][0] = (spec->modAmtOneMinus == true) ? a : 0.0; // §29.4 - off: 1-m passes In, m is silent
             } else {
-                value[n][0] = a * gain * mod;
+                double share = fmin(1.0, fmax(-1.0, gain * mod));       // §29.2 - held to one register's range
+
+                value[n][0] = (spec->modAmtOneMinus == true) ? (a * ((1.0 - gain) + share)) : (a * share);
             }
             break;
         }
         case eNodeSwitch:
         {
-            // §30 - closed passes In, or 64 units with nothing patched; open sends nothing.
+            // §30 - closed passes In, or 64 units with nothing patched; open sends nothing. Ctrl is the
+            // position, 4 units a step as every switch's is (§33.1): 4 closed, 0 open.
             double closed = (spec->active == true) ? LOGIC_HIGH_LEVEL : 0.0;
 
             value[n][0] = (spec->in[0] < 0) ? closed : (a * ((spec->active == true) ? 1.0 : 0.0));
-            value[n][1] = closed;
+            value[n][1] = (spec->active == true) ? (SWSEL_CTRL_UNITS / UNITS_PER_FULL_SCALE) : 0.0;
             break;
         }
         case eNodeLevConv:
@@ -11327,9 +11701,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeNoteDet:
         {
-            // §69.11 - Vel on MonoKey's scale (§35); release velocity is not kept, so RVel reads 0
+            // §69.11 - the instrument writes both velocities as v x 2^14: v / 128 here
             value[n][0] = logic_level(gKeyHeld[spec->select] > 0u);
-            value[n][1] = (double)gKeyVelocity[spec->select] / 127.0;
+            value[n][1] = (double)gKeyVelocity[spec->select] / NOTEDET_VELOCITY_SCALE;
+            value[n][2] = (double)gKeyReleaseVelocity[spec->select] / NOTEDET_VELOCITY_SCALE;
             break;
         }
         case eNodeWahWah:
@@ -11478,7 +11853,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             // §53 - Pitch is input 3, PitchVar input 0; Phase M input 2
             double hz = osc_frequency_hz(spec, voicePitch, signal_in(spec, value, 3), a);
 
-            value[n][0] = (spec->active == true) ? osc_pm_step(voice, n, spec, hz, signal_in(spec, value, 2)) : 0.0;
+            value[n][0] = (spec->active == true) ? osc_pm_step(voice, n, spec, hz, signal_in(spec, value, 2), osc_sync_edge(voice, n, spec, value)) : 0.0;
             break;
         }
         case eNodeDlySingle:
@@ -11630,8 +12005,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeOscNoise:
         {
-            double width = spec->oscNoiseWidth
-                           + (MOD_INPUT_SCALE * spec->oscNoiseWidthMod * signal_in(spec, value, 2));
+            // §8.4 - Width + Width M x the input, 64 units at 127 moving it across the whole dial
+            double width = spec->oscNoiseWidth + (spec->oscNoiseWidthMod * signal_in(spec, value, 2));
             double hz    = osc_frequency_hz(spec, voicePitch, a, signal_in(spec, value, 1));
 
             value[n][0] = (spec->active == true) ? oscnoise_step(voice, n, hz, width) : 0.0;
@@ -11720,8 +12095,13 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeCompress:
         {
-            value[n][0] = (spec->active == true) ? compress_step(voice, n, a, spec) : a;
-            value[n][1] = value[n][0];
+            // §25.2 - the module's first output jack (the right-hand one) is R, its second L
+            double inR  = signal_in(spec, value, 1);
+            double outR = inR;
+            double outL = (spec->active == true) ? compress_step(voice, n, a, inR, signal_in(spec, value, 2), spec, &outR) : a;
+
+            value[n][0] = outR;
+            value[n][1] = outL;
             break;
         }
         case eNodeDelay:
@@ -11807,6 +12187,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeChorus:
         case eNodeReverb:
         case eNodeFade:         // writes both legs itself: Pan and Fade1-2 have two outputs
+        case eNodeCompress:     // §25.2 - R and L
         case eNodeMixStereo:    // a genuine stereo pair
         case eNodeFltMulti:     // three outputs of its own
         case eNodeFxIn:         // the FX bus's two legs
@@ -12175,7 +12556,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                         voice->glidePitch = (double)voice->note;
                     }
                 }
-                double voicePitch = voice->glidePitch + bend + vibrato;
+                double voicePitch = voice->glidePitch + bend + vibrato + params.octaveSemis;
 
                 // The anti-click ramp, per voice. Only used when the patch has no EnvADSR to shape
                 // the note itself — with one, this would just double up on it.

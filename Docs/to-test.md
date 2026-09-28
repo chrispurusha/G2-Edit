@@ -4,6 +4,19 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***EVERY CABLED INPUT (2026-09-28)*** - findings 2026-09-28 (later), reference §6.7, §6.8, §28.4.
+  Oscillator Shape Mod and FM inputs and the LFOs' Rst, Phase M and Shape M now act. LISTEN: 18 Unreal
+  Dreams should have its moving background pad; 07 Unstable Lead should wander in pitch as on the G2;
+  10 Troll, 11 Cosmic Dream, 17 Mighty Nord gain FM timbre; 13, 14, 15 LFOs restart on their Rst.
+- ***LISTENING ROUND FIXES (2026-09-28)*** - same findings entry. 14 CS80 (and 11, 17 down, 05, 06, 16 up)
+  now at the G2's octave; 08 Ice Pad's OscD plays its Partial tuning; 07 goes straight to its first note;
+  15 Randee dz is silent with the master clock stopped; stereo compressors keep their stereo.
+- ***RESOURCE WARNING (2026-09-27)*** - g2-budget-estimate-design.md. With a G2 connected, load a heavy
+  patch: the top bar's VA/FX Cycles and Memory figures should turn red at 100%, as the voice count does
+  when the G2 assigns fewer voices than asked for.
+- ***PARTS RUN: OSCNOISE, FLTVOICE, NOTEDET, MODAMT (2026-09-27, night)*** - findings 2026-09-27 (night).
+  LISTEN: 10 Troll's vowel filter now sits a quarter tone lower. An OscNoise is quieter at high pitches
+  (about -3 dB/octave above 500 Hz) and narrower at Width 0; its Width input is a quarter as strong.
 - ***STAGE-PATCH PARTIALS SETTLED FROM THE REFERENCE MODEL (2026-09-27)*** - findings 2026-09-27 (evening). LISTEN:
   15 Randee dz now runs at the G2's master clock (top-bar tempo), not a fixed 120 BPM - change the tempo
   and it should follow. 07 Unstable Lead's two Lin Glides are now 2.5x slower (the instrument's tenth-step).

@@ -361,7 +361,7 @@ void render_patch_params_panel(void) {
     tModule *  vibMod        = get_module_slot(slot, (uint32_t)locationMorph, patchModuleVibrato);
     tModule *  glideMod      = get_module_slot(slot, (uint32_t)locationMorph, patchModuleGlide);
     uint8_t    sustainPedal  = sustMod ? sustMod->param[0][SUSTAIN_PEDAL].value : 0;
-    int8_t     octaveShift   = sustMod ? (int8_t)sustMod->param[0][OCTAVE_SHIFT].value : 0;
+    int8_t     octaveShift   = sustMod ? (int8_t)((int32_t)sustMod->param[0][OCTAVE_SHIFT].value - OCTAVE_SHIFT_ZERO) : 0;
     uint8_t    vibratoRate   = vibMod ? vibMod->param[0][VIBRATO_RATE].value : 0;
     uint8_t    vibratoAmount = vibMod ? vibMod->param[0][VIBRATO_DEPTH].value : 0;
     uint8_t    glideTime     = glideMod ? glideMod->param[0][GLIDE_SPEED].value : 0;

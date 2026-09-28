@@ -2293,11 +2293,12 @@ void open_bend_range_dropdown(tCoord coord) {
 
 void open_patch_octave_shift_dropdown(tCoord coord) {
     static tMenuItem items[] = {
-        {"-2", RGB_GREY_3, action_patch_setting_i8, (uint32_t)(int32_t)-2, NULL},
-        {"-1", RGB_GREY_3, action_patch_setting_i8, (uint32_t)(int32_t)-1, NULL},
-        {"0",  RGB_GREY_3, action_patch_setting_i8,                     0, NULL},
-        {"+1", RGB_GREY_3, action_patch_setting_i8,                     1, NULL},
-        {"+2", RGB_GREY_3, action_patch_setting_i8,                     2, NULL},
+        // stored 0..4 with 2 as no shift, as the instrument's own patches hold it
+        {"-2", RGB_GREY_3, action_patch_setting_i8, OCTAVE_SHIFT_ZERO - 2, NULL},
+        {"-1", RGB_GREY_3, action_patch_setting_i8, OCTAVE_SHIFT_ZERO - 1, NULL},
+        {"0",  RGB_GREY_3, action_patch_setting_i8, OCTAVE_SHIFT_ZERO,     NULL},
+        {"+1", RGB_GREY_3, action_patch_setting_i8, OCTAVE_SHIFT_ZERO + 1, NULL},
+        {"+2", RGB_GREY_3, action_patch_setting_i8, OCTAVE_SHIFT_ZERO + 2, NULL},
         {NULL, RGB_BLACK,  NULL,                                        0, NULL},
     };
 

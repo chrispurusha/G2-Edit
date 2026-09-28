@@ -2540,6 +2540,9 @@ one topology.
 
 ## 146. `svf_filter()`
 
+RETIRED 2026-09-27 with the code it described: its one user, OscNoise, now runs the module's own
+sections (reference §8). Kept for the record.
+
 A Chamberlin state-variable section: low, band and high from one pair of states; band-reject is
 low + high. OscNoise's resonators use it (§8.2). FltStatic did until 2026-09-13 and now runs
 FltMulti's filter instead (reference §10.4).
@@ -3228,4 +3231,6 @@ ClkGen whose Source is Master work to the G2's one master clock, the tempo the t
 them, so 15 Randee dz, whose two ClkGens are both on Master, played at 120 whatever the G2 was set to.
 The snapshot now reads the master clock when it is built, and a tempo change reaches the sound on the
 next rebuild (every redraw). A patch file loaded with no G2 and no performance has no master clock
-(0), and plays at 120 as before. The master clock's Run/Stop is not modelled.
+(0), and plays at 120 as before. Run/Stop (2026-09-28): a ClkGen on Master reads the master clock's own
+count, so with the master stopped it stops too - the engine treats it as switched off, which also
+restarts it cleanly from the top when the clock runs again. With no master clock known it runs.

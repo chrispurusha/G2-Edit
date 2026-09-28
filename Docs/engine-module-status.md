@@ -16,28 +16,27 @@ which fails the run if it names a module that is not offered or not modelled.
 
 | Group | Working | Partial | Not implemented |
 |---|---|---|---|
-| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Shape A, Osc Shape B, Osc Dual, Noise, Metallic Noise, Osc Percussion, Drum Synth, FM Operator, DX Router, Osc Master | Osc Phase Mod, Noise Osc, Osc String, Driver, Resonator | - |
-| **Filters** (§10, §13, §21-§23, §56, §67, §69, §70) | LP Filter, HP Filter, Nord Filter, Classic Filter, Multi Filter, Phase Filter, Static Filter, WahWah, Eq 2-band, Eq 3-band, Eq Peak | Comb Filter, FltVoice, Vocoder | - |
+| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Phase Mod, Osc Shape A, Osc Shape B, Osc Dual, Noise Osc, Noise, Metallic Noise, Osc Percussion, Drum Synth, FM Operator, DX Router, Osc Master | Osc String, Driver, Resonator | - |
+| **Filters** (§10, §13, §21-§23, §56, §67, §69, §70) | LP Filter, HP Filter, Nord Filter, Classic Filter, Multi Filter, Phase Filter, Static Filter, FltVoice, WahWah, Eq 2-band, Eq 3-band, Eq Peak | Comb Filter, Vocoder | - |
 | **Envelopes** (§17) | Envelope ADSR, Envelope AHD, Envelope ADR, Envelop ADDSR, Envelope H, Envelope D, Envelope Mod AHD, Envelope Mod ADSR | Envelope Multi | - |
-| **LFOs** (§28, §42, §50, §54) | LFO A, LFO B, LFO C, LFO Shp A | Clock Generator | - |
+| **LFOs** (§28, §42, §50, §54) | LFO A, LFO B, LFO C, LFO Shp A, Clock Generator | - | - |
 | **Mixers** (§3) | Mixer 1-1 A, Mixer 1-1 S, Mixer 2-1 A, Mixer 4-1 A, Mixer 4-1 B, Mixer 4-1 C, Mixer 4-1 S, Mixer 2-1 B, Mixer 8-1 A, Mixer 8-1 B, MixFader, MixStereo, Fade 1-2, Fade 2-1, X-Fade, Pan | - | - |
 | **Level** (§16, §29, §43, §44, §48, §68, §69, §70) | Constant, ConstSwM, ConstSwT, CompLev, CompSig, LevAdd, LevAmp, LevConv, LevMod, LevMult, MinMax, ModAmt, EnvFollow, Red2Blue, Blue2Red | NoiseGate | - |
 | **Shapers** (§3.4) | Saturate, Clip, OverDrive, ShpExp, WaveWrap, ShpStatic, Rect | - | - |
 | **Delays** (§24, §52, §65, §69, §70) | Delay Single A, Delay Single B, Delay Dual, Delay Quad, Delay A, Delay B, Delay Stereo, Delay Clock, Delay Eight, DlyShiftReg | - | - |
-| **Effects** (§11, §19, §20, §25, §55, §57, §69, §70) | Compressor, Digitizer, Phaser, Reverb | FreqShift, Flanger, Chorus, PShift, Scratch | - |
-| **In/Out** (§16, §69, §70) | 2 Outputs, 4 Outputs, 2 Inputs, FX Input, Keyboard, Monophonic Keyboard, Name Bar | 4 Inputs, Device, Status, Note Detector | - |
-| **Switches** (§30, §45, §68, §70) | SwOnOffM, Sw2-1, Sw2-1M, Sw4-1, Sw8-1, Sw1-2, Sw1-2M, Sw1-4, Sw1-8, ValSw2-1, ValSw1-2, Mux8-1, Mux1-8, S&H, T&H, WindSw | SwOnOffT, Mux8-1X | - |
+| **Effects** (§11, §19, §20, §25, §55, §57, §69, §70) | Compressor, Digitizer, FreqShift, Phaser, Reverb | Flanger, Chorus, PShift, Scratch | - |
+| **In/Out** (§16, §69, §70) | 2 Outputs, 4 Outputs, 2 Inputs, FX Input, Keyboard, Monophonic Keyboard, Note Detector, Name Bar | 4 Inputs, Device, Status | - |
+| **Switches** (§30, §45, §68, §70) | SwOnOffM, SwOnOffT, Sw2-1, Sw2-1M, Sw4-1, Sw8-1, Sw1-2, Sw1-2M, Sw1-4, Sw1-8, ValSw2-1, ValSw1-2, Mux8-1, Mux1-8, S&H, T&H, WindSw | Mux8-1X | - |
 | **Logic** (§38, §46, §68) | Invert, Pulse, Delay, Gate, FlipFlop, ClkDiv, 8Counter, BinCounter, ADConv, DAConv | - | - |
 | **Sequencers** (§58, §69, §70) | Sequencer Level | Sequencer Event, Sequencer Values, Sequencer Note, Sequencer Controlled | - |
 | **Random** (§47, §64, §69, §70) | Random A, Random B, Rnd Clock A, Rnd Trig | Rnd Clock B, Rnd Pattern | - |
-| **Note** (§26, §41, §49, §69, §70) | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide | Pitch Tracker, Zero Crossing Counter, Level Scaler | - |
+| **Note** (§26, §41, §49, §69, §70) | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide, Zero Crossing Counter | Pitch Tracker, Level Scaler | - |
 | **MIDI** (§70) | CtrlSend, PCSend, NoteZone, Automate | NoteSend, CtrlRcv, NoteRcv | - |
-| **Total 170** | **136** | **34** | **0** |
+| **Total 170** | **144** | **26** | **0** |
 
 | Partial module | What is still open |
 |---|---|
 | 4 Inputs | silent (the jacks); a Bus source is not bridged (§69.12) |
-| Note Detector | release velocity is not kept, so RVel reads 0 (§69.11) |
 | Flanger | basic: a swept delay from the manual (§70.2) |
 | PShift | basic: two crossfaded taps (§70.3) |
 | Scratch | basic: two crossfaded taps, ratio law guessed (§70.3) |
@@ -45,8 +44,7 @@ which fails the run if it names a module that is not offered or not modelled.
 | Resonator | basic: OscString's loop; Alg and inputs guessed (§70.4) |
 | Driver | a guess: not in the manual in hand (§70.5) |
 | NoiseGate | basic: follower and gate from the manual (§70.6) |
-| Pitch Tracker | basic: zero crossings, not the instrument's tracker (§70.7) |
-| Zero Crossing Counter | basic: zero crossings (§70.7) |
+| Pitch Tracker | counter and E2 reference are the instrument's; its detector (followers, filters, flip-flop) is not (§70.7) |
 | Vocoder | basic: 16 band-passes, band centres guessed (§70.8) |
 | Rnd Clock B | basic: RndClkA's node; StepM and Character not read (§70.9) |
 | Rnd Pattern | basic: reseeded LCG pattern; not the instrument's (§70.9) |
@@ -57,18 +55,12 @@ which fails the run if it names a module that is not offered or not modelled.
 | Status | Voice No. law guessed (§70.13) |
 | CtrlRcv | no MIDI CC reaches the engine: outputs 0 (§70.13) |
 | NoteRcv | NoteDet whatever the channel (§70.13) |
-| Noise Osc | Q and level measured, not yet read from the reference model (§8) |
 | Comb Filter | not yet checked against the reference model |
 | Envelope Multi | rise to an intermediate level is a guess (§17.9) |
 | Chorus | a third chorus in one patch passes dry (pool of 2 lines) |
-| SwOnOffT | Out and the unpatched 64 units are the module's; Ctrl's closed level, a word 0x20000, not decoded (§30) |
-| Osc Phase Mod | Tri's corner correction and the Sync input not modelled (§53) |
-| FreqShift | Sub range: the module's word and the readout disagree 12x (§57) |
-| FltVoice | the fine-pitch table offset is read as none, not decoded (§56) |
 | Sequencer Note | the record inputs are not modelled; steps at 96 kHz whatever the clock's rate (§58) |
 | Sequencer Event | steps at 96 kHz whatever the clock's rate (§58) |
 | Sequencer Values | steps at 96 kHz whatever the clock's rate (§58) |
-| Clock Generator | Master follows the G2 master clock; its Run/Stop is not modelled (notes §200) |
 | NoteSend | plays this slot only; notes to other slots and MIDI are dropped (§62) |
 
 ## What is left (2026-09-27): refinement, not coverage
