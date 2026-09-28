@@ -23,7 +23,7 @@ General
 - Render poly voices across cores (engine-multicore-design.md) - the long-term answer to patches whose voices never finish: 18 Unreal Dreams at 32 voices needs 120% of one core, and the engine manages ~9 (CT 2026-09-28); check first that VST3/AUv2 hosts let a plug-in join the audio workgroup
 - Engine voice count should follow the G2's own assignment, not the patch's request: 18 asks for 32 and the G2 gives 15 - use the G2's reported count when connected, the budget estimate's voice placer offline (g2-budget-estimate-design.md)
 - 18 Unreal Dreams: engine ~9 dB louder than the G2 capture at 32 voices - check the rig calibration first, then the voice level path (§62.1)
-- 04 Chris Pad is slightly brighter on the G2, with or without the output filter (CT 2026-09-28) - suspect OscShpB's Shape law (§27), not the filter; capture both
+- 04 Chris Pad brightness: re-listen after the exact Vel/Keyb morphs (§26.2); the captures matched to 12 kHz once the G2's filter was confirmed on, and the first capture had its FltClassic switched off - find out what switched it (findings 2026-09-28 late)
 - Diavolo Sync patch is brighter on the G2 than in the engine (CT 2026-09-28) - capture both; G2 outputs 1/2 are on the Fireface again
 - LfoShpA: its per-waveform Phase offsets and the Dir input (§28.4); the shape oscillators' waves below Shape 0 (§6.7)
 - `DELAY_LINE_SAMPLES` is sized 2.8 s at a 96 kHz graph, so at a 192 kHz device the longest Time is truncated to 1.4 s - pre-existing, and worse before the rate cap
@@ -37,6 +37,7 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Local mode button: draw a wave across sequencer columns, ultimately as a wave-representation mode
 - Add performance keyboard split/layer/zone UI (manual: "Layering Patches")
 - Add a dedicated master-clock/tempo panel
+- Virtual keyboard velocity: two computer-keyboard keys to step it down/up, and matching -/+ buttons in the Virtual Keyboard panel (CT 2026-09-28). Engine only - the G2 plays the editor's notes at 127 whatever is sent (code-notes/virtualKeyboard.c.md §11), so show that when a G2 is connected
 
 MODULES AND GRAPHICS
 - Mix4-1S: the G2 sends 8 parameters where the module tables hold 9 (logged loading the patch library, 2026-09-25)

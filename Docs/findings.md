@@ -12168,3 +12168,24 @@ running): 60-250 Hz 10-16 dB fuller than the engine, with a line at 88 Hz. Two c
   part writes into the Seq16's step words, which the engine rebuilds from the dials every sample.
 Also on 18: the G2 gives it 15 voices of the 32 it asks; CT set 8 for the engine. Multi-core voices and
 following the G2's own voice count are in todo.md.
+
+## 2026-09-28 (late) - 04 Chris Pad and FltClassic "tracking": the filter was right, the morph rows were coarse
+
+CT: 04 is brighter on the G2; with a test patch (FltClassicTest: Env and KBT off, high Res) the resonance
+sits lower in the engine. Captured on the G2 (Fireface, 192 kHz, note 52 vel 100 over MIDI):
+- **The first 04 capture was misleading**: the G2's FltClassic had been switched OFF during it (not by
+  the backdoor - PUSH, cabling and SAVEFILE all keep it; cause unknown). With it on, engine and G2 match
+  within 0.5 dB from 100 Hz to 12 kHz; above 14 kHz the G2 capture is its own noise floor. OscShpB's
+  Sine1 at Shape 127 matches with the filter taken out as well - not the oscillator.
+- **The FltClassic's law is right**: its dial table (its Freq table) is exactly 13.75 x 2^(v/12) as
+  a phase word, pitch's exponential path is exact at zero modulation, and with KBT off its linear
+  input is a global constant = 0x40000 = 1/32 - so the instrument's `a` is the engine's. The
+  instrument's own parts (a harness kept outside the repo) and the engine peak at the same frequency to 0.01%.
+- **The test patch's Freq carries Wheel (31) and Vel (22) morphs**, which is why its resonance is near
+  2 kHz rather than the dial's 740 Hz. The engine played velocity 100 from its 32-row table (amount
+  24/31 for 100/127): 0.29 semitone flat. Now a row per velocity and per note (reference §26.2, revert
+  record row 101): the engine's resonance is within 0.04 semitone of the G2's; the G2 sits 0.11 dial step
+  above the exact law, likely the mod wheel resting a hair above zero (CT: not a bug if so).
+- The same rounding hit every Vel/Keyb morph on every module - filters were only where it was audible.
+  Also: the Keyb row now counts the Octave Shift, as the law says. morphcheck's mirrored defines
+  updated; it passes on SimpleLead's FltClassic Freq on both axes and the pair.

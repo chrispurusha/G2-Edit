@@ -99,3 +99,13 @@ mouse keeps its one-note model through set_sounding_note().
 A key whose release never arrives would stay in the list. GLFW releases every held key itself
 when the window loses focus, so in the application that cannot happen. Closing the panel releases
 every key in it.
+
+## 11. `VIRTUAL_KEY_VELOCITY`
+
+The editor's note message to the G2 (USB 0x56, `send_play_note()`) carries a note and on/off and NO
+velocity. The G2 hands it to its own virtual key, which plays through the panel keyboard's path at
+velocity 127 on and 127 off, whatever the editor would have liked (read in the synth's code,
+2026-09-28). So the engine plays the computer keyboard's notes at 127 too - it had used 100, and a
+patch with a Vel morph (FltClassicTest's filter, 04 Chris Pad) sounded different in the two. The same
+virtual key is why a second editor note waits for the first one's release on the G2: there is only one.
+MIDI notes keep their own velocity on both.

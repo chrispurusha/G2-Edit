@@ -27,8 +27,8 @@ counted as a pass. A sweep where EVERY point is inconclusive is VACUOUS and fail
 is a parameter that this patch does not hear, or a range too small to matter. Without that column the
 tool's favourite answer would be PASS.
 
-The quantisation is the reference's, not the tool's. Both axes are tables (32 velocities, every other
-note), so the morph lands on a row's amount and not on the exact one. The `by hand` dial is computed
+The quantisation is the reference's, not the tool's. Both axes are tables - since 2026-09-28 one row per
+velocity and per note, so the rows ARE the exact amounts (32 velocities and every other note before). The `by hand` dial is computed
 from the ROW's amount, mirroring soundEngine.c's `velocity_row()`, `key_row()` and `axis_amount()` -
 if those change, the three defines at the top of this file change with them. Otherwise every reading
 would be out by up to one step and the tolerance would have to be loosened until the tool proved

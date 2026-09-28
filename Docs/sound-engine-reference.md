@@ -1284,23 +1284,26 @@ with every entry of its table to half a count.
 **26.2 The Vel and Keyb morphs, per voice (2026-09-17).** On the instrument each note-on gives every
 parameter with a Vel or Keyb morph range its own value for that voice: the patch-wide value plus
 range x velocity/127 plus range x (note - 36 + octave shift x 12)/60, in dial units, held to 0-127. The
-Keyb amount is 0 at C1 and 1 at C6, and goes past both (-0.6 at note 0, 1.52 at 127). The engine has
-no panel octave shift.
+Keyb amount is 0 at C1 and 1 at C6, and goes past both (-0.6 at note 0, 1.52 at 127). The octave shift
+is the patch's Octave Shift (§63a), which the engine counts into the Keyb row since 2026-09-28.
 
 The engine prepares these, since the audio thread cannot build nodes. Whenever the chain or a morph
 range changes, it builds the chain at each morph's full amount as well, takes the nodes that differ
 from the base build (at most eight per morph), and rebuilds just those modules along that morph's
-axis: 32 velocities, and every other note from 0 to 126 (`build_axis_table()`, `build_module_node()`).
-Each voice picks its rows at note-on (and a Mono voice returning to a held key its new Keyb row), so
-the worst step is range/31 dial units for velocity and range/30 for a two-semitone key step. Knob
+axis: every velocity 0-127 and every note 0-127 (`build_axis_table()`, `build_module_node()`), so the
+amount a voice plays is the law's exactly. Each voice picks its rows at note-on (and a Mono voice
+returning to a held key its new Keyb row). **Until 2026-09-28 the axes were 32 velocities and every
+other note**, rounding a morph by up to range/62 dial units on velocity and range/60 on the key: with
+FltClassic Freq on a Vel range of 22, velocity 100 played 0.29 semitone flat - CT heard the resonance
+low against the G2 (findings 2026-09-28, revert record row 101). Knob
 smoothing stays per node, and a voice adds each table's offset from the base node to the smoothed
 Freq, Res, gain, shape and mixer levels. FX Area nodes take the latest note's rows.
 
 LIMITS (closed 2026-09-18 - see §26.2.2 and §26.2.3). A node both morphs move plays a merge, each
 word from whichever axis moves it, and the words BOTH move come from a build at the pair of amounts -
 so the two are summed before the conversion and the clamp, which is the law in §26.2.0. What is left
-is a resolution limit rather than a modelling one: the pair is tabulated at the same 32 velocities and
-64 notes as the per-axis tables, and only the FIRST node a patch morphs on both axes gets one
+is a limit of count rather than resolution: the pair is tabulated at the same 128 velocities and
+128 notes as the per-axis tables, and only the FIRST node a patch morphs on both axes gets one
 (MAX_PAIR_NODES). Building the tables takes about
 3.6 ms in a Debug build when every row is used; the plug-in does that on a thread of its own since
 2026-09-18 (`rebuild_worker()`, g2Plugin.c notes §14) rather than on the audio thread.
