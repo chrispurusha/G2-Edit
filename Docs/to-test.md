@@ -4,6 +4,8 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***15 RANDEE DZ FX BASS (2026-09-28, night)*** - reference §16.2a. LISTEN: the FX-area bass line (OscDual
+  and OscD) should now be heard. The G2's occasional re-recorded low notes are still missing (SeqNote record).
 - ***18 UNREAL DREAMS SEQUENCES (2026-09-28, evening)*** - reference §62.1. LISTEN: 18 should now play its
   melody and held chord as the G2 does. It builds up over ~25 s as voices fill, on the G2 too. The engine
   may be louder than the G2 (about 9 dB offline) - say if it is.
@@ -30,8 +32,8 @@ Full detail for each is in findings.md, searchable by the wording below.
   has that combination).
 - ***G2 OUTPUT FILTER (2026-09-27)*** - sound-engine-notes §199, findings 2026-09-27. The engine now rolls
   off its top end as the G2's outputs do (-1 dB at 21 kHz, -6 dB at 42 kHz). LISTEN to Kick 5 in the app
-  against the G2: the engine's extra hiss should be gone. Toggle: Experimental > G2 Output Filter (app,
-  remembered), Settings > G2 Output Filter (plug-in, saved with the project).
+  against the G2: the engine's extra hiss should be gone. OFF by default since 2026-09-28 - turn it on to
+  test: Experimental > G2 Output Filter (app), Settings > G2 Output Filter (plug-in); both remembered.
 - ***PATCH VOLUME ON OLD FILES (2026-09-27)*** - code-notes/protocol.c.md §23. A patch file saved by the
   editor before 2026-09-27 carries no Volume; it now loads at 127 (0 dB), on. Open e.g. ReverbMeasure.pch2
   with the engine on: the top-bar Volume dial should show 0.0dB and the patch should play.

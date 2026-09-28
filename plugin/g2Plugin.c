@@ -267,7 +267,7 @@ static void * g2_create(const tSynthLibPluginDesc * desc) {
         return NULL;
     }
     note_stack_all_off();
-    sound_engine_set_dac_emulation(prefs_get_int(PREF_KEY_DAC_EMULATION, 1) != 0);    // as the dial mode: the prefs file
+    sound_engine_set_dac_emulation(prefs_get_int(PREF_KEY_DAC_EMULATION, 0) != 0);    // as the dial mode: the prefs file
 
     // All four slots start as the application's new empty patch, so selecting B, C or D in the editor
     // shows an empty patch rather than zeroed storage. Nothing replaces slot A any more: no patch is

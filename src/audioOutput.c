@@ -294,7 +294,7 @@ void audio_output_load_settings(void) {
     if (uid != NULL) {
         strncpy(gSelectedUid, uid, sizeof(gSelectedUid) - 1);
     }
-    sound_engine_set_dac_emulation(prefs_get_int(PREF_KEY_DAC_EMULATION, 1) != 0);
+    sound_engine_set_dac_emulation(prefs_get_int(PREF_KEY_DAC_EMULATION, 0) != 0);
     // notes §3
     gLevelDb      = (int32_t)prefs_get_int(PREF_KEY_LEVEL, 0);
 

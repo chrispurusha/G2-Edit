@@ -89,6 +89,10 @@ static const tPartialRow kPartial[] = {
     {"Sequencer Event",   "steps at 96 kHz whatever the clock's rate (§58)"                             },
     {"Sequencer Values",  "steps at 96 kHz whatever the clock's rate (§58)"                             },
     {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },
+    // §6.7, §28.4 - pieces of their jacks' laws not yet decoded
+    {"Osc Shape A",       "its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7)"  },
+    {"Osc Shape B",       "its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7)"  },
+    {"LFO Shp A",         "its per-waveform Phase offsets and the Dir input are not modelled (§28.4)"   },
 };
 
 #define PARTIAL_COUNT (sizeof(kPartial) / sizeof(kPartial[0]))

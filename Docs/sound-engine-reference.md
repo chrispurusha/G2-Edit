@@ -697,6 +697,12 @@ signal moves an oscillator 64 semitones, and a Keyboard Note output played throu
 KBT off plays in tune. The engine took full scale as 12 semitones (notes §14). Oscillators' Pitch and
 PitchVar inputs, and FltMulti's and FltComb's, all move five times as far as before for the same signal.
 
+**16.2a No key in the FX area (2026-09-28).** The FX area has no keyboard, so anything there that tracks
+the key sits at E4, the instrument's pitch zero: an FX oscillator with KBT on plays its Tune, an FX LFO
+or filter with KBT moves nothing. The engine had passed the post-mix nodes a key of 0.0 - MIDI note 0 -
+so 15 Randee dz's FX-area bass (OscDual and OscD, KBT on, played by an FX SeqNote) sounded five octaves
+and four semitones low, below hearing. Only 15 of the stage patches changes.
+
 **16.3 EnvADSR Sustain** is the dial over 128, 127 reaching exactly full level (`dial_fraction()`), as
 the other level dials are; it was over 127, a fraction of a percent high everywhere below the top.
 
