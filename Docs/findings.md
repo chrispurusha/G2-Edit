@@ -11570,7 +11570,7 @@ before believing its amplitude.
 
 Two harness bugs were found on the way, both worth remembering for the next module:
 
-- the DSP boot uploads the cent table from host index **64** (its `+0x100` is 64 words), not 0.
+- The DSP's cent table is loaded from host index **64** (an offset of 64 words), not 0.
   Uploading from 0 puts unity 64 entries out and biases every pitch. The table right above it,
   `a table`, IS uploaded from 0 - the two loops use different pointer arithmetic and the
   two are typed inconsistently, which is what hid it.
@@ -11675,7 +11675,7 @@ followed by a flag-setting op. After the fix the earlier reading and the program
 
 The host side came out of the instrument's code too: Decay is a stored table, Click is SQUARED by
 the host's Click action, Punch patches `asl b ifec` into one P-word, and an unpatched input's slot points at a
-constant - offset k in the connector is k x 2^16 (0x20 = 64 units, which is why the DrumSynth's
+constant - an offset of k is k x 2^16 (0x20 = 64 units, which is why the DrumSynth's
 unpatched Vel measured 64 units). OscPerc's unpatched Trig reads constant 0, so it never strikes.
 
 Eight G2 takes on outputs 3/4 (reference §40.3) agree with the program and the engine to 0.1 dB in level,
@@ -12076,32 +12076,20 @@ patches render with finite, non-silent output after the changes. Revert record r
   a quarter tone under the vowel table's words at Freq 64. 10 Troll is the one stage patch this changes.
 - **NoteDet (§69.11)**: RVel is the key's release velocity, both velocities v x 2^14 (v/128).
 - **OscPM (§53)**: its triangle is OscC/OscD's part, so it takes their corner correction.
-- **FreqShift Sub**: the host writes 0x80 (0.73 Hz at full) where its own readout says 8.78 Hz - both in
-  the instrument's code; the code alone could not settle it. A G2 check decides; the engine keeps the word.
+- **FreqShift Sub**: the instrument writes 0x80 (0.73 Hz at full) where its own readout says 8.78 Hz. A G2
+  check decides; the engine keeps the word.
 - Regression against 2b94849 (filter off): only 10 Troll changes among 7 test and 19 stage patches.
   Engine 139 Working / 31 Partial. Revert record rows 82-86.
 
-## 2026-09-27 (night) - the instrument's own code; FreqShift Sub settled by it
+## 2026-09-27 (night) - FreqShift Sub settled from the instrument's own code
 
-The OS image's two sections are compressed (
-first byte > 17 a literal run, 0x800 and 0x4000 offset classes, end when the match lands on the output
-pointer). Both expand to exactly the header's sizes - SRAM 1 946 bytes at 0x20000800, CODE 1 220 560 at
-0x30000400 - and every the instrument's code table probed (envelope times and shapes, semitone and cent tables, logic
-time, oscillator pitch, the exp curve) appears in CODE verbatim. So the instrument's own code can
-now be read as machine code, not only a reading of the same source. The images are kept
-outside the repo.
-
-First use: FreqShift's Range handler writes 0x80 / 0x42C0 / 0x42E40 for Sub / Lo / Hi, exactly as the instrument's code
-does - so Sub at full shifts 0.73 Hz on the instrument, and the readout's 8.78 Hz is its own. FreqShift
-moves to Working.
-The image also carries the DSP part programs: Mux2_1 (ValSw), ModAmount, PortamentoMain (Glide), FltComb,
-TNFilter (OscNoise) and OnOff (SwOnOffT) DSP programs are in CODE word for word as the instrument's code has them. So a part
-run in the DSP emulator is the instrument's own DSP program, not a demo's copy of it.
-
+FreqShift's Range handler writes 0x80 / 0x42C0 / 0x42E40 for Sub / Lo / Hi - so Sub at full shifts 0.73 Hz
+on the instrument, and the readout's 8.78 Hz is its own. FreqShift moves to Working. The DSP part programs
+run in the harness kept outside the repo are the instrument's own, word for word.
 
 ## 2026-09-27 (night) - SwOnOffT's Ctrl is its position, 4 units; the DAC is not configured by the OS
 
-- **SwOnOffT / SwOnOffM Ctrl (§30.1):** the G2's own code writes the part's frame word 0x20000
+- **SwOnOffT / SwOnOffM Ctrl (§30.1):** the instrument's own code writes the part's frame word 0x20000
   closed, 0 open, beside the part's two instruction words - through the same host-port writes whose
   FreqShift Range words are plain 24-bit values. 0x20000 is 4 units: the switch's POSITION, 4 units a
   step, as Sw2-1 (0 / 0x20000), Sw4-1 and the other switches write, and as the Muxes read. The engine
@@ -12137,12 +12125,12 @@ From CT's listen on the G2 (08, 14, 15, 18, 07):
 
 Then every input a stage patch cables and the engine ignored (the `ignored` harness lists none now,
 Operators aside):
-- **Shape Mod** (§6.7, shape-modulation): 02, 07, 10, 11, 14, 15, 17, 18. 18 Unreal Dreams' missing pad was
+- **Shape Mod** (§6.7): 02, 07, 10, 11, 14, 15, 17, 18. 18 Unreal Dreams' missing pad was
   two OscB pulses at Shape 0 whose width LFOs move - without the input they played static squares.
-- **FM** (§6.8, linear-FM): 02, 07 (Trk, from an S&H - the "unstable"), 10 (OscC from a Nord Filter,
+- **FM** (§6.8): 02, 07 (Trk, from an S&H - the "unstable"), 10 (OscC from a Nord Filter,
   FM 51 Lin: 1.6 kHz deviation a unit), 11, 17. The FM dial's curve is `type_ii_attenuator()`'s cube + 1%
   exactly.
-- **LFO Rst, Phase M, Shape M** (§28.4, counter): 13, 14, 15. LfoB's Phase dial is read too now, and
+- **LFO Rst, Phase M, Shape M** (§28.4): 13, 14, 15. LfoB's Phase dial is read too now, and
   its Sine and Tri sit a quarter cycle behind LfoA's for the same counter.
 Unchanged bit for bit: 01, 03, 04, 05, 06, 09, 12, 16, 19 across the input work.
 
@@ -12177,10 +12165,10 @@ sits lower in the engine. Captured on the G2 (Fireface, 192 kHz, note 52 vel 100
   the backdoor - PUSH, cabling and SAVEFILE all keep it; cause unknown). With it on, engine and G2 match
   within 0.5 dB from 100 Hz to 12 kHz; above 14 kHz the G2 capture is its own noise floor. OscShpB's
   Sine1 at Shape 127 matches with the filter taken out as well - not the oscillator.
-- **The FltClassic's law is right**: its dial table (its Freq table) is exactly 13.75 x 2^(v/12) as
-  a phase word, pitch's exponential path is exact at zero modulation, and with KBT off its linear
-  input is a global constant = 0x40000 = 1/32 - so the instrument's `a` is the engine's. The
-  instrument's own parts (a harness kept outside the repo) and the engine peak at the same frequency to 0.01%.
+- **The FltClassic's law is right**: the instrument's Freq dial table is exactly 13.75 x 2^(v/12) as a
+  phase word, its exponential pitch path is exact at zero modulation, and with KBT off its linear input is
+  a constant 1/32 - so the instrument's `a` is the engine's. The instrument's own parts, run in a harness
+  kept outside the repo, and the engine peak at the same frequency to 0.01%.
 - **The test patch's Freq carries Wheel (31) and Vel (22) morphs**, which is why its resonance is near
   2 kHz rather than the dial's 740 Hz. The engine played velocity 100 from its 32-row table (amount
   24/31 for 100/127): 0.29 semitone flat. Now a row per velocity and per note (reference §26.2, revert

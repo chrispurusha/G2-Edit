@@ -19,7 +19,7 @@ General
 - CPU: three quarters of it is `eval_node`'s per-node switch, run once per node per voice per oversampled sample (profile in findings 2026-09-19). The cheap wins are taken; skipping a node whose inputs are constant needs the sub-block restructure above to be worth the test that decides it
 - Drop the engine's fixed per-patch pools (every MAX_*_LINES in soundEngine.c: StChorus 2, FreqShift 2, Seq 8, ClkGen/MetNoise/FltPhase/DlyClock 4, delay lines, FX buffers, OscString, Vocoder - past the limit a module plays silent or bypassed): a laptop has the room, so emulate every instance; mind the plug-in's per-instance banks
 - Estimate whether a patch fits the G2's DSP/memory budget and WARN when it is over - never limit the emulation to match; resource model decoded, per-module record and voice placer open (g2-budget-estimate-design.md)
-- SeqNote record inputs (RecVal, RecEnable; the instrument's record part writing into the Seq16 step words) - 15 Randee dz re-records its bass from the FX-In (§58)
+- SeqNote record inputs (RecVal, RecEnable; the instrument's record part writes into the step sequencer's own step words) - 15 Randee dz re-records its bass from the FX-In (§58)
 - Render poly voices across cores (engine-multicore-design.md) - the long-term answer to patches whose voices never finish: 18 Unreal Dreams at 32 voices needs 120% of one core, and the engine manages ~9 (CT 2026-09-28); check first that VST3/AUv2 hosts let a plug-in join the audio workgroup
 - Engine voice count should follow the G2's own assignment, not the patch's request: 18 asks for 32 and the G2 gives 15 - use the G2's reported count when connected, the budget estimate's voice placer offline (g2-budget-estimate-design.md)
 - 18 Unreal Dreams: engine ~9 dB louder than the G2 capture at 32 voices - check the rig calibration first, then the voice level path (§62.1)
@@ -282,7 +282,7 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - Converter emulation ON/OFF option (CT 09-26): the G2's analogue output roll-off (-0.6 dB at 16.8 kHz, -1.1 at 21 kHz, -6 at 42 kHz, findings 09-26) as a switchable output stage. NO low shelf: outs 1/2 measured flat against 3/4 to 0.02 dB (findings 09-26) - the old shelf was the QU's inputs
 - 14 CS80project72: the G2's strongest partial, 527 Hz, is missing from the engine (1061/2112/3161 match; Fireface capture 09-27, findings 09-27)
 - Voice-area delays and Reverb per voice (findings 2026-09-27): allocate each voice's line at build time, sized by Range (the instrument's 513 .. 259212 samples); fit polyphony to a memory budget as the voice placer does
-- Mux8-1X (reference §68.3): its crossfade program shifts the weights in ways the reading of it does not show - run the part's program in the DSP emulator and port that
+- Mux8-1X (reference §68.3): its crossfade program shifts the weights in ways reading it does not show - run the part's program in the emulator kept outside the repo and port that
 - ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither
 - Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play
 - Compressor: new §25 port needs an ear (to-test)

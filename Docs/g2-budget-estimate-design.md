@@ -26,7 +26,7 @@ per-voice and common Voice-area load.
 two more. Checked against parts whose programs and frames are known: ValSw's part is 9 cycles, X 2, Y 2,
 P 10 (its program is 10 words, its frames 2 and 2); Glide's main part 14 cycles, X 2, Y 6, P 15.
 
-**Voice placement.** The synth's code places voices across its DSPs with these records (a voice
+**Voice placement.** The synth places voices across its DSPs with these records (a voice
 placer that pre-allocates voices slot by slot and compares load sizes). This is what decides the voice
 count the G2 reports, e.g. "15 (16)".
 
@@ -43,7 +43,7 @@ beside its own estimate.
    cost depends on its parameters (parts linked in or out by mode, e.g. a delay's range).
 2. **RAM / Q / R capacities** and the third context.
 3. **The voice placer**: how many DSPs a slot may use, how the common (FX) load is shared, and the
-   placement order - the synth's own code is in the instrument's own code.
+   placement order, from the instrument's own code.
 4. ~~The reported load message~~ - ALREADY RECEIVED: `parse_resources_used()` (usbComms.c) reads the
    G2's per-location record (red/blue cycles, zero page, X/Y/P for both rates, RAM, Q, R) into
    `gResourceAlloc`, with the same formula and capacities as above. With a G2 connected the warning

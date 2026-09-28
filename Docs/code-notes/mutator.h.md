@@ -39,7 +39,7 @@ over USB (send_param_value) - the same call init_params_on_module/action_copy_va
 use for other variations. pushUndo controls whether each change is also recorded on the undo
 stack (true for commits to real variations, false for scratch/audition writes).
 
-IMPORTANT: real G2 firmware only understands variation indices 0-7 (confirmed on hardware
+IMPORTANT: the G2 itself only understands variation indices 0-7 (confirmed on hardware
 2026-07-15) - there is no live "ninth variation" on the wire. The original Clavia editor's own
 "ninth internal variation" is purely a local in-memory scratch slot (never serialized).
 So: audition must target whichever variation is presently active on the front panel
