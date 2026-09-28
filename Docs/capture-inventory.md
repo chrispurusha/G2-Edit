@@ -49,6 +49,7 @@ impulse is what this rig gives.
 | **OscShpB** | `G2Captures/oscshpb/`, 8 files | Harmonic spectra per waveform at two Shape settings. |
 | **OscA** | `G2Captures/osca/`, 6 files | |
 | **Pulse** | `pulse192b.wav`, 17 dial values at 192 kHz | Time dial measured across the whole range in Sub. Every width is an integer count of 96 kHz samples. The engine's law (reference §18) lands within two samples of all 17, dial 0 included. Amplitude calibrated: logic high is 1.0 (findings.md). |
+| **Stage patch 18** | `G2Captures/stage/18_unreal_dreams_g2_var1_192k.wav` | 20 s of 18 Unreal Dreams playing itself (variation 1, master clock 120 BPM, G2 outs 1/2, Fireface 192 kHz, 2026-09-28) - long after load, so all 32 voices in use. Checked the NoteSend fix (reference §62) |
 | **FltClassic** | `G2Captures/fltclassic/`, 18 files | Bypass, resonance and spectra. Ladder topology and K range settled from it. |
 
 ## Partly covered — measured, but the captures are thin or gone

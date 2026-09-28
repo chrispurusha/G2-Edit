@@ -12131,3 +12131,13 @@ Operators aside):
   its Sine and Tri sit a quarter cycle behind LfoA's for the same counter.
 Unchanged bit for bit: 01, 03, 04, 05, 06, 09, 12, 16, 19 across the input work.
 
+## 2026-09-28 (evening) - 18 Unreal Dreams captured: its NoteSends had never played
+
+CT: 18 "still very wrong". Captured on the G2 (slot A already held 18, parameters identical to the file;
+variation 1, master clock running): a sequence of pitches and plenty above 2 kHz. The engine held one
+note and was 15-70 dB down above 2 kHz. Cause: the graph is built back from the Outs and a NoteSend feeds
+none, so 18's NoteSends and the FX-area SeqNotes/ClkGen driving them were pruned (reference §62.1). With
+them added the pitches and band balance match. Open: the engine is ~9 dB louder at steady state (both
+at 32 voices); the rig's calibration since outs 1/2 were re-patched is not checked, so no law was
+touched. Also: the plug-in's G2 Output Filter setting is now kept in its prefs file beside the dial
+mode (a project that stored one still overrides it, as with the dial mode).
