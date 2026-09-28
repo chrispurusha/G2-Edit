@@ -5994,6 +5994,22 @@ static void mark_post_mix_nodes(tSoundEngineParams * params) {
     }
 }
 
+// §62 - a NoteSend feeds no Out, so building back from the Outs never reaches it; each is a root of
+// its own, with whatever drives it
+static void add_note_senders(tSoundEngineParams * params, uint32_t variation) {
+    for (uint32_t l = 0; l < 2; l++) {
+        uint32_t location = (l == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+
+        for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
+            tModule * module = get_module_slot(engine_slot(), location, index);
+
+            if ((module != NULL) && (module->type == moduleTypeNoteSend)) {
+                (void)add_node(params, module, variation, 0);
+            }
+        }
+    }
+}
+
 // The whole chain from the patch, at the per-voice morph amounts in sBuildAxis. Database read lock held.
 static void build_snapshot(tSoundEngineParams * out) {
     SE_LOCAL;
@@ -6100,6 +6116,8 @@ static void build_snapshot(tSoundEngineParams * out) {
                             }
                         }
                     }
+
+                    add_note_senders(&snapshot, variation);
                 }
 
                 if (snapshot.tap < 0) {
@@ -9498,7 +9516,7 @@ static double lfo_rate_now(const tEngineNode * spec, double fixedIn, double varI
     double semitones = ((fixedIn + (varIn * spec->lfoRateMod)) * PITCH_MOD_SEMITONES)
                        + (spec->lfoKbt * (voicePitch - KEYBOARD_PITCH_ZERO));
 
-    return spec->rateHz * exp2(semitones / 12.0);
+    return (semitones == 0.0) ? spec->rateHz : (spec->rateHz * exp2(semitones / 12.0));
 }
 
 // §28.3 - the instrument's random generator: a 24-bit linear congruence, one draw per step
@@ -9535,6 +9553,14 @@ static double lfo_random_wave(uint32_t voice, uint32_t node, const tEngineNode *
     gLfoHeld[voice][node]  = out;
     gLfoSlope[voice][node] = fmin(fmax(gLfoSlope[voice][node] + (x * error), -1.0), 1.0);
     return out;
+}
+
+// §28.5 - the LFO's sine part is the oscillator's polynomial (the same frame words), read a quarter
+// cycle on so it keeps sin(2 pi phase)'s phase
+static double lfo_sine(double phase) {
+    double p = phase + 0.25;
+
+    return wave_sine_polynomial(osc_triangle(p - floor(p), 0.5));
 }
 
 static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double rateHz,
@@ -9586,7 +9612,7 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
             }                                                                                // Pulse
             default:
             {
-                wave = sin(phase * 2.0 * M_PI);
+                wave = lfo_sine(phase);
                 break;
             }                                                                                // Sine
         }
@@ -9616,7 +9642,7 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
             }
             default:
             {
-                wave = sin(phase * 2.0 * M_PI);
+                wave = lfo_sine(phase);
                 break;
             }
         }

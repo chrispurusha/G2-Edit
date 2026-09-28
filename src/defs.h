@@ -240,32 +240,34 @@
 // Patch settings module indices (locationMorph, location 2) — see tPatchModuleIndex in types.h
 
 // patchModuleVolume param indices
-#define VOLUME_LEVEL         (0x00)
-#define VOLUME_MUTE          (0x01)
+#define VOLUME_LEVEL              (0x00)
+#define VOLUME_MUTE               (0x01)
 
 // patchModuleGlide param indices
-#define GLIDE_TYPE           (0x00)
-#define GLIDE_SPEED          (0x01)
+#define GLIDE_TYPE                (0x00)
+#define GLIDE_SPEED               (0x01)
 
 // patchModuleBend param indices
-#define BEND_ON_OFF          (0x00)
-#define BEND_RANGE           (0x01)
+#define BEND_ON_OFF               (0x00)
+#define BEND_RANGE                (0x01)
 
 // patchModuleVibrato param indices
-#define VIBRATO_MOD          (0x00)
-#define VIBRATO_DEPTH        (0x01)
-#define VIBRATO_RATE         (0x02)
+#define VIBRATO_MOD               (0x00)
+#define VIBRATO_DEPTH             (0x01)
+#define VIBRATO_RATE              (0x02)
 
 // patchModuleArpeggiator param indices
-#define ARP_ON_OFF           (0x00)
-#define ARP_SPEED            (0x01)
-#define ARP_DIRECTION        (0x02)
-#define ARP_OCTAVES          (0x03)
+#define ARP_ON_OFF                (0x00)
+#define ARP_SPEED                 (0x01)
+#define ARP_DIRECTION             (0x02)
+#define ARP_OCTAVES               (0x03)
 
 // patchModuleSustain param indices
-#define OCTAVE_SHIFT         (0x00) // stored 0..4, 2 = no shift
-#define OCTAVE_SHIFT_ZERO    (2)
-#define SUSTAIN_PEDAL        (0x01)
+#define OCTAVE_SHIFT              (0x00) // stored 0..4, 2 = no shift
+// The G2 output-filter toggle, in the app's prefs file and the plug-in's alike
+#define PREF_KEY_DAC_EMULATION    "engineDacEmulation"
+#define OCTAVE_SHIFT_ZERO         (2)
+#define SUSTAIN_PEDAL             (0x01)
 
 // How long a Tx/Rx activity lamp stays lit after the packet that lit it. Shared by the renderer
 // that draws the lamps, the render loop that decides how long to sleep, and the USB thread that

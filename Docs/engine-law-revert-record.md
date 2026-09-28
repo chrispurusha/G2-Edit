@@ -164,3 +164,5 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 | 95 | OscB / OscShpA / OscShpB Shape Mod input | ignored | shape word + input x Shape M, saturated; OscB's pulse takes it below zero (§6.7) | `2b94849` `src/soundEngine.c` `osc_shape_modulated()`, the pulse clamp in `osc_waveform()` |
 | 96 | OscB / OscC / OscShpA / OscShpB FM input | ignored | the linear-FM part: Lin 24 kHz x FM x input, Trk in proportion to the key's pitch, through zero (§6.8) | `2b94849` `src/soundEngine.c` `osc_fm_hz()`, `advance_phase()` |
 | 97 | LfoB / LfoShpA Rst, Phase, Phase M, Shape M | all ignored | Rst clears the counter to phase 0.5; Phase and Phase M offset the read; LfoB's Sine/Tri a quarter cycle behind LfoA's (§28.4) | `2b94849` `src/soundEngine.c` `lfo_step()`, `lfo_phase_build()` |
+| 98 | NoteSend and what drives it | pruned: nothing reached it from the Outs | added as a root after the Outs (§62.1) | `4d1ec2d` `src/soundEngine.c` `build_snapshot()` |
+| 99 | LFO Sine (LFO A/B/C, LfoShpA Sine) | libm `sin(2 pi phase)` | the instrument's sine polynomial at the same phase, within -77 dB (§28.5) | `4d1ec2d` `src/soundEngine.c` `lfo_step()` |

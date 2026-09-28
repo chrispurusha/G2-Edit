@@ -4,6 +4,11 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***18 UNREAL DREAMS SEQUENCES (2026-09-28, evening)*** - reference §62.1. LISTEN: 18 should now play its
+  melody and held chord as the G2 does. It builds up over ~25 s as voices fill, on the G2 too. The engine
+  may be louder than the G2 (about 9 dB offline) - say if it is.
+- ***PLUG-IN OUTPUT FILTER REMEMBERED (2026-09-28)*** - toggle Settings > G2 Output Filter in G2 Alike,
+  then load a NEW instance: it should come up with the same setting, as the dial mode does.
 - ***EVERY CABLED INPUT (2026-09-28)*** - findings 2026-09-28 (later), reference §6.7, §6.8, §28.4.
   Oscillator Shape Mod and FM inputs and the LFOs' Rst, Phase M and Shape M now act. LISTEN: 18 Unreal
   Dreams should have its moving background pad; 07 Unstable Lead should wander in pitch as on the G2;

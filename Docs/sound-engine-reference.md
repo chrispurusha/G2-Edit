@@ -1529,6 +1529,12 @@ and LfoShpA) have a counter part the others (simpler counter) lack:
 - Dir (LfoShpA) is not modelled.
 The random waves still draw on the counter itself (§28.3), not the offset read.
 
+**28.5 The sine is the oscillator's polynomial (2026-09-28).** The LFO's sine part carries the same frame
+words as OscSine (0x800000, 0x648035, 0xadd4d5, 0x92aa9), so the LFO sine is `wave_sine_polynomial()` on
+the folded phase, not libm `sin()` - within 1.5e-4 (-77 dB) of it, read a quarter cycle on to keep the
+phase the engine already had. Also far cheaper: six LFOs a voice at the 96 kHz graph rate were a tenth
+of 18 Unreal Dreams' render time. The rate skips its `exp2()` when nothing modulates it (bit-exact).
+
 ## 29. ModAmt
 
 Added 2026-09-19. Parameters, validated against the G2 (param-validation.md): 0 Depth, 1 Enable,
@@ -2276,6 +2282,18 @@ dial + Note In in semitones (the dial word carries half a semitone, so it rounds
 Vel In x 2 per unit, both clipped to 0-127. A NoteSend to "This" or to its own slot plays the engine's
 own voices - which is how 18 Unreal Dreams plays itself from its sequencers; other channels would
 leave by MIDI and are dropped.
+
+**62.1 A NoteSend is a root of the graph (2026-09-28).** The chain is built backwards from the Out
+modules, and a NoteSend feeds none, so until this date it and everything driving it (18's two
+SeqNotes, their ClkGen) were pruned: 18 never played its sequences, and the 2026-09-26 "plays
+itself" was the Voice area's own sequencer, not the NoteSends. `add_note_senders()` now adds every
+NoteSend after the Outs. Checked against a G2 capture of 18 (capture-inventory): the same pitches
+(140, 174, 207, 262, 415, 693, 931 Hz) and octave-band balance within 1-2 dB to 8 kHz.
+
+A voice in 18 never finishes: Status's Patch Active keeps each voice's ClkGen running and its
+SeqEvent re-gates Env3/Env4 after the key is up (KB OR the Gate jack, §17.4), so released voices keep
+sounding and 18 fills all 32 voices within about 25 s of loading - on the instrument too, whose
+queue allocator (§15.1a) the engine already follows.
 
 ## 63. Patch Volume
 

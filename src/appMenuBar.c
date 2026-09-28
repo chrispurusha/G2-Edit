@@ -428,8 +428,11 @@ static void action_toggle_drone(int index) {
 }
 
 static void action_toggle_plugin_dac(int index) {
+    bool on = (sound_engine_dac_emulation() == false);
+
     (void)index;
-    sound_engine_set_dac_emulation(sound_engine_dac_emulation() == false);
+    sound_engine_set_dac_emulation(on);
+    prefs_set_int(PREF_KEY_DAC_EMULATION, on ? 1 : 0);    // beside the dial mode, in the plug-in's prefs
 }
 #endif
 
