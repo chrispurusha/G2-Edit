@@ -675,7 +675,7 @@ typedef enum {
 
 // notes §16
 #define OSCB_TUNE_UNITY           (64.0)
-// §6.8 - linear-FM: Lin adds 2 x amount x input words a sample (a unit is 1/4 of a word, a word is
+// §6.8 - linear FM: Lin adds 2 x amount x input words a sample (a unit is 1/4 of a word, a word is
 // 48 kHz of increment); Trk 64 x amount x input x the key increment, and the Pitch stage makes the
 // oscillator's increment 32 x Coarse x Fine words of it, 0x1c20d/2^23 and 1/2 at unity
 #define FM_LIN_HZ                   (OSC_INSTRUMENT_RATE / 4.0)
@@ -9428,7 +9428,7 @@ static double osc_frequency_hz(const tEngineNode * spec, double voicePitch, doub
 }
 
 // notes §154
-// §6.8 - linear-FM: FM Lin adds a deviation of its own; FM Trk one in proportion to the key's pitch,
+// §6.8 - FM Lin adds a deviation of its own; FM Trk one in proportion to the key's pitch,
 // which is the oscillator's frequency without its Tune offset. The sum is saturated to a phase word.
 static double osc_fm_hz(const tEngineNode * spec, double frequency, double fmIn) {
     double deviation = spec->fmAmount * fmIn
@@ -11174,7 +11174,7 @@ static double drum_synth_step(uint32_t voice, uint32_t node, const tEngineNode *
     }
 }
 
-// §6.7 - shape-modulation: the Shape word plus four times input x Shape M, saturated. An input of 1.0 is
+// §6.7 - the Shape word plus four times input x Shape M, saturated. An input of 1.0 is
 // a quarter of full scale, so the factor of four makes it input x Shape M in word terms.
 static double osc_shape_modulated(const tEngineNode * spec, double shape, double input) {
     bool   dialFraction = (spec->kind == eNodeOscShp);    // the shape oscillators keep dial/127

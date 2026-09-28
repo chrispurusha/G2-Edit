@@ -170,7 +170,7 @@ same word is 0.05. Checked: an OscB a fifth above an OscA, synced to it, repeats
 period (12.135 ms at 82.4 Hz, correlation 1.000). The stage patches 01 (two OscC), 02 (an OscB) and 14
 (an OscShpA) cable a Sync input and change with it (revert record row 89).
 
-**6.7 Shape Mod (2026-09-28, from the shape-modulation stage).** OscB, OscShpA and OscShpB share one control-rate stage: shape word = Shape word + 4 x input word x Shape M word, saturated to the 24-bit range. Shape and
+**6.7 Shape Mod (2026-09-28, from the reference model).** OscB, OscShpA and OscShpB share one control-rate stage: shape word = Shape word + 4 x input word x Shape M word, saturated to the 24-bit range. Shape and
 Shape M are both v/128 with 127 counting as full. A unit is a quarter word, so in the engine's terms the
 shape is Shape + input x Shape M. The Shape Mod jack is the fifth input on all three; Shape M is
 parameter 7 on OscB and OscShpB, 8 on OscShpA. OscB's pulse takes the word below zero too: its part
@@ -178,13 +178,13 @@ outputs +-1 plus the shape word, the width (1 - y)/2 of the cycle, so a negative
 up to a steady level at -1. The shape oscillators' waves have not been decoded below zero and stop there.
 Eight stage patches cable Shape Mod; 18 Unreal Dreams' pad is two OscB pulses width-modulated by LFOs.
 
-**6.8 FM (2026-09-28, from the linear-FM stage).** OscB, OscC, OscShpA and OscShpB (OscD has none: its
-FmOff part only adds the increment). Per sample the phase advances by the increment plus
+**6.8 FM (2026-09-28, from the reference model).** OscB, OscC, OscShpA and OscShpB (OscD has none: its
+phase stage only adds the increment). Per sample the phase advances by the increment plus
 
     clip(2 x FM x input x ((1 - Trk) + 32 x Trk x k))
 
-words, where FM is the FM dial through the cube + 1% attenuator curve (the module's its attenuator table, which is
-`type_ii_attenuator()`), Trk the FM Lin/Trk menu (0 or 1), and k the Pitch stage's first output word: the
+words, where FM is the FM dial through the cube + 1% attenuator curve (the instrument's, which is
+`type_ii_attenuator()` exactly), Trk the FM Lin/Trk menu (0 or 1), and k the Pitch stage's first output word: the
 key's increment WITHOUT the Coarse and Fine factors, which the Pitch stage multiplies in only for the
 second word, the oscillator's own increment. At unity Coarse is 0x1c20d/2^23 and Fine 1/2, so the
 oscillator's increment is 32 x 0x1c20d/2^23 x 1/2 x k. With a word of increment = 48 kHz and a unit a
@@ -195,7 +195,7 @@ quarter word:
 The deviation saturates at one word (48 kHz). The frequency can go below zero - through-zero FM, the
 phase then running backwards. FM jacks: input 3 on OscB, OscShpA and OscShpB, 2 on OscC; FM dial 5
 (OscC 4), menu 10 on OscB, 6 on OscShpA and OscC, 9 on OscShpB - the patch's own parameter order,
-which is not the instrument's list order for OscC. Only the Semi Tune Mode is checked; the others use the same
+which for OscC is not the order the module lists them in. Only the Semi Tune Mode is checked; the others use the same
 Tune offset.
 
 **6.1a WHAT THE TUNE DIAL MEANS: the Pitch Type drop-down (2026-09-19).** Four settings on OscA,
@@ -241,8 +241,7 @@ corners near 130 Hz and pulled its dark-end levels down.
 | corner Hz | 18306 | 7664 | 3164 | 1353 | 615 | 323 | 194 | 143 | 129 |
 | level dB RMS re FS | -7.7 | -9.6 | -10.2 | -9.4 | -8.6 | -9.1 | -10.7 | -12.8 | -14.8 |
 
-**7.2a The instrument's module, exactly (2026-09-18).** Read from the reference model and the code
-that feeds it - the whole module, not a fit:
+**7.2a The instrument's module, exactly (2026-09-18).** Read from the reference model - the whole module, not a fit:
 
     x    = 24-bit LFSR, shift left, XOR the tap mask X[0] when the bit shifted out is 1,
            then sign-extended: white noise at full scale
@@ -327,7 +326,7 @@ at 4 kHz, -12.5 at 8 kHz; narrower Widths a dB or two lower. The 2026-09-12 capt
 to +-1.5 dB, which it is between about 110 Hz and 1 kHz; the engine's old flat -4.5 dB was right there
 and up to 8 dB loud above it.
 
-**8.6 Checked** (2026-09-27): the model against the reference model, sample by sample on an
+**8.6 Checked** (2026-09-27): the model against the reference model run in a harness kept outside the repo, sample by sample on an
 impulse and on noise, 250 Hz-12 kHz, Width 0-127: equal to the stages' fixed-point rounding (0.1% of
 the peak on noise). The engine's rendered OscNoise against the reference model at C3-C8 and Width 127/64/16: the
 same centre and Q, and the same level shape to +-0.5 dB (one constant apart - the engine's output
@@ -1515,8 +1514,8 @@ the sequence repeats from load.
 The old model drew from `rand()` on the wrap and jumped straight to the value. An LFO feeding its own
 Rate input (09 Antarktis) then parked at −1 with its rate at the floor, and never drew again.
 
-**28.4 The counter's inputs** (2026-09-28, from the counter stage). LfoB and LfoShpA (the instrument's LfoB
-and LfoShpA) have a counter stage the others (simpler counter) lack:
+**28.4 The counter's inputs** (2026-09-28, from the reference model). LfoB and LfoShpA have a
+counter stage with inputs that LfoA's and LfoC's simpler counter lacks:
 - **Rst**: a rising edge (the last reading at or below zero, this one above) clears the counter to its
   word 0 - the engine's phase 0.5, where the Snc output goes high (§54).
 - **Phase** and **Phase M**: the waves read the counter plus the Phase word plus 4 x input x Phase M. The
@@ -1530,7 +1529,7 @@ and LfoShpA) have a counter stage the others (simpler counter) lack:
 - Dir (LfoShpA) is not modelled.
 The random waves still draw on the counter itself (§28.3), not the offset read.
 
-**28.5 The sine is the oscillator's polynomial (2026-09-28).** The LFO's sine stage carries the same words as OscSine (0x800000, 0x648035, 0xadd4d5, 0x92aa9), so the LFO sine is `wave_sine_polynomial()` on
+**28.5 The sine is the oscillator's polynomial (2026-09-28).** The LFO's sine stage carries the same words as the oscillator's sine stage (0x800000, 0x648035, 0xadd4d5, 0x92aa9), so the LFO sine is `wave_sine_polynomial()` on
 the folded phase, not libm `sin()` - within 1.5e-4 (-77 dB) of it, read a quarter cycle on to keep the
 phase the engine already had. Also far cheaper: six LFOs a voice at the 96 kHz graph rate were a tenth
 of 18 Unreal Dreams' render time. The rate skips its `exp2()` when nothing modulates it (bit-exact).
@@ -1575,9 +1574,9 @@ unpatched In reads a 64-unit constant).
 
 **30.1 Ctrl is the switch's POSITION, 4 units a step (settled 2026-09-27)** - 4 units closed, 0 open -
 the same code every switch's Ctrl carries (§33.1) and the Mux modules read (§68.3), so a switch can
-drive a Mux to the matching position. The G2's own OS code writes the module's word as
-0x20000 closed and 0 open, through the same host-port path whose Range words FreqShift confirms (§57);
-the instrument's DSP stores that word unshifted; the module copies it to Ctrl. SwOnOffM is the same
+drive a Mux to the matching position. The reference model writes the module's word as
+0x20000 closed and 0 open, through the same path whose Range words FreqShift confirms (§57), stored
+unshifted; the module copies it to Ctrl. SwOnOffM is the same
 (its host writes the same word). A logic input reads 4 units as high, so only a Ctrl feeding a level
 hears the change. Until 2026-09-27 the engine sent 64 units (revert record row 87).
 
@@ -1913,7 +1912,7 @@ so full Bend at 64 units is 64 semitones.
 **The engine's scale:** a DSP word is a quarter of an engine unit (a full-scale oscillator is 0.25 of
 the word, 1.0 in the engine), so every DrumSynth output is its word x 4 - the strike's `Vel << 1` puts
 the oscillators at 2 x Level. Checked on the G2 2026-09-25: the master alone peaks 3.5 dB above a
-full-scale OscA sine on the same path (x4 predicts +4.5). The first port that day used x2, 6 dB low. What the reference showed as a STALE REGISTER in the
+full-scale OscA sine on the same path (x4 predicts +4.5). The first port that day used x2, 6 dB low. What first read as a STALE REGISTER in the
 pitch-index line is this bend term: the accumulator already held it. **Velocity: an unpatched Vel is
 64 units**, not the key velocity - the G2 plays identically at MIDI velocities 32, 64 and 127 -
 and a DSP signal unit is 2^15 (64 units = 0x200000).
@@ -2226,8 +2225,7 @@ z^-2, (c + z^-2)/(1 + c z^-2), the second hearing the input a sample late, make 
 phases a quarter cycle apart drive the sine polynomial. **Down = cos H1 + sin H2, Up = cos H1 - sin
 H2.** The shift is x^3 x the range's word at 96 kHz, x = FreqShift/128 (127 = 1) + Mod In x mod,
 clamped 0..1: Hi 0x42E40 (1568 Hz at full) and Lo 0x42C0 (97.8 Hz) match the readout exactly; **Sub's
-word 0x80 gives 0.73 Hz at full where the readout says 8.78 Hz** - SETTLED 2026-09-27 by the G2's own
-the reference model: its Range handler writes 0x80, 0x42C0 and 0x42E40, the same three
+word 0x80 gives 0.73 Hz at full where the readout says 8.78 Hz** - SETTLED 2026-09-27 by the reference model: its Range handler writes 0x80, 0x42C0 and 0x42E40, the same three
 words, so the instrument shifts by 0.73 Hz at full on Sub and the 8.78 is the readout's own constant.
 The engine follows the word; the dial reads what the G2 displays. Checked: a 1 kHz tone shifted 196 Hz comes out at 1196 Hz on Up at full level, the other sideband
 37 dB down. Up to two per patch; more pass through unshifted.
@@ -2386,7 +2384,7 @@ Added 2026-09-27 from the reference model, each checked in a small patch built i
   unit, not the manual's "lower limit" (revert record row 75).
 - **68.3 Mux8-1 / Mux1-8.** The step is Ctrl's word >> 17 (4 units a step), clamped to 0..7. Mux8-1
   passes the chosen input and Mux1-8 puts In on the chosen output, both at a gain of exactly one.
-  **Mux8-1X is not built**: the reference model shifts the crossfade weights in ways the reading of it does not
+  **Mux8-1X is not built**: the reference model shifts the crossfade weights in ways reading it does not
   show, so it needs the reference model run rather than read.
 - **68.4 T&H** follows In while Ctrl is above zero and holds the last value while it is not.
 - **68.5 WindSw** passes In, and sends Gate high, while From <= Ctrl <= To. From and To are v x 2^14,
