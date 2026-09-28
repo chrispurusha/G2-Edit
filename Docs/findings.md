@@ -12058,3 +12058,91 @@ patches render with finite, non-silent output after the changes. Revert record r
 - Parked, with reasons: FltComb (581-line part; the stage patch's settings already fit the capture to its
   floor), EnvMulti (a segment state machine that wants a harness run), Chorus pool (a memory limit, not a
   law). Engine status 136 Working / 34 Partial.
+
+## 2026-09-27 (night) - parts RUN, not only read; OscNoise, FltVoice, NoteDet, OscPM from their parts
+
+- **Run in the DSP emulator** (the part's own DSP program; the emulator gained CMPM and CMP between the
+  accumulators): Glide - a Lin glide of 64 units lands in 61 501 ticks at Time 64 (2.5 x the dial's
+  time, as §36.1 said), Log reaches 99% in the one-pole's time; ModAmt - all four Enable x m/1-m
+  combinations equal the engine to one LSB, but only once Depth x Mod is held to +-1, which the engine
+  now does (§29.2). ValSw's ten-instruction program and value word read unambiguously (§34).
+- **OscNoise (§8)**: the three parts run natively. It is LFSR noise through a ~500 Hz one-pole tilt and
+  THREE gain-compensated Chamberlin sections (the measured model had two), h linear in f with a 9.73 kHz
+  ceiling, damping from Width by a quadratic. Its level peaks near 500 Hz and falls ~3 dB/octave above -
+  the 09-12 capture's "flat +-1.5 dB" held between ~110 Hz and 1 kHz, which is all it covered. A clean
+  model matches the native parts to their rounding; the engine's render matches them in centre, Q and
+  level shape (one constant apart). The Width input moved Width 4x too far.
+- **FltVoice (§56.1)**: the Freq shift reads the cent table from its -50-cent end, so the formants sit
+  a quarter tone under the vowel table's words at Freq 64. 10 Troll is the one stage patch this changes.
+- **NoteDet (§69.11)**: RVel is the key's release velocity, both velocities v x 2^14 (v/128).
+- **OscPM (§53)**: its triangle is OscC/OscD's part, so it takes their corner correction.
+- **FreqShift Sub**: the host writes 0x80 (0.73 Hz at full) where its own readout says 8.78 Hz - both in
+  the instrument's code; the code alone could not settle it. A G2 check decides; the engine keeps the word.
+- Regression against 2b94849 (filter off): only 10 Troll changes among 7 test and 19 stage patches.
+  Engine 139 Working / 31 Partial. Revert record rows 82-86.
+
+## 2026-09-27 (night) - the instrument's own code; FreqShift Sub settled by it
+
+The OS image's two sections are compressed (
+first byte > 17 a literal run, 0x800 and 0x4000 offset classes, end when the match lands on the output
+pointer). Both expand to exactly the header's sizes - SRAM 1 946 bytes at 0x20000800, CODE 1 220 560 at
+0x30000400 - and every the instrument's code table probed (envelope times and shapes, semitone and cent tables, logic
+time, oscillator pitch, the exp curve) appears in CODE verbatim. So the instrument's own code can
+now be read as machine code, not only a reading of the same source. The images are kept
+outside the repo.
+
+First use: FreqShift's Range handler writes 0x80 / 0x42C0 / 0x42E40 for Sub / Lo / Hi, exactly as the instrument's code
+does - so Sub at full shifts 0.73 Hz on the instrument, and the readout's 8.78 Hz is its own. FreqShift
+moves to Working.
+The image also carries the DSP part programs: Mux2_1 (ValSw), ModAmount, PortamentoMain (Glide), FltComb,
+TNFilter (OscNoise) and OnOff (SwOnOffT) DSP programs are in CODE word for word as the instrument's code has them. So a part
+run in the DSP emulator is the instrument's own DSP program, not a demo's copy of it.
+
+
+## 2026-09-27 (night) - SwOnOffT's Ctrl is its position, 4 units; the DAC is not configured by the OS
+
+- **SwOnOffT / SwOnOffM Ctrl (§30.1):** the G2's own code writes the part's frame word 0x20000
+  closed, 0 open, beside the part's two instruction words - through the same host-port writes whose
+  FreqShift Range words are plain 24-bit values. 0x20000 is 4 units: the switch's POSITION, 4 units a
+  step, as Sw2-1 (0 / 0x20000), Sw4-1 and the other switches write, and as the Muxes read. The engine
+  sent 64. No test or stage patch uses an on/off switch's Ctrl; the regression is unchanged.
+- **The output roll-off's source:** the OS names no converter and configures none. Its two I2C buses
+  reach a device at 0xCA and a serial EEPROM at 0xA0 (bit-banged on port bits 8 and 14); no DAC register
+  writes were found, so the converters' options are most likely set by board wiring. The measured droop's
+  shape (a clean two-pole, no knee or ripple) still points to an analogue output stage. The chips' part
+  numbers, read off the board, would settle it; the Fireface loopback in todo.md separates the rig.
+
+## 2026-09-28 - Oscillator Sync, and ZeroCnt from its parts
+
+- **Sync (reference §6.6):** the sync part - one for OscB, OscC, OscShpA, OscShpB and OscDual, a variant
+  for OscPM - restarts the phase on a rising crossing at the word -0.9 plus the sample's step. In the
+  engine's phase that is 0.55 (0.05 for OscPM). A synced OscB repeats at its master's period exactly.
+  Three stage patches cable Sync (01, 02, 14) and change with it; the rest are bit-identical.
+- **ZeroCnt (§70.7a):** whole 24 kHz ticks between rising crossings, 0 units at E2 (the engine had E4
+  and a sub-sample interpolation). PitchTrack shares the counter and the E2 reference; its detector is
+  still the basic one.
+- Also seen: 02 and 14 cable their oscillators' FM and Shape Mod inputs, which the engine does not model
+  (§6.5) - done below.
+
+## 2026-09-28 (later) - CT's listening round: compressor, clock stop, octave shift, OscD, glide; then every cabled input
+
+From CT's listen on the G2 (08, 14, 15, 18, 07):
+- **Compressor is stereo** (§25.2): L and R in, a side-chain, and the first output jack is R. Nine stage
+  patches use both legs.
+- **ClkGen on Master stops with the master clock** (notes §200): 15 Randee dz ran regardless.
+- **Patch Octave Shift** (§63a): stored 0..4, 2 = none; 11, 14, 17 at -1 and 05, 06, 16 at +1 were an octave
+  out. 14 CS80's "octave higher" was this.
+- **OscD's parameter 3 is its Tune Mode** (§6.1a): 08 Ice Pad's OscD is on Partial.
+- **Glide On is read a step late** (§36.2): 07 Unstable Lead glided into its first note.
+
+Then every input a stage patch cables and the engine ignored (the `ignored` harness lists none now,
+Operators aside):
+- **Shape Mod** (§6.7, shape-modulation): 02, 07, 10, 11, 14, 15, 17, 18. 18 Unreal Dreams' missing pad was
+  two OscB pulses at Shape 0 whose width LFOs move - without the input they played static squares.
+- **FM** (§6.8, linear-FM): 02, 07 (Trk, from an S&H - the "unstable"), 10 (OscC from a Nord Filter,
+  FM 51 Lin: 1.6 kHz deviation a unit), 11, 17. The FM dial's curve is `type_ii_attenuator()`'s cube + 1%
+  exactly.
+- **LFO Rst, Phase M, Shape M** (§28.4, counter): 13, 14, 15. LfoB's Phase dial is read too now, and
+  its Sine and Tri sit a quarter cycle behind LfoA's for the same counter.
+Unchanged bit for bit: 01, 03, 04, 05, 06, 09, 12, 16, 19 across the input work.
+

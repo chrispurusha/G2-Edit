@@ -160,7 +160,45 @@ on every topology change); a note-on never resets it (notes §63).
 **6.4 Pitch inputs.** Input 0 direct, input 1 attenuated by Pitch M. OscC: connectors 3 and 0. OscD:
 Pitch only.
 
-**6.5 Not modelled.** FM on OscB and OscC; OscB's Shape modulation input; Sync.
+**6.5 Not modelled.** Nothing on the inputs since 2026-09-28: Shape Mod is §6.7, FM §6.8.
+
+**6.6 Sync (2026-09-28, from the sync part).** One part serves OscB, OscC, OscShpA, OscShpB and OscDual;
+OscPM has its own variant. A rising crossing of the Sync input - the last sample at or below zero, this
+one above - restarts the phase at the part's reset word, -0.9 of the phase range, plus that sample's step,
+so the new cycle keeps its time. In the engine's phase (the word / 2, wrapped) that is 0.55: just past
+the saw's step, the ramp restarting near its foot. OscPM keeps its phase over 0..1 from -1, so there the
+same word is 0.05. Checked: an OscB a fifth above an OscA, synced to it, repeats exactly at the OscA's
+period (12.135 ms at 82.4 Hz, correlation 1.000). The stage patches 01 (two OscC), 02 (an OscB) and 14
+(an OscShpA) cable a Sync input and change with it (revert record row 89).
+
+**6.7 Shape Mod (2026-09-28, from the shape-modulation part).** OscB, OscShpA and OscShpB share one control-rate
+part: shape word = Shape word + 4 x input word x Shape M word, saturated to the 24-bit range. Shape and
+Shape M are both v/128 with 127 counting as full. A unit is a quarter word, so in the engine's terms the
+shape is Shape + input x Shape M. The Shape Mod jack is the fifth input on all three; Shape M is
+parameter 7 on OscB and OscShpB, 8 on OscShpA. OscB's pulse takes the word below zero too: its part
+outputs +-1 plus the shape word, the width (1 - y)/2 of the cycle, so a negative shape widens the pulse
+up to a steady level at -1. The shape oscillators' waves have not been decoded below zero and stop there.
+Eight stage patches cable Shape Mod; 18 Unreal Dreams' pad is two OscB pulses width-modulated by LFOs.
+
+**6.8 FM (2026-09-28, from the linear-FM part).** OscB, OscC, OscShpA and OscShpB (OscD has none: its
+FmOff part only adds the increment). Per sample the phase advances by the increment plus
+
+    clip(2 x FM x input x ((1 - Trk) + 32 x Trk x k))
+
+words, where FM is the FM dial through the cube + 1% attenuator curve (the part's its attenuator table, which is
+`type_ii_attenuator()`), Trk the FM Lin/Trk menu (0 or 1), and k the Pitch part's first output word: the
+key's increment WITHOUT the Coarse and Fine factors, which the Pitch part multiplies in only for the
+second word, the oscillator's own increment. At unity Coarse is 0x1c20d/2^23 and Fine 1/2, so the
+oscillator's increment is 32 x 0x1c20d/2^23 x 1/2 x k. With a word of increment = 48 kHz and a unit a
+quarter word:
+- FM Lin: a deviation of 24 kHz x FM x input, whatever the pitch.
+- FM Trk: a deviation of 2^23/0x1c20d x FM x input x (frequency / 2^(Tune offset/12)) - a constant
+  index across the keyboard, measured from the key's pitch rather than the tuned one.
+The deviation saturates at one word (48 kHz). The frequency can go below zero - through-zero FM, the
+phase then running backwards. FM jacks: input 3 on OscB, OscShpA and OscShpB, 2 on OscC; FM dial 5
+(OscC 4), menu 10 on OscB, 6 on OscShpA and OscC, 9 on OscShpB - the patch's own parameter order,
+which is not the instrument's list order for OscC. Only the Semi Tune Mode is checked; the others use the same
+Tune offset.
 
 **6.1a WHAT THE TUNE DIAL MEANS: the Pitch Type drop-down (2026-09-19).** Four settings on OscA,
 OscB, OscC, OscNoise and OscDual, and the engine read all of them as Semi - it logged "PitchType %d
@@ -185,11 +223,11 @@ the oscillator.
 02 Big Pad's oscillators have Tune 63 in Partial, which is 1:2 - an octave below the note. They were
 playing at 63.07 on the Semi scale, a semitone below unity; they now play at 52.07.
 
-**OscD has no Pitch Type at all** - five parameters, and 3 is its "Pitch" mod dial. The engine's
-table said its pitch type was parameter 3, which read that dial as the type. Harmless while anything
-above Semi was refused and wrong the moment this section started acting on it, so that entry is -1
-now, meaning always Semi. Whether the dial is OscD's PitchVar attenuator, and so belongs in the mod
-slot, is still open - see todo.md.
+**OscD's parameter 3 IS its Pitch Type (corrected 2026-09-28).** The instrument's own parameter list
+for OscD reads Coarse, Fine, KBT, Tune Mode, On/Off; until 2026-09-28 the engine took parameter 3 for a
+Pitch mod dial and played every OscD as Semi (revert record row 92). 08 Ice Pad's four OscDs are on
+Partial at Coarse 75/73/71/69 - the 12th, 10th, 8th and 6th harmonics - and were playing 11, 9, 7 and 5
+semitones up instead.
 
 ## 7. Noise
 
@@ -264,17 +302,42 @@ the engine (a crest difference).
 **8.1 Parameters.** On the instrument: Coarse 0, Fine 1, KBT 2, Pitch M 3, Tune Md 4, WidthMod 5,
 **Width 6**, On 7. The module tables name 5 and 6 the other way round.
 
-**8.2 Model.** White noise through TWO identical two-pole band-passes in series at the pitch: the
--10 dB span is 2.2-2.3 times the -3 dB width at every setting, which is what two resonators give
-(one would give 3).
+**8.2 The module, from its own parts (2026-09-27; replaces the measured model below).** A 24-bit
+LFSR (the TNNoise part: shift left, XOR 0xd71d87 when the bit shifted out is 1) through a one-pole
+tilt - pole 0x7bd7db (0.9675, about 500 Hz), input gain a quarter of 1 - pole - then THREE identical
+Chamberlin band-pass sections in series at the pitch, each taking the one before it:
 
-**8.3 Width.** Q per resonator = 3.34 × e^(0.032 × (127 - Width)): 3.3 at 127, 4.9 at 112, 9 at 96
-(measured), and about 190 at 0 by extrapolation - the manual's "lively fluctuating sine". Below 80 the
-band is narrower than the analysis resolves (under ~0.06 octave).
+    pre  = g (in + in') / 2              g  = 2 (d^2 + min(d, 0.15625) / 16)
+    low  = low' + h band'                fb = d^2 (1 - h)
+    high = pre - low - fb band'
+    band = band' + 4 h high              out = band (1 - h); the third section's out x 4
 
-**8.4 Level.** Normalised: about -4.5 dB RMS re full scale across width and pitch (±1.5 dB).
+every stored value saturating at the word's +-1 (four engine units). `oscnoise_step()`.
 
-**8.5 Width input (from the DSP code).** Width position += 4 × WidthMod × input, as §4.3.
+**8.3 Pitch.** h = pi f / 96 kHz - LINEAR in f, not the sine the filters use - and it stops at
+0x518368 / 2: the band centre goes no higher than 9.73 kHz, whatever the pitch asks. Near the top the
+linear h lands the peak a little above the note (8.38 kHz for 8 kHz at Width 127), as on the instrument.
+
+**8.4 Width.** w = (Width + Width M x the input) / 128, 64 units at Width M 127 moving it across the whole
+dial, held to 0..1. Then d = 1 - 0.99 (0.9453 - 0.3984 w^2): 0.459 at Width 127, 0.064 at 0. Per
+section that is a Q of about 3 at 127, 25 at 64 and 130 at 0 (measured off a 4 kHz band). Until
+2026-09-27 the input moved Width four times as far (revert record row 83).
+
+**8.5 Level.** Not normalised: the tilt makes the band's level peak near 500 Hz and fall about 3 dB an
+octave above it - at Width 127, -5.3 dB RMS re 64 units at 125 Hz, -2.4 at 500 Hz, -3.3 at 1 kHz, -8.8
+at 4 kHz, -12.5 at 8 kHz; narrower Widths a dB or two lower. The 2026-09-12 capture below found it flat
+to +-1.5 dB, which it is between about 110 Hz and 1 kHz; the engine's old flat -4.5 dB was right there
+and up to 8 dB loud above it.
+
+**8.6 Checked** (2026-09-27): the model against the instrument's own parts run natively, sample by sample on an
+impulse and on noise, 250 Hz-12 kHz, Width 0-127: equal to the parts' fixed-point rounding (0.1% of
+the peak on noise). The engine's rendered OscNoise against the parts at C3-C8 and Width 127/64/16: the
+same centre and Q, and the same level shape to +-0.5 dB (one constant apart - the engine's output
+chain).
+
+**8.7 The measured model this replaced (2026-09-12).** Two band-passes, Q = 3.34 x e^(0.032 (127 -
+Width)) each, level normalised to about -4.5 dB RMS; see findings. It agreed with the parts within
+about 10% on Q from Width 16 to 112, which is why it sounded right in the middle of the dial.
 
 ## 9. Node structure
 
@@ -409,7 +472,7 @@ unfiltered noise. With 11.1-11.4: EqPeak shape 0.57 dB mean (0.82 worst), Eq2Ban
 **12.1 Parameters and connections.** On the instrument: Coarse 0, Fine 1, Kbt 2, PitchM 3, TuneM 4,
 SqrL 5, PW mod amount 6, SawL 7, Phase 8, SubL 9, On 10, **PW 11**, Phase mod amount 12, Soft 13. The
 module tables have 6 and 11 the other way round (as OscNoise has 5 and 6). Inputs Pitch, PitchVar, Sync,
-PW, Phase; Sync is not modelled.
+PW, Phase; Sync as §6.6.
 
 **12.2 Waveforms.** Three at one pitch, summed:
 
@@ -1169,7 +1232,12 @@ engine reproduces its output word for word across Threshold, Ratio, Attack, Rele
   between dial steps. Attack 0 is instant.
 
 **25.2 Each sample.**
-1. **Level.** The larger of |L| and |R| (the engine's is mono). It follows a peak at once and releases
+1. **Level.** The larger of |L| and |R| - or, with the SideChain switch on, the side-chain input. One
+   detector and one gain serve both channels (2026-09-28; the engine had been mono, reading In L only
+   and copying it to both outputs - revert record row 90). The inputs are In L, In R and the side-chain,
+   an unpatched one reading 0; the module's FIRST output jack (the right-hand one) is R and its second
+   L - which is why every stereo stage patch crosses them into the next module's inputs. Nine of the
+   nineteen stage patches drive it in stereo. It follows a peak at once and releases
    at the release coefficient, and it never falls below −84 dB.
 2. **Log.** A piecewise-linear log2 of that level: the exponent, then the mantissa taken as linear.
 3. **Ratio's reduction.** (level − t)(1 − 1/r), rising at the attack coefficient and falling at the
@@ -1446,6 +1514,21 @@ the sequence repeats from load.
 The old model drew from `rand()` on the wrap and jumped straight to the value. An LFO feeding its own
 Rate input (09 Antarktis) then parked at −1 with its rate at the floor, and never drew again.
 
+**28.4 The counter's inputs** (2026-09-28, from the counter part). LfoB and LfoShpA (the instrument's LfoB
+and LfoShpA) have a counter part the others (simpler counter) lack:
+- **Rst**: a rising edge (the last reading at or below zero, this one above) clears the counter to its
+  word 0 - the engine's phase 0.5, where the Snc output goes high (§54).
+- **Phase** and **Phase M**: the waves read the counter plus the Phase word plus 4 x input x Phase M. The
+  Phase word is a per-waveform offset plus v/64 (the dial spans a cycle); Phase M is v/128, 127 full. In
+  cycles: Phase v/128, Phase M input x amount / 2. LfoB's offset puts its Sine and Tri half a word
+  (a quarter cycle) behind LfoA's reading of the same counter, its Saw and Sqr where LfoA's are; taken
+  relative to LfoA, whose mapping the engine already uses. LfoShpA's per-waveform offsets (seven,
+  indexed by its multi part's wave setting) are not applied - its waves are still the basic ones.
+- **Shape M** (LfoShpA): shape word + 8 x input x Shape M (v/128), saturated; the Shape dial is the
+  bipolar word (v - 64)/64, so in the engine's 0..1 shape it adds input x Shape M.
+- Dir (LfoShpA) is not modelled.
+The random waves still draw on the counter itself (§28.3), not the offset read.
+
 ## 29. ModAmt
 
 Added 2026-09-19. Parameters, validated against the G2 (param-validation.md): 0 Depth, 1 Enable,
@@ -1461,11 +1544,16 @@ display agrees: param-validation records Depth as `percent = raw*100/128`.
 at Depth 0: `Out = In x Depth x Mod`. With it ON the input stays at full level at Depth 0 and the
 modulation is crossfaded in: `Out = In x ((1 - Depth) + (Depth x Mod))` (manual p.232).
 
+**Depth x Mod is held to +-1** (64 units) before it multiplies In: the part forms it in a data
+register, which saturates. So a Mod input above 64 units cannot push the gain past one. Confirmed
+2026-09-27 by running the module's own program against these formulas in all four Enable x m/1-m
+combinations, Mod -64 to +192 units: equal to one LSB (revert record row 82).
+
 **29.3 Depth rides on the node's `gain`**, which is what gives it the per-sample smoothing and the
 per-voice morph offset every other level dial gets; the three drop-downs are read raw, because a
 drop-down cannot carry a morph (manual p.20).
 
-**29.4 Enable off, SETTLED 2026-09-27 from the part's own program.** Enable swaps the part's last
+**29.4 Enable off, SETTLED 2026-09-27 from the part's own program (and run, as 29.2).** Enable swaps the part's last
 instruction, and what it swaps in depends on m/1-m: with m/1-m ON the output becomes In (the module is
 bypassed), with it OFF the output is cleared (silent). Enable on runs the module. So "off" is a bypass
 only for the crossfade form - the plain multiplier with Enable off makes nothing, which is also what it
@@ -1477,15 +1565,16 @@ patches are unaffected: 02 Big Pad's two ModAmts with Enable off both have m/1-m
 Added 2026-09-19. One parameter, 0 On.
 
 Closed, the output is the input; open, it is nothing. With **nothing patched to In** a closed switch
-sends 64 units, which is 1.0 in the engine (§16), so the module doubles as a manual constant. The
-Ctrl output carries the switch state as a logic signal on the same scale - 1.0 closed, 0 open
-(manual p.222, and the Logic group's definition of a logic HIGH on p.233).
+sends 64 units, which is 1.0 in the engine (§16), so the module doubles as a manual constant (the
+unpatched In reads a 64-unit constant).
 
-**Checked 2026-09-27 against the module's own program:** closed passes In, open clears Out and Ctrl
-together, and an unpatched In reads a 64-unit constant - all as above. OPEN: the host sets Ctrl's closed
-value as the frame word 0x20000, which as a plain 24-bit word would be 4 units rather than 64; the same
-word appears in the other switches' source/destination updates. A logic input reads either as high,
-so it matters only where Ctrl feeds a level. None of the stage patches uses Ctrl.
+**30.1 Ctrl is the switch's POSITION, 4 units a step (settled 2026-09-27)** - 4 units closed, 0 open -
+the same code every switch's Ctrl carries (§33.1) and the Mux modules read (§68.3), so a switch can
+drive a Mux to the matching position. The G2's own OS code writes the part's frame word as
+0x20000 closed and 0 open, through the same host-port path whose Range words FreqShift confirms (§57);
+the instrument's DSP stores that word unshifted; the part copies it to Ctrl. SwOnOffM is the same
+(its host writes the same word). A logic input reads 4 units as high, so only a Ctrl feeding a level
+hears the change. Until 2026-09-27 the engine sent 64 units (revert record row 87).
 
 ## 31. LevConv
 
@@ -1524,12 +1613,13 @@ Added 2026-09-19. In 1 normally, In 2 (the On input, and the lamp lit) while Ctr
 within half a unit either side. The value dial counts whole units 0 to 64, and its top step reads 64
 rather than 63 - the same law the face prints (`render_paramType1UniPolShort`).
 
-**SETTLED 2026-09-27 from the module's own DSP program**, run rather than read: it subtracts the value
+**SETTLED 2026-09-27 from the module's own DSP program**, whose ten instructions read unambiguously: it subtracts the value
 from Ctrl, compares the magnitude with a frame word of half a unit (`cmpm`), and selects On only when
 it is not larger. The manual's "lower limit" describes a threshold; the instrument has none. Until
 2026-09-27 the engine followed the manual (revert record row 74): In 2 from the value upward. With a
 stepped Ctrl the two agree only at the value itself - above it the manual's switch stays on and the
-instrument's goes back off.
+instrument's goes back off. The value word is v x 2^15 - one unit a step - with 63 standing for 64 units, which is
+the engine's reading of the dial.
 
 ## 35. MonoKey
 
@@ -1603,7 +1693,10 @@ indexed by the Time dial and both taken from the ENVELOPE's own tables (17.3):
   row 78).
 
 The Log step is c x |gap| plus one least significant bit, so it lands exactly rather than
-approaching forever; and both shapes stop ON the target once the gap is no larger than a step.
+approaching forever; and both shapes stop ON the target once the gap is no larger than a step. Both
+CONFIRMED by running the part's own program tick by tick (2026-09-27): a Lin glide of 64 units lands in
+61 501 ticks at Time 64, 3 258 at 32 and 524 288 at the top - 2.5 x the dial's Time each, as above - and
+Log reaches 99% in the one-pole's time.
 
 Both run at the envelope tick rate (24 kHz), because on the instrument this IS an envelope segment.
 The engine builds both from `adr_time_seconds()`, which is where 17 already models those tables, so
@@ -1618,6 +1711,12 @@ An earlier version read the printed table and divided by ln(100) on the reasonin
 its times to -40 dB. That happened to be the right convention - which is why the numbers agreed -
 but it took the coefficient from a display string rounded to three figures instead of from the law,
 and it ran per sample rather than per tick.
+
+**36.2 Glide On is read a step late (2026-09-28).** The Glide's end part decides whether to glide from
+the Glide On it stored last time, then stores the new one. So a note whose own Gate switches the glide
+on - 07 Unstable Lead's Keyboard Gate into Glide On through a Logic Delay - lands on its pitch at once,
+and only the notes after it glide; the engine had been gliding into the first note too (revert record
+row 93).
 
 ## 37. 2-In
 
@@ -2072,8 +2171,9 @@ mode, PitchVar x Pitch M). **Phase M** is added to the phase the wave is read at
 In x PhM x 64 in phase words, which is **8 cycles per full-scale (64-unit) input at full PhM**; PhM is
 the Type II attenuator, capped at 1. The **Sine** is the part's fifth-order odd polynomial on the
 folded phase, x = 2|p| - 1 with p the phase over -1..1: x (1.5704 - 0.6459 x^2 + 0.0716 x^4), about
--cos(pi p), peaking at 0.996. **Tri** is the folded phase itself; the part also corrects its corners
-using the increment, which the engine does not yet. The Sync input is not read.
+-cos(pi p), peaking at 0.996. **Tri** is the folded phase itself, with its two corners rounded by the
+increment: OscPM's triangle is the same part OscC and OscD use, so it takes their correction and limit
+(§6.3, `OSC_CORNER_LIMIT_PARTS`), applied 2026-09-27 (revert record row 86). Sync as the other oscillators' (§6.6).
 
 The DX operators use the same phase-modulation part, which puts their FM depth (§14.3, a guess of one
 cycle per full-scale input) in question - todo.md.
@@ -2111,6 +2211,13 @@ low-pass and the other three's band-pass. Each vowel is four (frequency, gain) w
 instrument's table (A, E, I, O, U, Y, AA, AE, OE); gains are scaled by Level (Type II attenuator)/2.
 Res is the host's squared-linear word, 0.132 at 0 falling to 0 at 127. Bypass passes the input.
 
+**56.1 The Freq shift is half a semitone flat (settled 2026-09-27).** The control part turns the shift
+into a multiplier with two of the DSP's boot tables: the semitone table (entry 188 is 1.0) by the whole
+semitones, and the cent table by the remaining fraction in 128 steps of 50/64 cent. The cent table's
+first entry is -50 cents, and the part indexes it from there, so every shift comes out 50 cents below
+(v - 64)/2: the formants sit a quarter tone under the vowel table's words at Freq 64, and reach them at
+Freq 65. The engine took the table's zero as 0 cents until 2026-09-27 (revert record row 84).
+
 ## 57. FreqShift
 
 Added 2026-09-26 from the instrument's parts. A Bode shifter: two chains of four allpass sections in
@@ -2118,8 +2225,10 @@ z^-2, (c + z^-2)/(1 + c z^-2), the second hearing the input a sample late, make 
 phases a quarter cycle apart drive the sine polynomial. **Down = cos H1 + sin H2, Up = cos H1 - sin
 H2.** The shift is x^3 x the range's word at 96 kHz, x = FreqShift/128 (127 = 1) + Mod In x mod,
 clamped 0..1: Hi 0x42E40 (1568 Hz at full) and Lo 0x42C0 (97.8 Hz) match the readout exactly; **Sub's
-word 0x80 gives 0.73 Hz at full where the readout says 8.78 Hz** - unresolved, the engine follows the
-part. Checked: a 1 kHz tone shifted 196 Hz comes out at 1196 Hz on Up at full level, the other sideband
+word 0x80 gives 0.73 Hz at full where the readout says 8.78 Hz** - SETTLED 2026-09-27 by the G2's own
+the instrument's own code: its Range handler writes 0x80, 0x42C0 and 0x42E40, the same three
+words, so the instrument shifts by 0.73 Hz at full on Sub and the 8.78 is the readout's own constant.
+The engine follows the word; the dial reads what the G2 displays. Checked: a 1 kHz tone shifted 196 Hz comes out at 1196 Hz on Up at full level, the other sideband
 37 dB down. Up to two per patch; more pass through unshifted.
 
 ## 58. Step sequencers (SeqVal, SeqNote, SeqEvent)
@@ -2178,6 +2287,12 @@ outs 3/4, re Volume 127): 100 -6.18 dB, 64 -17.60, 32 -34.60 - the curve gives -
 -34.73. The dB the top bar prints (paramCurves notes §28: -7.7 dB at 100, -23.3 at 64) reproduces the
 instrument's own printed scale but is NOT the gain it applies. A new or empty patch (the plug-in's
 start, File > New) now has a Volume of 100, on, so the top bar shows it in engine mode too.
+
+**63a Octave Shift (2026-09-28).** The patch setting (the Sustain settings module's first parameter)
+transposes the keyboard by whole octaves. It is stored 0..4 with 2 as no shift, as every patch off the
+instrument holds it; the engine ignored it until 2026-09-28, which put 11, 14 and 17 an octave high and
+05, 06 and 16 an octave low. The editor's own Patch Settings panel read and wrote it as a signed -2..+2
+and so showed "+2" for no shift; both now use the stored form.
 
 ## 64. RndClkA and RndTrig
 
@@ -2311,9 +2426,10 @@ identical word for word to its part.
   (the exp attenuator, as an LFO's, §50), Step 4 (a dial, 512 (v^2 + 1), of which RandomA's Step menu
   is the points 32/64/96/127), on 5, OutType 6, Range 7, Edge 8. Inputs Rate and RateVar move the rate
   as an LFO's do. At RandomA's settings it renders identically to RandomA.
-- **69.11 NoteDet** gives Gate (the key held) and Vel (its velocity on MonoKey's scale, §35) from the
-  engine's held-key table, for every voice alike. The engine does not keep release velocity, so RVel
-  reads 0.
+- **69.11 NoteDet** gives Gate (the key held), Vel and RVel from the engine's held-key table, for every
+  voice alike. The host writes Vel at note-on and RVel at note-off, each as v x 2^14 - v / 128, so 127
+  reads 0.992 - and RVel holds until that key's next release (2026-09-27; before, RVel read 0 and Vel
+  was v / 127, revert record row 85).
 - **69.12 4-In** is silent, as 2-In from the jacks is (§37). Its Bus source is not yet bridged.
 - **Not yet: Rnd Clock B and Rnd Pattern.** Their RndState and RndLoop parts hand values to each other
   through shared registers and read a host word not yet identified, so they need the whole module run
@@ -2347,9 +2463,15 @@ been compared with the instrument yet.
 - **70.6 NoiseGate**: a peak follower (Release fall) opens the gain at the Attack rate above the
   Threshold and closes it at the Release rate below. The times and dB are read from the dials' own
   displays. Env is the follower.
-- **70.7 PitchTrack / ZeroCnt**: the period between rising zero crossings, interpolated to a fraction
-  of a sample, as a pitch (E4 = 0 units). PitchTrack pulses Period at each measurement and raises Gate
-  while a 20 ms follower is above the Threshold.
+- **70.7 PitchTrack / ZeroCnt**: the period between rising zero crossings as a pitch, **E2 = 0 units**
+  (settled 2026-09-27 from the counter's own parts: its log table and scaling put 0 at 82.41 Hz, 12 units
+  an octave; the engine had E4, 24 units low). PitchTrack pulses Period at each measurement and raises
+  Gate while a 20 ms follower is above the Threshold; its detector - followers, filters and a flip-flop
+  ahead of the counter - is not yet the instrument's.
+- **70.7a ZeroCnt, exactly (2026-09-27):** the Track part reads its input once a 24 kHz tick, counts the
+  ticks between rising crossings (the last reading at or below 0, this one above) WHOLE, and the Calc part
+  turns the count into 12 log2((24 000 / count) / 82.41 Hz) units - the table's law to 0.01 units. So the
+  reading steps: 440 Hz, 54.5 ticks, reads 28.9 or 29.4 by turns, not 29.0 (revert record row 88).
 - **70.8 Vocoder**: sixteen band-passes (Q 5, log spaced from 100 Hz to 8 kHz) on Ctrl and on In. Each
   synthesis band is scaled by a 10 ms envelope of the analysis band its BandSel routes there. Emphasis
   pre-emphasises Ctrl; Monitor outputs Ctrl.

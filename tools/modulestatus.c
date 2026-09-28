@@ -64,7 +64,6 @@ static const tGroupRow kGroups[] = {
 // Audible, but something about the law is still a guess; to-test.md carries each check.
 static const tPartialRow kPartial[] = {
     {"4 Inputs",          "silent (the jacks); a Bus source is not bridged (§69.12)"},
-    {"Note Detector",     "release velocity is not kept, so RVel reads 0 (§69.11)"},
     {"Flanger",           "basic: a swept delay from the manual (§70.2)"},
     {"PShift",            "basic: two crossfaded taps (§70.3)"},
     {"Scratch",           "basic: two crossfaded taps, ratio law guessed (§70.3)"},
@@ -72,8 +71,7 @@ static const tPartialRow kPartial[] = {
     {"Resonator",         "basic: OscString's loop; Alg and inputs guessed (§70.4)"},
     {"Driver",            "a guess: not in the manual in hand (§70.5)"},
     {"NoiseGate",         "basic: follower and gate from the manual (§70.6)"},
-    {"Pitch Tracker",     "basic: zero crossings, not the instrument's tracker (§70.7)"},
-    {"Zero Crossing Counter", "basic: zero crossings (§70.7)"},
+    {"Pitch Tracker",     "counter and E2 reference are the instrument's; its detector (followers, filters, flip-flop) is not (§70.7)"},
     {"Vocoder",           "basic: 16 band-passes, band centres guessed (§70.8)"},
     {"Rnd Clock B",       "basic: RndClkA's node; StepM and Character not read (§70.9)"},
     {"Rnd Pattern",       "basic: reseeded LCG pattern; not the instrument's (§70.9)"},
@@ -84,18 +82,12 @@ static const tPartialRow kPartial[] = {
     {"Status",            "Voice No. law guessed (§70.13)"},
     {"CtrlRcv",           "no MIDI CC reaches the engine: outputs 0 (§70.13)"},
     {"NoteRcv",           "NoteDet whatever the channel (§70.13)"},
-    {"Noise Osc",         "Q and level measured, not yet read from its own part (§8)"                  },
     {"Comb Filter",       "not yet checked against the instrument's own part"                          },
     {"Envelope Multi",    "rise to an intermediate level is a guess (§17.9)"                           },
     {"Chorus",            "a third chorus in one patch passes dry (pool of 2 lines)"                   },
-    {"SwOnOffT",          "Out and the unpatched 64 units are the part's; Ctrl's closed level, a frame word 0x20000, not decoded (§30)"},
-    {"Osc Phase Mod",     "Tri's corner correction and the Sync input not modelled (§53)"          },
-    {"FreqShift",         "Sub range: the part's word and the readout disagree 12x (§57)"          },
-    {"FltVoice",          "the fine-pitch table offset is read as none, not decoded (§56)"         },
     {"Sequencer Note",    "the record inputs are not modelled; steps at 96 kHz whatever the clock's rate (§58)" },
     {"Sequencer Event",   "steps at 96 kHz whatever the clock's rate (§58)"                             },
     {"Sequencer Values",  "steps at 96 kHz whatever the clock's rate (§58)"                             },
-    {"Clock Generator",   "Master follows the G2 master clock; its Run/Stop is not modelled (notes §200)"},
     {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },
 };
 

@@ -41,6 +41,8 @@
 #include "topbarRender.h"
 #include "palette.h"
 
+#define RESOURCE_FULL_PERCENT    (100.0)   // a resource at this share of the DSP is full
+
 void render_top_bar(void) {
     tRectangle  rectangle                           = {0};
     char        patchNameCopy[CLAVIA_NAME_SIZE + 1] = {0};
@@ -301,29 +303,34 @@ void render_top_bar(void) {
         }
     }
     {
-        double resLabelH  = STANDARD_TEXT_HEIGHT * 0.7;
-        double col1X      = 600.0;
-        double col2X      = 644.0;
-        double row1Y      = 44.0 + MENU_BAR_HEIGHT;
-        double row2Y      = 60.0 + MENU_BAR_HEIGHT;
-        double valW       = get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache);
-        double labelX     = 581.0;
-        double headerY    = row1Y - resLabelH - 2.0;
-        double rowLabelOY = (STANDARD_TEXT_HEIGHT - resLabelH) / 2.0;
+        double       resLabelH  = STANDARD_TEXT_HEIGHT * 0.7;
+        double       col1X      = 600.0;
+        double       col2X      = 644.0;
+        double       row1Y      = 44.0 + MENU_BAR_HEIGHT;
+        double       row2Y      = 60.0 + MENU_BAR_HEIGHT;
+        double       valW       = get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache);
+        double       labelX     = 581.0;
+        double       headerY    = row1Y - resLabelH - 2.0;
+        double       rowLabelOY = (STANDARD_TEXT_HEIGHT - resLabelH) / 2.0;
 
         render_text(mainArea, (tRectangle){{col1X, headerY}, {BLANK_SIZE, resLabelH}}, "Cycles");
         render_text(mainArea, (tRectangle){{col2X, headerY}, {BLANK_SIZE, resLabelH}}, "Memory");
         render_text(mainArea, (tRectangle){{labelX, row1Y + rowLabelOY}, {BLANK_SIZE, resLabelH}}, "VA");
         render_text(mainArea, (tRectangle){{labelX, row2Y + rowLabelOY}, {BLANK_SIZE, resLabelH}}, "FX");
 
-        snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationVa]);
-        draw_button(mainArea, (tRectangle){{col1X, row1Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
-        snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationFx]);
-        draw_button(mainArea, (tRectangle){{col1X, row2Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
-        snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationVa]);
-        draw_button(mainArea, (tRectangle){{col2X, row1Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
-        snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationFx]);
-        draw_button(mainArea, (tRectangle){{col2X, row2Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
+        // The G2's own figures (a share of one DSP); at 100% or more the patch does not fit, so they
+        // take the voice count's warning red (g2-budget-estimate-design.md)
+        const double values[4]  = {
+            gResourceAlloc[slot].cycles[locationVa], gResourceAlloc[slot].cycles[locationFx],
+            gResourceAlloc[slot].mem[locationVa],    gResourceAlloc[slot].mem[locationFx]
+        };
+        const tCoord at[4]      = {{col1X, row1Y}, {col1X, row2Y}, {col2X, row1Y}, {col2X, row2Y}};
+
+        for (uint32_t r = 0; r < 4u; r++) {
+            snprintf(buff, sizeof(buff), "%.1f%%", values[r]);
+            draw_button(mainArea, (tRectangle){at[r], {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff,
+                        (values[r] >= RESOURCE_FULL_PERCENT) ? (tRgb)RGB_RED_5 : (tRgb)RGB_BACKGROUND_GREY);
+        }
     }
 }
 
