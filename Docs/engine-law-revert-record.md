@@ -167,3 +167,4 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 | 98 | NoteSend and what drives it | pruned: nothing reached it from the Outs | added as a root after the Outs (§62.1) | `4d1ec2d` `src/soundEngine.c` `build_snapshot()` |
 | 99 | LFO Sine (LFO A/B/C, LfoShpA Sine) | libm `sin(2 pi phase)` | the instrument's sine polynomial at the same phase, within -77 dB (§28.5) | `4d1ec2d` `src/soundEngine.c` `lfo_step()` |
 | 100 | Key pitch seen by post-mix (FX-area) nodes | 0.0, MIDI note 0 | E4 (64), the pitch zero: KBT moves nothing there (§16.2a) | `4d1ec2d` `src/soundEngine.c` the post-mix `eval_node()` call |
+| 101 | Per-voice Vel and Keyb morph resolution | 32 velocity rows, every other note; Keyb ignored Octave Shift | a row per velocity and per note - the law exact; Keyb counts the Octave Shift (§26.2) | `4d1ec2d` `src/soundEngine.c` `VEL_MORPH_LEVELS`, `KEY_MORPH_LEVELS`, `key_row()`, `axis_amount()` |

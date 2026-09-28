@@ -47,6 +47,9 @@ extern "C" {
 #include "soundEngine.h"
 #include "utilsGraphics.h"
 
+// notes §11 - the G2 plays the editor's notes (USB 0x56) at velocity 127, on and off; the engine matches
+#define VIRTUAL_KEY_VELOCITY    (127)
+
 tVirtualKeyboard  gVirtualKeyboard = {0};
 
 // Which semitones of an octave are black keys. Index by note % 12.
@@ -78,7 +81,7 @@ void open_virtual_keyboard_panel(void) {
     gVirtualKeyboard.repeat       = false;
 
     if (gVirtualKeyboard.velocity == 0) {
-        gVirtualKeyboard.velocity  = 100;
+        gVirtualKeyboard.velocity  = VIRTUAL_KEY_VELOCITY;
         gVirtualKeyboard.firstNote = 48;   // C3, so the default span is C3..C6 — middle of the range
     }
 }
@@ -617,7 +620,7 @@ bool handle_note_entry_key(int key, int mods, int action) {
 
     // Playable with the panel never opened, so the defaults it would have set have to exist anyway.
     if (gVirtualKeyboard.velocity == 0) {
-        gVirtualKeyboard.velocity  = 100;
+        gVirtualKeyboard.velocity  = VIRTUAL_KEY_VELOCITY;
         gVirtualKeyboard.firstNote = 48;   // C3
     }
     int32_t note = (int32_t)gVirtualKeyboard.firstNote + offset;

@@ -1165,11 +1165,11 @@ typedef enum {
     eAxisCount
 } tMorphAxis;
 
-#define VEL_MORPH_LEVELS       (32)   // velocity 0..127 in 31 steps
-#define KEY_MORPH_LEVELS       (64)   // every other note, 0..126
+#define VEL_MORPH_LEVELS       (128)  // §26.2 - one row per velocity, so the Vel morph is exact
+#define KEY_MORPH_LEVELS       (128)  // §26.2 - one row per note, so the Keyb morph is exact
 #define KEY_MORPH_ZERO_NOTE    (36.0) // §26.2 - the Keyb morph is 0 at C1 (note 36) and full five octaves up
 #define KEY_MORPH_SPAN         (60.0)
-#define MAX_AXIS_LEVELS        (64)
+#define MAX_AXIS_LEVELS        (128)
 #define MAX_VOICE_NODES        (8)
 // §26.2 - how many DXRouters on one axis carry per-voice Operators. Two, not the engine's four: each
 // costs 64 rows of six, and a patch with more than two morphed routers is the same rarity that
@@ -2678,9 +2678,16 @@ static uint8_t velocity_row(uint8_t velocity) {
     return (uint8_t)lround(((double)velocity * (double)(VEL_MORPH_LEVELS - 1)) / 127.0);
 }
 
-static uint8_t key_row(int32_t note) {
-    int32_t row = (note < 0) ? 0 : ((note + 1) / 2);
+// §26.2 - the Keyb amount counts the patch's Octave Shift, so the row is the shifted note
+static double gKeyMorphShiftBank[SOUND_ENGINE_MAX_ENGINES];
+#define gKeyMorphShift    (gKeyMorphShiftBank[SE])
 
+static uint8_t key_row(int32_t note) {
+    SE_LOCAL;
+
+    int32_t row = note + (int32_t)lround(gKeyMorphShift);
+
+    row = (row < 0) ? 0 : row;
     return (uint8_t)((row < KEY_MORPH_LEVELS) ? row : (KEY_MORPH_LEVELS - 1));
 }
 
@@ -2689,7 +2696,7 @@ static double axis_amount(tMorphAxis axis, uint32_t row) {
     if (axis == eAxisVelocity) {
         return (double)row / (double)(VEL_MORPH_LEVELS - 1);
     }
-    return ((double)(row * 2u) - KEY_MORPH_ZERO_NOTE) / KEY_MORPH_SPAN;
+    return ((double)row - KEY_MORPH_ZERO_NOTE) / KEY_MORPH_SPAN;
 }
 
 static uint32_t axis_rows(tMorphAxis axis) {
@@ -2723,6 +2730,7 @@ static void voice_start_note(uint32_t chosen, int32_t note, uint8_t velocity,
     }
     voice->note               = note;
     voice->velocity           = velocity;
+    gKeyMorphShift            = params->octaveSemis;
     voice->row[eAxisVelocity] = velocity_row(velocity);
     voice->row[eAxisKey]      = key_row(note);
     voice->sustained          = false;

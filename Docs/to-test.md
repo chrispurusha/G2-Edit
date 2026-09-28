@@ -4,6 +4,11 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***COMPUTER-KEYBOARD VELOCITY 127 (2026-09-28)*** - code-notes/virtualKeyboard.c.md §11. LISTEN: a,s,d... on a
+  Vel-morphed patch (FltClassicTest) should now sound the same through the engine as on the G2.
+- ***EXACT VEL/KEYB MORPHS (2026-09-28, late)*** - reference §26.2. LISTEN: FltClassicTest's resonance should now
+  sit where the G2's does (mod wheel at zero on both). Any patch with a Vel or Keyb morph on a filter Freq
+  should track the G2 more closely, especially at velocities between the old rows.
 - ***15 RANDEE DZ FX BASS (2026-09-28, night)*** - reference §16.2a. LISTEN: the FX-area bass line (OscDual
   and OscD) should now be heard. The G2's occasional re-recorded low notes are still missing (SeqNote record).
 - ***18 UNREAL DREAMS SEQUENCES (2026-09-28, evening)*** - reference §62.1. LISTEN: 18 should now play its

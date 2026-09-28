@@ -43,11 +43,10 @@
 #define PRIME_BLOCKS       (4)      // the engine's own first blocks, before the note
 #define START_PHASE_SEED   (0x5EEDBEEFu)
 
-// §26.2 - the two axes quantise, and the reference has to quantise with them or every reading is
-// out by up to one step. These mirror soundEngine.c's velocity_row()/key_row() and axis_amount():
-// if those change, these must.
-#define VEL_MORPH_LEVELS    (32)
-#define KEY_MORPH_LEVELS    (64)
+// §26.2 - one row per velocity and per note since 2026-09-28, so the axes no longer quantise; these
+// still mirror soundEngine.c's velocity_row()/key_row() and axis_amount(): if those change, these must.
+#define VEL_MORPH_LEVELS    (128)
+#define KEY_MORPH_LEVELS    (128)
 #define KEY_ZERO_NOTE       (36.0)
 #define KEY_SPAN            (60.0)
 
@@ -83,12 +82,12 @@ static double velocity_amount(uint8_t velocity) {
 }
 
 static double key_amount(int32_t note) {
-    int32_t row = (note < 0) ? 0 : ((note + 1) / 2);
+    int32_t row = (note < 0) ? 0 : note;
 
     if (row >= KEY_MORPH_LEVELS) {
         row = KEY_MORPH_LEVELS - 1;
     }
-    return (((double)row * 2.0) - KEY_ZERO_NOTE) / KEY_SPAN;
+    return ((double)row - KEY_ZERO_NOTE) / KEY_SPAN;
 }
 
 static double render_rms(uint32_t blocks) {
