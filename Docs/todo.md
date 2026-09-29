@@ -4,14 +4,14 @@ Things to do. ONE LINE PER ITEM - keep it that way.
 Measurements, reasoning and completed-work narrative go in findings.md, NOT here.
 Built-but-unchecked work goes in to-test.md.
 
-CT (Priority order)
+General
+- Further investigation into voice stealing improvements.
+- On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
+- Make sure if we use bypass switch on a module, it no longer processes, to save CPU cycles.
+- Assess items below, which may have already been completed or partially completed.
 - At a 176.4/192 kHz device the engine's noise is ~3 dB low (white drawn per graph sample, not per 96 kHz one) and DrumSynth's noise filter goes 3-20 dB dark (its Chamberlin retuned off 96 kHz) - findings 2026-09-27
 - Fireface loopback at 192 kHz (an output cabled to an input, sine sweep to 48 kHz) to confirm the G2 output droop is not partly the interface's (sound-engine-notes §199)
-- Plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol.
-- Assess items below, which may have already been completed or partially completed.
 - Plan a mode switch (button on the far right of the current menu bar) to a mode representing the G2 keyboard's front panel, and back again to editor mode.
-
-General
 - Iteratively improve modules using the recent methods, especially those where we need graphical representation of wave/filter.
 - Zoom to Fit from a right click on module area, fitting the area under the cursor. Zoom to fit on main menu takes largest of VA/VX.
 - Separate zoom for VA and FX. Possibly scaling/zooming for top-bar too.
