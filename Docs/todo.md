@@ -5,6 +5,8 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General
+- Saw a crash on "tParamType       paramType = paramLocationList[param->paramRef].type;" in param_click_handler(). Bad address access.
+- Possible inconsistency in the drum synth noise filter sweep on our engine. Although - I think the hardware is also inconsistent for noise filter sweep. May be deliberate. Check against references.
 - Further investigation into voice stealing improvements.
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
 - Make sure if we use bypass switch on a module, it no longer processes, to save CPU cycles.
