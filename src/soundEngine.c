@@ -499,7 +499,13 @@ static const tLfoParams kLfoA    = {0, 7, 4, 6, -1, 5, 1, 3, 2, -1, -1, -1};
 static const tLfoParams kLfoB    = {0, 2, 4, 8, -1, 7, 5, 1, 3, 6, 9, -1};
 static const tLfoParams kLfoC    = {0, 3, -1, 2, -1, 4, 1, -1, -1, -1, -1, -1};
 static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4, 9, 3, 2, 7, 6, 8};
-#define LFO_RANGE_CLK    (4u)   // rangeLfoStrMap: Sub, Lo, Hi, BPM, Clk
+#define LFO_RANGE_CLK          (4u)                   // rangeLfoStrMap: Sub, Lo, Hi, BPM, Clk
+#define LFOSHPA_SHAPE_SCALE    (0x7c28f5 / 8388608.0) // §28.6 - the counter part hands the shape on x 0.97
+
+// §28.6 - LfoShpA's Shape dial as the word (v - 64)/64 in 0..1, pinned to full at 127
+static double lfo_shape_dial(double v) {
+    return (v >= 127.0) ? 1.0 : (v / 128.0);
+}
 
 // §28.4 - the counter part's inputs after the two rate inputs: Rst, then LfoB's Phase M, or
 // LfoShpA's Shape M and Phase M
@@ -5010,8 +5016,8 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             }
             node->polarity   = (p->polarity >= 0)
                              ? (uint32_t)param_value(module, variation, (uint32_t)p->polarity) : 0;
-            node->shape      = (p->shape >= 0)
-                             ? (param_value(module, variation, (uint32_t)p->shape) / 127.0) : 0.5;
+            node->shape      = (p->shape >= 0)   // §28.6 - the word (v - 64)/64, here in 0..1
+                             ? lfo_shape_dial(param_value(module, variation, (uint32_t)p->shape)) : 0.5;
             node->active     = (param_value(module, variation, (uint32_t)p->active) != 0.0);
             node->shpWave    = (module->type == moduleTypeLfoShpA);
             node->lfoMono    = (module->param[variation][p->mono].value != 0); // a drop-down, read raw
@@ -9646,6 +9652,63 @@ static double lfo_sine(double phase) {
     return wave_sine_polynomial(osc_triangle(p - floor(p), 0.5));
 }
 
+// §28.6 - LfoShpA's skewed triangle: (a s + |a - s| - 1) / (s^2 - 1), mapped onto -1..1
+static double lfo_shp_skew(double a, double s) {
+    return (2.0 * (((a * s) + fabs(a - s) - 1.0) / ((s * s) - 1.0))) - 1.0;
+}
+
+// §28.6 - the bell waves read half a shape further on, and sit at -1 past the shape
+static double lfo_shp_bell(double a, double s) {
+    double at = a + (0.5 * s);
+
+    at = (at >= 1.0) ? (at - 2.0) : at;
+    return (at >= s) ? -1.0 : (1.0 - (2.0 * fabs(lfo_shp_skew(at, s))));
+}
+
+// §28.6 - LfoShpA's six waves (lfoShpAWaveStrMap order) from the counter plus Phase, in cycles, and
+// the Shape in 0..1
+static double lfo_shp_wave(uint32_t wave, double cycles, double shape) {
+    static const double kOffset[6] = {0.5, 0.25, 0.25, 0.5, 0.25, 0.5};   // §28.6 - each wave's own phase
+    double              at         = cycles + kOffset[(wave < 6u) ? wave : 0u];
+    double              a          = (2.0 * (at - floor(at))) - 1.0;
+    double              s          = LFOSHPA_SHAPE_SCALE * ((2.0 * shape) - 1.0);
+    double              out        = 0.0;
+
+    switch (wave) {
+        case 1:   // CosBell
+        {
+            out = wave_sine_polynomial(fmin(fmax(lfo_shp_bell(a, s), -1.0), 1.0));
+            break;
+        }
+        case 2:   // TriBell
+        {
+            out = fmin(fmax(lfo_shp_bell(a, s), -1.0), 1.0);
+            break;
+        }
+        case 3:   // Saw>Tri
+        {
+            out = fmin(fmax(lfo_shp_skew(a, s), -1.0), 1.0);
+            break;
+        }
+        case 4:   // Tri>Sqr: the triangle, steepened up to five times and clipped
+        {
+            out = fmin(fmax(((2.0 * fabs(a)) - 1.0) * (1.0 + (2.0 * (s + 1.0))), -1.0), 1.0);
+            break;
+        }
+        case 5:   // Pulse
+        {
+            out = (a < s) ? 1.0 : -1.0;
+            break;
+        }
+        default:  // Sine: the skewed triangle through the sine polynomial
+        {
+            out = wave_sine_polynomial(fmin(fmax(lfo_shp_skew(a, s), -1.0), 1.0));
+            break;
+        }
+    }
+    return out;
+}
+
 static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double rateHz,
                        double readOffset, double shapeNow) {
     SE_LOCAL;
@@ -9662,43 +9725,7 @@ static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec, 
     }
 
     if (spec->shpWave == true) {
-        // LfoShpA's six shapes, Shape morphing each one. lfoShpAWaveStrMap order.
-        switch ((uint32_t)spec->wave) {
-            case 1:
-            {
-                wave = -cos(phase * 2.0 * M_PI);
-                break;
-            }                                                                          // CosBell
-            case 2:
-            {
-                wave = (osc_triangle(phase, 0.5) + 1.0) - 1.0;
-                break;
-            }                                                                          // TriBell
-            case 3:
-            {
-                wave = osc_triangle(phase, 0.5 + (0.49 * shapeNow));
-                break;
-            }                                                                           // Saw>Tri
-            // notes §158
-            case 4:                                                                     // Sqr2Tri
-            {
-                double tri = osc_triangle(phase, 0.5);
-                double dry = 1.0 + (20.0 * shapeNow);
-
-                wave = tanh(tri * dry) / tanh(dry);
-                break;
-            }
-            case 5:
-            {
-                wave = (phase < (0.5 + (0.49 * shapeNow))) ? 1.0 : -1.0;
-                break;
-            }                                                                                // Pulse
-            default:
-            {
-                wave = lfo_sine(phase);
-                break;
-            }                                                                                // Sine
-        }
+        wave = lfo_shp_wave((uint32_t)spec->wave, counter + readOffset, shapeNow);
     } else {
         // lfoWaveStrMap: Sin, Tri, Saw, Squ, RndSt, Rnd
         switch ((uint32_t)spec->wave) {

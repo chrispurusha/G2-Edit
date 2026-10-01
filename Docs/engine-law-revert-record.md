@@ -168,3 +168,12 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 | 99 | LFO Sine (LFO A/B/C, LfoShpA Sine) | libm `sin(2 pi phase)` | the instrument's sine polynomial at the same phase, within -77 dB (§28.5) | `4d1ec2d` `src/soundEngine.c` `lfo_step()` |
 | 100 | Key pitch seen by post-mix (FX-area) nodes | 0.0, MIDI note 0 | E4 (64), the pitch zero: KBT moves nothing there (§16.2a) | `4d1ec2d` `src/soundEngine.c` the post-mix `eval_node()` call |
 | 101 | Per-voice Vel and Keyb morph resolution | 32 velocity rows, every other note; Keyb ignored Octave Shift | a row per velocity and per note - the law exact; Keyb counts the Octave Shift (§26.2) | `4d1ec2d` `src/soundEngine.c` `VEL_MORPH_LEVELS`, `KEY_MORPH_LEVELS`, `key_row()`, `axis_amount()` |
+
+## 2026-10-01
+
+| # | What | Old | New | Old code at |
+|---|---|---|---|---|
+| 102 | LFO / Random Clk range: the division | the delay's slot map (`clk_sync_index()`): dial 32 ran 1/16 beat | the beat table at dial/4 straight (§28.2) | `8c92565` `src/paramCurves.c` `lfo_rate_hz()` |
+| 103 | LFO / Random Clk range: the tempo | a fixed 120 BPM | the G2's master clock (§28.2) | `8c92565` `src/soundEngine.c` `add_node()` eNodeLfo, `random_a_build()` |
+| 104 | LfoShpA waves | Sine and CosBell ignored Shape; TriBell a plain triangle; Saw>Tri `osc_triangle(p, 0.5 + 0.49 s)`; Tri>Sqr `tanh(tri (1 + 20 s)) / tanh(1 + 20 s)`; Pulse width 0.5 + 0.49 s; no per-wave phase | the instrument's six laws with their phases (§28.6) | `20bdd33` `src/soundEngine.c` `lfo_step()` |
+| 105 | LfoShpA Shape dial | v/127 | v/128, 127 pinned to full (§28.6) | `20bdd33` `src/soundEngine.c` `add_node()` eNodeLfo |

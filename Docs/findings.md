@@ -12195,3 +12195,16 @@ on the engine. The patch (G2 Backups/15 Randee dz.pch2) shows both:
   ran at 8 Hz, not 0.125 Hz - 64x fast; dial 50 (1/1) at 5.3 Hz, not 0.5. Now dial/4 straight, as the
   instrument reads it. Offline at 120 BPM the LEDs toggle every 4.0 s and 1.0 s.
   RandomA/RandomB on Clk share the fix and now follow the master clock too.
+
+## 2026-10-01 (later) - LfoShpA's waves from the instrument's own part
+
+CT: work through the Partial modules, those in 15 Randee dz and the User1 patches first. The User1 set
+is 01-19; Partial modules in it: Chorus (9 patches), LFO Shp A (01, 13, 14, 15), Osc Shape B (03, 04,
+12, 16), Osc Shape A (14, 15), SeqNote/SeqEvent (15, 18), Comb Filter (15), Device (14), Status and
+NoteSend (18).
+- **LFO Shp A** (reference §28.6): the engine's six waves were guesses - Sine and CosBell ignored Shape,
+  TriBell was a plain triangle, Tri>Sqr a tanh - and none carried its per-wave phase. All six are now the
+  instrument's laws, short closed forms of its wave part, matched to it at every Shape dial and 4096
+  phases (worst 1.0e-4, the shared sine polynomial). Shape now reads v/128 with 127 full, as the part
+  does. 15 Randee dz's FltNord LFO (Sine, Shape 76) was a plain sine; it is a sine leaning towards a
+  rising saw. Dir is still open.
