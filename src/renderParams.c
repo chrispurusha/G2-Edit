@@ -341,7 +341,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
             if (posClkSyncStrMap > 31) {
                 posClkSyncStrMap = 31;
             }
-            snprintf(buff, buffSize, "%s\n", clkSyncStrMap[posClkSyncStrMap]);
+            snprintf(buff, buffSize, "%s", clkSyncStrMap[posClkSyncStrMap]);
             break;
         }
         default:

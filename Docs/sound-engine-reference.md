@@ -1492,9 +1492,15 @@ entry.
 both modules, and the delay's Clk table is confirmed as the instrument's own into the bargain.
 
 The rate is therefore `(BPM/60) / clk_sync_beats(dial)`: 256 beats per cycle at dial 0 to 1/24 of a
-beat at 127, which at the reference 120 BPM is 0.0078 Hz to 32 Hz. The engine has no live master clock
-yet, so this uses the same fixed reference tempo the delay's Clk does - when one arrives, both follow
-it together.
+beat at 127, which at the reference 120 BPM is 0.0078 Hz to 32 Hz. It follows the G2's master clock,
+as the delay's Clk and a Master-sourced ClkGen do (notes §200); 120 BPM only when no G2 has reported one.
+Until 2026-10-01 the LFO alone stayed at 120 BPM, so on any other tempo it drifted against the patch's
+own clocked sequencers (15 Randee dz).
+
+**The LFO reads the table at dial/4 straight; the delay does not.** The delay's Clk goes through its own
+slot map (`clk_sync_index()`, notes §21), reversed and compressed. Until 2026-10-01 the LFO went through
+that map too, so dial 32 (4/1, 16 beats) ran at 1/16 of a beat: 8 Hz instead of 0.125 Hz. The dial's
+text was always right - it already read clkSyncStrMap at dial/4, as the instrument's text does.
 
 **28.3 RndSt and Rnd** (2026-09-27, from the reference model). The random waves are drawn from a 24-bit
 linear congruential generator: seed' = the low word of seed × 0xb2d9d + 0x361963, arranged as the DSP
@@ -2245,7 +2251,24 @@ every length, cycle, gate mode and polarity). Checked on the G2 at 192 kHz (find
 - Values: SeqVal v x 2^14 (v/2 units, 127 = 64), Bipolar (v - 64) units; SeqNote is always Bipolar, so
   (v - 64) is semitones from E4; on/off steps are 0 or 64 units. A Trig row passes its step only while
   the clock is high (two ticks late); a Gate row holds it.
-- SeqNote's record inputs are not modelled. Up to 8 sequencers per patch.
+- Up to 8 sequencers per patch.
+
+**58.1 SeqNote's record stage** (2026-10-01, from the instrument's own record stage and the code that links
+it). SeqNote runs a second stage after the 16-step one. It takes the value row (the step plus the Note
+input), RecVal (input 6) and RecEnable (input 7), and is what drives the Note output:
+- **While RecEnable is above zero the output IS RecVal**, raw and unquantised - the monitor the manual
+  describes. Otherwise the output is the value row.
+- **Recording** writes into the 16-step stage's own step words, so the stored sequence changes and keeps
+  playing changed. Each tick while armed, the current step (the module's word 43 points at it) takes RecVal
+  as a note: (RecVal + 0x200000) >> 15, convergent-rounded, negative read as 0 and 127 or more read as
+  128; stored `note << 14`. Only the 16 steps are writable (the patch set-up sets the limit to step 16's word).
+- **Arming**: a counter climbs by TWICE its delay word per tick while RecEnable is high and clears when
+  it falls; it is armed once the counter passes full scale. The delay word is 0x7FFFFF (armed at once)
+  for a part the patch set-up places as audio-rate, 0x10CC otherwise (about 41 ms at the 24 kHz control tick).
+  The engine takes an up-rated SeqNote as the audio-rate case - an inference, not read.
+- On the instrument the host also copies recorded steps back into the patch's step dials. The engine
+  keeps them in its own state instead: a step's dial is copied in only when it moves, so a recorded step
+  plays until that step is edited, and the whole sequence starts afresh when the patch's wiring changes.
 
 ## 59. ClkGen
 
@@ -2255,7 +2278,7 @@ period of 2^n beats and steps by tempo x 0x55555 >> n; the tempo word is floor(B
 Tempo v reading 24 + 2v BPM below 32, 56 + v to 95 and 2v - 40 above (24-214 BPM). At 120 BPM: 1/96
 gives 24 pulses a beat (30% duty), 1/16 four (swing moves every second one - 3380/2629 ticks at 32,
 4495/1514 at 127), Sync a short pulse at the start of each period, ClkActive high while on. Rst
-restarts the phase. **Master** follows the instrument's global clock; the engine takes 120 BPM.
+restarts the phase. **Master** follows the instrument's global clock (notes §200; 120 BPM when none is known).
 
 ## 60. NoteScaler
 

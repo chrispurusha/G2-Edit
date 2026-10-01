@@ -85,7 +85,7 @@ static const tPartialRow kPartial[] = {
     {"Comb Filter",       "not yet checked against the reference model"                          },
     {"Envelope Multi",    "rise to an intermediate level is a guess (§17.9)"                           },
     {"Chorus",            "a third chorus in one patch passes dry (pool of 2 lines)"                   },
-    {"Sequencer Note",    "the record inputs are not modelled; steps at 96 kHz whatever the clock's rate (§58)" },
+    {"Sequencer Note",    "steps at 96 kHz whatever the clock's rate (§58)" },
     {"Sequencer Event",   "steps at 96 kHz whatever the clock's rate (§58)"                             },
     {"Sequencer Values",  "steps at 96 kHz whatever the clock's rate (§58)"                             },
     {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },

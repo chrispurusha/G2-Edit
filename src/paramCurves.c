@@ -325,6 +325,15 @@ double flt_kbt_amount(uint32_t kbtValue) {
 // The delay's clocked time uses the same fixed tempo, for the same reason - see ENGINE_REFERENCE_BPM.
 #define LFO_CLK_REFERENCE_BPM    (120.0)
 
+// The Clk divisions as multiples of one beat, in clkSyncStrMap's order: "1/4" IS the beat, so it is 1.0;
+// D is dotted (x1.5) and T a triplet (x2/3)
+static const double kClkSyncBeats[32] = {
+    256.0,     192.0,     128.0,  96.0,      64.0,       48.0,      32.0,      24.0,
+    16.0,       12.0,       8.0,   6.0,       4.0,        3.0, 8.0 / 3.0,       2.0,
+    1.5,   4.0 / 3.0,       1.0,  0.75, 2.0 / 3.0,        0.5,     0.375, 1.0 / 3.0,
+    0.25,     0.1875, 1.0 / 6.0, 0.125,   0.09375, 1.0 / 12.0,    0.0625, 1.0 / 24.0
+};
+
 double lfo_rate_hz(uint32_t rangeMode, double paramValue) {
     switch (rangeMode) {
         case 0:   // Rate Sub: a period of 699 s down to 5.46 s
@@ -356,13 +365,11 @@ double lfo_rate_hz(uint32_t rangeMode, double paramValue) {
         }
         case 4:   // Rate Clk: the master clock divided - §28
         {
-            // The instrument's LFO sync ratios (its own 32-entry table) are 256/beats, which is
-            // EXACTLY the series clk_sync_beats() already holds for the delay's Clk, entry for entry.
-            // One table serves both, and the delay's reference tempo serves both too - the engine has
-            // no live master clock yet, so like the delay this runs at LFO_CLK_REFERENCE_BPM.
-            double beats = clk_sync_beats(paramValue);
+            // §28.2 - the delay's beat table, but read at dial / 4 straight: NOT through the delay's
+            // slot map. The rate at LFO_CLK_REFERENCE_BPM; the engine scales it to the master clock.
+            double slot = floor(fmin(fmax(paramValue, 0.0), 127.0) / 4.0);
 
-            return (beats > 0.0) ? ((LFO_CLK_REFERENCE_BPM / 60.0) / beats) : 1.0;
+            return (LFO_CLK_REFERENCE_BPM / 60.0) / kClkSyncBeats[(uint32_t)slot];
         }
         default:
         {
@@ -662,17 +669,10 @@ uint32_t clk_sync_index(double paramValue) {
     return kClkSyncSlot[value >> 2];
 }
 
-// That division as a multiple of one beat. "1/4" IS the beat, so it is 1.0; D is dotted (x1.5) and
-// T is a triplet (x2/3). Same entries clkSyncStrMap prints, so heard and shown cannot diverge.
+// The delay's Clk division as a multiple of one beat. Same entries clkSyncStrMap prints, so heard and
+// shown cannot diverge.
 double clk_sync_beats(double paramValue) {
-    static const double beats[32] = {
-        256.0,     192.0,     128.0,  96.0,      64.0,       48.0,      32.0,      24.0,
-        16.0,       12.0,       8.0,   6.0,       4.0,        3.0, 8.0 / 3.0,       2.0,
-        1.5,   4.0 / 3.0,       1.0,  0.75, 2.0 / 3.0,        0.5,     0.375, 1.0 / 3.0,
-        0.25,     0.1875, 1.0 / 6.0, 0.125,   0.09375, 1.0 / 12.0,    0.0625, 1.0 / 24.0
-    };
-
-    return beats[clk_sync_index(paramValue)];
+    return kClkSyncBeats[clk_sync_index(paramValue)];
 }
 
 // notes §22
