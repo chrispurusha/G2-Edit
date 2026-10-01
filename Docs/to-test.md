@@ -4,6 +4,9 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***LFO SHP A WAVES (2026-10-01)*** - reference §28.6. LISTEN/LOOK: an LfoShpA's LED and its effect
+  should now follow the G2 at any Shape - Sine leans saw-wards away from 64 (15 Randee dz's FltNord LFO
+  sits at 76), Tri>Sqr squares up, CosBell/TriBell narrow at low Shape. 01, 13, 14 and 15 use it.
 - ***SEQNOTE RECORD AND LFO CLK TEMPO (2026-10-01)*** - reference §58.1, §28.2. LISTEN to 15 Randee dz
   against the G2: the FX bass's occasional re-recorded low notes should now come and go as on the G2,
   the sequence drifting from its stored steps. Its LfoShpAs (Clk range) now run at the dial's division

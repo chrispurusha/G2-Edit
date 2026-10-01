@@ -2660,6 +2660,9 @@ anything that could alias into the audio band.
 
 ## 158. in `lfo_step()`
 
+SUPERSEDED 2026-10-01: LfoShpA's waves are now the instrument's own (reference §28.6). Kept for the
+record of the guess it replaced.
+
 The synth names this shape Sqr2Tri, i.e. square AT one end of Shape and triangle at
 the other. This runs the other way round - Shape at 0 gives very nearly a triangle
 and winding it up drives the tanh into a square - so either the name reads

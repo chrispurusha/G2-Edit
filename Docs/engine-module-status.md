@@ -64,7 +64,7 @@ which fails the run if it names a module that is not offered or not modelled.
 | NoteSend | plays this slot only; notes to other slots and MIDI are dropped (§62) |
 | Osc Shape A | its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7) |
 | Osc Shape B | its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7) |
-| LFO Shp A | its per-waveform Phase offsets and the Dir input are not modelled (§28.4) |
+| LFO Shp A | the Dir input is not modelled (§28.6) |
 
 ## What is left (2026-09-27): refinement, not coverage
 
@@ -77,7 +77,7 @@ below say what refining each will take; update them by hand as modules move to W
 | **Basic versions to replace with the reference model** | Delay Dual / Quad / Eight (delay-base and tap stages), PShift, Scratch (pitch-shift parts), Flanger, NoiseGate (follower, simple-envelope and VCA stages), Osc String (Karplus parts), Pitch Tracker, Vocoder, Rnd Clock B and Rnd Pattern (parts sharing registers - run the whole module in the harness), Sequencer Controlled (bit-field instructions), Mux8-1X (run the reference model) |
 | **Basic versions with no part in the reference** | Driver, Resonator, Zero Crossing Counter, Level Scaler - need captures from the G2 |
 | **Limited by what reaches the engine** | CtrlRcv (no MIDI CC stream), NoteRcv (no channels), Device (global wheel 2), 4 Inputs (Bus not bridged) |
-| **Jack laws not fully decoded** | Osc Shape A/B (Shape below 0), LFO Shp A (Phase offsets, Dir) - the rest of the jacks added 2026-09-28 are the stages' own and stay Working; their hardware check is in to-test.md |
+| **Jack laws not fully decoded** | Osc Shape A/B (Shape below 0), LFO Shp A (Dir) - the rest of the jacks added 2026-09-28 are the stages' own and stay Working; their hardware check is in to-test.md |
 | **Nothing to render** | CtrlSend, PCSend, Automate, NoteZone (counted Working) |
 
 **Moved to Working on 2026-09-27 (end of session):** the seven envelopes other than Multi. Each now reads

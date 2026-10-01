@@ -92,7 +92,7 @@ static const tPartialRow kPartial[] = {
     // §6.7, §28.4 - pieces of their jacks' laws not yet decoded
     {"Osc Shape A",       "its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7)"  },
     {"Osc Shape B",       "its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7)"  },
-    {"LFO Shp A",         "its per-waveform Phase offsets and the Dir input are not modelled (§28.4)"   },
+    {"LFO Shp A",         "the Dir input is not modelled (§28.6)"   },
 };
 
 #define PARTIAL_COUNT (sizeof(kPartial) / sizeof(kPartial[0]))

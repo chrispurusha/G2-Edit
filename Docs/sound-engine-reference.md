@@ -1528,8 +1528,7 @@ counter stage with inputs that LfoA's and LfoC's simpler counter lacks:
   Phase word is a per-waveform offset plus v/64 (the dial spans a cycle); Phase M is v/128, 127 full. In
   cycles: Phase v/128, Phase M input x amount / 2. LfoB's offset puts its Sine and Tri half a word
   (a quarter cycle) behind LfoA's reading of the same counter, its Saw and Sqr where LfoA's are; taken
-  relative to LfoA, whose mapping the engine already uses. LfoShpA's per-waveform offsets (seven,
-  indexed by its multi part's wave setting) are not applied - its waves are still the basic ones.
+  relative to LfoA, whose mapping the engine already uses. LfoShpA's per-waveform offsets are in §28.6.
 - **Shape M** (LfoShpA): shape word + 8 x input x Shape M (v/128), saturated; the Shape dial is the
   bipolar word (v - 64)/64, so in the engine's 0..1 shape it adds input x Shape M.
 - Dir (LfoShpA) is not modelled.
@@ -1539,6 +1538,27 @@ The random waves still draw on the counter itself (§28.3), not the offset read.
 the folded phase, not libm `sin()` - within 1.5e-4 (-77 dB) of it, read a quarter cycle on to keep the
 phase the engine already had. Also far cheaper: six LFOs a voice at the 96 kHz graph rate were a tenth
 of 18 Unreal Dreams' render time. The rate skips its `exp2()` when nothing modulates it (bit-exact).
+
+**28.6 LfoShpA's waves (2026-10-01, from the reference model).** Six waves, each a formula in the
+read phase a (the counter plus the Phase word, a cycle running -1..1) and the shape s = 0.97 x the
+Shape word (v - 64)/64, 127 pinned to full; Shape M adds as §28.4. The wave stage's own setting comes
+from the Wave menu through {0, 5, 6, 2, 3, 4}, and each setting adds its own phase before the read:
+
+| Wave | Phase added | Law |
+|---|---|---|
+| Sine | half a cycle | the sine polynomial (§28.5) of the skewed triangle r = 2(a s + \|a - s\| - 1)/(s^2 - 1) - 1 |
+| CosBell | a quarter | the sine polynomial of the bell b: a' = a + s/2 (wrapped); b = -1 where a' >= s, else 1 - 2\|r(a')\| |
+| TriBell | a quarter | the bell b itself |
+| Saw>Tri | half a cycle | r itself |
+| Tri>Sqr | a quarter | the triangle 2\|a\| - 1 times (1 + 2(s + 1)), clipped at full scale |
+| Pulse | half a cycle | +1 while a < s, else -1 |
+
+At Shape 64 (s = 0) the skewed triangle is the plain one, so Sine is a pure sine; Shape 1 makes it a
+falling saw and 127 a rising one, as the manual says. Checked against the reference model run at every
+Shape dial and 4096 phases: within 1.4e-5 for TriBell, Saw>Tri, Tri>Sqr and Pulse, and 1.0e-4 for Sine
+and CosBell (the shared polynomial, §28.5). The engine's earlier waves were guesses: Sine and CosBell
+ignored Shape, TriBell was a plain triangle, Tri>Sqr a tanh (notes §158), and none had its phase.
+The Dir input is still not modelled.
 
 ## 29. ModAmt
 
