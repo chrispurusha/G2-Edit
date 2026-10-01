@@ -5,9 +5,11 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General
+- The missing tones on 15 Randeedz may relate to its effects section's OscDual and OscD, or something downstream from there. I disabled those oscillators on the G2 and the missing tones also vanish. Possibly the LFOShpA controlling the FltNord? Filter is flashing much faster on engine than on G2.
 - Saw a crash on "tParamType       paramType = paramLocationList[param->paramRef].type;" in param_click_handler(). Bad address access.
 - Possible inconsistency in the drum synth noise filter sweep on our engine. Although - I think the hardware is also inconsistent for noise filter sweep. May be deliberate. Check against references.
 - Further investigation into voice stealing improvements.
+- Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works.
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
 - Make sure if we use bypass switch on a module, it no longer processes, to save CPU cycles.
 - Implement arpeggiator.
