@@ -499,6 +499,7 @@ static const tLfoParams kLfoA    = {0, 7, 4, 6, -1, 5, 1, 3, 2, -1, -1, -1};
 static const tLfoParams kLfoB    = {0, 2, 4, 8, -1, 7, 5, 1, 3, 6, 9, -1};
 static const tLfoParams kLfoC    = {0, 3, -1, 2, -1, 4, 1, -1, -1, -1, -1, -1};
 static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4, 9, 3, 2, 7, 6, 8};
+#define LFO_RANGE_CLK    (4u)   // rangeLfoStrMap: Sub, Lo, Hi, BPM, Clk
 
 // §28.4 - the counter part's inputs after the two rate inputs: Rst, then LfoB's Phase M, or
 // LfoShpA's Shape M and Phase M
@@ -564,6 +565,13 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4, 9, 3, 2, 7, 6, 8};
 #define SEQ_PARAM_LENGTH           (33)
 #define SEQ_X_WORDS                (16)
 #define SEQ_Y_WORDS                (48)
+#define SEQREC_X_WORDS             (6)  // §58.1 - SeqNote's record part: its own X frame
+#define SEQREC_Y                   (44) // §58.1 - and its Y frame, after the 16-step part's 44 words
+#define SEQREC_LAST_STEP           (37) // §58.1 - the linker's Y0: the 16th step's word, the last it may write
+#define SEQREC_DELAY_OFF           (0x7FFFFF)
+#define SEQREC_DELAY_24K           (0x10CC)
+#define SEQ_IN_REC_VAL             (6u) // SeqNote's inputs after Clk, Rst, Loop, Park, Note, Trig
+#define SEQ_IN_REC_ENABLE          (7u)
 #define MAX_CLKGEN_LINES           (4)  // §59 - clock generators per patch
 #define MAX_METNOISE_LINES         (4)  // §66 - per patch; more run silent
 #define MAX_FLTPHASE_LINES         (4)  // §67 - per patch; more pass their input through
@@ -1082,6 +1090,8 @@ typedef struct {
     uint8_t cycle;                  // the Cycle switch: wrap at the end, rather than stop
     uint8_t bipolar;                // the value row reads (v - 64) units, not v / 2
     uint8_t gate[2];                // each row a gate (held) rather than a trigger (with the clock)
+    uint8_t record;                 // §58.1 - SeqNote: the record part follows the 16-step one
+    int32_t recordDelay;            // §58.1 - its Y2, per 96 kHz tick
 } tSeqConfig;
 
 static void seq_config_build(tSeqConfig * cfg, tModule * module, uint32_t variation);
@@ -1539,6 +1549,8 @@ static double                 gFreqShiftBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICE
 typedef struct {
     int32_t x[SEQ_X_WORDS];
     int32_t y[SEQ_Y_WORDS];
+    int32_t rx[SEQREC_X_WORDS];      // §58.1
+    int32_t loaded[2 * SEQ_STEPS];   // the table as last copied in: a recorded step stays until its dial moves
     bool    ready;
 } tSeqState;
 static tSeqState              gSeqBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_SEQ_LINES];
@@ -4986,6 +4998,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                                        ? (uint32_t)param_value(module, variation, (uint32_t)p->range) : 1;
 
             node->rateHz     = lfo_rate_hz(range, param_value(module, variation, (uint32_t)p->rate));
+
+            if (range == LFO_RANGE_CLK) {
+                node->rateHz *= engine_master_bpm() / ENGINE_REFERENCE_BPM;   // §28.2 - lfo_rate_hz() takes 120 BPM
+            }
             node->wave       = (p->waveform >= 0)
                              ? (tOscWave)param_value(module, variation, (uint32_t)p->waveform) : eOscWaveSine;
 
@@ -7443,13 +7459,17 @@ static void random_a_build(tEngineNode * node, tModule * module, uint32_t variat
     bool                  isB         = (module->type == moduleTypeRandomB);
     uint32_t              step        = (uint32_t)module->param[variation][RNDA_PARAM_STEP].value;
     uint32_t              edge        = (uint32_t)module->param[variation][isB ? 8u : RNDA_PARAM_EDGE].value;
+    uint32_t              range       = (uint32_t)module->param[variation][isB ? 7u : RNDA_PARAM_RANGE].value;
     double                stepDial    = floor(param_value(module, variation, 4));
     double                word        = isB ? ((stepDial >= 127.0) ? 8388607.0 : fmin(8388607.0, (512.0 * stepDial * stepDial) + 512.0))
                                         : (double)kStepWord[(step < 4u) ? step : 3u];
     double                scale       = fmin(sqrt(8388608.0 / word), 8192.0) * 2048.0;
 
-    node->rateHz     = lfo_rate_hz((uint32_t)module->param[variation][isB ? 7u : RNDA_PARAM_RANGE].value,
-                                   param_value(module, variation, RNDA_PARAM_RATE));
+    node->rateHz     = lfo_rate_hz(range, param_value(module, variation, RNDA_PARAM_RATE));
+
+    if (range == LFO_RANGE_CLK) {
+        node->rateHz *= engine_master_bpm() / ENGINE_REFERENCE_BPM;   // §28.2
+    }
     node->rndStep    = word / 8388608.0;
     node->rndScale   = floor(scale) / 8388608.0;
     node->rndEdge    = (double)kEdgeWord[(edge < 5u) ? edge : 4u] / 8388608.0;
@@ -8405,9 +8425,12 @@ static void seq_config_build(tSeqConfig * cfg, tModule * module, uint32_t variat
         cfg->gate[0] = 1u;
         cfg->gate[1] = (uint8_t)(module->param[variation][35].value != 0);
     } else if (module->type == moduleTypeSeqNote) {
-        cfg->bipolar = 1u;
-        cfg->gate[0] = 1u;
-        cfg->gate[1] = (uint8_t)(module->param[variation][34].value != 0);
+        cfg->bipolar     = 1u;
+        cfg->gate[0]     = 1u;
+        cfg->gate[1]     = (uint8_t)(module->param[variation][34].value != 0);
+        cfg->record      = 1u;
+        // §58.1 - the 24 kHz delay word spread over four 96 kHz ticks (0x10CC is a multiple of four)
+        cfg->recordDelay = (module->upRate != 0u) ? SEQREC_DELAY_OFF : (SEQREC_DELAY_24K / 4);
     } else {
         cfg->gate[0] = (uint8_t)(module->param[variation][34].value != 0);
         cfg->gate[1] = (uint8_t)(module->param[variation][35].value != 0);
@@ -8447,15 +8470,25 @@ static void seq16_step(tSeqState * st, const tSeqConfig * cfg, const int32_t in[
     int32_t * Y = st->y;
 
     if (st->ready == false) {
-        static const int32_t kX[SEQ_X_WORDS] = {0x200000, 0, 0x2B, 1, 0, 0, 0, 0, 0, 0, 0x80000, 7, 0, 0, 0, 0};
+        static const int32_t kX[SEQ_X_WORDS]       = {0x200000, 0, 0x2B, 1, 0, 0, 0, 0, 0, 0, 0x80000, 7, 0, 0, 0, 0};
+        static const int32_t kRecX[SEQREC_X_WORDS] = {0, 0, 0x7F, 0x80, 0x200000, 0};
 
         memcpy(X, kX, sizeof(kX));
         memset(Y, 0, sizeof(st->y));
-        Y[1]      = 0x10;
-        Y[3]      = 0x200000;
-        Y[5]      = 0x11;
-        Y[6]      = 0x2B;
-        st->ready = true;
+        Y[1]             = 0x10;
+        Y[3]             = 0x200000;
+        Y[5]             = 0x11;
+        Y[6]             = 0x2B;
+        memcpy(st->rx, kRecX, sizeof(kRecX));
+        Y[SEQREC_Y]      = SEQREC_LAST_STEP;
+        Y[SEQREC_Y + 1u] = 0x200000;
+
+        for (uint32_t k = 0; k < (2u * SEQ_STEPS); k++) {
+            Y[7u + k]     = cfg->table[k];
+            st->loaded[k] = cfg->table[k];
+        }
+
+        st->ready        = true;
     }
     // the words the switches set, every sample, so a change applies without a restart
     X[8]  = cfg->length;
@@ -8464,7 +8497,10 @@ static void seq16_step(tSeqState * st, const tSeqConfig * cfg, const int32_t in[
     X[14] = cfg->bipolar ? 0x100000 : 0;
 
     for (uint32_t k = 0; k < (2u * SEQ_STEPS); k++) {
-        Y[7u + k] = cfg->table[k];
+        if (cfg->table[k] != st->loaded[k]) {
+            Y[7u + k]     = cfg->table[k];
+            st->loaded[k] = cfg->table[k];
+        }
     }
 
     Y[39] = cfg->bipolar ? 0x100000 : 0;   // one step past the table: the value a 17th step would read
@@ -8597,6 +8633,45 @@ static void seq16_step(tSeqState * st, const tSeqConfig * cfg, const int32_t in[
     }
     out[1]    = seq_sat((int64_t)value + in[4]);
     out[2]    = seq_sat((int64_t)other + in[5]);
+}
+
+// §58.1 - one tick of SeqNote's record part, after the 16-step part: `value` is that part's value row.
+// While Rec Enable is high the output is Rec itself, and once armed the current step takes Rec
+// rounded to a note.
+static int32_t seqrec_step(tSeqState * st, int32_t delay, int32_t value, int32_t rec, int32_t enable) {
+    int32_t * X     = st->rx;
+    int32_t * Y     = &st->y[SEQREC_Y];
+    int32_t   at    = Y[-1];                                                     // the 16-step part's word 43: the current step's value word
+    int64_t   count = (enable > 0) ? ((int64_t)X[1] + (2 * (int64_t)delay)) : 0; // two adds a tick
+    bool      armed = (enable > 0) && (count > 0x7FFFFF);
+    int64_t   sum   = (int64_t)Y[1] + rec;
+    int64_t   note  = 0;
+
+    Y[2] = delay;
+    X[0] = value;
+    X[1] = seq_sat(count);
+    Y[3] = rec;
+
+    if (sum >= 0) {
+        int64_t rest = sum & 0x7FFF;
+
+        note = sum >> 15;
+
+        if ((rest > 0x4000) || ((rest == 0x4000) && ((note & 1) != 0))) {   // rnd: convergent
+            note++;
+        }
+    }
+
+    if (note >= X[2]) {
+        note = X[3];
+    }
+    X[5] = armed ? X[4] : 0;
+
+    if ((at >= 0) && (at < SEQREC_Y) && armed && (at <= Y[0])) {
+        st->y[at] = seq_sat(note << 14);
+    }
+    X[0] = (enable > 0) ? Y[3] : X[0];
+    return X[0];
 }
 
 static int32_t sext24(int32_t w) {
@@ -11857,14 +11932,20 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             // §58 - words in, words out; the engine's 1.0 is 64 units, 0x200000
             if (spec->line < MAX_SEQ_LINES) {
-                int32_t in[6];
-                int32_t out[3];
+                int32_t            in[8];
+                int32_t            out[3];
+                const tSeqConfig * cfg = &paramsIn->seq[spec->line];
 
-                for (uint32_t k = 0; k < 6u; k++) {
-                    in[k] = seq_sat(llround(signal_in(spec, value, k) * DSP_WORD_PER_ENGINE));
+                for (uint32_t k = 0; k < 8u; k++) {
+                    in[k] = ((k < 6u) || (cfg->record != 0u)) ? seq_sat(llround(signal_in(spec, value, k) * DSP_WORD_PER_ENGINE)) : 0;
                 }
 
-                seq16_step(&gSeq[voice][spec->line], &paramsIn->seq[spec->line], in, out);
+                seq16_step(&gSeq[voice][spec->line], cfg, in, out);
+
+                if (cfg->record != 0u) {
+                    out[1] = seqrec_step(&gSeq[voice][spec->line], cfg->recordDelay, out[1],
+                                         in[SEQ_IN_REC_VAL], in[SEQ_IN_REC_ENABLE]);
+                }
                 value[n][0] = out[0] / DSP_WORD_PER_ENGINE;
                 value[n][1] = out[1] / DSP_WORD_PER_ENGINE;
                 value[n][2] = out[2] / DSP_WORD_PER_ENGINE;

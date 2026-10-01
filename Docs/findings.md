@@ -12177,3 +12177,21 @@ sits lower in the engine. Captured on the G2 (Fireface, 192 kHz, note 52 vel 100
 - The same rounding hit every Vel/Keyb morph on every module - filters were only where it was audible.
   Also: the Keyb row now counts the Octave Shift, as the law says. morphcheck's mirrored defines
   updated; it passes on SimpleLead's FltClassic Freq on both axes and the pair.
+
+## 2026-10-01 - 15 Randee dz: SeqNote's record part, and the LFOs' Clk tempo
+
+CT: the missing tones go when the FX OscDual and OscD are off on the G2; the filter's LFO flashes faster
+on the engine. The patch (G2 Backups/15 Randee dz.pch2) shows both:
+- **SeqNote record** (reference §58.1): RecVal is FX-In R, RecEnable is the RndTrig that also fires both
+  FX EnvAHDs - so on the G2 the oscillators' pitch follows the incoming audio exactly while the VCA opens,
+  and the current step is rewritten with it. The engine now runs the record part word for word after
+  the 16-step one. Offline: identical to before for 6 s (no RecEnable yet), then three record events in
+  the next 6 s rewrite steps to 61, 73 and 58, and the sequence diverges from the stored one.
+- **LFO Clk** (reference §28.2): Clk-range LFOs ran at a fixed 120 BPM while ClkGen (Master) and the
+  clocked delays followed the G2's tempo, so both LfoShpAs here (FltNord PitchVar, OscDual PW) drifted
+  against the sequencer at any other tempo. Now scaled by the master clock.
+- **LFO Clk division** (reference §28.2, CT: the FltNord LFO's LED toggles every ~5 s on the G2, several
+  times a second on the engine): the LFO read the beat table through the DELAY's slot map. Dial 32 (4/1)
+  ran at 8 Hz, not 0.125 Hz - 64x fast; dial 50 (1/1) at 5.3 Hz, not 0.5. Now dial/4 straight, as the
+  instrument reads it. Offline at 120 BPM the LEDs toggle every 4.0 s and 1.0 s.
+  RandomA/RandomB on Clk share the fix and now follow the master clock too.

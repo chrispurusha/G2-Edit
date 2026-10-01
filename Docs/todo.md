@@ -5,7 +5,6 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General
-- The missing tones on 15 Randeedz may relate to its effects section's OscDual and OscD, or something downstream from there. I disabled those oscillators on the G2 and the missing tones also vanish. Possibly the LFOShpA controlling the FltNord? Filter is flashing much faster on engine than on G2.
 - Saw a crash on "tParamType       paramType = paramLocationList[param->paramRef].type;" in param_click_handler(). Bad address access.
 - Possible inconsistency in the drum synth noise filter sweep on our engine. Although - I think the hardware is also inconsistent for noise filter sweep. May be deliberate. Check against references.
 - Further investigation into voice stealing improvements.
@@ -24,7 +23,6 @@ General
 - CPU: three quarters of it is `eval_node`'s per-node switch, run once per node per voice per oversampled sample (profile in findings 2026-09-19). The cheap wins are taken; skipping a node whose inputs are constant needs the sub-block restructure above to be worth the test that decides it
 - Drop the engine's fixed per-patch pools (every MAX_*_LINES in soundEngine.c: StChorus 2, FreqShift 2, Seq 8, ClkGen/MetNoise/FltPhase/DlyClock 4, delay lines, FX buffers, OscString, Vocoder - past the limit a module plays silent or bypassed): a laptop has the room, so emulate every instance; mind the plug-in's per-instance banks
 - Estimate whether a patch fits the G2's DSP/memory budget and WARN when it is over - never limit the emulation to match; resource model decoded, per-module record and voice placer open (g2-budget-estimate-design.md)
-- SeqNote record inputs (RecVal, RecEnable; the instrument's record part writes into the step sequencer's own step words) - 15 Randee dz re-records its bass from the FX-In (§58)
 - Render poly voices across cores (engine-multicore-design.md) - the long-term answer to patches whose voices never finish: 18 Unreal Dreams at 32 voices needs 120% of one core, and the engine manages ~9 (CT 2026-09-28); check first that VST3/AUv2 hosts let a plug-in join the audio workgroup
 - Engine voice count should follow the G2's own assignment, not the patch's request: 18 asks for 32 and the G2 gives 15 - use the G2's reported count when connected, the budget estimate's voice placer offline (g2-budget-estimate-design.md)
 - 18 Unreal Dreams: engine ~9 dB louder than the G2 capture at 32 voices - check the rig calibration first, then the voice level path (§62.1)

@@ -4,13 +4,18 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***SEQNOTE RECORD AND LFO CLK TEMPO (2026-10-01)*** - reference §58.1, §28.2. LISTEN to 15 Randee dz
+  against the G2: the FX bass's occasional re-recorded low notes should now come and go as on the G2,
+  the sequence drifting from its stored steps. Its LfoShpAs (Clk range) now run at the dial's division
+  (they ran 64x fast) and follow the G2's tempo: the FltNord LFO's LED should toggle every ~5 s as on the
+  G2, the OscDual one about four times as often; change the tempo, both follow.
 - ***COMPUTER-KEYBOARD VELOCITY 127 (2026-09-28)*** - code-notes/virtualKeyboard.c.md §11. LISTEN: a,s,d... on a
   Vel-morphed patch (FltClassicTest) should now sound the same through the engine as on the G2.
 - ***EXACT VEL/KEYB MORPHS (2026-09-28, late)*** - reference §26.2. LISTEN: FltClassicTest's resonance should now
   sit where the G2's does (mod wheel at zero on both). Any patch with a Vel or Keyb morph on a filter Freq
   should track the G2 more closely, especially at velocities between the old rows.
 - ***15 RANDEE DZ FX BASS (2026-09-28, night)*** - reference §16.2a. LISTEN: the FX-area bass line (OscDual
-  and OscD) should now be heard. The G2's occasional re-recorded low notes are still missing (SeqNote record).
+  and OscD) should now be heard. The re-recorded low notes are the 2026-10-01 entry above.
 - ***18 UNREAL DREAMS SEQUENCES (2026-09-28, evening)*** - reference §62.1. LISTEN: 18 should now play its
   melody and held chord as the G2 does. It builds up over ~25 s as voices fill, on the G2 too. The engine
   may be louder than the G2 (about 9 dB offline) - say if it is.
