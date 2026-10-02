@@ -369,6 +369,8 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define SWSEL_CTRL_UNITS          (4.0)  // §33 - In 1 is 0 units, In 2 is 4, ... In 8 is 28
 #define UNITS_PER_FULL_SCALE      (64.0) // §16 - a signal of 1.0 in the engine is 64 units on the G2
 #define DSP_FULL_SCALE            (4.0)  // notes §196 - a 24-bit word's range, which every stored value saturates to
+#define MUX8X_SPACING             (9.0)  // §70.11 - units of Ctrl between Mux8-1X's inputs
+#define MUX8X_CTRL_MAX            (63.0)
 #define VALSW_PARAM_VALUE         (0)    // the Ctrl threshold, 0-64 units in whole steps
 #define VALSW_VALUE_TOP           (63)   // the top step reads 64, not 63 (render_paramType1UniPolShort)
 #define VALSW_MATCH_UNITS         (0.5)  // §34 - Ctrl selects On while within half a unit of the value
@@ -513,9 +515,28 @@ static double lfo_shape_dial(double v) {
 #define LFOB_IN_PHASE_MOD          (3u)
 #define LFOSHPA_IN_SHAPE_MOD       (3u)
 #define LFOSHPA_IN_PHASE_MOD       (4u)
-#define LFO_MAX_INPUTS             (5u)
-#define LFO_RESET_PHASE            (0.5)    // §28.4 - the counter's word 0
-#define LFO_RST_PREV_HIGH          (1u)     // gLogicPrev bit: the Rst input was above zero
+#define LFOSHPA_IN_DIR             (5u)        // §28.4
+#define STATUS_TICK_HZ             (24000.0)   // §70.13 - the Status part's rate
+#define SEQ_CONTROL_TICK_HZ        (24000.0)   // §58 - a sequencer part's rate when it is not up-rated
+#define RNDCLKB_IN_STEP_MOD        (3u)        // §70.9
+#define RNDSTEP_SEED_OFFSET        (0x4AAAAB)  // §70.9 - the Step M part's Y2 and X4
+#define RNDSTEP_SEED_SLOPE         (-0x2AAAAB)
+#define RNDSTEP_SHIFT              (10)        // its Y1
+#define RND_SHIFT_TAPS             (0x872B41u) // §70.9 - Rnd2's feedback taps
+#define RNDSTATE_START_LEVEL       (0.25)      // §70.9 - RndPattern State's Y5 in its frame
+#define SEQCTR_REST_WORD           (0x220000)  // §70.10 - Ctrl out of range: the rest pair's index
+#define SEQCTR_BIPOLAR_CENTRE      (0x100000)  // §70.10 - Pol bipolar: the centre subtracted before doubling
+#define SEQCTR_TRIG_TICKS          (4.0)       // §70.10 - Trig's length in Pulse mode
+#define NOISEGATE_FALL1            (0x2746)    // §70.6 - the follower's first stage, per 96 kHz sample
+#define NOISEGATE_RISE2            (0x7FFFFF)  // its second: instant up
+#define NOISEGATE_FALL2            (0x1A10)    // and slow down
+#define NOISEGATE_OPEN             (0x200000)
+#define NOISEGATE_ATK_SHORTEST     (0.00025)   // §70.6 - Attack: 0.25 ms (1 + 19 v / 127)^2
+#define NOISEGATE_REL_OFFSET       (35.72)     // Release: ((v + 35.72) / 162.72)^5 s, dial 0 0.5 ms
+#define NOISEGATE_REL_SHORTEST     (0.0005)
+#define LFO_MAX_INPUTS             (6u)
+#define LFO_RESET_PHASE            (0.5)     // §28.4 - the counter's word 0
+#define LFO_RST_PREV_HIGH          (1u)      // gLogicPrev bit: the Rst input was above zero
 
 #define CONST_PARAM_VALUE          (0)
 #define CONST_PARAM_BIP_UNI        (1) // bipUniStrMap: 0 is Bipolar, 1 Unipolar - §16.1
@@ -866,12 +887,13 @@ typedef struct {
     int32_t half;       // half the multiplier, Q23
     int32_t add;        // the per-tick add, Q23
     int32_t target;     // where the segment heads, in envelope steps
+    int32_t decay;      // §17.11 - EnvMulti's fall multiplier, Q23
     uint8_t rising;     // chooses the attack-shaped recurrence and which way the end test runs
     uint8_t sustain;    // held while the gate is
     int8_t  modLeg;     // §17.10 - the node input carrying this stage's time mod, or -1
     uint8_t dial;       // its own time dial, so the mod can re-read the stage from dial + offset
     uint8_t modAmount;  // the mod amount dial
-    uint8_t pad[7];
+    uint8_t pad[3];
 } tEnvSegment;
 
 typedef struct {
@@ -952,6 +974,7 @@ typedef struct {
     uint32_t        envOutType;      // §17.6
     bool            envReset;        // §17.7
     bool            envKeyGate;      // §17.4 - the keys gate it: KB on, or a Gate jack fed by a module not played
+    bool            envMulti;        // §17.11 - EnvMulti's own segment arithmetic
 
     double          gain;            // LevAmp
     double          pulseSeconds;    // Pulse gate width, and the logic Delay's time
@@ -963,9 +986,12 @@ typedef struct {
     int32_t         metWords[4];     // §66 - Freq base, Freq mod, Colour base, Colour mod
     int32_t         phaseWords[9];   // §67 - FLTPHASE_W_*
     uint32_t        outCount;        // §68.1 - a Sw1-n's outputs before its Ctrl
-    double          bx[18];          // §70 - the basic modules' dial values, by module
+    double          bx[20];          // §70 - the basic modules' dial values, by module
     double          rndStep;         // §47 - RandomA: the one-pole's coefficient, from Step
     double          rndScale;        // §47 - and the draw's pre-scale, from the same Step
+    double          rndStepWord;     // §70.9 - RndClkB: the Step dial's word, for its Step M part
+    double          rndStepModWord;  // §70.9 - and Step M's
+    bool            rndShiftReg;     // §70.9 - RndClkB's Character Rnd2: the shift-register generator
     double          rndEdge;         // §47 - the Edge word
     uint32_t        outDest;         // Out module: 0 = outputs 1/2, 1 = outputs 3/4
 
@@ -1097,7 +1123,8 @@ typedef struct {
     uint8_t bipolar;                // the value row reads (v - 64) units, not v / 2
     uint8_t gate[2];                // each row a gate (held) rather than a trigger (with the clock)
     uint8_t record;                 // §58.1 - SeqNote: the record part follows the 16-step one
-    int32_t recordDelay;            // §58.1 - its Y2, per 96 kHz tick
+    uint8_t controlRate;            // §58 - not up-rated: the part ticks at 24 kHz
+    int32_t recordDelay;            // §58.1 - its Y2, per tick of the part
 } tSeqConfig;
 
 static void seq_config_build(tSeqConfig * cfg, tModule * module, uint32_t variation);
@@ -1557,6 +1584,8 @@ typedef struct {
     int32_t y[SEQ_Y_WORDS];
     int32_t rx[SEQREC_X_WORDS];      // §58.1
     int32_t loaded[2 * SEQ_STEPS];   // the table as last copied in: a recorded step stays until its dial moves
+    int32_t held[3];                 // §58 - the outputs between a control-rate part's ticks
+    double  tick;                    // time to its next tick, in ticks
     bool    ready;
 } tSeqState;
 static tSeqState              gSeqBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_SEQ_LINES];
@@ -1633,31 +1662,35 @@ static double                 gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
 // sensible rate, four lines, is enough for the delays a patch normally has and keeps this under a
 // megabyte. Nodes beyond that many run dry rather than sharing a line and smearing into each other.
-#define MAX_DELAY_LINES       (4)
+#define MAX_DELAY_LINES        (4)
 // notes §36
-#define DELAY_LINE_SAMPLES    (134400 * ENGINE_OVERSAMPLE)
+#define DELAY_LINE_SAMPLES     (134400 * ENGINE_OVERSAMPLE)
 static float                  gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
-#define MAX_COMB_LINES        (2)                                   // FltCombs per patch that sound; any more pass their input dry
-#define MAX_CHORUS_LINES      (2)                                   // StChorus lines per patch; any more pass their input dry
-#define CHORUS_INSTANCES      (MAX_CHORUS_LINES * (1 + MAX_VOICES)) // notes §197 - FX area one each, Voice area one per voice
-#define COMB_LINE_SAMPLES     (16384)                               // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
+#define MAX_COMB_LINES         (2)                                   // FltCombs per patch that sound; any more pass their input dry
+#define MAX_CHORUS_LINES       (2)                                   // StChorus lines per patch; any more pass their input dry
+#define CHORUS_INSTANCES       (MAX_CHORUS_LINES * (1 + MAX_VOICES)) // notes §197 - FX area one each, Voice area one per voice
+#define COMB_LINE_SAMPLES      (16384)                               // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
+#define COMB_FRACTION_STEPS    (512.0)                               // §13.4 - the read's coefficient table
+#define COMB_FB_MOD_GAIN       (2.0)                                 // §13.4 - FB Mod x input is taken x 8 in words
 static float                  gCombLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES][COMB_LINE_SAMPLES];
-#define gCombLine             (gCombLineBank[SE])
+#define gCombLine              (gCombLineBank[SE])
 static uint32_t               gCombWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];
-#define gCombWrite            (gCombWriteBank[SE])
-#define gDelayLine            (gDelayLineBank[SE])
+#define gCombWrite             (gCombWriteBank[SE])
+static double                 gCombFbBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];    // §13.4 - c x the last tap
+#define gCombFb                (gCombFbBank[SE])
+#define gDelayLine             (gDelayLineBank[SE])
 static uint32_t               gDelayWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
-#define gDelayWrite           (gDelayWriteBank[SE])
+#define gDelayWrite            (gDelayWriteBank[SE])
 static double                 gDelayDampBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
-#define gDelayDamp            (gDelayDampBank[SE])
+#define gDelayDamp             (gDelayDampBank[SE])
 static double                 gDelayHpBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];          // the HP's lowpass half; the filter is x - this
-#define gDelayHp              (gDelayHpBank[SE])
+#define gDelayHp               (gDelayHpBank[SE])
 static double                 gDelayHpBBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];         // §24.2 - the HP's second state
-#define gDelayHpB             (gDelayHpBBank[SE])
+#define gDelayHpB              (gDelayHpBBank[SE])
 static double                 gDelayFbBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];          // §24.1 - last sample's feedback, written with this one
-#define gDelayFb              (gDelayFbBank[SE])
+#define gDelayFb               (gDelayFbBank[SE])
 static double                 gDelayModBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][3];      // §24.6 - FB, wet, dry, from last sample
-#define gDelayMod             (gDelayModBank[SE])
+#define gDelayMod              (gDelayModBank[SE])
 
 // notes §37
 
@@ -2267,6 +2300,7 @@ static void reset_node_state(void) {
 
     memset(gCombLine, 0, sizeof(gCombLine));
     memset(gCombWrite, 0, sizeof(gCombWrite));
+    memset(gCombFb, 0, sizeof(gCombFb));
 
     for (i = 0; i < MAX_ENGINE_NODES; i++) {
         gSmoothPrimed[i] = false;
@@ -3100,6 +3134,34 @@ static void env_stage_rates(tEnvSegment * stage, double seconds, uint32_t shape,
     }
 }
 
+// §17.11 - EnvMulti's four segments as the instrument holds them: the attack words for its Shape time
+// every segment, a fall also has the decay multiplier, and the held segment and the last do not advance.
+#define ENVMULTI_SEGMENTS         (4u)
+#define ENVMULTI_PARAM_TIME       (4u)
+#define ENVMULTI_PARAM_SUSTAIN    (9u)
+#define ENVMULTI_SUSTAIN_NONE     (3u)
+
+static void envmulti_stages_build(tEngineNode * node, tModule * module, uint32_t variation, uint32_t shape) {
+    uint32_t sustain = module->param[variation][ENVMULTI_PARAM_SUSTAIN].value;
+
+    for (uint32_t i = 0; i < ENVMULTI_SEGMENTS; i++) {
+        tEnvSegment * stage = &node->envStage[i];
+        double        level = param_value(module, variation, i);
+        double        time  = param_value(module, variation, ENVMULTI_PARAM_TIME + i);
+
+        memset(stage, 0, sizeof(*stage));
+        stage->target  = (level >= 127.0) ? ENV_TOP : ((int32_t)level << 16);
+        stage->sustain = (uint8_t)((i == sustain) || (i == (ENVMULTI_SEGMENTS - 1u)));
+        stage->modLeg  = -1;
+        stage->decay   = env_q23(exp(-ENV_FALL_SHARPNESS / env_ticks(env_time_seconds(time))));
+        env_stage_rates(stage, env_attack_seconds(time, shape), shape, true);
+    }
+
+    node->envStageCount   = ENVMULTI_SEGMENTS;
+    node->envSustainStage = (sustain < ENVMULTI_SUSTAIN_NONE) ? (int32_t)sustain : -1;
+    node->envMulti        = true;
+}
+
 // §17.9 - the whole stage list, from the map the module shares with its face.
 static void env_stages_build(tEngineNode * node, tModule * module, uint32_t variation) {
     tEnvGraph map;
@@ -3161,6 +3223,10 @@ static void env_stages_build(tEngineNode * node, tModule * module, uint32_t vari
         }
         node->envStageCount++;
         from = level;
+    }
+
+    if (module->type == moduleTypeEnvMulti) {
+        envmulti_stages_build(node, module, variation, map.shape);
     }
 }
 
@@ -3246,6 +3312,7 @@ static uint32_t node_output_legs(tNodeKind kind) {
 
 static void delay_words(tEngineNode * node, double lpDial, double hpDial, double fbDial, double dryWetDial, double fbModDial, double mixModDial); // §24.2
 static void basic_build(tEngineNode * node, tModule * module, uint32_t variation);                                                                // §70
+static void noise_gate_build(tEngineNode * node, tModule * module, uint32_t variation);                                                           // §70.6
 static int32_t follower_coef_word(double seconds);                                                                                                // §69.4
 static int32_t dial_mod_word(double dial);                                                                                                        // §67
 static int32_t dly_dial_word(double dial);                                                                                                        // §24.2
@@ -5044,6 +5111,11 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             eq_build(node, module, variation);
             break;
         }
+        case eNodeStatus:
+        {
+            node->select = variation + 1u;    // §70.13 - Var Active dips when this changes
+            break;
+        }
         case eNodeFltComb:
         {
             // Freq 0, Pitch 1, Kbt 2, FB 3, FB Mod 4, Type 5, Level 6, On 7 - §13.1
@@ -5385,10 +5457,14 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->rndScale = floor(fmin(sqrt(8388608.0 / word), 8192.0) * 2048.0) / 8388608.0;
 
             if (module->type == moduleTypeRndClkB) {
-                // §70.9 - Step 0, OutType 1, on 2, Mode 3, StepM 4 (not yet read), Character a mode
-                node->lfoMono  = false;
-                node->polarity = (uint32_t)module->param[variation][1].value;
-                node->active   = (module->param[variation][2].value != 0);
+                // §70.9 - Step 0, OutType 1, on 2, Mode 3 (Mono), Step M 4
+                node->rndStepWord    = (v >= 127) ? 8388607.0 : (double)(v << 16);
+                node->rndStepModWord = (param_value(module, variation, 4) >= 127.0) ? 8388607.0
+                                       : (double)((int32_t)param_value(module, variation, 4) << 16);
+                node->lfoMono        = (module->param[variation][3].value != 0);
+                node->rndShiftReg    = (module->mode[0].value == 1u);    // Character: Rnd1, Rnd2
+                node->polarity       = (uint32_t)module->param[variation][1].value;
+                node->active         = (module->param[variation][2].value != 0);
                 break;
             }
             node->lfoMono  = (module->param[variation][1].value != 0);
@@ -8423,8 +8499,9 @@ static void seq_config_build(tSeqConfig * cfg, tModule * module, uint32_t variat
         cfg->table[(2u * k) + 1u] = (v2 != 0) ? 0x200000 : 0;
     }
 
-    cfg->cycle  = (module->param[variation][SEQ_PARAM_CYCLE].value != 0);
-    cfg->length = (int32_t)module->param[variation][SEQ_PARAM_LENGTH].value;
+    cfg->controlRate = (module->upRate == 0u);
+    cfg->cycle       = (module->param[variation][SEQ_PARAM_CYCLE].value != 0);
+    cfg->length      = (int32_t)module->param[variation][SEQ_PARAM_LENGTH].value;
 
     if ((module->type == moduleTypeSeqVal) || (module->type == moduleTypeSeqLev)) {
         cfg->bipolar = (module->param[variation][34].value == 0);   // bipUniStrMap
@@ -8435,8 +8512,8 @@ static void seq_config_build(tSeqConfig * cfg, tModule * module, uint32_t variat
         cfg->gate[0]     = 1u;
         cfg->gate[1]     = (uint8_t)(module->param[variation][34].value != 0);
         cfg->record      = 1u;
-        // §58.1 - the 24 kHz delay word spread over four 96 kHz ticks (0x10CC is a multiple of four)
-        cfg->recordDelay = (module->upRate != 0u) ? SEQREC_DELAY_OFF : (SEQREC_DELAY_24K / 4);
+        // §58.1 - the record part's bank: 0x7FFFFF where it runs at audio rate, 0x10CC at control rate
+        cfg->recordDelay = (module->upRate != 0u) ? SEQREC_DELAY_OFF : SEQREC_DELAY_24K;
     } else {
         cfg->gate[0] = (uint8_t)(module->param[variation][34].value != 0);
         cfg->gate[1] = (uint8_t)(module->param[variation][35].value != 0);
@@ -9287,9 +9364,76 @@ static const tEnvSegment * env_stage_modulated(const tEngineNode * spec, const t
     return scratch;
 }
 
+static int32_t sat24(int64_t value) {
+    return (int32_t)((value > ENV_TOP) ? ENV_TOP : ((value < -0x800000) ? -0x800000 : value));
+}
+
+// §17.11 - EnvMulti, one tick in the instrument's words. state: the segment's progress, the level it
+// started from, the segment last ticked (+1, 0 for none) and the gate last seen.
+static double envmulti_step(uint32_t voice, uint32_t node, const tEngineNode * spec, bool gate) {
+    SE_LOCAL;
+
+    if (gEnvTick[voice][node] <= 0.0) {
+        double * state  = gLadder[voice][node];
+        int32_t  level  = gEnvQ[voice][node];
+        uint32_t seg    = gEnvStage[voice][node];
+        bool     was    = (state[3] != 0.0);
+        bool     retrig = (spec->envKeyGate == true) && (gEnvTrigger[voice][node] != gVoice[voice].trigger);
+
+        gEnvTick[voice][node] += 1.0;
+
+        if ((gate == true) && ((was == false) || (retrig == true))) {
+            seg                      = 0u;
+            gEnvTrigger[voice][node] = gVoice[voice].trigger;
+
+            if (spec->envReset == true) {
+                level = spec->envStage[ENVMULTI_SEGMENTS - 1u].target;    // Reset restarts from L4
+            }
+        } else if ((gate == false) && (was == true) && (spec->envSustainStage >= 0)) {
+            seg = (uint32_t)spec->envSustainStage + 1u;    // a release starts the segment after the held one
+        }
+        state[3]               = (gate == true) ? 1.0 : 0.0;
+
+        if (seg < ENVMULTI_SEGMENTS) {
+            const tEnvSegment * s        = &spec->envStage[seg];
+            bool                entered  = (state[2] != (double)(seg + 1u));
+
+            if (entered == true) {
+                state[0] = 0.0;
+                state[1] = (double)level;
+                state[2] = (double)(seg + 1u);
+            }
+            int64_t             progress = (int64_t)s->add + ((2 * (int64_t)s->half * (int64_t)state[0]) >> 23);
+            int32_t             p        = sat24(progress);
+            int32_t             start    = (int32_t)state[1];
+            int32_t             delta    = sat24((int64_t)s->target - start);
+
+            if (((uint32_t)spec->wave == (uint32_t)eEnvShapeLinLin) || (delta >= 0)) {
+                level = sat24(start + (((int64_t)p * delta) >> 23));
+            } else {
+                level = sat24(s->target + (((int64_t)s->decay * ((int64_t)level - s->target)) >> 23));
+            }
+            state[0] = (double)p;
+
+            if ((progress != p) && (s->sustain == 0u)) {
+                seg++;    // the segment's time is up: the next starts on the next tick
+            }
+        }
+        gEnvQ[voice][node]     = level;
+        gEnvStage[voice][node] = seg;
+        gEnvLevel[voice][node] = (double)level / ENV_FULL_SCALE_STEPS;
+    }
+    gEnvTick[voice][node] -= ENV_TICK_HZ / gSampleRate;
+    return gEnvLevel[voice][node];
+}
+
 static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * spec, bool gate,
                             double value[][NODE_OUTPUTS]) {
     SE_LOCAL;
+
+    if (spec->envMulti == true) {
+        return envmulti_step(voice, node, spec, gate);
+    }
 
     // §17.3 - the segments step at the envelope tick, and the level holds between ticks.
     if (gEnvTick[voice][node] <= 0.0) {
@@ -9894,11 +10038,12 @@ static double fltstatic_step(double * state, double input, double tuning, double
     }
 }
 
-// Four-point Lagrange read, `delay` samples back from the next write (so at least 2).
+// §13.4 - the instrument's four-point Lagrange read, `delay` samples back from the next write (so at least
+// 2), its fraction taken to 1/512 as its coefficient table is
 static double comb_read(const float * line, uint32_t write, double delay) {
     const uint32_t mask  = COMB_LINE_SAMPLES - 1u;
     double         whole = floor(delay);
-    double         t     = delay - whole;
+    double         t     = floor((delay - whole) * COMB_FRACTION_STEPS) / COMB_FRACTION_STEPS;
     uint32_t       base  = (write - (uint32_t)whole) & mask;
     double         ym1   = line[(base + 1u) & mask];
     double         y0    = line[base];
@@ -9911,29 +10056,36 @@ static double comb_read(const float * line, uint32_t write, double delay) {
     return (((c3 * t) + c2) * t + c1) * t + y0;
 }
 
-// §13 - one section, k (1 + b z^-D) / (1 - c z^-D), in direct form II around one line per voice.
+static double dsp_saturate(double value) {
+    return fmin(fmax(value, -DSP_FULL_SCALE), DSP_FULL_SCALE);
+}
+
+// §13.4 - the instrument's comb: the line takes half the levelled input plus c x the last tap, and the
+// output is twice b x that input plus the tap, every word saturated.
 static double fltcomb_step(uint32_t voice, const tEngineNode * spec, double input, double pitchVar, double pitchDirect,
                            double voicePitch, double cutoffParam, double fbModInput) {
     SE_LOCAL;
 
-    const tCombShape * shape   = flt_comb_shape(spec->combType);
-    float *            line    = gCombLine[voice][spec->line];
-    uint32_t *         write   = &gCombWrite[voice][spec->line];
-    double             control = cutoffParam + ((pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES);
+    const tCombShape * shape    = flt_comb_shape(spec->combType);
+    float *            line     = gCombLine[voice][spec->line];
+    uint32_t *         write    = &gCombWrite[voice][spec->line];
+    double *           fb       = &gCombFb[voice][spec->line];
+    double             control  = cutoffParam + ((pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES);
 
     if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
         control += (voicePitch - KBT_REFERENCE_NOTE) * spec->fltKbt;
     }
     control      = fmin(fmax(control, FLT_CONTROL_MIN), FLT_CONTROL_MAX);
 
-    double             delay   = flt_comb_delay_samples(control, shape, gSampleRate);
-    double             g       = fmin(fmax(spec->combFeedback + (spec->combFbMod * fbModInput), -1.0), 1.0);
-    double             delayed = comb_read(line, *write, fmin(fmax(delay, 2.0), (double)(COMB_LINE_SAMPLES - 3)));
-    double             fed     = (input * spec->combLevel) + (shape->feedback * g * delayed);
+    double             delay    = flt_comb_delay_samples(control, shape, gSampleRate);
+    double             g        = fmin(fmax(spec->combFeedback + (COMB_FB_MOD_GAIN * spec->combFbMod * fbModInput), -1.0), 1.0);
+    double             levelled = dsp_saturate(0.5 * spec->combLevel * input);
+    double             tap      = comb_read(line, *write, fmin(fmax(delay, 2.0), (double)(COMB_LINE_SAMPLES - 3)));
 
-    line[*write] = (float)fed;
+    line[*write] = (float)dsp_saturate(levelled + *fb);
     *write       = (*write + 1u) & (COMB_LINE_SAMPLES - 1u);
-    return pow(10.0, (shape->gainDbPerG2 * g * g) / 20.0) * (fed + (shape->feedForward * g * delayed));
+    *fb          = dsp_saturate(dsp_saturate(shape->feedback * g) * tap);
+    return dsp_saturate(2.0 * ((dsp_saturate(shape->feedForward * g) * levelled) + tap));
 }
 
 static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input, double mod, double pitchDirect, double voicePitch,
@@ -10348,16 +10500,53 @@ static double saturate_unit(double x) {
 // state: 0 the one-pole, 1 the folded value, 2 and 3 the glide's velocity and position.
 // §47 - one draw of the random parts' generator: the LCG, the one-pole towards the scaled draw, and the
 // value it folds to, into state[0] (the one-pole) and state[1] (the value)
-static void random_draw(double state[2], uint32_t * seed, const tEngineNode * spec) {
+static void random_draw_with(double state[2], uint32_t * seed, double step, double scale, bool shiftReg) {
     double r = 0.0;
     double b = 0.0;
 
-    *seed     = ((*seed * 0xB2D9Du) + 0x361963u) & 0xFFFFFFu;
+    if (shiftReg == true) {
+        // §70.9 - Rnd2: a 24-bit shift register, the bit falling off the top fed back through the taps
+        uint32_t shifted = *seed << 1;
+
+        *seed = (shifted & 0xFFFFFFu) ^ (((shifted & 0x1000000u) != 0u) ? RND_SHIFT_TAPS : 0u);
+    } else {
+        *seed = ((*seed * 0xB2D9Du) + 0x361963u) & 0xFFFFFFu;
+    }
     r         = (double)((int32_t)(*seed << 8) >> 8) / 8388608.0;
-    state[0] += spec->rndStep * ((r * spec->rndScale) - state[0]);
+    state[0] += step * ((r * scale) - state[0]);
     b         = fmax(-256.0, fmin(256.0, state[0] * 8192.0));
     b         = (b >= 1.0) ? (2.0 - b) : ((b < -1.0) ? (-2.0 - b) : b);
     state[1]  = saturate_unit(b);
+}
+
+static void random_draw(double state[2], uint32_t * seed, const tEngineNode * spec) {
+    random_draw_with(state, seed, spec->rndStep, spec->rndScale, spec->rndShiftReg);
+}
+
+// §70.9 - RndClkB's Step M part: from the step word s, the one-pole's word q = s^2 + 0x200 and the draw's
+// pre-scale, the part's own approximation to 1/sqrt(q) - a linear seed on the mantissa, its exponent halved
+static void rnd_step_words(int32_t s, double * step, double * scale) {
+    int64_t square = (int64_t)s * s;
+    int64_t top    = (square >> 23) + 0x200;
+    int64_t full   = (top > 0x7FFFFF) ? ((int64_t)0x7FFFFF << 23) : ((top << 23) | (square & 0x7FFFFF));
+    int     e      = 0;
+
+    while (((full >> 23) < 0x400000) && (full != 0)) {
+        full <<= 1;
+        e--;
+    }
+    int32_t m      = (int32_t)(full >> 23);
+
+    if ((e & 1) != 0) {
+        m >>= 1;
+        e++;
+    }
+    int64_t r      = ((int64_t)RNDSTEP_SEED_OFFSET << 23) + ((int64_t)m * RNDSTEP_SEED_SLOPE);
+    int     shift  = (e >> 1) + RNDSTEP_SHIFT;
+
+    r      = (shift >= 0) ? (r >> shift) : (r << -shift);
+    *step  = (double)((top > 0x7FFFFF) ? 0x7FFFFF : top) / 8388608.0;
+    *scale = (double)((r >> 23) > 0x7FFFFF ? 0x7FFFFF : (r >> 23)) / 8388608.0;
 }
 
 // §47 - Bip, Pos or Neg
@@ -10390,7 +10579,8 @@ static double random_a_step(double state[4], uint32_t * seed, double * phase, co
 
 // §64 - RndClkA: a draw on each rising clock edge, with no glide. Rst reloads the generator from Seed
 // and clears the one-pole. state: gLadder 0-1 as random_draw(); gPulseCount says it has started.
-static double rnd_clk_a_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double clock, double rst, double seedIn) {
+static double rnd_clk_a_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double clock, double rst, double seedIn,
+                             const double * stepModIn) {
     SE_LOCAL;
 
     double * st   = gLadder[voice][n];
@@ -10412,7 +10602,18 @@ static double rnd_clk_a_step(uint32_t voice, uint32_t n, const tEngineNode * spe
     }
 
     if (clk && ((prev & LOGIC_PREV_CLOCK) == 0u)) {
-        random_draw(st, &gNoiseSeed[voice][n], spec);
+        if (stepModIn != NULL) {
+            // §70.9 - Step + 4 x input x Step M, held to 0..full, through the part's own words
+            int64_t s = (int64_t)spec->rndStepWord
+                        + (((int64_t)seq_sat(llround(*stepModIn * DSP_WORD_PER_ENGINE)) * (int64_t)spec->rndStepModWord) >> 21);
+            double  step;
+            double  scale;
+
+            rnd_step_words((int32_t)((s < 0) ? 0 : ((s > 0x7FFFFF) ? 0x7FFFFF : s)), &step, &scale);
+            random_draw_with(st, &gNoiseSeed[voice][n], step, scale, spec->rndShiftReg);
+        } else {
+            random_draw(st, &gNoiseSeed[voice][n], spec);
+        }
     }
     gLogicPrev[voice][n] = (uint8_t)((clk ? LOGIC_PREV_CLOCK : 0u) | (res ? LOGIC_PREV_DATA : 0u));
     return (spec->active == true) ? random_level_shift(spec, st[1]) : 0.0;
@@ -10596,11 +10797,7 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
         }
         case moduleTypeNoiseGate:
         {
-            // §70.6 - Threshold, Attack and Release as their displays print them
-            bx[0]        = pow(10.0, param_display_number(module->type, 0, module->param[variation][0].value) / 20.0);
-            bx[1]        = fmax(1.0e-5, param_display_number(module->type, 1, module->param[variation][1].value));
-            bx[2]        = fmax(1.0e-5, param_display_number(module->type, 2, module->param[variation][2].value));
-            node->active = (module->param[variation][3].value != 0);
+            noise_gate_build(node, module, variation);   // §70.6
             break;
         }
         case moduleTypePitchTrack:
@@ -10625,40 +10822,50 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
         }
         case moduleTypeRndPattern:
         {
-            // §70.9 - PatA 0, PatB 1, Step 2, Loop 3 ((v + 1) x 8 steps), StepM 4, OutType 5, on 6; Wave a mode
-            int32_t v    = (int32_t)param_value(module, variation, 2);
-            double  word = (v >= 127) ? 8388607.0 : fmin(8388607.0, (512.0 * v * v) + 512.0);
+            // §70.9 - Pattern 0, Bank 1, Step 2, Loop 3, Step M 4, OutType 5, on 6; Wave a mode (Val, State)
+            int32_t v       = (int32_t)param_value(module, variation, 2);
+            double  word    = (v >= 127) ? 8388607.0 : fmin(8388607.0, (512.0 * v * v) + 512.0);
+            int32_t pattern = (int32_t)param_value(module, variation, 0);
+            int32_t bank    = (int32_t)param_value(module, variation, 1);
+            int32_t stepM   = (int32_t)param_value(module, variation, 4);
 
             node->rndStep  = word / 8388608.0;
             node->rndScale = floor(fmin(sqrt(8388608.0 / word), 8192.0) * 2048.0) / 8388608.0;
             node->polarity = (uint32_t)module->param[variation][5].value;
             node->active   = (module->param[variation][6].value != 0);
-            bx[0]          = param_value(module, variation, 0);
-            bx[1]          = param_value(module, variation, 1);
-            bx[2]          = 8.0 * ((double)module->param[variation][3].value + 1.0);
+            bx[0]          = (pattern >= 127) ? 0x200000 : ((pattern - 64) * 0x8000);      // its X0
+            bx[1]          = (bank >= 127) ? 0x4000 : ((bank - 64) * 0x100);               // its Y0
+            bx[2]          = -(double)module->param[variation][3].value;                   // Y1: the loop starts at -Loop
             bx[3]          = (double)module->mode[0].value;
+            bx[4]          = (v >= 127) ? 0x7FFFFF : ((v - 64) * 0x20000);                 // State's threshold
+            bx[5]          = (stepM >= 127) ? 0x7FFFFF : (stepM << 16);
             break;
         }
         case moduleTypeSeqCtr:
         {
-            // §70.10 - steps 0-15 (SeqVal's law), events 16-31 as a bit mask, T/G 32, Pol 33, XFade 34
-            bool bipolar = (module->param[variation][33].value == 0);
-
+            // §70.10 - steps 0-15 as words (v x 2^14), events 16-31 as a bit mask, Pulse 32, Pol 33, XFade 34
             node->select = 0u;
 
             for (uint32_t k = 0; k < 16u; k++) {
-                double v = param_value(module, variation, k);
+                int32_t v = (int32_t)param_value(module, variation, k);
 
-                bx[k]         = bipolar ? ((v >= 127.0) ? 1.0 : ((v - 64.0) / 64.0)) : ((v >= 127.0) ? 1.0 : (v / 128.0));
+                bx[k]         = (v >= 127) ? 0x200000 : (v << 14);
                 node->select |= (module->param[variation][16u + k].value != 0) ? (1u << k) : 0u;
             }
 
-            bx[16]       = 0.25 * (double)((module->param[variation][34].value < 3u) ? module->param[variation][34].value : 4u);
+            bx[16]       = (double)module->param[variation][34].value;            // XFade 0-3
+            bx[17]       = (module->param[variation][33].value == 0) ? 1.0 : 0.0; // Pol: bipolar
+            bx[18]       = (module->param[variation][32].value != 0) ? 1.0 : 0.0; // Pulse 1: a gate
+            bx[19]       = (module->upRate == 0u) ? 1.0 : 0.0;                    // §58 - not up-rated: 24 kHz
             break;
         }
         case moduleTypeMux8to1X:
         {
-            bx[0] = param_value(module, variation, 0) / 127.0;   // §70.11 - X-fade: the share of a step spent fading
+            // §70.11 - the gain at an input and its fall per unit of distance, from X-Fade's words
+            int32_t d = (0x7fff - (int32_t)(param_value(module, variation, 0) * 256.0)) >> 1;
+
+            bx[0] = (512.0 * (double)((8 * d) + 0x4000)) / 8388608.0;
+            bx[1] = (2.0 * 56.0 * (double)((8 * d) + 0x2000)) / 8388608.0;
             break;
         }
         case moduleTypeLevScaler:
@@ -10832,20 +11039,77 @@ static void string_step(uint32_t voice, uint32_t n, const tEngineNode * spec, do
     out[1]                 = ring_read(ring, STRING_SAMPLES, write, 1.0 + (spec->bx[2] * period));
 }
 
-// §70.6 - NoiseGate: a peak follower (instant rise, Release fall) opens the gain towards 1 at the
-// Attack rate while above the threshold and closes it at the Release rate below. state: 0 envelope, 1 gain.
-static void noise_gate_step(double state[2], const tEngineNode * spec, double input, double out[2]) {
+// §70.6 - NoiseGate: a two-stage peak follower in the part's own words opens a gate above Threshold and
+// closes it below three quarters of it (the gate is held open when the module is switched off); the gate
+// runs an attack-hold-release envelope (§17.3's arithmetic, its own times), and Out is In x that.
+// state: 0-1 the follower's two stages, 2 the gate, as words.
+static void noise_gate_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double input, double value[][NODE_OUTPUTS],
+                            double out[2]) {
     SE_LOCAL;
 
-    double mag  = fabs(input);
-    double rel  = exp(-1.0 / (spec->bx[2] * gSampleRate));
-    double atk  = exp(-1.0 / (spec->bx[1] * gSampleRate));
-    double open = (state[0] > spec->bx[0]) ? 1.0 : 0.0;
+    double * st   = gLadder[voice][n];
+    int64_t  in   = llabs((int64_t)seq_sat(llround(input * DSP_WORD_PER_ENGINE)));
+    int64_t  y0   = (int64_t)st[0];
+    int64_t  y1   = (int64_t)st[1];
+    int64_t  diff = in - y0;
+    int64_t  acc  = (y0 << 23) + ((diff > 0) ? ((int64_t)seq_sat(diff) << 23)
+                                              : ((diff < 0) ? ((int64_t)NOISEGATE_FALL1 * seq_sat(diff)) : 0));
+    int64_t  hi   = acc >> 23;
 
-    state[0] = (mag > state[0]) ? mag : (state[0] * rel);
-    state[1] = open + ((state[1] - open) * ((open > state[1]) ? atk : rel));
-    out[0]   = (spec->active == true) ? (input * state[1]) : input;
-    out[1]   = state[0];
+    st[0]  = (double)seq_sat(hi);
+    diff   = hi - y1;
+
+    int64_t  acc2 = (y1 << 23) + (((diff > 0) || ((diff == 0) && ((acc & 0x7FFFFF) != 0)))
+                                   ? ((int64_t)NOISEGATE_RISE2 * seq_sat(diff))
+                                   : ((diff < 0) ? ((int64_t)NOISEGATE_FALL2 * seq_sat(diff)) : 0));
+    int64_t  hi2  = acc2 >> 23;
+    double   gate = st[2];
+
+    st[1]  = (double)seq_sat(hi2);
+
+    if (hi2 < (int64_t)spec->bx[1]) {
+        gate = 0.0;    // below three quarters of the threshold: shut
+    }
+
+    if ((spec->active == false) || (acc2 > ((int64_t)spec->bx[0] << 23))) {
+        gate = (double)NOISEGATE_OPEN;
+    }
+    st[2]  = gate;
+
+    double   env  = envelope_step(voice, n, spec, gate > 0.0, value);
+
+    out[0] = input * env;
+    out[1] = env;
+}
+
+static void noise_gate_build(tEngineNode * node, tModule * module, uint32_t variation) {
+    int32_t       thr   = (int32_t)param_value(module, variation, 0);
+    double        atk   = param_value(module, variation, 1);
+    double        rel   = param_value(module, variation, 2);
+    double        relX  = (rel <= 0.0) ? NOISEGATE_REL_SHORTEST : pow((rel + NOISEGATE_REL_OFFSET) / (127.0 + NOISEGATE_REL_OFFSET), 5.0);
+    tEnvSegment * stage = node->envStage;
+    int32_t       word  = (thr >= 127) ? 0x200000 : (thr << 14);
+
+    node->bx[0]           = (double)word;                        // its Y2: open above
+    node->bx[1]           = (double)((word >> 1) + (word >> 2)); // its X3: shut below
+    node->active          = (module->param[variation][3].value != 0);
+    memset(stage, 0, 3u * sizeof(*stage));
+    env_stage_rates(&stage[0], NOISEGATE_ATK_SHORTEST * pow(1.0 + (19.0 * atk / 127.0), 2.0), (uint32_t)eEnvShapeLogExp, true);
+    stage[0].rising       = 1u;
+    stage[0].target       = ENV_TOP;
+    stage[1].sustain      = 1u;
+    stage[1].target       = ENV_TOP;
+    stage[1].half         = ENV_HALF_UNITY;
+    env_stage_rates(&stage[2], relX, (uint32_t)eEnvShapeLogExp, false);
+
+    for (uint32_t k = 0; k < 3u; k++) {
+        stage[k].modLeg = -1;
+    }
+
+    node->envStageCount   = 3u;
+    node->envSustainStage = 1;
+    node->wave            = (tOscWave)eEnvShapeLogExp;
+    node->envOutType      = 0u;
 }
 
 #define PITCH_TRACK_ZERO_HZ    (82.4068892)   // §70.7 - the counter's 0 units is E2
@@ -10973,78 +11237,148 @@ static double vocoder_step(uint32_t voice, const tEngineNode * spec, double ctrl
 static void random_draw(double state[2], uint32_t * seed, const tEngineNode * spec);
 static double random_level_shift(const tEngineNode * spec, double value);
 
-// §70.9 - RndPattern: on each rising Clk a draw from the random generator; every Loop steps (and on
-// Rst) the generator is reseeded from PatA and PatB (plus their inputs), so the pattern repeats. Wave
-// (mode 0) 1 passes the clock as +-64 units by the draw's sign, as RndTrig. state: gLadder 0-1 the draw,
-// 2 the step count.
-static double rnd_pattern_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double clock, double rst, double aIn,
-                               double bIn) {
+// §70.9 - RndPattern, its loop part then Val's generator or State's gate, in the parts' words. The loop
+// part reseeds the generator from Pattern, Bank and the two Seed inputs on a rising Rst (unpatched it
+// reads high) or once its counter, restarted at -Loop, has counted past zero; each rising Clk counts and
+// draws. state: 0-1 as random_draw(), 2 the counter, 3 Clk and 4 Rst as last read, 5 State's level, 6 started.
+static double rnd_pattern_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double clock, double rst,
+                               double seedIn, double seedFineIn, double probIn) {
     SE_LOCAL;
 
-    double * st  = gLadder[voice][n];
-    bool     clk = (clock > 0.0);
-    bool     res = (rst > 0.0);
+    double * st    = gLadder[voice][n];
+    int32_t  clkW  = seq_sat(llround(clock * DSP_WORD_PER_ENGINE));
+    int32_t  rstW  = (spec->in[1] >= 0) ? seq_sat(llround(rst * DSP_WORD_PER_ENGINE)) : 0x200000;
+    bool     rstUp = (rstW > 0) && (st[4] <= 0.0);
+    bool     clkUp = (clkW > 0) && (st[3] <= 0.0);
+    bool     state = (spec->bx[3] != 0.0);
 
-    if (res && ((gLogicPrev[voice][n] & LOGIC_PREV_DATA) == 0u)) {
-        st[2] = 0.0;
+    st[4] = (double)rstW;
+    st[3] = (double)clkW;
+
+    if (st[6] == 0.0) {
+        st[6] = 1.0;
+        st[5] = RNDSTATE_START_LEVEL;    // State's level word before its first tick
     }
 
-    if (clk && ((gLogicPrev[voice][n] & LOGIC_PREV_CLOCK) == 0u)) {
-        if (st[2] <= 0.0) {
-            double a = fmin(127.0, fmax(0.0, spec->bx[0] + (aIn * UNITS_PER_FULL_SCALE)));
-            double b = fmin(127.0, fmax(0.0, spec->bx[1] + (bIn * UNITS_PER_FULL_SCALE)));
+    if (rstUp || (st[2] > 0.0)) {
+        int64_t seed = (int64_t)spec->bx[1] + (int64_t)spec->bx[0]
+                       + (seq_sat(llround(seedFineIn * DSP_WORD_PER_ENGINE)) >> 7) + seq_sat(llround(seedIn * DSP_WORD_PER_ENGINE));
 
-            gNoiseSeed[voice][n] = ((uint32_t)a * 128u + (uint32_t)b) * 0x9E37u & 0xFFFFFFu;
-            st[0]                = 0.0;
+        gNoiseSeed[voice][n] = (uint32_t)seq_sat(seed) & 0xFFFFFFu;
+        st[0]                = 0.0;
+        st[2]                = spec->bx[2];
+    }
+
+    if (clkUp) {
+        st[2] = fmin(st[2] + 1.0, 8388607.0);
+
+        if (state == false) {
+            random_draw(st, &gNoiseSeed[voice][n], spec);
+        } else {
+            int64_t thr = (int64_t)spec->bx[4]
+                          + (((int64_t)seq_sat(llround(probIn * DSP_WORD_PER_ENGINE)) * (int64_t)spec->bx[5]) >> 20);
+
+            gNoiseSeed[voice][n] = ((gNoiseSeed[voice][n] * 0xB2D9Du) + 0x361963u) & 0xFFFFFFu;
+
+            if ((int64_t)((int32_t)(gNoiseSeed[voice][n] << 8) >> 8) <= (int64_t)seq_sat(thr)) {
+                st[5] = 1.0;
+            }
         }
-        random_draw(st, &gNoiseSeed[voice][n], spec);
-        st[2] = fmod(st[2] + 1.0, spec->bx[2]);
     }
-    gLogicPrev[voice][n] = (uint8_t)((clk ? LOGIC_PREV_CLOCK : 0u) | (res ? LOGIC_PREV_DATA : 0u));
+
+    if (state && (clkW <= 0)) {
+        st[5] = -1.0;    // State is low while the clock is
+    }
 
     if (spec->active == false) {
         return 0.0;
     }
-
-    if (spec->bx[3] != 0.0) {
-        return clk ? ((st[1] >= 0.0) ? 1.0 : -1.0) : 0.0;
-    }
-    return random_level_shift(spec, st[1]);
+    return random_level_shift(spec, state ? st[5] : st[1]);
 }
 
-// §70.10 - SeqCtr: Ctrl's units / 4 pick the step (0 to 16 of them over 0-64 units); the last XFade share
-// of each step fades linearly into the next. Val adds the Val input; Trig is high while on a step whose
-// event is set, or while the Trig input is.
-static void seq_ctr_step(const tEngineNode * spec, double ctrl, double valIn, double trigIn, double out[2]) {
-    double   pos  = fmin(fmax(ctrl * UNITS_PER_FULL_SCALE / 4.0, 0.0), 15.999);
-    uint32_t step = (uint32_t)pos;
-    double   frac = pos - (double)step;
-    double   x    = spec->bx[16];
-    double   val  = spec->bx[step];
+// §70.10 - SeqCtr, its own program in its own words. Ctrl / 4 units picks the step, and Ctrl at or above 64
+// units or below 0 picks a rest pair; within a step, w = (1 - the position) x the X-Fade scale, saturated,
+// weighs the step against the next (step 16's next is step 1). Trig carries the step's event: as a gate, or
+// for four ticks after the step word changes - which, the part's own test, is whenever Ctrl's low 16 bits
+// are not zero. Not up-rated, the part ticks at 24 kHz and its outputs hold between (§58). state: 0 the step
+// index as last stored, 1 the trig counter, 2 the time to the next tick, 3-4 the held outputs.
+static int64_t seq_ctr_limit(int64_t acc) {
+    int64_t top = acc >> 47;
 
-    if ((x > 0.0) && (step < 15u) && (frac > (1.0 - x))) {
-        double t = (frac - (1.0 - x)) / x;
-
-        val += (spec->bx[step + 1u] - val) * t;
-    }
-    out[0] = val + valIn;
-    out[1] = logic_level((((spec->select >> step) & 1u) != 0u) || (trigIn > 0.0));
+    return ((top == 0) || (top == -1)) ? (acc >> 24) : ((acc < 0) ? -0x800000 : 0x7FFFFF);
 }
 
-// §70.11 - Mux8-1X: Mux8-1's step (§68.3) as a continuous position; the last X-fade share of each
-// step fades into the next input
+static void seq_ctr_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double ctrl, double valIn, double trigIn,
+                         double out[2]) {
+    SE_LOCAL;
+
+    double * st    = gLadder[voice][n];
+
+    if (spec->bx[19] != 0.0) {
+        if (st[2] > 0.0) {
+            st[2] -= SEQ_CONTROL_TICK_HZ / gSampleRate;
+            out[0] = st[3];
+            out[1] = st[4];
+            return;
+        }
+        st[2] += 1.0 - (SEQ_CONTROL_TICK_HZ / gSampleRate);
+    }
+    int32_t  c     = seq_sat(llround(ctrl * DSP_WORD_PER_ENGINE));
+    int32_t  field = c & 0x1FFFF;
+    int32_t  a1    = ((c >= 0x200000) || (c < 0)) ? SEQCTR_REST_WORD : c;
+    int32_t  index = (a1 >> 16) & ~1;
+    bool     moved = ((double)index != st[0]) || ((a1 & 0xFFFF) != 0);
+    int64_t  one   = (int64_t)1 << 47;
+    int64_t  w     = ((int64_t)1 << 23) - ((int64_t)field << 6);     // 1 - the position, Q23
+    int32_t  shift = (int32_t)spec->bx[16];
+    int32_t  vk    = 0;
+    int32_t  vNext = 0;
+    int32_t  event = 0;
+
+    st[0]  = (double)index;
+    st[1]  = (moved ? SEQCTR_TRIG_TICKS : st[1]) - 1.0;
+
+    if (index < 32) {
+        vk    = (int32_t)spec->bx[index >> 1];
+        vNext = (int32_t)spec->bx[((index >> 1) + 1) & 15];
+        event = (((spec->select >> (index >> 1)) & 1u) != 0u) ? 0x200000 : 0;
+    } else {
+        vk    = (spec->bx[17] != 0.0) ? SEQCTR_BIPOLAR_CENTRE : 0;    // the rest pair
+        vNext = vk;
+    }
+    w      = (shift == 0) ? 0x7FFFFF : ((shift == 1) ? (w << 2) : ((shift == 2) ? (w << 1) : w));
+    w      = (w > 0x7FFFFF) ? 0x7FFFFF : w;
+
+    int64_t  acc   = (((int64_t)vk * w) + ((int64_t)vNext * (((int64_t)1 << 23) - w))) << 1;
+
+    if (spec->bx[17] != 0.0) {
+        acc = (acc - ((int64_t)SEQCTR_BIPOLAR_CENTRE << 24)) << 1;
+    }
+    acc   += (int64_t)seq_sat(llround(valIn * DSP_WORD_PER_ENGINE)) << 24;
+    out[0] = (double)seq_ctr_limit(acc) / DSP_WORD_PER_ENGINE;
+
+    int64_t  trig  = ((spec->bx[18] != 0.0) || (st[1] >= 0.0)) ? ((int64_t)event << 24) : 0;
+
+    trig  += (int64_t)seq_sat(llround(trigIn * DSP_WORD_PER_ENGINE)) << 24;
+    out[1] = (double)seq_ctr_limit(trig) / DSP_WORD_PER_ENGINE;
+    st[3]  = out[0];
+    st[4]  = out[1];
+    (void)one;
+}
+
+// §70.11 - Mux8-1X: input k sits at Ctrl = 9k units (Ctrl held to 0..63), and takes a gain that falls
+// linearly with Ctrl's distance from it, saturated to 0..1
 static double mux8x_step(const tEngineNode * spec, double ctrl, const double in[8]) {
-    double   pos  = fmin(fmax(ctrl * UNITS_PER_FULL_SCALE / 4.0, 0.0), 7.0);
-    uint32_t k    = (uint32_t)pos;
-    double   frac = pos - (double)k;
-    double   x    = spec->bx[0];
+    double c   = fmin(fmax(ctrl * UNITS_PER_FULL_SCALE, 0.0), MUX8X_CTRL_MAX);
+    double sum = 0.0;
 
-    if ((k >= 7u) || (x <= 0.0) || (frac <= (1.0 - x))) {
-        return in[(k > 7u) ? 7u : k];
+    for (uint32_t k = 0; k < 8u; k++) {
+        double gain = spec->bx[0] - (spec->bx[1] * fabs(c - (MUX8X_SPACING * (double)k)));
+
+        sum += fmin(fmax(gain, 0.0), 1.0) * in[k];
     }
-    double   t    = (frac - (1.0 - x)) / x;
 
-    return in[k] + ((in[k + 1u] - in[k]) * t);
+    return fmin(fmax(sum, -DSP_FULL_SCALE), DSP_FULL_SCALE);
 }
 
 // §70.12 - LevScaler: dB = L x octaves below the breakpoint, or R x octaves above; Level is that gain
@@ -11375,6 +11709,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             double rate = lfo_rate_now(spec, a, signal_in(spec, value, 1), voicePitch);
 
+            // §28.4 - LfoShpA's Dir scales the counter's step: unpatched it reads 1, negative runs backwards
+            if ((spec->lfoShapeSlot >= 0) && (spec->in[LFOSHPA_IN_DIR] >= 0)) {
+                rate *= signal_in(spec, value, LFOSHPA_IN_DIR);
+            }
             gLfoMonoRate[n] = rate;
 
             if (spec->lfoHasReset == true) {
@@ -11768,7 +12106,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeNoiseGate:
         {
-            noise_gate_step(gLadder[voice][n], spec, a, value[n]);
+            noise_gate_step(voice, n, spec, a, value, value[n]);
             break;
         }
         case eNodePitchTrack:
@@ -11784,12 +12122,12 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeRndPattern:
         {
             value[n][0] = rnd_pattern_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2),
-                                           signal_in(spec, value, 3));
+                                           signal_in(spec, value, 3), signal_in(spec, value, 4));
             break;
         }
         case eNodeSeqCtr:
         {
-            seq_ctr_step(spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), value[n]);
+            seq_ctr_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), value[n]);
             break;
         }
         case eNodeMux8to1X:
@@ -11810,10 +12148,18 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeStatus:
         {
-            // §70.13 - Voice No. is 4 units a voice, so it picks SeqCtr's steps one per voice
+            // §70.13 - Var Active is low for one tick after the variation changes; Voice No. is 4
+            // units a voice (the index's low five bits), so it picks SeqCtr's steps one per voice
+            double * state = gLadder[voice][n];
+
+            if (state[0] != (double)spec->select) {
+                state[1] = (state[0] != 0.0) ? (gSampleRate / STATUS_TICK_HZ) : 0.0;
+                state[0] = (double)spec->select;
+            }
             value[n][0] = LOGIC_HIGH_LEVEL;
-            value[n][1] = LOGIC_HIGH_LEVEL;
-            value[n][2] = (spec->postMix == true) ? 0.0 : ((double)voice * 4.0 / UNITS_PER_FULL_SCALE);
+            value[n][1] = (state[1] > 0.0) ? 0.0 : LOGIC_HIGH_LEVEL;
+            state[1]   -= 1.0;
+            value[n][2] = (spec->postMix == true) ? 0.0 : ((double)(voice & 0x1fu) * 4.0 / UNITS_PER_FULL_SCALE);
             break;
         }
         case eNodeDevice:
@@ -11890,7 +12236,12 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeRndClkA:
         {
-            value[n][0] = rnd_clk_a_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2));
+            // §70.9 - RndClkB's Step M jack links in its Step M part; unpatched, B is A
+            double stepMod = signal_in(spec, value, RNDCLKB_IN_STEP_MOD);
+            bool   linked  = (spec->inCount > RNDCLKB_IN_STEP_MOD) && (spec->in[RNDCLKB_IN_STEP_MOD] >= 0);
+
+            value[n][0] = rnd_clk_a_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2),
+                                         linked ? &stepMod : NULL);
             break;
         }
         case eNodeRndTrig:
@@ -11960,16 +12311,32 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 int32_t            in[8];
                 int32_t            out[3];
                 const tSeqConfig * cfg = &paramsIn->seq[spec->line];
+                tSeqState *        st  = &gSeq[voice][spec->line];
 
-                for (uint32_t k = 0; k < 8u; k++) {
-                    in[k] = ((k < 6u) || (cfg->record != 0u)) ? seq_sat(llround(signal_in(spec, value, k) * DSP_WORD_PER_ENGINE)) : 0;
+                if (st->ready == false) {
+                    st->tick = 0.0;
+                    memset(st->held, 0, sizeof(st->held));
                 }
 
-                seq16_step(&gSeq[voice][spec->line], cfg, in, out);
+                // §58 - a control-rate part ticks at 24 kHz and its outputs hold between ticks
+                if ((cfg->controlRate != 0u) && (st->tick > 0.0)) {
+                    memcpy(out, st->held, sizeof(out));
+                } else {
+                    for (uint32_t k = 0; k < 8u; k++) {
+                        in[k] = ((k < 6u) || (cfg->record != 0u)) ? seq_sat(llround(signal_in(spec, value, k) * DSP_WORD_PER_ENGINE)) : 0;
+                    }
 
-                if (cfg->record != 0u) {
-                    out[1] = seqrec_step(&gSeq[voice][spec->line], cfg->recordDelay, out[1],
-                                         in[SEQ_IN_REC_VAL], in[SEQ_IN_REC_ENABLE]);
+                    seq16_step(st, cfg, in, out);
+
+                    if (cfg->record != 0u) {
+                        out[1] = seqrec_step(st, cfg->recordDelay, out[1], in[SEQ_IN_REC_VAL], in[SEQ_IN_REC_ENABLE]);
+                    }
+                    memcpy(st->held, out, sizeof(st->held));
+                    st->tick += 1.0;
+                }
+
+                if (cfg->controlRate != 0u) {
+                    st->tick -= SEQ_CONTROL_TICK_HZ / gSampleRate;
                 }
                 value[n][0] = out[0] / DSP_WORD_PER_ENGINE;
                 value[n][1] = out[1] / DSP_WORD_PER_ENGINE;

@@ -1224,9 +1224,9 @@ double eq_magnitude(const tEqBands * bands, double hz) {
 #define FLTCOMB_TUNING_SEMITONES    (9.0)    // §13.2 - the comb sits a major sixth below the dial
 
 static const tCombShape kCombShapes[] = {    // §13.4 - Notch, Peak, Deep
-    { 1.00, 0.00, 0.0,  0.00},
-    {-0.30, 0.90, 1.1,  2.45},
-    { 0.60, 0.85, 0.5, -4.10},
+    { 1.0, 0.0},
+    {-0.4, 0.9},
+    { 0.6, 0.9},
 };
 
 const tCombShape * flt_comb_shape(uint32_t type) {
@@ -1240,21 +1240,23 @@ double flt_comb_feedback(double fbParam) {
 double flt_comb_delay_samples(double control, const tCombShape * shape, double sampleRate) {
     double rateScale = sampleRate / FLTCOMB_REFERENCE_RATE;
 
-    return (sampleRate / flt_cutoff_hz(control - FLTCOMB_TUNING_SEMITONES)) - rateScale + (shape->extraDelay * rateScale);
+    (void)shape;    // §13.4 - every Type reads the same tap
+
+    return (sampleRate / flt_cutoff_hz(control - FLTCOMB_TUNING_SEMITONES)) - rateScale;
 }
 
-// k (1 + b.g.z^-D) / (1 - c.g.z^-D), at a frequency given in cycles per sample.
+// §13.4 - b.g + z^-D / (1 - c.g.z^-(D+1)), at a frequency given in cycles per sample
 double flt_comb_magnitude(const tCombShape * shape, double g, double delaySamples, double cyclesPerSample) {
-    double theta = 2.0 * M_PI * cyclesPerSample * delaySamples;
+    double theta = 2.0 * M_PI * cyclesPerSample;
     double b     = shape->feedForward * g;
     double c     = shape->feedback * g;
-    double numRe = 1.0 + (b * cos(theta));
-    double numIm = -b * sin(theta);
-    double denRe = 1.0 - (c * cos(theta));
-    double denIm = c * sin(theta);
-    double k     = pow(10.0, (shape->gainDbPerG2 * g * g) / 20.0);
+    double denRe = 1.0 - (c * cos(theta * (delaySamples + 1.0)));
+    double denIm = c * sin(theta * (delaySamples + 1.0));
+    double den   = fmax((denRe * denRe) + (denIm * denIm), 1e-12);
+    double tapRe = ((cos(theta * delaySamples) * denRe) - (sin(theta * delaySamples) * denIm)) / den;    // e^-jwD / den
+    double tapIm = ((-sin(theta * delaySamples) * denRe) - (cos(theta * delaySamples) * denIm)) / den;
 
-    return k * sqrt(((numRe * numRe) + (numIm * numIm)) / fmax((denRe * denRe) + (denIm * denIm), 1e-12));
+    return sqrt(((b + tapRe) * (b + tapRe)) + (tapIm * tapIm));
 }
 
 // notes §40
