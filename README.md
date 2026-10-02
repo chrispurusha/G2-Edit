@@ -4,9 +4,7 @@ A macOS GUI editor for the Nord G2 modular synthesizer. Work in progress.
 
 Binary beta releases: https://github.com/chrispurusha/G2-Edit/releases
 
-If anyone is interested in helping, please drop me a line.
-
-Since I'm now incurring costs (I recently started using LLMs) which would be good to at least cover, I now have a Buy Me a Coffee page:
+Since I'm now incurring costs (I recently started using LLMs) which it would be good to at least cover, I now have a Buy Me a Coffee page:
 
 https://buymeacoffee.com/chrispurusha
 
@@ -48,8 +46,7 @@ can be left open beside the patch while you try them.
 ### The VST3 plug-in (optional)
 
 `G2 Alike.vst3` **plays** a patch rather than editing one, which is where the name comes from. It is
-experimental: it implements around 17 module types, so many patches load without complaint and make
-no sound. The editor does not need it, and it does not need the editor — skip this if you only want
+experimental and in-progress. Many patches load without complaint. The editor does not need it, and it does not need the editor — skip this if you only want
 the editor.
 
 Copy it into your own VST3 folder and clear its quarantine flag too:
@@ -224,12 +221,6 @@ The plug-in has a **File** menu of its own, which opens a `.pch2` through the sa
 application uses — and since 2026-09-16 that is the only way a patch gets in. It starts **empty**,
 in all four slots, and loads nothing by itself.
 
-Reopening a host project does **not** bring the patch back. The project stores what the editor was
-showing — performance mode, selected slot, dial mode, drone mode and the per-slot Voice/FX divider —
-and names no file at all, so nothing is reloaded from disk behind your back. Storing the patch
-*itself* in the project, so that a reopened project sounds as it did, is the next piece of work;
-until then, open it again from the File menu.
-
 Watch for the sandbox trap: a host may deny the plug-in access to `~/Documents`, in which case a
 perfectly correct path still produces silence — and silence looks the same whatever caused it.
 
@@ -248,9 +239,7 @@ them to.
 
 ### What to expect
 
-The plug-in inherits exactly what the sound engine can do, which is a **subset** of the G2: around
-17 module types. A patch built from anything else will load without complaint and render silence.
-`PatchTestFiles/SimpleLead.pch2` is known to work.
+The plug-in inherits exactly what the sound engine can do. Not all modules are a good match as-is, but I'm progressively working on that. Performance mode not yet implemented.
 
 See [THIRD_PARTY.md](./THIRD_PARTY.md) for open-source acknowledgments.
 
