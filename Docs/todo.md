@@ -5,14 +5,18 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General
-- Saw a crash on "tParamType       paramType = paramLocationList[param->paramRef].type;" in param_click_handler(). Bad address access.
-- Possible inconsistency in the drum synth noise filter sweep on our engine. Although - I think the hardware is also inconsistent for noise filter sweep. May be deliberate. Check against references.
+-
+- Assess items in this todo list, which may have already been completed or partially completed and can therefore be removed to to-test. Some are definitely already addressed.
+- Finish last (roughly) 10 modules. If MIDI note send requires performance mode, defer to when we implement that.
+- 07 Unstable Lead (Bank 1 Loc 2) seems to be outputting a constant tone without a keyboard note. Also, mod wheel value change seems to be producing a zipper-like sound.
+- I saw a one-off crash on "tParamType       paramType = paramLocationList[param->paramRef].type;" in param_click_handler(). Bad address access. Worth a check for obvious issues.
 - Further investigation into voice stealing improvements.
-- Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works.
+- Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
+- Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works anyhow.
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
 - Make sure if we use bypass switch on a module, it no longer processes, to save CPU cycles.
+- CPU bandwidth optimisations.
 - Implement arpeggiator.
-- Assess items below, which may have already been completed or partially completed.
 - At a 176.4/192 kHz device the engine's noise is ~3 dB low (white drawn per graph sample, not per 96 kHz one) and DrumSynth's noise filter goes 3-20 dB dark (its Chamberlin retuned off 96 kHz) - findings 2026-09-27
 - Fireface loopback at 192 kHz (an output cabled to an input, sine sweep to 48 kHz) to confirm the G2 output droop is not partly the interface's (sound-engine-notes §199)
 - Plan a mode switch (button on the far right of the current menu bar) to a mode representing the G2 keyboard's front panel, and back again to editor mode.
@@ -31,14 +35,16 @@ General
 - LfoShpA: its per-waveform Phase offsets and the Dir input (§28.4)
 - OscShpB Pulse at Shape +-1: the residual one-sample click is -33 dB (+1) / -43 dB (-1) per harmonic in the engine, -41 dB at both on the G2 (§6.7)
 - `DELAY_LINE_SAMPLES` is sized 2.8 s at a 96 kHz graph, so at a 192 kHz device the longest Time is truncated to 1.4 s - pre-existing, and worse before the rate cap
+- Possible (not definite) inconsistency in the drum synth noise filter sweep on our engine. Although - I think the hardware is also inconsistent for noise filter sweep. May be deliberate. Check against references.
 
 USER REQUESTS (reported 2026-08-22; none blocking)
-- Adjustable scrolling and zoom sensitivity in synth settings - both are far too fast
+- Adjustable mouse wheel scrolling and zoom sensitivity in synth settings - both are too fast
 - Add a top-level Edit menu (Undo, Redo, Cut, Copy, Paste, Delete, Paste Params, Select All)
 - Yellow module-selection border is not obvious enough; try twice the line width and/or more prominent yellow
 - Open Recent for patches loaded from a bank
 - Move Delete Unused Cables out of the cable popup to a top-level menu
-- Local mode button: draw a wave across sequencer columns, ultimately as a wave-representation mode
+- Local mode button: draw a wave across sequencer columns, ultimately as a wave-representation mode. Allow wavetable (wav file) loading.
+- Plug-in only wavetable and sample playback modules.
 - Add performance keyboard split/layer/zone UI (manual: "Layering Patches")
 - Add a dedicated master-clock/tempo panel
 - Virtual keyboard velocity: two computer-keyboard keys to step it down/up, and matching -/+ buttons in the Virtual Keyboard panel (CT 2026-09-28). Engine only - the G2 plays the editor's notes at 127 whatever is sent (code-notes/virtualKeyboard.c.md §11), so show that when a G2 is connected
@@ -163,10 +169,7 @@ ARCHITECTURE AND SHARED CODE
 
 BUILD
 - Cross-platform build (Windows/Linux) - the render backend seam is in place, the rest is not
-
-
 - ModADSR/ModAHD: the ATTACK and SUSTAIN mod jacks, and all of ModAHD's, are implemented but unmeasured (reference §17.10) - only the decay is checked against the G2
-
 - Never measure an envelope or any other time constant THROUGH a resonant filter. Tracking a
   cutoff sweep with an 80 ms window on a filter at high Res said our ModADSR attack was 4x slow
   (40 ms against 160); measured directly through the module's own VCA on a sine the two agreed
@@ -179,14 +182,12 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
   gives a 1/16 duty, not the 10% the manual's "Sqr10" label promises, and the arithmetic looks like
   an off-by-a-bit begging to be 0.8. It is not: a hardware measurement (2026-08-24) and the
   instrument's own three constants (2026-09-20) independently give 0.875.
-
 - Measure performance on the ARTEFACT the owner is running, not on an offline harness. Every
   engine measurement here is built by hand at -O2, as the plug-in is, so they all agreed with the
   plug-in and all disagreed with the standalone the owner could hear breaking up - for a week of
   hypotheses (buffer size, the USB thread, App Nap, efficiency cores, headroom) before anyone ran
   the Debug build and read its own load figure. -O0 is roughly three times slower here. If a
   measurement and a person's ears disagree, reproduce on their build first (2026-09-19).
-
 - The engine's three per-node output-leg loops (the clear at the top of `eval_node()`, the voice sum,
   the mono fan-out) must keep iterating the CONSTANT `NODE_OUTPUTS`. Replacing it with the node's
   real leg count - 2 for almost every kind against the constant 6 - looks like a three-fold cut in
@@ -200,7 +201,6 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
   their targets is +0.6%, and caching `osc_frequency_hz()`'s exp2 per voice and node is +1.1% for
   2 MB of banked arrays. The profile is why - `eval_node`'s per-node switch is 77% of the engine,
   and no constant-factor trim touches it. See findings 2026-09-19.
-
 - The "sudden/random horizontal VA scroll" was the SIDE WHEEL on the owner's new mouse (CT,
   2026-09-19), not a trackpad momentum tail. Do not re-derive the trackpad theory from that symptom.
   The minor-axis filter written for it (SCROLL_AXIS_DOMINANCE, dropping whichever scroll axis was
@@ -208,7 +208,6 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
   filter passes straight through, so it never addressed the cause - and it would have cost a real
   diagonal trackpad gesture its minor axis. If horizontal drift is ever seen again on a machine with
   no horizontal scroll device, that is the point at which the trackpad theory becomes worth testing.
-
 - FT_LOAD_FORCE_AUTOHINT in the glyph rasteriser: tried and REJECTED. Crisper, but it changes glyph
   advances, and with canonical-advance positioning it renders "R andomA 1" / "554.4H z". Do not re-try
   without also making get_text_width() use the same hinted advances — which it cannot, as it never sees
@@ -291,4 +290,3 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play
 - Compressor: new §25 port needs an ear (to-test)
 - 03 Chris' Lead coverage left: OscShpB waves (above), native check of Mix4-1C/Mix4-1S, clock-synced DelayB uses a fixed 120 BPM
-
