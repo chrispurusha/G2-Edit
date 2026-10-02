@@ -3190,8 +3190,9 @@ end of a chain, but wrong for one inside a loop. 08 Ice Pad feeds its Voice-area
 voice's Mixer (Chorus -> LevAmp 42 -> Mixer 2-1 A -> Chorus), so every voice re-injected the SUM of all
 voices. A loop gain of about 0.7 for one voice became 0.7 x the voice count, ran away, and before §196
 turned the output to NaN (2026-09-27). A Chorus in the Voice area now has its own line per voice, at
-instance MAX_CHORUS_LINES + line x MAX_VOICES + voice; one in the FX area (post-mix) keeps a single
-instance. Each instance draws its own start phase (§19.2).
+instance MAX_CHORUS_FX_LINES + line x MAX_VOICES + voice; one in the FX area (post-mix) keeps a single
+instance. The two areas have their own pools (2026-10-02): eight FX-area choruses cost one buffer each, while a
+Voice-area one costs a buffer per voice, so that pool stays at two - a third Voice-area chorus passes dry. Each instance draws its own start phase (§19.2).
 
 An Out module saturates at twice that, +-8 units: the manual (p.35 area, "headroom") gives output
 modules an extra 6 dB of headroom per bus. Clipping them at +-4 hard-clipped chords the instrument

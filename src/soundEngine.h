@@ -99,6 +99,8 @@ bool sound_engine_set_morph(uint32_t group, double amount);
 // Pitch bend, -1..+1 across the wheel's travel. How many semitones that is comes from the patch's
 // own Bend setting, so the engine bends by the same amount the G2 would. Called from the MIDI thread.
 void sound_engine_pitch_bend(double bend);
+void sound_engine_midi_cc(uint32_t channel, uint32_t controller, uint32_t value, bool listened);           // §70.13
+void sound_engine_midi_note(uint32_t channel, uint32_t note, uint32_t velocity, bool on, bool listened);   // §70.13
 
 // notes §5
 // velocity: 1-127 with a note-on, the release velocity (0 when unknown) with a note-off.

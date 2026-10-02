@@ -63,7 +63,6 @@ static const tGroupRow kGroups[] = {
 
 // Audible, but something about the law is still a guess; to-test.md carries each check.
 static const tPartialRow kPartial[] = {
-    {"4 Inputs",          "silent (the jacks); a Bus source is not bridged (§69.12)"},
     {"Flanger",           "basic: a swept delay from the manual (§70.2)"},
     {"PShift",            "basic: two crossfaded taps (§70.3)"},
     {"Scratch",           "basic: two crossfaded taps, ratio law guessed (§70.3)"},
@@ -73,10 +72,6 @@ static const tPartialRow kPartial[] = {
     {"Pitch Tracker",     "counter and E2 reference are the instrument's; its detector (followers, filters, flip-flop) is not (§70.7)"},
     {"Vocoder",           "basic: 16 band-passes, band centres guessed (§70.8)"},
     {"Level Scaler",      "basic: dB per octave from the manual (§70.12)"},
-    {"Device",            "global wheel 2 reads 0 (§70.13)"},
-    {"CtrlRcv",           "no MIDI CC reaches the engine: outputs 0 (§70.13)"},
-    {"NoteRcv",           "NoteDet whatever the channel (§70.13)"},
-    {"Chorus",            "a third chorus in one patch passes dry (pool of 2 lines)"                   },
     {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },
     // §6.7, §28.4 - pieces of their jacks' laws not yet decoded
 };

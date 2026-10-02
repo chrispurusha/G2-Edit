@@ -24,6 +24,11 @@ Full detail for each is in findings.md, searchable by the wording below.
   may be louder than the G2 (about 9 dB offline) - say if it is.
 - ***PLUG-IN OUTPUT FILTER REMEMBERED (2026-09-28)*** - toggle Settings > G2 Output Filter in G2 Alike,
   then load a NEW instance: it should come up with the same setting, as the dial mode does.
+- ***MIDI IN TO THE PATCH (2026-10-02)*** - reference §70.13. In the app with MIDI in: a CtrlRcv on a CC
+  you move should pulse Rcv and follow Val; a NoteRcv on a note and channel should gate; a Device's
+  global wheel outputs should follow CC 96 and CC 97.
+- ***4-IN FROM BUS, MORE CHORUSES (2026-10-02)*** - reference §69.12, notes §197. A 4-In set to Bus should
+  carry 2-Outs sent to Bus 1/2 and 3/4; up to eight FX-area choruses in one patch should all sound.
 - ***FLTCOMB PEAK AND DEEP (2026-10-02)*** - reference §13.4. The comb is now the instrument's own part.
   LISTEN at high FB on Peak and Deep: Deep is quieter than before at full FB (-6.7 dB), and every Type
   now delays the signal by one period at FB 64.
