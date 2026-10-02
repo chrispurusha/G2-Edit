@@ -28,7 +28,8 @@ General
 - 18 Unreal Dreams: engine ~9 dB louder than the G2 capture at 32 voices - check the rig calibration first, then the voice level path (§62.1)
 - 04 Chris Pad brightness: re-listen after the exact Vel/Keyb morphs (§26.2); the captures matched to 12 kHz once the G2's filter was confirmed on, and the first capture had its FltClassic switched off - find out what switched it (findings 2026-09-28 late)
 - Diavolo Sync patch is brighter on the G2 than in the engine (CT 2026-09-28) - capture both; G2 outputs 1/2 are on the Fireface again
-- LfoShpA: its per-waveform Phase offsets and the Dir input (§28.4); the shape oscillators' waves below Shape 0 (§6.7)
+- LfoShpA: its per-waveform Phase offsets and the Dir input (§28.4)
+- OscShpB Pulse at Shape +-1: the residual one-sample click is -33 dB (+1) / -43 dB (-1) per harmonic in the engine, -41 dB at both on the G2 (§6.7)
 - `DELAY_LINE_SAMPLES` is sized 2.8 s at a 96 kHz graph, so at a 192 kHz device the longest Time is truncated to 1.4 s - pre-existing, and worse before the rate cap
 
 USER REQUESTS (reported 2026-08-22; none blocking)

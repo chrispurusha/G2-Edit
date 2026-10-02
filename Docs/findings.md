@@ -12191,3 +12191,18 @@ NoteSend (18).
   instrument's laws, short closed forms of its wave stage, matched to it at every Shape dial and 4096
   phases (worst 1.0e-4, the shared sine polynomial). Shape now reads v/128 with 127 full, as the module does. 15 Randee dz's FltNord LFO (Sine, Shape 76) was a plain sine; it is a sine leaning towards a
   rising saw. Dir is still open.
+
+## 2026-10-02 - the shape oscillators below Shape 0 (reference §6.7)
+
+Shape Mod can drive OscShpA/OscShpB's shape word to -1; the engine floored it at 0. Running each wave stage
+with the word swept -1..+1: Sine1, Sine2 and TriSaw continue their own laws (the mirror of +y), DblSaw's
+offset wraps, Pulse is OscB's offset pulse, SymPulse depends on |y|, and Sine3/Sine4 saturate their ratio
+at zero (run as the reference model - the reference C carries the >>2 slip there and reads a flat -12 dB). Two
+engine bugs surfaced on the way: DblSaw's `fmod` of a negative offset, and TriSaw at y = -1, whose fall
+had zero length and whose peak and wrap corners cancelled.
+
+Checked on the G2 the same day, every wave at nine settings (`G2Captures/oscshpb_shapemod/`): -y matches
++y to 0.1 dB and the engine matches the G2 within 0.16 dB on harmonics 1-16. Trap repeated: the first
+analysis searched f0 over 330-370 Hz with the oscillator at E4 (329.63 Hz); the argmax sat on the 330
+edge and the 0.3 Hz error read as a steep roll-off above the 8th harmonic - a 38 dB "defect" that was
+the analyser's.

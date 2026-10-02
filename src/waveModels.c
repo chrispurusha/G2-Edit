@@ -42,11 +42,11 @@ double wave_shape_word(double shape) {
 
 // notes §2
 double wave_sine1_limited(double phase, double shape, double shortestRise) {
-    // notes §3 - the rising half takes (1 - Shape)/2 of the cycle, never less than shortestRise
+    // notes §3 - the rising half takes (1 - Shape)/2 of the cycle, and neither half less than shortestRise
     double rise = 0.5 * (1.0 - wave_shape_word(shape));
 
     rise = (rise < shortestRise) ? shortestRise : rise;
-    rise = (rise > 0.5) ? 0.5 : rise;
+    rise = (rise > (1.0 - shortestRise)) ? (1.0 - shortestRise) : rise;
 
     double at   = fmod(phase + (0.5 * rise), 1.0);    // 0 where the rise begins
     double theta;
@@ -75,12 +75,12 @@ double wave_sine_polynomial(double x) {
 // notes §4 - the instrument's Sine2 (reference §27.2), before its gain and its DC blocker
 double wave_sine2_limited(double phase, double shape, double shortestLobe) {
     // Shape takes the positive half-sine down to (1 - s)/2 of the cycle and gives the negative half
-    // the rest; the positive lobe never narrows past shortestLobe.
+    // the rest, and below zero the other way round; neither lobe narrows past shortestLobe.
     double s     = wave_shape_word(shape);
     double limit = 1.0 - (2.0 * shortestLobe);
 
     s = (s > limit) ? limit : s;
-    s = (s < 0.0) ? 0.0 : s;
+    s = (s < -limit) ? -limit : s;
 
     double lobe  = 0.5 * (1.0 - s);                  // the positive half's share of the cycle
     double at    = fmod(phase, 1.0);                 // 0 where the positive half begins

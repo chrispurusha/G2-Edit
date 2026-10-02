@@ -90,8 +90,6 @@ static const tPartialRow kPartial[] = {
     {"Sequencer Values",  "steps at 96 kHz whatever the clock's rate (§58)"                             },
     {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },
     // §6.7, §28.4 - pieces of their jacks' laws not yet decoded
-    {"Osc Shape A",       "its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7)"  },
-    {"Osc Shape B",       "its waves below Shape 0 (Shape Mod driving it negative) not decoded (§6.7)"  },
     {"LFO Shp A",         "the Dir input is not modelled (§28.6)"   },
 };
 

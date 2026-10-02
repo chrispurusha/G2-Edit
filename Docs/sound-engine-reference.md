@@ -175,7 +175,21 @@ Shape M are both v/128 with 127 counting as full. A unit is a quarter word, so i
 shape is Shape + input x Shape M. The Shape Mod jack is the fifth input on all three; Shape M is
 parameter 7 on OscB and OscShpB, 8 on OscShpA. OscB's pulse takes the word below zero too: its part
 outputs +-1 plus the shape word, the width (1 - y)/2 of the cycle, so a negative shape widens the pulse
-up to a steady level at -1. The shape oscillators' waves have not been decoded below zero and stop there.
+up to a steady level at -1. The shape oscillators' waves run below zero too, each wave's own law
+continued (2026-10-02, the wave stages run with the word swept -1..+1):
+- Sine1, Sine2, TriSaw: the mirror of +y - the same wave reversed in time and inverted, so the steep
+  segment moves to the other side of the peak. Their shortest segments (two, four, two samples) hold
+  whichever side is steep. Sine2's gain is 1 + |y|.
+- DblSaw: the second saw's offset y/2 wraps, so -y sounds as +y.
+- Pulse: OscB's law - +-1 plus y, high for (1 - y)/2 of the cycle - silent at -1.
+- SymPulse: exactly the wave at +y.
+- Sine3, Sine4: the module saturates the ratio at zero; below zero they are the Shape 0 sine.
+The DSF pair were run as the reference model; the rest are the reference translation, which agrees with
+the reference model wherever the two have been compared. Checked on the G2 2026-10-02 (OscShpB at E4, Shape Mod
+from a Constant, y = +-1, +-0.75, +-0.5, +-0.25, 0, every wave): each -y take matches its +y twin, and the
+engine matches the G2 within 0.16 dB on harmonics 1-16 at every setting. The one gap is Pulse at exactly
++-1, where only a one-sample click remains: the G2's is -41 dB per harmonic at both ends, the engine's
+-33 dB at +1 and -43 dB at -1.
 Eight stage patches cable Shape Mod; 18 Unreal Dreams' pad is two OscB pulses width-modulated by LFOs.
 
 **6.8 FM (2026-09-28, from the reference model).** OscB, OscC, OscShpA and OscShpB (OscD has none: its
