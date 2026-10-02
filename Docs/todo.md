@@ -8,6 +8,7 @@ General
 -
 - Assess items in this todo list, which may have already been completed or partially completed and can therefore be removed to to-test. Some are definitely already addressed.
 - Finish last (roughly) 10 modules. If MIDI note send requires performance mode, defer to when we implement that.
+- There was an issue mentioned (I think) with Mix Stereo? Maybe we should check stereo paths?
 - 07 Unstable Lead (Bank 1 Loc 2) seems to be outputting a constant tone without a keyboard note. Also, mod wheel value change seems to be producing a zipper-like sound.
 - I saw a one-off crash on "tParamType       paramType = paramLocationList[param->paramRef].type;" in param_click_handler(). Bad address access. Worth a check for obvious issues.
 - Further investigation into voice stealing improvements.
