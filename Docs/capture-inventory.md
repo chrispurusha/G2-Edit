@@ -47,6 +47,7 @@ impulse is what this rig gives.
 |---|---|---|
 | **Reverb** | 19 files: four rooms × Time, decay, stereo; Brightness in Hall, Small and Medium | The most complete. Room scale, decay law, pre-delay, wet level, input filtering, stereo tap sets and the Brightness law were all measured here first. Since 2026-09-14 the engine runs the instrument's own network instead (reference §20) and these captures are its check: onsets, stereo correlation and the Time law agree; the captured decay times run 6-12% longer, which is their early-decay fits over ~15 dB of tail. |
 | **OscShpB** | `G2Captures/oscshpb/`, 8 files | Harmonic spectra per waveform at two Shape settings. |
+| **OscShpB below zero** | `G2Captures/oscshpb_shapemod/`, 72 files | Every wave at Shape Mod y = -1..+1 in quarters, E4, G2 outs 1/2, Fireface 192 kHz (2026-10-02). `waves.svg`/`waves_neg.svg` overlay the engine. Reference §6.7 |
 | **OscA** | `G2Captures/osca/`, 6 files | |
 | **Pulse** | `pulse192b.wav`, 17 dial values at 192 kHz | Time dial measured across the whole range in Sub. Every width is an integer count of 96 kHz samples. The engine's law (reference §18) lands within two samples of all 17, dial 0 included. Amplitude calibrated: logic high is 1.0 (findings.md). |
 | **Stage patch 18** | `G2Captures/stage/18_unreal_dreams_g2_var1_192k.wav` | 20 s of 18 Unreal Dreams playing itself (variation 1, master clock 120 BPM, G2 outs 1/2, Fireface 192 kHz, 2026-09-28) - long after load, so all 32 voices in use. Checked the NoteSend fix (reference §62) |

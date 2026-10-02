@@ -6866,7 +6866,7 @@ static double shp_corner(double distance, double x, double turn) {
 
 // §27.5 - TriSaw: falls from +1 at p = -y, rises over at least two samples from p = -y - rise
 static double shp_trisaw(double p, double x, double y) {
-    double rise   = fmax(1.0 - y, TRISAW_SHORTEST_RISE * x);
+    double rise   = fmin(fmax(1.0 - y, TRISAW_SHORTEST_RISE * x), 2.0 - (TRISAW_SHORTEST_RISE * x));
     double peak   = -y;
     double trough = osc_wrap_two(peak - rise);
     double since  = osc_wrap_two(p - trough);
@@ -6874,7 +6874,7 @@ static double shp_trisaw(double p, double x, double y) {
     double turn   = (2.0 / rise) + (2.0 / (2.0 - rise));
 
     value = (value < rise) ? (-1.0 + (2.0 * value / rise)) : (1.0 - (2.0 * (value - rise) / (2.0 - rise)));
-    double atWrap = (y < 1.0) ? shp_corner(osc_wrap_two(p - 1.0), x, turn) : 0.0;    // at y = 1 the peak is the wrap
+    double atWrap = (fabs(y) < 1.0) ? shp_corner(osc_wrap_two(p - 1.0), x, turn) : 0.0;    // at y = +-1 the peak is the wrap
 
     return value - shp_corner(osc_wrap_two(p - peak), x, turn) + atWrap;
 }
@@ -6914,24 +6914,24 @@ static double osc_shp_wave(uint32_t waveform, double phase, double inc96, double
     switch (waveform) {
         case 0:
         {
-            double rise = fmax(0.5 * (1.0 - y), SHP_SINE1_SHORTEST * inc96);    // peaks at half a cycle
+            double rise = fmin(fmax(0.5 * (1.0 - y), SHP_SINE1_SHORTEST * inc96), 1.0 - (SHP_SINE1_SHORTEST * inc96));    // peaks at half a cycle
 
             return wave_sine1_limited(fmod(phase + 0.5 + (0.5 * rise), 1.0), shape, SHP_SINE1_SHORTEST * inc96);
         }
         case 1:
         {
-            // §27.2 - four samples at the least, and a gain of 1 + Shape; the DC blocker follows
-            double lobe = fmax(0.5 * (1.0 - y), SHP_SINE2_SHORTEST * inc96);    // ends at half a cycle
+            // §27.2 - four samples at the least, and a gain of 1 + |Shape|; the DC blocker follows
+            double lobe = fmin(fmax(0.5 * (1.0 - y), SHP_SINE2_SHORTEST * inc96), 1.0 - (SHP_SINE2_SHORTEST * inc96));    // ends at half a cycle
 
-            return wave_sine2_limited(fmod(phase + 0.5 + lobe, 1.0), shape, SHP_SINE2_SHORTEST * inc96) * (1.0 + y);
+            return wave_sine2_limited(fmod(phase + 0.5 + lobe, 1.0), shape, SHP_SINE2_SHORTEST * inc96) * (1.0 + fabs(y));
         }
         case 2:
         {
-            return wave_sine3_instrument(fmod(phase + SHP_DSF_ORIGIN, 1.0), shape, inc96);    // §27.3
+            return wave_sine3_instrument(fmod(phase + SHP_DSF_ORIGIN, 1.0), fmax(shape, 0.0), inc96);    // §27.3, §6.7
         }
         case 3:
         {
-            return wave_sine4_instrument(fmod(phase + SHP_DSF_ORIGIN, 1.0), shape, inc96);
+            return wave_sine4_instrument(fmod(phase + SHP_DSF_ORIGIN, 1.0), fmax(shape, 0.0), inc96);
         }
         case 4:
         {
@@ -6939,7 +6939,7 @@ static double osc_shp_wave(uint32_t waveform, double phase, double inc96, double
         }
         case 5:
         {
-            return -osc_saw(phase, edge) - osc_saw(fmod(phase + (0.5 * y), 1.0), edge);
+            return -osc_saw(phase, edge) - osc_saw(fmod(phase + 1.0 + (0.5 * y), 1.0), edge);
         }
         case 6:
         {
@@ -6947,7 +6947,7 @@ static double osc_shp_wave(uint32_t waveform, double phase, double inc96, double
         }
         default:
         {
-            return shp_sympulse(phase, edge, y);
+            return shp_sympulse(phase, edge, fabs(y));    // §6.7
         }
     }
 }
@@ -11287,8 +11287,6 @@ static double osc_shape_modulated(const tEngineNode * spec, double shape, double
     if (dialFraction == false) {
         return word;
     }
-    word = fmax(word, 0.0);    // §6.7 - the shape waves below zero are not decoded
-
     return (word >= SHAPE_WORD_MAX) ? 1.0 : ((word * 128.0) / 127.0);
 }
 
