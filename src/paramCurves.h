@@ -236,10 +236,8 @@ double eq_magnitude(const tEqBands * bands, double hz);                         
 
 // FltComb - §13 of the engine reference.
 typedef struct {
-    double feedForward;    // per unit of g
-    double feedback;
-    double extraDelay;     // samples at FLTCOMB_REFERENCE_RATE
-    double gainDbPerG2;
+    double feedForward;    // b per unit of g: the direct path's share
+    double feedback;       // c per unit of g
 } tCombShape;
 
 #define FLTCOMB_REFERENCE_RATE    (96000.0)    // the engine rate §13's sample offsets were measured at

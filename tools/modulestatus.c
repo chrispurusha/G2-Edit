@@ -70,27 +70,15 @@ static const tPartialRow kPartial[] = {
     {"Osc String",        "basic: a tuned loop; decay and damp laws guessed (§70.4)"},
     {"Resonator",         "basic: OscString's loop; Alg and inputs guessed (§70.4)"},
     {"Driver",            "a guess: not in the manual in hand (§70.5)"},
-    {"NoiseGate",         "basic: follower and gate from the manual (§70.6)"},
     {"Pitch Tracker",     "counter and E2 reference are the instrument's; its detector (followers, filters, flip-flop) is not (§70.7)"},
     {"Vocoder",           "basic: 16 band-passes, band centres guessed (§70.8)"},
-    {"Rnd Clock B",       "basic: RndClkA's node; StepM and Character not read (§70.9)"},
-    {"Rnd Pattern",       "basic: reseeded LCG pattern; not the instrument's (§70.9)"},
-    {"Sequencer Controlled", "basic: step and crossfade from the manual; T/G not read (§70.10)"},
-    {"Mux8-1X",           "basic: linear crossfade; the reference model not run (§70.11)"},
     {"Level Scaler",      "basic: dB per octave from the manual (§70.12)"},
     {"Device",            "global wheel 2 reads 0 (§70.13)"},
-    {"Status",            "Voice No. law guessed (§70.13)"},
     {"CtrlRcv",           "no MIDI CC reaches the engine: outputs 0 (§70.13)"},
     {"NoteRcv",           "NoteDet whatever the channel (§70.13)"},
-    {"Comb Filter",       "not yet checked against the reference model"                          },
-    {"Envelope Multi",    "rise to an intermediate level is a guess (§17.9)"                           },
     {"Chorus",            "a third chorus in one patch passes dry (pool of 2 lines)"                   },
-    {"Sequencer Note",    "steps at 96 kHz whatever the clock's rate (§58)" },
-    {"Sequencer Event",   "steps at 96 kHz whatever the clock's rate (§58)"                             },
-    {"Sequencer Values",  "steps at 96 kHz whatever the clock's rate (§58)"                             },
     {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },
     // §6.7, §28.4 - pieces of their jacks' laws not yet decoded
-    {"LFO Shp A",         "the Dir input is not modelled (§28.6)"   },
 };
 
 #define PARTIAL_COUNT (sizeof(kPartial) / sizeof(kPartial[0]))

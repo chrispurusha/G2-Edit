@@ -538,18 +538,25 @@ before the table was read; it is the same number either way, and now it has a re
 
 **13.3 Feedback.** g = (FB - 64)/64: 64 is no comb, below 64 the comb inverts.
 
-**13.4 Types.** One section, gain k × (1 + b·z^-D') / (1 - c·z^-D'):
+**13.4 The comb (the reference model, 2026-10-02).** One structure for every Type. With L the
+Level word (half the mixer's Exp taper, §13.5), g = (FB - 64)/64 + 2 x FB Mod x input (saturated to
++-1), c = g x Y8 and b = g x Y9:
 
-| Type | b | c | D' | k |
-|---|---|---|---|---|
-| Notch | g | 0 | D | 1 |
-| Peak | -0.30 g | 0.90 g | D + 1.1 | +2.45 g² dB |
-| Deep | 0.60 g | 0.85 g | D + 0.5 | -4.1 g² dB |
+    line[n] = L x[n] + c tap[n-1]        tap[n] = line[n - D]        y[n] = 2 (b L x[n] + tap[n])
 
-Notch and Peak fit every setting to the capture's noise floor (about 2 dB rms per bin). Deep fits to
-the floor for |g| up to 0.5 and grows to 5 dB rms at full feedback - a single section is not its whole
-structure (the reference model reads the delay through a four-point interpolator, which a frequency-flat model
-cannot show). The extra delay of Peak and Deep is part of the same story.
+| Type | Y8 (c per g) | Y9 (b per g) |
+|---|---|---|
+| Notch | 0 | 1.0 |
+| Peak | 0.9 | -0.4 |
+| Deep | 0.9 | 0.6 |
+
+D is one period less a sample (§13.2), read through a four-point Lagrange interpolator whose coefficients
+are a 512-step table - the fraction is taken to 1/512. Every stored word saturates. So the feedforward
+path is D long and the loop D + 1, and at FB 64 the output is the input delayed by D. As one section,
+Peak is (-0.4g + (1 + 0.36g^2) z^-D) over (1 - 0.9g z^-(D+1)) and Deep (0.6g + (1 - 0.54g^2) z^-D) over
+the same - which is why the 2026-09-12 fits found b = -0.30g, +2.45 dB g^2 and an extra sample for Peak,
+and could not fit Deep above |g| = 0.5 (at full FB its gain is -6.7 dB, not -4.1). Checked against the reference model run sample by sample: within 2e-5 for all three Types, FB 0-127, delays 3-584 samples. On/Off off
+passes the input.
 
 **13.5 Level.** The mixer's Exp taper (§3.2), as the EQs' (§11.1).
 
@@ -871,9 +878,8 @@ the DX envelopes are untouched. Re-typing SimpleLead's amp envelope to each modu
 others all produced sound where every one of them had been silent.
 
 NOT YET CHECKED. The KB gate and Reset are read at EnvADSR's own parameter numbers only; the other
-modules number theirs differently, so they gate from the key and never reset. A segment that RISES to
-an intermediate level - EnvMulti's alone - uses the attack curve toward that level, which is a
-reasonable reading and not one taken from the instrument. Neither the stages nor the curves have been
+modules number theirs differently, so they gate from the key and never reset. EnvMulti is no longer played
+by this walker but by the reference model's arithmetic (§17.11). Neither the stages nor the curves have been
 heard against a G2.
 
 **17.10 The Mod envelopes' time-mod jacks, added 2026-09-20.** ModADSR and ModAHD give each of
@@ -916,6 +922,26 @@ segment, which is why nothing per voice had to be stored.
 **NOT yet checked on the hardware:** the Attack and Sustain mod jacks, and ModAHD's. They share
 this one path, so the decay measurement exercises the mechanism, but neither the attack's curve
 under a mod nor the sustain's own law has been measured. to-test.md.
+
+**17.11 EnvMulti, from the reference model (2026-10-02).** Not the stage walker of §17.9: each
+of the four segments carries a PROGRESS word p that starts at 0 when the segment is entered and steps by
+the attack recurrence of §17.3 for the module's Shape and the segment's Time (p' = add + 2 half p, the
+same tables as EnvADSR's attack). The segment's time is up when p passes full scale. The level is
+
+- rising (target above the level the segment started from), and every segment under LinLin:
+  start + p x (target - start) - the full attack curve SCALED to the step, so a rise to half scale
+  takes exactly as long as a rise to full;
+- falling, under the other three Shapes: target + decay x (level - target), the decay multiplier of
+  §17.2 for the same Time dial - an exponential approach that is cut off when p's time is up, so the
+  next segment starts from wherever it got to.
+
+The held segment (Sustain L1, L2 or L3) and segment 4 do not advance when their time is up; the level
+then stays where the formula leaves it. A rising gate (or a new key with KB on) starts segment 1 - from
+L4 when Reset is on, from the level it is at when it is off - and a falling gate starts the segment after
+the held one. With Sustain "none" nothing is held but segment 4 and the gate's fall is ignored. Levels
+are v/128 (127 full). All four steps happen in the tick the gate changes. Checked against the reference model run
+tick by tick with the instrument's own time tables: 0 difference over 128 runs (four Shapes, four
+Sustain places, Reset on and off, rising and falling segments, short and long gates).
 
 ## 18. Pulse
 
@@ -1545,7 +1571,9 @@ counter stage with inputs that LfoA's and LfoC's simpler counter lacks:
   relative to LfoA, whose mapping the engine already uses. LfoShpA's per-waveform offsets are in §28.6.
 - **Shape M** (LfoShpA): shape word + 8 x input x Shape M (v/128), saturated; the Shape dial is the
   bipolar word (v - 64)/64, so in the engine's 0..1 shape it adds input x Shape M.
-- Dir (LfoShpA) is not modelled.
+- **Dir** (LfoShpA, input 5, 2026-10-02): the counter's step is multiplied by the input (4 x the word, so
+  1.0 is unity). Unpatched it reads that constant, so the LFO runs forward; a negative input runs it
+  backwards, 0 stops it, and a value above 1 speeds it up - it is a rate multiplier, not a switch.
 The random waves still draw on the counter itself (§28.3), not the offset read.
 
 **28.5 The sine is the oscillator's polynomial (2026-09-28).** The LFO's sine stage carries the same words as the oscillator's sine stage (0x800000, 0x648035, 0xadd4d5, 0x92aa9), so the LFO sine is `wave_sine_polynomial()` on
@@ -1572,7 +1600,7 @@ falling saw and 127 a rising one, as the manual says. Checked against the refere
 Shape dial and 4096 phases: within 1.4e-5 for TriBell, Saw>Tri, Tri>Sqr and Pulse, and 1.0e-4 for Sine
 and CosBell (the shared polynomial, §28.5). The engine's earlier waves were guesses: Sine and CosBell
 ignored Shape, TriBell was a plain triangle, Tri>Sqr a tanh (notes §158), and none had its phase.
-The Dir input is still not modelled.
+The Dir input is §28.4's.
 
 ## 29. ModAmt
 
@@ -2277,7 +2305,11 @@ every length, cycle, gate mode and polarity). Checked on the G2 at 192 kHz (find
 - **Steps jump; there is no smoothing** - a step change has the converters' own edge.
 - **The new value lands two of the module's ticks after the clock's rising edge**, and the module ticks at
   its clock's rate: 96 kHz when clocked from audio, 24 kHz from control signals (21 us and 83 us on the
-  G2). The engine always runs it at 96 kHz, so a control-rate clock lands 62 us early - not audible.
+  G2). Which one is the module's rate: the module sits in the audio list when the module is up-rated and
+  in the 24 kHz list when it is not. Since 2026-10-02 the engine does the same - a sequencer that is not
+  up-rated reads its inputs and steps once per 24 kHz tick and holds its outputs between, so its value
+  lands two 24 kHz ticks after the edge as on the G2, and a clock pulse shorter than a tick can be missed
+  as it can there.
 - Inputs Clk, Rst, Loop, Park, then an input added to each row's output; outputs Link, the first row,
   the second row. A clock already high at load counts as an edge, so the first step heard is step 2.
 - Parameters: 0-15 the first row, 16-31 the second, 32 Cycle, 33 Length (value + 1 steps); SeqVal 34
@@ -2299,7 +2331,10 @@ input), RecVal (input 6) and RecEnable (input 7), and is what drives the Note ou
 - **Arming**: a counter climbs by TWICE its delay word per tick while RecEnable is high and clears when
   it falls; it is armed once the counter passes full scale. The delay word is 0x7FFFFF (armed at once)
   for a part the patch set-up places as audio-rate, 0x10CC otherwise (about 41 ms at the 24 kHz control tick).
-  The engine takes an up-rated SeqNote as the audio-rate case - an inference, not read.
+  Read from the module's link code: the delay word follows the record stage's list - 0x7FFFFF in the
+  audio list, 0x10CC in the 24 kHz one - and the list follows the module's up-rate, which is what the
+  engine keys it on. At control rate the engine now ticks the record stage at 24 kHz too, so the word is
+  used as it stands.
 - On the instrument the host also copies recorded steps back into the patch's step dials. The engine
   keeps them in its own state instead: a step's dial is copied in only when it moves, so a recorded step
   plays until that step is edited, and the whole sequence starts afresh when the patch's wiring changes.
@@ -2527,9 +2562,20 @@ been compared with the instrument yet.
   read. Its inputs are taken as In, Pitch and PitchVar, which is a guess.
 - **70.5 Driver**: a guess. The manual edition in hand has no Driver, so it is (In1 + In2 x Embouchure)
   through a tanh driven by Stiffness.
-- **70.6 NoiseGate**: a peak follower (Release fall) opens the gain at the Attack rate above the
-  Threshold and closes it at the Release rate below. The times and dB are read from the dials' own
-  displays. Env is the follower.
+- **70.6 NoiseGate** (the reference model, 2026-10-02): a follower, a gate, an attack-hold-release
+  envelope and a VCA. Out is In x the envelope; Env is the envelope.
+  - The follower, every 96 kHz sample, in words: stage 1 jumps up to |In| and falls towards it by
+    0x2746 / 2^23 a sample; stage 2 jumps up to stage 1 and falls towards it by 0x1A10 / 2^23.
+  - The gate opens when stage 2 is above Threshold (v/128) and shuts when it is below three quarters of
+    it - hysteresis. Switched off, the gate is held open: the module still passes In through its
+    envelope, which then sits at full.
+  - The envelope is the ADSR's arithmetic (§17.3) at the 24 kHz tick, Log shape: attack to full in
+    0.25 ms x (1 + 19 v / 127)^2 (the attack words this gives are the instrument's, bit for bit), held
+    while the gate is open, then a fall with the decay law over ((v + 35.72) / 162.72)^5 s (Release 0:
+    0.5 ms) - within 0.1% of the instrument's release times.
+  Checked against the reference model run together: the gate opens and shuts on the same sample, Out within 1e-5
+  and Env within 1e-4 over 40 000 samples of bursts at five settings.
+
 - **70.7 PitchTrack / ZeroCnt**: the period between rising zero crossings as a pitch, **E2 = 0 units**
   (settled 2026-09-27 from the counter's own parts: its log table and scaling put 0 at 82.41 Hz, 12 units
   an octave; the engine had E4, 24 units low). PitchTrack pulses Period at each measurement and raises
@@ -2542,17 +2588,62 @@ been compared with the instrument yet.
 - **70.8 Vocoder**: sixteen band-passes (Q 5, log spaced from 100 Hz to 8 kHz) on Ctrl and on In. Each
   synthesis band is scaled by a 10 ms envelope of the analysis band its BandSel routes there. Emphasis
   pre-emphasises Ctrl; Monitor outputs Ctrl.
-- **70.9 RndClkB** runs on RndClkA's node (§64) with its own dial positions; StepM and Character are
-  not read. **RndPattern** draws on each clock and reseeds from PatA and PatB (plus inputs) every
-  (Loop + 1) x 8 steps. Wave passes the clock as +-64 units.
-- **70.10 SeqCtr**: Ctrl's units / 4 pick the step, and the last XFade share of each step fades into the
-  next. Trig is high on a step whose event is set; T/G is not read.
-- **70.11 Mux8-1X**: Mux8-1's step as a continuous position, with the last X-fade share of each step
-  fading into the next input.
+- **70.9 RndClkB** (the reference model, 2026-10-02) is RndClkA (§64) with a Step M stage in front.
+  Parameters: 0 Step, 1 OutType, 2 on, 3 Mode (Mono, as RndClkA's), 4 Step M; inputs Clk, Rst, Seed,
+  Step M. With the Step M jack unpatched that part is not linked in, and the host gives Step's words
+  exactly as RndClkA's - B is A. With it patched, the module computes them each tick from
+  s = Step + 4 x input x Step M (both v/128, s held to 0..full): the one-pole's word q = s^2 + 0x200, and
+  the draw's pre-scale from the module's own approximation to 1/sqrt(q) - a linear seed 0.5833 - 0.3333 m
+  on the normalised mantissa, the exponent halved - within about 0.2% of the instrument's exact root. The
+  engine reproduces both words for every one of the 2^23 step words. The Character mode picks the
+  generator stage: Rnd1 is RndClkA's linear congruence, Rnd2 a 24-bit shift register - shift left one,
+  and XOR 0x872B41 when a bit falls off the top - with the same pre-scale and one-pole after it. Mono
+  clears the generator's word to 0, where the shift register stays: Rnd2 in Mono holds still until a
+  Rst reloads it from Seed. Poly starts each voice from a random word. **RndPattern** (the reference model, 2026-10-02): a loop stage, then - by the Wave mode - Val's
+  generator (RndClkA's, Step's square law) or State's gate, then the level shift. Parameters 0 Pattern,
+  1 Bank, 2 Step, 3 Loop, 4 Step M, 5 OutType, 6 on; inputs Clk, Rst, Seed, Seed (fine), Step.
+  - The loop stage reseeds the generator's word with Pattern (v - 64) x 2^15 + Bank (v - 64) x 2^8 + Seed
+    + Seed fine / 128 (in words, saturated), and clears the one-pole, on a rising Rst - unpatched, Rst
+    reads high, so that happens once at the start - or once its counter, restarted at -Loop, has counted
+    past zero. Each rising Clk counts and draws, so the pattern repeats every Loop + 1 clocks (1-16).
+  - Val: the draw is RndClkA's value.
+  - State: each rising Clk draws; while the clock stays high the output is +1 if the draw (a signed
+    24-bit word) is at or below Step's (v - 64) x 2^17 + 8 x Step input x Step M (v/128), otherwise it
+    stays -1; whenever the clock is low it is -1. Before its first tick the level is 0.25.
+  Checked against the four stages run together, sample by sample: within the output's truncation (6e-7)
+  over 30 000 samples of clocks, resets and moving seeds, in both modes.
+
+- **70.10 SeqCtr** (the reference model, 2026-10-02). Steps are words v x 2^14 (v/2 units,
+  127 = 64), events 0 or 64 units. Parameters 0-15 steps, 16-31 events, 32 Pulse (0 trigger, 1 gate), 33
+  Pol, 34 XFade (0-3); inputs Ctrl, Val, Trig, added to the outputs Val and Trig.
+  - Ctrl / 4 units picks the step. At or above 64 units, or below 0, it picks a rest pair instead: 0, or
+    the centre when bipolar - so the output rests outside the dial's range.
+  - Within the step, w = (1 - the position) x 1, 2 or 4 (XFade 3, 2, 1), saturated at 1, and XFade 0 makes
+    w = 1: out = step x w + next step x (1 - w), so XFade 3 fades across the whole step and 1 across its
+    last quarter. Step 16's next is step 1. Bipolar takes the centre off and doubles.
+  - Trig is the step's event - as a gate, or (Pulse 0) for four ticks after the step word changes (the module's ticks: 96 kHz up-rated, 24 kHz otherwise, as §58's sequencers; the engine does the same).
+    the module tests that by comparing the whole accumulator, so ANY Ctrl whose low 16 bits are not zero
+    counts as a change: a stepped Ctrl landing on exact multiples gives four-tick pulses, a moving one
+    keeps Trig up for as long as the step's event is set.
+  Checked against the reference model run as such, sample by sample: identical at every XFade, Pulse and
+  Pol, over 20 000 samples of ramps, wobbles and out-of-range Ctrl.
+
+- **70.11 Mux8-1X** (the reference model, 2026-10-02): a control stage turns Ctrl into eight gains
+  and a mixer sums gain x input. Ctrl is held to 0..63 units and input k sits at 9k (not Mux8-1's 4-unit
+  step). With d = (0x7fff - 256 X-Fade) >> 1, each gain is
+
+      clamp((512 (8d + 0x4000) - 112 (8d + 0x2000) |Ctrl - 9k|) / 2^23, 0, 1)
+
+  - a flat top, then a linear fall. At X-Fade 0 an input holds full gain to 4.3 units from its place and
+  is gone by 4.8, so midway between two inputs each plays at 0.63; at 127 the top is 0.5 units wide and
+  the fall reaches 8.6, a near-linear crossfade (0.51 + 0.51 midway). The sum saturates at the word.
+  Checked against the reference model run sample by sample: within 5e-5 at X-Fade 0-127, Ctrl -2..66.
 - **70.12 LevScaler**: dB = L x octaves below the breakpoint, or R x octaves above. Level is that gain
   (64 units at 0 dB), and Out = In x Level. The key comes from the voice (Kbt) or from the Note input.
-- **70.13 The MIDI and panel modules.** Status gives Patch and Var Active high, and Voice No. at 4 units
-  a voice. Device gives the wheel, aftertouch, control pedal (morph group 5), sustain, pitch stick and
+- **70.13 The MIDI and panel modules.** Status (the reference model, 2026-10-02): Patch Active
+  goes high when the patch is made active and stays there; Var Active is high, and low for one 24 kHz
+  tick after the variation changes - a trigger, not a level; Voice No. is the voice's index (its low five
+  bits) x 4 units, 0 in the FX area. Device gives the wheel, aftertouch, control pedal (morph group 5), sustain, pitch stick and
   global wheel 1 (group 7); global wheel 2 reads 0. NoteRcv is NoteDet whatever the channel. CtrlRcv
   outputs 0, because no MIDI CC stream reaches the engine. CtrlSend, PCSend, Automate and NoteZone
   render nothing.
