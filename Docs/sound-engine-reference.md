@@ -2532,7 +2532,9 @@ identical exactly to its part.
   voice alike. The instrument writes Vel at note-on and RVel at note-off, each as v x 2^14 - v / 128, so 127
   reads 0.992 - and RVel holds until that key's next release (2026-09-27; before, RVel read 0 and Vel
   was v / 127, revert record row 85).
-- **69.12 4-In** is silent, as 2-In from the jacks is (§37). Its Bus source is not yet bridged.
+- **69.12 4-In** is silent from the jacks, as 2-In is (§37). From Bus (2026-10-02) it is both buses, bridged as
+  2-In's are: outputs 1-2 are the Voice area's 2-Outs sent to Bus 1/2, outputs 3-4 those sent to Bus 3/4,
+  through the same On and Pad.
 - **Not yet: Rnd Clock B and Rnd Pattern.** Their RndState and RndLoop parts hand values to each other
   through shared registers and read a host word not yet identified, so they need the whole module run
   in the harness, not part by part.
@@ -2643,7 +2645,14 @@ been compared with the instrument yet.
 - **70.13 The MIDI and panel modules.** Status (the reference model, 2026-10-02): Patch Active
   goes high when the patch is made active and stays there; Var Active is high, and low for one 24 kHz
   tick after the variation changes - a trigger, not a level; Voice No. is the voice's index (its low five
-  bits) x 4 units, 0 in the FX area. Device gives the wheel, aftertouch, control pedal (morph group 5), sustain, pitch stick and
-  global wheel 1 (group 7); global wheel 2 reads 0. NoteRcv is NoteDet whatever the channel. CtrlRcv
-  outputs 0, because no MIDI CC stream reaches the engine. CtrlSend, PCSend, Automate and NoteZone
-  render nothing.
+  bits) x 4 units, 0 in the FX area.
+  Device gives the wheel, aftertouch, control pedal (morph group 5), sustain, pitch stick, and the G2X
+  global wheels 1 and 2, which arrive as MIDI CC 96 and 97 on the slot's channel (the manual's fixed CC
+  list).
+  CtrlRcv and NoteRcv (the reference model, 2026-10-02) take MIDI as it arrives, before any channel
+  filter. Channel 1-16 is that channel, This the slot's own (the editor's MIDI input channel, or any when
+  it is set to all), Keyb the keys that play the voices. CtrlRcv: each arrival of its controller sets Val
+  to v/128 (127 full) and raises Rcv for one 24 kHz tick; Val is 0 until the first. NoteRcv: Rcv is high
+  while its note is held, Vel the last note-on's velocity / 128, RVel the last note-off's; on Keyb it is
+  NoteDet (§69.11). In the plug-in only notes reach them - a VST3 host gives a plug-in no MIDI controller
+  stream beyond the ones it maps to parameters. CtrlSend, PCSend, Automate and NoteZone render nothing.

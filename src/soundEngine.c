@@ -516,6 +516,10 @@ static double lfo_shape_dial(double v) {
 #define LFOSHPA_IN_SHAPE_MOD       (3u)
 #define LFOSHPA_IN_PHASE_MOD       (4u)
 #define LFOSHPA_IN_DIR             (5u)        // §28.4
+#define IN4_BUS_FIRST              (2u)        // §69.12 - voice_area_outputs_for_fx()'s number for Bus 1/2
+#define CTRLRCV_TICK_HZ            (24000.0)   // §70.13 - the receive part's rate
+#define MIDI_CC_GLOBAL_WHEEL_1     (96u)       // §70.13 - G2X Global Wheel 1
+#define MIDI_CC_GLOBAL_WHEEL_2     (97u)
 #define STATUS_TICK_HZ             (24000.0)   // §70.13 - the Status part's rate
 #define SEQ_CONTROL_TICK_HZ        (24000.0)   // §58 - a sequencer part's rate when it is not up-rated
 #define RNDCLKB_IN_STEP_MOD        (3u)        // §70.9
@@ -875,6 +879,7 @@ typedef enum {
     eNodeDevice,         // §70.13 - the performance controls
     eNodeCtrlRcv,        // §70.13 - no MIDI CC stream reaches the engine: both outputs 0
     eNodeSink,           // §70.13 - MIDI senders and routers: nothing to render
+    eNodeIn4Bus,         // §69.12 - 4-In from Bus: Bus 1/2 on outputs 1-2, Bus 3/4 on 3-4
     eNodeOut,
 } tNodeKind;
 
@@ -1666,12 +1671,13 @@ static double                 gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][
 // notes §36
 #define DELAY_LINE_SAMPLES     (134400 * ENGINE_OVERSAMPLE)
 static float                  gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
-#define MAX_COMB_LINES         (2)                                   // FltCombs per patch that sound; any more pass their input dry
-#define MAX_CHORUS_LINES       (2)                                   // StChorus lines per patch; any more pass their input dry
-#define CHORUS_INSTANCES       (MAX_CHORUS_LINES * (1 + MAX_VOICES)) // notes §197 - FX area one each, Voice area one per voice
-#define COMB_LINE_SAMPLES      (16384)                               // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
-#define COMB_FRACTION_STEPS    (512.0)                               // §13.4 - the read's coefficient table
-#define COMB_FB_MOD_GAIN       (2.0)                                 // §13.4 - FB Mod x input is taken x 8 in words
+#define MAX_COMB_LINES         (2)                                                     // FltCombs per patch that sound; any more pass their input dry
+#define MAX_CHORUS_FX_LINES    (8)                                                     // StChorus in the FX area: one buffer each
+#define MAX_CHORUS_LINES       (2)                                                     // StChorus in the Voice area: one per voice; any more pass dry
+#define CHORUS_INSTANCES       (MAX_CHORUS_FX_LINES + (MAX_CHORUS_LINES * MAX_VOICES)) // notes §197
+#define COMB_LINE_SAMPLES      (16384)                                                 // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
+#define COMB_FRACTION_STEPS    (512.0)                                                 // §13.4 - the read's coefficient table
+#define COMB_FB_MOD_GAIN       (2.0)                                                   // §13.4 - FB Mod x input is taken x 8 in words
 static float                  gCombLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES][COMB_LINE_SAMPLES];
 #define gCombLine              (gCombLineBank[SE])
 static uint32_t               gCombWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];
@@ -1703,9 +1709,23 @@ static uint32_t               gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_
 static int32_t                gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
 #define gChorusPhase       (gChorusPhaseBank[SE])         // §19.2 - a signed 24-bit LFO phase
 static int32_t                gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
-#define gChorusTrim        (gChorusTrimBank[SE])          // §19.2 - this instance's rate trim
+
+// §70.13 - what MIDI has brought in, for CtrlRcv, NoteRcv and Device: rows 0-15 the channels, MIDI_ROW_THIS
+// the channel this slot listens on. Written by the MIDI thread, read by the audio thread.
+#define MIDI_ROWS        (17u)
+#define MIDI_ROW_THIS    (16u)
+#define MIDI_ROW_KEYB    (17u)   // a module's Channel "Keyb": the keys that play the voices, as NoteDet
+static _Atomic uint8_t        gMidiCcValueBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
+#define gMidiCcValue     (gMidiCcValueBank[SE])
+static _Atomic uint32_t       gMidiCcCountBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
+#define gMidiCcCount     (gMidiCcCountBank[SE])
+static _Atomic uint8_t        gMidiNoteVelBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];    // 0 while up
+#define gMidiNoteVel     (gMidiNoteVelBank[SE])
+static _Atomic uint8_t        gMidiNoteRelBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
+#define gMidiNoteRel     (gMidiNoteRelBank[SE])
+#define gChorusTrim      (gChorusTrimBank[SE])            // §19.2 - this instance's rate trim
 static double                 gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
-#define gChorusTick        (gChorusTickBank[SE])
+#define gChorusTick      (gChorusTickBank[SE])
 static void chorus_reset(uint32_t line);
 
 // Pulse: the countdown still to run, and the previous input, so a rising edge can be seen. Per voice,
@@ -1953,6 +1973,41 @@ typedef enum {
     eEnvSustain,
     eEnvRelease,
 } tEnvStage;
+
+// §70.13 - a controller as it arrived; `listened` says the slot's own channel takes it too
+void sound_engine_midi_cc(uint32_t channel, uint32_t controller, uint32_t value, bool listened) {
+    SE_LOCAL;
+
+    if ((channel >= 16u) || (controller >= MIDI_KEY_COUNT)) {
+        return;
+    }
+    uint32_t rows[2] = {channel, MIDI_ROW_THIS};
+
+    for (uint32_t r = 0; r < (listened ? 2u : 1u); r++) {
+        atomic_store(&gMidiCcValue[rows[r]][controller], (uint8_t)((value > 127u) ? 127u : value));
+        atomic_fetch_add(&gMidiCcCount[rows[r]][controller], 1u);
+    }
+}
+
+// §70.13 - a note as it arrived, on or off with its velocity
+void sound_engine_midi_note(uint32_t channel, uint32_t note, uint32_t velocity, bool on, bool listened) {
+    SE_LOCAL;
+
+    if ((channel >= 16u) || (note >= MIDI_KEY_COUNT)) {
+        return;
+    }
+    uint32_t rows[2] = {channel, MIDI_ROW_THIS};
+    uint8_t  vel     = (uint8_t)((velocity > 127u) ? 127u : ((velocity == 0u) ? 1u : velocity));
+
+    for (uint32_t r = 0; r < (listened ? 2u : 1u); r++) {
+        if (on == true) {
+            atomic_store(&gMidiNoteVel[rows[r]][note], vel);
+        } else {
+            atomic_store(&gMidiNoteVel[rows[r]][note], 0u);
+            atomic_store(&gMidiNoteRel[rows[r]][note], (uint8_t)((velocity > 127u) ? 127u : velocity));
+        }
+    }
+}
 
 void sound_engine_pitch_bend(double bend) {
     SE_LOCAL;
@@ -3284,6 +3339,10 @@ static uint32_t node_output_legs(tNodeKind kind) {
         {
             return 3u;
         }
+        case eNodeIn4Bus:              // §69.12 - four outputs
+        {
+            return 4u;
+        }
         case eNodeMultiTap:            // §70.1 - up to eight taps
         case eNodeDevice:              // §70.13 - seven controls
         {
@@ -3592,7 +3651,10 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
         }
         case moduleType4toIn:
         {
-            *kind = eNodeAudioIn;    // §69.12 - the jacks are silent here, and a Bus source is not bridged
+            // §69.12 - the jacks are silent here; Bus is both buses, bridged as 2-In's are (fourToInSourceStrMap)
+            uint32_t source = module->param[gPatchDescr[module->key.slot].activeVariation][0].value;
+
+            *kind = (source == 1u) ? eNodeIn4Bus : eNodeAudioIn;
             return true;
         }
         case moduleTypeInvert:
@@ -4297,6 +4359,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             return env_input_connectors(moduleType, derived);
         }
         case eNodeFxIn:
+        case eNodeIn4Bus:
         {
             *connectors = none;   // filled in by the Voice-area bridge, not by a cable
             return 0;
@@ -4883,6 +4946,27 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
         inCount = count;
 
+        // §69.12 - 4-In from Bus: the 2-Outs sent to Bus 1/2, then those sent to Bus 3/4; select counts the first
+        if (kind == eNodeIn4Bus) {
+            tModule * feeder[MAX_NODE_INPUTS / 2];
+            uint32_t  firstBus = voice_area_outputs_for_fx(module->key.slot, IN4_BUS_FIRST, feeder, MAX_NODE_INPUTS / 4);
+            uint32_t  total    = firstBus + voice_area_outputs_for_fx(module->key.slot, IN4_BUS_FIRST + 1u, &feeder[firstBus],
+                                                                      MAX_NODE_INPUTS / 4);
+
+            inCount      = 0;
+            node->select = firstBus;
+
+            for (uint32_t f = 0; f < total; f++) {
+                int32_t source = add_node(params, feeder[f], variation, depth + 1);
+
+                resolvedIn[2u * f]            = source;
+                resolvedSrcOut[2u * f]        = 0;
+                resolvedIn[(2u * f) + 1u]     = source;
+                resolvedSrcOut[(2u * f) + 1u] = 1;
+                inCount                       = 2u * (f + 1u);
+            }
+        }
+
         // notes §79
         if (kind == eNodeFxIn) {
             uint32_t  wantedBus = module->param[variation][FXIN_PARAM_SOURCE].value;
@@ -5296,6 +5380,17 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeNoteDet:
         {
             node->select = (uint32_t)module->param[variation][0].value % MIDI_KEY_COUNT;   // §69.11
+            // §70.13 - NoteRcv's Channel: 1-16, This, Keyb; NoteDet is always the keys
+            node->bx[0]  = (module->type == moduleTypeNoteRcv) ? (double)module->param[variation][1].value : (double)MIDI_ROW_KEYB;
+            break;
+        }
+        case eNodeCtrlRcv:
+        {
+            // §70.13 - Ctrl 0, Channel 1 (1-16, This, Keyb - the keys' channel, here the slot's own)
+            uint32_t row = module->param[variation][1].value;
+
+            node->select = module->param[variation][0].value % MIDI_KEY_COUNT;
+            node->bx[0]  = (double)((row >= MIDI_ROW_THIS) ? MIDI_ROW_THIS : row);
             break;
         }
         case eNodeWahWah:
@@ -5731,6 +5826,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             break;
         }
         case eNodeFxIn:
+        case eNodeIn4Bus:
         {
             // db12PadStrMap is {"+6dB", "0dB", "-6dB", "-12dB"}, and the default is the FIRST entry,
             // so a freshly created FxtoIn is boosting by 6 dB rather than sitting at unity.
@@ -6333,6 +6429,18 @@ static void build_snapshot(tSoundEngineParams * out) {
         }
     }
     mark_post_mix_nodes(&snapshot);
+
+    // notes §197 - the choruses again, numbered within their own area's pool
+    {
+        uint32_t fxChoruses    = 0u;
+        uint32_t voiceChoruses = 0u;
+
+        for (uint32_t k = 0; k < snapshot.nodeCount; k++) {
+            if (snapshot.node[k].kind == eNodeChorus) {
+                snapshot.node[k].line = (snapshot.node[k].postMix == true) ? fxChoruses++ : voiceChoruses++;
+            }
+        }
+    }
     snapshot.topology   = topology_signature(&snapshot);
     snapshot.voiceCount = voice_count_for_patch(engine_slot());
 
@@ -9335,6 +9443,11 @@ static int32_t env_segment(int32_t level, int32_t half, int32_t add, int32_t tar
     return (int32_t)(((step < 0) ? 0 : step) + target);
 }
 
+// §70.13 - a controller value as the module takes it: v x 2^14, 127 full
+static double midi_cc_level(uint8_t value) {
+    return (value >= 127u) ? 1.0 : ((double)value / 128.0);
+}
+
 static double signal_in(const tEngineNode * spec, double value[][NODE_OUTPUTS], uint32_t input);
 
 // §17.10 - a stage whose time dial is being modulated, re-read at the dial the mod puts it at. A
@@ -12170,11 +12283,29 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             value[n][2] = (double)atomic_load(&gMorphMilli[5]) / 1000.0;
             value[n][3] = logic_level(atomic_load(&gSustainPedal));
             value[n][4] = (double)atomic_load(&gBendMilli) / 1000.0;
-            value[n][5] = (double)atomic_load(&gMorphMilli[7]) / 1000.0;
-            value[n][6] = 0.0;
+            // the G2X global wheels arrive as CC 96 and CC 97 on the slot's channel (manual, MIDI CC list)
+            value[n][5] = midi_cc_level(atomic_load(&gMidiCcValue[MIDI_ROW_THIS][MIDI_CC_GLOBAL_WHEEL_1]));
+            value[n][6] = midi_cc_level(atomic_load(&gMidiCcValue[MIDI_ROW_THIS][MIDI_CC_GLOBAL_WHEEL_2]));
             break;
         }
         case eNodeCtrlRcv:
+        {
+            // §70.13 - each arrival latches Val and raises Rcv for one 24 kHz tick. state: 0 the arrivals
+            // seen (+1, 0 before the first sample), 1 Rcv's time left, 2 Val as latched
+            double * st    = gLadder[voice][n];
+            uint32_t row   = (uint32_t)spec->bx[0];
+            double   count = (double)atomic_load(&gMidiCcCount[row][spec->select]) + 1.0;
+
+            if ((st[0] != 0.0) && (count != st[0])) {
+                st[1] = gSampleRate / CTRLRCV_TICK_HZ;
+                st[2] = midi_cc_level(atomic_load(&gMidiCcValue[row][spec->select]));
+            }
+            st[0]       = count;
+            value[n][0] = (st[1] > 0.0) ? LOGIC_HIGH_LEVEL : 0.0;
+            value[n][1] = st[2];
+            st[1]      -= 1.0;
+            break;
+        }
         case eNodeSink:
         {
             break;
@@ -12182,6 +12313,18 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeNoteDet:
         {
             // §69.11 - the instrument writes both velocities as v x 2^14: v / 128 here
+            if ((uint32_t)spec->bx[0] < MIDI_ROWS) {
+                // §70.13 - NoteRcv on a MIDI channel: the gate and velocities as they last arrived there
+                uint32_t row  = (uint32_t)spec->bx[0];
+                uint8_t  vel  = atomic_load(&gMidiNoteVel[row][spec->select]);
+                double * held = &gLadder[voice][n][0];   // Vel as the last note-on left it
+
+                *held       = (vel > 0u) ? ((double)vel / NOTEDET_VELOCITY_SCALE) : *held;
+                value[n][0] = logic_level(vel > 0u);
+                value[n][1] = *held;
+                value[n][2] = (double)atomic_load(&gMidiNoteRel[row][spec->select]) / NOTEDET_VELOCITY_SCALE;
+                break;
+            }
             value[n][0] = logic_level(gKeyHeld[spec->select] > 0u);
             value[n][1] = (double)gKeyVelocity[spec->select] / NOTEDET_VELOCITY_SCALE;
             value[n][2] = (double)gKeyReleaseVelocity[spec->select] / NOTEDET_VELOCITY_SCALE;
@@ -12589,9 +12732,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeChorus:
         {
-            if ((spec->active == true) && (spec->line < MAX_CHORUS_LINES)) {
+            if ((spec->active == true) && (spec->line < ((spec->postMix == true) ? MAX_CHORUS_FX_LINES : MAX_CHORUS_LINES))) {
                 uint32_t instance = (spec->postMix == true) ? spec->line
-                                    : (MAX_CHORUS_LINES + (spec->line * MAX_VOICES) + voice);   // notes §197
+                                    : (MAX_CHORUS_FX_LINES + (spec->line * MAX_VOICES) + voice);   // notes §197
 
                 chorus_step(instance, a, spec->depth, spec->amount, &value[n][0], &value[n][1]);
             } else {
@@ -12652,6 +12795,24 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
 
             value[n][0] = (spec->active == true) ? (left * gain) : 0.0;
             value[n][1] = (spec->active == true) ? (right * gain) : 0.0;
+            break;
+        }
+        case eNodeIn4Bus:
+        {
+            // §69.12 - the first select pairs are Bus 1/2, the rest Bus 3/4
+            double sum[4] = {0.0, 0.0, 0.0, 0.0};
+
+            for (uint32_t c = 0; (c + 1u) < spec->inCount; c += 2u) {
+                uint32_t leg = ((c / 2u) < spec->select) ? 0u : 2u;
+
+                sum[leg]      += signal_in(spec, value, c);
+                sum[leg + 1u] += signal_in(spec, value, c + 1u);
+            }
+
+            for (uint32_t k = 0; k < 4u; k++) {
+                value[n][k] = (spec->active == true) ? (sum[k] * gain) : 0.0;
+            }
+
             break;
         }
         case eNodePassThru:

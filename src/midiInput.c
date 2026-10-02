@@ -160,9 +160,18 @@ static void handle_message(uint32_t word) {
     uint8_t  data2  = (uint8_t)(word & 0x7F);
     uint8_t  kind   = (uint8_t)(status & 0xF0);
     uint32_t wanted = atomic_load(&gChannel);
+    uint32_t chan   = (uint32_t)(status & 0x0F);
+    bool     ours   = (wanted == MIDI_CHANNEL_OMNI) || ((chan + 1) == wanted);
+
+    // The patch's CtrlRcv and NoteRcv modules listen on any channel, so they hear everything first
+    if (kind == 0xB0) {
+        sound_engine_midi_cc(chan, data1, data2, ours);
+    } else if ((kind == 0x90) || (kind == 0x80)) {
+        sound_engine_midi_note(chan, data1, data2, (kind == 0x90) && (data2 > 0), ours);
+    }
 
     // notes §5
-    if ((wanted != MIDI_CHANNEL_OMNI) && (((uint32_t)(status & 0x0F) + 1) != wanted)) {
+    if (ours == false) {
         return;
     }
 

@@ -440,7 +440,7 @@ static void g2_note_on(void * inst, uint8_t channel, uint8_t note, float velocit
                        uint32_t sampleOffset) {
     tG2Plugin * g2 = enter(inst);
 
-    (void)channel;
+    sound_engine_midi_note(channel, note, (uint32_t)lroundf(velocity * 127.0f), true, true);   // NoteRcv
     queue_note(g2, note, velocity, true, sampleOffset);
 }
 
@@ -448,7 +448,7 @@ static void g2_note_off(void * inst, uint8_t channel, uint8_t note, float veloci
                         uint32_t sampleOffset) {
     tG2Plugin * g2 = enter(inst);
 
-    (void)channel;
+    sound_engine_midi_note(channel, note, (uint32_t)lroundf(velocity * 127.0f), false, true);   // NoteRcv
     queue_note(g2, note, velocity, false, sampleOffset);
 }
 
