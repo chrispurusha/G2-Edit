@@ -1142,7 +1142,23 @@ that gets steeper with frequency, which wants another pole rather than a lower c
 already there. Dropping those instead would have cost a decibel at 4 kHz, where the match is
 already good.
 
-## 61. `PARAM_SMOOTH_SECONDS`
+## 61. `PARAM_RAMP_SAMPLES` (was `PARAM_SMOOTH_SECONDS`)
+
+UPDATED 2026-10-03: THE INSTRUMENT'S OWN GLIDE. On the G2 a changed dial (a knob, a morph, the mod wheel
+moving a morph) does not jump: its new value becomes a target, the step is (target - current)/128, and
+every 94 samples (about 1021 Hz) the value moves one step until it arrives - a straight line to the new
+value in 125 ms, restarted from wherever it has got to whenever another value arrives. A wheel sweep
+therefore reaches the DSP as one continuous glide that trails the hand slightly.
+
+The engine had an 8 ms one-pole instead. Fed by a 7-bit wheel through a 67-unit morph (07 Unstable Lead's
+VCF), each wheel message moved the cutoff about half a dial unit, and 8 ms smoothed each of those into a
+quick rise followed by a flat until the next message - a staircase, heard as zipper on the resonant
+filter (CT, todo). The engine now runs the instrument's ramp per sample: the same line, without the
+94-sample treads. Applies to everything smoothed here: shape, cutoff, resonance, gain and the levels.
+Revert record row 123.
+
+The earlier reasoning, kept for the record:
+
 
 Linear 0..1 through the current segment, and the level it started from. Shaping this rather than
 the step keeps a segment's DURATION exactly what its dial says, whatever curve it draws.
