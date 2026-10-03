@@ -382,6 +382,8 @@ Shape mod input, which the engine ignores.
   MorphSplitEnv (Vel on an envelope's Sustain, Keyb on its Decay - this entry's case) and
   MorphSameDxLevel (both on one Operator Level - the case still 7.7% out). Load each on the G2 and in
   the editor and compare; none of §26.2 has ever been heard against the instrument.
+- ***OVERDRIVE BY THE INSTRUMENT'S LAW (2026-10-04)*** - reference §71. LISTEN: 14 CS80project72 in the
+  engine against the G2 - CT heard it distort on one note; the OverDrive was the first stage that differed.
 - ***DX OPERATOR AND DXROUTER BY THE INSTRUMENT'S LAWS (2026-10-03)*** - reference §14. Checked on the
   G2 already: the envelope's shape, the level, FM depth, feedback, keyboard level and rate scaling, and
   levels above 99. Velocity confirmed too (Vel 7, MIDI velocities 127/100/64/30, within

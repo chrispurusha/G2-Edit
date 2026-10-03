@@ -560,19 +560,8 @@ the module should be at its most extreme. Nine folds full scale back to full sca
 
 ## 35. in `shaper_transfer()`
 
-Drive into a soft limiter whose KNEE is what the four type names select:
-y = x / (1 + |x|^n)^(1/n) reaches +-1 asymptotically, gently for a small n and
-almost squarely for a large one. odTypeStrMap is {Soft, Hard, Fat, Heavy}, so Fat
-takes the most drive and Hard the sharpest knee.
-
-AMOUNT BOTH DRIVES AND MIXES, and the mix is what makes zero mean zero. The limiter
-bends the curve at every drive setting, unity included - x/(1+x^2)^(1/2) is already
-3 dB down at full scale with no drive at all - so a dial that only fed the drive
-would leave the module audibly distorting with its depth control shut. Crossfading
-the shaped signal against the dry one by the same dial is the only construction here
-that reaches genuine transparency at 0 and full character at 127. Which of the two
-the instrument actually does is UNMEASURED; that it is transparent at 0 is not in
-doubt, since the module has no separate bypass reading of its own dial.
+OverDrive is the instrument's own since 2026-10-04 - sound-engine-reference §71. Here it is drawn at a steady
+drive, without the feedback and the 7 Hz high-pass, which only the engine's stateful step carries.
 
 ## 36. in `shaper_transfer()`
 

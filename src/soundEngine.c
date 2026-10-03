@@ -1056,6 +1056,7 @@ typedef struct {
     // Shaper group. Stored rather than re-derived from the module type so the render loop never
     // reaches back into the patch database.
     tShaperSettings shaper;
+    tOverdriveWords od;              // §71 - OverDrive's Type and Shape words
 
     double          constant;        // Constant module's value
     // Fade family (§4); the position rides on the shape smoother.
@@ -5530,6 +5531,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // The drop-downs are read raw because a drop-down cannot carry a morph (manual p.20).
             shaper_settings_build(module, variation, param_value, &node->shaper);
             node->active = node->shaper.active;
+
+            if (node->shaper.kind == eShaperOverdrive) {
+                overdrive_words(node->shaper.curve, node->shaper.sym, &node->od);
+            }
             break;
         }
         case eNodeConstant:
@@ -8089,6 +8094,54 @@ static double shaper_step(double input, double modulation, const tEngineNode * s
     // The mod jack adds to the dial through its own attenuator, and the sum is clamped to the
     // dial's range - the same treatment the filter's cutoff modulation gets.
     return shaper_transfer(&spec->shaper, spec->shaper.amount + (spec->shaper.mod * modulation), input);
+}
+
+// §71 - OverDrive, the instrument's own. Each 24 kHz tick sets the drive and the blend from the dials and
+// the Mod input; each sample feeds back (Heavy), shapes twice, takes out the DC and blends with the dry.
+#define OD_FILTER      (0xfa0 / DSP_WORD_SCALE)       // §71.1 - the wet path's 7 Hz high-pass
+#define OD_TOP         (8388607.0 / DSP_WORD_SCALE)
+#define OD_SHAPED      (0)                            // gLadder slots: the shaped sample last time,
+#define OD_BAND        (1)                            // the high-pass's two states,
+#define OD_LOW         (2)
+#define OD_DRIVE       (3)                            // and this tick's drive, feedback and blend
+#define OD_FEEDBACK    (4)
+#define OD_DRY         (5)
+#define OD_WET         (6)
+
+static double overdrive_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double input, double modulation) {
+    SE_LOCAL;
+
+    double * st  = gLadder[voice][n];
+    double   x   = overdrive_word_saturate(input / DSP_FULL_SCALE);
+
+    if (spec->active == false) {
+        return input;
+    }
+
+    if (gEnvTick[voice][n] <= 0.0) {
+        double drive = overdrive_word_saturate(fmax(0.0, spec->shaper.amount + (spec->shaper.mod * modulation)));
+        double rest  = overdrive_word_saturate(OD_TOP - drive);
+
+        st[OD_DRIVE]        = drive;
+        st[OD_FEEDBACK]     = overdrive_word_saturate(drive * spec->od.feedback) / 2.0;
+        st[OD_DRY]          = overdrive_word_saturate(rest * rest);
+        st[OD_WET]          = overdrive_word_saturate(OD_TOP - st[OD_DRY]);
+        gEnvTick[voice][n] += 1.0;
+    }
+    gEnvTick[voice][n] -= ENV_TICK_HZ / gSampleRate;
+
+    double   v   = overdrive_word_saturate((st[OD_FEEDBACK] * st[OD_SHAPED]) + ((OD_TOP - st[OD_FEEDBACK]) * x));
+    double   raw = 0.0;
+    double   low = st[OD_LOW] + (OD_FILTER * st[OD_BAND]);
+    double   e   = 0.0;
+
+    overdrive_poly(&spec->od, overdrive_poly(&spec->od, overdrive_drive_gain(&spec->od, st[OD_DRIVE], v), NULL), &raw);
+    st[OD_SHAPED]       = overdrive_word_saturate(raw);
+    e                   = overdrive_word_saturate((raw / 4.0) - low - (2.0 * OD_TOP * st[OD_BAND]));
+    st[OD_LOW]          = overdrive_word_saturate(low);
+    st[OD_BAND]         = overdrive_word_saturate(st[OD_BAND] + (OD_FILTER * e));
+
+    return DSP_FULL_SCALE * overdrive_word_saturate((st[OD_DRY] * x) + (st[OD_WET] * e));
 }
 
 // §18.3 - the time in samples, with a Time Mod input moving the dial by Mod x TimeMod steps
@@ -13320,7 +13373,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             double sig = (spec->shaper.signalLeg == 0) ? a : signal_in(spec, value, 1);
             double mod = (spec->shaper.signalLeg == 0) ? signal_in(spec, value, 1) : a;
 
-            value[n][0] = shaper_step(sig, mod, spec);
+            value[n][0] = (spec->shaper.kind == eShaperOverdrive) ? overdrive_step(voice, n, spec, sig, mod) : shaper_step(sig, mod, spec);
             break;
         }
         case eNodeMix:

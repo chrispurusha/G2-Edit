@@ -891,8 +891,8 @@ bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader di
         case moduleTypeOverdrive:
         {
             out->kind   = eShaperOverdrive;
-            out->amount = dial(module, variation, OD_PARAM_AMOUNT) / 127.0;
-            out->mod    = dial(module, variation, OD_PARAM_AMOUNT_MOD) / 127.0;
+            out->amount = shaper_dial_fraction(dial(module, variation, OD_PARAM_AMOUNT));       // §71.3
+            out->mod    = shaper_dial_fraction(dial(module, variation, OD_PARAM_AMOUNT_MOD));
             out->curve  = module->param[variation][OD_PARAM_TYPE].value;
             out->sym    = (module->param[variation][OD_PARAM_SHAPE].value != 0);
             out->active = (dial(module, variation, OD_PARAM_ACTIVE) != 0.0);
@@ -943,6 +943,58 @@ bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader di
         default:
             return false;
     }
+}
+
+// §71 - OverDrive. A word as a fraction, as the instrument's arithmetic saturates it.
+#define OD_WORD_SCALE    (8388608.0)
+#define OD_WORD_TOP      (8388607.0 / OD_WORD_SCALE)
+
+double overdrive_word_saturate(double word) {
+    return (word >= OD_WORD_TOP) ? OD_WORD_TOP : ((word < -1.0) ? -1.0 : word);
+}
+
+// §71.2 - the Type's polynomial and gain words and the Shape's square term, in the instrument's own
+// integer arithmetic (its Type and Shape actions), then as fractions of a word.
+void overdrive_words(uint32_t type, bool sym, tOverdriveWords * out) {
+    static const int32_t kSat[4]      = {0, 0x40, 0x7f, 0x30};             // the polynomial's setting by Type
+    static const int32_t kTypeGain[4] = {0x200000, 0x400000, 0x7fffff, 0};
+    static const int32_t kFeedback[4] = {0, 0, 0, 0x600000};
+    uint32_t             t            = (type < 4u) ? type : 0u;
+    uint32_t             u4           = (uint32_t)((kSat[t] * -0x4000) - 0x13352c);
+    uint32_t             u3           = u4 & 0xffffu;
+    int32_t              hi           = (int32_t)u4 >> 16;
+    int32_t              sq           = ((int32_t)(((uint32_t)hi * u3 * 2u) + ((u3 * u3) >> 16)) >> 7) + (hi * hi * 0x200);
+    int32_t              y3           = (int32_t)((u4 * (uint32_t)-3) + 0x800000u + (uint32_t)(sq * 5)) >> 3;
+    float                inv          = 8388608.0f / (float)(int32_t)((uint32_t)y3 << 3);
+    int32_t              tube         = sym ? 0 : ((t == 3u) ? 0x40 : 0x7f);
+
+    out->y3       = y3 / OD_WORD_SCALE;
+    out->y4       = ((int32_t)((u4 * 4u) + (uint32_t)(sq * -0x14)) >> 3) / OD_WORD_SCALE;
+    out->y5       = ((sq * 0x10) >> 3) / OD_WORD_SCALE;
+    out->y2       = ((int32_t)(inv * inv * 8388608.0f) >> 2) / OD_WORD_SCALE;
+    out->tube     = (tube * 0x1cca) / OD_WORD_SCALE;
+    out->typeGain = kTypeGain[t] / OD_WORD_SCALE;
+    out->feedback = kFeedback[t] / OD_WORD_SCALE;
+}
+
+// §71.1 - Y3 z + Y4 z^3 + Y5 z^5, times eight
+double overdrive_poly(const tOverdriveWords * w, double z, double * raw) {
+    double z2 = overdrive_word_saturate(z * z);
+    double z3 = overdrive_word_saturate(z * z2);
+    double z5 = overdrive_word_saturate(z3 * z2);
+    double r  = 8.0 * ((w->y3 * z) + (w->y4 * z3) + (w->y5 * z5));
+
+    if (raw != NULL) {
+        *raw = r;
+    }
+    return overdrive_word_saturate(r);
+}
+
+// §71.1 - Asym's square term, then the gain: sixteen times the drive's share plus Y2
+double overdrive_drive_gain(const tOverdriveWords * w, double drive, double v) {
+    double t = overdrive_word_saturate(-w->tube + (OD_WORD_TOP * v) + (w->tube * overdrive_word_saturate(v * v)));
+
+    return overdrive_word_saturate(16.0 * (((drive * w->typeGain) * t) + (w->y2 * t)));
 }
 
 // Fold rather than clip: a triangle of period 4 that runs straight through [-1, 1] and turns back
@@ -1043,20 +1095,15 @@ double shaper_transfer(const tShaperSettings * settings, double amount, double i
         }
         case eShaperOverdrive:
         {
-            // notes §35
-            static const double kKnee[]  = {2.0, 16.0, 3.0, 6.0};
-            static const double kDrive[] = {8.0, 8.0, 24.0, 32.0};
-            uint32_t            type     = (settings->curve < 4) ? settings->curve : 0;
-            double              driven   = x * (1.0 + (amount * kDrive[type]));
-            double              shaped   = driven / pow(1.0 + pow(fabs(driven), kKnee[type]),
-                                                        1.0 / kKnee[type]);
+            // §71 - the instrument's curve at a steady drive: its feedback and 7 Hz high-pass left out
+            tOverdriveWords w;
+            double          v   = overdrive_word_saturate(x / 4.0);
+            double          dry = (1.0 - amount) * (1.0 - amount);
+            double          raw = 0.0;
 
-            // Asym shapes only the positive peaks (manual), so the negative half stays linear -
-            // and then meets the headroom, which is where its own harmonics come from.
-            if ((settings->sym == false) && (driven < 0.0)) {
-                shaped = shaper_limit(driven, 1.0);
-            }
-            return ((1.0 - amount) * x) + (amount * shaped);
+            overdrive_words(settings->curve, settings->sym, &w);
+            overdrive_poly(&w, overdrive_poly(&w, overdrive_drive_gain(&w, amount, v), NULL), &raw);
+            return 4.0 * overdrive_word_saturate((dry * v) + ((1.0 - dry) * (raw / 4.0)));
         }
         case eShaperClip:
         default:
