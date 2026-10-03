@@ -12173,6 +12173,7 @@ the same saved patch; levels against a full-scale OscDual square captured and re
     L-Depth 60 -Exp, R-Depth 60 -Lin, keys 40/64/100      fundamental within 0.12 dB (100 is -41 dB)
     RateScale 7, R2 30 to L2 0, keys 40 and 88            -30 dB at 1.91/1.92 s and 0.18/0.18 s
     Level 100 / 110 / 127, L1-L3 127                      100 plays as 99; the others at the floor
+    Vel 7, MIDI velocities 127/100/64/30 (TM-1, ch 3)  fundamental within 0.03 dB
 
 Algorithm 28 routes Operator 2 to Main as well as into Operator 1, and algorithms 16-18 store their
 Main level as the word 0x800000 (-1.0) - both the instrument's, both now in the engine.
