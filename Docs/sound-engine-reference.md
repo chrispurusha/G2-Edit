@@ -652,7 +652,8 @@ The Note is the Keyboard's, 0x8000 a semitone from E4; BrPt v is the key v + 17 
 scaling adds RateScale x 0x84210 x (note word + 0x158000) >> 39 rate steps, counting up from key 21:
 0 at the bottom, 15 at key 102 for RateScale 3. CONFIRMED ON THE G2: level scaling at keys 40, 64 and
 100 (L-Depth 60 -Exp, R-Depth 60 -Lin) within 0.12 dB; rate scaling at RateScale 7, keys 40 and 88,
-within one 10 ms window. Velocity is not yet checked against the G2 (to-test.md).
+within one 10 ms window; velocity at Vel 7, velocities 127, 100, 64 and 30 through MIDI, within
+0.03 dB.
 
 **14.5 Main and pitch.** Main is twice `kDxMainWords[algorithm]` times the carriers' sum: 1.0 for
 most two-carrier algorithms, 0.75 for three, down to 0.375 for algorithm 32's six. Algorithms 16-18
