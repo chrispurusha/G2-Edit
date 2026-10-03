@@ -4,15 +4,15 @@ Things to do. ONE LINE PER ITEM - keep it that way.
 Measurements, reasoning and completed-work narrative go in findings.md, NOT here.
 Built-but-unchecked work goes in to-test.md.
 
-General
+General (priority order)
 -
 - NEXT SESSION: Resonator - settle its law (Driver and Level Scaler done 2026-10-03; engine-module-status.md)
-- Further investigation into voice stealing improvements.
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
+- CPU bandwidth optimisations.
+- Further investigation into voice stealing improvements.
 - Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works anyhow.
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
 - Bypass, the rest: a module switched off still has its INPUTS evaluated (an LFO into a switched-off oscillator keeps running) - prune the chain behind an Off module whose output is silence or a plain pass-through. Each module itself now skips its work when off (2026-10-03)
-- CPU bandwidth optimisations.
 - Implement arpeggiator.
 - At a 176.4/192 kHz device the engine's noise is ~3 dB low (white drawn per graph sample, not per 96 kHz one) and DrumSynth's noise filter goes 3-20 dB dark (its Chamberlin retuned off 96 kHz) - findings 2026-09-27
 - Fireface loopback at 192 kHz (an output cabled to an input, sine sweep to 48 kHz) to confirm the G2 output droop is not partly the interface's (sound-engine-notes §199)
