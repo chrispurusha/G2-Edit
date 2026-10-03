@@ -63,14 +63,8 @@ static const tGroupRow kGroups[] = {
 
 // Audible, but something about the law is still a guess; to-test.md carries each check.
 static const tPartialRow kPartial[] = {
-    {"Flanger",           "basic: a swept delay from the manual (§70.2)"},
-    {"PShift",            "basic: two crossfaded taps (§70.3)"},
-    {"Scratch",           "basic: two crossfaded taps, ratio law guessed (§70.3)"},
-    {"Osc String",        "basic: a tuned loop; decay and damp laws guessed (§70.4)"},
-    {"Resonator",         "basic: OscString's loop; Alg and inputs guessed (§70.4)"},
+    {"Resonator",         "basic: a tuned loop; Alg and inputs guessed (§70.4a)"},
     {"Driver",            "a guess: not in the manual in hand (§70.5)"},
-    {"Pitch Tracker",     "counter and E2 reference are the instrument's; its detector (followers, filters, flip-flop) is not (§70.7)"},
-    {"Vocoder",           "basic: 16 band-passes, band centres guessed (§70.8)"},
     {"Level Scaler",      "basic: dB per octave from the manual (§70.12)"},
     {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },
     // §6.7, §28.4 - pieces of their jacks' laws not yet decoded

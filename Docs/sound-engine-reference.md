@@ -485,7 +485,7 @@ unfiltered noise. With 11.1-11.4: EqPeak shape 0.57 dB mean (0.82 worst), Eq2Ban
 
 **12.1 Parameters and connections.** On the instrument: Coarse 0, Fine 1, Kbt 2, PitchM 3, TuneM 4,
 SqrL 5, PW mod amount 6, SawL 7, Phase 8, SubL 9, On 10, **PW 11**, Phase mod amount 12, Soft 13. The
-module tables have 6 and 11 the other way round (as OscNoise has 5 and 6). Inputs Pitch, PitchVar, Sync,
+editor's face had 6 and 11 the other way round until 2026-10-03. Inputs Pitch, PitchVar, Sync,
 PW, Phase; Sync as §6.6.
 
 **12.2 Waveforms.** Three at one pitch, summed:
@@ -2568,18 +2568,55 @@ been compared with the instrument yet.
   mod input x its amount (64 = one engine unit a full dial). Quad's Time/Clk uses the clock-sync law,
   and its Main output reads the Range's full time. Eight's taps are at 1..8 x the Time spacing, and the
   Range is the total to tap 8. The taps are the instrument's (§52.1, 2026-09-27).
-- **70.2 Flanger** (laws from the parts, 2026-09-27): a triangle LFO at the Rate display's law
-  (v x 384000/2^24 Hz, so 0.01 to 2.91 Hz; the manual's 24.4 Hz is wrong) sweeps the delay from a
-  74-sample offset over up to 436 samples (Range, v x 0xdbec). Feedback is unipolar, v x 7000000/127
-  (0.834 at 127). Not yet the part's: its 512-sample ring with the 4-point interpolator, and its exact
-  dry/wet sums.
-- **70.3 PShift / Scratch**: two taps half a window apart, crossfaded by triangles. The window is the
-  Delay setting (12.5 to 100 ms). PShift's ratio is 25 cents a Semi step plus Fine plus Shift mod, in
-  semitones. Scratch's is (v - 64)/63 x 4 plus Mod, so it runs backwards below 64 and is silent at 64.
-- **70.4 OscString / Resonator**: a tuned loop, y = In + g x lowpass(y one period back), pitched as the
+- **70.2 Flanger** (the instrument's own parts, 2026-10-03). A sweep part on the 24 kHz tick and a
+  delay part every 96 kHz sample:
+  - **Sweep.** A signed 24-bit phase steps by Rate x 16 a tick (8 at Rate 0): a saw at
+    v x 384000/2^24 Hz, 0.01 to 2.91 Hz (the manual's 24.4 Hz is wrong). Its absolute value is a
+    triangle, starting from a random phase drawn at load. The delay word is
+    floor(Range x 0xdbec x |phase|) + 0x128000, and the read sits (word >> 14) + 1 + t samples back, with
+    t = ((word >> 9) & 31)/32: 75 samples at the floor, 511.4 at Range 127.
+  - **Ring.** 512 samples. A 4-point Lagrange read at 1/32-sample steps, with the four coefficients
+    halved, so the read is half the delayed signal d. A delay past the ring wraps onto the newest
+    samples, as the part's mask does; only Range near 127 at the top of the sweep reaches it.
+  - **Sums, every word saturated.** The ring takes 0.8 In + 2 x FB x o, where FB = floor(v x 7000000/127)
+    of a word (0.834 at 127). The second output o = 0.6 In + 0.3 d is the feedback, so the loop gain
+    tops out at 0.5. Out = 0.6 In + 0.8 d, or In with the module off; the ring keeps running while it is
+    off.
+- **70.3 PShift / Scratch** (the instrument's own parts, 2026-10-03). The same five parts in both: a
+  100 ms line, two taps, a crossfade, and a control part on the 24 kHz tick:
+  - **Taps.** One signed 24-bit phase p, with the second tap at p plus half a cycle. Each tap reads
+    9728 x X1 x (1 + p) samples back (a 4-point Lagrange read), where X1 = 127/2048 x 2^Delay gives
+    windows of 12.6, 25.1, 50.3 and 100.5 ms. Each tap is weighted 1 - p^2, so the two gains sum to 1
+    at a jump and 1.5 between. **The output is the NEGATED sum.** Off passes In.
+  - **Rate.** The phase steps by 6990.67 x (1 - ratio) x 8/4/2/1 a tick, for Delay 0..3, so the delay
+    moves 4 x (1 - ratio) samples a tick.
+  - **PShift ratio.** Coarse is a quarter semitone a step (+-16 semitones), interpolated linearly between
+    the semitone table's entries. Fine is +-50 cents (127 = +49.2). Pitch M is v/128 (127 = 1) at **half
+    a semitone a unit**.
+  - **Scratch ratio.** A word R = (v - 64)/512 (127 = 1/8) passes a one-pole s = 0.01 R + 0.99 s +
+    Ratio M x input (the input's word, NOT through the 0.01: a few hundredths of a unit move it as far as
+    the whole dial), saturated to +-1. The speed is 4 x clamp(8s), +-4, backwards below 64. Both gains
+    are scaled by clamp(64 x (8|s| - 1/128), 0, 1), which is silent at 64 and full from 66.
+  - **What a capture would check.** With a short window the jump is a large fraction of a cycle, so the
+    output's carrier can cancel into sidebands at the crossfade rate (440 Hz at Coarse 112 in 12.5 ms
+    reads 880 +- 40). That is the structure itself, not the engine.
+- **70.4 OscString** (the instrument's own part, 2026-10-03). A 7000-sample line (13.7 Hz at the
+  lowest), pitched by the oscillators' Pitch part (§6):
+  - **Period.** 2^25 / increment, which is exactly 96000/f samples. It is read with a 4-point Lagrange
+    at 1/512 sample. The part adds two samples and the read sits two samples in, so the loop is exactly
+    one period with Damp at 0.
+  - **Loop.** The read passes a one-pole s += Damp x (read - s), with Damp = (127 - v)/128 (v = 0 gives
+    1, no damping; 127 freezes it). The line takes In + Decay x s, and Out is s. With the module off the
+    loop runs on and Out is 0. Every word saturates.
+  - **Decay** is the loop gain per period: 1 - t(127 - v), interpolated as the dial is.
+    t(i) = exp(2.070135 - 11.050795 x 0.9869^i) for i > 0 and t(0) = 0, which reproduces the instrument's
+    128-entry table within 0.1%. Decay 127 never decays; 64 keeps 0.936 a period, 0 keeps 0.0004.
+  - **Damp moves the pitch.** The one-pole adds its own delay and nothing compensates for it: at Damp 64
+    the string is about 1 sample long, +8 cents flat at A4 and +34 cents at A7.
+- **70.4a Resonator** (basic): a tuned loop, y = In + g x lowpass(y one period back), pitched as the
   oscillators are (§6). Decay sets a T60 of 20 ms to 10 s and Damp the one-pole. The loop saturates at
-  the DSP's full scale. Resonator's Out2 reads the loop at the Pos share of the period; its Alg is not
-  read. Its inputs are taken as In, Pitch and PitchVar, which is a guess.
+  the DSP's full scale. Out2 reads the loop at the Pos share of the period; Alg is not read. Its inputs
+  are taken as In, Pitch and PitchVar, which is a guess.
 - **70.5 Driver**: a guess. The manual edition in hand has no Driver, so it is (In1 + In2 x Embouchure)
   through a tanh driven by Stiffness.
 - **70.6 NoiseGate** (the instrument's own parts, 2026-10-02): a follower, a gate, an attack-hold-release
@@ -2596,18 +2633,54 @@ been compared with the instrument yet.
   Checked against the parts run together: the gate opens and shuts on the same sample, Out within 1e-5
   and Env within 1e-4 over 40 000 samples of bursts at five settings.
 
-- **70.7 PitchTrack / ZeroCnt**: the period between rising zero crossings as a pitch, **E2 = 0 units**
-  (settled 2026-09-27 from the counter's own parts: its log table and scaling put 0 at 82.41 Hz, 12 units
-  an octave; the engine had E4, 24 units low). PitchTrack pulses Period at each measurement and raises
-  Gate while a 20 ms follower is above the Threshold; its detector - followers, filters and a flip-flop
-  ahead of the counter - is not yet the instrument's.
+- **70.7 PitchTrack** (the instrument's own parts, 2026-10-03). Pitch 0 is E2 (82.41 Hz), 12 units an
+  octave, as ZeroCnt's (§70.7a). Every part runs on every 96 kHz sample; see the end of this section.
+  - **Gate.** |In| passes a two-stage follower: the first stage attacks instantly and releases by
+    0x2746/2^23 a sample, the second follows it up and releases by 0x1a10/2^23. Gate goes high when the
+    second stage exceeds Threshold (v/128 units of a full-scale signal, 127 = 1) and low below 3/4 of it.
+  - **Positive peaks.** In passes a one-pole low-pass (pole 0x7d6103, about 316 Hz) and then a DC blocker
+    (pole 0x7fe645, gain (1 + pole)/2, about 12 Hz). The positive half of that passes the same kind of
+    follower (second-stage release 0x270a/2^23). A sample counts as a peak when it reaches 0.9 of the
+    follower.
+  - **Negative peaks** come the same way from the negative half of the RAW In: the module wires its input
+    there directly, not through the filters.
+  - **Flip-flop.** A positive peak sets it and a negative peak resets it (reset wins). The flip-flop is
+    the Period output: a square at the tracked pitch, not the "very short pulse" the manual describes.
+    The counter measures the samples between its rising edges.
+  - **Outputs** are Period, Pitch and Gate, in that order, which is the manual's order. The editor's
+    face had Pitch and Gate labelled the other way round until 2026-10-03.
+  - **The rate.** These parts may be placed in the every-sample list or the 24 kHz one, and the counter's
+    offset word is 0 in the first case. Offline, the parts at 24 kHz miss periods of a 440 Hz saw (360
+    edges a second); at 96 kHz they track sines and saws from 55 to 880 Hz exactly. So the engine runs
+    them at 96 kHz.
 - **70.7a ZeroCnt, exactly (2026-09-27):** the Track part reads its input once a 24 kHz tick, counts the
   ticks between rising crossings (the last reading at or below 0, this one above) WHOLE, and the Calc part
   turns the count into 12 log2((24 000 / count) / 82.41 Hz) units - the table's law to 0.01 units. So the
   reading steps: 440 Hz, 54.5 ticks, reads 28.9 or 29.4 by turns, not 29.0 (revert record row 88).
-- **70.8 Vocoder**: sixteen band-passes (Q 5, log spaced from 100 Hz to 8 kHz) on Ctrl and on In. Each
-  synthesis band is scaled by a 10 ms envelope of the analysis band its BandSel routes there. Emphasis
-  pre-emphasises Ctrl; Monitor outputs Ctrl.
+- **70.8 Vocoder** (the instrument's own program, 2026-10-03). Two parts: converters every 96 kHz
+  sample, and a band bank on the 24 kHz tick. Words are a quarter of an engine unit.
+  - **Section.** Every filter is a chain of one form: w = 2(u - k1 w2 - k2 w1), y = w/2 + k3 w2 + k4 w1,
+    i.e. (1 + 2k4 z^-1 + 2k3 z^-2)/(1 + 2k2 z^-1 + 2k1 z^-2). The first section takes k0 x the input;
+    each later one takes the previous output shifted by a fixed power of two. Stored words saturate.
+  - **Converters.** Ctrl passes one section (a gentle low-pass near 11 kHz) and In four (a steep
+    low-pass, 0.94 to 8 kHz, -20 dB at 10 kHz). Each is doubled and held every fourth sample. The bank's
+    output is held, passes the same four sections, and is scaled by 0x651eb8 x 8 (2.97 overall in the
+    passband).
+  - **Bands.** Sixteen contiguous bands with edges at about 205, 325, 461, 606, 778, 974, 1200, 1460,
+    1775, 2152, 2601, 3159, 3876, 4890, 6430 and 8566 Hz. Band 0 is a two-section low-pass below
+    205 Hz; the rest are four-section band-passes. Passband gain is 0.5. Analysis (Ctrl) and synthesis
+    (In) use the same coefficient words, which the engine holds as the instrument's data: the edges are
+    a designed set, not a curve.
+  - **Followers.** Each analysis band is rectified into p = max(r, R r + (1 - R) p), then
+    e = max(R p + (1 - R) e, A p + (1 - A) e): release R and attack A per band, from 0.0021 and 0.0165
+    (band 0) up to 0.0179 and 0.218 (band 15), a tick.
+  - **Routing and output.** Synthesis band k is scaled by the envelope its BandSel names (Off: none). The
+    sum x 16 is the output.
+  - **Emphasis** replaces the analysis input with 8 (e0 x - e1 e0 x[n-1]), e0 = 0x5061f1, e1 = 0x4bd344.
+    **Monitor** outputs Ctrl unchanged.
+  - **Checked.** The bank was checked against the instrument's program run sample by sample: 53 dB below
+    the signal, with emphasis off and on, under a scrambled routing. The converters are read from the
+    program and are not yet run.
 - **70.9 RndClkB** (the instrument's own parts, 2026-10-02) is RndClkA (§64) with a Step M part in front.
   Parameters: 0 Step, 1 OutType, 2 on, 3 Mode (Mono, as RndClkA's), 4 Step M; inputs Clk, Rst, Seed,
   Step M. With the Step M jack unpatched that part is not linked in, and the host gives Step's words

@@ -4,6 +4,37 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***BYPASS SKIPS THE WORK (2026-10-03)*** - Phaser, FltPhase, DlyStereo, Flanger, OscString and MetNoise no longer
+  compute while switched off (the rest already did not). Their state now freezes while off instead of running
+  on, so switching one back on can replay what it held from before. LISTEN for that on a delay or flanger.
+- ***STEREO PATHS: SEQCTR TRIG AND 4-IN BUS RIGHT (2026-10-03)*** - notes §168. Every node's second output was
+  overwritten with its first unless its kind was on a list; SeqCtr and 4-In (Bus) were missing, so SeqCtr's
+  Trig was a copy of Val and a 4-In from the bus played its left leg on the right. MixStereo itself was
+  measured on the G2 and is unchanged. LISTEN: a 4-In set to Bus carrying a stereo FX chain is stereo again.
+- ***CLICK ON A MODULE THAT IS GONE (2026-10-03)*** - code-notes/moduleGraphics.c.md §2a. The one-off crash in
+  param_click_handler(): every canvas click handler now ignores a module deleted or replaced since the frame
+  was drawn. WATCH the log for "Click on a module that is no longer there" - it names when it would have
+  crashed.
+- ***VOCODER FROM THE INSTRUMENT'S PROGRAM (2026-10-03)*** - reference §70.8. LISTEN against the G2: a voice or
+  drum loop into Ctrl and a saw into In, all BandSel 1-16, then Emphasis on, then a scrambled routing.
+  The level is the new code's arithmetic (quieter than the old guess) - say if it differs from the G2's.
+- ***OSCSTRING AND PITCH TRACKER FROM THE PARTS (2026-10-03)*** - reference §70.4, §70.7. LISTEN: an OscString
+  struck by a short noise burst should sit in tune with Damp at 0 and go flat as Damp rises (+8 cents at
+  A4 at Damp 64); Decay 127 should ring forever, 64 die in a few hundred periods. LOOK: the Pitch Tracker's
+  outputs are now labelled Period, Pitch, Gate (Pitch and Gate were swapped); patched from an OscB saw it
+  should track 55-880 Hz and Gate should open at the Threshold. Period is now a square at the pitch.
+- ***FLANGER, PSHIFT, SCRATCH FROM THE PARTS (2026-10-03)*** - reference §70.2-§70.3. LISTEN against the
+  G2: a Flanger at FB 0 and 127 (now at most a 0.5 loop gain, Out 0.6 dry + 0.8 wet); a PShift at Coarse
+  112 on a sustained tone in each Delay range (Fine now spans +-50 cents, Pitch M half a semitone a
+  unit); a Scratch at Ratio 80 (normal speed), 96 and 32 (backwards), and its Ratio M driven by a small
+  LFO - the Mod input is now far stronger than the dial. PShift and Scratch now INVERT the signal, as
+  the parts do: mixed with the dry signal at Coarse 64 they should cancel on the G2 too.
+- ***OSCDUAL FACE PW / SQR M (2026-10-03)*** - reference §12.1. The face drove PW from the mod-amount
+  dial and the reverse. LOOK: on an OscDual, the "PW" dial should now change the pulse width on the G2
+  and in the engine, and "SqrM" only scale the PW input.
+- ***LFOSHPA DIR AND MUX8-1X (2026-10-02)*** - reference §28.4, §70.11. LISTEN: an LfoShpA with a negative
+  value in Dir should run backwards, 0 should stop it; a Mux8-1X swept by an LFO should crossfade between
+  neighbouring inputs as on the G2.
 - ***LFO SHP A WAVES (2026-10-01)*** - reference §28.6. LISTEN/LOOK: an LfoShpA's LED and its effect
   should now follow the G2 at any Shape - Sine leans saw-wards away from 64 (15 Randee dz's FltNord LFO
   sits at 76), Tri>Sqr squares up, CosBell/TriBell narrow at low Shape. 01, 13, 14 and 15 use it.

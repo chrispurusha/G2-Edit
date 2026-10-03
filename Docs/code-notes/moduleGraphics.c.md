@@ -26,6 +26,17 @@ handler is only ever registered from render_param_common(), which morph
 groups don't go through), so the paramType-by-location branch those
 functions needed is gone here.
 
+
+## 2a. `clicked_module()`
+
+A click region is registered while a frame is drawn, and its handler runs on a later mouse event. In
+between, the USB thread can delete the module (a patch load, a slot change, a bank load) or a replace can
+give the key a different type with fewer parameters or modes. Every canvas handler took `get_module()`'s
+result on trust and dereferenced it, which is the one-off crash seen on
+`paramLocationList[param->paramRef].type` in `param_click_handler()` (todo, 2026-10-02). A missing module
+is now logged and the click ignored, and the parameter and mode handlers also check their index and
+table reference against the module's current type. The drag code in canvasDrag.c already checked for
+NULL.
 ## 3. in `param_click_handler()`
 
 The parameter MIDI Learn will act on. Every param type, not just the draggable ones — a

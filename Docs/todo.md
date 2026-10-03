@@ -6,16 +6,13 @@ Built-but-unchecked work goes in to-test.md.
 
 General
 -
-- Assess items in this todo list, which may have already been completed or partially completed and can therefore be removed to to-test. Some are definitely already addressed.
-- Finish last (roughly) 10 modules. If MIDI note send requires performance mode, defer to when we implement that.
-- There was an issue mentioned (I think) with Mix Stereo? Maybe we should check stereo paths?
+- DEDICATED SESSION: Driver, Resonator and Level Scaler - settle their laws (all three still basic, engine-module-status.md)
 - 07 Unstable Lead (Bank 1 Loc 2) seems to be outputting a constant tone without a keyboard note. Also, mod wheel value change seems to be producing a zipper-like sound.
-- I saw a one-off crash on "tParamType       paramType = paramLocationList[param->paramRef].type;" in param_click_handler(). Bad address access. Worth a check for obvious issues.
 - Further investigation into voice stealing improvements.
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works anyhow.
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
-- Make sure if we use bypass switch on a module, it no longer processes, to save CPU cycles.
+- Bypass, the rest: a module switched off still has its INPUTS evaluated (an LFO into a switched-off oscillator keeps running) - prune the chain behind an Off module whose output is silence or a plain pass-through. Each module itself now skips its work when off (2026-10-03)
 - CPU bandwidth optimisations.
 - Implement arpeggiator.
 - At a 176.4/192 kHz device the engine's noise is ~3 dB low (white drawn per graph sample, not per 96 kHz one) and DrumSynth's noise filter goes 3-20 dB dark (its Chamberlin retuned off 96 kHz) - findings 2026-09-27
@@ -33,9 +30,10 @@ General
 - 18 Unreal Dreams: engine ~9 dB louder than the G2 capture at 32 voices - check the rig calibration first, then the voice level path (§62.1)
 - 04 Chris Pad brightness: re-listen after the exact Vel/Keyb morphs (§26.2); the captures matched to 12 kHz once the G2's filter was confirmed on, and the first capture had its FltClassic switched off - find out what switched it (findings 2026-09-28 late)
 - Diavolo Sync patch is brighter on the G2 than in the engine (CT 2026-09-28) - capture both; G2 outputs 1/2 are on the Fireface again
-- LfoShpA: its per-waveform Phase offsets and the Dir input (§28.4)
 - OscShpB Pulse at Shape +-1: the residual one-sample click is -33 dB (+1) / -43 dB (-1) per harmonic in the engine, -41 dB at both on the G2 (§6.7)
 - `DELAY_LINE_SAMPLES` is sized 2.8 s at a 96 kHz graph, so at a 192 kHz device the longest Time is truncated to 1.4 s - pre-existing, and worse before the rate cap
+- PShift/Scratch at a 176.4/192 kHz engine: the 100 ms Delay window (19,300 samples) overruns FXBUF_SAMPLES (16384) and is clamped to ~85 ms
+- ZeroCnt's counter may run every 96 kHz sample, as the Pitch Tracker's does, rather than on the 24 kHz tick (§70.7a): check which rate matches the G2's stepped readings
 - Possible (not definite) inconsistency in the drum synth noise filter sweep on our engine. Although - I think the hardware is also inconsistent for noise filter sweep. May be deliberate. Check against references.
 
 USER REQUESTS (reported 2026-08-22; none blocking)
@@ -52,7 +50,6 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 
 MODULES AND GRAPHICS
 - Mix4-1S: the G2 sends 8 parameters where the module tables hold 9 (logged loading the patch library, 2026-09-25)
-- The rest of the Logic group: 8Counter, BinCounter, ADConv, DAConv and the logic Delay - the four done 2026-09-19 (reference §38) leave these five
 - Re-lay out the remaining families by rule (module-layout-rules.md "common face", tools/relayout.py) - Level group done 2026-09-13; next the delays and the pitch/FX group still on port coordinates
 - A drag-and-drop layout mode in the editor that snaps to the grid and writes the rows back - for what the rules cannot settle
 - Draw the jack-to-dial link as a short graphical line instead of the "-"/"--" connector label (CT) - the labels already mark every pair
@@ -72,11 +69,8 @@ MODULES AND GRAPHICS
 - Fill the 39 Unknown slots in gModuleProperties (of 209) by sweeping factory banks for type numbers
 
 FILTERS
-- FltNord's FM-lin and Res-mod inputs are not modelled in the engine (its filter is the instrument's since 2026-09-14, reference §23)
 - EqPeak/Eq3band deep wide cuts above ~1 kHz: the instrument's Chamberlin form is unstable there - measure what it actually does (§11.5)
 - FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs - NOT in the host tables (the part computes the drive; its starting X frame is all zeros but for a 0.9 at X4, as FltStatic's X3), so this needs the translate-and-run harness
-- Measure FltPhase against the Freq dial - notch positions are not yet tied to it
-- FltComb Deep fits only to |g| 0.5 with one section (5 dB rms at full feedback) - find its real structure (§13.4)
 - FltComb: only two per patch sound in the engine (MAX_COMB_LINES), and at a 192 kHz engine rate the lowest octave of Freq is clamped (COMB_LINE_SAMPLES); FB Mod depth unmeasured
 - FltPhase: capture a Freq sweep, a Spread sweep and each Type at FB 96/112/127 - the graph's model is fitted at one Freq and its Spread law is a placeholder (paramCurves.c notes §40)
 - Audit for the other half of the FltStatic crash: a -1 "not present" index that some reader does not check
@@ -88,25 +82,17 @@ FILTERS
 - Re-check FltComb FB 127 and FltPhase FB 127 with the level-tracking test, as FltClassic/FltNord were
 
 SOUND ENGINE
-- Sound engine across cores - design note at Docs/engine-multicore-design.md (2026-09-19, nothing built). The blocker is the per-sample note grid; the payoff is 3-4x, capped by a fixed 3.7% of a core; JUCE has no design to borrow, only Apple's audio workgroup. Settle where the deficit actually is first
 - `reset_node_state()` runs on the AUDIO THREAD on a topology change - 0.28 ms for 02 Big Pad, 0.59 ms for 01 Mini Emulator, 5-11% of a 256-frame budget. Not the break-up, but bulk clearing inside the callback is an RT rule broken; move it to the publisher or do it incrementally
 - Engine headroom: no attenuation anywhere for polyphony, so a pad at full voices sits on the rail at the default 0 dB. Decide whether the Out module, the output stage or nothing should scale with voice count - the G2 itself does not clip here
 - Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) - CONFIRMED right (02 Big Pad asks for and gets 14, 2026-09-19) - but the G2 assigns by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"), so the topbar should show a requested/assigned pair as the original does
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
 - MonoKey in a POLY patch: all three priorities read the voice being evaluated, which is a guess - it is a monophonic module and the case may not arise (reference §35.1)
-- The sustain pedal does not hold keys in the engine (only its morph group moves); the G2 keeps a sustained key held until the pedal lifts (reference §15.5)
 - ShpStatic Inv x3/Inv x2: the engine plays exponents 1/3 and 1/2, the 2026-08-24 capture measured 0.49 and 0.65 (the picker icon draws those) - reconcile
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.md)
-- Extend engine module coverage; recount the supported types, 23 predates the filter work
 - Run the engine-vs-hardware diff: both sides can produce the file, the comparison has not been run
 - Notes are not sent to the G2 while the local engine is sounding (owner's request)
-- FM is not modelled on any oscillator: OscB's and OscC's FmMod input, FM amount and FM Lin/Trk are ignored by the engine
-- OscDual's PW (param 11) and its mod amount (param 6) are SWAPPED in G2-Edit's tables: the face labels 6 as PW and 11 as SqrM - fix the face; the engine reads the instrument's order (§12.1)
-- OscDual's PW and Phase input depths are unmeasured (scale 1 in the engine) and Sync is not modelled
-- LFO KBT (LfoA, LfoB, LfoShpA have the control) is not implemented in the engine: the rate ignores the key. The instrument feeds the same key-tracking values the filters use (pivot E4, reference §21.3)
+- OscDual's PW and Phase input depths are unmeasured (scale 1 in the engine, §12.4)
 - OscD's face draws a "Pitch" dial at parameter 3, where the module tables have Tune Md (a Semi/Freq/Factor/Partial drop-down) - check against the instrument and fix the face
-- OscB's DualSaw renders as eOscWaveSuper in the engine; hardware says it is DblSaw (detune 0.5*Shape)
-- tOscWave has no DualSaw and value 4 means Sqr25 on OscA/C/D - the waveform enum needs a per-module map
 - Free-run RENDER is gated on the patch having no per-voice envelope; the exact test is "does a node
   reach an Out without passing a gated envelope" - phase already advances for every patch
 - Option to reset oscillator phase on note-on, for predictable bass; hardware free-runs, so not default
@@ -119,10 +105,6 @@ MEASUREMENT PROGRAMME
 - Measure the rest of the instrument the way the reverb was: EQs, the remaining envelopes
 - Shaper group is IMPLEMENTED but only Rect and ShpStatic are known; capture a transfer curve for Clip, Overdrive, Saturate, ShpExp and WaveWrap - one slow full-scale ramp (or a low sine) per mode gives the ENTIRE curve, since all seven are memoryless
 - Confirm the shaper parameter and connector ORDER on the instrument: it was read off the layout tables, and WaveWrap's mod dial and Mod jack both come before its signal ones
-- FX modules still missing from the engine: Phaser, Flanger, Vocoder, Digitizer, FreqShift, PShift, Resonator, Scratch, WahWah, NoiseGate, the EQs and the rest of the delay family
-- Control modules that promote to audio rate and cost almost nothing to add: the level maths (LevAdd, LevConv, LevMod, LevScaler, ModAmt, Invert), the switches and multiplexers, and Blue2Red/Red2Blue (the summing mixers are done; Pan, X-Fade, the faders and MixStereo are in hand)
-- Oscillators: the engine covers OscB, OscShpB, OscA and OscShpA. Eight more exist (OscC, OscD, OscDual, OscMaster, OscNoise, OscPerc, OscPM, OscString) and a patch using any of them renders silence. OscNoise, OscC and OscD are done (2026-09-12), OscDual (09-17), OscPerc (09-25)
-- tools/harmonics.py is BROKEN: fails at import with "No module named 'wav'", so every harmonic analysis is being written from scratch each time
 - OscA's harmonic ROLL-OFF is unverified - the osca/ captures look filtered (saw reads -16 dB at h2 against an ideal -6), so a capture with a known patch is needed; waveform identities and pulse duties ARE confirmed
 - Compressor UI: draw the settings graphically (threshold, ratio, RefLvl as a transfer curve) - CT's idea 2026-09-07. The live half is DONE: the engine now drives the meter, see findings.md
 - Extend engine-driven meters/LEDs beyond the compressor and the LFOs: every other module with a volumeType or LEDs still shows only what the instrument last sent
@@ -143,7 +125,6 @@ PROTOCOL AND SECOND OPINIONS (each is a code comment needing hardware or a manua
 
 VST3
 - ./do-uncrustify does not cover plugin/ or SynthLib/plugin/, so the plug-in sources and both format wrappers are unformatted
-- ./do-uncrustify rewrites ~2000 lines of src/moduleResources.h as committed (column alignment only, 0 non-whitespace lines) - format it once and commit, or every run leaves that file dirty
 - G2 Alike instances share EDITOR state: each has its own document (four slots) and engine since 2026-09-11, but two open editors still share palette.c, menus.c, splitView.c, mutatorUI.c, paramOverlay.c and SynthLib's click regions and popups, plus the panels and drag flags kept out of the document because static tables point at them (gTopbarControls, gPatchSettingsEdit, gPerfSettingsEdit, gPatchParamsEdit, gPatchNotesEdit, gPatchParamRects) - scroll, zoom and an open panel follow you between editors
 - Performance playback in the engine: an instance holds all four slots but plays only the selected one; bind one engine per slot (sound_engine_bind_slot()) and mix them, with each slot's keyboard range and channel
 - The plug-in build's engine is ~5% slower than the application's (2.24 s vs 2.14 s CPU for 30 s of a 4-voice chord; it was 13% before SE_LOCAL, 2026-09-11). The thread-local read is now ~1% in a profile; the rest is indexing each banked access by a variable instead of the constant 0 - only a per-engine state struct reached through one pointer would recover it
@@ -151,7 +132,6 @@ VST3
 - g2Menu.c's loaded-patch name is still one per process, so two editors show whichever file was opened last
 - Plug-in editors in tools/vst3host own ~350 MB of GPU memory that is NOT this code's (49 x 8 MB 'owned unmapped (graphics)' regions; the backend allocates one 1120x1660 target, its 4x MSAA copy and six small atlases, ~37 MB), and it barely changes with editor size (431 MB at a quarter of the area). The apps show nothing like it (EmuUtility 128 MB total). Check Live's own footprint per editor before chasing - it may be the harness. In G2 Alike it belongs to the FIRST editor: after closing and re-creating the editor 40 times (vst3host --reopen) the process sat at 196 MB, drawing correctly; GenBridge and MidiSyncTool stayed at ~470 MB either way
 
-- tools/auhost is not in the .gitignore and its BINARY is untracked; tools/vst3host's binary IS tracked, so pick one convention
 - The Audio Unit's version number is in two places that must agree: G2_AU_VERSION in plugin/g2Plugin.c and AU_VERSION in do-plugin
 
 ARCHITECTURE AND SHARED CODE
@@ -281,13 +261,9 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - OscDual (§12.5): compare the new code sample for sample with the harness (the offline part harness kept outside the repo, `the harness`: note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
 - OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
 - DX FM depth (§14.3, a guess of 1 cycle per full-scale input): the Operators share OscPM's phase-mod part, which gives 8 cycles at full amount (§53) - decode the DXRouter's amount words and correct
-- OscPM: Tri corner correction and the Sync input (§53)
-- Pulse ignores its Type (Plus/Minus); logic Delay ignores its Mod input (§46)
-- Converter emulation ON/OFF option (CT 09-26): the G2's analogue output roll-off (-0.6 dB at 16.8 kHz, -1.1 at 21 kHz, -6 at 42 kHz, findings 09-26) as a switchable output stage. NO low shelf: outs 1/2 measured flat against 3/4 to 0.02 dB (findings 09-26) - the old shelf was the QU's inputs
+- Pulse ignores its Mode (Plus/Minus, §18)
 - 14 CS80project72: the G2's strongest partial, 527 Hz, is missing from the engine (1061/2112/3161 match; Fireface capture 09-27, findings 09-27)
 - Voice-area delays and Reverb per voice (findings 2026-09-27): allocate each voice's line at build time, sized by Range (the instrument's 513 .. 259212 samples); fit polyphony to a memory budget as the voice placer does
-- Mux8-1X (reference §68.3): its crossfade program shifts the weights in ways reading it does not show - run the part's program in the emulator kept outside the repo and port that
 - ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither
 - Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play
-- Compressor: new §25 port needs an ear (to-test)
-- 03 Chris' Lead coverage left: OscShpB waves (above), native check of Mix4-1C/Mix4-1S, clock-synced DelayB uses a fixed 120 BPM
+- 03 Chris' Lead coverage left: OscShpB waves (above), native check of Mix4-1C/Mix4-1S
