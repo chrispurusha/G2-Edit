@@ -3222,7 +3222,7 @@ void render_module(tModule * module) {
     }
 
     // Patch Mutator: mark excluded modules with a thin red frame, but only while the panel is
-    // open - matches the original editor's mutator display (pure display state, not persisted).
+    // open - as the original editor shows it (pure display state, not persisted).
     if (gMutator.active && module->excludeFromMutation) {
         double t = 1.0;
         double x = moduleRectangle.coord.x;

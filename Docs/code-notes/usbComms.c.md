@@ -126,7 +126,7 @@ consecutive: a module appears once per LED group, and its repeats give the index
 module.
 
 LED_STREAM_SIZE (40) is where it ENDS, not how much one message holds: the original walks from the
-start index to 0x28 and stops, and the original editor's code gives each area Min(itsLedCount, 0x28 - used), so
+start index to 0x28 and stops, giving each area Min(its LED count, 0x28 - used), so
 40 is the whole index space for both areas together and a patch with more LEDs than that has the
 surplus unreported by the instrument. A message therefore covers startIndex..LED_STREAM_SIZE-1 —
 it is NOT startIndex + 40.

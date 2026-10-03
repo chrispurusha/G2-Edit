@@ -340,7 +340,7 @@ uint32_t module_led_row_count(tModuleType moduleType) {
 
 // How many LEDs a module drives from ONE multi-stream value, or 0 if it has no such group. The
 // multi stream (0x3a) carries a 16-bit value per group; where the group holds several LEDs, the bits
-// of that value are the LEDs — see the original editor's code in the reference, which spreads it a bit at a time.
+// of that value are the LEDs, one bit each.
 uint32_t module_multibit_led_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};

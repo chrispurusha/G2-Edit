@@ -184,8 +184,7 @@ continued (2026-10-02, the wave stages run with the word swept -1..+1):
 - Pulse: OscB's law - +-1 plus y, high for (1 - y)/2 of the cycle - silent at -1.
 - SymPulse: exactly the wave at +y.
 - Sine3, Sine4: the module saturates the ratio at zero; below zero they are the Shape 0 sine.
-The DSF pair were run as the reference model; the rest are the reference translation, which agrees with
-the reference model wherever the two have been compared. Checked on the G2 2026-10-02 (OscShpB at E4, Shape Mod
+All eight are the reference model, checked sample by sample. Checked on the G2 2026-10-02 (OscShpB at E4, Shape Mod
 from a Constant, y = +-1, +-0.75, +-0.5, +-0.25, 0, every wave): each -y take matches its +y twin, and the
 engine matches the G2 within 0.16 dB on harmonics 1-16 at every setting. The one gap is Pulse at exactly
 +-1, where only a one-sample click remains: the G2's is -41 dB per harmonic at both ends, the engine's
@@ -340,7 +339,7 @@ at 4 kHz, -12.5 at 8 kHz; narrower Widths a dB or two lower. The 2026-09-12 capt
 to +-1.5 dB, which it is between about 110 Hz and 1 kHz; the engine's old flat -4.5 dB was right there
 and up to 8 dB loud above it.
 
-**8.6 Checked** (2026-09-27): the model against the reference model run in a harness kept outside the repo, sample by sample on an
+**8.6 Checked** (2026-09-27): the model against the reference model, sample by sample on an
 impulse and on noise, 250 Hz-12 kHz, Width 0-127: equal to the stages' fixed-point rounding (0.1% of
 the peak on noise). The engine's rendered OscNoise against the reference model at C3-C8 and Width 127/64/16: the
 same centre and Q, and the same level shape to +-0.5 dB (one constant apart - the engine's output
@@ -1458,8 +1457,8 @@ at the engine rate with a scaled to it (`oscillator_step()`); the model matched 
 1.8e-4 of full scale sample by sample, and the engine's output matches its level, DC and harmonics. The
 four-sample floor is the hardware's 0.013-cycle lobe at full Shape (329 Hz).
 
-**27.3 Sine3 and Sine4 - the reference model (2026-09-25).** Read from the DsfAll/DsfOdd reference model
-
+**27.3 Sine3 and Sine4 - the reference model (2026-09-25).** From the instrument's own stages, run
+sample by sample. With g the Shape word and inc96 the phase step per 96 kHz sample:
 
     r    = g x (Y0 - 8 inc96),  Y0 = 8279556/2^23 = 0.98699, clamped at 0
     q    = DIV16( sin(theta)/16 , (1 - 2r cos theta + r^2)/4 )        Sine4: cos 2theta
@@ -1479,10 +1478,8 @@ waves, and within 0.002 in ratio at E2 and E6. The sweep was taken on desk input
 is corrected for that path's shelf (zero 69 Hz, pole 197 Hz); that shelf is also the "1.10-1.13 lift of
 harmonics 2 and up" the sweep's README describes.
 
-**The earlier reading is wrong here, twice**, which is why the code once read 12 dB low. It treats 90/128
-as the integer 90 (so the level term vanishes), and it shifts the quotient right by 2 after its 64-bit
-divide, where the DSP has no such shift. With both slips switched on, the reference model reproduces the translation's
-output to the DIVISION's 16-bit precision. That comparison is what proves the reference model.
+**Two details matter**, and missing them once made the engine read 12 dB low: the coefficient is the fraction 0.703125, not the integer 90 (which makes the level term vanish), and the quotient is not shifted after
+the divide.
 
 **27.5 On the instrument's phase, at the engine rate (2026-09-17).** OscShpB runs once per engine sample, like the
 basic oscillators (§6.3), against the reference model sample for sample (a test harness; 96 kHz):
@@ -2035,7 +2032,7 @@ settings, contributors isolated by zeroing the others.
   not used the way the filter modules use theirs - and that is a question only the reference model can answer.
 - **The Sweep dial measures one semitone a step**: 0, 2.65 and 5.30 octaves at dials 0, 32 and 64,
   exactly linear. The engine's five-octaves-over-the-dial comes from the manual, not from the
-  instrument, and is 2.1x too shallow - but the reference has to confirm the law before it changes.
+  instrument, and is 2.1x too shallow - but the reference model has to confirm the law before it changes.
 - **The resonance curve is the wrong shape** (SETTLED since - §39.9), quite apart from the level:
   peak gain relative to Res 0 runs 0, +0.6, +1.2, +5.0, +10.9 dB on the G2 at dials
   0/32/64/96/127, against the engine's 0, +1.2, +3.7, +7.6, +14.4. **The earlier guess in this section - that the engine is four times
@@ -2078,8 +2075,7 @@ rather than as constants.
 
 ## 40. OscPerc
 
-Added 2026-09-25 from the reference model (37 words, run in the reference model kept outside the
-repo; the earlier reading agrees with it bit for bit) and checked
+Added 2026-09-25 from the reference model (37 words, run sample by sample) and checked
 on the G2. Dials: Coarse 0, Fine 1, Tune Mode 2, KBT 3, Pitch mod 4 through the shared oscillator pitch
 path (§6); Decay 5, Click 6, Punch 7, Mute 8. Inputs Pitch, PitchVar, Trig.
 
@@ -2599,8 +2595,15 @@ been compared with the instrument yet.
   oscillators are (§6). Decay sets a T60 of 20 ms to 10 s and Damp the one-pole. The loop saturates at
   the DSP's full scale. Out2 reads the loop at the Pos share of the period; Alg is not read. Its inputs
   are taken as In, Pitch and PitchVar, which is a guess.
-- **70.5 Driver**: a guess. The manual edition in hand has no Driver, so it is (In1 + In2 x Embouchure)
-  through a tanh driven by Stiffness.
+- **70.5 Driver** (the reference model, 2026-10-03). One stage per Type, all every 96 kHz sample, in
+  words (a quarter of an engine unit). In1 is the excitation (breath pressure, bow velocity) and In2 the
+  return from the resonator. Stiffness is v/128 and Embouchure v/128 (127 = 1 for both); Bow uses
+  Embouchure / 16.
+  - **Reed** (and -Lip- and -Mallet-, which share its part): r = Emb - 4 Stiff (In2 - In1), saturated to
+    +-1; out = In1 + r (In2 - In1) - the classic reed table, Embouchure its offset and Stiffness its slope.
+  - **Bow**: v = 8 Stiff |In1 - In2 + Emb|, saturated at 1; out = min(3 (1 - v)^3, 1) (In1 - In2) - a
+    friction curve, full stick near zero relative velocity.
+  - Every stored word saturates, so out stays within a word.
 - **70.6 NoiseGate** (the reference model, 2026-10-02): a follower, a gate, an attack-hold-release
   envelope and a VCA. Out is In x the envelope; Env is the envelope.
   - The follower, every 96 kHz sample, in words: stage 1 jumps up to |In| and falls towards it by
@@ -2712,8 +2715,16 @@ been compared with the instrument yet.
   is gone by 4.8, so midway between two inputs each plays at 0.63; at 127 the top is 0.5 units wide and
   the fall reaches 8.6, a near-linear crossfade (0.51 + 0.51 midway). The sum saturates at the word.
   Checked against the reference model run sample by sample: within 5e-5 at X-Fade 0-127, Ctrl -2..66.
-- **70.12 LevScaler**: dB = L x octaves below the breakpoint, or R x octaves above. Level is that gain
-  (64 units at 0 dB), and Out = In x Level. The key comes from the voice (Kbt) or from the Note input.
+- **70.12 LevScaler** (the reference model, 2026-10-03). A 24 kHz stage makes the gain and a second
+  multiplies:
+  - **Key and breakpoint.** The key is the Note input plus, with Kbt on, the keyboard (both in keys from E4).
+    BrkPnt is v - 64 keys (127 = +64).
+  - **Slope.** Below the breakpoint the distance is multiplied by L.Gain's word, -341 (v - 64)/63 (+341 at
+    v = 0); above it by R.Gain's, +341 (v - 64)/63 (-341 at 0).
+  - **Gain.** Distance x word / 256 is a step of the instrument's semitone gain table (2^(step/12), 0.502 dB
+    a step, interpolated linearly between whole steps), clamped to -128..+95 (-64 dB .. +47.7 dB). So a
+    Gain dial at 127 is 8.02 dB an octave, and a positive dial raises the keys on its side.
+  - **Outputs.** Level is the gain (1.0 = 0 dB), saturated at 4; Out is In x Level.
 - **70.13 The MIDI and panel modules.** Status (the reference model, 2026-10-02): Patch Active
   goes high when the patch is made active and stays there; Var Active is high, and low for one 24 kHz
   tick after the variation changes - a trigger, not a level; Voice No. is the voice's index (its low five

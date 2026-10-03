@@ -3330,7 +3330,7 @@ static int send_perf_header(void) {
     uint32_t bitPos                  = 0;
     uint32_t i                       = 0;
 
-    // Build payload starting at byte 2, reserving bytes 0-1 for the the original editor's code size word
+    // Build payload starting at byte 2, reserving bytes 0-1 for the size word
     bitPos = BYTE_TO_BIT(2);
 
     // 8 global bytes
@@ -3359,7 +3359,7 @@ static int send_perf_header(void) {
         write_bit_stream(payload, &bitPos, 8, 0);
     }
 
-    // Back-fill the the original editor's code size word (big-endian; counts bytes after the word)
+    // Back-fill the size word (big-endian; counts bytes after the word)
     uint32_t totalBytes   = BIT_TO_BYTE(bitPos);
     uint32_t contentBytes = totalBytes - 2;
 
@@ -3386,7 +3386,7 @@ static int send_perf_name(void) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
-// SUB_COMMAND_SET_PARAM_MODE (0x3e) is the original editor's code in the reference.
+// SUB_COMMAND_SET_PARAM_MODE (0x3e) is the performance-mode change.
 // Version byte 0x41 matches all other connection-level sys commands.
 static int send_perf_mode_change(uint8_t perfMode) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};

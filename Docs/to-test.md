@@ -4,6 +4,11 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***DRIVER AND LEVEL SCALER FROM THE INSTRUMENT (2026-10-03)*** - reference §70.5, §70.12. LISTEN/MEASURE on the G2:
+  a Driver set to Reed and to Bow between an excitation (In1) and a delay or OscString return (In2) - if it
+  only works with the two inputs swapped, say so (the input order is the one reading not yet confirmed). A
+  Level Scaler with L.Gain and R.Gain at 127, BrkPnt 64: Level should read about +8 dB an octave either side
+  of E4 (a capture of Level at E3, E4, E5 settles it).
 - ***MOD WHEEL ZIPPER, 07 UNSTABLE LEAD (2026-10-03)*** - notes §61. Dials, morphs and the wheel now glide to a new
   value as the G2 does (a straight line over 125 ms, restarted by each new value) instead of an 8 ms smoother
   that left a staircase. LISTEN: 07's wheel sweeps its VCF; the zipper should be gone. A knob turned quickly
@@ -1022,7 +1027,7 @@ Everything below is DrumSynth, gathered 2026-09-21 so it can be worked through i
 the module in front of you. The laws marked (code) came from the instrument's own reference model, not
 from a capture, so they are the ones most likely to be right.
 
-- ***DRUMSYNTH REBUILT ON the reference NOISE PATH, BEND AND INPUTS (2026-09-25)*** - reference §39.6,
+- ***DRUMSYNTH REBUILT ON THE INSTRUMENT'S NOISE PATH, BEND AND INPUTS (2026-09-25)*** - reference §39.6,
   §39.9, §39.10. Offline it matches the G2 (Kick 1's 5 ms envelope within 1 dB, every part's energy
   on one constant); not yet heard. Listen for: Kick 1 against the G2 - the noise ~15 dB quieter
   than before, the click louder and held, the master/slave beat in the same place; a Constant into

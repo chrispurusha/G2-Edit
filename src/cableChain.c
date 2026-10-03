@@ -218,9 +218,8 @@ tCableColour cable_chain_colour(uint32_t slot, uint32_t location, tCableNode nod
     if (index < 0) {
         return cableColourWhite;
     }
-    // Matches the original's the original editor's code, which resolves the connector to
-    // its rendered hole widget and asks that for its colour — bandwidth-dependent for logic
-    // holes, which is exactly what the upRate promotion in effective_connector_type() does.
+    // As the original colours it: bandwidth-dependent for logic connectors, which is exactly what
+    // the upRate promotion in effective_connector_type() does.
     return cable_colour_for_connector_type(
         effective_connector_type(module->connector[index].type, module->upRate));
 }
