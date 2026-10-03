@@ -2922,12 +2922,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscDual,    paramTypeMenu,           {{ 28, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },          // 164 Tune M
 
     {moduleTypeOscDual,    paramTypeCommonDial,     {{ 72,  13}, { 7,  7}}, anchorTopLeft,     "SqrL",         128, 127, NULL,                                  NULL          },          // 164 SqrLvl
-    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 56,  13}, { 7,  7}}, anchorTopLeft,     "PW",           128,   0, NULL,                                  NULL          },          // 164 PW
+    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 40,  13}, { 7,  7}}, anchorTopLeft,     "SqrM",         128,   0, NULL,                                  NULL          },          // 164 Sqr M (PW mod amount; reference §12.1)
     {moduleTypeOscDual,    paramTypeCommonDial,     {{ 72,  28}, { 7,  7}}, anchorTopLeft,     "SawL",         128,   0, NULL,                                  NULL          },          // 164 SawLvl
     {moduleTypeOscDual,    paramTypePhase,          {{ 56,  28}, { 7,  7}}, anchorTopLeft,     "Phase",        128,   0, NULL,                                  NULL          },          // 164 Phase
     {moduleTypeOscDual,    paramTypeCommonDial,     {{ 88,  13}, { 7,  7}}, anchorTopLeft,     "SubL",         128,   0, NULL,                                  NULL          },          // 164 Suboct Lvl
     {moduleTypeOscDual,    paramTypeBypass,         {{ -3, -12}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },
-    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 40,  13}, { 7,  7}}, anchorTopLeft,     "SqrM",         128,   0, NULL,                                  NULL          },          // 164 Sqr M
+    {moduleTypeOscDual,    paramTypeCommonDial,     {{ 56,  13}, { 7,  7}}, anchorTopLeft,     "PW",           128,   0, NULL,                                  NULL          },          // 164 PW (reference §12.1)
     {moduleTypeOscDual,    paramTypeCommonDial,     {{ 40,  28}, { 7,  7}}, anchorTopLeft,     "SawM",         128,   0, NULL,                                  NULL          },          // 164 Saw M
     {moduleTypeOscDual,    paramTypeMenu,           {{ -5,  25}, { 7,  7}}, anchorTopRight,    "Soft",           2,   0, offOnStrMap,                           NULL          },          // 164 Tune M
 
@@ -4098,8 +4098,8 @@ const tConnectorLocation connectorLocationList[] = {
     // 198 PitchTrack
     {moduleTypePitchTrack,  connectorDirIn,  connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Input",         labelLocRight}, // 198 Input
     {moduleTypePitchTrack,  connectorDirOut, connectorTypeLogic,   {{-30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Period",        labelLocUp   }, // 198 Period
-    {moduleTypePitchTrack,  connectorDirOut, connectorTypeControl, {{-19,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Gate",          labelLocUp   }, // 198 Gate
-    {moduleTypePitchTrack,  connectorDirOut, connectorTypeLogic,   {{ -8,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Pitch",         labelLocUp   }, // 198 Pitch
+    {moduleTypePitchTrack,  connectorDirOut, connectorTypeControl, {{-19,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Pitch",         labelLocUp   }, // 198 Pitch (the manual's order, reference §70.7)
+    {moduleTypePitchTrack,  connectorDirOut, connectorTypeLogic,   {{ -8,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Gate",          labelLocUp   }, // 198 Gate
     // 199 MonoKey
     {moduleTypeMonoKey,     connectorDirOut, connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Pitch",         labelLocUp   }, // 199 Pitch
     {moduleTypeMonoKey,     connectorDirOut, connectorTypeLogic,   {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",          labelLocUp   }, // 198 Gate

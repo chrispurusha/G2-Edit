@@ -16,34 +16,28 @@ which fails the run if it names a module that is not offered or not modelled.
 
 | Group | Working | Partial | Not implemented |
 |---|---|---|---|
-| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Phase Mod, Osc Shape A, Osc Shape B, Osc Dual, Noise Osc, Noise, Metallic Noise, Osc Percussion, Drum Synth, FM Operator, DX Router, Osc Master | Osc String, Driver, Resonator | - |
-| **Filters** (§10, §13, §21-§23, §56, §67, §69, §70) | LP Filter, HP Filter, Nord Filter, Classic Filter, Multi Filter, Phase Filter, Comb Filter, Static Filter, FltVoice, WahWah, Eq 2-band, Eq 3-band, Eq Peak | Vocoder | - |
+| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Phase Mod, Osc Shape A, Osc Shape B, Osc Dual, Noise Osc, Noise, Metallic Noise, Osc Percussion, Drum Synth, Osc String, FM Operator, DX Router, Osc Master | Driver, Resonator | - |
+| **Filters** (§10, §13, §21-§23, §56, §67, §69, §70) | LP Filter, HP Filter, Nord Filter, Classic Filter, Multi Filter, Phase Filter, Comb Filter, Static Filter, FltVoice, WahWah, Vocoder, Eq 2-band, Eq 3-band, Eq Peak | - | - |
 | **Envelopes** (§17) | Envelope ADSR, Envelope AHD, Envelope ADR, Envelop ADDSR, Envelope H, Envelope D, Envelope Multi, Envelope Mod AHD, Envelope Mod ADSR | - | - |
 | **LFOs** (§28, §42, §50, §54) | LFO A, LFO B, LFO C, LFO Shp A, Clock Generator | - | - |
 | **Mixers** (§3) | Mixer 1-1 A, Mixer 1-1 S, Mixer 2-1 A, Mixer 4-1 A, Mixer 4-1 B, Mixer 4-1 C, Mixer 4-1 S, Mixer 2-1 B, Mixer 8-1 A, Mixer 8-1 B, MixFader, MixStereo, Fade 1-2, Fade 2-1, X-Fade, Pan | - | - |
 | **Level** (§16, §29, §43, §44, §48, §68, §69, §70) | Constant, ConstSwM, ConstSwT, CompLev, CompSig, LevAdd, LevAmp, LevConv, LevMod, LevMult, MinMax, ModAmt, NoiseGate, EnvFollow, Red2Blue, Blue2Red | - | - |
 | **Shapers** (§3.4) | Saturate, Clip, OverDrive, ShpExp, WaveWrap, ShpStatic, Rect | - | - |
 | **Delays** (§24, §52, §65, §69, §70) | Delay Single A, Delay Single B, Delay Dual, Delay Quad, Delay A, Delay B, Delay Stereo, Delay Clock, Delay Eight, DlyShiftReg | - | - |
-| **Effects** (§11, §19, §20, §25, §55, §57, §69, §70) | Compressor, Digitizer, FreqShift, Chorus, Phaser, Reverb | Flanger, PShift, Scratch | - |
+| **Effects** (§11, §19, §20, §25, §55, §57, §69, §70) | Compressor, Digitizer, FreqShift, Flanger, Chorus, Phaser, PShift, Reverb, Scratch | - | - |
 | **In/Out** (§16, §69, §70) | 2 Outputs, 4 Outputs, 2 Inputs, 4 Inputs, FX Input, Keyboard, Monophonic Keyboard, Device, Status, Note Detector, Name Bar | - | - |
 | **Switches** (§30, §45, §68, §70) | SwOnOffM, SwOnOffT, Sw2-1, Sw2-1M, Sw4-1, Sw8-1, Sw1-2, Sw1-2M, Sw1-4, Sw1-8, ValSw2-1, ValSw1-2, Mux8-1, Mux1-8, Mux8-1X, S&H, T&H, WindSw | - | - |
 | **Logic** (§38, §46, §68) | Invert, Pulse, Delay, Gate, FlipFlop, ClkDiv, 8Counter, BinCounter, ADConv, DAConv | - | - |
 | **Sequencers** (§58, §69, §70) | Sequencer Event, Sequencer Values, Sequencer Level, Sequencer Note, Sequencer Controlled | - | - |
 | **Random** (§47, §64, §69, §70) | Random A, Random B, Rnd Clock A, Rnd Clock B, Rnd Trig, Rnd Pattern | - | - |
-| **Note** (§26, §41, §49, §69, §70) | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide, Zero Crossing Counter | Pitch Tracker, Level Scaler | - |
+| **Note** (§26, §41, §49, §69, §70) | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide, Pitch Tracker, Zero Crossing Counter | Level Scaler | - |
 | **MIDI** (§70) | CtrlSend, PCSend, CtrlRcv, NoteRcv, NoteZone, Automate | NoteSend | - |
-| **Total 170** | **160** | **10** | **0** |
+| **Total 170** | **166** | **4** | **0** |
 
 | Partial module | What is still open |
 |---|---|
-| Flanger | basic: a swept delay from the manual (§70.2) |
-| PShift | basic: two crossfaded taps (§70.3) |
-| Scratch | basic: two crossfaded taps, ratio law guessed (§70.3) |
-| Osc String | basic: a tuned loop; decay and damp laws guessed (§70.4) |
-| Resonator | basic: OscString's loop; Alg and inputs guessed (§70.4) |
+| Resonator | basic: a tuned loop; Alg and inputs guessed (§70.4a) |
 | Driver | a guess: not in the manual in hand (§70.5) |
-| Pitch Tracker | counter and E2 reference are the instrument's; its detector (followers, filters, flip-flop) is not (§70.7) |
-| Vocoder | basic: 16 band-passes, band centres guessed (§70.8) |
 | Level Scaler | basic: dB per octave from the manual (§70.12) |
 | NoteSend | plays this slot only; notes to other slots and MIDI are dropped (§62) |
 
@@ -55,7 +49,7 @@ below say what refining each will take; update them by hand as modules move to W
 
 | Kind | Modules |
 |---|---|
-| **Basic versions to replace with the reference model** | Delay Dual / Quad / Eight (delay-base and tap stages), PShift, Scratch (pitch-shift parts), Flanger, Osc String (Karplus parts), Pitch Tracker, Vocoder |
+| **Basic versions to replace with the reference model** | Delay Dual / Quad / Eight (delay-base and tap stages) |
 | **Basic versions with no part in the reference** | Driver, Resonator, Zero Crossing Counter, Level Scaler - need captures from the G2 |
 | **Limited by what reaches the engine** | NoteSend (notes to other slots need the engine to play a performance; to MIDI, an output path) |
 | **Nothing to render** | CtrlSend, PCSend, Automate, NoteZone (counted Working) |

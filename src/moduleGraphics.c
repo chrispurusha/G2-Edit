@@ -102,13 +102,31 @@ static void param_drag_start(tModule * module, uint32_t paramIndex) {
     gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
 }
 
+// notes §2a - the regions are last frame's; the module may have gone since, or been replaced by another type
+static tModule * clicked_module(tModuleKey key) {
+    tModule * module = get_module(key);
+
+    if (module == NULL) {
+        LOG_ERROR("Click on a module that is no longer there: slot %u location %u index %u\n", key.slot, key.location, key.index);
+    }
+    return module;
+}
+
 // notes §2
 static void param_click_handler(tCoord coord, eClickPhase phase, void * userData) {
     tParamClickCtx * ctx       = (tParamClickCtx *)userData;
-    tModule *        module    = get_module(ctx->key);
+    tModule *        module    = clicked_module(ctx->key);
+
+    if ((module == NULL) || (ctx->paramIndex >= module_param_count(module->type))) {
+        return;
+    }
     uint32_t         slot      = ctx->key.slot;
     uint32_t         variation = gPatchDescr[slot].activeVariation;
     tParam *         param     = &module->param[variation][ctx->paramIndex];
+
+    if (param->paramRef >= array_size_param_location_list()) {
+        return;
+    }
     tParamType       paramType = paramLocationList[param->paramRef].type;
 
     if (phase == eClickPress) {
@@ -185,8 +203,16 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
 // notes §8
 static void mode_click_handler(tCoord coord, eClickPhase phase, void * userData) {
     tModeClickCtx * ctx      = (tModeClickCtx *)userData;
-    tModule *       module   = get_module(ctx->key);
+    tModule *       module   = clicked_module(ctx->key);
+
+    if ((module == NULL) || (ctx->modeIndex >= module_mode_count(module->type))) {
+        return;
+    }
     tMode *         mode     = &module->mode[ctx->modeIndex];
+
+    if (mode->modeRef >= array_size_mode_location_list()) {
+        return;
+    }
     tParamType      modeType = modeLocationList[mode->modeRef].type;
 
     if (phase == eClickPress) {
@@ -221,8 +247,11 @@ static void connector_click_handler(tCoord coord, eClickPhase phase, void * user
         return;
     }
     tConnectorClickCtx * ctx    = (tConnectorClickCtx *)userData;
-    tModule *            module = get_module(ctx->key);
+    tModule *            module = clicked_module(ctx->key);
 
+    if (module == NULL) {
+        return;
+    }
     gCableDrag.rerouting = false;
 
     // notes §10
@@ -268,8 +297,12 @@ static void drag_area_click_handler(tCoord coord, eClickPhase phase, void * user
         return;
     }
     tModuleClickCtx * ctx             = (tModuleClickCtx *)userData;
-    tModule *         module          = get_module(ctx->key);
+    tModule *         module          = clicked_module(ctx->key);
     bool              multiSelectHeld = multi_select_modifier_held();
+
+    if (module == NULL) {
+        return;
+    }
 
     if (multiSelectHeld) {
         selection_toggle(module->key);
@@ -316,7 +349,11 @@ bool module_wave_picker_mode(uint32_t moduleType, uint32_t modeIndex);
 static void morph_param_click_handler(tCoord coord, eClickPhase phase, void * userData) {
     (void)coord;
     uint32_t  i         = ((const tParamClickCtx *)userData)->paramIndex;
-    tModule * module    = get_module((tModuleKey){gSlot, (uint32_t)locationMorph, 1});
+    tModule * module    = clicked_module((tModuleKey){gSlot, (uint32_t)locationMorph, 1});
+
+    if (module == NULL) {
+        return;
+    }
     uint32_t  variation = gPatchDescr[gSlot].activeVariation;
     tParam *  param     = &module->param[variation][i];
 

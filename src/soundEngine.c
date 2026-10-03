@@ -601,33 +601,59 @@ static double lfo_shape_dial(double v) {
 #define SEQREC_LAST_STEP           (37) // §58.1 - the set-up's Y0: the 16th step's word, the last it may write
 #define SEQREC_DELAY_OFF           (0x7FFFFF)
 #define SEQREC_DELAY_24K           (0x10CC)
-#define SEQ_IN_REC_VAL             (6u) // SeqNote's inputs after Clk, Rst, Loop, Park, Note, Trig
+#define SEQ_IN_REC_VAL             (6u)             // SeqNote's inputs after Clk, Rst, Loop, Park, Note, Trig
 #define SEQ_IN_REC_ENABLE          (7u)
-#define MAX_CLKGEN_LINES           (4)  // §59 - clock generators per patch
-#define MAX_METNOISE_LINES         (4)  // §66 - per patch; more run silent
-#define MAX_FLTPHASE_LINES         (4)  // §67 - per patch; more pass their input through
-#define MAX_DLYCLOCK_LINES         (4)  // §69.7 - per patch; more output nothing
-#define MAX_FXBUF_LINES            (4)  // §70 - Flanger, PShift, Scratch: short post-mix buffers
+#define MAX_CLKGEN_LINES           (4)              // §59 - clock generators per patch
+#define MAX_METNOISE_LINES         (4)              // §66 - per patch; more run silent
+#define MAX_FLTPHASE_LINES         (4)              // §67 - per patch; more pass their input through
+#define MAX_DLYCLOCK_LINES         (4)              // §69.7 - per patch; more output nothing
+#define MAX_FXBUF_LINES            (4)              // §70 - Flanger, PShift, Scratch: short post-mix buffers
+#define DSP_WORD_SCALE             (8388608.0)      // a 24-bit word's 1.0
+#define FLANGER_RING               (512.0)          // §70.2 - the ring, in 96 kHz samples
+#define FLANGER_RANGE_STEP         (56300.0)        // §70.2 - Range: v x 0xdbec of a sweep word
+#define FLANGER_MIN_WORD           (0x128000u)      // §70.2 - the sweep's floor: 74 samples
+#define FLANGER_IN_GAIN            (0.8)            // §70.2
+#define FLANGER_MIX_GAIN           (0.3)            // §70.2
+#define PSHIFT_WINDOW_X1           (127.0 / 2048.0) // §70.3 - the shortest Delay's tap span, of the line
+#define PSHIFT_TAP_SCALE           (9728.0)         // §70.3 - the 100 ms line's length word, in samples
+#define PSHIFT_RATE_SCALE          (6990.67)        // §70.3 - phase step per tick at a ratio of 0
+#define SCRATCH_RATE_SCALE         (6990.0)         // §70.3
+#define SCRATCH_SMOOTH_IN          (0.0100002)      // §70.3 - 0x147ae
+#define SCRATCH_SMOOTH_POLE        (0.99)           // §70.3 - 0x7eb852
+#define KARPLUS_LINE               (7000.0)         // §70.4 - OscString's line, in 96 kHz samples
+#define KARPLUS_DECAY_A            (2.070135)       // §70.4 - the Decay law's three constants
+#define KARPLUS_DECAY_B            (11.050795)
+#define KARPLUS_DECAY_R            (0.9869)
+#define VOCODER_EMPHASIS_0         (0x5061f1)             // §70.8 - the pre-emphasis: 8 (e0 x - e1 e0 x[n-1])
+#define VOCODER_EMPHASIS_1         (0x4bd344)
+#define VOCODER_OUT_GAIN           (0x651eb8)             // §70.8 - the output converter's gain, then x 8
+#define MAX_PITCH_TRACKER_LINES    (4)                    // §70.7 - Pitch Trackers per patch; more read silence
+#define PD_RELEASE_FAST            (0x2746 / 8388608.0)   // §70.7 - the followers' first-stage release, a 96 kHz sample
+#define PD_RELEASE_GATE            (0x1a10 / 8388608.0)   // §70.7 - the gate follower's second stage
+#define PD_RELEASE_PEAK            (0x270a / 8388608.0)   // §70.7 - the peak followers' second stage
+#define PD_ATTACK                  (0x7fffff / 8388608.0)
+#define PD_LP_POLE                 (0x7d6103 / 8388608.0) // §70.7 - the low-pass, ~316 Hz
+#define PD_HP_POLE                 (0x7fe645 / 8388608.0) // §70.7 - the DC blocker, ~12 Hz
+#define PD_PEAK_SHARE              (0x733333 / 8388608.0) // §70.7 - a peak is 0.9 of its envelope
 #define FXBUF_SAMPLES              (16384)
-#define MAX_FXBUF_VOICE_LINES      (2)  // notes §197 - in the Voice area, per voice
+#define MAX_FXBUF_VOICE_LINES      (2)                    // notes §197 - in the Voice area, per voice
 #define FXBUF_INSTANCES            (MAX_FXBUF_LINES + (MAX_FXBUF_VOICE_LINES * MAX_VOICES))
-#define MAX_STRING_LINES           (2)  // §70 - OscString, Resonator: a per-voice loop each
-#define STRING_SAMPLES             (4096)
-#define MAX_BASIC_LINES            (2)  // §70 - Vocoder: per-voice filter states
-#define BASIC_STATES               (96)
+#define MAX_STRING_LINES           (2)                    // §70 - OscString, Resonator: a per-voice loop each
+#define STRING_SAMPLES             (8192)                 // §70.4 - OscString's line is 7000 samples at 96 kHz
+#define MAX_BASIC_LINES            (2)                    // §70 - Vocoder: per-voice filter states
 #define DLYCLOCK_SLOTS             (128)
-#define FLTPHASE_W_FREQ            (0)  // §67 - the node's words: the pitch stage's X2
-#define FLTPHASE_W_PITCHM          (1)  // Y0
-#define FLTPHASE_W_SPREADM         (2)  // X4
-#define FLTPHASE_W_SPREAD          (3)  // Y3
-#define FLTPHASE_W_FB              (4)  // the filter stage's X8
-#define FLTPHASE_W_FBM             (5)  // Y9
-#define FLTPHASE_W_LEVEL           (6)  // Y1
-#define FLTPHASE_W_LOOP            (7)  // Y10, set by Type
-#define FLTPHASE_W_DRY             (8)  // Y11, set by Type
-#define CLKGEN_PARAM_TEMPO         (0)  // §59 - Tempo, On, Source, Sync every, Swing
+#define FLTPHASE_W_FREQ            (0)                    // §67 - the node's words: the pitch stage's X2
+#define FLTPHASE_W_PITCHM          (1)                    // Y0
+#define FLTPHASE_W_SPREADM         (2)                    // X4
+#define FLTPHASE_W_SPREAD          (3)                    // Y3
+#define FLTPHASE_W_FB              (4)                    // the filter stage's X8
+#define FLTPHASE_W_FBM             (5)                    // Y9
+#define FLTPHASE_W_LEVEL           (6)                    // Y1
+#define FLTPHASE_W_LOOP            (7)                    // Y10, set by Type
+#define FLTPHASE_W_DRY             (8)                    // Y11, set by Type
+#define CLKGEN_PARAM_TEMPO         (0)                    // §59 - Tempo, On, Source, Sync every, Swing
 #define CLKGEN_PARAM_ACTIVE        (1)
-#define CLKGEN_PARAM_SOURCE        (2)  // clkSrcStrMap: 0 Int, 1 Master
+#define CLKGEN_PARAM_SOURCE        (2)                    // clkSrcStrMap: 0 Int, 1 Master
 #define CLKGEN_PARAM_SYNC          (3)
 #define CLKGEN_PARAM_SWING         (4)
 #define CLKGEN_TICK_HZ             (24000.0)
@@ -1615,17 +1641,55 @@ typedef struct {
 static tMetNoiseState         gMetNoiseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_METNOISE_LINES];
 // §70 - the basic modules' buffers: post-mix FX (one each), per-voice loops, per-voice filter states
 static float                  gFxBufBank[SOUND_ENGINE_MAX_ENGINES][FXBUF_INSTANCES][FXBUF_SAMPLES];
-#define gFxBuf          (gFxBufBank[SE])
+#define gFxBuf         (gFxBufBank[SE])
 static uint32_t               gFxBufWriteBank[SOUND_ENGINE_MAX_ENGINES][FXBUF_INSTANCES];
-#define gFxBufWrite     (gFxBufWriteBank[SE])
-static double                 gFxPhaseBank[SOUND_ENGINE_MAX_ENGINES][FXBUF_INSTANCES];
-#define gFxPhase        (gFxPhaseBank[SE])
+#define gFxBufWrite    (gFxBufWriteBank[SE])
+typedef struct {
+    int32_t phase;      // §70.2/§70.3 - a signed 24-bit LFO or tap phase, stepped on the 24 kHz tick
+    double  tick;       // engine samples since the last 24 kHz tick
+    double  delay[2];   // the taps' delays in 96 kHz samples, as the last tick set them
+    double  gain[2];    // §70.3 - the taps' crossfade gains
+    double  feedback;   // §70.2 - the Flanger's second output, fed back
+    double  ratio;      // §70.3 - Scratch's smoothed ratio word
+    bool    ready;
+} tFxBufState;
+static tFxBufState            gFxStateBank[SOUND_ENGINE_MAX_ENGINES][FXBUF_INSTANCES];
+#define gFxState    (gFxStateBank[SE])
+typedef struct {
+    double tick;          // engine samples to the next 96 kHz step
+    double pre[2];        // the gate's two-stage follower
+    double gate;
+    double lp;
+    double hp;            // the DC blocker's state word
+    double pos[2];        // the positive and negative peak followers
+    double neg[2];
+    double flip;          // the flip-flop: Period, and what the counter counts
+    double count;         // ticks since its last rising edge
+    double last;
+    double pitch;
+} tPitchTracker;
+static tPitchTracker          gPitchTrackerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_PITCH_TRACKER_LINES];
+#define gPitchTracker    (gPitchTrackerBank[SE])
 static float                  gStringBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_STRING_LINES][STRING_SAMPLES];
-#define gString         (gStringBank[SE])
+#define gString          (gStringBank[SE])
 static uint32_t               gStringWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_STRING_LINES];
-#define gStringWrite    (gStringWriteBank[SE])
-static double                 gBasicBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_BASIC_LINES][BASIC_STATES];
-#define gBasic          (gBasicBank[SE])
+#define gStringWrite     (gStringWriteBank[SE])
+typedef struct {
+    double tick;              // engine samples to the next 24 kHz tick
+    double ctrlSec[2];        // §70.8 - the 96 kHz converters' section states
+    double inSec[4][2];
+    double outSec[4][2];
+    double ctrlHeld;          // the decimated inputs and the held output
+    double inHeld;
+    double outHeld;
+    double analysis[16][4][2];
+    double synthesis[16][4][2];
+    double peak[16];          // each band's two-stage follower
+    double env[16];
+    double emphasisLast;
+} tVocoderState;
+static tVocoderState          gVocoderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_BASIC_LINES];
+#define gVocoder    (gVocoderBank[SE])
 // §69.7 - each DlyClock's ring and write position, per voice
 typedef struct {
     double   slot[DLYCLOCK_SLOTS];
@@ -2294,13 +2358,13 @@ static void reset_node_state(void) {
             }
 
             if (i < MAX_BASIC_LINES) {
-                memset(gBasic[v][i], 0, sizeof(gBasic[v][i]));
+                memset(&gVocoder[v][i], 0, sizeof(gVocoder[v][i]));
             }
 
             if ((v == 0) && (i < FXBUF_INSTANCES)) {
                 memset(gFxBuf[i], 0, sizeof(gFxBuf[i]));
                 gFxBufWrite[i] = 0;
-                gFxPhase[i]    = 0.0;
+                memset(&gFxState[i], 0, sizeof(gFxState[i]));
             }
 
             if (i < MAX_DLYCLOCK_LINES) {
@@ -2313,6 +2377,10 @@ static void reset_node_state(void) {
 
             if (i < MAX_METNOISE_LINES) {
                 gMetNoise[v][i].ready = false;   // §66 - fresh random phases at its next sample
+            }
+
+            if (i < MAX_PITCH_TRACKER_LINES) {
+                memset(&gPitchTracker[v][i], 0, sizeof(gPitchTracker[v][i]));
             }
 
             if (i < MAX_FREQSHIFT_LINES) {
@@ -3334,7 +3402,7 @@ static uint32_t node_output_legs(tNodeKind kind) {
             return 8u;
         }
         case eNodeNoteDet:             // §69.11 - Gate, Vel, RVel
-        case eNodePitchTrack:          // §70.7 - Period, Gate, Pitch
+        case eNodePitchTrack:          // §70.7 - Period, Pitch, Gate
         case eNodeStatus:              // §70.13
         {
             return 3u;
@@ -4741,7 +4809,7 @@ static void set_osc_pitch(tEngineNode * node, tModule * module, uint32_t variati
     node->active    = (param_value(module, variation, (uint32_t)p->active) != 0.0) && (silent == false);
 }
 
-#define OSCDUAL_PARAM_SQUARE_LEVEL    (5)     // §12.1 - 6 and 11 are the other way round in the module tables
+#define OSCDUAL_PARAM_SQUARE_LEVEL    (5)     // §12.1
 #define OSCDUAL_PARAM_PW_MOD          (6)
 #define OSCDUAL_PARAM_SAW_LEVEL       (7)
 #define OSCDUAL_PARAM_SAW_PHASE       (8)
@@ -6393,6 +6461,7 @@ static void build_snapshot(tSoundEngineParams * out) {
         uint32_t fxbufs     = 0;
         uint32_t strings    = 0;
         uint32_t basics     = 0;
+        uint32_t trackers   = 0;
 
         for (i = 0; i < snapshot.nodeCount; i++) {
             if (  (snapshot.node[i].kind == eNodeDelay) || (snapshot.node[i].kind == eNodeDlySingle)
@@ -6404,6 +6473,8 @@ static void build_snapshot(tSoundEngineParams * out) {
                 snapshot.node[i].line = strings++;
             } else if (snapshot.node[i].kind == eNodeVocoder) {
                 snapshot.node[i].line = basics++;
+            } else if (snapshot.node[i].kind == eNodePitchTrack) {
+                snapshot.node[i].line = trackers++;
             } else if (snapshot.node[i].kind == eNodeDlyStereo) {
                 snapshot.node[i].line = lines;   // §65 - two lines, this and the next
                 lines                += 2u;
@@ -7288,7 +7359,7 @@ static void dly_stereo_step(const tEngineNode * spec, double input, double * out
 
     uint32_t line    = spec->line;
 
-    if ((line + 1u) >= MAX_DELAY_LINES) {
+    if (((line + 1u) >= MAX_DELAY_LINES) || (spec->active == false)) {   // bypassed: no work while off
         *outL = input;
         *outR = input;
         return;
@@ -7334,8 +7405,8 @@ static void dly_stereo_step(const tEngineNode * spec, double input, double * out
     gDelayFb[line]      = dly_sat((((int64_t)y[0] * spec->dlyStereoFb[0]) + ((int64_t)y[1] * spec->dlyStereoFb[2])) >> 23);
     gDelayFb[line + 1u] = dly_sat((((int64_t)y[1] * spec->dlyStereoFb[1]) + ((int64_t)y[0] * spec->dlyStereoFb[3])) >> 23);
 
-    *outL               = (spec->active == true) ? out[0] : input;
-    *outR               = (spec->active == true) ? out[1] : input;
+    *outL               = out[0];
+    *outR               = out[1];
 }
 
 // an engine value as the DSP word a cable carries, saturated
@@ -7469,8 +7540,12 @@ static double flt_phase_step(uint32_t voice, const tEngineNode * spec, double in
     if (spec->line >= MAX_FLTPHASE_LINES) {
         return input;
     }
-    tFltPhaseState * st     = &gFltPhase[voice][spec->line];
     const int32_t *  w      = spec->phaseWords;
+
+    if (spec->active == false) {
+        return (double)dly_sat(((int64_t)engine_word(input) * w[FLTPHASE_W_LEVEL]) >> 23) / DSP_WORD_PER_ENGINE;   // bypassed: no work while off
+    }
+    tFltPhaseState * st     = &gFltPhase[voice][spec->line];
     int32_t          p      = dly_sat((((int64_t)engine_word(mods[3]) << 23) + ((int64_t)engine_word(mods[0]) * w[FLTPHASE_W_PITCHM])) >> 21);
     int32_t          semi   = (int32_t)llround(131072.0 * pow(2.0, (double)(p >> 17) / 12.0));
     int32_t          cent   = (int32_t)llround(4194304.0 * pow(2.0, (double)((p >> 10) & 127) / 1536.0));
@@ -7512,9 +7587,6 @@ static double flt_phase_step(uint32_t voice, const tEngineNode * spec, double in
 
     st->feedback = dly_sat(((int64_t)tap * loop) >> 23);
 
-    if (spec->active == false) {
-        return (double)direct / DSP_WORD_PER_ENGINE;
-    }
     return (double)dly_sat(((((int64_t)tap * 0x7fffff) << 3) + ((int64_t)direct * mix)) >> 23) / DSP_WORD_PER_ENGINE;
 }
 
@@ -7533,7 +7605,7 @@ static double met_noise_step(uint32_t voice, const tEngineNode * spec, double fr
 
     static const int32_t kRatio[6] = {0x1e354, 0x28b44, 0x2d7b9, 0x362fd, 0x46666, 0x4aec3};
 
-    if (spec->line >= MAX_METNOISE_LINES) {
+    if ((spec->line >= MAX_METNOISE_LINES) || (spec->active == false)) {   // off: no work while off
         return 0.0;
     }
     tMetNoiseState *     st        = &gMetNoise[voice][spec->line];
@@ -8466,6 +8538,9 @@ static double phaser_sat(double x) {
 static double phaser_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double input) {
     SE_LOCAL;
 
+    if (spec->active == false) {
+        return phaser_sat(input / 4.0) * 4.0;   // bypassed: no work while off
+    }
     double * st       = gLadder[voice][n];
     bool     typeII   = (spec->select != 0u);
     double   in       = phaser_sat(input / 4.0);
@@ -8525,9 +8600,6 @@ static double phaser_step(uint32_t voice, uint32_t n, const tEngineNode * spec, 
 
     st[6] = chain;
 
-    if (spec->active == false) {
-        return in * 4.0;
-    }
     return phaser_sat((in * dry) + (chain * wet)) * 4.0;
 }
 
@@ -10799,41 +10871,16 @@ static uint32_t mux_select(double ctrl) {
 
 static double logic_level(bool high);
 
-// §70 - a dial's value as its own display prints it (ms and s as seconds, dB, Hz), for the basic
-// modules whose laws are only known from those strings
-static double param_display_number(tModuleType type, uint32_t paramIndex, uint32_t value) {
-    uint32_t seen = 0;
-
-    for (uint32_t r = 0; r < array_size_param_location_list(); r++) {
-        if (paramLocationList[r].moduleType != type) {
-            continue;
-        }
-
-        if (seen++ != paramIndex) {
-            continue;
-        }
-        const char ** map    = paramLocationList[r].strMap;
-
-        if ((map == NULL) || (value >= array_size_str_map(map))) {
-            return 0.0;
-        }
-        char *        end    = NULL;
-        double        number = strtod(map[value], &end);
-
-        if ((end != NULL) && (strncmp(end, "ms", 2) == 0)) {
-            return number / 1000.0;
-        }
-
-        if ((end != NULL) && (strncmp(end, "kHz", 3) == 0)) {
-            return number * 1000.0;
-        }
-        return number;
+// §70 - the basic modules' dials into bx[] (and a few named fields), module by module
+// §70.4 - the share of the loop Decay takes away each period, 0 at Decay 127; i = 127 - Decay,
+// interpolated as the dial is
+static double karplus_decay_step(double i) {
+    if (i <= 0.0) {
+        return 0.0;
     }
-
-    return 0.0;
+    return fmin(exp(KARPLUS_DECAY_A - (KARPLUS_DECAY_B * pow(KARPLUS_DECAY_R, i))), 1.0);
 }
 
-// §70 - the basic modules' dials into bx[] (and a few named fields), module by module
 static void basic_build(tEngineNode * node, tModule * module, uint32_t variation) {
     double * bx = node->bx;
 
@@ -10862,44 +10909,56 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
         }
         case moduleTypeFlanger:
         {
-            // §70.2 - from the reference model: Rate the display's law (paramCurves), Range v x 0xdbec of a sweep of up
-            // to 436 samples above a 74-sample offset, Feedback v x 7000000/127 (unipolar, 0.834 at 127)
-            bx[0]        = flanger_rate_hz(param_value(module, variation, 0));
-            bx[1]        = 436.0 * param_value(module, variation, 1) / 127.0 / G2_ENGINE_SAMPLE_RATE;
-            bx[2]        = (param_value(module, variation, 2) * 7000000.0 / 127.0) / 8388608.0;
+            // §70.2 - Rate a phase step of v x 16 (8 at 0), Range v x 0xdbec, FB v x 7000000/127 of a word
+            double rate = param_value(module, variation, 0);
+
+            bx[0]        = (rate > 0.0) ? (rate * 16.0) : 8.0;
+            bx[1]        = param_value(module, variation, 1) * FLANGER_RANGE_STEP;
+            bx[2]        = floor(param_value(module, variation, 2) * 7000000.0 / 127.0) / DSP_WORD_SCALE;
             node->active = (module->param[variation][3].value != 0);
             break;
         }
         case moduleTypePShift:
         {
-            // §70.3 - Semi 25 cents a step, Fine a quarter of that, Shift mod in semitones, Delay the window
-            bx[0]        = ((param_value(module, variation, 0) - 64.0) * 25.0) + ((param_value(module, variation, 1) - 64.0) * 25.0 / 64.0);
-            bx[1]        = 64.0 * param_value(module, variation, 2) / 127.0;
-            bx[2]        = 0.0125 * pow(2.0, (double)module->param[variation][3].value);
+            // §70.3 - Coarse and Fine dials, Pitch M v/128, Delay the window's range
+            bx[0]        = param_value(module, variation, 0);
+            bx[1]        = param_value(module, variation, 1);
+            bx[2]        = (module->param[variation][2].value >= 127) ? 1.0 : (param_value(module, variation, 2) / 128.0);
+            bx[3]        = (double)module->param[variation][3].value;
             node->active = (module->param[variation][4].value != 0);
             node->select = 0u;
             break;
         }
         case moduleTypeScratch:
         {
-            // §70.3 - Ratio: silent at 64, up to 4x forwards or backwards; Mod adds; Delay the window
-            bx[0]        = 4.0 * (param_value(module, variation, 0) - 64.0) / 63.0;
-            bx[1]        = 4.0 * param_value(module, variation, 1) / 127.0;
-            bx[2]        = 0.0125 * pow(2.0, (double)module->param[variation][2].value);
+            // §70.3 - Ratio a word of (v - 64)/512 (127 = 1/8), Ratio M v/128, Delay the window's range
+            bx[0]        = (module->param[variation][0].value >= 127) ? 0.125 : ((param_value(module, variation, 0) - 64.0) / 512.0);
+            bx[2]        = (module->param[variation][1].value >= 127) ? 1.0 : (param_value(module, variation, 1) / 128.0);
+            bx[3]        = (double)module->param[variation][2].value;
             node->active = (module->param[variation][3].value != 0);
             node->select = 1u;
             break;
         }
         case moduleTypeOscString:
+        {
+            // §70.4 - the oscillators' pitch dials; Decay the loop gain, Damp the loop's one-pole
+            static const tOscParams kString = {moduleTypeOscString, 0, 1, 2, 3, 4, 7, -1, -1, -1, false};
+            double                  damp    = param_value(module, variation, 6);
+
+            set_osc_pitch(node, module, variation, &kString);
+            bx[0] = 1.0 - karplus_decay_step(127.0 - param_value(module, variation, 5));
+            bx[1] = (damp <= 0.0) ? 1.0 : ((127.0 - damp) / 128.0);
+            break;
+        }
         case moduleTypeResonator:
         {
-            // §70.4 - the oscillators' pitch dials; Decay a T60 of 20 ms to 10 s; Damp a one-pole in the loop
+            // §70.4a - basic: the oscillators' pitch dials; Decay a T60 of 20 ms to 10 s; Damp a one-pole
             static const tOscParams kString = {moduleTypeOscString, 0, 1, 2, 3, 4, 7, -1, -1, -1, false};
 
             set_osc_pitch(node, module, variation, &kString);
             bx[0] = 0.02 * pow(500.0, param_value(module, variation, 5) / 127.0);
             bx[1] = 1.0 - (0.9 * param_value(module, variation, 6) / 127.0);
-            bx[2] = (module->type == moduleTypeResonator) ? (param_value(module, variation, 8) / 127.0) : 0.0;
+            bx[2] = param_value(module, variation, 8) / 127.0;
             break;
         }
         case moduleTypeDriver:
@@ -10916,9 +10975,8 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
         case moduleTypePitchTrack:
         case moduleTypeZeroCnt:
         {
-            // §70.7 - PitchTrack's Threshold reads NoiseGate's table (the same string map)
-            bx[0]        = (module->type == moduleTypePitchTrack)
-                           ? pow(10.0, param_display_number(moduleTypeNoiseGate, 0, module->param[variation][0].value) / 20.0) : 0.0;
+            // §70.7 - PitchTrack's Threshold: the gate opens at v/128 of a unit-level signal and closes at 3/4 of it
+            bx[0]        = (module->param[variation][0].value >= 127) ? 1.0 : (param_value(module, variation, 0) / 128.0);
             node->select = (module->type == moduleTypeZeroCnt) ? 1u : 0u;
             break;
         }
@@ -11066,63 +11124,173 @@ static uint32_t fx_buf_instance(const tEngineNode * spec, uint32_t voice) {
     return (spec->line < MAX_FXBUF_VOICE_LINES) ? (MAX_FXBUF_LINES + (spec->line * MAX_VOICES) + voice) : FXBUF_INSTANCES;
 }
 
-// §70.2 - Flanger: a 0.5 ms delay swept by up to Range by a sine LFO, FB fed back, mixed half and half
+// A 4-point Lagrange read `delay` samples behind `write`, on a ring of `size`
+static double ring_read_lagrange(const float * ring, uint32_t size, uint32_t write, double delay) {
+    double   d  = fmax(delay, 1.0);
+    uint32_t i  = (uint32_t)d;
+    double   t  = d - (double)i;
+    double   y0 = ring[(write + (4u * size) - i + 1u) % size];
+    double   y1 = ring[(write + (4u * size) - i) % size];
+    double   y2 = ring[(write + (4u * size) - i - 1u) % size];
+    double   y3 = ring[(write + (4u * size) - i - 2u) % size];
+
+    return (-t * (t - 1.0) * (t - 2.0) / 6.0 * y0) + ((t + 1.0) * (t - 1.0) * (t - 2.0) / 2.0 * y1)
+           - ((t + 1.0) * t * (t - 2.0) / 2.0 * y2) + ((t + 1.0) * t * (t - 1.0) / 6.0 * y3);
+}
+
+// The 24 kHz tick the instruments' control stages run on, in engine samples
+static bool fx_tick(tFxBufState * st) {
+    SE_LOCAL;
+
+    double period = 4.0 * gSampleRate / G2_ENGINE_SAMPLE_RATE;
+
+    st->tick += 1.0;
+
+    if (st->tick >= period) {
+        st->tick -= period;
+        return true;
+    }
+    return false;
+}
+
+// §70.2 - Flanger: a triangle sweeps a 4-point read of a 512-sample ring; the ring takes 0.8 In plus
+// twice FB times the second output, 0.6 In + 0.3 x the read; Out is 0.6 In + 0.8 x the read
 static double flanger_step(const tEngineNode * spec, uint32_t voice, double input) {
     SE_LOCAL;
 
-    uint32_t l     = fx_buf_instance(spec, voice);
+    uint32_t      l     = fx_buf_instance(spec, voice);
 
-    if ((l >= FXBUF_INSTANCES) || (spec->active == false)) {
+    if ((l >= FXBUF_INSTANCES) || (spec->active == false)) {   // bypassed: no work while off
         return input;
     }
-    double * phase = &gFxPhase[l];
-    double   tri   = 1.0 - fabs((2.0 * *phase) - 1.0);   // §70.2 - the module's LFO is a triangle
-    double   delay = ((74.0 / G2_ENGINE_SAMPLE_RATE) + (spec->bx[1] * tri)) * gSampleRate;
-    double   wet   = ring_read(gFxBuf[l], FXBUF_SAMPLES, gFxBufWrite[l], delay);
-    uint32_t write = (gFxBufWrite[l] + 1u) % FXBUF_SAMPLES;
+    tFxBufState * st    = &gFxState[l];
+    double        scale = gSampleRate / G2_ENGINE_SAMPLE_RATE;
+    uint32_t      size  = (uint32_t)lround(FLANGER_RING * scale);
+    uint32_t      write = (gFxBufWrite[l] + 1u) % size;
 
-    gFxBuf[l][write] = (float)(input + (spec->bx[2] * wet));
+    if (st->ready == false) {
+        // the instrument draws the start phase at load; drawn from the line here so that a render repeats
+        st->phase = chorus_sign24(chorus_scramble(0x9E3779B9u ^ ((l + 1u) * 0x85EBCA6Bu)));
+        st->tick  = 4.0 * scale;
+        st->ready = true;
+    }
+
+    if (fx_tick(st) == true) {
+        st->phase    = chorus_sign24((uint32_t)st->phase + (uint32_t)spec->bx[0]);
+        uint32_t word = (uint32_t)floor(spec->bx[1] * fabs((double)st->phase) / DSP_WORD_SCALE) + FLANGER_MIN_WORD;
+
+        st->delay[0] = (double)(word >> 14) + 1.0 + ((double)((word >> 9) & 31u) / 32.0);
+    }
+    gFxBuf[l][write] = (float)dsp_saturate((FLANGER_IN_GAIN * input) + (2.0 * spec->bx[2] * st->feedback));
     gFxBufWrite[l]   = write;
-    *phase           = fmod(*phase + (spec->bx[0] / gSampleRate), 1.0);
-    return 0.5 * (input + wet);
+
+    double        wet   = ring_read_lagrange(gFxBuf[l], size, write, st->delay[0] * scale);
+
+    st->feedback     = dsp_saturate((FLANGER_MIX_GAIN * 2.0 * input) + (FLANGER_MIX_GAIN * wet));
+    return dsp_saturate((FLANGER_MIX_GAIN * 2.0 * input) + ((FLANGER_MIX_GAIN + 0.5) * wet));
 }
 
-// §70.3 - PShift and Scratch: two taps a half window apart move through the buffer at (1 - ratio) of
-// real time, each faded in and out by a triangle so they sum to one. Scratch's ratio may be negative
-// (backwards) and is silent at zero.
+// §70.3 - PShift's pitch ratio: Coarse in quarter semitones (interpolated between semitone steps),
+// Fine +-50 cents, Pitch M half a semitone a unit at full
+static double pitch_shift_ratio(const tEngineNode * spec, double mod) {
+    double quarter = spec->bx[0] / 4.0;
+    double step    = floor(quarter);
+    double frac    = quarter - step;
+    double coarse  = (exp2((step - 16.0) / 12.0) * (1.0 - frac)) + (exp2((step - 15.0) / 12.0) * frac);
+    double fine    = exp2((spec->bx[1] - 64.0) * 50.0 / 64.0 / 1200.0);
+    double semis   = fmin(fmax(mod * 32.0 * spec->bx[2], -64.0), 64.0);
+
+    return coarse * fine * exp2(semis / 12.0);
+}
+
+// §70.3 - PShift and Scratch: two taps on a 100 ms line, half a cycle of one phase apart, each delayed
+// 9728 x X1 x (1 + phase) samples and weighted 1 - phase^2; the sum is inverted. The phase steps on the
+// 24 kHz tick by 6990.67 x (1 - ratio), times 8/4/2/1 as the Delay range doubles X1 from 127/2048.
 static double pitch_shift_step(const tEngineNode * spec, uint32_t voice, double input, double mod) {
     SE_LOCAL;
 
-    uint32_t l      = fx_buf_instance(spec, voice);
+    uint32_t      l      = fx_buf_instance(spec, voice);
 
     if ((l >= FXBUF_INSTANCES) || (spec->active == false)) {
         return input;
     }
-    double   ratio  = (spec->select == 0u) ? exp2(((spec->bx[0] / 100.0) + (mod * spec->bx[1])) / 12.0)
-                      : (spec->bx[0] + (mod * spec->bx[1]));
-    double   window = fmin(spec->bx[2] * gSampleRate, (double)(FXBUF_SAMPLES - 4u));
-    double * phase  = &gFxPhase[l];
-    uint32_t write  = (gFxBufWrite[l] + 1u) % FXBUF_SAMPLES;
-    double   p1     = *phase;
-    double   p2     = fmod(p1 + 0.5, 1.0);
-    double   out    = 0.0;
+    tFxBufState * st     = &gFxState[l];
+    double        scale  = gSampleRate / G2_ENGINE_SAMPLE_RATE;
+    uint32_t      mode   = (uint32_t)spec->bx[3] & 3u;
+    double        window = PSHIFT_WINDOW_X1 * (double)(1u << mode);
+    uint32_t      write  = (gFxBufWrite[l] + 1u) % FXBUF_SAMPLES;
 
-    gFxBuf[l][write] = (float)input;
-    gFxBufWrite[l]   = write;
-    out              = ((1.0 - fabs((2.0 * p1) - 1.0)) * ring_read(gFxBuf[l], FXBUF_SAMPLES, write, 1.0 + (p1 * window)))
-                       + ((1.0 - fabs((2.0 * p2) - 1.0)) * ring_read(gFxBuf[l], FXBUF_SAMPLES, write, 1.0 + (p2 * window)));
-    *phase           = fmod(p1 + ((1.0 - ratio) / window) + 1.0, 1.0);
-
-    if (spec->select == 1u) {
-        out *= fmin(1.0, 4.0 * fabs(ratio));
+    if (st->ready == false) {
+        st->tick  = 4.0 * scale;
+        st->ready = true;
     }
-    return out;
+
+    if (fx_tick(st) == true) {
+        double level = 1.0;
+        double step  = 0.0;
+
+        if (spec->select == 1u) {
+            // Scratch: the ratio word through a one-pole of 0.99 a tick, the Mod input added unsmoothed;
+            // the level rises from silence over the first 3/1024 of it, and 4 x the ratio is the speed
+            st->ratio = fmin(fmax((SCRATCH_SMOOTH_IN * spec->bx[0]) + (SCRATCH_SMOOTH_POLE * st->ratio)
+                                  + (spec->bx[2] * mod / DSP_FULL_SCALE), -1.0), 1.0);
+            level     = fmin(fmax(64.0 * ((8.0 * fabs(st->ratio)) - (1.0 / 128.0)), 0.0), 1.0);
+            step      = SCRATCH_RATE_SCALE * (1.0 - (4.0 * fmin(fmax(8.0 * st->ratio, -1.0), 1.0)));
+        } else {
+            step = PSHIFT_RATE_SCALE * (1.0 - pitch_shift_ratio(spec, mod));
+        }
+        step      = fmin(fmax(step * (double)(8u >> mode), -DSP_WORD_SCALE), DSP_WORD_SCALE - 1.0);
+        st->phase = chorus_sign24((uint32_t)st->phase + (uint32_t)(int32_t)step);
+
+        for (uint32_t k = 0; k < 2u; k++) {
+            double p = (double)chorus_sign24((uint32_t)st->phase + (k * 0x800000u)) / DSP_WORD_SCALE;
+
+            st->delay[k] = PSHIFT_TAP_SCALE * window * (1.0 + p);
+            st->gain[k]  = level * (1.0 - (p * p));
+        }
+    }
+    gFxBuf[l][write] = (float)dsp_saturate(input);
+    gFxBufWrite[l]   = write;
+
+    double out = 0.0;
+
+    for (uint32_t k = 0; k < 2u; k++) {
+        out += st->gain[k] * ring_read_lagrange(gFxBuf[l], FXBUF_SAMPLES, write, fmin(st->delay[k] * scale, (double)(FXBUF_SAMPLES - 4u)));
+    }
+
+    return dsp_saturate(-out);
 }
 
 static double osc_frequency_hz(const tEngineNode * spec, double voicePitch, double pitchDirect, double pitchVar);
 
-// §70.4 - OscString and Resonator: y = excitation + g x lowpass(the loop one period back), g from the
-// Decay's T60; Resonator's Out2 reads the loop at the Pos share of the period
+// §70.4 - OscString: the line read 96000/f samples back (a 4-point read), through the Damp one-pole s;
+// the line takes In + Decay x s, Out is s (0 with the module off, the loop running on)
+static double karplus_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double excite, double pitchIn,
+                           double pitchVar, double voicePitch) {
+    SE_LOCAL;
+
+    uint32_t l      = spec->line;
+
+    if ((l >= MAX_STRING_LINES) || (spec->active == false)) {   // off: no work while off
+        return 0.0;
+    }
+    float *  ring   = gString[voice][l];
+    uint32_t write  = gStringWrite[voice][l];
+    double   hz     = osc_frequency_hz(spec, voicePitch, pitchIn, pitchVar);
+    double   period = (hz > 0.0) ? fmin(G2_ENGINE_SAMPLE_RATE / hz, KARPLUS_LINE - 2.0) : (KARPLUS_LINE - 2.0);
+    double   delay  = fmin(fmax(period, 2.0) * gSampleRate / G2_ENGINE_SAMPLE_RATE, (double)(STRING_SAMPLES - 4u));
+    double * lp     = &gLadder[voice][n][0];
+    double   back   = ring_read_lagrange(ring, STRING_SAMPLES, write, delay - 1.0);
+
+    *lp                    = dsp_saturate(*lp + (spec->bx[1] * (back - *lp)));
+    write                  = (write + 1u) % STRING_SAMPLES;
+    ring[write]            = (float)dsp_saturate(excite + (spec->bx[0] * *lp));
+    gStringWrite[voice][l] = write;
+    return *lp;
+}
+
+// §70.4a - Resonator (basic): y = excitation + g x lowpass(the loop one period back), g from the
+// Decay's T60; Out2 reads the loop at the Pos share of the period
 static void string_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double excite, double pitchIn, double pitchVar,
                         double voicePitch, double out[2]) {
     SE_LOCAL;
@@ -11248,103 +11416,238 @@ static void zero_count_step(double state[5], double input, double out[3]) {
     out[0]    = state[2];
 }
 
-// §70.7 - the period between rising zero crossings as a pitch, E2 at 0 units; PitchTrack also pulses
-// Period at each measurement and raises Gate above the threshold. state: 0 samples since the last
-// crossing, 1 last sample, 2 pitch, 3 envelope, 4 the share of a sample the last crossing came early.
-static void pitch_track_step(double state[5], const tEngineNode * spec, double input, double out[3]) {
-    SE_LOCAL;
+// §70.7 - a two-stage follower: an instant first stage releasing by `release1` a tick, then a second
+// that attacks by `attack` and releases by `release2`
+static void pd_follow(double env[2], double x, double release1, double attack, double release2) {
+    double d = x - env[0];
 
-    bool fresh = false;
+    env[0] += (d > 0.0) ? d : (release1 * d);
+    d       = env[0] - env[1];
+    env[1] += ((d > 0.0) ? attack : release2) * d;
+}
+
+// §70.7 - PitchTrack, every 96 kHz sample: |In| through a two-stage follower opens Gate at the threshold
+// and closes it at 3/4 of it; In through a 316 Hz low-pass and a DC blocker sets a flip-flop at each
+// positive peak (the half-wave reaching 0.9 of its follower), and the raw In's negative peaks reset it.
+// The flip-flop is Period; the ticks between its rising edges are the pitch, as ZeroCnt's (§70.7a).
+static void pitch_track_step(uint32_t voice, double state[5], const tEngineNode * spec, double input, double out[3]) {
+    SE_LOCAL;
 
     if (spec->select == 1u) {
         zero_count_step(state, input, out);
         return;
     }
-    state[0] += 1.0;
 
-    if ((state[1] < 0.0) && (input >= 0.0)) {
-        // the crossing interpolated between the two samples, so the period is not whole samples
-        double before = input / (input - state[1]);
-
-        if (state[0] - before > 2.0) {
-            double hz = gSampleRate / (state[0] - before + state[4]);
-
-            state[2] = (12.0 * log2(hz / PITCH_TRACK_ZERO_HZ)) / UNITS_PER_FULL_SCALE;
-            fresh    = true;
-        }
-        state[0] = 0.0;
-        state[4] = before;
+    if (spec->line >= MAX_PITCH_TRACKER_LINES) {
+        out[0] = 0.0;
+        out[1] = 0.0;
+        out[2] = 0.0;
+        return;
     }
-    state[1]  = input;
-    state[3]  = fmax(fabs(input), state[3] * exp(-1.0 / (0.02 * gSampleRate)));
+    tPitchTracker * pd = &gPitchTracker[voice][spec->line];
 
-    out[0]    = logic_level(fresh);
-    out[1]    = logic_level(state[3] > spec->bx[0]);
-    out[2]    = state[2];
+    pd->tick -= G2_ENGINE_SAMPLE_RATE / gSampleRate;
+
+    if (pd->tick <= 0.0) {
+        double v     = 0.0;
+        double x     = 0.0;
+
+        pd->tick  += 1.0;
+
+        pd_follow(pd->pre, fabs(input), PD_RELEASE_FAST, PD_ATTACK, PD_RELEASE_GATE);
+        pd->gate   = (pd->pre[1] < 0.75 * spec->bx[0]) ? 0.0 : pd->gate;
+        pd->gate   = (pd->pre[1] > spec->bx[0]) ? 1.0 : pd->gate;
+
+        pd->lp     = dsp_saturate(((1.0 - PD_LP_POLE) * input) + (PD_LP_POLE * pd->lp));
+        v          = dsp_saturate(pd->hp + (0.5 * (1.0 + PD_HP_POLE) * pd->lp));
+        pd->hp     = dsp_saturate((-0.5 * (1.0 + PD_HP_POLE) * pd->lp) + (PD_HP_POLE * v));
+
+        x          = fmax(v, 0.0);
+        pd_follow(pd->pos, x, PD_RELEASE_FAST, PD_ATTACK, PD_RELEASE_PEAK);
+        bool   set   = (PD_PEAK_SHARE * pd->pos[1]) <= x;
+
+        x          = fmax(-input, 0.0);
+        pd_follow(pd->neg, x, PD_RELEASE_FAST, PD_ATTACK, PD_RELEASE_PEAK);
+        bool   reset = (PD_PEAK_SHARE * pd->neg[1]) <= x;
+
+        pd->flip   = (set == true) ? 1.0 : pd->flip;
+        pd->flip   = (reset == true) ? 0.0 : pd->flip;
+
+        pd->count += 1.0;
+
+        if ((pd->last <= 0.0) && (pd->flip > 0.0)) {
+            pd->pitch = (12.0 * log2((G2_ENGINE_SAMPLE_RATE / pd->count) / PITCH_TRACK_ZERO_HZ)) / UNITS_PER_FULL_SCALE;
+            pd->count = 0.0;
+        }
+        pd->last   = pd->flip;
+    }
+    out[0] = logic_level(pd->flip > 0.0);
+    out[1] = pd->pitch;
+    out[2] = logic_level(pd->gate > 0.0);
 }
 
-// §70.8 - Vocoder: sixteen band-passes (Q 5, 100 Hz to 8 kHz, log spaced) on Ctrl (analysis, with
-// optional pre-emphasis) and on In (synthesis); each synthesis band is scaled by the 10 ms envelope of
-// the analysis band routed to it. state per band: analysis 2, synthesis 2, envelope 1; then emphasis 1.
+// §70.8 - the sixteen bands' sections, in program order: band 0 two sections (k0..k4, k1..k4), the
+// rest four (k0..k4, then k1..k4 three times). Analysis and synthesis share them.
+static const int32_t kVocoderBandWords[264] = {
+    0x000253, 0x3ee1d5, 0x8149cd, 0x400000, 0x7fffff, 0x3d5541, 0x82b932, 0x3ff99d,
+    0x7ff99d, 0x000485, 0x3f98ee, 0x80db30, 0x3ffffe, 0x800002, 0x3fbd93, 0x80728d,
+    0x3ffffe, 0x800002, 0x3f2177, 0x813811, 0x3ff696, 0x7ff696, 0x3f46b7, 0x80f741,
+    0x400000, 0x7fffff, 0x000e63, 0x3f2aa3, 0x816706, 0x3ffffb, 0x800005, 0x3fb056,
+    0x80c830, 0x400000, 0x800000, 0x3f0b5b, 0x81b478, 0x3ffa0e, 0x7ffa0d, 0x3f9139,
+    0x815877, 0x400000, 0x7fffff, 0x0004dd, 0x3fa695, 0x814a3e, 0x3ffff8, 0x800008,
+    0x3f8c09, 0x820a5c, 0x3ffff8, 0x800008, 0x3efbd4, 0x825f63, 0x3ffc86, 0x7ffc86,
+    0x3f165e, 0x820119, 0x3ffc86, 0x7ffc86, 0x001196, 0x3eef77, 0x82ec0f, 0x3fffee,
+    0x800012, 0x3f969a, 0x820a29, 0x400000, 0x800000, 0x3ed41e, 0x836d07, 0x3ff677,
+    0x7ff676, 0x3f7b2b, 0x831de5, 0x400000, 0x7fffff, 0x000f8a, 0x3f84f6, 0x83234e,
+    0x3ffff4, 0x80000c, 0x3f6849, 0x84a8c1, 0x3ffff4, 0x80000c, 0x3ea7de, 0x84e9f7,
+    0x3ffb4d, 0x7ffb4d, 0x3ec462, 0x8439d7, 0x3ffb4d, 0x7ffb4d, 0x001b8f, 0x3f70a9,
+    0x84b5a7, 0x3fffdc, 0x800024, 0x3f5229, 0x86d675, 0x3fffdc, 0x800024, 0x3e7459,
+    0x86fede, 0x3ff852, 0x7ff851, 0x3e929a, 0x860e53, 0x3ff852, 0x7ff851, 0x006437,
+    0x3e56c0, 0x889da6, 0x3fffbe, 0x800042, 0x3f5857, 0x86ef8e, 0x400000, 0x800000,
+    0x3e35fb, 0x89e761, 0x3ff81a, 0x7ff81a, 0x3f3739, 0x89e7b6, 0x400000, 0x7fffff,
+    0x003254, 0x3f3781, 0x8a12c2, 0x3fffb3, 0x80004d, 0x3f11ad, 0x8e4bae, 0x3fffb3,
+    0x80004d, 0x3ddfed, 0x8e0835, 0x3ffc33, 0x7ffc33, 0x3e0542, 0x8c3990, 0x3ffc33,
+    0x7ffc33, 0x00c874, 0x3d7b58, 0x93d2fd, 0x3fffa3, 0x80005d, 0x3f109b, 0x8e8c9e,
+    0x400000, 0x800000, 0x3da562, 0x914e02, 0x3ffcd0, 0x7ffcd0, 0x3ee5e0, 0x9480f2,
+    0x3ffcd0, 0x7ffcd0, 0x0067c8, 0x3edf53, 0x94dfff, 0x3ffff2, 0x80000e, 0x3eaec9,
+    0x9d4b04, 0x3ffff2, 0x80000e, 0x3cfcd7, 0x9bf665, 0x3ff9eb, 0x7ff9eb, 0x3d2c6d,
+    0x986f93, 0x3ff9eb, 0x7ff9eb, 0x01df83, 0x3c8371, 0xa29336, 0x3ffeb3, 0x80014d,
+    0x3e9a48, 0x9ddcf7, 0x400000, 0x800000, 0x3c4c4d, 0xa79dd7, 0x3ff682, 0x7ff682,
+    0x3e61c9, 0xaa01df, 0x400000, 0x7fffff, 0x0153b1, 0x3b37b1, 0xb8ea28, 0x3ffeef,
+    0x800111, 0x3e2d31, 0xaae1c6, 0x400000, 0x800000, 0x3b79b0, 0xb16430, 0x3ffc4f,
+    0x7ffc4f, 0x3de92c, 0xbd2c61, 0x3ffc4f, 0x7ffc4f, 0x026144, 0x3978cf, 0xd3a0ff,
+    0x3ffd55, 0x8002ab, 0x3d7602, 0xbe85c6, 0x400000, 0x800000, 0x39c2c1, 0xc7ea4a,
+    0x3ffb74, 0x7ffb74, 0x3d293f, 0xdb4c01, 0x3ffb74, 0x7ffb74, 0x06448e, 0x367279,
+    0xebc8a5, 0x3ffc0f, 0x8003f2, 0x3650e6, 0xfef948, 0x3ffb92, 0x7ffb92, 0x3c0666,
+    0xdd67e8, 0x3ffc0f, 0x8003f2, 0x3be360, 0x0d050b, 0x3ffb92, 0x7ffb92, 0x0a31b5,
+    0x3295d7, 0x210b2b, 0x3ffc88, 0x800378, 0x3b3b0e, 0x4b6535, 0x3ffe35, 0x7ffe35,
+    0x33b5ab, 0x394ead, 0x3ffc88, 0x800378, 0x3a1359, 0x0f89e4, 0x3ffe35, 0x7ffe35,
+};
+// §70.8 - each band's follower: release, attack (a share of the step a 24 kHz tick)
+static const int32_t kVocoderFollowWords[16][2] = {
+    {0x004432, 0x021d9b},
+    {0x006385, 0x0390be},
+    {0x0077ee, 0x04bdef},
+    {0x00899c, 0x05c519},
+    {0x009890, 0x06ab05},
+    {0x00a8dd, 0x0796f5},
+    {0x00b929, 0x088c93},
+    {0x00cc29, 0x099330},
+    {0x00e082, 0x0aae14},
+    {0x00f78d, 0x0bf1b1},
+    {0x0113fe, 0x0d6050},
+    {0x013478, 0x0f0451},
+    {0x015bab, 0x10fb43},
+    {0x01904f, 0x137bb1},
+    {0x01d90e, 0x16e21b},
+    {0x024b3b, 0x1bf5b7},
+};
+// §70.8 - the 96 kHz converters: Ctrl's one section, then In's and Out's four (the same words)
+static const int32_t kVocoderConverterWords[22] = {
+    0x038379, 0x1d3308, 0xb0dadc, 0x400000, 0x7fffff, 0x014527, 0x349ba3, 0x99a801,
+    0x3e2077, 0x7e195c, 0x2f3e73, 0x980f42, 0x3ffedb, 0x7ff7a0, 0x2c551b, 0x9635ca,
+    0x3d5df2, 0x7d56de, 0x3bd67d, 0x9807bf, 0x3e2077, 0x7e1954,
+};
+
+static const int8_t  kVocoderBandShift[16][3]   = {
+    {-10,  0,  0}, {-1, -3, -10}, {-4, -1, -10}, {-1, -3, -9}, {-4, -2, -8}, {-1, -4, -8}, {-1, -4, -8}, {-5, -2, -7},
+    { -1, -4, -7}, {-4, -3,  -6}, {-2, -4,  -5}, {-5, -2, -5}, {-3, -3, -4}, {-3, -3, -3}, {-3, -3, -2}, {-4, -2, -1},
+};
+static const int8_t  kVocoderConverterShift[3]  = {-5, -5, -4};
+
+static double vocoder_word(int32_t w) {
+    return (double)(((w & 0x800000) != 0) ? (w - 0x1000000) : w) / 8388608.0;
+}
+
+// §70.8 - a chain of the instrument's sections: w = 2(u - k1 w2 - k2 w1), y = w/2 + k3 w2 + k4 w1, the
+// first fed k0 x the input, each later one the last's output shifted; every stored word saturates
+static double vocoder_chain(double state[][2], const int32_t * k, uint32_t sections, const int8_t * shift, double x) {
+    double u = vocoder_word(k[0]) * x;
+
+    k++;
+
+    for (uint32_t i = 0; i < sections; i++, k += 4) {
+        if (i > 0) {
+            u = ldexp(u, shift[i - 1]);
+        }
+        double * m = state[i];
+        double   v = u - (vocoder_word(k[0]) * m[0]) - (vocoder_word(k[1]) * m[1]);
+        double   w = fmin(fmax(2.0 * v, -1.0), 1.0);
+
+        u    = v + (vocoder_word(k[2]) * m[0]) + (vocoder_word(k[3]) * m[1]);
+        m[0] = m[1];
+        m[1] = w;
+    }
+
+    return u;
+}
+
+static double vocoder_word_saturate(double v) {
+    return fmin(fmax(v, -1.0), 1.0);
+}
+
+// §70.8 - Vocoder: Ctrl and In converted down to 24 kHz; on that tick sixteen analysis bands of Ctrl
+// (optionally pre-emphasised), each rectified into a two-stage follower, scale sixteen synthesis bands
+// of In through the BandSel routing; the sum is converted back up. Words are 1/4 of an engine unit.
 static double vocoder_step(uint32_t voice, const tEngineNode * spec, double ctrl, double input) {
     SE_LOCAL;
-
-    static double kB0[16], kA1[16], kA2[16];
-    static bool   ready = false;
-
-    if (ready == false) {
-        for (uint32_t k = 0; k < 16u; k++) {
-            double w     = 2.0 * M_PI * 100.0 * pow(80.0, (double)k / 15.0) / G2_ENGINE_SAMPLE_RATE;
-            double alpha = sin(w) / (2.0 * 5.0);
-            double a0    = 1.0 + alpha;
-
-            kB0[k] = alpha / a0;
-            kA1[k] = -2.0 * cos(w) / a0;
-            kA2[k] = (1.0 - alpha) / a0;
-        }
-
-        ready = true;
-    }
 
     if (spec->line >= MAX_BASIC_LINES) {
         return 0.0;
     }
+    tVocoderState * st    = &gVocoder[voice][spec->line];
+    double          c     = ctrl / DSP_FULL_SCALE;
+    double          x     = input / DSP_FULL_SCALE;
+    double          scale = gSampleRate / G2_ENGINE_SAMPLE_RATE;
+    double          cDown = vocoder_word_saturate(2.0 * vocoder_chain(&st->ctrlSec, kVocoderConverterWords, 1u, kVocoderConverterShift, c));
+    double          xDown = vocoder_word_saturate(2.0 * vocoder_chain(st->inSec, &kVocoderConverterWords[5], 4u, kVocoderConverterShift, x));
+
+    st->tick -= 1.0;
+
+    if (st->tick <= 0.0) {
+        double sum = 0.0;
+        double a   = cDown;
+
+        st->tick += 4.0 * scale;
+
+        if (spec->bx[16] != 0.0) {
+            double e0 = vocoder_word(VOCODER_EMPHASIS_0);
+
+            a                = vocoder_word_saturate(8.0 * ((e0 * cDown) - (vocoder_word(VOCODER_EMPHASIS_1) * st->emphasisLast)));
+            st->emphasisLast = vocoder_word_saturate(e0 * cDown);
+        }
+
+        for (uint32_t b = 0, at = 0; b < 16u; b++) {
+            uint32_t sections = (b == 0u) ? 2u : 4u;
+            double   rel      = vocoder_word(kVocoderFollowWords[b][0]);
+            double   att      = vocoder_word(kVocoderFollowWords[b][1]);
+            double   rect     = vocoder_word_saturate(fabs(vocoder_chain(st->analysis[b], &kVocoderBandWords[at], sections, kVocoderBandShift[b], a)));
+
+            st->peak[b] = vocoder_word_saturate(fmax(rect, (rel * rect) + ((1.0 - rel) * st->peak[b])));
+            st->env[b]  = vocoder_word_saturate(fmax((rel * st->peak[b]) + ((1.0 - rel) * st->env[b]),
+                                                     (att * st->peak[b]) + ((1.0 - att) * st->env[b])));
+            at         += 1u + (4u * sections);
+        }
+
+        for (uint32_t k = 0, at = 0; k < 16u; k++) {
+            uint32_t sections = (k == 0u) ? 2u : 4u;
+            uint32_t route    = (uint32_t)spec->bx[k];
+            double   band     = vocoder_word_saturate(vocoder_chain(st->synthesis[k], &kVocoderBandWords[at], sections, kVocoderBandShift[k], xDown));
+
+            if ((route >= 1u) && (route <= 16u)) {
+                sum += st->env[route - 1u] * band;
+            }
+            at += 1u + (4u * sections);
+        }
+
+        st->outHeld = vocoder_word_saturate(16.0 * sum);
+    }
+    double out = vocoder_chain(st->outSec, &kVocoderConverterWords[5], 4u, kVocoderConverterShift, st->outHeld);
 
     if (spec->bx[17] != 0.0) {
         return ctrl;
     }
-    double * st  = gBasic[voice][spec->line];
-    double   env = exp(-1.0 / (0.01 * gSampleRate));
-    double   x   = ctrl;
-    double   out = 0.0;
-
-    if (spec->bx[16] != 0.0) {
-        x      = ctrl - (0.95 * st[80]);
-        st[80] = ctrl;
-    }
-    double   ys[16];
-
-    for (uint32_t k = 0; k < 16u; k++) {
-        double * a  = &st[5u * k];
-        double   ya = (kB0[k] * x) + a[0];
-
-        ys[k] = (kB0[k] * input) + a[2];
-        a[0]  = (-kA1[k] * ya) + a[1];
-        a[1]  = (-kB0[k] * x) - (kA2[k] * ya);
-        a[2]  = (-kA1[k] * ys[k]) + a[3];
-        a[3]  = (-kB0[k] * input) - (kA2[k] * ys[k]);
-        a[4]  = fmax(fabs(ya), a[4] * env);
-    }
-
-    for (uint32_t k = 0; k < 16u; k++) {
-        uint32_t route = (uint32_t)spec->bx[k];
-
-        if ((route >= 1u) && (route <= 16u)) {
-            out += ys[k] * st[(5u * (route - 1u)) + 4u] * 4.0;
-        }
-    }
-
-    return out;
+    return vocoder_word_saturate(out * vocoder_word(VOCODER_OUT_GAIN) * 8.0) * DSP_FULL_SCALE;
 }
 
 static void random_draw(double state[2], uint32_t * seed, const tEngineNode * spec);
@@ -12199,13 +12502,14 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             break;
         }
         case eNodeOscString:
+        {
+            value[n][0] = karplus_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch);
+            value[n][1] = value[n][0];
+            break;
+        }
         case eNodeResonator:
         {
             string_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch, value[n]);
-
-            if (spec->kind == eNodeOscString) {
-                value[n][1] = value[n][0];
-            }
             break;
         }
         case eNodeDriver:
@@ -12224,12 +12528,12 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodePitchTrack:
         {
-            pitch_track_step(gLadder[voice][n], spec, a, value[n]);
+            pitch_track_step(voice, gLadder[voice][n], spec, a, value[n]);
             break;
         }
         case eNodeVocoder:
         {
-            value[n][0] = vocoder_step(voice, spec, a, signal_in(spec, value, 1));
+            value[n][0] = vocoder_step(voice, spec, a, signal_in(spec, value, 1));   // Ctrl, In
             break;
         }
         case eNodeRndPattern:
@@ -12881,6 +13185,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeDlyShiftReg:  // §69.6
         case eNodeNoteDet:      // §69.11
         case eNodeMultiTap:     // §70 - separate outputs, none a stereo pair
+        case eNodeIn4Bus:       // §69.12 - four outputs, the buses' two pairs
+        case eNodeSeqCtr:       // §70.10 - Val and Trig
         case eNodeNoiseGate:
         case eNodePitchTrack:
         case eNodeResonator:

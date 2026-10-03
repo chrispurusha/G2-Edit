@@ -239,7 +239,7 @@ them to.
 
 ### What to expect
 
-The plug-in inherits exactly what the sound engine can do. 160 of the 170 module types are modelled on the instrument's own behaviour and the remaining 10 are working approximations, still being refined - see [Docs/engine-module-status.md](./Docs/engine-module-status.md). Performance mode is not yet implemented, so a NoteSend aimed at another slot, or at MIDI out, is dropped.
+The plug-in inherits exactly what the sound engine can do. 166 of the 170 module types are modelled on the instrument's own behaviour and the remaining 4 are working approximations, still being refined - see [Docs/engine-module-status.md](./Docs/engine-module-status.md). Performance mode is not yet implemented, so a NoteSend aimed at another slot, or at MIDI out, is dropped.
 
 See [THIRD_PARTY.md](./THIRD_PARTY.md) for open-source acknowledgments.
 
