@@ -218,6 +218,22 @@ typedef struct {
 bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader dial, tShaperSettings * out); // false: not a shaper
 double shaper_transfer(const tShaperSettings * settings, double amount, double input);                      // input and amount clamped
 
+// §71 - OverDrive's words for its Type and Shape, as fractions of a word, and its two-pass polynomial
+typedef struct {
+    double y2;          // added to the drive's gain
+    double y3;          // the polynomial's 1st, 3rd and 5th order terms
+    double y4;
+    double y5;
+    double tube;        // Asym's square term
+    double typeGain;    // the drive's share of the gain
+    double feedback;    // Heavy's feedback at full drive
+} tOverdriveWords;
+
+void overdrive_words(uint32_t type, bool sym, tOverdriveWords * out);
+double overdrive_word_saturate(double word);
+double overdrive_poly(const tOverdriveWords * w, double z, double * raw);       // saturated; *raw unsaturated
+double overdrive_drive_gain(const tOverdriveWords * w, double drive, double v); // the tube term, then the gain
+
 // EqPeak, Eq2Band and Eq3band as the bands they add up to - §11 of the engine reference.
 typedef struct {
     double inputLevel;

@@ -12208,3 +12208,30 @@ TRAPS worth remembering:
   read 4.7 dB out until the fundamental's own bin was measured, which agreed to 0.02 dB.
 - A rate test that decays to L2 0 with L3 at 99 climbs straight back to L3: at fast rates the dip is
   shorter than the analysis window and the capture looks like no decay at all.
+
+====================================================================================================
+
+## 2026-10-04 - 14 CS80project72's grit: the OverDrive, found by tapping each stage on the G2
+
+CT heard 14 CS80project72 (bank 1:19) distort on ONE note in the engine, where the G2 is clean. The engine's
+output never comes near full scale, so it was not clipping. Tapping each stage on the G2 and in the engine
+(the stage cabled to a 2-Out, Fireface capture, the engine rendering the same saved patch) found the first
+departure at the FX area's OverDrive (Soft, Sym, Drive 32): the engine's fitted curve made the 5th and 7th
+harmonics up to 18 dB too strong at this patch's levels. Replaced by the instrument's own (reference §71,
+revert record row 134); after it the energy above 6 kHz is -41.5 dB against the G2's -41.6.
+
+TRAPS - each of these produced a confident wrong lead first:
+- THE EDITOR FORWARDS MIDI NOTES to the G2 (midiInput.c send_note_to_synth). With the TM-1 also feeding
+  the G2 directly, a running editor makes every note arrive twice - two voices on a poly patch. Close the
+  editor before playing the instrument through MIDI.
+- NEWPATCH LEAVES THE EDITOR'S VOLUME where the last patch had it (ensure_patch_volume() returns early when
+  the module is active), while the G2's new patch is at 100. A calibration patch built that way played at
+  127 in the engine and 100 on the G2 - a 6.18 dB error that looked like the engine running 7 dB short
+  through the whole CS80 chain.
+- The backdoor's single DELCABLE/CABLE edits sent live to the G2 can race and leave the editor and the G2
+  with a different cable than asked. Build tap patches offline, then LOADFILE + PUSH them whole.
+- CS80 varies a lot from note to note (free-running LFOs and random modulation). Two captures of different
+  notes are not comparable sample for sample: the "dark" reverb that looked like an engine fault vanished
+  once input and output came from ONE take (four outputs at once, a second FX 2-Out on Out 3/4).
+- Reverb, StChorus, Compress, DelayA, ModAmt, LevAmp and Fx-In all match the G2 here; the Reverb checked
+  with each input alone and from a single take of its real inputs.

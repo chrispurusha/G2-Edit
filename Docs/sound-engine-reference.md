@@ -2835,3 +2835,31 @@ been compared with the instrument yet.
   while its note is held, Vel the last note-on's velocity / 128, RVel the last note-off's; on Keyb it is
   NoteDet (§69.11). In the plug-in only notes reach them - a VST3 host gives a plug-in no MIDI controller
   stream beyond the ones it maps to parameters. CtrlSend, PCSend, Automate and NoteZone render nothing.
+
+## 71. OverDrive
+
+The instrument's own (2026-10-04), replacing a fitted soft-knee curve (revert record row 134). Two parts: a
+coefficient part on the 24 kHz tick, and the shaper on every 96 kHz sample. The engine follows the
+instrument's code to within 7e-4 of a unit sample by sample, over all four Types, Sym and Asym, Drive 16-127
+and inputs of 0.3-3 units.
+
+**71.1 Per sample.** Words as fractions, each saturating at a word's full scale; the input is a word, a
+quarter of an engine unit.
+- Feedback (Heavy only): v = f x the shaped sample last time + (1 - f) x in.
+- Asym's square term: t = -k + v + k v^2 (k 0 for Sym).
+- Gain: u = 16 (drive x the type's share + Y2) t.
+- The polynomial, twice: p(z) = 8 (Y3 z + Y4 z^3 + Y5 z^5); s = p(p(u)).
+- A 2-pole high-pass on s/4 at about 7 Hz (coefficient 0xfa0/2^23, damping 1), which takes out Asym's DC.
+- Out = dry x in + wet x the high-passed s.
+
+**71.2 Type and Shape.** Soft, Hard, Fat and Heavy set the polynomial's words (Y2-Y5, from one setting each:
+0, 0x40, 0x7f, 0x30), the drive's share of the gain (1/4, 1/2, 1, 0) and Heavy's feedback (0.75 of the
+drive, halved). Asym sets k = 0x7f x 0x1cca (0x40 for Heavy); Sym, 0. `overdrive_words()` in paramCurves.c
+does this in the instrument's own integer arithmetic, so the module face's curve and the engine share it.
+
+**71.3 The coefficients, per tick.** d = Drive + Mod x Drive Mod, both dial/128 with 127 counting as 1,
+clamped to 0..1. Dry is (1 - d)^2 and wet 1 - (1 - d)^2, so Drive 0 is transparent.
+
+**71.4 Checked.** Against the G2 inside 14 CS80project72 (OverDrive Soft, Sym, Drive 32): the energy above
+6 kHz after it is -41.5 dB in the engine and -41.6 on the G2; the fitted curve gave -40.2. At 0.5 units the
+old curve made the 5th and 7th harmonics 18 dB too strong.
