@@ -119,6 +119,28 @@ already drawn.
 6. **A serial fallback**, chosen at start-up: one voice, a host that gives us no workgroup, or a
    patch whose voice count does not repay the sync.
 
+## Voice area against FX area (measured 2026-10-04)
+
+Where a slot's time goes, timed around the voice pass and the post-mix (FX area) pass, offline at -O2,
+96 kHz, a four-note chord; percentages of one core's real time:
+
+| Patch | Voices | Total | Voice pass | FX pass | Other |
+|---|---|---|---|---|---|
+| 14 CS80project72 | 5 | 46.4% | 36.2% | 5.8% | 4.4% |
+| 02 Big Pad | 14 | 16.1% | 13.1% | 1.3% | 1.7% |
+| Mini Emulator | 1 | 17.2% | 11.8% | 1.5% | 3.9% |
+| Dx | 5 | 4.8% | 4.2% | 0.1% | 0.6% |
+| RevLeadTest | 1 | 3.9% | 1.8% | 1.1% | 1.0% |
+
+So a slot's FX area on its own thread buys at most its share - about 12% on CS80 - and costs a chunk of
+latency plus a sync per chunk, since the FX area consumes the voices' sum sample by sample. The voices are
+78-81% of the heavy patches: they are what to spread. Slots across threads comes with four-slot playback:
+the engine's state is already banked per engine, so one engine per slot shares nothing while rendering.
+
+**Built 2026-10-04: the voices on a worker, the FX pass on the audio thread** (sound-engine-notes §202).
+It bought what the table says - CS80 47.8% to 40.2% - and the per-engine worker is the shape the per-slot
+threads will take.
+
 ## Open questions
 
 - Where the workgroup comes from in a VST3 on macOS, if anywhere. If there is none, does a plug-in

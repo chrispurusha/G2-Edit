@@ -3258,3 +3258,42 @@ next rebuild (every redraw). A patch file loaded with no G2 and no performance h
 (0), and plays at 120 as before. Run/Stop (2026-09-28): a ClkGen on Master reads the master clock's own
 count, so with the master stopped it stops too - the engine treats it as switched off, which also
 restarts it cleanly from the top when the clock runs again. With no master clock known it runs.
+
+## 201. The per-sample work as two passes (`stage_voices()`, `stage_fx()`)
+
+One sample of an engine is the voice pass - note events, vibrato and bend, the smoothing of the dials,
+every voice's nodes and their sum, the Voice area's meters - and then the pass after the mix: every
+postMix node (the FX area, and the Voice area's shared lines), the output taps and the output stage.
+`stage_smooth()` advances each node's dials once a sample; serially it does them all before the
+voices, as it always did, and split (§202) each pass smooths its own nodes. Moving the code into
+these functions changed nothing: the serial render is bit-identical to the one before (2026-10-04,
+seven patches, a four-note chord).
+
+## 202. The voices on their own thread (`split_plan()`, `split_worker()`)
+
+Each engine has a worker thread, started with the engine and woken once a block. It runs the voice pass
+for the whole block; the audio thread runs the pass after the mix SPLIT_LAG (32) graph samples behind
+it - a third of a millisecond at 96 kHz - and waits for the worker before returning, so nothing runs
+between callbacks. The two passes meet only at the values the pass after the mix and the output taps
+read from the voice sum: `split_plan()` lists them (2 to 4 on the patches tried) and they cross in a
+ring of per-sample records. Everything else either pass writes is its own: per-node state is indexed
+by node, and each node belongs to one pass.
+
+A graph is played serially instead when splitting it would change what it does:
+- a node after the mix that reads the keyboard or a voice (Keyboard, MonoKey, NoteDet, DXRouter, a
+  keyboard-gated envelope) - it would see them a lag early;
+- a loop leg between the two passes, or a voice node reading one after the mix;
+- more than SPLIT_MAX_PAIRS values to cross, or nothing after the mix at all.
+
+`sound_engine_set_split_mode()` (or `G2_ENGINE_SPLIT=0/1/2` in the environment at start) picks serial,
+inline - the same pipeline on one thread - or threaded, the default. CHECKED 2026-10-04: threaded is
+bit-identical to inline on seven patches, which is the test that the threads share nothing they both
+write; split equals serial delayed by the lag exactly where the FX area keeps no clock of its own (a
+static FX chain: zero difference), and differs by the lag in the FX area's own modulation elsewhere.
+Measured at 256-frame blocks, 96 kHz: 14 CS80project72 47.8% -> 40.2% of the deadline (worst block
+55.9% -> 44.7%), 02 Big Pad 16.3% -> 15.2% (worst 24.9% -> 18.0%) - the FX pass's share, as the
+multicore design note predicted.
+
+The worker is a real-time thread on macOS (THREAD_TIME_CONSTRAINT_POLICY); it does not yet join the
+device's audio workgroup. The plug-in does not report the lag to the host. The semaphore and the
+priority are the only platform code, behind `split_sem_*()` and `split_thread_make_realtime()`.
