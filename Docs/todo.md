@@ -257,6 +257,7 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
 - OscDual (§12.5): compare the new code sample for sample with the instrument's own part (note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
 - OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
+- 14 CS80project72 (bank 1:19) clips at the outputs on the engine; lowering the two Mix2-1B at the end of the FX chain all but cures it (CT, 2026-10-03) - the FX area is two loops of FltLP (Freq 51/91) and Mix2-1B (Lvl 127, Inv2 on, Lin) feeding each other, ending in Mix2-1B 25 and 36; the engine's mixers are exactly unity at 127, so the loops' gain at DC is 1 - capture a Mix2-1B Lin at 127 and FltLP's DC gain on the G2, then log peak level per FX node offline
 - CPU profile per module: sampled cycle counts per node (one block in N), per voice, slot and FX area; a backdoor CPUDUMP table and a file-gated log for the plug-in - first input to multi-threading the 4 slots and FX (engine-multicore-design.md)
 - Operator inputs from cables (§14.1): Gate, Note and Vel come from the voice, and Freq, Pitch and AMod are not read - the instrument reads all six off the Operator
 - Pulse ignores its Mode (Plus/Minus, §18)
