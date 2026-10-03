@@ -787,6 +787,17 @@ static void action_select_buffer_frames(int index) {
 
     audio_output_select_buffer_frames(sizes[((size_t)index < (sizeof(sizes) / sizeof(sizes[0]))) ? index : 0]);
 }
+
+// audioOutput.c notes §7
+static const uint32_t kRenderAheadMs[] = {0, 5, 10, 20};
+
+static void action_select_voice_thread(int index) {
+    audio_output_select_voice_thread(index != 0);
+}
+
+static void action_select_render_ahead(int index) {
+    audio_output_select_render_ahead_ms(kRenderAheadMs[((size_t)index < (sizeof(kRenderAheadMs) / sizeof(kRenderAheadMs[0]))) ? index : 0]);
+}
 #endif // SYNTHLIB_PLUGIN_BUILD
 
 
@@ -1064,6 +1075,55 @@ void open_experimental_menu(tCoord anchor) {
             };
             items[i++] = (tMenuItem){
                 "Buffer Size", (tRgb)RGB_GREY_3, NULL, 0, buffers, 0, 0.0
+            };
+        }
+
+        // Render ahead: room for a slow block, at the cost of everything being that much later
+        {
+            static tMenuItem aheads[(sizeof(kRenderAheadMs) / sizeof(kRenderAheadMs[0])) + 1];
+            static char      aheadLabel[(sizeof(kRenderAheadMs) / sizeof(kRenderAheadMs[0]))][24];
+            uint32_t         n = 0;
+
+            for (n = 0; n < (sizeof(kRenderAheadMs) / sizeof(kRenderAheadMs[0])); n++) {
+                const char * mark = (audio_output_render_ahead_ms() == kRenderAheadMs[n]) ? "* " : "  ";
+
+                if (kRenderAheadMs[n] == 0) {
+                    snprintf(aheadLabel[n], sizeof(aheadLabel[n]), "%sOff", mark);
+                } else {
+                    snprintf(aheadLabel[n], sizeof(aheadLabel[n]), "%s%u ms", mark, (unsigned)kRenderAheadMs[n]);
+                }
+                aheads[n] = (tMenuItem){
+                    aheadLabel[n], (tRgb)RGB_GREY_3, action_select_render_ahead, n, NULL, 0, 0.0
+                };
+            }
+
+            aheads[n]  = (tMenuItem){
+                NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+            };
+            items[i++] = (tMenuItem){
+                "Render Ahead", (tRgb)RGB_GREY_3, NULL, 0, aheads, 0, 0.0
+            };
+        }
+
+        // soundEngine notes §202 - the voices on a thread of their own, the FX area on the audio thread
+        {
+            static tMenuItem threads[3];
+            static char      threadLabel[2][16];
+            bool             on = audio_output_voice_thread();
+
+            snprintf(threadLabel[0], sizeof(threadLabel[0]), "%sOff", on ? "  " : "* ");
+            snprintf(threadLabel[1], sizeof(threadLabel[1]), "%sOn", on ? "* " : "  ");
+            threads[0] = (tMenuItem){
+                threadLabel[0], (tRgb)RGB_GREY_3, action_select_voice_thread, 0, NULL, 0, 0.0
+            };
+            threads[1] = (tMenuItem){
+                threadLabel[1], (tRgb)RGB_GREY_3, action_select_voice_thread, 1, NULL, 0, 0.0
+            };
+            threads[2] = (tMenuItem){
+                NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+            };
+            items[i++] = (tMenuItem){
+                "Multi-threading", (tRgb)RGB_GREY_3, NULL, 0, threads, 0, 0.0
             };
         }
 

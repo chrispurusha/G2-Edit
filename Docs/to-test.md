@@ -382,9 +382,11 @@ Shape mod input, which the engine ignores.
   MorphSplitEnv (Vel on an envelope's Sustain, Keyb on its Decay - this entry's case) and
   MorphSameDxLevel (both on one Operator Level - the case still 7.7% out). Load each on the G2 and in
   the editor and compare; none of §26.2 has ever been heard against the instrument.
+- ***RENDER AHEAD (2026-10-04)*** - audioOutput.c notes §7, Settings > Audio > Render Ahead. On the Intel MacBook,
+  a patch that breaks up: does 10 or 20 ms cure it, and does Off behave exactly as before.
 - ***THE VOICES ON THEIR OWN THREAD (2026-10-04)*** - sound-engine-notes §202. LISTEN: patches with an FX area
   in the app and the plug-in, at small buffers - no clicks, no dropouts, and the CPU readout lower on heavy
-  patches; `G2_ENGINE_SPLIT=0` in the environment switches it off to compare.
+  patches; Settings > Audio > Multi-threading switches it off in the app to compare.
 - ***OVERDRIVE BY THE INSTRUMENT'S LAW (2026-10-04)*** - reference §71. LISTEN: 14 CS80project72 in the
   engine against the G2 - CT heard it distort on one note; the OverDrive was the first stage that differed.
 - ***DX OPERATOR AND DXROUTER BY THE INSTRUMENT'S LAWS (2026-10-03)*** - reference §14. Checked on the
