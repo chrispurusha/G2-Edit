@@ -53,7 +53,7 @@ MODULES AND GRAPHICS
 - Draw the jack-to-dial link as a short graphical line instead of the "-"/"--" connector label (CT) - the labels already mark every pair
 - RndPattern's Loop dial reads "11.7" - the percent dial on a 16-step value; it should be a loop count, Loop + 1 clocks (reference §70.9)
 - Faces touching (not overlapping) a 16-W name at 0.59 (face-shots --name-band) - CT's call, most are his: Automate Ctrl, the sequencers' Cycle/Length, Mix2-1B Chain/Exp, the tall mixers' Curve/Exp, DlyEight Range, RndClkB Char, RndPattern Wave, PitchTrack Threshold, OscShpA Wave
-- Operator: read Coarse's text off the G2 panel in Ratio and Fixed (DX law assumed), and L/R Depth's range (table 8 values, DX 0-99) - L1 and Level are 0-127, confirmed 2026-08-10
+- Operator: read Coarse's text off the G2 panel in Ratio and Fixed, and L/R Depth's range - the module table holds 8 values, but the instrument shows them as plain numbers and scales them v x 0xffff (reference §14.4), so 0-99 is likely; L1 and Level are 0-127, confirmed 2026-08-10
 - Sequencer row-chain inputs: try a "Chain" label (value row and trigger row) and keep it only if it fits at zoom 0.59
 - Build the layout comparison: per module, how far each control sits from its transformed .rsrc position
 - Delay draws a bypass button in the original at CodeRef 3 but stores only 3 params - decide if we want it
@@ -89,7 +89,6 @@ SOUND ENGINE
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.md)
 - Run the engine-vs-hardware diff: both sides can produce the file, the comparison has not been run
 - Notes are not sent to the G2 while the local engine is sounding (owner's request)
-- OscDual's PW and Phase input depths are unmeasured (scale 1 in the engine, §12.4)
 - OscD's face draws a "Pitch" dial at parameter 3, where the module tables have Tune Md (a Semi/Freq/Factor/Partial drop-down) - check against the instrument and fix the face
 - Free-run RENDER is gated on the patch having no per-voice envelope; the exact test is "does a node
   reach an Out without passing a gated envelope" - phase already advances for every patch
@@ -258,7 +257,7 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
 - OscDual (§12.5): compare the new code sample for sample with the reference model (note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
 - OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
-- DX FM depth (§14.3, a guess of 1 cycle per full-scale input): the Operators share OscPM's phase-mod part, which gives 8 cycles at full amount (§53) - decode the DXRouter's amount words and correct
+- Operator inputs from cables (§14.1): Gate, Note and Vel come from the voice, and Freq, Pitch and AMod are not read - the instrument reads all six off the Operator
 - Pulse ignores its Mode (Plus/Minus, §18)
 - 14 CS80project72: the G2's strongest partial, 527 Hz, is missing from the engine (1061/2112/3161 match; Fireface capture 09-27, findings 09-27)
 - Voice-area delays and Reverb per voice (findings 2026-09-27): allocate each voice's line at build time, sized by Range (the instrument's 513 .. 259212 samples); fit polyphony to a memory budget as the voice placer does

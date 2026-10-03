@@ -382,6 +382,11 @@ Shape mod input, which the engine ignores.
   MorphSplitEnv (Vel on an envelope's Sustain, Keyb on its Decay - this entry's case) and
   MorphSameDxLevel (both on one Operator Level - the case still 7.7% out). Load each on the G2 and in
   the editor and compare; none of §26.2 has ever been heard against the instrument.
+- ***DX OPERATOR AND DXROUTER BY THE INSTRUMENT'S LAWS (2026-10-03)*** - reference §14. Checked on the
+  G2 already: the envelope's shape, the level, FM depth, feedback, keyboard level and rate scaling, and
+  levels above 99. STILL TO CHECK: velocity (Vel 1-7) with real MIDI velocities - the virtual key always
+  sends 127; algorithm 28 by ear (Operator 2 is on Main as well); 19 DxPiano and PatchTestFiles/Dx.pch2
+  against the G2 by ear.
 - ***DXROUTER OPERATORS FOLLOW THE VEL AND KEYB MORPHS (2026-09-18)*** - reference §26.2.1. A Vel or
   Keyb morph on an Operator's own dials (Level, the ratio, the envelope) now moves per voice; it moved
   nothing at all before. Checked offline on DXTest.pch2 to within 0.04% rms of the dial turned down by

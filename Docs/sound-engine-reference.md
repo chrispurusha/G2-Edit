@@ -499,8 +499,15 @@ about 0.3 dB. Soft doubles it and adds a one-pole low-pass that tracks the pitch
 oscillator's (3 × the sub's): +5.4 dB on the fundamental and a further -3 dB on the third harmonic, the
 same at all three pitches.
 
-**12.4 Modulation (not measured).** PW += PW mod × input and Phase += Phase mod × input (in cycles),
-each at a scale of 1 until measured.
+**12.4 Modulation (from the reference model, 2026-10-03).** PW Mod and Phase Mod are v/128 (127 = 1);
+PW is v/512 and Phase (v - 64)/256 of a word. the module adds 4 x (dial + amount x input) to its pulse threshold and
+to its saw phase, with the input as a word (a quarter of an engine unit). So an engine input of 1.0 at full amount
+moves PW by one whole dial range and the saw phase by half a cycle (OSCDUAL_PW_DEPTH 1, OSCDUAL_PHASE_DEPTH 0.5).
+§12.5's "4x / 2x" are the same law per WORD of input; the engine had applied them per engine unit, four times
+too strong (revert record row 127). CHECKED ON THE G2 2026-10-03 (OscDual at E4, a bipolar Constant into each
+input at full amount, Fireface capture): PW at +8 and +16 units moved the duty 6.24% and 12.54% (law: 6.25%, 12.5%;
+the old factor would have given 25% and 50%); Phase at +16 units, square and saw both full, matched the engine's
+harmonics 2-8 within 0.15 dB, where the old factor was 9 dB out.
 
 **12.5 Measurement.** 2026-09-12 - OscDual alone against an OscA sine at the same pitch, harmonics
 read at each setting; the sub at three pitches, Soft off and on.
@@ -515,7 +522,7 @@ where the model peaks near 1.9. Captured peaks cannot settle it: the output path
 RISES and steps at phase Phase/128 (Phase dial through dial/128, 127 = 1); the sub is a square an octave down,
 low first; all three with the two-sample edge of §6.3; Soft = one-pole, coefficient 8 inc96, times 2. NO shelf on
 the sub: the measured 190 Hz shelf was very likely the capture chain's own high-pass (§6.3 found -4 dB at 110 Hz on
-that chain). PW input reaches 4x the dial's range (OSCDUAL_PW_DEPTH), the phase input 2x; over-range PW wraps.
+that chain). The inputs' depths are §12.4's; over-range PW wraps.
 Runs at the engine rate. NOT YET compared sample for sample with the harness - see todo.md.
 
 ## 13. FltComb
@@ -567,41 +574,89 @@ free, then jointly per Type.
 
 ## 14. Operator and DXRouter
 
+The instrument's own laws throughout (settled 2026-10-03), checked against the G2 through the Fireface
+the same day - the confirmations are with each part. Revert record rows 128-133.
+
 **14.1 One node.** A DXRouter and the Operators patched into its six inputs are played as ONE node
 (`eNodeDx`). Their FM runs through the router in both directions - Operator out to router in, router
 out to Operator FM - which a chain of separate nodes cannot evaluate: `add_node()` would recurse round
 the loop until its depth guard stopped it. `dx_build()` finds the Operator feeding each router input
-and copies its settings into the snapshot's `dxOp[]` (six per router, `MAX_DX_OPERATORS` 24 = four
-routers). Each sample the operators run 6 down to 1: every DX7 modulation goes from a higher-numbered
-operator to a lower one, so each operator's modulators are already computed when it runs. The Main
-output is the carriers' sum. An Operator NOT patched into a router is not played. The algorithm table is
-the published DX7 chart, shared with the DXRouter graph (paramCurves.c `dx_algorithm()`).
+and copies its dials into the snapshot's `dxOp[]`, in the instrument's words (six per router,
+`MAX_DX_OPERATORS` 24 = four routers). Each sample the operators run 6 down to 1: every modulation goes
+from a higher-numbered operator to a lower one, so each operator's modulators are already computed
+when it runs. An Operator NOT patched into a router is not played. The algorithm table is the DX7
+chart, shared with the DXRouter graph (paramCurves.c `dx_algorithm()`), and it is what the instrument
+routes, with the one exception in 14.5.
 
-What the node reads from the voice rather than from cables: gate and pitch (as `eNodeEnv` does - the
-Keyboard module's outputs ARE the voice). NOT MODELLED: the Freq, Pitch and AMod inputs, Vel (the
-engine has no velocity), KBEnv, and the router's Out1-Out6 as outputs anywhere else.
+What the node reads from the voice rather than from cables: gate, Note and Vel - the Keyboard's Gate,
+Note and Lin, which is how every DX patch on file cables all six Operators. The instrument reads the
+Operator's own Gate, Note and Vel inputs, so a patch putting something else into them is NOT YET
+MODELLED, nor are the Freq, Pitch and AMod inputs and the router's Out1-Out6 used anywhere else. An
+unpatched AMod reads full scale on the instrument and changes nothing, as EnvADSR's AM does (17.5).
 
-**14.2 Levels and the envelope - the DX7's laws, NOT MEASURED ON THE G2.** Level and L1-L4 are 0.75 dB
-a step below 99 (99 is full scale; 0 is silence); values above 99, which the G2 accepts and displays,
-are held at 99. The envelope moves in dB, linearly, at each stage's rate towards its level: L4 -> L1 at
-R1, L2 at R2, L3 at R3, held there while the key is down, then L4 at R4. A rate is a full 96 dB sweep
-taking 40 s at 0, halving every 6.5 steps to 1 ms at 99. RateScale speeds the rates up the keyboard,
-by 2^(RateScale/7 x (note - 60)/24). Sync restarts the phase at each note.
+**14.2 The envelope.** It moves a LOG level, 0 to 0x7fffff, once a 24 kHz tick. The amplitude is
+`kDxAmpWords[level >> 16]`, read linearly between whole steps by the low 16 bits: 129 points, 0x200000
+(one unit) at the top, 0.70 dB a step. L1-L4 and Level reach it through `kDxLevelWords`.
 
-**14.3 FM depth and feedback - UNMEASURED.** A full-scale signal at an FM input moves the phase by one
-cycle (`DX_FM_CYCLES_PER_UNIT`). Feedback 1-7 feeds the operator's last two outputs, averaged, back
-into its target at 2^(Feedback - 8) of that, so 7 is half a cycle (pi) - the DX7's arrangement; 0 is
-off. Algorithms 4 and 6 feed back across operators (4 to 6, 5 to 6), the rest into the same operator.
+Six segments, in order: R1 to L1, R2 to L2, R3 to L3, a hold, R4 to L4, and a final hold. A segment's
+target is its L plus the note's offset (14.4), never below 0. Each tick the level steps towards the
+target and, landing on it, moves to the next segment; a hold never lands. A gate rising (or a voice
+retrigger) puts it back on R1 FROM WHERE IT IS; a gate down puts it on R4, every tick; Sync restarts
+the phase as the gate rises. A step is a whole number of words:
 
-**14.4 Keyboard level scaling - shape from the DX7, size UNMEASURED.** Each side of BrPt (read as a
-note number) takes its curve (-Lin, -Exp, +Exp, +Lin) and depth; a full depth is 24 dB four octaves
-from the break point. Linear is a straight slope, exponential e^4x normalised.
+- falling: `kDxDecayWords[r]` x 0xbd567
+- rising: `kDxAttackWords[r]` x (0x1a9fc, plus 0x28f5c below 0x75c28f, plus 0x7ae14 below 0x600000),
+  plus a jump of 0xa3d7 below 0x34b5dd - quick off the floor, slowing towards the top
 
-**14.5 Main output - UNMEASURED.** The carriers are summed and divided by how many there are, so a
-six-carrier algorithm is no louder than a one-carrier one. The DX7 sums without dividing; how the G2's
-DXRouter scales its Main output has not been measured, and this is the first thing to check against a
-capture. Frequencies: Ratio mode is the played note (Kbt on) or E4 (off) times Coarse/Fine by the DX7's
-law (paramCurves.c notes §41); Fixed is 1/10/100/1000 Hz times Fine; Detune is taken as 1 cent a step.
+where r is the rate plus the rate scaling (14.4), at most 99; a rate of 0 is not scaled, and the
+rate dials never go past 99 in effect. Because a rate is a step on the log level, an envelope with
+lower levels is over sooner - the manual's "lower envelope levels means that the entire envelope
+cycle becomes faster".
+
+The engine's level moves bit for bit with the instrument's: 400 random settings of every dial,
+velocity, note and gate length, 11.9 million ticks, no difference; the amplitude within one word.
+CONFIRMED ON THE G2: attack, decay to L2 and L3 and the release land within one 50 ms window of the
+G2's, and the drop from peak to sustain matches to the decibel.
+
+**Levels above 99.** The G2 accepts 100-127 for L1-L4 and Level, and `kDxLevelWords` carries the
+instrument's own words for them, read by their low 24 bits. Measured: Level 100 plays exactly as 99;
+Level 110 and 127, and L1-L3 at 127, are at the noise floor. The table reproduces all of that.
+
+**14.3 FM and feedback.** A unit at an Operator's FM input moves its phase `DX_FM_CYCLES_PER_UNIT`
+= 3.2706 cycles: 0x345487 x 64 over a two-word cycle, at a quarter word a unit. Modulators reach the
+router's outputs at unity. Feedback is its source's previous sample times
+`kDxFeedbackWords[group][Feedback]`, the groups being algorithms 6 and 32, algorithm 4, algorithm 18,
+and every other; at 7 that is 0.348 for most algorithms. There is no averaging of the last two
+samples, which is the DX7's arrangement and not the G2's. CONFIRMED ON THE G2 (2->1 at algorithm 1,
+modulator Level 60-90, then algorithm 2 at Feedback 3, 5 and 7): the carrier's harmonics 1-10 within
+0.2 dB, and within 0.4 dB with feedback, down to the capture's -60 dB floor.
+
+**14.4 The note's offset.** Every segment's target is shifted by one offset, kept at the
+accumulator's precision (a word is 1 << 24) as the instrument carries it:
+
+- Level: `kDxLevelWords[Level]` less the top
+- keyboard level scaling: the distance from BrPt in two-semitone steps, at most 63; Lin is
+  d x 162263/40 and Exp a quarter of it (on a log level the "exponential" curve is the gentler line),
+  times the side's depth (v x 0xffff) and 128; -Lin and -Exp subtract, +Exp and +Lin add. Level and
+  the scaling together never go above the top
+- then a fixed -0x77660, which puts an Operator at Level 99 with no velocity 5.2 dB below full
+- velocity: `kDxVelocityWords[v]` x Vel/7, the index being the Keyboard's Lin as a word >> 14
+
+The Note is the Keyboard's, 0x8000 a semitone from E4; BrPt v is the key v + 17 (E4 at 47). Rate
+scaling adds RateScale x 0x84210 x (note word + 0x158000) >> 39 rate steps, counting up from key 21:
+0 at the bottom, 15 at key 102 for RateScale 3. CONFIRMED ON THE G2: level scaling at keys 40, 64 and
+100 (L-Depth 60 -Exp, R-Depth 60 -Lin) within 0.12 dB; rate scaling at RateScale 7, keys 40 and 88,
+within one 10 ms window. Velocity is not yet checked against the G2 (to-test.md).
+
+**14.5 Main and pitch.** Main is twice `kDxMainWords[algorithm]` times the carriers' sum: 1.0 for
+most two-carrier algorithms, 0.75 for three, down to 0.375 for algorithm 32's six. Algorithms 16-18
+store the word 0x800000, which is -1.0, so their Main is twice the sum INVERTED. Algorithm 28 sends
+Operator 2 to Main as well as into Operator 1 - the instrument's routing, where the DX7 has it as a
+modulator only (`alsoMain`). CONFIRMED ON THE G2: one Operator through Main at algorithm 1 sits
+8.8 dB below a full-scale OscDual square on the G2 and 8.45 dB below it in the engine.
+
+Pitch is the instrument's: Ratio is the played note (Kbt on) or E4 (off) times Coarse (0 is a half)
+x (1 + Fine/100); Fixed is 1, 10, 100 or 1000 Hz x 10^(Fine/100); Detune is 1 cent a step.
 
 ## 15. Voicing: Mono, Legato, stealing and glide
 

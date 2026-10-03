@@ -701,6 +701,9 @@ two ends, from the published DX7 algorithm chart. Moved here from moduleGraphics
 DXRouter graph (moduleGraphics.c notes §85) and the sound engine (sound-engine-reference §14) read the
 same table - the engine cannot include the graph code.
 
+It matches what the G2 routes (checked 2026-10-03) with one exception, carried in `alsoMain`: algorithm
+28 sends Operator 2 to Main as well as into Operator 1. The graph still draws the DX7's picture.
+
 ## 44. `constant_level()`
 
 A Constant's output as the engine carries it, 1.0 being 64 units. Bipolar is (value - 64) units and

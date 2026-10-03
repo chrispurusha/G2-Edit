@@ -774,17 +774,29 @@ typedef enum {
 #define MAX_ENGINE_NODES            (128)
 #define MAX_DX_OPERATORS            (24) // §14 - six per DXRouter, so four routers
 
-// §14 - Operator and DXRouter. See the reference for what each of these is and how sure it is.
-#define DX_LEVEL_TOP                (99.0)   // Level and L1-L4 at the DX's top value read full scale
-#define DX_LEVEL_DB_PER_STEP        (0.75)
-#define DX_SILENT_DB                (-96.0)
-#define DX_RATE_SLOWEST_SECONDS     (40.0)   // a full 96 dB sweep at rate 0 ...
-#define DX_RATE_OCTAVES_PER_STEP    (0.1544) // ... halving every 6.5 steps, to 1 ms at rate 99
+// §14 - Operator and DXRouter, in the instrument's own words.
+#define DX_LEVEL_TOP                (0x7fffff)         // §14.2 - the log level's top; kDxAmpWords is read at level >> 16
+#define DX_LEVEL_BIAS               (-0x77660)         // §14.4 - every operator sits this far below the top
+#define DX_HOLD_MARK                (-0x800000)        // §14.2 - a holding segment's target, below every level
+#define DX_ACC_WORD                 ((int64_t)1 << 24) // a word at the accumulator's precision
+#define DX_RATE_TOP                 (99)
+#define DX_ATTACK_JUMP_BELOW        (0x34b5dd)         // §14.2 - the attack's step, by how far up it has come
+#define DX_ATTACK_JUMP              (0xa3d7)
+#define DX_ATTACK_LOW_BELOW         (0x600000)
+#define DX_ATTACK_LOW               (0x7ae14)
+#define DX_ATTACK_MID_BELOW         (0x75c28f)
+#define DX_ATTACK_MID               (0x28f5c)
+#define DX_ATTACK_BASE              (0x1a9fc)
+#define DX_DECAY                    (0xbd567)
+#define DX_RATESCALE_KEY_OFFSET     (0x158000)   // §14.4 - rate scaling counts up from the keyboard's bottom
+#define DX_KBSCALE_SPAN_MAX         (63)         // §14.4 - in steps of two semitones
+#define DX_KBSCALE_LIN_NUM          (162263)     // §14.4 - the Lin curve is d x 162263/40, Exp a quarter of it
+#define DX_KBSCALE_LIN_DEN          (40)
+#define DX_KBSCALE_SHIFT            (7)
+#define DX_VEL_INDEX_SHIFT          (14)         // §14.4 - Vel's word to its kDxVelocityWords index
 #define DX_DETUNE_CENTS_PER_STEP    (1.0)
-#define DX_KBSCALE_FULL_DB          (24.0)   // a full depth's offset ...
-#define DX_KBSCALE_SPAN_NOTES       (48.0)   // ... this far from the break point
 #define DX_E4_HZ                    (329.6276)
-#define DX_FM_CYCLES_PER_UNIT       (1.0)    // phase deviation, in cycles, per unit at an FM input
+#define DX_FM_CYCLES_PER_UNIT       ((0x345487 / 8388608.0) * 64.0 / 2.0 / DSP_FULL_SCALE)   // §14.3
 
 // notes §19
 #define MAX_VOICES                  (32)
@@ -1130,25 +1142,26 @@ static void fltvoice_build(tEngineNode * node, tModule * module, uint32_t variat
 // notes §22
 #define MAX_ENGINE_TAPS    (4)
 
-// §14 - one Operator patched into a DXRouter, as the router's node plays it.
+// §14 - one Operator patched into a DXRouter, as the router's node plays it: dials in the instrument's words.
 typedef struct {
-    bool     present;
-    bool     active;
-    bool     kbt;
-    bool     sync;
-    bool     fixed;
-    double   ratio;
-    double   fixedHz;
-    double   detune;               // a frequency factor
-    double   outputGain;           // Level
-    double   rateDbPerSecond[4];   // R1-R4
-    double   levelDb[4];           // L1-L4
-    double   rateScale;            // 0..1
-    double   bpNote;
-    uint32_t lCurve;
-    uint32_t rCurve;
-    double   lDepth;               // 0..1
-    double   rDepth;
+    bool    present;
+    bool    active;
+    bool    kbt;
+    bool    sync;
+    bool    fixed;
+    uint8_t lCurve;                // -Lin, -Exp, +Exp, +Lin
+    uint8_t rCurve;
+    uint8_t rate[4];               // R1-R4
+    double  ratio;
+    double  fixedHz;
+    double  detune;                // a frequency factor
+    int32_t level[4];              // L1-L4, kDxLevelWords
+    int32_t outLevel;              // Level, as an offset from the top
+    int32_t keyVel;                // Vel / 7
+    int32_t rateScale;
+    int32_t breakPoint;            // a note word
+    int32_t lDepth;
+    int32_t rDepth;
 } tDxOperator;
 
 // §58 - what a step sequencer's parameters make of the shared part's words
@@ -2018,8 +2031,9 @@ static uint32_t   gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE
 static uint32_t   gEnvTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvTrigger    (gEnvTriggerBank[SE])
 
-// §14 - per voice, per Operator of every DXRouter node: phase, envelope (in dB, and its stage), and
-// the last two outputs for the feedback loop; per voice and node, the gate and trigger last seen.
+// §14 - per voice, per Operator of every DXRouter node: phase, envelope (its log level, segment and
+// the amplitude read from it), and its last output for the feedback loop; per voice and node, the gate
+// and trigger last seen. The segments are the instrument's records, in order.
 typedef enum {
     eDxRise1 = 0,
     eDxRise2,
@@ -2031,8 +2045,10 @@ typedef enum {
 
 static double     gDxPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
 #define gDxPhase       (gDxPhaseBank[SE])
-static double     gDxEnvDbBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
-#define gDxEnvDb       (gDxEnvDbBank[SE])
+static int32_t    gDxLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+#define gDxLevel       (gDxLevelBank[SE])
+static double     gDxAmpBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+#define gDxAmp         (gDxAmpBank[SE])
 static uint32_t   gDxEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
 #define gDxEnvStage    (gDxEnvStageBank[SE])
 static double     gDxOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS][2];
@@ -2421,8 +2437,9 @@ static void reset_node_state(void) {
     for (v = 0; v < MAX_VOICES; v++) {
         for (i = 0; i < MAX_DX_OPERATORS; i++) {
             gDxPhase[v][i]    = 0.0;
-            gDxEnvDb[v][i]    = DX_SILENT_DB;
-            gDxEnvStage[v][i] = eDxIdle;
+            gDxLevel[v][i]    = 0;
+            gDxAmp[v][i]      = 0.0;
+            gDxEnvStage[v][i] = eDxRelease;   // §14.2 - where the instrument starts one
             gDxOut[v][i][0]   = 0.0;
             gDxOut[v][i][1]   = 0.0;
         }
@@ -4850,6 +4867,7 @@ static void oscdual_build(tEngineNode * node, tModule * module, uint32_t variati
 #define OP_PARAM_SYNC               (1)
 #define OP_PARAM_COARSE             (3)
 #define OP_PARAM_DETUNE             (5)
+#define OP_PARAM_KEYVEL             (6)
 #define OP_PARAM_RATESCALE          (7)
 #define OP_PARAM_R1                 (8)      // R1 L1 R2 L2 R3 L3 R4 L4 run from here
 #define OP_PARAM_BRPT               (17)
@@ -4859,26 +4877,159 @@ static void oscdual_build(tEngineNode * node, tModule * module, uint32_t variati
 #define OP_PARAM_RDEPTH             (21)
 #define OP_PARAM_LEVEL              (22)
 #define OP_PARAM_ACTIVE             (23)
-#define OP_DEPTH_MAX                (7.0)    // the depth menus' top value in the module table
+#define OP_SEVENTH_WORD             (0x124924)   // §14.4 - Vel as sevenths
+#define OP_RATESCALE_WORD           (0x84210)
+#define OP_DEPTH_WORD               (0xffff)     // L-Depth and R-Depth, 0-99
+#define OP_NOTE_WORD                (0x8000)     // one semitone of a Note input
+#define OP_BREAKPOINT_E4            (47)         // the BrPt value at E4
 
-static double dx_level_db(double value) {
-    return (value <= 0.0) ? DX_SILENT_DB : ((fmin(value, DX_LEVEL_TOP) - DX_LEVEL_TOP) * DX_LEVEL_DB_PER_STEP);
+// §14.2 - L1-L4 and Level as a log level: 0x10000 is one step of kDxAmpWords. 100-127, which the G2
+// accepts, are the instrument's own words past the DX range, read by their low 24 bits (dx_word24())
+static const uint32_t kDxLevelWords[128] = {
+    0x00000000, 0x0003ffff, 0x0007ffff, 0x000bffff, 0x000fffff, 0x0013ffff, 0x0015ffff, 0x0017ffff,
+    0x0019ffff, 0x001bffff, 0x001dffff, 0x001fffff, 0x0021ffff, 0x0023ffff, 0x0025ffff, 0x0027ffff,
+    0x00296f96, 0x002adf2d, 0x002c4ec4, 0x002dbe5b, 0x002f2df2, 0x00309d89, 0x0031a3b6, 0x0032a9e4,
+    0x0033b011, 0x0034b63e, 0x0035bc6c, 0x0036c299, 0x0037c8c6, 0x0038cef4, 0x0039d521, 0x003adb4e,
+    0x003be17c, 0x003ce7a9, 0x003dedd6, 0x003ef404, 0x003ffa31, 0x0041005f, 0x0042068c, 0x00430cb9,
+    0x004412e7, 0x00451914, 0x00461f41, 0x0047256f, 0x00482b9c, 0x004931c9, 0x004a37f7, 0x004b3e24,
+    0x004c4451, 0x004d4a7f, 0x004e50ac, 0x004f56d9, 0x00505d07, 0x00516334, 0x00526961, 0x00536f8f,
+    0x005475bc, 0x00557be9, 0x00568217, 0x00578844, 0x00588e71, 0x0059949f, 0x005a9acc, 0x005ba0fa,
+    0x005ca727, 0x005dad54, 0x005eb382, 0x005fb9af, 0x0060bfdc, 0x0061c60a, 0x0062cc37, 0x0063d264,
+    0x0064d892, 0x0065debf, 0x0066e4ec, 0x0067eb1a, 0x0068f147, 0x0069f774, 0x006afda2, 0x006c03cf,
+    0x006d09fc, 0x006e102a, 0x006f1657, 0x00701c84, 0x007122b2, 0x007228df, 0x00732f0c, 0x0074353a,
+    0x00753b67, 0x00764195, 0x007747c2, 0x00784def, 0x0079541d, 0x007a5a4a, 0x007b6077, 0x007c66a5,
+    0x007d6cd2, 0x007e72ff, 0x007f397f, 0x007fffff, 0x02bb0cf8, 0x015d867c, 0x00e90453, 0x00aec33e,
+    0x008bcf65, 0x00748229, 0x0063dd48, 0x0057619f, 0x004dac1c, 0x0045e7b2, 0x003f8cd1, 0x003a4115,
+    0x0035c5ec, 0x0031eea4, 0x002e9a77, 0x002bb0d0, 0x00291ee1, 0x0026d60e, 0x0024caca, 0x0022f3d9,
+    0x002149c3, 0x001fc668, 0x001e64bd, 0x001d208a, 0x001bf647, 0x001ae2f6, 0x0019e409, 0x0018f752,
+};
+
+
+// §14.2 - amplitude at each whole log level, 0x200000 full scale; read between by the low 16 bits
+static const int32_t  kDxAmpWords[129] = {
+    0x000000, 0x000048, 0x00004e, 0x000055, 0x00005c, 0x000064, 0x00006c, 0x000075,
+    0x00007f, 0x00008a, 0x000096, 0x0000a2, 0x0000b0, 0x0000bf, 0x0000cf, 0x0000e0,
+    0x0000f3, 0x000108, 0x00011e, 0x000136, 0x000151, 0x00016d, 0x00018c, 0x0001ad,
+    0x0001d1, 0x0001f9, 0x000223, 0x000251, 0x000283, 0x0002b9, 0x0002f4, 0x000334,
+    0x000379, 0x0003c4, 0x000415, 0x00046d, 0x0004cd, 0x000535, 0x0005a5, 0x00061f,
+    0x0006a3, 0x000732, 0x0007cd, 0x000875, 0x00092c, 0x0009f2, 0x000ac8, 0x000bb1,
+    0x000cad, 0x000dbe, 0x000ee7, 0x001028, 0x001185, 0x0012ff, 0x001498, 0x001655,
+    0x001836, 0x001a41, 0x001c77, 0x001edd, 0x002176, 0x002448, 0x002757, 0x002aa7,
+    0x002e3f, 0x003225, 0x00365e, 0x003af3, 0x003fea, 0x00454d, 0x004b24, 0x005178,
+    0x005856, 0x005fc7, 0x0067d9, 0x007098, 0x007a15, 0x00845e, 0x008f85, 0x009b9c,
+    0x00a8b9, 0x00b6f0, 0x00c659, 0x00d70f, 0x00e92e, 0x00fcd3, 0x011220, 0x012938,
+    0x014243, 0x015d69, 0x017ada, 0x019ac5, 0x01bd60, 0x01e2e6, 0x020b95, 0x0237b2,
+    0x026786, 0x029b62, 0x02d39c, 0x031093, 0x0352ad, 0x039a58, 0x03e80d, 0x043c4e,
+    0x0497a9, 0x04fab5, 0x05661b, 0x05da8c, 0x0658cd, 0x06e1b0, 0x07761d, 0x08170a,
+    0x08c586, 0x0982b6, 0x0a4fd6, 0x0b2e3e, 0x0c1f63, 0x0d24d9, 0x0e4056, 0x0f73b5,
+    0x10c0fa, 0x122a53, 0x13b21e, 0x155aea, 0x172781, 0x191ae6, 0x1b385d, 0x1d8373,
+    0x200000,
+};
+
+// §14.2 - a rising segment's step per tick at each rate
+static const int32_t  kDxAttackWords[100]         = {
+    0x000057, 0x00005e, 0x000066, 0x000070, 0x00007a, 0x000087, 0x000096, 0x0000a7,
+    0x0000bc, 0x0000d4, 0x0000f0, 0x000112, 0x000139, 0x000167, 0x00019a, 0x0001d2,
+    0x000209, 0x000241, 0x000280, 0x0002c6, 0x000315, 0x00036d, 0x0003d0, 0x000441,
+    0x0004c1, 0x000553, 0x0005fe, 0x0006c9, 0x0007b6, 0x0008b9, 0x0009b7, 0x000ab4,
+    0x000bd3, 0x000d16, 0x000e85, 0x001022, 0x0011f3, 0x0013fc, 0x00163f, 0x0018b8,
+    0x001b63, 0x001e5f, 0x0021e9, 0x00261a, 0x002b13, 0x0030f0, 0x0037c8, 0x003f95,
+    0x004822, 0x0050e2, 0x0058d1, 0x006052, 0x0068bf, 0x00723f, 0x007d00, 0x008937,
+    0x009723, 0x00a712, 0x00b95d, 0x00ce70, 0x00e6c7, 0x0102ef, 0x012389, 0x014938,
+    0x01749b, 0x01a627, 0x01ddf6, 0x021b79, 0x025d0c, 0x029f8f, 0x02de26, 0x031c10,
+    0x036131, 0x03ae95, 0x040574, 0x04673d, 0x04d598, 0x055279, 0x05e022, 0x068135,
+    0x0738bc, 0x080a2d, 0x08f972, 0x0a0ad6, 0x0b42e6, 0x0ca62d, 0x0e38ae, 0x0ffd16,
+    0x11f372, 0x141772, 0x165e30, 0x18ee9a, 0x1c095f, 0x1fc215, 0x2422ad, 0x291b66,
+    0x2e6850, 0x3371b5, 0x37411e, 0x38b9f9,
+};
+
+// §14.2 - a falling segment's step per tick at each rate
+static const int32_t  kDxDecayWords[100]          = {
+    0x000014, 0x000015, 0x000016, 0x000017, 0x000019, 0x00001a, 0x00001c, 0x00001e,
+    0x000020, 0x000022, 0x000024, 0x000027, 0x00002a, 0x00002e, 0x000032, 0x000037,
+    0x00003c, 0x000042, 0x000049, 0x000052, 0x00005b, 0x000067, 0x000074, 0x000084,
+    0x000097, 0x0000ad, 0x0000c6, 0x0000e2, 0x000100, 0x00011f, 0x00013b, 0x000154,
+    0x000172, 0x000193, 0x0001b8, 0x0001e3, 0x000215, 0x00024e, 0x000290, 0x0002dd,
+    0x000338, 0x0003a2, 0x00041f, 0x0004b3, 0x000561, 0x00062d, 0x000718, 0x000820,
+    0x00093c, 0x000a5b, 0x000b5c, 0x000c4e, 0x000d5c, 0x000e8a, 0x000fdd, 0x00115a,
+    0x001307, 0x0014ed, 0x001714, 0x001986, 0x001c51, 0x001f82, 0x00232a, 0x00275b,
+    0x002c29, 0x0031aa, 0x0037f1, 0x003f10, 0x004710, 0x004feb, 0x005981, 0x006442,
+    0x007103, 0x00802d, 0x009233, 0x00a78a, 0x00c084, 0x00dd1c, 0x00fc8f, 0x011cd7,
+    0x013a38, 0x01564c, 0x01766f, 0x019b69, 0x01c62a, 0x01f7e0, 0x0231f9, 0x027638,
+    0x02c6bf, 0x032619, 0x039733, 0x041d34, 0x04bb10, 0x05729b, 0x0642d1, 0x07251b,
+    0x0809ee, 0x08d6a0, 0x096813, 0x099d63,
+};
+
+// §14.4 - the level offset at each velocity, before Vel scales it
+static const int32_t  kDxVelocityWords[128]       = {
+    -0x788a9b, -0x372ef3, -0x366451, -0x359ae5, -0x34d2ad, -0x3345db, -0x328141, -0x31bddc,
+    -0x30fbac, -0x303ab0, -0x2f7ae8, -0x2ebc56, -0x2ebc56, -0x2dfef8, -0x2d42cf, -0x2c87da,
+    -0x2c87da, -0x2bce1a, -0x2b158f, -0x2b158f, -0x2a5e38, -0x2a5e38, -0x29a816, -0x28f329,
+    -0x28f329, -0x283f71, -0x283f71, -0x278ced, -0x278ced, -0x26db9d, -0x26db9d, -0x26db9d,
+    -0x262b83, -0x262b83, -0x257c9d, -0x257c9d, -0x257c9d, -0x24ceeb, -0x24ceeb, -0x24226f,
+    -0x24226f, -0x24226f, -0x237727, -0x237727, -0x237727, -0x22cd14, -0x22cd14, -0x222435,
+    -0x222435, -0x222435, -0x217c8b, -0x217c8b, -0x217c8b, -0x20d616, -0x20d616, -0x20d616,
+    -0x2030d5, -0x2030d5, -0x1f8cc9, -0x1f8cc9, -0x1f8cc9, -0x1ee9f2, -0x1ee9f2, -0x1e484f,
+    -0x1e484f, -0x1e484f, -0x1da7e1, -0x1da7e1, -0x1d08a8, -0x1d08a8, -0x1c6aa3, -0x1c6aa3,
+    -0x1bcdd3, -0x1bcdd3, -0x1b3238, -0x1a97d1, -0x1a97d1, -0x19fe9f, -0x19fe9f, -0x1966a2,
+    -0x18cfd9, -0x183a45, -0x183a45, -0x17a5e5, -0x1712bb, -0x1680c5, -0x15f003, -0x156077,
+    -0x14d21f, -0x1444fb, -0x13b90c, -0x132e52, -0x12a4cd, -0x119560, -0x110f79, -0x108ac6,
+    -0x0f84fe, -0x0f03ea, -0x0e055e, -0x0d87e7, -0x0c9098, -0x0c16bf, -0x0b26ab, -0x0ab071,
+    -0x09c799, -0x0954fc, -0x087361, -0x080462, -0x072a02, -0x06bea1, -0x05eb7e, -0x051d2c,
+    -0x04b7d3, -0x03f0be, -0x038f02, -0x02cf29, -0x021423, -0x01b86f, -0x0104a4, -0x0055ac,
+    0x005478,   0x00f9ca,  0x019a4a,  0x0235f7,  0x02ccd2,  0x035eda,  0x03ec0f,  0x047472,
+};
+
+// §14.3 - the feedback amount at Feedback 0-7: algorithms 6 and 32, 4, 18, and every other
+static const int32_t  kDxFeedbackWords[4][8]      = {
+    {0x000000, 0x004f94, 0x00e165, 0x01cd13, 0x030152, 0x05b697, 0x09be85, 0x0ca7a5},
+    {0x000000, 0x00e165, 0x01f901, 0x0381a9, 0x055a1a, 0x0938fc, 0x0ca7a5, 0x127360},
+    {0x000000, 0x004456, 0x017d62, 0x03c70e, 0x07534c, 0x0ca7a5, 0x1d04cd, 0x345487},
+    {0x000000, 0x004456, 0x017d62, 0x03c70e, 0x07534c, 0x0ca7a5, 0x17d0ea, 0x2c8241},
+};
+
+// §14.5 - Main's gain word at each algorithm; Main is twice it times the carriers' sum
+static const int32_t  kDxMainWords[DX_ALGORITHMS] = {
+    0x400000,   0x400000, 0x400000, 0x400000, 0x300000, 0x300000, 0x400000,  0x400000,
+    0x400000,   0x400000, 0x400000, 0x400000, 0x400000, 0x400000, 0x400000, -0x800000,
+    -0x800000, -0x800000, 0x300000, 0x300000, 0x200000, 0x200000, 0x200000,  0x1b3333,
+    0x1b3333,   0x300000, 0x300000, 0x300000, 0x200000, 0x200000, 0x1b3333,  0x180000,
+};
+
+// §14.2 - the instrument's dial tables
+static int32_t dx_word24(uint32_t word) {
+    return (int32_t)(word << 8) >> 8;
 }
 
-static double dx_rate_db_per_second(double value) {
-    return -DX_SILENT_DB / (DX_RATE_SLOWEST_SECONDS * exp2(-fmin(value, DX_LEVEL_TOP) * DX_RATE_OCTAVES_PER_STEP));
+static uint32_t dx_level_entry(double value) {
+    long v = lround(value);
+
+    return kDxLevelWords[(v < 0) ? 0 : ((v > 127) ? 127 : v)];
 }
 
-// §14.3: Feedback 7 feeds back half a cycle (pi), each step below it half as much.
-static double dx_feedback_gain(double value) {
-    return (value < 1.0) ? 0.0 : exp2(value - 8.0);
+static int32_t dx_level_word(double value) {
+    return dx_word24(dx_level_entry(value));
+}
+
+static uint8_t dx_rate(double value) {
+    long v = lround(value);
+
+    return (uint8_t)((v < 0) ? 0 : ((v > DX_RATE_TOP) ? DX_RATE_TOP : v));
+}
+
+// §14.3 - the feedback amount, by algorithm group and Feedback
+static int32_t dx_feedback_word(uint32_t algorithm, double value) {
+    long     v     = lround(value);
+    uint32_t group = ((algorithm == 5u) || (algorithm == 31u)) ? 0u : ((algorithm == 3u) ? 1u : ((algorithm == 17u) ? 2u : 3u));
+
+    return kDxFeedbackWords[group][(v < 0) ? 0 : ((v > 7) ? 7 : v)];
 }
 
 // §14.1 - the router and the Operators on its six inputs, gathered into one node: their FM runs
 // through the router in both directions, which a chain of separate nodes cannot evaluate.
 static void dx_build(tSoundEngineParams * params, tEngineNode * node, tModule * router, uint32_t variation) {
     node->dxAlgorithm  = (uint32_t)param_value(router, variation, DXROUTER_PARAM_ALGORITHM);
-    node->dxFeedback   = dx_feedback_gain(param_value(router, variation, DXROUTER_PARAM_FEEDBACK));
+    node->dxFeedback   = dx_feedback_word(node->dxAlgorithm, param_value(router, variation, DXROUTER_PARAM_FEEDBACK)) / DSP_WORD_SCALE;
     node->active       = false;
 
     if ((params->dxOpCount + DX_OPERATORS) > MAX_DX_OPERATORS) {
@@ -4900,7 +5051,6 @@ static void dx_build(tSoundEngineParams * params, tEngineNode * node, tModule * 
         }
         uint32_t      coarse       = (uint32_t)param_value(source, variation, OP_PARAM_COARSE);
         uint32_t      fine         = (uint32_t)param_value(source, variation, OPERATOR_FINE_PARAM);
-        double        level        = param_value(source, variation, OP_PARAM_LEVEL);
 
         op->present    = true;
         op->active     = (param_value(source, variation, OP_PARAM_ACTIVE) != 0.0);
@@ -4910,17 +5060,18 @@ static void dx_build(tSoundEngineParams * params, tEngineNode * node, tModule * 
         op->ratio      = operator_ratio(coarse, fine);
         op->fixedHz    = operator_fixed_hz(coarse, fine);
         op->detune     = exp2(((param_value(source, variation, OP_PARAM_DETUNE) - 7.0) * DX_DETUNE_CENTS_PER_STEP) / 1200.0);
-        op->outputGain = (level <= 0.0) ? 0.0 : exp2(dx_level_db(level) / 6.0206);
-        op->rateScale  = param_value(source, variation, OP_PARAM_RATESCALE) / 7.0;
-        op->bpNote     = param_value(source, variation, OP_PARAM_BRPT);
-        op->lCurve     = source->param[variation][OP_PARAM_LCURVE].value;
-        op->rCurve     = source->param[variation][OP_PARAM_RCURVE].value;
-        op->lDepth     = param_value(source, variation, OP_PARAM_LDEPTH) / OP_DEPTH_MAX;
-        op->rDepth     = param_value(source, variation, OP_PARAM_RDEPTH) / OP_DEPTH_MAX;
+        op->outLevel   = dx_word24(dx_level_entry(param_value(source, variation, OP_PARAM_LEVEL)) - DX_LEVEL_TOP);
+        op->keyVel     = (int32_t)lround(param_value(source, variation, OP_PARAM_KEYVEL)) * OP_SEVENTH_WORD;
+        op->rateScale  = (int32_t)lround(param_value(source, variation, OP_PARAM_RATESCALE)) * OP_RATESCALE_WORD;
+        op->breakPoint = ((int32_t)lround(param_value(source, variation, OP_PARAM_BRPT)) - OP_BREAKPOINT_E4) * OP_NOTE_WORD;
+        op->lCurve     = (uint8_t)source->param[variation][OP_PARAM_LCURVE].value;
+        op->rCurve     = (uint8_t)source->param[variation][OP_PARAM_RCURVE].value;
+        op->lDepth     = (int32_t)lround(param_value(source, variation, OP_PARAM_LDEPTH)) * OP_DEPTH_WORD;
+        op->rDepth     = (int32_t)lround(param_value(source, variation, OP_PARAM_RDEPTH)) * OP_DEPTH_WORD;
 
         for (uint32_t s = 0; s < 4; s++) {
-            op->rateDbPerSecond[s] = dx_rate_db_per_second(param_value(source, variation, OP_PARAM_R1 + (2 * s)));
-            op->levelDb[s]         = dx_level_db(param_value(source, variation, OP_PARAM_R1 + (2 * s) + 1));
+            op->rate[s]  = dx_rate(param_value(source, variation, OP_PARAM_R1 + (2 * s)));
+            op->level[s] = dx_level_word(param_value(source, variation, OP_PARAM_R1 + (2 * s) + 1));
         }
 
         if (op->active) {
@@ -6326,7 +6477,8 @@ static void build_snapshot(tSoundEngineParams * out) {
         // §63a - the patch's Octave Shift transposes the keyboard, stored 0..4 with 2 as none
         {
             tModule * sustain = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleSustain);
-            uint32_t  shift   = (sustain != NULL) ? sustain->param[0][OCTAVE_SHIFT].value : OCTAVE_SHIFT_ZERO;
+            // a patch begun in the editor has no settings module, and its zeroes would read as -2 octaves
+            uint32_t  shift   = ((sustain != NULL) && (sustain->active == true)) ? sustain->param[0][OCTAVE_SHIFT].value : OCTAVE_SHIFT_ZERO;
 
             snapshot.octaveSemis = 12.0 * ((double)((shift <= 4u) ? shift : OCTAVE_SHIFT_ZERO) - OCTAVE_SHIFT_ZERO);
         }
@@ -9403,42 +9555,86 @@ static double ladder_filter(double * state, double input, double g, double k, ui
 }
 
 // notes §149
-// §14.4 - the DX7's keyboard level scaling, as an offset in dB around the break point.
-static double dx_kbscale_db(const tDxOperator * op, double note) {
-    bool     left     = (note < op->bpNote);
-    uint32_t curve    = left ? op->lCurve : op->rCurve;    // -Lin, -Exp, +Exp, +Lin
-    double   depth    = left ? op->lDepth : op->rDepth;
-    double   distance = fmin(fabs(note - op->bpNote) / DX_KBSCALE_SPAN_NOTES, 1.0);
-    double   shape    = ((curve == 1u) || (curve == 2u)) ? ((exp(4.0 * distance) - 1.0) / (exp(4.0) - 1.0)) : distance;
+// §14.4 - where the envelope sits below its dials for this note and velocity: Level, keyboard level
+// scaling about the break point, and Vel, as one offset added to every segment's target. Kept at the
+// accumulator's precision (a word is 1 << 24), as the instrument carries it into the target.
+static int64_t dx_level_offset(const tDxOperator * op, int32_t noteWord, uint32_t velIndex) {
+    bool     left   = (noteWord < op->breakPoint);
+    int32_t  span   = abs(noteWord - op->breakPoint) >> 16;
+    uint32_t curve  = left ? op->lCurve : op->rCurve;
+    int64_t  depth  = left ? op->lDepth : op->rDepth;
+    int64_t  steps  = (span > DX_KBSCALE_SPAN_MAX) ? DX_KBSCALE_SPAN_MAX : span;
+    int64_t  exp    = (curve == 1u) || (curve == 2u);
+    int64_t  shape  = (steps * DX_KBSCALE_LIN_NUM) / (DX_KBSCALE_LIN_DEN << (2 * exp));
+    int64_t  scaled = (2 * depth * shape) << DX_KBSCALE_SHIFT;
+    int64_t  level  = ((int64_t)op->outLevel * DX_ACC_WORD) + ((curve < 2u) ? -scaled : scaled);
 
-    return ((curve < 2u) ? -1.0 : 1.0) * depth * shape * DX_KBSCALE_FULL_DB;
+    if (level > 0) {
+        level = 0;
+    }
+    return level + ((int64_t)DX_LEVEL_BIAS * DX_ACC_WORD) + (2 * (int64_t)kDxVelocityWords[velIndex] * op->keyVel);
 }
 
-// §14.2 - the rate/level envelope, in dB: each stage moves at its rate towards its level.
-static double dx_envelope_db(uint32_t voice, uint32_t slot, const tDxOperator * op, double note) {
+// §14.4 - how many rate steps faster this note runs the envelope
+static int32_t dx_rate_offset(const tDxOperator * op, int32_t noteWord) {
+    int64_t sum = 2 * (int64_t)op->rateScale * (noteWord + DX_RATESCALE_KEY_OFFSET);
+
+    return (sum < 0) ? 0 : (int32_t)(sum >> 39);
+}
+
+// §14.2 - one tick of an Operator's envelope: the log level steps towards the segment's target and,
+// landing on it, moves on to the next segment. A holding segment never lands.
+static void dx_envelope_tick(uint32_t voice, uint32_t slot, const tDxOperator * op, int64_t offset, int32_t rateOffset) {
     SE_LOCAL;
 
-    uint32_t stage = gDxEnvStage[voice][slot];
-    double   level = gDxEnvDb[voice][slot];
+    uint32_t seg   = gDxEnvStage[voice][slot];
+    int64_t  level = gDxLevel[voice][slot];
+    bool     hold  = (seg == (uint32_t)eDxHold) || (seg == (uint32_t)eDxIdle);
+    uint32_t s     = (seg == (uint32_t)eDxRelease) ? 3u : seg;
+    int64_t  goal  = ((int64_t)op->level[s] * DX_ACC_WORD) + offset;
+    int32_t  rate  = hold ? 0 : op->rate[s];
+    int64_t  step  = 0;
 
-    if ((stage <= (uint32_t)eDxRise3) || (stage == (uint32_t)eDxRelease)) {
-        uint32_t s      = (stage == (uint32_t)eDxRelease) ? 3u : stage;
-        double   target = op->levelDb[s];
-        double   step   = (op->rateDbPerSecond[s] * exp2((op->rateScale * (note - 60.0)) / 24.0)) / gSampleRate;
+    goal = hold ? DX_HOLD_MARK : (((goal < 0) ? 0 : goal) >> 24);
 
-        if (fabs(target - level) <= step) {
-            level = target;
-            stage = (stage == (uint32_t)eDxRelease) ? (uint32_t)eDxIdle
-                    : ((stage == (uint32_t)eDxRise3) ? (uint32_t)eDxHold : (stage + 1u));
-        } else {
-            level += (target > level) ? step : -step;
-        }
-    } else if (stage == (uint32_t)eDxHold) {
-        level = op->levelDb[2];
+    if (rate > 0) {
+        rate = ((rate + rateOffset) > DX_RATE_TOP) ? DX_RATE_TOP : (rate + rateOffset);
     }
-    gDxEnvDb[voice][slot]    = level;
-    gDxEnvStage[voice][slot] = stage;
-    return level;
+
+    if (hold == false) {
+        if (level < goal) {
+            int64_t inc = kDxAttackWords[rate];
+
+            step  = (level < DX_ATTACK_JUMP_BELOW) ? ((int64_t)DX_ATTACK_JUMP * DX_ACC_WORD) : 0;
+            step += 2 * inc * ((level < DX_ATTACK_LOW_BELOW) ? DX_ATTACK_LOW : 0);
+            step += 2 * inc * ((level < DX_ATTACK_MID_BELOW) ? DX_ATTACK_MID : 0);
+            step += 2 * inc * DX_ATTACK_BASE;
+        } else {
+            step = 2 * (int64_t)kDxDecayWords[rate] * DX_DECAY;
+        }
+        step >>= 24;
+    }
+
+    if (llabs(level - goal) <= step) {
+        level = goal;
+    } else {
+        level += (level < goal) ? step : -step;
+    }
+
+    if ((level == goal) && (seg < (uint32_t)eDxIdle)) {
+        seg++;
+    }
+    gDxLevel[voice][slot]    = (int32_t)level;
+    gDxEnvStage[voice][slot] = seg;
+}
+
+// §14.2 - the amplitude a log level reads, between whole steps of kDxAmpWords
+static double dx_amplitude(int32_t level) {
+    uint32_t whole = (uint32_t)level >> 16;
+    double   part  = (double)(level & 0xffff) / 65536.0;
+    double   lo    = kDxAmpWords[whole];
+
+    return (lo + (part * ((double)kDxAmpWords[whole + 1u] - lo))) / DSP_WORD_PER_ENGINE;
 }
 
 // §14 - one sample of a DXRouter and its Operators, for one voice.
@@ -9448,15 +9644,24 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
     const tDxAlgorithm * alg               = dx_algorithm(spec->dxAlgorithm);
     double               out[DX_OPERATORS] = {0.0};
     double               mix               = 0.0;
-    uint32_t             carriers          = 0;
     bool                 gate              = gVoice[voice].gate;
     bool                 strike            = gate && ((gDxGate[voice][node] == false) || (gDxTrigger[voice][node] != gVoice[voice].trigger));
-    bool                 letGo             = (gate == false) && gDxGate[voice][node];
     double               note              = (voicePitch >= 0.0) ? voicePitch : 64.0;
     double               noteHz            = 440.0 * exp2((note - MIDI_NOTE_A440) / 12.0);
+    bool                 tick              = (gEnvTick[voice][node] <= 0.0);
 
-    gDxGate[voice][node]    = gate;
-    gDxTrigger[voice][node] = gVoice[voice].trigger;
+    // §14.4 - what the Operators' Note and Vel inputs carry from the Keyboard
+    int32_t              noteWord          = (gVoice[voice].note >= 0) ? ((gVoice[voice].note - (int32_t)KEYBOARD_PITCH_ZERO) * OP_NOTE_WORD) : 0;
+    uint32_t             velIndex          = (((uint32_t)gVoice[voice].velocity * (uint32_t)DSP_WORD_PER_ENGINE) / 127u) >> DX_VEL_INDEX_SHIFT;
+
+    velIndex               = (velIndex > 127u) ? 127u : velIndex;
+
+    if (tick == true) {
+        gEnvTick[voice][node]  += 1.0;
+        gDxGate[voice][node]    = gate;
+        gDxTrigger[voice][node] = gVoice[voice].trigger;
+    }
+    gEnvTick[voice][node] -= ENV_TICK_HZ / gSampleRate;
 
     // Modulators before what they modulate: every DX7 modulation runs from a higher operator to a lower one.
     for (int32_t k = DX_OPERATORS - 1; k >= 0; k--) {
@@ -9465,21 +9670,26 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
         const tDxOperator * op   = &ops[k];
         double              fm   = 0.0;
         double              hz   = 0.0;
-        double              env  = 0.0;
         double              y    = 0.0;
 
         if (op->present == false) {
             continue;
         }
 
-        if (strike == true) {
-            gDxEnvStage[voice][slot] = eDxRise1;
+        if (tick == true) {
+            // §14.2 - the level steps first; then a gate edge or a gate down moves the segment
+            dx_envelope_tick(voice, slot, op, dx_level_offset(op, noteWord, velIndex), dx_rate_offset(op, noteWord));
 
-            if (op->sync == true) {
-                gDxPhase[voice][slot] = 0.0;
+            if (strike == true) {
+                gDxEnvStage[voice][slot] = eDxRise1;
+
+                if (op->sync == true) {
+                    gDxPhase[voice][slot] = 0.0;
+                }
+            } else if (gate == false) {
+                gDxEnvStage[voice][slot] = eDxRelease;
             }
-        } else if ((letGo == true) && (gDxEnvStage[voice][slot] < (uint32_t)eDxRelease)) {
-            gDxEnvStage[voice][slot] = eDxRelease;
+            gDxAmp[voice][slot] = dx_amplitude(gDxLevel[voice][slot]);
         }
 
         for (uint32_t m = (uint32_t)k + 1u; m < DX_OPERATORS; m++) {
@@ -9488,44 +9698,37 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
             }
         }
 
-        if ((uint32_t)k == (alg->feedbackTo - 1u)) {    // §14.3 - the last two samples, averaged
-            uint32_t from = spec->dxBase + alg->feedbackFrom - 1u;
-
-            fm += spec->dxFeedback * 0.5 * (gDxOut[voice][from][0] + gDxOut[voice][from][1]);
+        if ((uint32_t)k == (alg->feedbackTo - 1u)) {    // §14.3 - the source's last sample
+            fm += spec->dxFeedback * gDxOut[voice][spec->dxBase + alg->feedbackFrom - 1u][0];
         }
         hz                     = op->fixed ? op->fixedHz : ((op->kbt ? noteHz : DX_E4_HZ) * op->ratio);
         gDxPhase[voice][slot] += (hz * op->detune) / gSampleRate;
         gDxPhase[voice][slot] -= floor(gDxPhase[voice][slot]);
-        env                    = dx_envelope_db(voice, slot, op, note);
 
-        if ((op->active == true) && (env > DX_SILENT_DB)) {
-            y = sin(2.0 * M_PI * (gDxPhase[voice][slot] + (DX_FM_CYCLES_PER_UNIT * fm)))
-                * op->outputGain * exp2((env + dx_kbscale_db(op, note)) / 6.0206);
+        if (op->active == true) {
+            y = sin(2.0 * M_PI * (gDxPhase[voice][slot] + (DX_FM_CYCLES_PER_UNIT * fm))) * gDxAmp[voice][slot];
         }
-        gDxOut[voice][slot][1] = gDxOut[voice][slot][0];
         gDxOut[voice][slot][0] = y;
         out[k]                 = y;
     }
 
     for (uint32_t k = 0; k < DX_OPERATORS; k++) {
-        if ((alg->target[k] == 0) && (ops[k].present == true)) {
+        if (((alg->target[k] == 0) || ((alg->alsoMain & (1u << k)) != 0)) && (ops[k].present == true)) {
             mix += out[k];
-            carriers++;
         }
     }
 
-    return (carriers > 0u) ? (mix / (double)carriers) : 0.0;   // §14.5
+    return 2.0 * mix * (kDxMainWords[(spec->dxAlgorithm < DX_ALGORITHMS) ? spec->dxAlgorithm : 0u] / DSP_WORD_SCALE);   // §14.5
 }
 
-// True while any of the router's Operators is still moving or holds a level above silence.
+// True while any of the router's Operators holds a level above silence, or the key is down.
 static bool dx_voice_sounding(const tSoundEngineParams * params, const tEngineNode * spec, uint32_t voice) {
     SE_LOCAL;
 
     for (uint32_t k = 0; k < DX_OPERATORS; k++) {
         uint32_t slot = spec->dxBase + k;
 
-        if (  (params->dxOp[slot].present == true)
-           && ((gDxEnvStage[voice][slot] != (uint32_t)eDxIdle) || (gDxEnvDb[voice][slot] > DX_SILENT_DB))) {
+        if ((params->dxOp[slot].present == true) && ((gVoice[voice].gate == true) || (gDxLevel[voice][slot] > 0))) {
             return true;
         }
     }
@@ -9742,8 +9945,8 @@ static double osc_rising_saw(double phase, double edge) {
 // notes §151
 #define OSCDUAL_SOFT_GAIN      (2.0)   // §12.3
 #define OSCDUAL_SOFT_POLE      (8.0)   // times inc96
-#define OSCDUAL_PW_DEPTH       (4.0)   // §12.2 - the inputs' reach, in the dials' own terms
-#define OSCDUAL_PHASE_DEPTH    (2.0)
+#define OSCDUAL_PW_DEPTH       (1.0)   // §12.4 - a unit input at full amount moves PW one dial range
+#define OSCDUAL_PHASE_DEPTH    (0.5)   // §12.4 - half a cycle
 
 // §12.3 - the octave below: low for the first half of its cycle. state: flip-flop, last phase, soft low-pass.
 static double oscdual_sub(double * state, double phase, double inc96, bool soft) {
