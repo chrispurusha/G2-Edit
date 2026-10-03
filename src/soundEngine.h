@@ -133,6 +133,16 @@ const char * sound_engine_debug_text(void);
 void sound_engine_set_sample_rate(double sampleRate);
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount);
 
+// notes §202 - the voices on a worker thread, the FX pass trailing them on the audio thread. Inline is
+// the same pipeline run on one thread, which the threaded one must match sample for sample.
+typedef enum {
+    eSplitSerial,
+    eSplitInline,
+    eSplitThreaded
+} tSplitMode;
+
+void sound_engine_set_split_mode(uint32_t mode);
+
 // notes §7
 bool sound_engine_attach(void);
 void sound_engine_detach(void);
