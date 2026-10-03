@@ -4,6 +4,12 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***RESONATOR FROM THE INSTRUMENT (2026-10-03)*** - reference §70.4a. LISTEN against the G2: a Resonator on String1
+  struck by a short noise burst into In1, Pos swept - the pitch should hold and the timbre move like a pluck
+  position; Out2 sounds, Out1 is silent on String1. Then a Tube with a Driver (Reed) closing the loop through
+  Out1 -> Driver In2, Driver Out -> Resonator In1, breath into Driver In1. If the strings or tubes only work
+  with the two lines' inputs swapped, say so - which junction output feeds which line is the reading still to
+  confirm.
 - ***DRIVER AND LEVEL SCALER FROM THE INSTRUMENT (2026-10-03)*** - reference §70.5, §70.12. LISTEN/MEASURE on the G2:
   a Driver set to Reed and to Bow between an excitation (In1) and a delay or OscString return (In2) - if it
   only works with the two inputs swapped, say so (the input order is the one reading not yet confirmed). A

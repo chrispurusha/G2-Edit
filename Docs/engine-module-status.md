@@ -16,7 +16,7 @@ which fails the run if it names a module that is not offered or not modelled.
 
 | Group | Working | Partial | Not implemented |
 |---|---|---|---|
-| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Phase Mod, Osc Shape A, Osc Shape B, Osc Dual, Noise Osc, Noise, Metallic Noise, Osc Percussion, Drum Synth, Osc String, FM Operator, DX Router, Driver, Osc Master | Resonator | - |
+| **Oscillators** (§5-§8, §12, §21.3, §27, §51, §53, §66, §70) | Osc A, Osc B, Osc C, Osc D, Osc Phase Mod, Osc Shape A, Osc Shape B, Osc Dual, Noise Osc, Noise, Metallic Noise, Osc Percussion, Drum Synth, Osc String, FM Operator, DX Router, Driver, Resonator, Osc Master | - | - |
 | **Filters** (§10, §13, §21-§23, §56, §67, §69, §70) | LP Filter, HP Filter, Nord Filter, Classic Filter, Multi Filter, Phase Filter, Comb Filter, Static Filter, FltVoice, WahWah, Vocoder, Eq 2-band, Eq 3-band, Eq Peak | - | - |
 | **Envelopes** (§17) | Envelope ADSR, Envelope AHD, Envelope ADR, Envelop ADDSR, Envelope H, Envelope D, Envelope Multi, Envelope Mod AHD, Envelope Mod ADSR | - | - |
 | **LFOs** (§28, §42, §50, §54) | LFO A, LFO B, LFO C, LFO Shp A, Clock Generator | - | - |
@@ -32,11 +32,10 @@ which fails the run if it names a module that is not offered or not modelled.
 | **Random** (§47, §64, §69, §70) | Random A, Random B, Rnd Clock A, Rnd Clock B, Rnd Trig, Rnd Pattern | - | - |
 | **Note** (§26, §41, §49, §69, §70) | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide, Pitch Tracker, Zero Crossing Counter, Level Scaler | - | - |
 | **MIDI** (§70) | CtrlSend, PCSend, CtrlRcv, NoteRcv, NoteZone, Automate | NoteSend | - |
-| **Total 170** | **168** | **2** | **0** |
+| **Total 170** | **169** | **1** | **0** |
 
 | Partial module | What is still open |
 |---|---|
-| Resonator | basic: a tuned loop; Alg and inputs guessed (§70.4a) |
 | NoteSend | plays this slot only; notes to other slots and MIDI are dropped (§62) |
 
 ## What is left (2026-09-27): refinement, not coverage
@@ -48,7 +47,6 @@ below say what refining each will take; update them by hand as modules move to W
 | Kind | Modules |
 |---|---|
 | **Basic versions to replace with the instrument's parts** | Delay Dual / Quad / Eight (delay-base and tap parts) |
-| **Basic versions still to settle** | Resonator (next session) |
 | **Limited by what reaches the engine** | NoteSend (notes to other slots need the engine to play a performance; to MIDI, an output path) |
 | **Nothing to render** | CtrlSend, PCSend, Automate, NoteZone (counted Working) |
 

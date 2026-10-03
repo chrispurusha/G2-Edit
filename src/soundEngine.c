@@ -629,6 +629,9 @@ static double lfo_shape_dial(double v) {
 #define VOCODER_OUT_GAIN           (0x651eb8)             // §70.8 - the output converter's gain, then x 8
 #define LEVSCALER_SLOPE_MAX        (341.0)                // §70.12 - a Gain dial's word at full: 8.02 dB an octave
 #define DRIVER_TYPE_BOW            (1u)                   // §70.5 - Reed, Bow, -Lip-, -Mallet-
+#define RESONATOR_ALGS             (5u)                   // §70.4a - String1, String2, Tube1, Tube2, Tube3
+#define RESONATOR_TRIM             (6.0)                  // §70.4a - the period less the loop's own six samples
+#define RESONATOR_LOSS             (0x7c28f6 / 8388608.0) // §70.4a - line 1's fixed 0.97
 #define MAX_PITCH_TRACKER_LINES    (4)                    // §70.7 - Pitch Trackers per patch; more read silence
 #define PD_RELEASE_FAST            (0x2746 / 8388608.0)   // §70.7 - the followers' first-stage release, a 96 kHz sample
 #define PD_RELEASE_GATE            (0x1a10 / 8388608.0)   // §70.7 - the gate follower's second stage
@@ -640,7 +643,7 @@ static double lfo_shape_dial(double v) {
 #define FXBUF_SAMPLES              (16384)
 #define MAX_FXBUF_VOICE_LINES      (2)                    // notes §197 - in the Voice area, per voice
 #define FXBUF_INSTANCES            (MAX_FXBUF_LINES + (MAX_FXBUF_VOICE_LINES * MAX_VOICES))
-#define MAX_STRING_LINES           (2)                    // §70 - OscString, Resonator: a per-voice loop each
+#define MAX_STRING_LINES           (4)                    // §70 - OscString one each, Resonator two (its two lines)
 #define STRING_SAMPLES             (8192)                 // §70.4 - OscString's line is 7000 samples at 96 kHz
 #define MAX_BASIC_LINES            (2)                    // §70 - Vocoder: per-voice filter states
 #define DLYCLOCK_SLOTS             (128)
@@ -6478,8 +6481,11 @@ static void build_snapshot(tSoundEngineParams * out) {
                 snapshot.node[i].line = lines++;
             } else if ((snapshot.node[i].kind == eNodeFlanger) || (snapshot.node[i].kind == eNodePShift)) {
                 snapshot.node[i].line = fxbufs++;
-            } else if ((snapshot.node[i].kind == eNodeOscString) || (snapshot.node[i].kind == eNodeResonator)) {
+            } else if (snapshot.node[i].kind == eNodeOscString) {
                 snapshot.node[i].line = strings++;
+            } else if (snapshot.node[i].kind == eNodeResonator) {
+                snapshot.node[i].line = strings;   // §70.4a - two lines, this and the next
+                strings              += 2u;
             } else if (snapshot.node[i].kind == eNodeVocoder) {
                 snapshot.node[i].line = basics++;
             } else if (snapshot.node[i].kind == eNodePitchTrack) {
@@ -10977,13 +10983,15 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
         }
         case moduleTypeResonator:
         {
-            // §70.4a - basic: the oscillators' pitch dials; Decay a T60 of 20 ms to 10 s; Damp a one-pole
+            // §70.4a - the oscillators' pitch dials, Decay and Damp as OscString's, Pos v/128, Alg the junction
             static const tOscParams kString = {moduleTypeOscString, 0, 1, 2, 3, 4, 7, -1, -1, -1, false};
+            double                  damp    = param_value(module, variation, 6);
 
             set_osc_pitch(node, module, variation, &kString);
-            bx[0] = 0.02 * pow(500.0, param_value(module, variation, 5) / 127.0);
-            bx[1] = 1.0 - (0.9 * param_value(module, variation, 6) / 127.0);
-            bx[2] = param_value(module, variation, 8) / 127.0;
+            bx[0]        = 1.0 - karplus_decay_step(127.0 - param_value(module, variation, 5));
+            bx[1]        = (damp <= 0.0) ? 1.0 : ((127.0 - damp) / 128.0);
+            bx[2]        = (module->param[variation][8].value >= 127) ? 1.0 : (param_value(module, variation, 8) / 128.0);
+            node->select = (uint32_t)module->param[variation][9].value % RESONATOR_ALGS;
             break;
         }
         case moduleTypeDriver:
@@ -11324,35 +11332,75 @@ static double karplus_step(uint32_t voice, uint32_t n, const tEngineNode * spec,
     return *lp;
 }
 
-// §70.4a - Resonator (basic): y = excitation + g x lowpass(the loop one period back), g from the
-// Decay's T60; Out2 reads the loop at the Pos share of the period
-static void string_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double excite, double pitchIn, double pitchVar,
-                        double voicePitch, double out[2]) {
+// §70.4a - Resonator: two lines, Pos and 1 - Pos of the period (less six samples) long, meet at a junction
+// whose six words the Alg selects. Line 1 takes 0.97 (a D1 + b D2 + c Exc); line 2 takes Decay x four
+// half-sample averages of the Damp one-pole of (d D2 + e D1 + f Exc). Out1 is a mix of the two lines, Out2
+// what enters line 2. In words (a quarter of an engine unit); every stored word saturates.
+static const double kResonatorJunction[RESONATOR_ALGS][6] = {
+    {0.0,  1.0, -1.0, 0.0,  1.0, 1.0},     // String1
+    {0.0, -1.0,  1.0, 0.0, -1.0, 1.0},     // String2
+    {0.0, -1.0,  0.0, 0.0,  0.0, 1.0},     // Tube1
+    {0.0,  1.0,  0.0, 1.0,  0.0, 1.0},     // Tube2
+    {1.0,  0.0,  1.0, 1.0,  0.0, 1.0},     // Tube3
+};
+static const double kResonatorMix[RESONATOR_ALGS][2]      = {
+    {0.0, 0.0}, {-1.0, -1.0}, {0.0, 1.0}, {-1.0, 1.0}, {-1.0, -1.0},   // Out1 = [0] D2 + [1] D1
+};
+
+static void resonator_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double excite, double pitchIn,
+                           double pitchVar, double voicePitch, double out[2]) {
     SE_LOCAL;
 
-    uint32_t l      = spec->line;
+    uint32_t       l      = spec->line;
 
-    if ((l >= MAX_STRING_LINES) || (spec->active == false)) {
-        out[0] = 0.0;
-        out[1] = 0.0;
+    out[0] = 0.0;
+    out[1] = 0.0;
+
+    if (((l + 1u) >= MAX_STRING_LINES) || (spec->active == false)) {   // off: no work while off
         return;
     }
-    float *  ring   = gString[voice][l];
-    uint32_t write  = gStringWrite[voice][l];
-    double   hz     = fmin(fmax(osc_frequency_hz(spec, voicePitch, pitchIn, pitchVar), gSampleRate / (STRING_SAMPLES - 4.0)), gSampleRate / 4.0);
-    double   period = gSampleRate / hz;
-    double   gain   = pow(10.0, -3.0 * (period / gSampleRate) / spec->bx[0]);
-    double * lp     = &gLadder[voice][n][0];
-    double   back   = ring_read(ring, STRING_SAMPLES, write, period);
-    double   y      = 0.0;
+    const double * j      = kResonatorJunction[spec->select];
+    const double * mix    = kResonatorMix[spec->select];
+    double         scale  = gSampleRate / G2_ENGINE_SAMPLE_RATE;
+    double         hz     = osc_frequency_hz(spec, voicePitch, pitchIn, pitchVar);
+    double         period = (hz > 0.0) ? fmin(G2_ENGINE_SAMPLE_RATE / hz, KARPLUS_LINE - 2.0) : (KARPLUS_LINE - 2.0);
+    double         span   = fmax(period - RESONATOR_TRIM, 0.0);
+    double         len[2] = {span * spec->bx[2], span * (1.0 - spec->bx[2])};
+    double         line[2];
+    double *       st     = gLadder[voice][n];
+    double         e      = excite / DSP_FULL_SCALE;
 
-    *lp                   += spec->bx[1] * (back - *lp);
-    y                      = fmin(4.0, fmax(-4.0, excite + (gain * *lp)));       // the DSP's full scale
-    write                  = (write + 1u) % STRING_SAMPLES;
-    ring[write]            = (float)y;
-    gStringWrite[voice][l] = write;
-    out[0]                 = y;
-    out[1]                 = ring_read(ring, STRING_SAMPLES, write, 1.0 + (spec->bx[2] * period));
+    for (uint32_t k = 0; k < 2u; k++) {
+        double delay = fmin((len[k] + 2.0) * scale, (double)(STRING_SAMPLES - 4u));
+
+        line[k] = ring_read_lagrange(gString[voice][l + k], STRING_SAMPLES, gStringWrite[voice][l + k], fmax(delay - 1.0, 1.0));
+    }
+
+    double         a      = fmin(fmax(RESONATOR_LOSS * ((j[0] * line[0]) + (j[1] * line[1]) + (j[2] * e)), -1.0), 1.0);
+    double         x      = 0.0;
+
+    st[0]  = fmin(fmax(st[0] + (spec->bx[1] * (((j[3] * line[1]) + (j[4] * line[0]) + (j[5] * e)) - st[0])), -1.0), 1.0);
+    x      = st[0];
+
+    for (uint32_t k = 1; k <= 4u; k++) {
+        double y = 0.5 * (x + st[k]);
+
+        st[k] = x;
+        x     = y;
+    }
+
+    double         b      = fmin(fmax(spec->bx[0] * x, -1.0), 1.0);
+    double         w[2]   = {a, b};
+
+    for (uint32_t k = 0; k < 2u; k++) {
+        uint32_t write = (gStringWrite[voice][l + k] + 1u) % STRING_SAMPLES;
+
+        gString[voice][l + k][write] = (float)w[k];
+        gStringWrite[voice][l + k]   = write;
+    }
+
+    out[0] = fmin(fmax((mix[0] * line[1]) + (mix[1] * line[0]), -1.0), 1.0) * DSP_FULL_SCALE;
+    out[1] = b * DSP_FULL_SCALE;
 }
 
 // §70.6 - NoiseGate: a two-stage peak follower in the part's own words opens a gate above Threshold and
@@ -12567,7 +12615,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeResonator:
         {
-            string_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch, value[n]);
+            resonator_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), voicePitch, value[n]);
             break;
         }
         case eNodeDriver:
