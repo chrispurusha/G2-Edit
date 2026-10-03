@@ -74,3 +74,17 @@ The count is zeroed when the output opens, so it is always "overruns since this 
 `SNDSTATUS` reports it with the rate and the buffer size, because the sound engine cannot: it is
 deliberately platform-free and knows nothing about CoreAudio.
 
+
+## 7. Render ahead (`ahead_start()`, `ahead_read()`)
+
+Optional, off by default: Settings > Audio > Render Ahead, 5, 10 or 20 ms (preference
+`audioRenderAheadMs`). A real-time thread of ours renders the engine into a ring in 64-frame pieces and
+keeps that many milliseconds rendered beyond what the callback has taken; the callback only copies out.
+One slow block - a note-on, a patch change, the machine doing something else - is then absorbed by what is
+already in the ring instead of breaking the output, where without it the same block misses the deadline.
+
+It cannot help an engine slower than real time on average: the ring just drains. And it makes everything
+later by the amount chosen, keys and knobs alike, so it is a setting for heavy patches on slower machines
+(the Intel MacBooks), not a default. A shortfall is not waited for: the callback plays what there is,
+silence for the rest, and counts it (`audio_output_render_ahead_underruns()`). The plug-in has none of
+this - the host owns its buffer.

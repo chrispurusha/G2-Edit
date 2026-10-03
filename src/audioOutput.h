@@ -68,6 +68,11 @@ void audio_output_select_level_db(int32_t db);
 
 uint32_t audio_output_buffer_frames(void);
 void audio_output_select_buffer_frames(uint32_t frames);
+uint32_t audio_output_render_ahead_ms(void);                 // notes §7 - 0 is off
+void audio_output_select_render_ahead_ms(uint32_t ms);
+uint32_t audio_output_render_ahead_underruns(void);
+bool audio_output_voice_thread(void);                        // soundEngine notes §202
+void audio_output_select_voice_thread(bool on);
 
 // notes §4 - the device's rate can change under a running unit (Audio MIDI Setup, or another
 // application opening it first). Call once per frame from the render loop: it re-opens the output

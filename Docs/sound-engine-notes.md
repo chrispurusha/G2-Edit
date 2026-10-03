@@ -3292,7 +3292,10 @@ A graph is played serially instead when splitting it would change what it does:
 - a loop leg between the two passes, or a voice node reading one after the mix;
 - more than SPLIT_MAX_PAIRS values to cross, or nothing after the mix at all.
 
-`sound_engine_set_split_mode()` (or `G2_ENGINE_SPLIT=0/1/2` in the environment at start) picks serial,
+In the application, Settings > Audio > Multi-threading switches it On (the default) or Off - the one switch
+for every thread the engine adds, this and those to come - saved as the preference `engineVoiceThread`; the
+plug-in always splits. `sound_engine_set_split_mode()` (or `G2_ENGINE_SPLIT=0/1/2` in the environment at
+start, which wins) picks serial,
 inline - the same pipeline on one thread - or threaded, the default. CHECKED 2026-10-04: threaded is
 bit-identical to inline on seven patches, which is the test that the threads share nothing they both
 write; split equals serial delayed by the lag exactly where the FX area keeps no clock of its own (a

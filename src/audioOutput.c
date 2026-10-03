@@ -35,6 +35,9 @@ extern "C" {
 #include <pthread/qos.h>
 #include <mach/mach.h>
 #include <mach/thread_policy.h>
+#include <mach/mach_time.h>
+#include <dispatch/dispatch.h>
+#include <pthread.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -46,17 +49,19 @@ extern "C" {
 
 // notes §1
 
-#define OUTPUT_CHANNELS      (2)
-#define MAX_AUDIO_DEVICES    (32)
-#define DEVICE_NAME_SIZE     (96)
-#define DEVICE_UID_SIZE      AUDIO_DEVICE_UID_MAX   // audioOutput.h — one definition, since callers copy UIDs too
+#define OUTPUT_CHANNELS         (2)
+#define MAX_AUDIO_DEVICES       (32)
+#define DEVICE_NAME_SIZE        (96)
+#define DEVICE_UID_SIZE         AUDIO_DEVICE_UID_MAX // audioOutput.h — one definition, since callers copy UIDs too
 
-#define PREF_KEY_DEVICE      "audioOutputDeviceUID"
-#define PREF_KEY_LEFT        "audioOutputLeftChannel"
-#define PREF_KEY_RIGHT       "audioOutputRightChannel"
-#define PREF_KEY_CHANNEL     "audioOutputFirstChannel"   // superseded; read once to migrate
-#define PREF_KEY_BUFFER      "audioOutputBufferFrames"
-#define PREF_KEY_LEVEL       "audioOutputLevelDb"
+#define PREF_KEY_DEVICE         "audioOutputDeviceUID"
+#define PREF_KEY_LEFT           "audioOutputLeftChannel"
+#define PREF_KEY_RIGHT          "audioOutputRightChannel"
+#define PREF_KEY_CHANNEL        "audioOutputFirstChannel" // superseded; read once to migrate
+#define PREF_KEY_BUFFER         "audioOutputBufferFrames"
+#define PREF_KEY_AHEAD          "audioRenderAheadMs"
+#define PREF_KEY_VOICETHREAD    "engineVoiceThread"
+#define PREF_KEY_LEVEL          "audioOutputLevelDb"
 
 typedef struct {
     AudioObjectID id;
@@ -80,6 +85,7 @@ static uint32_t     gRightChannel                 = 1;
 
 // 0 means "whatever the device already has", which is what it was before this was selectable.
 static uint32_t     gBufferFrames                 = 0;
+static uint32_t     gAheadMs                      = 0;   // notes §7 - render ahead, 0 off
 
 // notes §2
 static int32_t      gLevelDb                      = 0;
@@ -313,6 +319,9 @@ void audio_output_load_settings(void) {
         gRightChannel = first + 1;
     }
     gBufferFrames = (uint32_t)prefs_get_int(PREF_KEY_BUFFER, 0);
+    gAheadMs      = (uint32_t)prefs_get_int(PREF_KEY_AHEAD, 0);
+    // soundEngine notes §202 - on unless switched off here
+    sound_engine_set_split_mode((prefs_get_int(PREF_KEY_VOICETHREAD, 1) != 0) ? eSplitThreaded : eSplitSerial);
 }
 
 // See audioOutput.h for why this takes a UID rather than an index, and why it has a return value.
@@ -475,6 +484,156 @@ const char * audio_output_thread_text(void) {
     return text;
 }
 
+// notes §7 - RENDER AHEAD. Optional: a thread of our own renders into a ring the callback only copies
+// out of, so one slow block is absorbed by what is already rendered instead of breaking the output.
+// It makes everything later by the same amount, which is the price; off, the callback renders directly.
+#define AHEAD_MAX_CALLBACK    (8192u)   // frames one callback may ask for
+#define AHEAD_CHUNK           (64u)     // frames the render thread makes at a time
+
+static float *              gAheadRing      = NULL;
+static uint32_t             gAheadCapacity  = 0;   // frames
+static uint32_t             gAheadTarget    = 0;   // frames kept rendered ahead of the callback
+static _Atomic uint64_t     gAheadWritten   = 0;   // frames, ever
+static _Atomic uint64_t     gAheadRead      = 0;
+static _Atomic bool         gAheadQuit      = false;
+static _Atomic bool         gAheadRunning   = false;
+static _Atomic uint32_t     gAheadUnderruns = 0;
+static dispatch_semaphore_t gAheadWake      = NULL;
+static pthread_t            gAheadThread;
+
+static void ahead_make_realtime(double sampleRate) {
+    mach_timebase_info_data_t            base;
+    thread_time_constraint_policy_data_t policy;
+    double                               perMs = 0.0;
+    double                               chunk = 1000.0 * AHEAD_CHUNK / sampleRate;
+
+    (void)mach_timebase_info(&base);
+    perMs              = 1.0e6 * (double)base.denom / (double)base.numer;
+    policy.period      = (uint32_t)(chunk * perMs);
+    policy.computation = (uint32_t)(0.5 * chunk * perMs);
+    policy.constraint  = (uint32_t)(chunk * perMs);
+    policy.preemptible = 1;
+    (void)thread_policy_set(mach_thread_self(), THREAD_TIME_CONSTRAINT_POLICY,
+                            (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+}
+
+static void * ahead_thread(void * arg) {
+    double sampleRate = *(double *)arg;
+
+    free(arg);
+    ahead_make_realtime(sampleRate);
+
+    while (atomic_load(&gAheadQuit) == false) {
+        uint64_t written = atomic_load_explicit(&gAheadWritten, memory_order_relaxed);
+        uint64_t read    = atomic_load_explicit(&gAheadRead, memory_order_acquire);
+
+        if ((written - read) >= gAheadTarget) {
+            (void)dispatch_semaphore_wait(gAheadWake, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_MSEC));
+            continue;
+        }
+        uint32_t at      = (uint32_t)(written % gAheadCapacity);
+        uint32_t frames  = AHEAD_CHUNK;
+
+        if ((at + frames) > gAheadCapacity) {
+            frames = gAheadCapacity - at;   // up to the wrap; the next pass carries on from 0
+        }
+        sound_engine_render(&gAheadRing[at * OUTPUT_CHANNELS], frames, OUTPUT_CHANNELS);
+        atomic_store_explicit(&gAheadWritten, written + frames, memory_order_release);
+    }
+    return NULL;
+}
+
+static void ahead_start(double sampleRate) {
+    double * rate = NULL;
+
+    if ((gAheadMs == 0u) || (sampleRate <= 0.0)) {
+        return;
+    }
+    gAheadTarget   = (uint32_t)((sampleRate * gAheadMs) / 1000.0);
+    gAheadCapacity = gAheadTarget + AHEAD_MAX_CALLBACK + AHEAD_CHUNK;
+    gAheadRing     = (float *)calloc((size_t)gAheadCapacity * OUTPUT_CHANNELS, sizeof(float));
+    rate           = (double *)malloc(sizeof(double));
+
+    if ((gAheadRing == NULL) || (rate == NULL)) {
+        free(gAheadRing);
+        free(rate);
+        gAheadRing = NULL;
+        return;
+    }
+    *rate          = sampleRate;
+    atomic_store(&gAheadWritten, 0u);
+    atomic_store(&gAheadRead, 0u);
+    atomic_store(&gAheadQuit, false);
+
+    if (gAheadWake == NULL) {
+        gAheadWake = dispatch_semaphore_create(0);
+    }
+
+    if (pthread_create(&gAheadThread, NULL, ahead_thread, rate) != 0) {
+        free(gAheadRing);
+        free(rate);
+        gAheadRing = NULL;
+        return;
+    }
+    atomic_store(&gAheadRunning, true);
+}
+
+static void ahead_stop(void) {
+    if (atomic_load(&gAheadRunning) == false) {
+        return;
+    }
+    atomic_store(&gAheadQuit, true);
+    (void)dispatch_semaphore_signal(gAheadWake);
+    (void)pthread_join(gAheadThread, NULL);
+    atomic_store(&gAheadRunning, false);
+    free(gAheadRing);
+    gAheadRing = NULL;
+}
+
+// The callback's side: copy out what is there, and count a shortfall rather than wait for it.
+static void ahead_read(float * out, uint32_t frames, uint32_t channels) {
+    uint64_t read      = atomic_load_explicit(&gAheadRead, memory_order_relaxed);
+    uint64_t written   = atomic_load_explicit(&gAheadWritten, memory_order_acquire);
+    uint32_t available = (uint32_t)(written - read);
+    uint32_t take      = (available < frames) ? available : frames;
+
+    for (uint32_t f = 0; f < frames; f++) {
+        for (uint32_t c = 0; c < channels; c++) {
+            out[(f * channels) + c] = (f < take) ? gAheadRing[(((read + f) % gAheadCapacity) * OUTPUT_CHANNELS) + (c % OUTPUT_CHANNELS)] : 0.0f;
+        }
+    }
+
+    if (take < frames) {
+        atomic_fetch_add(&gAheadUnderruns, 1u);
+    }
+    atomic_store_explicit(&gAheadRead, read + take, memory_order_release);
+    (void)dispatch_semaphore_signal(gAheadWake);
+}
+
+uint32_t audio_output_render_ahead_ms(void) {
+    return gAheadMs;
+}
+
+void audio_output_select_render_ahead_ms(uint32_t ms) {
+    gAheadMs = ms;
+    prefs_set_int(PREF_KEY_AHEAD, (long)ms);
+    reopen_if_running();
+}
+
+// soundEngine notes §202 - the voices on a thread of their own; the next block follows a change
+bool audio_output_voice_thread(void) {
+    return prefs_get_int(PREF_KEY_VOICETHREAD, 1) != 0;
+}
+
+void audio_output_select_voice_thread(bool on) {
+    prefs_set_int(PREF_KEY_VOICETHREAD, on ? 1 : 0);
+    sound_engine_set_split_mode(on ? eSplitThreaded : eSplitSerial);
+}
+
+uint32_t audio_output_render_ahead_underruns(void) {
+    return atomic_load(&gAheadUnderruns);
+}
+
 static OSStatus render_callback(void *                       inRefCon,
                                 AudioUnitRenderActionFlags * ioActionFlags,
                                 const AudioTimeStamp *       inTimeStamp,
@@ -493,10 +652,16 @@ static OSStatus render_callback(void *                       inRefCon,
     if (atomic_load(&gRenderRealTime) < 0) {
         sample_render_thread_policy();   // notes §6 - once, on the first callback
     }
+
     // Interleaved, so there is exactly one buffer holding all the channels.
-    sound_engine_render((float *)ioData->mBuffers[0].mData,
-                        (uint32_t)inNumberFrames,
-                        (uint32_t)ioData->mBuffers[0].mNumberChannels);
+    if (atomic_load(&gAheadRunning) == true) {
+        ahead_read((float *)ioData->mBuffers[0].mData, (uint32_t)inNumberFrames,
+                   (uint32_t)ioData->mBuffers[0].mNumberChannels);
+    } else {
+        sound_engine_render((float *)ioData->mBuffers[0].mData,
+                            (uint32_t)inNumberFrames,
+                            (uint32_t)ioData->mBuffers[0].mNumberChannels);
+    }
     return noErr;
 }
 
@@ -765,6 +930,7 @@ bool audio_output_start(void) {
         audio_output_stop();
         return false;
     }
+    ahead_start(gSampleRate);    // notes §7 - before the first callback, which reads its ring
     status   = AudioOutputUnitStart(gOutputUnit);
 
     if (status != noErr) {
@@ -792,6 +958,7 @@ void audio_output_stop(void) {
     if (gRunning == true) {
         AudioOutputUnitStop(gOutputUnit);
     }
+    ahead_stop();   // the callback has returned; now the thread that fed it
     AudioUnitUninitialize(gOutputUnit);
     AudioComponentInstanceDispose(gOutputUnit);
 
