@@ -8,7 +8,6 @@ General (priority order)
 -
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations.
-- Further investigation into voice stealing improvements.
 - Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works anyhow.
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
 - Bypass, the rest: a module switched off still has its INPUTS evaluated (an LFO into a switched-off oscillator keeps running) - prune the chain behind an Off module whose output is silence or a plain pass-through. Each module itself now skips its work when off (2026-10-03)
