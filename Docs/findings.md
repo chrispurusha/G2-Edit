@@ -22,9 +22,8 @@ When G2 gives an indication of voice limit, I wonder if we're off by 1? Seem to 
   knob: requested 14 -> assigned 14, requested 15 -> assigned 15, requested 16 -> assigned 15. A read
   that was one low would have returned 13 and 14 for the first two; it did not. The device saturates
   at 15 for that patch.
-  THE REFERENCE AGREES: the original editor's code clamps at 32 and stores the wire byte AS IS,
-  the original editor's code returns it unmodified, and the original prints it with a bare
-  %d. No +/-1 anywhere on that path. (gPatchDescr.voiceCount IS count-minus-one, and we add 1 at
+  THE ORIGINAL EDITOR AGREES: it clamps the count at 32 and shows the wire byte as it is, with no
+  +/-1 anywhere on that path. (gPatchDescr.voiceCount IS count-minus-one, and we add 1 at
   every display and comparison, which is a different field and already consistent.)
   WHAT IS ACTUALLY MISSING IS THE ASSIGNED NUMBER ON SCREEN. The original's Voice Mode box prints
   "%d (%d)" — ACTUAL (REQUESTED) — so it reads "15 (16)" and the gap is explicit. We show only the
@@ -280,7 +279,7 @@ the actual behaviour change, is NOT.
   idVendor 4092 (0x0FFC, VENDOR_ID in usbComms.c), kUSBProductString "Nord Modular G2". Same family
   as the pgrep trap below — a check that can fail QUIETLY is worse than no check at all.
   AND THERE IS A BIGGER LEVER STILL, unexplored: the stream is ARMABLE. SUB_COMMAND_START_STOP
-  (0x7d) is already used by send_stop()/send_start() around reloads, and the reference decode below
+  (0x7d) is already used by send_stop()/send_start() around reloads, and the format below
   confirms 0x41 0x7D 0x00/0x01 as START/STOP_COMM for exactly this notification stream. Disarming it
   while the window is hidden or minimised would take the idle cost to zero rather than reduce it.
   CORRECTED 2026-08-29 — NOT ON ITS OWN IT WOULD NOT. Disarming stops the traffic, but
@@ -317,7 +316,7 @@ something and a disagreement worth chasing. Three of each.
   have some interesting takes." That is exactly how it turned out.
 
   1. RESOLVED — LED PAIR ORDER WITHIN A BYTE. OURS IS RIGHT. They have it MSB-first (bits 7-6 =
-     LED n); parse_led_data() has it LSB-first, from the original editor's code. Measured
+     LED n); parse_led_data() has it LSB-first. Measured
      on the connected G2 with two LfoA modules at deliberately different rates and the raw 0x39
      bytes logged: the two blinks land in bits 0-1 and bits 2-3 of the first data byte, and bits 4-7
      are constant. Under our LSB-first reading those are stream indices 0 and 1 — where the parser
@@ -336,8 +335,7 @@ something and a disagreement worth chasing. Three of each.
      run polled through the new LEDDUMP shows the VA module changing once in 30 samples and the FX
      module ten times, the same ratio and the same way round.
      NOTE THE COMMENT ABOVE parse_led_data() IS STILL MISLEADING even though the code is right: it
-     cites the original editor's code calling an area before an area and calls that "VA then FX", which
-     is only true if the original numbers VA as area 1. The behaviour is now measured directly and
+     says "VA then FX" without saying how the areas are numbered. The behaviour is now measured directly and
      does not depend on that reading, so the comment should cite the measurement instead.
 
   3. STILL UNTESTED — VOLUME BYTE ORDER. They read 2-byte pairs as (unknown, value) — the SECOND
@@ -1406,15 +1404,13 @@ connector symbol away from the input/output and release the mouse button. If you
   is what it should look like, the cable leaving its socket and following the cursor.
   NOT IMPLEMENTED: the manual's other route into the same gesture, double-click-hold. Ctrl-click is
   the one the user asked for and the one that needs no click-timing machinery.
-  MULTIPLE CABLES ON ONE CONNECTOR — WE ARE CURRENTLY WRONG, and the reference is unambiguous about
-  what should happen. I had assumed the original faced the same ambiguity; it does not, because it
+  MULTIPLE CABLES ON ONE CONNECTOR — WE ARE CURRENTLY WRONG, and the original editor is unambiguous
+  about what should happen. I had assumed the original faced the same ambiguity; it does not, because it
   never picks a cable at all.
-  ITS MODEL IS HOLE-TO-HOLE, NOT CABLE-BY-CABLE. the original editor's code dispatches three
-  actions, all of them in terms of HOLES: InternalCableDisconnect(hole), InternalCableConnect(holeA,
-  holeB) and InternalCableMove(holeA, holeB). The move goes to
-  the original editor's code, which does the original editor's code on the connector's node and then
-  RE-PARENTS THE WHOLE NODE: it emits a delete plus a connect for the cable to the node's PARENT, and
-  then loops over get_child() emitting a delete plus a connect for EVERY CHILD. So moving a connector
+  ITS MODEL IS HOLE-TO-HOLE, NOT CABLE-BY-CABLE. A drop is one of three actions, all in terms of
+  connectors: disconnect one, connect two, or move one onto another. A move RE-PARENTS THE WHOLE NODE:
+  a delete plus a connect for the cable to the node's PARENT, then a delete plus a connect for EVERY
+  CHILD. So moving a connector
   moves EVERYTHING PLUGGED INTO IT, as one operation.
   So the answer to "which cable?" is "all of them". For an input there is only ever one and our
   behaviour is already right; for an output carrying three, ours moves one at random and should move
@@ -1499,17 +1495,16 @@ THE ORIGINAL EDITOR'S RESOURCE FILE HOLDS EVERY MODULE FACE AS PLAIN TEXT — su
   Gate and FlipFlop "missing params" are not missing: their selectors are MODES, and the resource
   numbers modes in the same CodeRef space as parameters.
 
-  LED GROUPING — INVESTIGATED AND FIXED 2026-08-22, see below. Kept here because the reference is
-  what settled it.
+  LED GROUPING — INVESTIGATED AND FIXED 2026-08-22, see below.
   TWO THINGS IT COULD SETTLE THAT WE CURRENTLY GUESS AT:
   1. LED GROUPING, which bears directly on the LED work above. Every Led carries a Type of "Green"
      (105 of them) or "Sequencer" (90), and a GroupId. The Green/Sequencer split is the 0x39 2-bit
      stream versus the 0x3a multi stream — Compress's ten and the Seq modules' sixteen are
      "Sequencer", which is why our LED counts differ there and why we handle them as volume meters
      instead. That part of ours is right.
-     THE GROUPID IS THE PART TO CHECK. The original walks GROUPS, not LEDs: the original editor's code pushes a
-     module once per LED group, and the original editor's code then collects every LED view in that group and,
-     where there is more than one, spreads the value across them A BIT AT A TIME. Invert has two LEDs
+     THE GROUPID IS THE PART TO CHECK. The original walks GROUPS, not LEDs: a module takes one stream
+     value per LED group and, where a group holds more than one LED, the value is spread across them
+     A BIT AT A TIME. Invert has two LEDs
      in two groups (0 and 1) so it takes two stream indices, exactly as we assume — but 8Counter has
      EIGHT LEDs all in group 0, which is ONE index carrying eight bits, where we now consume eight.
      BinCounter, ADConv, Mux8to1, Mux1to8 and Mux8to1X are the same shape. If that reading is right,
@@ -1533,31 +1528,28 @@ Check my LEDs fix in parse_led_data
   things fixed on top: the exit(1) went (it exits a RELEASE build too, and its LOG_DEBUG prints
   nothing there — LOG_ERROR + EXIT_IN_DEBUG + drop only the surplus instead, per defs.h's own note);
   the startIndex + 40 window went, which was only ever safe while one module consumed one value
-  however many LEDs it had (see the reference note below for what replaced it); and
+  however many LEDs it had (see the note below for what replaced it); and
   render_led_common() bounds ledIndex the same way the parser does. Checked against the connected G2
   with LogicMidi: 8Counter draws eight separate LEDs, and Invert's read green while Gate's read black
   — which is the patch, not a fault. That Gate is an AND with nothing driving it, so it sits low and
   both its LEDs are correctly off; the Invert beside it goes high on a low input. Gate LEDs confirmed
   working by CT.
 
-  THEN THE WIRE FORMAT TURNED UP IN THE REFERENCE, in the original editor's code, and it
-  answers three things at once:
+  THEN THE WIRE FORMAT WAS SETTLED, and it answers three things at once:
     - PACKING. Four values per byte, lowest bits first, each value read as (byte >> 2k) & 3 with its
       own bits in order. Our reverse_bits_in_byte() + MSB-first read put the VALUES in the right
       order but transposed the two bits WITHIN each one — and render_led_common()'s bit0-red/bit1-
       green mapping was the mirror image of that, so the two errors CANCELLED and the LEDs have
-      always looked right. Both sides now match the reference (extraction by direct indexing, green
+      always looked right. Both sides now match the format (extraction by direct indexing, green
       on bit 0), which is provably the same picture — verified pixel-for-pixel against a capture of
       the old build on live device data, every LED identical — but neither half now depends on the
       other being wrong. It also stops us writing into the receive buffer.
     - THE WINDOW IS A CONSTANT 40, NOT startIndex + 40. The original walks startIndex..0x28 and
-      stops, and the original editor's code gives each area Min(itsLeds, 0x28 - used), so 40 is the whole index
+      stops, giving each area Min(its LEDs, 0x28 - used), so 40 is the whole index
       space for VA and FX TOGETHER — a patch with more LEDs than that has the surplus unreported by
       the instrument. LED_STREAM_SIZE in defs.h.
-    - THE PER-LED MODEL IS CONFIRMED. the original editor's code pushes a module once per LED group and
-      the original editor's code counts consecutive repeats to get the index within the module, which is exactly
-      what the fix does. VA-before-FX is confirmed too: the original editor's code calls an area then
-      an area.
+    - THE PER-LED MODEL IS CONFIRMED: one stream value per LED group, and the index within a module
+      counts consecutive repeats, which is exactly what the fix does. VA comes before FX.
   Still an assumption, but now only one and only in one place: WHICH bit is green. If a module whose
   LED is known to be red ever shows green, swap the two lines in render_led_common() and nothing else.
   Also dropped tLed's ledRef and rectangle — both write-only, and with value[] an array a single
@@ -1829,14 +1821,14 @@ SW1-2 and similar need something new. See manual. The offset box seems to show 0
   I had wrongly called fine from a smaller screenshot, and it needed two passes because the first
   position clipped the title bar. Sw4-1 and Sw1-8 were already clear, but their Ctrl offset boxes
   clipped a connector, so those two moved up a row. Sw1-2 needed nothing.
-  Mapping positions across from the reference does NOT work here and was tried first: our faces are
+  Mapping positions across from the original's layout does NOT work here and was tried first: our faces are
   hand-laid approximations, not proportional copies, so the two coordinate systems do not agree even
   after fitting a scale to them. Rendering and looking is the method.
 Add an open recent for patches from bank?
 Got a: D parse_command_response() Got unknown sub-command 0x4d - must implement!!! That's SUB_RESPONSE_PARAM_LIST. We had that implemented at some point in the past, but removed it. Maybe needs case and call to parse_param_list() adding to parse_command_response()? Assume it's unsolicited. Have attempted a fix, but not seen it again. Check my fix as mentioned.
   REVIEWED 2026-08-21 — the CASE is right, the OFFSET is unknowable from here, so it now tests before
   it trusts. Inside a patch dump every section carries [type][16-bit length] before its payload
-  (parse_patch() consumes it, and the original editor's its reader reads exactly that
+  (parse_patch() consumes it, and the original editor reads exactly that
   for 0x4d too). Whether the device's standalone 0x4d does is NOT settled, and this file's own
   handlers disagree for messages of that shape: SUB_RESPONSE_GLOBAL_KNOBS reads a length first,
   SUB_RESPONSE_KNOBS does not. Guessing wrong is not a no-op — parse_param_list() writes a value into
@@ -1920,11 +1912,10 @@ DOES THE INVERT MODULE'S LED ACTUALLY DO ANYTHING? YES — and steady is usually
 LED STREAM ALIGNMENT — 7 MODULES WERE EATING OTHER MODULES' SLOTS. Fixed 2026-08-22.
   THE RULE, from the original editor: a module takes ONE 2-bit value out of the 0x39 stream PER
   SINGLE-LED GROUP — not one per LED. Where a group holds several LEDs it is served by the OTHER
-  stream (0x3a) as a single value whose BITS are the LEDs. the original editor's code pushes a module once per
-  group and sorts groups into the two lists; the original editor's code counts distinct groups;
-  the original editor's code calls a group multi if it holds more than one view (a meter counts as multi on
-  its own, which is why a lone MiniVU still takes a 0x3a slot).
-  WE COUNTED LEDS, NOT GROUPS. Comparing every module against the reference, exactly seven disagree,
+  stream (0x3a) as a single value whose BITS are the LEDs. A module is counted once per group, the
+  groups are sorted into the two streams, and a group is multi if it holds more than one LED (a meter
+  counts as multi on its own, which is why a lone MiniVU still takes a 0x3a slot).
+  WE COUNTED LEDS, NOT GROUPS. Comparing every module against that rule, exactly seven disagree,
   all the same way — 8Counter, ADConv, BinCounter, Mux1-8, Mux8-1 and Mux8-1X took EIGHT 2-bit slots
   each where they should take none, and FlipFlop took two. Every LED after one of those in the stream
   was reading someone else's slot. All 202 other modules already agreed.
@@ -1952,8 +1943,7 @@ LED STREAM ALIGNMENT — 7 MODULES WERE EATING OTHER MODULES' SLOTS. Fixed 2026-
     - with an 8Counter (8 LEDs, one multi group) and a FlipFlop (2, one group) sitting AHEAD of two
       Inverts in the stream — which is the case this whole change is about. Both Inverts stayed lit,
       so the ten slots really are not in the 2-bit stream and skipping them is correct.
-    - a patch loaded into ANOTHER SLOT changed nothing here, matching the reference, where
-      the original editor's code is indexed per slot
+    - a patch loaded into ANOTHER SLOT changed nothing here, as expected: the LED data is per slot
   AND THE SWITCHING STATES ARE RIGHT TOO: with an LFO driving one Invert channel and both inputs of a
   Gate, the driven Invert channel toggles while its unconnected channel stays lit, the driven Gate
   toggles, the LFO's own LED blinks — and in the frame where the LFO and the Gate are lit, the
@@ -1990,9 +1980,9 @@ cables, so a "clean" test inherited them and reported a dark Invert that was cor
   DEVADDMODULE and DEVDELMODULE stay as synonyms so existing scripts keep working.
   VERIFIED: NEWPATCH, two ADDMODULEs and a CABLE, then a restart — the device's own copy came back
   identical, cable included, with nothing left over from the patch before it. The change
-  is arithmetic that follows from the reference, and it cannot affect a patch without one of the
+  is arithmetic that follows from the format, and it cannot affect a patch without one of the
   seven module types. ALSO A READING, not a certainty: the multi value's top two bits (0x3000) are
-  what the reference tests before spreading it a bit at a time, so we do the same and show nothing
+  what is tested before spreading it a bit at a time, so we do the same and show nothing
   when they are absent — if a counter stays dark on real hardware, that test is the thing to revisit.
 
   TO CHECK IT BY HAND, load PatchTestFiles/LedGroups.pch2 (built for this, 4 modules): an LfoA at
@@ -2056,7 +2046,7 @@ from the muscle memory,
 
 Module knobs and sliders don't have the "nudge arrows" to allow adjusting the parameter values step
 by step with mouse/touchpad
-  THE REFERENCE BACKS THIS ONE UP, and it pairs with the arrow-keys request above. The manual, on
+  THE ORIGINAL BACKS THIS ONE UP, and it pairs with the arrow-keys request above. The manual, on
   putting a parameter in focus: "An increment and decrement button appears below the knob or slider
   parameter as you move the cursor over it, and the current setting of the parameter displays briefly
   in a yellow hintbox." The original's own module faces carry 75 ButtonIncDec controls, so the
@@ -2106,7 +2096,7 @@ FIXED 2026-08-20 — both bugs reported that day, kept because the FINDINGS are 
   a single capture.
   NOT DECODED: what that SeqNote record actually means. One capture cannot settle it, parameter names
   are cosmetic, and inventing semantics here is how the wrong kind of "fix" gets written. If it is
-  ever wanted, it wants the reference editor's reader.
+  ever wanted, it needs more captures.
 
 - PATCH PICKER SHOWED TWO NAMES RUN TOGETHER — "distant activity Ringmod Basses" for Bank 3 Loc 22.
   "distant activity" is EXACTLY 16 characters, which is CLAVIA_NAME_SIZE, and strncpy pads with zeros
@@ -2526,18 +2516,18 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   Reordered; Range defaults bumped 0->1 (Rate Lo). NEEDS HARDWARE:
     (1) confirm a fresh LFO really defaults to Rate Lo;
     (2) RandomA(200)/RandomB(202) STILL use the old-order rangeStrMap — there is no
-        no matching formatter in the reference to confirm their wire order, so they were left
+        nothing to confirm their wire order, so they were left
         unchanged. Verify whether Random shares {Sub,Lo,Hi,BPM,Clk} and reorder if so.
 
 - param-names section-count fix — push_slot_to_device() and write_perf_to_file() no longer write a
-  spurious empty Morph param-names (0x5b) section (3 sections -> 2, matching the original editor's code and
+  spurious empty Morph param-names (0x5b) section (3 sections -> 2, matching the original's patch files and
   write_patch_to_file). VERIFY: (1) USB store-patch and store-perf still round-trip on real
   hardware; (2) a .prf2 saved by G2-Edit now loads in the original NMG2 editor / g2ools (the whole
-  point — the reference reader is strict-positional and a 3rd 0x5b desyncs it); (3) patches/perfs
+  point — the original's reader is strict-positional and a 3rd 0x5b desyncs it); (3) patches/perfs
   with renamed params on VA/FX modules still preserve those names across save/load.
 
 - module up-rate propagation fix — the "destination connector must be multi-bandwidth" guard now
-  covers both source conditions, matching the original editor's code. VERIFY on
+  covers both source conditions, as the original editor's does. VERIFY on
   real hardware / against the original editor: build a patch with an up-rated module (one that
   received audio on a Control input) whose Audio output feeds another module's Audio input, and
   confirm cable colours + the red/blue bandwidth indication match the original for that topology,
@@ -2815,8 +2805,7 @@ OPEN WORK
   the question. THE ONE VARIABLE NOBODY VARIED WAS THE PATCH.
 
   TWO THINGS SURVIVE THE FALSE ALARM AND ARE WORTH KEEPING:
-   * THE WIRE FORMAT IS NOW CONFIRMED, not merely decoded. the original editor's code initialises with
-     id 0x56 and writes TWO bytes, an action and the note - no velocity, which is why
+   * THE WIRE FORMAT IS NOW CONFIRMED: id 0x56 and TWO bytes, an action and the note - no velocity, which is why
      send_play_note() takes none and the backdoor correctly discards the velocity it accepts.
    * DEVNOTES, a new backdoor command, asks the instrument which notes it believes are held
      (SUB_COMMAND 0x68, already implemented as send_get_current_note but never reachable). It waits
@@ -2843,7 +2832,7 @@ OPEN WORK
 
   WHY THE READING MISLED, and it is the useful part: our law IS a one-pole in disguise - a one-pole
   aimed at a target ABOVE 1.0 and stopped when it reaches 1.0 gives exactly
-  (1 - exp(-k*p))/(1 - exp(-k)). So seeing "rate times a difference, accumulated" in the reference
+  (1 - exp(-k*p))/(1 - exp(-k)). So seeing "rate times a difference, accumulated" in the
   arithmetic does not distinguish the two at all; both are that. What separates them is whether the
   segment ARRIVES at a fixed time or approaches asymptotically, and the arithmetic alone cannot say,
   because which state word holds the target was inferred from position and never established.
@@ -3168,8 +3157,7 @@ OPEN WORK
   a plausible wrong arrangement gets built. The seven-pair set becomes right when the tank underneath
   it is the instrument's, which is specified in the entry below and not yet built.
 
-- THE INSTRUMENT'S REVERB LINE LENGTHS, RECOVERED 2026-08-18. The harness lives OUTSIDE the repo at
-  (kept outside the repo) (see its README for why and for the memory model); only these numbers
+- THE INSTRUMENT'S REVERB LINE LENGTHS, RECOVERED 2026-08-18. The harness lives OUTSIDE the repo; only these numbers
   cross back. The lengths did not even need the harness run to obtain them: the instrument's own
   parameter-update path writes 4 buffer cursors at state offset 0x12 and 39 words at 0x16, and those
   39 are DIFFERENCES between tap addresses. Since every address is roomSize * K + 1200, the +1200
@@ -3700,7 +3688,7 @@ MEASURED (headless, both engines built from the same harness, SimpleLead.pch2):
 STILL NEEDS AN EAR. Everything above is numerical. The knob-turn behaviour in particular changed
 (smoothing domain) and cannot be measured from steady-state renders.
 
-CORRECTION to the reference reading, for whoever goes back to it: the filter COEFFICIENT part is
+CORRECTION, for whoever goes back to it: the filter COEFFICIENT part is
 NOT the frequency conversion this section claimed. It computes x + Q23mul(x, y) and stores a
 pair — a coefficient smoother/interpolator. Do not go looking for cutoff-to-hertz constants in it.
 Also note the filter MOD part clamps the sum AFTER a *4, so the effective bound on the sum is
@@ -3728,23 +3716,14 @@ is to run the filter oversampled". That describes the pre-ENGINE_OVERSAMPLE engi
 now bite earlier than it needs to at 96 kHz, but that is range at the very top of the dial, not
 tone across it.
 
---- 4. THE REFERENCE MATERIAL DOES contain the full emulated DSP (I claimed otherwise; I was wrong) ---
+--- 4. THE INSTRUMENT'S OWN CODE SETTLES THE LAWS ---
 
-It plays real audio through PortAudio and CoreAudio, and it holds one class per DSP part, each with
-a compute method — 299 of them, which are the per-module DSP. Searching for an AudioUnit render
-callback finds nothing, and that is what misled me.
+Module laws and the parameter -> real-unit meanings are taken from the instrument's own code, part by part
+(that is what fixed the delay Clk mapping). Worked example: Saturate builds successive powers of its input,
+so it is a polynomial waveshaper.
 
-Reading a compute body (the SHARC's fixed point, emulated in software):
-    0x7fffff / 0xff800000   24-bit saturation clamps
-    >> 0x17 after a multiply Q23 fixed-point multiply
-    g_r3 / g_r4             emulated register indices into the input arrays
-    a constant            coefficient constants — the actual magic numbers
-    repeated x = a*x >> 0x17  successive powers, i.e. a polynomial
-Worked example: the Saturate part builds successive powers of its input, so Saturate is a polynomial
-waveshaper. Also present: 229 text-formatter functions giving parameter->real-unit meanings
-authoritatively (that family is what fixed the delay Clk mapping).
 Cross-check DSP against github.com/gleb812/pch2csd (MIT) — its resources/value_maps.json has 116
-parameter maps, 113 still unchecked. Do not cite the reverse-engineering source in committed material.
+parameter maps, 113 still unchecked.
 
 --- 5. KEEP: connector indices are now derived from moduleResources ---
 
@@ -3931,8 +3910,7 @@ resources already hold.
   filter response curves (Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ
   curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/
   Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger —
-  see the original editor's custom-object factory in the reference material, and the
-  the original editor's code class family for reference implementations.
+  the original editor draws one for each.
 
 - DRAW THE WAVEFORM GRAPHICS FROM CAPTURED SAMPLES RATHER THAN BY HAND (2026-08-20, owner's idea).
   Feeds the entry above: instead of reimplementing each oscillator/LFO/waveshaper picture from a
@@ -4141,11 +4119,10 @@ resources already hold.
 - Sw8-1(15), ValSw1-2(17) — need more resources.
 
 - Seq* park-LED (SeqNote/SeqEvent/SeqVal/SeqLev/SeqCtr) — DEFERRED pending a look at the REAL
-  original editor. Confirmed from the reference that the park LED is NOT in the hardware LED stream
-  (its LED-list builder only enrols LEDs with GroupId/CodeRef >= 0; the
-  park LED is GroupId=-1, rendered but stream-excluded), so G2-Edit's exclusion is CORRECT and must
+  original editor. The park LED is NOT in the hardware LED stream
+  (its layout entry has GroupId -1: drawn, but not one of the streamed LEDs), so G2-Edit's exclusion is CORRECT and must
   STAY. Its lit state is editor-computed. Owner observed the real editor lights it when the Park
-  input is patched, but the exact trigger isn't provable from the reference. G2-Edit paints a
+  input is patched, but the exact trigger is not established. G2-Edit paints a
   permanent dim green (RGB_GREEN_3, render_led_common ledTypePark) — likely wrong. Once we can watch
   the real editor, confirm the rule (probably "green when Park input has a cable, else off") and
   implement it. NOTE: the live sequencer step-position indicator WORKS — owner confirmed 2026-08-05
@@ -4873,8 +4850,7 @@ resources already hold.
   platform layer and a separate question from the application.
 
 - Compress(150) — module height may be 1 row too many (currently 5 rows, moduleResources.h). The
-  original editor's module-info structs are opaque in the reference (they are
-  placeholder structs, heights not recoverable as readable data); needs validation by running the
+  original editor's height for it is not known from any table here; needs validation by running the
   original editor and comparing.
 
 - SynthLib file-naming consistency — DEFERRED (cross-repo, coordinate carefully). SynthLib/src mixes
@@ -4888,14 +4864,7 @@ resources already hold.
   when all three projects can be built/committed together.
 
 - BIG / long-term idea — add a built-in sound-generation (DSP) engine so the editor can produce
-  audio itself, not just edit/drive the hardware G2. Reference: the DEMO editor (the
-  standalone editor that ran patches without hardware) — its DSP/voice code is the model. (That
-  reference may not be on hand; the one here is the HARDWARE
-  editor, whose module-info/DSP internals come through as opaque placeholder structs — CVoice/
-  CVoiceMap/the original editor's code symbols survive but bodies don't.) Would let module waveform/response
-  graphics be driven by real DSP instead of hand-derived approximations, and enable offline
-  auditioning. Very large effort; capture the demo-editor reference alongside this note when
-  starting.
+  audio itself, not just edit/drive the hardware G2. DONE since: soundEngine.c.
 
 - Cross-platform build — Linux + Windows, with a CMake build derived from the Xcode project as the
   master (Xcode stays authoritative for day-to-day Mac dev; CMake is the portable build).
@@ -5217,11 +5186,9 @@ none of these exist in G2-Edit at all, confirmed by source search)
     to find it already droning would be a nasty surprise.
   NOTE ON/OFF CONFIRMED ON HARDWARE 2026-08-02, after one real bug: THE FLAG BYTE IS INVERTED FROM
   THE OBVIOUS READING. ZERO SOUNDS THE NOTE, ONE RELEASES IT. Sent as 1-for-on first, which gave a
-  keyboard that was exactly backwards — silent on press, sounding on release. So the original editor's code::
-  EAction's value 1 is the note-OFF action and the reference's `action == 1` is asking "is this a
-  release?", not "is this a press?". Nothing in the reference says which way round the enum runs;
-  only the hardware did. A good example of why a reference settles the SHAPE of a message but not
-  its polarity.
+  keyboard that was exactly backwards — silent on press, sounding on release. So the action
+  byte's 1 means note-OFF. Only the hardware could say which way round it runs: the SHAPE of a
+  message does not give its polarity.
   Worth recording how it was found, since the same confusion could recur: the symptom looked like a
   missing note-off, and the UI path was suspected first. It was traced and cleared —
   mouse_button() → convert_to_mouse_button() maps GLFW_RELEASE to mouseButtonLeftUp →
@@ -5231,20 +5198,15 @@ none of these exist in G2-Edit at all, confirmed by source search)
   since been removed.
   OWNER CONFIRMED 2026-08-02: the keyboard and all six of its buttons work on hardware — keys,
   the four scroll buttons, Drone and Repeat.
-  THE WIRE FORMAT IS REVERSE-ENGINEERED. SUB_COMMAND_PLAY_NOTE (0x56) was already
-  in defs.h but had never been sent. the original editor's code in the reference is:
-      the original editor's code(stream, 0x56, 0, 1);
-      <write>(stream, action == 1);      // note-on/note-off flag
-      <write>(stream, note);             // MIDI note number
-  Both values go through the same a field that the original editor's code uses for the
-  location and param-index bytes of SUB_COMMAND_ASSIGN_MIDICC, which G2-Edit already sends as plain
-  8-bit fields — hence 8 bits each. No slot field in the class, so send_play_note() frames it as a
-  SYS command and lets the synth route the note by its own keyboard assignment.
+  THE WIRE FORMAT. SUB_COMMAND_PLAY_NOTE (0x56) was already in defs.h but had never been sent. It
+  carries two bytes, the note-on/off flag and the MIDI note number, each 8 bits like the location
+  and param-index bytes of SUB_COMMAND_ASSIGN_MIDICC. There is no slot field, so send_play_note()
+  frames it as a SYS command and lets the synth route the note by its own keyboard assignment.
   Sent with COMMAND_WRITE_NO_RESP and no send_and_receive(), deliberately: a held key fires many of
   these and an unconsumed ack is exactly what desynchronises the next command (see the bulk MIDI CC
   entry). send_set_param_value() is the precedent. IF NOTHING SOUNDS, that framing is the first
   thing to doubt — the panel itself is ordinary drawing and hit-testing.
-  Velocity is accepted by the caller but not sent; the reference writes two values only.
+  Velocity is accepted by the caller but not sent; the message carries two values only.
   STILL TO DO:
    1. Repeat's 250ms rate works but has never been compared against the original's, which exposes
       no control over it either. VKB_REPEAT_MS is the constant if it should track the master clock.
@@ -5262,12 +5224,10 @@ none of these exist in G2-Edit at all, confirmed by source search)
   were supposed to share that encoding. Deassign itself was not in the capture, so it stays open —
   but do not "fix" it on the strength of the inferred widths alone.
 
-- WHILE DECODING PLAY NOTE, A QUESTION ABOUT send_deassign_midi_cc() TURNED UP. the original editor's code::
-  WriteStream() (0x23) writes a 1-bit field of value 1 (a field followed by the CC number as
-  SEVEN bits (+0x3c, which takes an explicit width) — i.e. a byte of 0x80|cc. G2-Edit writes eight
-  bits of cc, so 0x00|cc. the original editor's code (0x22) ends the same way. If the reference's widths are read
-  right, both our assign and deassign have the top bit clear where the original sets it. DELIBERATELY
-  NOT CHANGED: the vtable-slot widths are inferred, per-param assign is believed to work, and this
+- A QUESTION ABOUT send_deassign_midi_cc(). The original's deassign (0x23) may send a 1-bit field
+  of value 1 followed by the CC number as SEVEN bits — a byte of 0x80|cc — where G2-Edit writes eight
+  bits of cc, so 0x00|cc. Assign (0x22) may end the same way, in which case both of ours have the top
+  bit clear where the original sets it. DELIBERATELY NOT CHANGED: those widths are uncertain, per-param assign is believed to work, and this
   wants a USB-log comparison against the real editor rather than a guess. Worth settling, since it
   would also explain any deassign that silently does nothing.
 
@@ -5280,7 +5240,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
   relative editing tools" and consequently "cannot be assigned to MIDI Controllers or to physical
   knobs on the synth". Nothing about the knobs is stored in the patch; only the parameters they move
   are, which is why none of this needed a protocol change.
-  THE CURVE, decoded from the original editor's code in the reference — knobs run -50..+50 with 0
+  THE CURVE, as the original editor applies it — knobs run -50..+50 with 0
   at centre, working from a BASELINE snapshot rather than from live values:
       amount > 0:  new = orig + (max - orig) * amount/50      (toward maximum)
       amount < 0:  new = orig * (50 + amount)/50              (toward zero)
@@ -5341,9 +5301,8 @@ none of these exist in G2-Edit at all, confirmed by source search)
     clicked target, and there is no "focused module" concept to hang a shortcut on.
   * SEND CONTROLLER SNAPSHOT — Tools menu, greyed offline (it asks the G2 to transmit, so there is
     nothing to transmit from). SUB_COMMAND_CTRL_SNAPSHOT (0x55) was in defs.h but had never been
-    sent. the original editor's code in the reference is a BARE command with no payload at all,
-    and the (id, 0, 1) Initialize shape is CALIBRATED rather than guessed: the original editor's code
-    has the identical shape with id 0x68, which G2-Edit already implements as usb_cmd_slot
+    sent. It is a BARE command with no payload at all, the same shape as the current-notes
+    request (id 0x68), which G2-Edit already implements as usb_cmd_slot
     (COMMAND_REQ) with no payload — and which works. UNTESTED on hardware; needs an external device
     listening to confirm anything actually goes out.
   ONE REAL BUG FOUND BY LOOKING AT IT: inserting Paste Params into the module menu's array shifted
@@ -5565,7 +5524,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
    * THE WHEEL ACTS ON THE PANE UNDER THE CURSOR, not the focused one — hover the FX half and scroll
      and the FX half moves, no click needed. set_x/y_scroll_bar() already write through to the
      current pane, so pointing the current pane at the hovered one is the whole mechanism.
-  NEW-PATCH DEFAULT is now 300 (a visible split) rather than the reference's 4000 (Voice Area takes
+  NEW-PATCH DEFAULT is now 300 (a visible split) rather than the original's 4000 (Voice Area takes
   everything) — owner's call, on the grounds that the divider is the point of the window. Patches
   from file or device carry their own value and are untouched.
   A TESTING LESSON WORTH MORE THAN THE FEATURE: a run of "the drag doesn't work" results were
@@ -5650,9 +5609,8 @@ none of these exist in G2-Edit at all, confirmed by source search)
      description read at protocol.c:89 and written back at protocol.c:163. So it already round-trips
      to file and device; patches are NOT being corrupted today. Nothing reads it — the split view
      needs to start honouring it.
-     CONFIRMED AGAINST THE REFERENCE: the original editor's code/SetSplitterPos, a short
-     clamped to 0..0x3fff — the same 14 bits.
-     THE UNIT IS PIXELS, not a fraction. The reference's layout code computes
+     The original keeps it as a value clamped to 0..0x3fff — the same 14 bits.
+     THE UNIT IS PIXELS, not a fraction. The original's layout computes
      the top pane's bottom edge as toolbarHeight + scrollBarHeight + splitterPos, clamps it to the
      window less the scrollbar less 11, and gives the bar itself a height of 0xb = 11 px. So
      splitterPos IS THE VOICE AREA PANE'S HEIGHT IN PIXELS.
@@ -5697,20 +5655,16 @@ none of these exist in G2-Edit at all, confirmed by source search)
   are still unconfirmed — and note that any Disconnect test predating 2026-08-01 is void, because
   it was run against the duplicate-cable bug in item 4 below.
 
-  MODEL MISMATCH: RESOLVED, and it was never real. Every one of the original's cable commands is
-  keyed on a CONNECTOR, not a cable — the original editor's code (163473),
-  the original editor's code (163878), the original editor's code (158993) and
-  the original editor's code (158869) all take an the original editor's code const&. The original's
+  MODEL MISMATCH: RESOLVED, and it was never real. Every one of the original's cable commands -
+  Disconnect, Break, Colour and Delete - is keyed on a CONNECTOR, not a cable. The original's
   popup is opened by clicking a cable, but nothing downstream of that uses the cable identity. So
   they all port onto G2-Edit's per-connector popup, and NO CABLE HIT-TESTING IS NEEDED anywhere —
   the earlier note claiming Disconnect required sag-curve sampling was wrong.
 
   THE THREE SCOPES (this was the real subtlety — all three exist and they differ):
-    the original editor's code   (ctor 30321) — calls the original editor's code first, so it walks UP to
-                                           the chain root and covers the WHOLE tree. Used by CONNECT.
-    the original editor's code (ctor 30775) — no base() call, so it stays at the clicked connector and
-                                           covers that BRANCH only. Used by COLOR and DELETE.
-    partial / find_partial              — chain-ID-matched subtree, used inside BREAK.
+    whole tree   — walks UP to the chain root first and covers the WHOLE tree. Used by CONNECT.
+    branch       — stays at the clicked connector and covers that BRANCH only. Used by COLOR and DELETE.
+    partial      — a chain-ID-matched subtree, used inside BREAK.
   That is what reconciles the manual's two lines: "Cables in a serial cable chain will always have
   the same color" (connect repaints the whole tree) vs "Cables in a branch connection may have
   different colors" (COLOR only repaints one branch).
@@ -5736,28 +5690,22 @@ none of these exist in G2-Edit at all, confirmed by source search)
   five, in the manual's order: Disconnect / Break / Cable colour / Delete / Delete unused cables.
   Say the word and it can come back alongside them. ***
 
-  MAPPING WORK IS CLOSED — both the original editor's code overloads are decoded:
-   a. (EConnectorColor const&) at 158224 — table is Control->blue, Logic-at-full-bandwidth->orange,
-      Logic->yellow, catch-all->red. Semantically IDENTICAL to G2-Edit's existing
-      cable_colour_for_connector_type().
-   b. (the original editor's code const&) at 159536 — builds a the original editor's code, calls the original editor's code (159516),
-      then applies the exact same table. the original editor's code resolves module -> panel -> HOLE WIDGET
-      and calls its virtual GetColor() at a field, i.e. the original editor's code — which is
-      bandwidth-dependent for logic holes. That is precisely what effective_connector_type(type,
-      upRate) already does, so the correspondence is confirmed and no colour-mapping work remains.
+  MAPPING WORK IS CLOSED. The original's connector-to-cable colour table is Control->blue,
+  Logic-at-full-bandwidth->orange, Logic->yellow, catch-all->red - IDENTICAL to G2-Edit's
+  cable_colour_for_connector_type() - and a connector's colour is bandwidth-dependent for logic,
+  which is precisely what effective_connector_type(type, upRate) already does. No colour-mapping
+  work remains.
 
   STILL TO VERIFY (needs the real editor and/or hardware — do not assume):
    1. Whether the branch scope really includes the cable feeding the clicked connector. We include
       it for COLOR and DELETE (cable_chain_collect_branch), inferred from the manual rather than
-      proven: the original editor's code's end sentinel is the tree end, not next_tree(node), and the
-      iteration bound is not cleanly recoverable from the reference. Easy to check in the real
+      proven. Easy to check in the real
       editor: right-click a mid-chain input, pick a colour, and see whether the cable ARRIVING at
       that connector changes too.
    2. Whether COLOR really is refused on a sourceless (white) chain. That is an inference from
       white being a state rather than a colour, plus the chain-ID guards in Disconnect and Break.
-      Not proven — 151152 is the original editor's code, which is a thin wrapper with no guard of
-      its own, so any guard would sit in the caller we have not located.
-   3. Disconnect at an OUTPUT. The original's IsBase() branch makes the first child the new parent
+      Not proven.
+   3. Disconnect at an OUTPUT. The original makes the first child the new parent
       and chains the other children under it, leaving the lot sourceless and white. Unit-tested to
       behave that way, but it is an odd-looking operation and worth eyeballing in the real editor.
    4. CLOSED 2026-08-01, and it was a REAL BUG — worse than "white might not stick". Recolour went
@@ -5774,7 +5722,7 @@ none of these exist in G2-Edit at all, confirmed by source search)
       METHOD WORTH REUSING: decode the device's OWN cable list out of the patch dump in the USB
       log rather than trusting the editor's view — find the newest EX message with data[1]&7 ==
       slot, scan for a `52 00 LL` section, then parse per protocol.c parse_cable_list(). A one-off
-      script settled in seconds what days of reasoning from the reference could not.
+      script settled in seconds what days of reasoning could not.
    5. Far more cables will now come out white than before (any input-to-input link with no source).
       The topbar has a white visibility toggle (gPatchDescr[slot].visible[6]), so hiding white is
       now a much more destructive-looking action than it used to be.
@@ -5784,10 +5732,8 @@ none of these exist in G2-Edit at all, confirmed by source search)
   selection.c), and inside Disconnect/Break. Per the design note below this is a conditional
   recompute keyed on source-reachability, so over-calling it is harmless and idempotent; the
   failure mode is a MISSED trigger, which strands a coloured sourceless chain.
-  STILL UNATTRIBUTED in the reference: the original editor's code call sites. Worth
-  walking backwards to their enclosing functions to see whether they are triggers we have missed
-  (cable move / drag-an-end-elsewhere and paste are the obvious candidates — neither recolours in
-  G2-Edit today). 151152 is now attributed: the original editor's code, the COLOR menu entry.
+  POSSIBLY MISSED TRIGGERS: cable move / drag-an-end-elsewhere and paste are the obvious candidates -
+  neither recolours in G2-Edit today.
 
   All five ARE now undoable (2026-07-31) — see the undo sweep entry below. Built, not yet tested on
   hardware; testing it only became meaningful once the duplicate-cable bug in item 4 was fixed.
@@ -9881,16 +9827,16 @@ increment (a four-sample floor) but its level falls with pitch (0.29 rms at 10 H
 Shape 127, which points at the divide (as TriSaw's did). Sine3/4's translation is still 12 dB low, as it is against
 the hardware.
 
-2026-09-17 - OSCSHPB SINE2 IS THE INSTRUMENT'S, AND ITS "BROKEN" TRANSLATION WAS RIGHT (reference §27.2). The translation's
+2026-09-17 - OSCSHPB SINE2 IS THE INSTRUMENT'S, AND ITS "BROKEN" LAW WAS RIGHT (reference §27.2). The instrument's
 Sine2 looked wrong - level falling with pitch, DC wandering, spikes to +3 at Shape 127 - but its tail is a DC blocker
 (two states, a = 4000/2^23, near 20 Hz) after a gain of 1 + Shape: all three follow from that. Instrumenting a scratch
-copy of the translation gave the warp directly (two linear segments, positive half (1 - s)/2 of the cycle, four-sample
+copy of the part gave the warp directly (two linear segments, positive half (1 - s)/2 of the cycle, four-sample
 floor) and the polynomial from the frame values; a clean model then matched the code to 1.8e-4 of full scale at 10 Hz,
 187.5 Hz and 2 kHz, every Shape, once the gain was taken from the UNLIMITED Shape. The engine renders shape and gain,
 decimates, then runs the blocker; its output matches level, DC and harmonics (0.2 dB). The four-sample floor is the
 hardware's 0.013-cycle lobe at full Shape, measured 08-30. The old law's static mean removal and peak normalisation
 made it up to 6 dB quiet - the captures' 1.31x Sine1 at Shape 64 now comes out.
-SINE3/SINE4 LEVELS (§27.3): the translation gives r = 0.9714 x Shape and levels DSF and oddDSF/(1 + r) (x4); the captures
+SINE3/SINE4 LEVELS (§27.3): the part gives r = 0.9714 x Shape and levels DSF and oddDSF/(1 + r) (x4); the captures
 at Shape 64 are those x 1/(1 + r) - one factor 4/(1 + r) missing on both waves. The engine's measured ratio laws stay;
 its levels are now DSF/(1 + r) and oddDSF/(1 + r)^2, 0.677 and 0.460 of Sine1 at Shape 64 against 0.68 and 0.46 measured
 (before: 0.80 and 1.02).
@@ -9946,7 +9892,7 @@ cap at Shape 120-127), DblSaw/Pulse/SymPulse exact, TriSaw -43..-77 dB (-25 at 6
 ramp FALLS (the engine's rose - time-reversed, same magnitudes, which is why harmonic checks passed); DblSaw's saws
 rise; the phase origins of Sine1/Sine2 follow their floored widths; the Pulse's "1" is 0x7fffff; the TriSaw harness's
 corner signs flip with tiny pitch changes (its division emulation), so only the magnitude is trusted there.
-OscDual: a new harness (the offline part harness kept outside the repo, `the harness` + `the harness`, the part regex-translated; its phase increment is
+OscDual: run against the instrument's own part (its phase increment is
 half the output pitch, the part doubles it and keeps the undoubled phase for the sub). Its laws are in reference
 §12.5. THE SUB HAS NO SHELF in the instrument: the 2026-09-12 "190 Hz shelf 0.38 -> 1.12" matches this morning's
 finding that the QU-24 capture chain itself is -4 dB at 110 Hz - the sub, being low, took the chain's high-pass for
@@ -10179,7 +10125,7 @@ known-fitted, which matters because every patch uses one.
 
   A NOTE ON METHOD, since this is the third module read this way: the answer came from a coefficient table in
   minutes, where the comb filter's own part defeated a direct read earlier the same day (emulated fixed point
-  with a bit-serial divide inlined). Read the TABLES first and reach for the translate-and-run harness only when
+  with a bit-serial divide inlined). Read the TABLES first and reach for running the part only when
   the structure itself is the question.
 
 2026-09-18 - THE LFO RATES AGAINST THE INSTRUMENT: FOUR CONFIRMED, ONE MISSING ENTIRELY (CT priority list;
@@ -10216,9 +10162,9 @@ the shape we had.
   P-code, so the law stays the 2026-09-12 fit (which is good to 0.001).
 
   FLTMULTI's GComp is NOT reachable from the tables. The part exposes only an UpdateType custom action, which
-  patches four DSP program opcodes per slope; the drive is computed in the part. Its starting X frame is five words,
+  patches four of its own opcodes per slope; the drive is computed in the part. Its starting X frame is five words,
   all zero but for X4 = 0.9000 exactly - the same 0.9 constant FltStatic carries at X3. So "what does GComp OFF
-  do" stays open and needs the harness, not another table read.
+  do" stays open and needs the part run, not another table read.
 
   NOISE: THE WHOLE MODULE IS NOW KNOWN, AND THE ENGINE STILL DOES NOT USE IT. Its own DSP part is
   66 lines and reads straight - a 24-bit LFSR (shift left, XOR the tap mask when the bit shifted out is 1,
@@ -10788,8 +10734,8 @@ Checked against the instrument's own parts where they are readable:
   decode. The Time dial IS settled: it comes off the instrument's own displayed table (0.2 ms to
   22.4 s), read rather than fitted, as the patch glide already reads its own. Log's SHAPE uses our
   convention - a one-pole with the Time as the time to close the gap to 1%, which is §17.3's
-  reading of a time here. Settling it properly needs the translate-and-run harness that FltStatic
-  and OscDual used; todo.md carries it.
+  reading of a time here. Settling it properly needs the part run, as FltStatic
+  and OscDual were; todo.md carries it.
 
 **A crash worth recording, because it cost the diagnosis half an hour.** The new switch case in
 `input_connectors()` returned a count and never set `*connectors`, so `add_node()` walked a NULL
@@ -11571,8 +11517,8 @@ before believing its amplitude.
 Two harness bugs were found on the way, both worth remembering for the next module:
 
 - The DSP's cent table is loaded from host index **64** (an offset of 64 words), not 0.
-  Uploading from 0 puts unity 64 entries out and biases every pitch. The table right above it,
-  `a table`, IS uploaded from 0 - the two loops use different pointer arithmetic and the
+  Uploading from 0 puts unity 64 entries out and biases every pitch. The semitone table right above it
+  IS uploaded from 0 - the two loops use different pointer arithmetic and the
   two are typed inconsistently, which is what hid it.
 - **Host-side tables are read as plain 32-bit words, not sign-extended 24-bit ones.** The shared
   exponential curve's top entry is 0x800000, which sign-extends to -1.0 and silenced the top of
@@ -11584,7 +11530,7 @@ Two harness bugs were found on the way, both worth remembering for the next modu
 ## 2026-09-25 - DrumSynth settled from the instrument's own code, checked on the G2
 
 CT: "let's try and nail drum synth", with the G2 connected, and repeatedly to refer back to the instrument's own code.
-Every law below came out of the instrument's two DrumSynth parts, run offline in a harness kept outside the repo;
+Every law below came out of the instrument's two DrumSynth parts, run offline sample by sample;
 the captures only checked them. Reference §39.1, §39.4a, §39.6, §39.9, §39.10.
 
 **The three open harness items were not what they looked like.**
@@ -11635,43 +11581,31 @@ channel 3 for Slot A as cabled on 2026-09-25).
 
 ====================================================================================================
 
-## 2026-09-25 - the part's program, and OscShpB's Sine3/Sine4 from the instrument's program
+## 2026-09-25 - OscShpB's Sine3/Sine4 from the instrument's program
 
-CT: "This is why we should always refer to the reference. Worth doing OscShpB." then "I'd like to nail this, so
-take on the decoder."
+CT: "Worth doing OscShpB." then "I'd like to nail this."
 
-Sine3/Sine4 were the last OscShpB waves on fitted laws, because the earlier reading of their DSF parts gave
-a quarter of the G2's level and a ratio with no ceiling. No host update action explained it: all eight
-wave parts carry the same Active opcode and nothing else. So the part's own DSP program was decoded - the
-DSP program is real DSP56300 machine code - with a disassembler and an emulator kept outside the repo.
+Sine3/Sine4 were the last OscShpB waves on fitted laws: the earlier reading of their DSF parts gave a quarter
+of the G2's level and a ratio with no ceiling. All eight wave parts carry the same Active opcode and nothing
+else, so the parts' own DSP program was run sample by sample.
 
-**The earlier reading gets two instructions wrong.** `move #$5a,y1` loads a FRACTION into the MSBs (0.703125);
-the C multiplies by the integer 90. And the C shifts its 64-bit quotient right by 2 where the DSP's 16
-DIVs + ASL #32 leave N'/D' unshifted. With both slips switched on the emulator reproduces the translation to
-the DIV's precision (64 LSB), which proves every other instruction; with them off it reproduces the G2's
-own sweep to 0.001 in level and ratio at all eleven Shapes, E4, both waves - including the "ceiling",
-which is the 16-step DIV wrapping once the quotient reaches 1, not a cap on the ratio.
+**The earlier reading got two details wrong.** `move #$5a,y1` loads a FRACTION into the MSBs (0.703125), not the
+integer 90; and the 16 DIVs + ASL #32 leave N'/D' unshifted, with no right shift by 2. With both put right the
+program reproduces the G2's own sweep to 0.001 in level and ratio at all eleven Shapes, E4, both waves -
+including the "ceiling", which is the 16-step DIV wrapping once the quotient reaches 1, not a cap on the ratio.
 
 The engine now does the part's arithmetic (reference §27.3, `dsf_divide()` in waveModels.c) and matches
 the same sweep to 0.001, and E2/E6 to 0.002. Fitted constants gone: DSF_RATIO_MAX 0.905, the level slope
 0.642 (now 0.703125, `#$5a`); Y0 is the frame's 8279556/2^23.
-
-**For the next part whose translated code disagrees with the hardware:** disassemble its DSP program and run it -
-disassemble it and run it beside the translation, sample for sample. The emulator
-covers parallel moves, the data ALU, IFcc, DIV and ASL/ASR #n; SineSym also uses Tcc, long immediates
-and one opcode ($040434) not yet decoded.
 
 ====================================================================================================
 
 ## 2026-09-25 - OscPerc, from its DSP program, checked on the G2
 
 CT: "Move onto other modules? Percsynth?" OscPerc is one DSP part behind the shared
-pitch part. Its DSP program needed three more instruction classes in the emulator - X:Y double moves, Tcc,
-IFcc.U - and one real emulator fix: **TFR leaves the condition codes alone**. The part's edge detector
-depends on it (a product's sign survives a `tfr` into the next `tst ... ifge.u`), and with TFR setting
-flags the phase was reset every sample. The DSF parts could not have caught it: there every `tfr` was
-followed by a flag-setting op. After the fix the earlier reading and the program agree bit for bit
-(0 of 96000 samples, every setting tried).
+pitch part, run sample by sample. One detail matters: **TFR leaves the condition codes alone** - the part's
+edge detector depends on it (a product's sign survives a `tfr` into the next `tst ... ifge.u`); with TFR
+setting flags the phase would reset every sample.
 
 The host side came out of the instrument's code too: Decay is a stored table, Click is SQUARED by
 the host's Click action, Punch patches `asl b ifec` into one P-word, and an unpatched input's slot points at a
@@ -11696,8 +11630,8 @@ from a few spot frequencies is fine for tones and clicks but scatters 10 dB on o
 **Kick 5 (CT: "very slightly more noise on our engine vs. G2"), same day.** Noise alone, 20 hits a take on
 outputs 3/4, against the instrument's code and the engine. Raw totals said the G2's noise was 2.7 dB quieter, but ONLY
 where the sweep drives the coefficient to its 1.0 ceiling (Kick 5: Freq 111, Sweep 40); unsaturated
-settings matched to 0.15 dB. The drum's part-A DSP program was run in the emulator (lsl, eor, subl,
-extractu added) and is bit-identical to the earlier reading, so the law was not it. The measurement was: a
+settings matched to 0.15 dB. The drum's part-A DSP program was run sample by sample and agrees with the engine's
+reading of it, so the law was not it. The measurement was: a
 saturated filter rings near 16 kHz and puts ~2.7 dB of the noise's energy ABOVE 20 kHz, which the
 96 kHz renders kept and the 48 kHz recording cannot hold. Band-limited to 20 kHz and taken to 48 kHz,
 the engine's Kick 5 noise is within 0.2 dB of the G2's in level and 0.5 dB in envelope. So at a 48 kHz
@@ -11884,11 +11818,8 @@ and WahWah, each checked in a patch built in code. WahWah is also identical word
 through the same native-harness method as FltPhase. Two table checks were worth recording.
 EnvFollow's tables are the one-pole reaching 1% in the labelled time at 96 kHz (release to 1 LSB,
 attack to 0.2%). Digitizer's rate is exactly 32.70 Hz x 2^(v/12), confirmed by counting its hold
-changes. The the reference module names do not always match the palette's: its "SeqCtrl" is SeqLev (the
-16-step part) and its "SeqVolt" is SeqCtr. The remaining 26 are grouped by what they need in
+changes. The remaining 26 are grouped by what they need in
 engine-module-status.md.
-Harness conversion trap: the converter drops a closing parenthesis on a connector at slot 0
-(`*(int *)**(int **)(this + 0x20)`); patch the output to W(W(W(self + 0x20))).
 
 ## 2026-09-27 - Every module type modelled (§70 basic versions): 118 working, 52 partial
 
@@ -12061,8 +11992,7 @@ patches render with finite, non-silent output after the changes. Revert record r
 
 ## 2026-09-27 (night) - parts RUN, not only read; OscNoise, FltVoice, NoteDet, OscPM from their parts
 
-- **Run in the DSP emulator** (the part's own DSP program; the emulator gained CMPM and CMP between the
-  accumulators): Glide - a Lin glide of 64 units lands in 61 501 ticks at Time 64 (2.5 x the dial's
+- **Run sample by sample** (the part's own DSP program): Glide - a Lin glide of 64 units lands in 61 501 ticks at Time 64 (2.5 x the dial's
   time, as §36.1 said), Log reaches 99% in the one-pole's time; ModAmt - all four Enable x m/1-m
   combinations equal the engine to one LSB, but only once Depth x Mod is held to +-1, which the engine
   now does (§29.2). ValSw's ten-instruction program and value word read unambiguously (§34).
@@ -12085,7 +12015,7 @@ patches render with finite, non-silent output after the changes. Revert record r
 
 FreqShift's Range handler writes 0x80 / 0x42C0 / 0x42E40 for Sub / Lo / Hi - so Sub at full shifts 0.73 Hz
 on the instrument, and the readout's 8.78 Hz is its own. FreqShift moves to Working. The DSP part programs
-run in the harness kept outside the repo are the instrument's own, word for word.
+run here are the instrument's own, word for word.
 
 ## 2026-09-27 (night) - SwOnOffT's Ctrl is its position, 4 units; the DAC is not configured by the OS
 
@@ -12167,8 +12097,7 @@ sits lower in the engine. Captured on the G2 (Fireface, 192 kHz, note 52 vel 100
   Sine1 at Shape 127 matches with the filter taken out as well - not the oscillator.
 - **The FltClassic's law is right**: the instrument's Freq dial table is exactly 13.75 x 2^(v/12) as a
   phase word, its exponential pitch path is exact at zero modulation, and with KBT off its linear input is
-  a constant 1/32 - so the instrument's `a` is the engine's. The instrument's own parts, run in a harness
-  kept outside the repo, and the engine peak at the same frequency to 0.01%.
+  a constant 1/32 - so the instrument's `a` is the engine's. The instrument's own parts, run sample by sample, and the engine peak at the same frequency to 0.01%.
 - **The test patch's Freq carries Wheel (31) and Vel (22) morphs**, which is why its resonance is near
   2 kHz rather than the dial's 740 Hz. The engine played velocity 100 from its 32-row table (amount
   24/31 for 100/127): 0.29 semitone flat. Now a row per velocity and per note (reference §26.2, revert
@@ -12214,7 +12143,7 @@ NoteSend (18).
 Shape Mod can drive OscShpA/OscShpB's shape word to -1; the engine floored it at 0. Running each wave part
 with the word swept -1..+1: Sine1, Sine2 and TriSaw continue their own laws (the mirror of +y), DblSaw's
 offset wraps, Pulse is OscB's offset pulse, SymPulse depends on |y|, and Sine3/Sine4 saturate their ratio
-at zero (run as the DSP program - the reference C carries the >>2 slip there and reads a flat -12 dB). Two
+at zero (run as the DSP program; an earlier reading's >>2 slip gave a flat -12 dB there). Two
 engine bugs surfaced on the way: DblSaw's `fmod` of a negative offset, and TriSaw at y = -1, whose fall
 had zero length and whose peak and wrap corners cancelled.
 

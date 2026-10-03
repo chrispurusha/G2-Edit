@@ -627,6 +627,8 @@ static double lfo_shape_dial(double v) {
 #define VOCODER_EMPHASIS_0         (0x5061f1)             // §70.8 - the pre-emphasis: 8 (e0 x - e1 e0 x[n-1])
 #define VOCODER_EMPHASIS_1         (0x4bd344)
 #define VOCODER_OUT_GAIN           (0x651eb8)             // §70.8 - the output converter's gain, then x 8
+#define LEVSCALER_SLOPE_MAX        (341.0)                // §70.12 - a Gain dial's word at full: 8.02 dB an octave
+#define DRIVER_TYPE_BOW            (1u)                   // §70.5 - Reed, Bow, -Lip-, -Mallet-
 #define MAX_PITCH_TRACKER_LINES    (4)                    // §70.7 - Pitch Trackers per patch; more read silence
 #define PD_RELEASE_FAST            (0x2746 / 8388608.0)   // §70.7 - the followers' first-stage release, a 96 kHz sample
 #define PD_RELEASE_GATE            (0x1a10 / 8388608.0)   // §70.7 - the gate follower's second stage
@@ -893,7 +895,7 @@ typedef enum {
     eNodePShift,         // §70.3 - PShift and Scratch: two crossfaded moving taps
     eNodeOscString,      // §70.4 - a tuned delay loop with decay and damping
     eNodeResonator,      // §70.4 - OscString's loop, with a pickup position
-    eNodeDriver,         // §70.5 - a soft nonlinearity
+    eNodeDriver,         // §70.5 - a reed or bow table between an excitation and a return
     eNodeNoiseGate,      // §70.6 - a follower opening a gate above the threshold
     eNodePitchTrack,     // §70.7 - PitchTrack and ZeroCnt: the period between rising zero crossings
     eNodeVocoder,        // §70.8 - sixteen analysis bands driving sixteen synthesis bands
@@ -10986,8 +10988,14 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
         }
         case moduleTypeDriver:
         {
-            bx[0] = param_value(module, variation, 0) / 127.0;   // §70.5 - Stiffness
-            bx[1] = param_value(module, variation, 1) / 127.0;   // Embouchure
+            // §70.5 - Stiffness and Embouchure as words (v/128, 127 full); Bow takes Embouchure / 16
+            double stiff = param_value(module, variation, 0);
+            double emb   = param_value(module, variation, 1);
+
+            node->select = module->mode[0].value;
+            bx[0]        = (module->param[variation][0].value >= 127) ? 1.0 : (stiff / 128.0);
+            bx[1]        = (module->param[variation][1].value >= 127) ? 1.0 : (emb / 128.0);
+            bx[1]       /= (node->select == DRIVER_TYPE_BOW) ? 16.0 : 1.0;
             break;
         }
         case moduleTypeNoiseGate:
@@ -11064,10 +11072,14 @@ static void basic_build(tEngineNode * node, tModule * module, uint32_t variation
         }
         case moduleTypeLevScaler:
         {
-            // §70.12 - L 0 and R 2 (-8..+8 dB an octave), BP 1 (a key), Kbt 3
-            bx[0] = 8.0 * (param_value(module, variation, 0) - 64.0) / 64.0;
-            bx[1] = param_value(module, variation, 1);
-            bx[2] = 8.0 * (param_value(module, variation, 2) - 64.0) / 64.0;
+            // §70.12 - L.Gain 0 and R.Gain 2 as the instrument's slope words, BrkPnt 1 in keys from E4, Kbt 3
+            double l  = param_value(module, variation, 0);
+            double bp = param_value(module, variation, 1);
+            double r  = param_value(module, variation, 2);
+
+            bx[0] = (l <= 0.0) ? LEVSCALER_SLOPE_MAX : (-LEVSCALER_SLOPE_MAX * (l - 64.0) / 63.0);
+            bx[1] = (module->param[variation][1].value >= 127) ? 64.0 : (bp - 64.0);
+            bx[2] = (r <= 0.0) ? -LEVSCALER_SLOPE_MAX : (LEVSCALER_SLOPE_MAX * (r - 64.0) / 63.0);
             bx[3] = (module->param[variation][3].value != 0);
             break;
         }
@@ -11822,14 +11834,37 @@ static double mux8x_step(const tEngineNode * spec, double ctrl, const double in[
 
 // §70.12 - LevScaler: dB = L x octaves below the breakpoint, or R x octaves above; Level is that gain
 // (1.0 = 64 units at 0 dB) and Out is In x it. The key is the voice's (Kbt) or the Note input (E4 = 0).
-static void lev_scaler_step(const tEngineNode * spec, double noteIn, double input, double voicePitch, double out[2]) {
-    double note = ((spec->bx[3] != 0.0) && (voicePitch >= 0.0)) ? voicePitch : (KEYBOARD_PITCH_ZERO + (noteIn * UNITS_PER_FULL_SCALE));
-    double oct  = (note - spec->bx[1]) / 12.0;
-    double db   = (oct < 0.0) ? (-spec->bx[0] * oct) : (spec->bx[2] * oct);
-    double gain = fmin(4.0, pow(10.0, db / 20.0));
+// §70.5 - Driver, in words (a quarter of an engine unit): In1 the excitation, In2 the return. Reed (and
+// Lip and Mallet, which share its part): r = Emb - 4 Stiff (In2 - In1), saturated, out = In1 + r (In2 - In1).
+// Bow: v = 8 Stiff |In1 - In2 + Emb|, saturated at 1, out = min(3 (1 - v)^3, 1) (In1 - In2).
+static double driver_step(const tEngineNode * spec, double in1, double in2) {
+    double b = in1 / DSP_FULL_SCALE;
+    double a = in2 / DSP_FULL_SCALE;
 
-    out[0] = gain;
-    out[1] = input * gain;
+    if (spec->select == DRIVER_TYPE_BOW) {
+        double v = fmin(8.0 * spec->bx[0] * fabs(b - a + spec->bx[1]), 1.0);
+        double f = fmin(3.0 * (1.0 - v) * (1.0 - v) * (1.0 - v), 1.0);
+
+        return dsp_saturate(f * (b - a) * DSP_FULL_SCALE);
+    }
+    double r = fmin(fmax(spec->bx[1] - (4.0 * spec->bx[0] * (a - b)), -1.0), 1.0);
+
+    return fmin(fmax(b + (r * (a - b)), -1.0), 1.0) * DSP_FULL_SCALE;
+}
+
+// §70.12 - the key (Note plus, with Kbt, the keyboard) less BrkPnt, in keys, times the slope word of its
+// side over 256 is a step of the semitone gain table (0.5 dB), clamped to -128..95; Level is that gain and
+// Out is In times it, both saturated
+static void lev_scaler_step(const tEngineNode * spec, double noteIn, double input, double voicePitch, double out[2]) {
+    double key   = (noteIn * UNITS_PER_FULL_SCALE)
+                   + (((spec->bx[3] != 0.0) && (voicePitch >= 0.0)) ? (voicePitch - KEYBOARD_PITCH_ZERO) : 0.0);
+    double d     = key - spec->bx[1];
+    double step  = fmin(fmax(d * ((d < 0.0) ? spec->bx[0] : spec->bx[2]) / 256.0, -128.0), 95.0);
+    double whole = floor(step);
+    double gain  = exp2(whole / 12.0) + ((step - whole) * (exp2((whole + 1.0) / 12.0) - exp2(whole / 12.0)));
+
+    out[0] = fmin(gain, DSP_FULL_SCALE);
+    out[1] = dsp_saturate(input * out[0]);
 }
 
 // §68.6 - both counters step on a rising Clk (above zero now, not before) and are held at zero while
@@ -12537,11 +12572,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeDriver:
         {
-            // §70.5 - a guess: the two inputs, the second weighted by Embouchure, through a tanh whose
-            // drive rises with Stiffness
-            double drive = 1.0 + (8.0 * spec->bx[0]);
-
-            value[n][0] = tanh((a + (signal_in(spec, value, 1) * (0.5 + spec->bx[1]))) * drive) / drive;
+            value[n][0] = driver_step(spec, a, signal_in(spec, value, 1));
             break;
         }
         case eNodeNoiseGate:

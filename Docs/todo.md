@@ -6,7 +6,7 @@ Built-but-unchecked work goes in to-test.md.
 
 General
 -
-- DEDICATED SESSION: Driver, Resonator and Level Scaler - settle their laws (all three still basic, engine-module-status.md)
+- NEXT SESSION: Resonator - settle its law (Driver and Level Scaler done 2026-10-03; engine-module-status.md)
 - Further investigation into voice stealing improvements.
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works anyhow.
@@ -69,7 +69,7 @@ MODULES AND GRAPHICS
 
 FILTERS
 - EqPeak/Eq3band deep wide cuts above ~1 kHz: the instrument's Chamberlin form is unstable there - measure what it actually does (§11.5)
-- FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs - NOT in the host tables (the part computes the drive; its starting X frame is all zeros but for a 0.9 at X4, as FltStatic's X3), so this needs the translate-and-run harness
+- FltMulti with GComp OFF is unmeasured (the engine takes the drive as unity), as are its Freq and Pitch inputs - NOT in the host tables (the part computes the drive; its starting X frame is all zeros but for a 0.9 at X4, as FltStatic's X3), so this needs the part run
 - FltComb: only two per patch sound in the engine (MAX_COMB_LINES), and at a 192 kHz engine rate the lowest octave of Freq is clamped (COMB_LINE_SAMPLES); FB Mod depth unmeasured
 - FltPhase: capture a Freq sweep, a Spread sweep and each Type at FB 96/112/127 - the graph's model is fitted at one Freq and its Spread law is a placeholder (paramCurves.c notes §40)
 - Audit for the other half of the FltStatic crash: a -1 "not present" index that some reader does not check
@@ -100,7 +100,7 @@ SOUND ENGINE
 - The engine costs ~2% of a core while SILENT (SimpleLead, no notes: 0.62 s CPU per 30 s, output all zero; a 4-voice chord is 2.2 s) - every instance on an idle track pays it. The time is the whole graph running: per-sample parameter smoothing of every node's 12 values, the voice loop, the reverb. A 'sleep when silent' mode (no voice sounding and the post-mix output below a floor for a second) would recover it, but must keep LFO and oscillator phase advancing and let effect tails finish - not a quick change. (Hoisting the per-sample exp() coefficients was tried 2026-09-11 and gained nothing: the compiler already does it)
 
 MEASUREMENT PROGRAMME
-- Finish the EnvADSR oracle at (kept outside the repo) it compiles and runs but outputs zero until the state-block layout and the time tables contents are worked out
+- Finish the EnvADSR oracle (kept outside the repo): it compiles and runs but outputs zero until the state-block layout and the time tables contents are worked out
 - Measure the rest of the instrument the way the reverb was: EQs, the remaining envelopes
 - Shaper group is IMPLEMENTED but only Rect and ShpStatic are known; capture a transfer curve for Clip, Overdrive, Saturate, ShpExp and WaveWrap - one slow full-scale ramp (or a low sine) per mode gives the ENTIRE curve, since all seven are memoryless
 - Confirm the shaper parameter and connector ORDER on the instrument: it was read off the layout tables, and WaveWrap's mod dial and Mod jack both come before its signal ones
@@ -118,7 +118,7 @@ PROTOCOL AND SECOND OPINIONS (each is a code comment needing hardware or a manua
 - usbComms.c:3650-3651, 3834, 3980, 4047 - open questions in comments
 - protocol.c:1759, mouseHandle.c:164 and :929, moduleGraphics.c:744/751/758, globalVars.c:87
 - moduleGraphics.c:685 - can Mode be morphed?
-- send_deassign_midi_cc(): the original editor's code (0x23) writes a 1-bit field we do not
+- send_deassign_midi_cc(): the original's deassign (0x23) may write a 1-bit field we do not
 - send_perf_mode_change() takes ~3 sends (500 ms retries) before the 0x1f response arrives
 - SUB_RESPONSE_PARAM_LIST (0x4d): confirm the fix in parse_command_response() is right
 
@@ -257,7 +257,7 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 ## Sound engine - open at 2026-09-14 (session cut short; see findings.md 2026-09-14 OSCSHPB entry)
 
 - DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
-- OscDual (§12.5): compare the new code sample for sample with the harness (the offline part harness kept outside the repo, `the harness`: note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
+- OscDual (§12.5): compare the new code sample for sample with the instrument's own part (note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
 - OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
 - DX FM depth (§14.3, a guess of 1 cycle per full-scale input): the Operators share OscPM's phase-mod part, which gives 8 cycles at full amount (§53) - decode the DXRouter's amount words and correct
 - Pulse ignores its Mode (Plus/Minus, §18)
