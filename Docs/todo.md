@@ -269,3 +269,4 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither
 - Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play
 - 03 Chris' Lead coverage left: OscShpB waves (above), native check of Mix4-1C/Mix4-1S
+- Plug-in Multi-threading on/off in its own menu, saved with the host project - low priority; the plug-in always splits today (sound-engine-notes §202)
