@@ -63,7 +63,6 @@ static const tGroupRow kGroups[] = {
 
 // Audible, but something about the law is still a guess; to-test.md carries each check.
 static const tPartialRow kPartial[] = {
-    {"Resonator",         "basic: a tuned loop; Alg and inputs guessed (§70.4a)"},
     {"NoteSend",          "plays this slot only; notes to other slots and MIDI are dropped (§62)"       },
     // §6.7, §28.4 - pieces of their jacks' laws not yet decoded
 };

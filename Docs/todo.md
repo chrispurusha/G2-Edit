@@ -6,7 +6,6 @@ Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
 -
-- NEXT SESSION: Resonator - settle its law (Driver and Level Scaler done 2026-10-03; engine-module-status.md)
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations.
 - Further investigation into voice stealing improvements.

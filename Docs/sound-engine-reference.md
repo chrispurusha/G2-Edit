@@ -2591,10 +2591,29 @@ been compared with the instrument yet.
     128-entry table within 0.1%. Decay 127 never decays; 64 keeps 0.936 a period, 0 keeps 0.0004.
   - **Damp moves the pitch.** The one-pole adds its own delay and nothing compensates for it: at Damp 64
     the string is about 1 sample long, +8 cents flat at A4 and +34 cents at A7.
-- **70.4a Resonator** (basic): a tuned loop, y = In + g x lowpass(y one period back), pitched as the
-  oscillators are (§6). Decay sets a T60 of 20 ms to 10 s and Damp the one-pole. The loop saturates at
-  the DSP's full scale. Out2 reads the loop at the Pos share of the period; Alg is not read. Its inputs
-  are taken as In, Pitch and PitchVar, which is a guess.
+- **70.4a Resonator** (the reference model, 2026-10-03). Two delay lines meeting at a junction, every
+  96 kHz sample, in words (a quarter of an engine unit); every stored word saturates.
+  - **Lengths.** The period is OscString's (96000/f samples, the oscillators' pitch dials); less six samples, it
+    is split Pos : 1 - Pos (Pos v/128, 127 = 1) between line 1 and line 2. Each line reads through a 4-point
+    Lagrange; with the averager's two samples the loop is exactly one period.
+  - **Junction.** Line 1 takes 0.97 (a L1 + b L2 + c Exc); line 2 takes Decay x four half-sample averages
+    ((1 + z^-1)/2 each) of the Damp one-pole of (d L2 + e L1 + f Exc). Decay and Damp are OscString's laws
+    (§70.4). The Alg sets a..f and the Out1 mix:
+
+    | Alg | a, b, c | d, e, f | Out1 |
+    |---|---|---|---|
+    | String1 | 0, 1, -1 | 0, 1, 1 | 0 |
+    | String2 | 0, -1, 1 | 0, -1, 1 | -(L1 + L2) |
+    | Tube1 | 0, -1, 0 | 0, 0, 1 | L1 |
+    | Tube2 | 0, 1, 0 | 1, 0, 1 | L1 - L2 |
+    | Tube3 | 1, 0, 1 | 1, 0, 1 | -(L1 + L2) |
+
+  - **Outputs.** Out1 is that mix of the two lines; Out2 is what enters line 2. Off zeroes both junction
+    outputs. In1 is the excitation; In2 and In3 are Pitch and PitchVar.
+  - **What it means.** The strings are one loop through both lines, with the excitation entering at the Pos
+    point in opposite senses - a pluck position: at Pos 64 the fundamental leads, nearer an end the higher
+    harmonics do. The tubes do NOT close their own loop (Tube1 has none): they are made to be driven by a
+    Driver whose return comes from Out1, which closes it.
 - **70.5 Driver** (the reference model, 2026-10-03). One stage per Type, all every 96 kHz sample, in
   words (a quarter of an engine unit). In1 is the excitation (breath pressure, bow velocity) and In2 the
   return from the resonator. Stiffness is v/128 and Embouchure v/128 (127 = 1 for both); Bow uses
