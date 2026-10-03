@@ -291,6 +291,7 @@ typedef struct {
     uint8_t target[DX_OPERATORS];   // bit k: modulates operator k + 1; no bits: a carrier
     uint8_t feedbackFrom;           // operator numbers, 1-6
     uint8_t feedbackTo;
+    uint8_t alsoMain;               // bit k: operator k + 1 is a carrier as well as a modulator
 } tDxAlgorithm;
 
 const tDxAlgorithm * dx_algorithm(uint32_t index);   // 0..31 is algorithm 1..32; out of range reads as 1

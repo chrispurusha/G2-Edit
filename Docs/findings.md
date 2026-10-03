@@ -12152,3 +12152,58 @@ Checked on the G2 the same day, every wave at nine settings (`G2Captures/oscshpb
 analysis searched f0 over 330-370 Hz with the oscillator at E4 (329.63 Hz); the argmax sat on the 330
 edge and the 0.3 Hz error read as a steep roll-off above the 8th harmonic - a 38 dB "defect" that was
 the analyser's.
+
+====================================================================================================
+
+## 2026-10-03 - OscDual's PW and Phase inputs were four times too strong; checked on the G2
+
+The engine applied the part's "4x the dial range" (PW) and "2x" (Phase) per ENGINE unit of input, but the part
+works in DSP words, a quarter of an engine unit: 4 x (dial + amount x input word). Per engine unit that is one
+PW dial range and half a cycle at full amount (reference §12.4, revert record row 127).
+
+Checked on the G2 with a scripted patch (OscDual -> 2-Out, a bipolar Constant into PW, then into Phase, Fireface
+input 5 at 192 kHz), and the same patch rendered in the engine:
+
+    Constant   PW: G2 duty   engine   old factor        Phase (+16 units): harmonics 2-8 vs G2
+    0 units    50.00%        49.99%   50%               new law within 0.15 dB
+    +8 units   56.24%        56.23%   75%               old factor up to 9.05 dB out
+    +16 units  62.54%        62.48%   100% (silent)
+
+TRAP worth remembering: the first Phase capture showed no change at all - the Constant was still cabled to the PW
+input from the run before. A null result from a patch edited between runs is a wiring check before it is a law.
+
+====================================================================================================
+
+## 2026-10-03 - Operator and DXRouter rebuilt from the instrument's own laws; checked on the G2
+
+Everything in reference §14 that was a DX7 stand-in is now the instrument's: the envelope (a log level
+stepped once a 24 kHz tick, its attack and decay words, the attack's shape), its amplitude curve, the
+level, keyboard-scaling, velocity and rate-scaling words, FM depth (3.27 cycles a unit, not 1), the
+feedback words by algorithm group (the source's last sample, no averaging), and the router's Main gain
+by algorithm. Revert record rows 128-133. The envelope was checked bit for bit against the
+instrument's program: 400 random settings, 11.9 million ticks, no level differs.
+
+On the G2 (scripted patches through the backdoor, Fireface input 5 at 192 kHz, the engine rendering
+the same saved patch; levels against a full-scale OscDual square captured and rendered alike):
+
+    envelope R1 50/L1 99, R2 40/L2 90, R3 30/L3 80, R4 50   peak to sustain 13 dB on both; segment
+                                                          times within one 50 ms window; release 66 dB/s
+    one Operator through Main, algorithm 1                G2 -8.8 dB, engine -8.45 dB re the square
+    2->1, modulator Level 60, 70, 80, 90                  carrier harmonics 1-10 within 0.2 dB
+    algorithm 2, Feedback 3, 5, 7                         harmonics 1-10 within 0.4 dB
+    L-Depth 60 -Exp, R-Depth 60 -Lin, keys 40/64/100      fundamental within 0.12 dB (100 is -41 dB)
+    RateScale 7, R2 30 to L2 0, keys 40 and 88            -30 dB at 1.91/1.92 s and 0.18/0.18 s
+    Level 100 / 110 / 127, L1-L3 127                      100 plays as 99; the others at the floor
+
+Algorithm 28 routes Operator 2 to Main as well as into Operator 1, and algorithms 16-18 store their
+Main level as the word 0x800000 (-1.0) - both the instrument's, both now in the engine.
+
+TRAPS worth remembering:
+- A patch begun with NEWPATCH has NO patch-settings module, and the engine read Octave Shift off the
+  dead module's zeroes: every note two octaves down (82 Hz for E4), and the first FM comparison looked
+  like no FM at all. Fixed - an inactive settings module now reads as no shift. Anything built in the
+  editor from New and played on the engine or the plug-in had this.
+- Broadband RMS cannot measure a level near the capture's floor (-47 dB re the square here): key 100
+  read 4.7 dB out until the fundamental's own bin was measured, which agreed to 0.02 dB.
+- A rate test that decays to L2 0 with L3 at 99 climbs straight back to L3: at fast rates the dip is
+  shorter than the analysis window and the capture looks like no decay at all.
