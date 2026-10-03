@@ -1960,50 +1960,57 @@ static void reverb_build(tEngineNode * node, uint32_t type, double timeDial, dou
     node->rvWet = fmin(top, trunc(wet * wet * RV_COEF)) / RV_COEF;
 }
 
-static double   gEnvLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gEnvLevel               (gEnvLevelBank[SE])
-static int32_t  gEnvQBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gEnvQ                   (gEnvQBank[SE])       // §17.3 - the level in the instrument's integers
-static double   gEnvTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
-#define gEnvTick                (gEnvTickBank[SE])
-// notes §61
-#define PARAM_SMOOTH_SECONDS    (0.008)
+static double     gEnvLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gEnvLevel             (gEnvLevelBank[SE])
+static int32_t    gEnvQBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gEnvQ                 (gEnvQBank[SE])         // §17.3 - the level in the instrument's integers
+static double     gEnvTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gEnvTick              (gEnvTickBank[SE])
+// notes §61 - a changed dial glides linearly to its new value over 128 steps of 94 samples (125 ms at
+// 96 kHz), and a new value restarts the glide from wherever it has got to
+#define PARAM_RAMP_SAMPLES    (128.0 * 94.0)
 
-static double   gSmoothShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
-#define gSmoothShape            (gSmoothShapeBank[SE])
-static double   gSmoothCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
-#define gSmoothCutoff           (gSmoothCutoffBank[SE])
-static double   gSmoothResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
-#define gSmoothRes              (gSmoothResBank[SE])
-static double   gSmoothGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
-#define gSmoothGain             (gSmoothGainBank[SE])
-static double   gSmoothLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
-#define gSmoothLevel            (gSmoothLevelBank[SE])
+typedef struct {
+    double value;
+    double target;
+    double step;    // per engine sample; 0 once the target is reached
+} tParamRamp;
+
+static tParamRamp gSmoothShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothShape     (gSmoothShapeBank[SE])
+static tParamRamp gSmoothCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothCutoff    (gSmoothCutoffBank[SE])
+static tParamRamp gSmoothResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothRes       (gSmoothResBank[SE])
+static tParamRamp gSmoothGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gSmoothGain      (gSmoothGainBank[SE])
+static tParamRamp gSmoothLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
+#define gSmoothLevel     (gSmoothLevelBank[SE])
 
 // Where the per-sample smoothing pass leaves its results, for the voice passes to read. Not per
 // voice: a knob is in one place however many notes are sounding, and smoothing it inside the voice
 // loop would advance the filter once per voice — so a sweep would speed up as more keys went down.
-static double   gSmoothedShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double     gSmoothedShapeBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothedShape     (gSmoothedShapeBank[SE])
-static double   gSmoothedCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double     gSmoothedCutoffBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothedCutoff    (gSmoothedCutoffBank[SE])
-static double   gSmoothedResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double     gSmoothedResBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothedRes       (gSmoothedResBank[SE])
-static double   gSmoothedGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static double     gSmoothedGainBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothedGain      (gSmoothedGainBank[SE])
-static double   gSmoothedLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
+static double     gSmoothedLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][MAX_NODE_LEVELS];
 #define gSmoothedLevel     (gSmoothedLevelBank[SE])
 // Until a node has been seen once there is nothing to interpolate FROM, so the first sample snaps.
 // Also what stops a patch load sweeping every parameter up from whatever the last patch left.
-static bool     gSmoothPrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+static bool       gSmoothPrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 #define gSmoothPrimed    (gSmoothPrimedBank[SE])
 
-static uint32_t gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t   gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvStage        (gEnvStageBank[SE])
 
 // The voice's trigger count this envelope last started an attack for. When the voice's count moves
 // past it, a note-on has asked for a restart that the gate alone cannot show - see envelope_step().
-static uint32_t gEnvTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t   gEnvTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvTrigger    (gEnvTriggerBank[SE])
 
 // §14 - per voice, per Operator of every DXRouter node: phase, envelope (in dB, and its stage), and
@@ -2017,17 +2024,17 @@ typedef enum {
     eDxIdle
 } tDxStage;
 
-static double   gDxPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+static double     gDxPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
 #define gDxPhase       (gDxPhaseBank[SE])
-static double   gDxEnvDbBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+static double     gDxEnvDbBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
 #define gDxEnvDb       (gDxEnvDbBank[SE])
-static uint32_t gDxEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
+static uint32_t   gDxEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS];
 #define gDxEnvStage    (gDxEnvStageBank[SE])
-static double   gDxOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS][2];
+static double     gDxOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_DX_OPERATORS][2];
 #define gDxOut         (gDxOutBank[SE])
-static bool     gDxGateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static bool       gDxGateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gDxGate        (gDxGateBank[SE])
-static uint32_t gDxTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t   gDxTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gDxTrigger     (gDxTriggerBank[SE])
 
 typedef enum {
@@ -9119,13 +9126,29 @@ static double osc_pm_step(uint32_t voice, uint32_t n, const tEngineNode * spec, 
 }
 
 // notes §143
-static double smooth_to(double * current, double target, double coeff, bool primed) {
+// notes §61
+static double smooth_to(tParamRamp * ramp, double target, double samples, bool primed) {
     if (primed == false) {
-        *current = target;
-    } else {
-        *current += coeff * (target - *current);
+        ramp->value  = target;
+        ramp->target = target;
+        ramp->step   = 0.0;
+        return target;
     }
-    return *current;
+
+    if (target != ramp->target) {
+        ramp->target = target;
+        ramp->step   = (target - ramp->value) / samples;
+    }
+
+    if (ramp->step != 0.0) {
+        ramp->value += ramp->step;
+
+        if (((ramp->step > 0.0) && (ramp->value >= target)) || ((ramp->step < 0.0) && (ramp->value <= target))) {
+            ramp->value = target;
+            ramp->step  = 0.0;
+        }
+    }
+    return ramp->value;
 }
 
 // notes §144
@@ -13415,7 +13438,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     // eval_node() could in principle write gSampleRate.
     // §15.4 - a constant glide rate: the time is per octave, so this is semitones per sample.
     double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
-    double smoothCoeff  = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
+    double rampSamples  = PARAM_RAMP_SAMPLES * gSampleRate / G2_ENGINE_SAMPLE_RATE;   // the glide's length in samples
     double glideStep    = (params.glideSeconds > 0.0)
                           ? (12.0 / (params.glideSeconds * gSampleRate)) : 0.0;
 
@@ -13460,15 +13483,15 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 const tEngineNode * spec     = &params.node[n];
                 bool                primed   = gSmoothPrimed[n];
 
-                gSmoothedShape[n]  = smooth_to(&gSmoothShape[n], spec->shape, smoothCoeff, primed);
+                gSmoothedShape[n]  = smooth_to(&gSmoothShape[n], spec->shape, rampSamples, primed);
                 // notes §177
-                gSmoothedCutoff[n] = smooth_to(&gSmoothCutoff[n], spec->cutoffParam, smoothCoeff, primed);
-                gSmoothedRes[n]    = smooth_to(&gSmoothRes[n], spec->resonance, smoothCoeff, primed);
-                gSmoothedGain[n]   = smooth_to(&gSmoothGain[n], spec->gain, smoothCoeff, primed);
+                gSmoothedCutoff[n] = smooth_to(&gSmoothCutoff[n], spec->cutoffParam, rampSamples, primed);
+                gSmoothedRes[n]    = smooth_to(&gSmoothRes[n], spec->resonance, rampSamples, primed);
+                gSmoothedGain[n]   = smooth_to(&gSmoothGain[n], spec->gain, rampSamples, primed);
 
                 // §9.2
                 for (uint32_t c = 0; c < spec->levelCount; c++) {
-                    gSmoothedLevel[n][c] = smooth_to(&gSmoothLevel[n][c], spec->level[c], smoothCoeff, primed);
+                    gSmoothedLevel[n][c] = smooth_to(&gSmoothLevel[n][c], spec->level[c], rampSamples, primed);
                 }
 
                 gSmoothPrimed[n]   = true;

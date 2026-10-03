@@ -7,7 +7,6 @@ Built-but-unchecked work goes in to-test.md.
 General
 -
 - DEDICATED SESSION: Driver, Resonator and Level Scaler - settle their laws (all three still basic, engine-module-status.md)
-- 07 Unstable Lead (Bank 1 Loc 2) seems to be outputting a constant tone without a keyboard note. Also, mod wheel value change seems to be producing a zipper-like sound.
 - Further investigation into voice stealing improvements.
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works anyhow.

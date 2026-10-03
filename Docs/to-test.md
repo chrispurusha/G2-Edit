@@ -4,6 +4,12 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***MOD WHEEL ZIPPER, 07 UNSTABLE LEAD (2026-10-03)*** - notes §61. Dials, morphs and the wheel now glide to a new
+  value as the G2 does (a straight line over 125 ms, restarted by each new value) instead of an 8 ms smoother
+  that left a staircase. LISTEN: 07's wheel sweeps its VCF; the zipper should be gone. A knob turned quickly
+  now trails by up to 125 ms, as on the G2. The CONSTANT TONE with no key held did not reproduce: offline,
+  07 is silent at rest with drone mode on or off and its tail dies within 8 s - say if it comes back, and
+  whether it was the engine or the G2.
 - ***BYPASS SKIPS THE WORK (2026-10-03)*** - Phaser, FltPhase, DlyStereo, Flanger, OscString and MetNoise no longer
   compute while switched off (the rest already did not). Their state now freezes while off instead of running
   on, so switching one back on can replay what it held from before. LISTEN for that on a delay or flanger.
