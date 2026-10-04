@@ -2104,14 +2104,6 @@ static bool       gDxGateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_N
 static uint32_t   gDxTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gDxTrigger     (gDxTriggerBank[SE])
 
-typedef enum {
-    eEnvIdle = 0,
-    eEnvAttack,
-    eEnvDecay,
-    eEnvSustain,
-    eEnvRelease,
-} tEnvStage;
-
 // §70.13 - a controller as it arrived; `listened` says the slot's own channel takes it too
 // notes §204 - which slots the keyboard plays: the selected one, or in a performance every slot whose
 // Keyboard is on, within its range when ranges are on
@@ -13980,7 +13972,7 @@ static bool voice_is_finished(const tSoundEngineParams * paramsIn, uint32_t v, b
             continue;
         }
 
-        if ((gEnvStage[v][n] != (uint32_t)eEnvIdle) || (fabs(gEnvLevel[v][n]) > 1.0e-5)) {
+        if ((gEnvStage[v][n] != ENV_STAGE_IDLE) || (fabs(gEnvLevel[v][n]) > 1.0e-5)) {
             return false;
         }
     }
