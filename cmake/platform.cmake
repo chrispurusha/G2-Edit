@@ -13,6 +13,14 @@ if(WIN32)
     # Third-party libraries from MSYS2 (CLANG64 or UCRT64), found through pkg-config:
     #   pacman -S mingw-w64-clang-x86_64-{clang,cmake,ninja,pkgconf,glfw,freetype,libusb}
     find_package(PkgConfig REQUIRED)
+
+    # tools/do-windows, cross-building one self-contained .exe, links the libraries statically and
+    # needs what each one in turn links (GLFW's gdi32, for one) - pkg-config's --static answers
+    option(G2_WIN_STATIC "link glfw, freetype and libusb statically" OFF)
+
+    if(G2_WIN_STATIC)
+        set(PKG_CONFIG_ARGN --static)
+    endif()
     pkg_check_modules(G2_DEPS REQUIRED IMPORTED_TARGET glfw3 freetype2 libusb-1.0)
     find_package(Threads REQUIRED)    # winpthreads: the code is pthreads throughout
     list(APPEND G2_PLATFORM_LIBS PkgConfig::G2_DEPS Threads::Threads opengl32 winmm)

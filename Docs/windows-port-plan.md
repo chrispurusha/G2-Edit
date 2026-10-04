@@ -60,6 +60,34 @@ Clone inside the Windows file system: a Parallels shared folder is slow to build
 not to be trusted. `-DG2_WERROR=OFF` to begin with, so the first build shows every warning at once; turn it back
 on once it is clean.
 
+## Cross-building on the Mac
+
+The same build, from the Mac, with llvm-mingw (clang for Windows, UCRT runtime - the same compiler family and
+runtime as MSYS2's CLANG64): one self-contained `.exe` per architecture, needing only DLLs Windows itself ships
+(OpenGL32, Kernel32, User32, GDI32, Shell32 and the universal C runtime of every Windows 10/11).
+
+```
+# once: the toolchain, into its own folder (nothing installed system-wide)
+mkdir -p ~/Developer && cd ~/Developer
+curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20260922/llvm-mingw-20260922-ucrt-macos-universal.tar.xz
+tar xf llvm-mingw-*.tar.xz && ln -sfn llvm-mingw-20260922-ucrt-macos-universal llvm-mingw
+
+tools/do-windows            # x64:   build-cross-x86_64/G2_Editor.exe
+tools/do-windows arm64      # ARM64: build-cross-aarch64/G2_Editor.exe - native under Parallels on Apple silicon
+tools/do-windows --clean    # the libraries again too
+```
+
+`tools/do-windows` builds GLFW, FreeType and libusb for Windows from `SynthLib/ThirdParty` once per
+architecture (into `build-cross-<arch>/deps`; libusb from a clean copy, since its Mac build lives in its own
+source folder), then the editor through the generated `CMakeLists.txt`, `cmake/platform.cmake` and
+`cmake/toolchain-windows.cmake`, statically (`G2_WIN_STATIC`, pkg-config's `--static`). `G2_WERROR=ON` and
+`G2_WIN_CONFIG=Debug` in the environment change those defaults.
+
+CHECKED 2026-10-04: both architectures build on the Mac (x64 6.2 MB, ARM64 5.9 MB) with the same four warnings
+the Windows session listed. NOT YET RUN: copy one into the VM - the Mac's home folder is usually shared to
+Parallels as \\Mac\Home - and start it. Windows on ARM's own OpenGL is 1.1 (or the OpenGL Compatibility
+Pack's, if installed), which is what the renderer asks for.
+
 ## The G2 over USB - read before plugging in
 
 libusb on Windows talks to a device only through a generic driver (WinUSB). Binding the G2 to WinUSB - with

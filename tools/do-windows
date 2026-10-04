@@ -1,0 +1,86 @@
+#!/bin/zsh
+#
+# do-windows - cross-builds the editor for Windows on this Mac, with llvm-mingw.
+#
+#   tools/do-windows            x64 (runs on any Windows PC, and emulated on Windows on ARM)
+#   tools/do-windows arm64      native Windows on ARM - Parallels on Apple silicon
+#   tools/do-windows --clean    rebuild the libraries too
+#
+# Result: build-cross-<arch>/G2_Editor.exe, one self-contained file. The libraries (GLFW, FreeType, libusb)
+# are built once per architecture from SynthLib/ThirdParty into build-cross-<arch>/deps. llvm-mingw is
+# expected at ~/Developer/llvm-mingw, or wherever $LLVM_MINGW points. See Docs/windows-port-plan.md.
+
+set -e
+HERE=${0:A:h}
+ROOT=${HERE:h}
+LLVM_MINGW=${LLVM_MINGW:-$HOME/Developer/llvm-mingw}
+ARCH=x86_64
+CLEAN=0
+
+for arg in "$@"; do
+    case $arg in
+        arm64|aarch64) ARCH=aarch64 ;;
+        x64|x86_64)    ARCH=x86_64 ;;
+        --clean)       CLEAN=1 ;;
+        *) echo "usage: tools/do-windows [x64|arm64] [--clean]" >&2; exit 2 ;;
+    esac
+done
+
+TRIPLE=$ARCH-w64-mingw32
+OUT=$ROOT/build-cross-$ARCH
+DEPS=$OUT/deps
+THIRD=$ROOT/SynthLib/ThirdParty
+TOOLCHAIN=$ROOT/cmake/toolchain-windows.cmake
+JOBS=$(sysctl -n hw.ncpu)
+
+if [[ ! -x $LLVM_MINGW/bin/$TRIPLE-clang ]]; then
+    echo "error: no llvm-mingw at $LLVM_MINGW - see Docs/windows-port-plan.md" >&2
+    exit 1
+fi
+[[ $CLEAN == 1 ]] && rm -rf $OUT
+mkdir -p $DEPS
+
+cmake_lib() {   # name, source, extra cmake arguments
+    local name=$1 src=$2; shift 2
+    [[ -f $DEPS/.built-$name ]] && return
+    echo "==> $name for $TRIPLE"
+    cmake -S $src -B $OUT/$name -G Ninja -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN -DG2_WIN_ARCH=$ARCH -DLLVM_MINGW=$LLVM_MINGW \
+          -DCMAKE_INSTALL_PREFIX=$DEPS -DBUILD_SHARED_LIBS=OFF "$@" >/dev/null
+    cmake --build $OUT/$name >/dev/null
+    cmake --install $OUT/$name >/dev/null
+    touch $DEPS/.built-$name
+}
+
+cmake_lib glfw $THIRD/glfw -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
+cmake_lib freetype $THIRD/freetype -DFT_DISABLE_ZLIB=ON -DFT_DISABLE_BZIP2=ON -DFT_DISABLE_PNG=ON \
+                                   -DFT_DISABLE_HARFBUZZ=ON -DFT_DISABLE_BROTLI=ON
+
+# libusb is autotools, and its Mac build lives in its own source folder - so a clean copy, built there
+if [[ ! -f $DEPS/.built-libusb ]]; then
+    echo "==> libusb for $TRIPLE"
+    rm -rf $OUT/libusb
+    rsync -a --exclude '.git' --exclude '.libs' --exclude '*.o' --exclude '*.lo' --exclude '*.la' \
+          --exclude 'config.status' --exclude 'config.log' --exclude 'config.h' --exclude 'Makefile' \
+          --exclude 'libtool' --exclude 'libusb-1.0.pc' --exclude 'stamp-h1' --exclude '.deps' \
+          $THIRD/libusb/ $OUT/libusb/
+    ( cd $OUT/libusb &&
+      PATH=$LLVM_MINGW/bin:$PATH ./configure --host=$TRIPLE --prefix=$DEPS \
+          --enable-static --disable-shared --disable-examples-build --disable-tests-build >/dev/null &&
+      PATH=$LLVM_MINGW/bin:$PATH make -j$JOBS >/dev/null &&
+      PATH=$LLVM_MINGW/bin:$PATH make install >/dev/null )
+    touch $DEPS/.built-libusb
+fi
+
+echo "==> G2 Editor for $TRIPLE"
+export PKG_CONFIG_LIBDIR=$DEPS/lib/pkgconfig
+unset PKG_CONFIG_PATH
+cmake -S $ROOT -B $OUT/app -G Ninja -DCMAKE_BUILD_TYPE=${G2_WIN_CONFIG:-Release} \
+      -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN -DG2_WIN_ARCH=$ARCH -DLLVM_MINGW=$LLVM_MINGW -DG2_WIN_DEPS=$DEPS \
+      -DG2_WIN_STATIC=ON -DG2_WERROR=${G2_WERROR:-OFF} >/dev/null
+cmake --build $OUT/app
+
+cp $OUT/app/G2_Editor.exe $OUT/
+echo
+echo "built: $OUT/G2_Editor.exe ($(du -h $OUT/G2_Editor.exe | cut -f1), $TRIPLE)"
+echo "needs: $(PATH=$LLVM_MINGW/bin:$PATH $TRIPLE-objdump -p $OUT/G2_Editor.exe | grep 'DLL Name' | awk '{print $3}' | tr '\n' ' ')"
