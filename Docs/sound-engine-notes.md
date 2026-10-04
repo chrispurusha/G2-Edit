@@ -3312,8 +3312,13 @@ per voice (`gCtlHold`), which is what an audio module on the instrument reads fr
 evaluated, `gSampleRate` reads 24000 (a thread-local override, `sCtlRate`), so every rate-derived step
 inside it - LFO phases, envelope and clock ticks, pulse lengths - advances by a control sample.
 
-Held at the audio rate until each is checked: Resonator, Scratch, NoiseGate, PitchTrack, EnvFollow and
-Red2Blue, which run detectors or delay lines tied to the audio rate here.
+Held at the audio rate, checked 2026-10-04 against the reference model tables, where each part is
+96 kHz, 24 kHz or either: NoiseGate (its follower is a 96 kHz part) and Scratch (its delay and taps are)
+stay at 96 kHz rightly. EnvFollow, PitchTrack and ZeroCnt are "either" parts and would run at 24 kHz with the
+same words when not up-rated - on the instrument their times then stretch fourfold - but no stage or test
+patch uses them un-up-rated, so they wait for a measurement. The Resonator is not in the tables. Red2Blue is
+the one part that is ALWAYS 24 kHz - a copy each tick, held - and is now a control-rate node whatever its
+up-rate flag says.
 
 CHECKED 2026-10-04 against the engine before it, 8 patches with a four-note chord: level and band levels
 unchanged to 0.01 dB; sample differences are the stepping and triggers landing on the next control tick.
@@ -3355,3 +3360,50 @@ CHECKED 2026-10-04: one slot bit-identical to the engine before, five patches, s
 A plus Big Pad in B equal to each alone, summed (-150 dB); a split at 55 sends 48 to A and 55, 60 to B
 (-145 dB); in patch mode only the selected slot sounds, bit-identical to it alone. Slots render one after
 another on the audio thread, each with its own voice thread: A+B threaded is 34.4% against 23.5% + 10.9%.
+
+## 205. Economy: the graph at 48 kHz (`sound_engine_set_economy()`, `node_steps_at_96k()`, `rv_steps()`)
+
+OPTIONAL and OFF by default. Below 88.2 kHz the engine runs its graph at twice the device rate, so a 48 kHz
+device costs a 96 kHz graph (§29a). Economy runs the graph at the device rate instead: Experimental > Engine
+Rate in the application (Full / Half), and Settings > Half Rate (economy) in the plug-in, which saves it in
+the project (`economy=`) with its prefs file as the default for a new instance (`engineEconomy`, the
+application's preference too). A stopped engine takes it at its next `sound_engine_set_sample_rate()`; a
+RUNNING one at the start of its next block, on the audio thread (`engine_render_slot()`), which then flags
+the document (`sound_engine_take_rate_changed()`) and the plug-in's rebuild worker rebuilds the snapshots
+built at the old rate. The switch clears that engine's node state and its voices - a voice left sounding
+over cleared envelopes never finishes, and 18 Unreal Dreams' sequencer piled them up to twice the load - so
+a note held across it is cut and plays again on the next key. The oscillators keep
+their oversampling on top (2x, so 96 kHz), and control-rate nodes tick at 24 kHz as before (§203).
+
+Most of the engine scales with `gSampleRate`. What does not:
+- **Parts whose per-sample words are the instrument's at 96 kHz** step TWICE per engine sample, on the
+  same input, with `gSampleRate` reading 96 kHz while they run, and their two outputs averaged
+  (`eval_node_full()`): FltNord, FltPhase, Phaser, Compressor, EnvFollow, Flanger, NoiseGate, PitchTrack,
+  OscString. Each runs exactly as at 96 kHz and only these keep their full cost. The Reverb network does the
+  same inside its own node (`rv_steps()`), its positions laid out for 96 kHz.
+- **Noise** is white at the graph rate, so on the doubled graph half its power lies above the device's
+  band; on an economy graph its per-sample level is scaled by sqrt(1/2) to keep the doubled graph's density.
+- At 44.1 kHz the doubled graph is 88.2 kHz, not 96, and economy halves THAT: the parts above step at 88.2 kHz,
+  exactly as they run in the normal 44.1 kHz mode.
+- Only a RUNNING engine is cleared on a change of graph rate; one not yet started is primed afterwards
+  anyway, and clearing it there would advance its seeded state and change every render that sets a rate
+  before starting.
+
+MEASURED 2026-10-04 at a 48 kHz device, four-note chord, against the 96 kHz graph: CPU down 30-48% on all
+19 stage patches (14 CS80project72 40% -> 25%, 08 Ice Pad 29% -> 17%, 01 Mini Emulator 18% -> 10%); every
+octave band within about 2 dB, except 05 SelfOsc LFO, noise ringing a 20 Hz self-oscillation, which
+differs by up to 5 dB between 2-second windows in either mode and agrees once it settles, and 10 Troll,
+which differs by 37 dB between start seeds in the normal engine. Very bright filter settings lose a few dB
+above 16 kHz. The 96 kHz graph is unchanged: all 19 stage patches render bit-identically to the engine
+before this note, serial and threaded.
+
+44.1 kHz, CHECKED the same day (no 44.1 kHz interface on the rig - the QU-24 runs at 48 only, so offline):
+the normal mode against 48 kHz, every stage patch within about 1 dB a band bar the chord-phase and random
+patches, pitch exact (DxPiano 439.93 Hz against 439.92, CS80 442.01 against 442.05) and a single DxPiano note
+identical in decay and partials; economy against the normal 44.1 kHz mode, CPU down 30-45% and every band
+within about 2 dB bar 05 and 10 as at 48 kHz.
+
+ON HARDWARE 2026-10-04: the application on the Fireface at 44.1 kHz, CS80 one note (5 voices), Debug build,
+peak load per block 94-96% at Full and 72-73% at Half, no overloads either way, and back again on switching.
+Switching a running engine (offline, 48 kHz): CS80 32% -> 22% -> 32%, Big Pad 15% -> 10% -> 15%, Unreal Dreams
+34% -> 25% -> 35%, levels within about 1 dB.

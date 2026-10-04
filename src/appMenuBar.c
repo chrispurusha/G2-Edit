@@ -427,6 +427,15 @@ static void action_toggle_drone(int index) {
     sound_engine_set_drone_mode(sound_engine_drone_mode() == false);
 }
 
+// soundEngine notes §205 - the graph at half the rate; the engine applies it at its next block
+static void action_toggle_plugin_economy(int index) {
+    bool on = (sound_engine_economy() == false);
+
+    (void)index;
+    sound_engine_set_economy(on);
+    prefs_set_int(PREF_KEY_ECONOMY, on ? 1 : 0);    // the default for new instances; a project keeps its own
+}
+
 static void action_toggle_plugin_dac(int index) {
     bool on = (sound_engine_dac_emulation() == false);
 
@@ -438,32 +447,37 @@ static void action_toggle_plugin_dac(int index) {
 
 void open_settings_menu(tCoord anchor) {
     static tMenuItem items[] = {
-        {"Synth",                (tRgb)RGB_GREY_3, action_open_synth,          0, NULL, 0, 0.0},
-        {"Patch",                (tRgb)RGB_GREY_3, action_open_patch_settings, 0, NULL, 0, 0.0},
-        {"Perf",                 (tRgb)RGB_GREY_3, action_open_perf_settings,  0, NULL, 0, 0.0},
-        {"Notes",                (tRgb)RGB_GREY_3, action_open_notes,          0, NULL, 0, 0.0},
-        {"Parameter Pages",      (tRgb)RGB_GREY_3, action_open_param_pages,    0, NULL, 0, 0.0},
-        {"Parameter Overview",   (tRgb)RGB_GREY_3, action_open_param_overview, 0, NULL, 0, 0.0},
+        {"Synth",                (tRgb)RGB_GREY_3, action_open_synth,            0, NULL, 0, 0.0},
+        {"Patch",                (tRgb)RGB_GREY_3, action_open_patch_settings,   0, NULL, 0, 0.0},
+        {"Perf",                 (tRgb)RGB_GREY_3, action_open_perf_settings,    0, NULL, 0, 0.0},
+        {"Notes",                (tRgb)RGB_GREY_3, action_open_notes,            0, NULL, 0, 0.0},
+        {"Parameter Pages",      (tRgb)RGB_GREY_3, action_open_param_pages,      0, NULL, 0, 0.0},
+        {"Parameter Overview",   (tRgb)RGB_GREY_3, action_open_param_overview,   0, NULL, 0, 0.0},
         // The original reaches this from a right-click menu and the M key; menu-only here, matching
         // the standing decision for this family of panels.
-        {"MIDI Controller List", (tRgb)RGB_GREY_3, action_open_midi_cc_list,   0, NULL, 0, 0.0},
+        {"MIDI Controller List", (tRgb)RGB_GREY_3, action_open_midi_cc_list,     0, NULL, 0, 0.0},
 #ifdef SYNTHLIB_PLUGIN_BUILD
-        {"Drone Mode",           (tRgb)RGB_GREY_3, action_toggle_drone,        0, NULL, 0, 0.0},
-        {"G2 Output Filter",     (tRgb)RGB_GREY_3, action_toggle_plugin_dac,   0, NULL, 0, 0.0},
+        {"Drone Mode",           (tRgb)RGB_GREY_3, action_toggle_drone,          0, NULL, 0, 0.0},
+        {"G2 Output Filter",     (tRgb)RGB_GREY_3, action_toggle_plugin_dac,     0, NULL, 0, 0.0},
+        {"Half Rate (economy)",  (tRgb)RGB_GREY_3, action_toggle_plugin_economy, 0, NULL, 0, 0.0},
 #endif
-        {NULL,                   (tRgb)RGB_BLACK,  NULL,                       0, NULL, 0, 0.0},
+        {NULL,                   (tRgb)RGB_BLACK,  NULL,                         0, NULL, 0, 0.0},
     };
 
 #ifdef SYNTHLIB_PLUGIN_BUILD
-    tMenuItem *      drone   = &items[(sizeof(items) / sizeof(items[0])) - 3];
-    tMenuItem *      dac     = &items[(sizeof(items) / sizeof(items[0])) - 2];
+    tMenuItem *      drone   = &items[(sizeof(items) / sizeof(items[0])) - 4];
+    tMenuItem *      dac     = &items[(sizeof(items) / sizeof(items[0])) - 3];
+    tMenuItem *      economy = &items[(sizeof(items) / sizeof(items[0])) - 2];
     bool             on      = sound_engine_drone_mode();
     bool             dacOn   = sound_engine_dac_emulation();
+    bool             ecoOn   = sound_engine_economy();
 
-    drone->label  = on ? "* Drone Mode" : "  Drone Mode";
-    drone->colour = on ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
-    dac->label    = dacOn ? "* G2 Output Filter" : "  G2 Output Filter";
-    dac->colour   = dacOn ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
+    drone->label    = on ? "* Drone Mode" : "  Drone Mode";
+    drone->colour   = on ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
+    dac->label      = dacOn ? "* G2 Output Filter" : "  G2 Output Filter";
+    dac->colour     = dacOn ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
+    economy->label  = ecoOn ? "* Half Rate (economy)" : "  Half Rate (economy)";
+    economy->colour = ecoOn ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
 #endif
     open_context_menu(anchor, items, 0, 0.0);
 }
@@ -795,6 +809,14 @@ static void action_select_voice_thread(int index) {
     audio_output_select_voice_thread(index != 0);
 }
 
+static void action_select_economy(int index) {
+    audio_output_select_economy(index != 0);
+    database_read_lock();
+    sound_engine_update_from_patch();   // positions and words built at the old rate
+    database_read_unlock();
+    synthlib_request_redraw();
+}
+
 static void action_select_render_ahead(int index) {
     audio_output_select_render_ahead_ms(kRenderAheadMs[((size_t)index < (sizeof(kRenderAheadMs) / sizeof(kRenderAheadMs[0]))) ? index : 0]);
 }
@@ -1124,6 +1146,29 @@ void open_experimental_menu(tCoord anchor) {
             };
             items[i++] = (tMenuItem){
                 "Multi-threading", (tRgb)RGB_GREY_3, NULL, 0, threads, 0, 0.0
+            };
+        }
+
+        // soundEngine notes §205 - the graph at twice the device rate below 88.2 kHz, or at the device rate
+        // for half the CPU and some accuracy
+        {
+            static tMenuItem rates[3];
+            static char      rateLabel[2][40];
+            bool             economy = audio_output_economy();
+
+            snprintf(rateLabel[0], sizeof(rateLabel[0]), "%sFull, as the G2", economy ? "  " : "* ");
+            snprintf(rateLabel[1], sizeof(rateLabel[1]), "%sHalf (economy)", economy ? "* " : "  ");
+            rates[0]   = (tMenuItem){
+                rateLabel[0], (tRgb)RGB_GREY_3, action_select_economy, 0, NULL, 0, 0.0
+            };
+            rates[1]   = (tMenuItem){
+                rateLabel[1], (tRgb)RGB_GREY_3, action_select_economy, 1, NULL, 0, 0.0
+            };
+            rates[2]   = (tMenuItem){
+                NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+            };
+            items[i++] = (tMenuItem){
+                "Engine Rate", (tRgb)RGB_GREY_3, NULL, 0, rates, 0, 0.0
             };
         }
 

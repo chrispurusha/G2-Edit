@@ -144,6 +144,11 @@ typedef enum {
 
 void sound_engine_set_split_mode(uint32_t mode);
 
+// sound-engine-notes §205 - the graph at the device's rate below 88.2 kHz: half the CPU, not the G2's laws
+void sound_engine_set_economy(bool on);
+bool sound_engine_economy(void);
+bool sound_engine_take_rate_changed(void);
+
 // notes §7
 bool sound_engine_attach(void);
 void sound_engine_detach(void);

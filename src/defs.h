@@ -266,6 +266,7 @@
 #define OCTAVE_SHIFT              (0x00) // stored 0..4, 2 = no shift
 // The G2 output-filter toggle, in the app's prefs file and the plug-in's alike
 #define PREF_KEY_DAC_EMULATION    "engineDacEmulation"
+#define PREF_KEY_ECONOMY          "engineEconomy"   // soundEngine notes §205
 #define OCTAVE_SHIFT_ZERO         (2)
 #define SUSTAIN_PEDAL             (0x01)
 

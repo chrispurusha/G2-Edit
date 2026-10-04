@@ -1143,6 +1143,7 @@ typedef struct {
     // they sit, and for anything downstream of one of those. See mark_post_mix_nodes().
     bool postMix;
     bool ctlRate;   // notes §203 - evaluated at the G2's control rate, its outputs held between
+    bool steps96;   // notes §205 - on an economy graph, stepped twice a sample at 96 kHz
 } tEngineNode;
 
 static void keyquant_build(tEngineNode * node, tModule * module, uint32_t variation);
@@ -1478,7 +1479,7 @@ typedef enum {
     eStatusPlaying,
 } tSoundEngineStatus;
 
-static tSoundEngineStatus   gStatusBank[SOUND_ENGINE_MAX_ENGINES]        = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = eStatusOff};
+static tSoundEngineStatus   gStatusBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = eStatusOff};
 #define gStatus              (gStatusBank[SE])
 static uint32_t             gPlayingCountBank[SOUND_ENGINE_MAX_ENGINES];        // how many modules are in the rendered chain
 #define gPlayingCount        (gPlayingCountBank[SE])
@@ -1494,15 +1495,21 @@ static uint32_t             gPlayingCountBank[SOUND_ENGINE_MAX_ENGINES];        
 #define ENGINE_GRAPH_RATE_MIN    (88200.0)   // 44.1 kHz doubled - the lowest graph rate in use today
 #define OSC_GRAPH_RATE_MIN       (176400.0)  // notes §34 fitted the decimator at 192 kHz -> 96 kHz
 
+// notes §205 - economy: the graph at the device's own rate below 88.2 kHz too, half the work, off the G2's laws
+static _Atomic bool         gEconomyBank[SOUND_ENGINE_MAX_ENGINES];
+#define gEconomy                (gEconomyBank[SE])
+static bool                 gEconomyAppliedBank[SOUND_ENGINE_MAX_ENGINES];          // what the graph rate was last set for
+#define gEconomyApplied         (gEconomyAppliedBank[SE])
+static _Atomic bool         gRateChangedBank[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS]; // per document, for a rebuild
 static uint32_t             gOversampleBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = ENGINE_OVERSAMPLE};
-#define gOversample              (gOversampleBank[SE])
+#define gOversample             (gOversampleBank[SE])
 static uint32_t             gOscOversampleBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 4 / ENGINE_OVERSAMPLE};
-#define gOscOversample           (gOscOversampleBank[SE])
+#define gOscOversample          (gOscOversampleBank[SE])
 
 // notes §200 - the tempo when the G2's master clock is not known (a lone patch file, no G2)
-#define ENGINE_REFERENCE_BPM     (120.0)
-#define MASTER_CLOCK_BPM_MIN     (30u)
-#define MASTER_CLOCK_BPM_MAX     (240u)
+#define ENGINE_REFERENCE_BPM    (120.0)
+#define MASTER_CLOCK_BPM_MIN    (30u)
+#define MASTER_CLOCK_BPM_MAX    (240u)
 
 // notes §200 - the tempo every Clk-synced module and a Master-sourced ClkGen follow: the G2's master clock
 static double engine_master_bpm(void) {
@@ -1524,8 +1531,9 @@ static double               gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ..
 static double               gSampleRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
 // notes §203 - while a control-rate node is evaluated, the rate it sees is the control rate
 static _Thread_local double sCtlRate;
-#define CTL_RATE_HZ    (24000.0)   // the G2's control rate, a quarter of its audio rate
-#define gSampleRate    ((sCtlRate > 0.0) ? sCtlRate : gSampleRateBank[SE])
+#define CTL_RATE_HZ            (24000.0)
+#define ECONOMY_GRAPH_BELOW    (72000.0)   // notes §205 - a graph under this is an economy one   // the G2's control rate, a quarter of its audio rate
+#define gSampleRate            ((sCtlRate > 0.0) ? sCtlRate : gSampleRateBank[SE])
 
 // notes §30
 typedef struct {
@@ -1954,13 +1962,20 @@ static uint32_t     gRvCurBank[SOUND_ENGINE_MAX_ENGINES];
 static double       gRvPhaseBank[SOUND_ENGINE_MAX_ENGINES];
 #define gRvPhase    (gRvPhaseBank[SE])      // §20.4 - the LFO, -2^23..2^23 as the instrument counts
 
+// notes §205 - an economy graph (48 kHz) steps the network twice a sample, at its own rate
+static uint32_t rv_steps(void) {
+    SE_LOCAL;
+
+    return (gSampleRate < ECONOMY_GRAPH_BELOW) ? 2u : 1u;
+}
+
 // §20.2, §20.3, §20.5 - positions, coefficients and mix, as the instrument's host sets them.
 static void reverb_build(tEngineNode * node, uint32_t type, double timeDial, double brightDial, double mixDial) {
     SE_LOCAL;
 
     uint32_t room    = (type < REVERB_TYPE_COUNT) ? type : 0u;
     float    roomF   = kRvRoomSize[room];
-    double   rate    = gSampleRate / RV_BASE_RATE;
+    double   rate    = (gSampleRate * (double)rv_steps()) / RV_BASE_RATE;
 
     for (uint32_t i = 0; i < (uint32_t)eRvPlaceCount; i++) {
         double at = floor(((double)roomF * kRvPlace[i].k) + RV_TAP_BASE) - RV_CURSOR_LEAD + (double)kRvPlace[i].step;
@@ -2363,7 +2378,8 @@ bool sound_engine_active(void) {
 static void set_oversampling(double deviceRate) {
     SE_LOCAL;
 
-    gOversample         = (deviceRate >= ENGINE_GRAPH_RATE_MIN) ? 1u : (uint32_t)ENGINE_OVERSAMPLE;
+    gEconomyApplied     = atomic_load(&gEconomy);
+    gOversample         = ((deviceRate >= ENGINE_GRAPH_RATE_MIN) || (gEconomyApplied == true)) ? 1u : (uint32_t)ENGINE_OVERSAMPLE;
     gSampleRateBank[SE] = deviceRate * (double)gOversample;
     gOscOversample      = (gSampleRate >= OSC_GRAPH_RATE_MIN) ? 1u : (uint32_t)OSC_OVERSAMPLE;
 }
@@ -2372,6 +2388,7 @@ static void set_oversampling(double deviceRate) {
 // rate, so every coefficient already derived from it — envelope and glide times, filter and chorus
 // coefficients, LFO and oscillator increments — scales with no further change.
 static void build_decimator(void);
+static void reset_node_state(void);
 
 static void set_sample_rate_one(double sampleRate) {
     SE_LOCAL;
@@ -2390,6 +2407,13 @@ static void set_sample_rate_one(double sampleRate) {
         // constant and does now.
         if ((gOversample != wasGraph) || (gOscOversample != wasOsc)) {
             build_decimator();
+
+            // notes §205 - a running engine keeps nothing tuned to the old graph rate; one not yet
+            // started is primed afterwards anyway
+            if (atomic_load(&gActive) == true) {
+                reset_node_state();
+                reset_voices();   // a voice left sounding over reset state never finishes
+            }
         }
     }
 }
@@ -2668,6 +2692,30 @@ void sound_engine_set_drone_mode(bool on) {
 
 void sound_engine_set_dac_emulation(bool on) {
     FOR_EACH_SLOT_ENGINE(set_dac_emulation_one(on));
+}
+
+static void set_economy_one(bool on) {
+    SE_LOCAL;
+
+    atomic_store(&gEconomy, on);
+}
+
+// notes §205 - a stopped engine takes it at the next sound_engine_set_sample_rate(); a running one at
+// the start of its next block, on the audio thread
+void sound_engine_set_economy(bool on) {
+    FOR_EACH_SLOT_ENGINE(set_economy_one(on));
+}
+
+bool sound_engine_economy(void) {
+    SE_LOCAL;
+
+    return atomic_load(&gEconomy);
+}
+
+// notes §205 - whether a running engine has moved to a new graph rate since this was last asked, and
+// so wants its snapshots rebuilt
+bool sound_engine_take_rate_changed(void) {
+    return atomic_exchange(&gRateChangedBank[ENGINE_DOC], false);
 }
 
 // For a plug-in host: prime the engines and mark them live, but leave the audio device alone. The
@@ -5272,6 +5320,11 @@ static bool node_kind_can_tick_slowly(tNodeKind kind) {
 static bool node_runs_at_control_rate(const tModule * module, tNodeKind kind) {
     uint32_t outputs = 0;
 
+    // notes §203 - Red2Blue is the instrument's one part that is ALWAYS 24 kHz: a copy each tick, held
+    if (module->type == moduleTypeRed2Blue) {
+        return true;
+    }
+
     if ((module->upRate != 0u) || (node_kind_can_tick_slowly(kind) == false)) {
         return false;
     }
@@ -5288,6 +5341,38 @@ static bool node_runs_at_control_rate(const tModule * module, tNodeKind kind) {
     }
 
     return outputs > 0u;
+}
+
+// notes §205 - parts whose per-sample words are the instrument's at 96 kHz: on an economy graph they step
+// twice a sample rather than run at half speed
+static bool node_steps_at_96k(const tModule * module, tNodeKind kind) {
+    SE_LOCAL;
+
+    if (gSampleRate >= ECONOMY_GRAPH_BELOW) {
+        return false;
+    }
+
+    if (module->type == moduleTypeFltNord) {
+        return true;
+    }
+
+    switch (kind) {
+        case eNodeFltPhase:
+        case eNodePhaser:
+        case eNodeCompress:
+        case eNodeEnvFollow:
+        case eNodeFlanger:
+        case eNodeNoiseGate:
+        case eNodePitchTrack:
+        case eNodeOscString:
+        {
+            return true;
+        }
+        default:
+        {
+            return false;
+        }
+    }
 }
 
 static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t variation, uint32_t depth) {
@@ -5443,6 +5528,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     node->location    = module->key.location;
     node->inCount     = inCount;
     node->ctlRate     = node_runs_at_control_rate(module, kind);
+    node->steps96     = node_steps_at_96k(module, kind);
     {
         // counted back from the end, in the order input_connectors() appends them
         bool     oscKind     = ((kind == eNodeOsc) || (kind == eNodeOscShp));
@@ -5685,6 +5771,12 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeNoise:
         {
             noise_colour(param_value(module, variation, 0), gSampleRate, &node->noisePole, &node->noiseGain);
+
+            // notes §205 - an economy graph keeps the density of the doubled graph it replaces, not its
+            // per-sample level
+            if (gSampleRate < ECONOMY_GRAPH_BELOW) {
+                node->noiseGain *= sqrt(1.0 / (double)ENGINE_OVERSAMPLE);
+            }
             node->active = (param_value(module, variation, 1) != 0.0);
             break;
         }
@@ -8692,7 +8784,7 @@ static void reverb_step(double inLeft, double inRight, const tEngineNode * spec,
     }
     const int32_t * p                    = spec->rvPos;
     const double *  y                    = spec->rvY;
-    double          rate                 = gSampleRate / RV_BASE_RATE;
+    double          rate                 = (gSampleRate * (double)rv_steps()) / RV_BASE_RATE;
     uint32_t        cur                  = gRvCur;
 
 #define RVR(o)       ((double)gRvRing[(cur + (uint32_t)(o)) & (RV_RING - 1u)])
@@ -13641,8 +13733,15 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             // Only the first reverb in a chain is modelled; see the DSP note above.
             double inRight = signal_in(spec, value, 1);
 
-            if ((spec->active == true) && (spec->line == 0)) {
+            if ((spec->active == true) && (spec->line == 0) && (rv_steps() == 1u)) {
                 reverb_step(a, inRight, spec, &value[n][0], &value[n][1]);
+            } else if ((spec->active == true) && (spec->line == 0)) {
+                double firstL = 0.0, firstR = 0.0, secondL = 0.0, secondR = 0.0;   // notes §205
+
+                reverb_step(a, inRight, spec, &firstL, &firstR);
+                reverb_step(a, inRight, spec, &secondL, &secondR);
+                value[n][0] = 0.5 * (firstL + secondL);
+                value[n][1] = 0.5 * (firstR + secondR);
             } else {
                 value[n][0] = a;    // §20.5 - bypassed, each input passes to its own output
                 value[n][1] = inRight;
@@ -13806,6 +13905,28 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
     // The Voice Area's meters are fed from the voice sum instead - notes §191
     if (spec->postMix == true) {
         meter_node(spec, n, value[n][0], value[n][1]);
+    }
+}
+
+// notes §205 - a node flagged steps96 runs twice at 96 kHz on the same inputs, its two outputs averaged
+static void eval_node_full(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
+                           double value[][NODE_OUTPUTS], double voicePitch) {
+    SE_LOCAL;
+
+    if (paramsIn->node[n].steps96 == false) {
+        eval_node(voice, n, paramsIn, value, voicePitch);
+        return;
+    }
+    double first[NODE_OUTPUTS];
+
+    sCtlRate = 2.0 * gSampleRateBank[SE];
+    eval_node(voice, n, paramsIn, value, voicePitch);
+    memcpy(first, value[n], sizeof(first));
+    eval_node(voice, n, paramsIn, value, voicePitch);
+    sCtlRate = 0.0;
+
+    for (uint32_t k = 0; k < NODE_OUTPUTS; k++) {
+        value[n][k] = 0.5 * (first[k] + value[n][k]);
     }
 }
 
@@ -14054,7 +14175,7 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
             }
 
             if (p->node[n].ctlRate == false) {
-                eval_node(v, n, p, value, voicePitch);
+                eval_node_full(v, n, p, value, voicePitch);
             } else if (ctlTick == true) {
                 sCtlRate = CTL_RATE_HZ;
                 eval_node(v, n, p, value, voicePitch);
@@ -14134,7 +14255,7 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
         }
 
         if (p->node[n].ctlRate == false) {
-            eval_node(0, n, p, value, KEYBOARD_PITCH_ZERO);    // §16.2a - no key after the mix: E4, 0 units
+            eval_node_full(0, n, p, value, KEYBOARD_PITCH_ZERO);    // §16.2a - no key after the mix: E4, 0 units
         } else if (ctlTick == true) {
             sCtlRate = CTL_RATE_HZ;
             eval_node(0, n, p, value, KEYBOARD_PITCH_ZERO);
@@ -14535,6 +14656,12 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
 
     if (atomic_load(&gActive) == false) {
         return;
+    }
+
+    // notes §205 - a change of Engine Rate reaches a running engine here, between blocks
+    if (atomic_load(&gEconomy) != gEconomyApplied) {
+        set_sample_rate_one(gDeviceRate);
+        atomic_store(&gRateChangedBank[ENGINE_DOC], true);
     }
     params = read_params();
     refresh_voice_morphs(params.build);

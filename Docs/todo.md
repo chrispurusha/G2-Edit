@@ -6,7 +6,7 @@ Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
 -
-- Control rate (notes §203), next: check the held-back kinds one by one (Resonator, Scratch, NoiseGate, PitchTrack, EnvFollow, Red2Blue) and move each that is safe
+- Control rate (notes §203): EnvFollow, PitchTrack and ZeroCnt not up-rated run at 24 kHz on the instrument with their 96 kHz words (times fourfold) - measure one on the G2 (EnvFollow fed by an LFO, release time un-up-rated vs up-rated) before following it; no stage patch uses them
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations and/or multi-core threading as below.
 - Four slots, next (sound-engine-notes §204): render the slots concurrently - today they run one after another on the audio thread, each with its own voice thread
@@ -274,5 +274,4 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play
 - 03 Chris' Lead coverage left: OscShpB waves (above), reference-model check of Mix4-1C/Mix4-1S
 - CPU: run nodes over short blocks (16-32 samples) where no loop or per-sample event forbids it, to amortise the dispatch and let it vectorise - the same restructure per-voice threading needs
-- CPU, optional and low priority: a native 48/44.1 kHz "economy" graph for slow machines (Intel MacBooks) - halves the work but every 96 kHz law drifts from the G2, so never the default
 - Plug-in Multi-threading on/off in its own menu, saved with the host project - low priority; the plug-in always splits today (sound-engine-notes §202)

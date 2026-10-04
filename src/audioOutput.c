@@ -322,6 +322,7 @@ void audio_output_load_settings(void) {
     gAheadMs      = (uint32_t)prefs_get_int(PREF_KEY_AHEAD, 0);
     // soundEngine notes §202 - on unless switched off here
     sound_engine_set_split_mode((prefs_get_int(PREF_KEY_VOICETHREAD, 1) != 0) ? eSplitThreaded : eSplitSerial);
+    sound_engine_set_economy(prefs_get_int(PREF_KEY_ECONOMY, 0) != 0);   // soundEngine notes §205 - off unless chosen
 }
 
 // See audioOutput.h for why this takes a UID rather than an index, and why it has a return value.
@@ -628,6 +629,17 @@ bool audio_output_voice_thread(void) {
 void audio_output_select_voice_thread(bool on) {
     prefs_set_int(PREF_KEY_VOICETHREAD, on ? 1 : 0);
     sound_engine_set_split_mode(on ? eSplitThreaded : eSplitSerial);
+}
+
+// soundEngine notes §205 - the graph at 48 kHz rather than 96; the device reopens to apply it
+bool audio_output_economy(void) {
+    return prefs_get_int(PREF_KEY_ECONOMY, 0) != 0;
+}
+
+void audio_output_select_economy(bool on) {
+    prefs_set_int(PREF_KEY_ECONOMY, on ? 1 : 0);
+    sound_engine_set_economy(on);
+    reopen_if_running();
 }
 
 uint32_t audio_output_render_ahead_underruns(void) {

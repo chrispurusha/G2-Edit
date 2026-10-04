@@ -73,6 +73,8 @@ void audio_output_select_render_ahead_ms(uint32_t ms);
 uint32_t audio_output_render_ahead_underruns(void);
 bool audio_output_voice_thread(void);                        // soundEngine notes §202
 void audio_output_select_voice_thread(bool on);
+bool audio_output_economy(void);                             // soundEngine notes §205
+void audio_output_select_economy(bool on);
 
 // notes §4 - the device's rate can change under a running unit (Audio MIDI Setup, or another
 // application opening it first). Call once per frame from the render loop: it re-opens the output

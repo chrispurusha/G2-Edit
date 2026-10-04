@@ -382,6 +382,14 @@ Shape mod input, which the engine ignores.
   MorphSplitEnv (Vel on an envelope's Sustain, Keyb on its Decay - this entry's case) and
   MorphSameDxLevel (both on one Operator Level - the case still 7.7% out). Load each on the G2 and in
   the editor and compare; none of §26.2 has ever been heard against the instrument.
+- ***ECONOMY ENGINE RATE (2026-10-04)*** - sound-engine-notes §205. In the app at 48 kHz: Settings > Audio >
+  Engine Rate > 48 kHz economy while a patch plays - the device reopens with a short gap, the load halves,
+  the stage patches sound the same; switch back and nothing is left changed. Listen above all to reverb
+  tails, FltNord and Phaser patches (11, 18), and noise patches (05, 06, 12).
+  The app ran on the Fireface at 44.1 kHz (load 95% -> 73%, no overloads) but was not LISTENED to there.
+  Plug-in: Settings > Half Rate (economy) while playing - the load drops at once, a held note is cut and
+  the next plays; save and reopen the project and the setting comes back; a new instance takes the last
+  setting chosen.
 - ***FOUR SLOTS (2026-10-04)*** - sound-engine-notes §204. In the app with the engine on: patches in A and B,
   play - only the selected slot sounds, switching slot while a key is held still releases it. Performance
   mode with Keyboard on for A and B: both sound; with Key Range on and split ranges, each its own half.
