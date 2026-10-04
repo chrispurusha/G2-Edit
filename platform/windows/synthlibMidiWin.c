@@ -1,5 +1,5 @@
 /*
- * The G2 Editor application.
+ * SynthLib - common library for synthesizer editor applications.
  *
  * Copyright (C) 2026 Chris Turner <chris_purusha@icloud.com>
  *
@@ -17,24 +17,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __SYS_INCLUDES_H__
-#define __SYS_INCLUDES_H__
+// Windows stand-in for SynthLib/src/synthlibMidi.c: MIDI out, not yet - every send fails, as it does
+// on the Mac when no destination is chosen.
 
-#include <errno.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdbool.h>
-#include <time.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <stdatomic.h>
-#if defined (__APPLE__)
-#include <dispatch/dispatch.h>
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#pragma clang diagnostic ignored "-Wwrite-strings"
+#include "synthlibMidi.h"
 
-#endif // __SYS_INCLUDES_H__
+void synthlib_midi_set_out_port(MIDIPortRef port) {
+    (void)port;
+}
+
+bool synthlib_midi_send_to(const uint8_t * data, uint32_t length, MIDIEndpointRef dest) {
+    (void)data;
+    (void)length;
+    (void)dest;
+    return false;
+}
+
+#ifdef __cplusplus
+}
+#endif

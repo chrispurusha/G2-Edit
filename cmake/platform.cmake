@@ -14,7 +14,8 @@ if(WIN32)
     #   pacman -S mingw-w64-clang-x86_64-{clang,cmake,ninja,pkgconf,glfw,freetype,libusb}
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(G2_DEPS REQUIRED IMPORTED_TARGET glfw3 freetype2 libusb-1.0)
-    list(APPEND G2_PLATFORM_LIBS PkgConfig::G2_DEPS opengl32 winmm)
+    find_package(Threads REQUIRED)    # winpthreads: the code is pthreads throughout
+    list(APPEND G2_PLATFORM_LIBS PkgConfig::G2_DEPS Threads::Threads opengl32 winmm)
 
     # The files that talk to CoreAudio and CoreMIDI, swapped for Windows ones as they are written
     # (platform/windows/, plan step 3). Until then the stubs keep the editor building and running silent.
@@ -46,5 +47,12 @@ if(WIN32)
         list(APPEND G2_PLATFORM_SOURCES platform/windows/miscWin.c)
     endif()
 
-    list(APPEND G2_PLATFORM_DEFINES _USE_MATH_DEFINES)
+    # platform/windows/ is outside src/, so it needs src/'s headers by path
+    list(APPEND G2_PLATFORM_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+    # The POSIX and OpenGL names MinGW lacks, given to every file (platform/windows/winCompat.h)
+    add_compile_options(-include ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows/winCompat.h)
+
+    # _POSIX_THREAD_SAFE_FUNCTIONS: MinGW's time.h declares localtime_r() only with it
+    list(APPEND G2_PLATFORM_DEFINES _USE_MATH_DEFINES _POSIX_THREAD_SAFE_FUNCTIONS=200112L)
 endif()

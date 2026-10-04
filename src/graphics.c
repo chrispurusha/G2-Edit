@@ -212,12 +212,18 @@ void init_graphics(void) {
         },
     }, NULL);
 
+#if defined (__APPLE__)
+    const char * fontPath = "/System/Library/Fonts/Supplemental/Arial.ttf";
+#else
+    const char * fontPath = "C:/Windows/Fonts/arial.ttf";
+#endif
+
     FT_Init_FreeType(&gLibrary);
-    FT_New_Face(gLibrary, "/System/Library/Fonts/Supplemental/Arial.ttf", 0, &gFace);
+    FT_New_Face(gLibrary, fontPath, 0, &gFace);
     FT_Set_Char_Size(gFace, 0, 48 * 64, 300, 300);
 
     // Preload glyph textures
-    if (!preload_glyph_textures("/System/Library/Fonts/Supplemental/Arial.ttf", 72.0f)) {
+    if (!preload_glyph_textures(fontPath, 72.0f)) {
         LOG_ERROR("Failed to preload glyph textures\n");
     }
 }

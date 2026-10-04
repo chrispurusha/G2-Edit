@@ -17,24 +17,30 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __SYS_INCLUDES_H__
-#define __SYS_INCLUDES_H__
+// Force-included into every Windows compile by cmake/platform.cmake: the small POSIX and OpenGL
+// gaps MinGW leaves, filled here so the shared sources need no #ifdefs for them.
 
-#include <errno.h>
+#ifndef __WIN_COMPAT_H__
+#define __WIN_COMPAT_H__
+
 #include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdbool.h>
-#include <time.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <stdatomic.h>
-#if defined (__APPLE__)
-#include <dispatch/dispatch.h>
+#include <io.h>
+#include <direct.h>
+
+// No bus errors on Windows; a handler installed for one is installed for the segfault instead.
+#ifndef SIGBUS
+#define SIGBUS    SIGSEGV
 #endif
 
-#pragma clang diagnostic ignored "-Wwrite-strings"
+// MinGW's mkdir() takes no mode; Windows has no permission bits to give it.
+#define mkdir(path, mode)    mkdir(path)
 
-#endif // __SYS_INCLUDES_H__
+// Windows' gl.h stops at OpenGL 1.1; the driver takes these, the header just does not name them.
+#ifndef GL_MULTISAMPLE
+#define GL_MULTISAMPLE      0x809D
+#endif
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE    0x812F
+#endif
+
+#endif // __WIN_COMPAT_H__

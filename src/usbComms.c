@@ -142,7 +142,7 @@ static void name_tables_edited(void);
 static bool                   sSuppressNameTableUpdate              = false;
 
 // Protected by usbStaticMutex
-static pthread_t              usbThread                             = NULL;
+static pthread_t              usbThread                             = 0;
 static libusb_context *       libUsbCtx                             = NULL;
 static libusb_device_handle * devHandle                             = NULL;
 

@@ -84,6 +84,28 @@ the G2 > Update driver > Clavia's), but do it knowingly, and not on a machine wh
 Keep `platform/windows/` beside `src/` rather than inside it: `src/` is a synchronized folder, so anything put
 there is compiled into the Mac application too.
 
+## Progress
+
+**2026-10-04, Windows (step 1, first pass).** MSYS2 CLANG64 installed. The application builds (`build-win/`,
+-Werror off) and runs: the window opens and the menu bar and top bar draw. Not yet compared against the Mac
+with a loaded patch.
+
+- `platform/windows/`: `audioOutputWin.c`, `midiInputWin.c`, `synthlibMidiWin.c`, `synthlibMidiPortsWin.c` -
+  silent stubs that read and write the Mac's pref keys; `miscWin.c` - `setup_main_menu` does the Mac's prefs
+  and settings loading, mouse state via `GetAsyncKeyState`, sleep/wake still a stub; `winCompat.h` -
+  force-included (`SIGBUS`, two-argument `mkdir`, `GL_MULTISAMPLE`, `GL_CLAMP_TO_EDGE`).
+- `cmake/platform.cmake`: `src/` on the include path, the forced include, `_POSIX_THREAD_SAFE_FUNCTIONS`
+  (MinGW's `localtime_r`), `Threads::Threads`.
+- Shared files, each Mac-identical by `#if defined (__APPLE__)`: `src/sysIncludes.h` (dispatch),
+  `src/graphics.c` (Arial path), `SynthLib/src/synthlibMidi.h` and `synthlibMidiPorts.h` (CoreMIDI; typedefs
+  off Apple - a SynthLib commit). `src/usbComms.c`: `usbThread = 0`, not `NULL` (`pthread_t` is an integer in
+  winpthreads). NOT YET BUILT ON THE MAC - build there before pushing.
+
+Still open in step 1: five warnings stand between it and -Werror (`long` is 32 bits on Windows:
+`renderParams.c:1068`, `usbComms.c:309,328`; unreachable code at `usbComms.c:2549-2550`); the exe is a
+console-subsystem program (opens a console window); `deviceSync.c` builds its Recovery folder from `$HOME` and
+`Library/Application Support`; load `PatchTestFiles/` and compare with the Mac.
+
 ## Rules that still hold on Windows
 
 - `CLAUDE.md` at the root of the GitHub folder on the Mac carries the project's rules; the essentials: comments
