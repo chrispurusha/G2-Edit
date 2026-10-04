@@ -338,11 +338,11 @@ PLUGIN_REQUIREMENT=""
 if [[ ${#PLUGIN_BUNDLES[@]} -gt 0 ]]; then
     PLUGIN_CONTENTS=$(cat <<CONTENTS
 
-  G2 Alike.vst3      the same experimental instrument in both plug-in formats.
-  G2 Alike.component It PLAYS a patch rather than editing one, which is why it
-                     has its own name. Install whichever your host uses - see
-                     "THE PLUG-INS" below, and install neither if you only want
-                     the editor.
+  G2 Alike.vst3      the same instrument in both plug-in formats. It PLAYS
+  G2 Alike.component patches and performances rather than editing them, which is
+                     why it has its own name. Install whichever your host uses -
+                     see "THE PLUG-INS" below, and install neither if you only
+                     want the editor.
 CONTENTS
 )
 
@@ -356,8 +356,18 @@ host and "G2 Alike.component" for an Audio Unit host. Install the one your host
 uses; installing both is fine, and hosts that read both formats will then list it
 twice.
 
-It is experimental: it covers around 17 module types, so many patches will load
-without complaint and make no sound.
+It models 169 of the 170 module types the G2 offers on the instrument's own
+behaviour, so most patches sound as they do on the hardware. It starts empty: open
+a patch or a performance from its own File menu, and your project then remembers
+it, edits and all. In a performance all four slots play together, each over its
+own keyboard range; otherwise the keyboard plays the selected slot.
+
+Its Settings menu has two options worth knowing:
+
+  G2 Output Filter      the gentle top-end roll-off of the G2's own outputs.
+  Half Rate (economy)   runs the engine at half its internal rate: roughly half
+                        the CPU, for big patches or slower Macs, a little less
+                        exact. Saved with your project.
 
 The editor does not need it and it does not need the editor. Skip this section
 entirely if you only want the editor.
@@ -438,6 +448,23 @@ command to match where you put the app.
 Alternative, if you would rather not use Terminal: double-click the app in
 Applications, dismiss the warning, then open System Settings > Privacy &
 Security, scroll down, and click "Open Anyway".
+
+PLAYING PATCHES WITHOUT A G2 (EXPERIMENTAL)
+
+The editor can play the patch it shows through your Mac's audio, with or without
+a G2 connected: Experimental > Enable Sound Engine, then choose the Audio Device.
+The same menu has the settings that matter if the sound breaks up:
+
+  Engine Rate       "Half (economy)" roughly halves the CPU, a little less exact.
+  Multi-threading   "On" (the default) spreads the work over two cores.
+  Render Ahead      a few milliseconds of extra safety against dropouts.
+  Buffer Size       larger is safer, smaller plays more promptly.
+
+While the engine is on, the grey lines just below "Disable Sound Engine" show the
+load and a "late" count. If "late" keeps climbing while you play, the Mac cannot
+keep up with that patch:
+try Half, a larger buffer, or Render Ahead. Only the G2's ACTIVE slots play, as on
+the instrument itself.
 
 $PLUGIN_SECTION
 
