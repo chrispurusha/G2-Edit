@@ -36,6 +36,22 @@ needed once per install, including after each update.
 If you would rather not use Terminal: double-click the app, dismiss the warning, then open System
 Settings > Privacy & Security, scroll down and click **Open Anyway**.
 
+### Windows (experimental)
+
+There is no Windows installer: a release has a `.zip` per architecture - `windows-x64` for an ordinary
+PC, `windows-arm64` for Windows on ARM (Parallels on an Apple silicon Mac) - holding one file,
+`G2 Editor.exe`, and its `Read Me First.txt`. It is unsigned, so Windows SmartScreen warns on the first
+run: More info > Run anyway. No plug-ins on Windows yet. See [Docs/windows-port-plan.md](./Docs/windows-port-plan.md)
+for how it is built.
+
+**The G2 needs Windows' generic USB driver, WinUSB, once** - Clavia's driver will not work with this
+editor. With the G2 connected (in Parallels: Devices > USB & Bluetooth > the G2): Device Manager > the G2,
+usually under Other devices (Properties > Details > Hardware Ids reads `USB\VID_0FFC&PID_0002`) >
+Update driver > Browse my computer > Let me pick from a list > Universal Serial Bus devices > **WinUsb
+Device** / **WinUsb Device** > Next > Yes. [Zadig](https://zadig.akeo.ie) (Options > List All Devices,
+the G2, WinUSB, Install Driver) does the same, but fails on some machines, Windows on ARM among them.
+While the G2 has WinUSB, Clavia's editor cannot see it; Update driver back to Clavia's to undo.
+
 ### Keyboard and mouse
 
 Once it is running, **Help > Keyboard and Mouse** lists everything the modifier keys do — Alt with

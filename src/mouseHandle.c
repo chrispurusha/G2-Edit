@@ -141,8 +141,15 @@ static bool notes_own_keyboard(void) {
 }
 
 void cursor_capture(void) {
+#if defined (_WIN32)
+    // notes §37 - hidden, not locked: Windows' locked pointer is re-centred by the application, which a VM's
+    // absolute pointer (Parallels) does not allow, and the drag then never moves
+    gDragSkipCount = 0;
+    glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+#else
     gDragSkipCount = 3;
     glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+#endif
     sCursorHidden  = true;
 }
 

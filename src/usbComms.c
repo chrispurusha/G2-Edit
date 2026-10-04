@@ -51,14 +51,25 @@ extern "C" {
 #include <stdatomic.h>
 #include <pthread.h>
 
-#define VENDOR_ID                   (0xffc)
-#define PRODUCT_ID                  (2)
+#define VENDOR_ID     (0xffc)
+#define PRODUCT_ID    (2)
 
 // USB transfer timeouts (milliseconds)
+#if defined (_WIN32)
+// notes §76 - USB through a VM (Parallels) adds latency each way, and WinUSB is slow to cancel: the Mac's 50 ms cut
+// every send off before it completed
+#define USB_SEND_TIMEOUT_MS         (1000)
+#define USB_RECV_POLL_MS            (250)  // ePollYes idle poll — timeout is expected and normal
+#define USB_RECV_ACK_MS             (1500) // simple command acknowledgment (SUB_RESPONSE_OK)
+#define USB_RECV_DATA_MS            (5000) // data response — may be large or slow to prepare
+#define USB_CANCEL_DRAIN_MS         (3000L)
+#else
 #define USB_SEND_TIMEOUT_MS         (50)
 #define USB_RECV_POLL_MS            (50)   // ePollYes idle poll — timeout is expected and normal
 #define USB_RECV_ACK_MS             (500)  // simple command acknowledgment (SUB_RESPONSE_OK)
 #define USB_RECV_DATA_MS            (3000) // data response — may be large or slow to prepare
+#define USB_CANCEL_DRAIN_MS         (500L)
+#endif
 #define USB_KEEPALIVE_INTERVAL_S    (2)    // macOS suspends USB after ~3s idle; keep well inside that
 
 // Atomic flags for cross-thread signalling
@@ -232,14 +243,270 @@ static bool is_disconnect_error(int err) {
 
 // Must be called with usbStaticMutex held, or from a context where devHandle
 // is not yet shared (e.g. open_and_claim_device on failure path).
+#if defined (_WIN32)
+static void win_readers_stop(void);
+#endif
+
 static void close_device(void) {
     if (devHandle != NULL) {
+#if defined (_WIN32)
+        win_readers_stop();   // notes §77
+#endif
         libusb_release_interface(devHandle, 0);
         libusb_close(devHandle);
         devHandle = NULL;
         LOG_DEBUG("Device closed\n");
     }
 }
+
+
+#if defined (_WIN32)
+// notes §77 - ON WINDOWS NO INCOMING READ IS EVER CANCELLED: under WinUSB (Parallels at least) a cancel stalls the
+// device about five seconds. A read stays pending on the interrupt pipe always, on the bulk pipe while one is wanted
+// (the G2 answers an idle bulk read at once with an empty packet), and a read with a timeout simply stops waiting.
+#define WIN_READ_QUEUE        (32u)
+#define WIN_READ_SETTLE_MS    (400)   // what arrives this soon after the open is the last session's, discarded
+#define WIN_READ_STOP_MS      (6000)
+
+typedef struct {
+    uint8_t                  endpoint;
+    int                      size;
+    struct libusb_transfer * xfer;
+    uint8_t *                buffer;
+    uint8_t *                chunk[WIN_READ_QUEUE];
+    int                      chunkLength[WIN_READ_QUEUE];
+    uint32_t                 head;
+    uint32_t                 count;
+    bool                     pending;   // a transfer is in flight
+    bool                     wanted;    // bulk only: keep reading - someone is waiting, or the open is draining
+    bool                     stopping;
+    int                      failure;   // a libusb error to hand the next read, once the pipe has failed
+} tWinReader;
+
+static tWinReader      gWinReaders[2] = {{.endpoint = 0x81, .size = 16}, {.endpoint = 0x82, .size = 65536}};
+static pthread_mutex_t gWinReadMutex  = PTHREAD_MUTEX_INITIALIZER;
+
+static long win_elapsed_ms(const struct timespec * start) {
+    struct timespec now = {0};
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (long)(((int64_t)(now.tv_sec - start->tv_sec) * 1000) + ((int64_t)(now.tv_nsec - start->tv_nsec) / 1000000));
+}
+
+static tWinReader * win_reader(uint8_t endpoint) {
+    return (endpoint == 0x81) ? &gWinReaders[0] : ((endpoint == 0x82) ? &gWinReaders[1] : NULL);
+}
+
+static void win_reader_clear(tWinReader * r) {
+    while (r->count > 0u) {
+        free(r->chunk[r->head]);
+        r->head = (r->head + 1u) % WIN_READ_QUEUE;
+        r->count--;
+    }
+}
+
+static void LIBUSB_CALL win_read_cb(struct libusb_transfer * xfer) {
+    tWinReader * r = (tWinReader *)xfer->user_data;
+
+    pthread_mutex_lock(&gWinReadMutex);
+    r->pending = false;
+
+    if ((xfer->status == LIBUSB_TRANSFER_COMPLETED) && (xfer->actual_length == 0) && (r->endpoint == 0x82)) {
+        // the G2's "nothing yet" on the bulk pipe - read again only while wanted
+    } else if (xfer->status == LIBUSB_TRANSFER_COMPLETED) {
+        if (r->count < WIN_READ_QUEUE) {
+            uint32_t  at   = (r->head + r->count) % WIN_READ_QUEUE;
+            uint8_t * copy = (uint8_t *)malloc((size_t)((xfer->actual_length > 0) ? xfer->actual_length : 1));
+
+            if (copy != NULL) {
+                memcpy(copy, xfer->buffer, (size_t)xfer->actual_length);
+                r->chunk[at]       = copy;
+                r->chunkLength[at] = xfer->actual_length;
+                r->count++;
+            }
+        } else {
+            LOG_ERROR("Windows read queue full on 0x%02x - %d bytes dropped\n", r->endpoint, xfer->actual_length);
+        }
+    } else if (xfer->status == LIBUSB_TRANSFER_NO_DEVICE) {
+        r->failure = LIBUSB_ERROR_NO_DEVICE;
+    } else if (xfer->status != LIBUSB_TRANSFER_CANCELLED) {
+        LOG_DEBUG("Windows read on 0x%02x ended with status %d - resubmitting\n", r->endpoint, (int)xfer->status);
+    }
+
+    if (  (r->stopping == false) && (r->failure == 0) && (xfer->status != LIBUSB_TRANSFER_CANCELLED)
+       && ((r->endpoint == 0x81) || (r->wanted == true))) {
+        if (libusb_submit_transfer(xfer) == LIBUSB_SUCCESS) {
+            r->pending = true;
+        } else {
+            r->failure = LIBUSB_ERROR_IO;
+        }
+    }
+    pthread_mutex_unlock(&gWinReadMutex);
+}
+
+static void win_readers_stop(void) {
+    struct timeval  tv    = {0, 50 * 1000};
+    struct timespec start = {0};
+
+    pthread_mutex_lock(&gWinReadMutex);
+
+    for (uint32_t i = 0; i < 2u; i++) {
+        gWinReaders[i].stopping = true;
+
+        if (gWinReaders[i].pending == true) {
+            (void)libusb_cancel_transfer(gWinReaders[i].xfer);   // the one place a read is cancelled: closing
+        }
+    }
+
+    pthread_mutex_unlock(&gWinReadMutex);
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    for ( ; ;) {
+        pthread_mutex_lock(&gWinReadMutex);
+        bool busy = gWinReaders[0].pending || gWinReaders[1].pending;
+        pthread_mutex_unlock(&gWinReadMutex);
+
+        if ((busy == false) || (win_elapsed_ms(&start) >= WIN_READ_STOP_MS)) {
+            break;
+        }
+        (void)libusb_handle_events_timeout(libUsbCtx, &tv);
+    }
+
+    pthread_mutex_lock(&gWinReadMutex);
+
+    for (uint32_t i = 0; i < 2u; i++) {
+        tWinReader * r = &gWinReaders[i];
+
+        if ((r->xfer != NULL) && (r->pending == false)) {
+            libusb_free_transfer(r->xfer);   // its buffer goes with it (LIBUSB_TRANSFER_FREE_BUFFER)
+        }
+        r->xfer    = NULL;   // one still pending is left to libusb_close(), which takes in-flight transfers
+        r->buffer  = NULL;
+        r->pending = false;
+        win_reader_clear(r);
+    }
+
+    pthread_mutex_unlock(&gWinReadMutex);
+}
+
+static bool win_readers_start(libusb_device_handle * handle) {
+    struct timeval  tv    = {0, 20 * 1000};
+    struct timespec start = {0};
+    uint32_t        stale = 0;
+
+    for (uint32_t i = 0; i < 2u; i++) {
+        tWinReader * r = &gWinReaders[i];
+
+        r->stopping     = false;
+        r->wanted       = true;   // the bulk pipe drains until the settle ends
+        r->failure      = 0;
+        r->head         = 0;
+        r->count        = 0;
+
+        if (r->endpoint == 0x81) {
+            // notes §77 - exactly one packet: a full one does not end a transfer, a larger request waits forever
+            int maxPacket = libusb_get_max_packet_size(libusb_get_device(handle), r->endpoint);
+
+            r->size = (maxPacket > 0) ? maxPacket : 16;
+        }
+        r->xfer         = libusb_alloc_transfer(0);
+        r->buffer       = (uint8_t *)malloc((size_t)r->size);
+
+        if ((r->xfer == NULL) || (r->buffer == NULL)) {
+            return false;
+        }
+        libusb_fill_bulk_transfer(r->xfer, handle, r->endpoint, r->buffer, r->size, win_read_cb, r, 0);
+        r->xfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
+
+        if (libusb_submit_transfer(r->xfer) != LIBUSB_SUCCESS) {
+            return false;
+        }
+        r->pending      = true;
+    }
+
+    // notes §77 - the last session's leftovers come in now; let them, and throw them away
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    do {
+        (void)libusb_handle_events_timeout(libUsbCtx, &tv);
+    } while (win_elapsed_ms(&start) < WIN_READ_SETTLE_MS);
+
+    pthread_mutex_lock(&gWinReadMutex);
+    gWinReaders[1].wanted = false;
+
+    for (uint32_t i = 0; i < 2u; i++) {
+        stale += gWinReaders[i].count;
+        win_reader_clear(&gWinReaders[i]);
+    }
+
+    pthread_mutex_unlock(&gWinReadMutex);
+
+    if (stale > 0u) {
+        LOG_DEBUG("Discarded %u stale message(s) left by the last session\n", (unsigned)stale);
+    }
+    return true;
+}
+
+static int win_read(uint8_t endpoint, uint8_t * buffer, int length, int * actual_length, unsigned int timeout_ms) {
+    tWinReader *    r      = win_reader(endpoint);
+    struct timeval  tv     = {0, 10 * 1000};
+    struct timespec start  = {0};
+
+    *actual_length = 0;
+
+    if (r == NULL) {
+        return LIBUSB_ERROR_INVALID_PARAM;
+    }
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    pthread_mutex_lock(&gWinReadMutex);
+    r->wanted      = true;
+
+    if ((r->pending == false) && (r->stopping == false) && (r->failure == 0)) {
+        if (libusb_submit_transfer(r->xfer) == LIBUSB_SUCCESS) {
+            r->pending = true;
+        } else {
+            r->failure = LIBUSB_ERROR_IO;
+        }
+    }
+    pthread_mutex_unlock(&gWinReadMutex);
+
+    int             result = LIBUSB_ERROR_TIMEOUT;
+
+    for ( ; ;) {
+        pthread_mutex_lock(&gWinReadMutex);
+
+        if (r->count > 0u) {
+            int got = (r->chunkLength[r->head] < length) ? r->chunkLength[r->head] : length;
+
+            memcpy(buffer, r->chunk[r->head], (size_t)got);
+            free(r->chunk[r->head]);
+            r->head        = (r->head + 1u) % WIN_READ_QUEUE;
+            r->count--;
+            pthread_mutex_unlock(&gWinReadMutex);
+            *actual_length = got;
+            result         = LIBUSB_SUCCESS;
+            break;
+        }
+        int failure = r->failure;
+        pthread_mutex_unlock(&gWinReadMutex);
+
+        if (failure != 0) {
+            result = failure;
+            break;
+        }
+
+        if (win_elapsed_ms(&start) >= (long)timeout_ms) {
+            break;   // nothing came: stop waiting, abort nothing
+        }
+        (void)libusb_handle_events_timeout(libUsbCtx, &tv);
+    }
+
+    pthread_mutex_lock(&gWinReadMutex);
+    r->wanted = false;   // the bulk read in flight ends at the G2's next empty packet
+    pthread_mutex_unlock(&gWinReadMutex);
+    return result;
+}
+#endif
 
 // notes §8
 static bool open_and_claim_device(void) {
@@ -255,7 +522,13 @@ static bool open_and_claim_device(void) {
         close_device();
         return false;
     }
+#if defined (_WIN32)
+    // notes §75 - none of it on Windows: WinUSB cannot reset a device, and clearing a halt on the G2's interrupt
+    // endpoint takes five seconds and leaves it silent - the claim, then the pending reads (notes §77)
+    result    = win_readers_start(devHandle) ? LIBUSB_SUCCESS : LIBUSB_ERROR_NO_MEM;
+#else
     result    = libusb_reset_device(devHandle);
+#endif
 
     if (result != LIBUSB_SUCCESS) {
         LOG_ERROR("Failed to reset device: %s\n", libusb_error_name(result));
@@ -287,6 +560,12 @@ static int usb_bulk_transfer_sync(libusb_device_handle * handle, uint8_t endpoin
 
     *actual_length = 0;
 
+#if defined (_WIN32)
+    if ((endpoint & LIBUSB_ENDPOINT_IN) != 0u) {
+        (void)handle;
+        return win_read(endpoint, buffer, length, actual_length, timeout_ms);   // notes §77 - never a cancel
+    }
+#endif
     xfer           = libusb_alloc_transfer(0);
 
     if (xfer == NULL) {
@@ -327,7 +606,7 @@ static int usb_bulk_transfer_sync(libusb_device_handle * handle, uint8_t endpoin
             long drain_ms = (now.tv_sec - start.tv_sec) * 1000L
                             + (now.tv_nsec - start.tv_nsec) / 1000000L;
 
-            if (drain_ms >= 500L) {
+            if (drain_ms >= USB_CANCEL_DRAIN_MS) {
                 LOG_ERROR("Cancel drain timed out — leaking transfer\n");
                 *actual_length = 0;
                 return LIBUSB_ERROR_IO;
@@ -1384,7 +1663,11 @@ static int send_message(uint8_t * buff, int pos) {
     }
 
     if (actualLength != msgLength) {
+#if defined (_WIN32)
+        LOG_ERROR("Mismatch: actual length %d, msg length %d (%s)\n", actualLength, msgLength, libusb_error_name(result));
+#else
         LOG_ERROR("Mismatch: actual length %d, msg length %d\n", actualLength, msgLength);
+#endif
     }
 
     if (is_disconnect_error(result)) {

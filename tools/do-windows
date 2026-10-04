@@ -9,6 +9,9 @@
 # Result: build-cross-<arch>/G2_Editor.exe, one self-contained file. The libraries (GLFW, FreeType, libusb)
 # are built once per architecture from SynthLib/ThirdParty into build-cross-<arch>/deps. llvm-mingw is
 # expected at ~/Developer/llvm-mingw, or wherever $LLVM_MINGW points. See Docs/windows-port-plan.md.
+#
+# Environment: G2_WIN_CONFIG=Debug (keeps the console window), G2_WERROR=ON, G2_WIN_VERSION=V0.6.0-beta.1
+# (the About box; ../do-release-windows sets it).
 
 set -e
 HERE=${0:A:h}
@@ -77,10 +80,11 @@ export PKG_CONFIG_LIBDIR=$DEPS/lib/pkgconfig
 unset PKG_CONFIG_PATH
 cmake -S $ROOT -B $OUT/app -G Ninja -DCMAKE_BUILD_TYPE=${G2_WIN_CONFIG:-Release} \
       -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN -DG2_WIN_ARCH=$ARCH -DLLVM_MINGW=$LLVM_MINGW -DG2_WIN_DEPS=$DEPS \
-      -DG2_WIN_STATIC=ON -DG2_WERROR=${G2_WERROR:-OFF} >/dev/null
+      -DG2_WIN_STATIC=ON -DG2_WERROR=${G2_WERROR:-OFF} -DG2_VERSION=${G2_WIN_VERSION:-} >/dev/null
 cmake --build $OUT/app
 
 cp $OUT/app/G2_Editor.exe $OUT/
+cp "$ROOT/platform/windows/Read Me First.txt" $OUT/   # the user's instructions, beside the .exe
 echo
 echo "built: $OUT/G2_Editor.exe ($(du -h $OUT/G2_Editor.exe | cut -f1), $TRIPLE)"
 echo "needs: $(PATH=$LLVM_MINGW/bin:$PATH $TRIPLE-objdump -p $OUT/G2_Editor.exe | grep 'DLL Name' | awk '{print $3}' | tr '\n' ' ')"

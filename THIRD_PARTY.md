@@ -36,4 +36,12 @@ Third-party libraries are maintained in [SynthLib](https://github.com/chrispurus
 
 ---
 
+## miniaudio (Windows build only)
+- **Description**: A single-file audio playback and capture library. The Windows build plays through WASAPI with it (`platform/windows/audioOutputWin.c`); the Mac build does not use it.
+- **Website**: https://miniaud.io
+- **Source Code**: https://github.com/mackron/miniaudio - vendored as `platform/windows/miniaudio.h` (0.11.25)
+- **License**: Public domain (Unlicense) or MIT No Attribution, at the user's choice
+
+---
+
 For detailed license terms, please refer to the license files provided with each library or visit their official license pages.

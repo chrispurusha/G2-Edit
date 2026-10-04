@@ -1,0 +1,59 @@
+G2 Editor for Windows (experimental)
+====================================
+
+WHAT IS IN HERE
+
+  G2 Editor.exe    the editor - one file, nothing to install
+  LICENSE          the GNU General Public License, version 3
+
+Put it anywhere and double-click it. Windows 10 or 11: the "x64" download for
+an ordinary PC, "arm64" for Windows on ARM (including Parallels on an Apple
+silicon Mac).
+
+THE FIRST RUN - "WINDOWS PROTECTED YOUR PC"
+
+The editor is not signed with a paid certificate, so on the first run Windows
+SmartScreen shows "Windows protected your PC". Click "More info", then "Run
+anyway". It asks once. If Windows blocked the .zip itself, right-click the .zip
+> Properties > tick "Unblock" > OK, before extracting it.
+
+CONNECTING THE G2 - THE USB DRIVER (ONCE)
+
+The editor talks to the G2 through Windows' own generic USB driver, WinUSB. The
+G2 has to be given that driver once; Clavia's driver will NOT work with this
+editor.
+
+  1. Connect the G2 by USB and switch it on. (Parallels: Devices > USB &
+     Bluetooth, and choose the Clavia / Nord G2 so it connects to Windows.)
+  2. Open Device Manager (right-click Start > Device Manager). Find the G2 -
+     usually under "Other devices" with a yellow warning sign. To be sure it is
+     the G2: Properties > Details > Hardware Ids reads USB\VID_0FFC&PID_0002.
+  3. Right-click it > Update driver > Browse my computer for drivers > Let me
+     pick from a list of available drivers on my computer.
+  4. If it shows a list of device types, choose "Universal Serial Bus devices",
+     then Next.
+  5. Manufacturer "WinUsb Device", model "WinUsb Device", Next, and Yes to the
+     warning.
+
+It now appears as "WinUsb Device" under Universal Serial Bus devices. Start the
+editor and the top bar shows Online.
+
+The alternative is Zadig (https://zadig.akeo.ie): Options > List All Devices,
+choose the G2 (USB ID 0FFC 0002), target driver WinUSB, Install Driver. It does
+the same, but it fails on some machines - Windows on ARM among them - where the
+Device Manager route above works.
+
+NOTE: while the G2 has WinUSB, Clavia's own editor cannot see it. To go back,
+Device Manager > the G2 > Update driver, and choose Clavia's driver.
+
+PLAYING PATCHES WITHOUT A G2
+
+Experimental > Enable Sound Engine plays the patch on screen through Windows'
+audio; choose the output in Experimental > Audio Device. If it breaks up:
+Experimental > Engine Rate > Half (economy), or a larger Buffer Size.
+
+LICENCES
+
+G2 Editor is free software under the GNU General Public License version 3:
+https://github.com/chrispurusha/G2-Edit . It uses GLFW (zlib), FreeType (FTL),
+libusb (LGPL 2.1) and miniaudio (public domain / MIT No Attribution).

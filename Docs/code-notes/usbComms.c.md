@@ -753,3 +753,49 @@ with patch mode, not perf-only — see parse_performance_settings()'s
 own comment on gGlobalSettings.masterClock. Without this,
 switching to patch mode left the clock display showing
 whatever was last fetched until the app was restarted.
+
+## 75. in `open_and_claim_device()` - Windows
+
+WINUSB CANNOT RESET A DEVICE: libusb's WinUSB backend answers libusb_reset_device() by aborting and resetting
+each pipe, which is not the same act. The first Windows build went briefly online and then every send failed.
+Clearing the halt on each endpoint instead was worse - LIBUSB_DEBUG showed the clear on interrupt IN 0x81 take
+FIVE SECONDS, after which the G2 never answered (2026-10-04). On Windows the open is the claim alone. The Mac is
+unchanged: `#if defined (_WIN32)`.
+
+## 76. the USB timeouts - Windows
+
+The same log: the first message went out and completed, the G2's answer on 0x81 did not come within 3 s, the
+cancel of that read did not drain in the Mac's 500 ms - leaving a transfer in flight - and every send after it
+was cancelled at the Mac's 50 ms ("Time taken 55.4 with timeout of 50"). Under Parallels each transfer goes
+Windows -> Parallels -> macOS -> the G2 and back, and WinUSB's cancellation is slow; 50 ms is tight even on a PC.
+On Windows: send 1 s, idle poll 250 ms, acknowledgement 1.5 s, data 5 s, cancel drain 3 s
+(USB_CANCEL_DRAIN_MS). The idle poll is a background wait, so the editor's response is unchanged.
+
+## 77. the pending reads (`win_readers_start()`, `win_read()`) - Windows
+
+FOUND 2026-10-04 (CT and LIBUSB_DEBUG logs): under WinUSB in Parallels, CANCELLING AN INCOMING READ STALLS THE
+DEVICE ABOUT FIVE SECONDS - a fresh G2 as much as one with leftovers - and can leave the handle unusable
+(every send after it failed with Windows error 433, "device does not exist"). The Mac's design cancels a
+timed-out read many times a second (the idle poll), and a first attempt at draining the last session's
+leftovers cancelled by design and broke even a clean start.
+
+So on Windows no incoming read is cancelled while the device is open, and what arrives is queued
+(WIN_READ_QUEUE). usb_bulk_transfer_sync() hands an incoming read to win_read(), which takes the oldest queued
+message or, when nothing comes within the timeout, returns LIBUSB_ERROR_TIMEOUT and simply stops waiting.
+Writes are unchanged.
+
+- Interrupt IN 0x81: a transfer is pending all the time, resubmitted from its callback, sized at EXACTLY the
+  endpoint's max packet (libusb_get_max_packet_size(), 16 on the G2). The G2's notices are one full 16-byte
+  packet, and a full packet does not end a transfer - only a short one does - so a 64-byte read waited
+  forever with the notice inside it (2026-10-04). The Mac reads 16 there too.
+- Bulk IN 0x82 (64 KB): THE G2 ANSWERS AN IDLE BULK READ AT ONCE WITH A ZERO-LENGTH PACKET - the Mac's reader
+  already skips up to three. A permanently pending read there spun ~5,500 times in the first seconds, filled
+  the queue with empty packets and dropped the real replies ("queue full"; the editor sat at "G2 not ready
+  yet", 2026-10-04). So the bulk read is resubmitted only while `wanted` - while win_read() waits on it, or
+  during the settle below - and empty packets are discarded, never queued. When the wait ends the read in
+  flight finishes at the G2's next empty packet, so it needs no cancel either; data arriving after a timeout
+  is queued and taken by the next read.
+
+The last session's leftovers - the G2 can hold a half-finished exchange, which the Mac's device reset clears
+(§75) - arrive within moments of the open, before the first message is sent: both pipes are read for the first
+WIN_READ_SETTLE_MS (400 ms) and all of it is discarded. The one cancel is at close, waited for up to WIN_READ_STOP_MS.

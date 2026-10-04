@@ -458,3 +458,12 @@ F IS NOT BOUND, THOUGH THE MANUAL DEFINES IT. The same sentence gives "Press F .
 the current split position and viewing only the FX Area", but F is a white key in the computer
 keyboard's note entry (A S D F G H J K, help panel), so binding it would cost a note to gain a view
 toggle. Left for the owner to settle rather than decided here - see todo.md.
+
+## 37. in `cursor_capture()` - Windows
+
+VERTICAL AND HORIZONTAL DIAL DRAGS DID NOTHING ON WINDOWS under Parallels (2026-10-04); rotary worked.
+GLFW_CURSOR_DISABLED on Windows re-centres the pointer and reads the motion, and a VM's pointer with mouse
+integration is absolute - it cannot be re-centred, so the drag saw no movement. Rotary follows the pointer's
+position and never locks it. On Windows the pointer is HIDDEN for the drag instead (GLFW_CURSOR_HIDDEN, no
+stale events to skip): it works from real positions on a PC and in a VM alike, and the price is that a drag
+stops at the edge of the screen. The Mac is unchanged.

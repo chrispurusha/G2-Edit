@@ -107,15 +107,24 @@ static uint32_t sRecoveryCount                           = 0;
 
 // Builds (and creates) <app support>/G2-Edit/Recovery. Mirrors prefs.cpp's platform choice.
 static bool recovery_folder(char * out, size_t outSize) {
+#if defined (_WIN32)
+    const char * home                   = getenv("APPDATA");   // where prefs.cpp keeps prefs on Windows
+#else
     const char * home                   = getenv("HOME");
+#endif
 
     if ((home == NULL) || (home[0] == '\0')) {
         return false;
     }
     char         parent[FILE_PATH_SIZE] = {0};
 
+#if defined (_WIN32)
+    snprintf(parent, sizeof(parent), "%s\\G2-Edit", home);
+    snprintf(out, outSize, "%s\\Recovery", parent);
+#else
     snprintf(parent, sizeof(parent), "%s/Library/Application Support/G2-Edit", home);
     snprintf(out, outSize, "%s/Recovery", parent);
+#endif
 
     // Both levels, ignoring "already there" — anything else is a real failure and the caller's
     // write will report it.

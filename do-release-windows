@@ -1,0 +1,193 @@
+#!/bin/zsh
+#
+# do-release-windows - builds the Windows editor for a release, on this Mac, and zips it for GitHub.
+#
+# The Windows counterpart to ./do-release, with the same version arguments and the same rule that the
+# git tag is the source of truth:
+#
+#   ./do-release-windows beta      V0.5.0-beta.6 -> V0.5.0-beta.7   (the usual one)
+#   ./do-release-windows patch     V0.5.0-beta.6 -> V0.5.1-beta.1
+#   ./do-release-windows minor     V0.5.0-beta.6 -> V0.6.0-beta.1
+#   ./do-release-windows major     V0.5.0-beta.6 -> V1.0.0-beta.1
+#   ./do-release-windows final     V0.5.0-beta.6 -> V0.5.0
+#   ./do-release-windows 0.9.0-rc1 an explicit version
+#   ./do-release-windows           reuse the newest tag as-is
+#   ./do-release-windows beta ~/tmp   into a different directory (default: the Desktop)
+#
+# Run it with the same argument as ./do-release for the same release, BEFORE the tag is made - both work
+# the next version out from the newest tag. Never creates or pushes the tag.
+#
+# Writes one .zip per architecture - G2-Edit-<version>-windows-x64.zip (any PC) and -arm64.zip (Windows on
+# ARM, Parallels on Apple silicon) - each holding "G2 Editor.exe", "Read Me First.txt" and LICENSE. The
+# .exe is self-contained and unsigned: SmartScreen warns on first run, and the Read Me says what to do.
+# Cross-built by tools/do-windows with llvm-mingw - see Docs/windows-port-plan.md.
+
+set -e
+
+ARG_BUMP="$1"
+DIST="${2:-$HOME/Desktop}"
+DIST="${DIST:a}"
+
+cd ${0:a:h}
+
+STAGE=$(mktemp -d)
+trap 'rm -rf "$STAGE"' EXIT
+
+# --- version (as ./do-release) -------------------------------------------
+
+LATEST=$(git tag --list --sort=-v:refname 'V*' 2>/dev/null | head -1)
+NEW_TAG=""
+
+case "$ARG_BUMP" in
+    super-major)
+        # Retired name from the pre-semver scheme. Rejected rather than silently
+        # treated as a literal version string, which would build a misnamed .zip.
+        echo "error: 'super-major' is the old name for what semver calls 'major'." >&2
+        echo "       The names shifted by one when this switched to semver:" >&2
+        echo "           super-major -> major     minor -> patch" >&2
+        echo "           major       -> minor     beta  -> beta" >&2
+        exit 1
+        ;;
+
+    major|minor|patch|beta|final)
+        if [[ -z $LATEST ]]; then
+            echo "error: no existing V* tag to bump from." >&2
+            echo "       give an explicit version instead: ./do-release-windows 0.1.0-beta.1" >&2
+            exit 1
+        fi
+
+        # V<major>.<minor>.<patch>[-beta.<n>]
+        if [[ ! $LATEST =~ '^[Vv]([0-9]+)\.([0-9]+)\.([0-9]+)(-beta\.([0-9]+))?$' ]]; then
+            echo "error: newest tag '$LATEST' is not V<n>.<n>.<n>[-beta.<n>]," >&2
+            echo "       so it cannot be bumped. Give an explicit version instead." >&2
+            exit 1
+        fi
+
+        MAJOR=$match[1]
+        MINOR=$match[2]
+        PATCH=$match[3]
+        BETA=$match[5]
+
+        case "$ARG_BUMP" in
+            major) (( MAJOR++ )); MINOR=0; PATCH=0; BETA=1 ;;
+            minor) (( MINOR++ ));          PATCH=0; BETA=1 ;;
+            patch) (( PATCH++ ));                   BETA=1 ;;
+            beta)
+                if [[ -z $BETA ]]; then
+                    echo "error: '$LATEST' has no -beta.n to bump." >&2
+                    echo "       use 'patch' to start a new beta series." >&2
+                    exit 1
+                fi
+                (( BETA++ ))
+                ;;
+            final) BETA="" ;;
+        esac
+
+        if [[ -n $BETA ]]; then
+            NEW_TAG="V$MAJOR.$MINOR.$PATCH-beta.$BETA"
+        else
+            NEW_TAG="V$MAJOR.$MINOR.$PATCH"
+        fi
+
+        if git rev-parse -q --verify "refs/tags/$NEW_TAG" >/dev/null; then
+            echo "error: tag $NEW_TAG already exists." >&2
+            exit 1
+        fi
+
+        VERSION="$NEW_TAG"
+        echo "==> version $VERSION ($ARG_BUMP bump from $LATEST)"
+        ;;
+
+    "")
+        if [[ -z $LATEST ]]; then
+            echo "error: no git tag found and no version given." >&2
+            echo "       try: ./do-release-windows beta" >&2
+            exit 1
+        fi
+
+        VERSION="$LATEST"
+        echo "==> version $VERSION (reusing newest tag)"
+
+        # Only meaningful when reusing an existing tag. When bumping, HEAD being
+        # ahead of the previous tag is the whole point.
+        if [[ -n $(git rev-list "$LATEST"..HEAD 2>/dev/null) ]]; then
+            echo "    WARNING: HEAD is ahead of $LATEST - this release contains code" >&2
+            echo "             that is not in that tag. Did you mean ./do-release-windows beta?" >&2
+        fi
+        ;;
+
+    *)
+        # An explicit version. Require it to start like one, so a mistyped keyword
+        # ("bета", "pacth") is caught here instead of producing a misnamed .zip.
+        if [[ ! $ARG_BUMP =~ '^[Vv]?[0-9]+\.' ]]; then
+            echo "error: '$ARG_BUMP' is not a bump keyword or a version number." >&2
+            echo "       keywords: major minor patch beta final" >&2
+            echo "       or give a version: ./do-release-windows 0.9.0-rc1" >&2
+            exit 1
+        fi
+
+        VERSION="$ARG_BUMP"
+        echo "==> version $VERSION (specified)"
+        ;;
+esac
+
+if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
+    echo "    WARNING: working tree has uncommitted changes" >&2
+fi
+
+# Strip a leading V/v for filenames and the volume title: tags read "V0.5.0",
+# but "G2-Edit-0.5.0.dmg" is the conventional artifact name.
+VERSION_CLEAN="${VERSION#[Vv]}"
+
+# --- build ---------------------------------------------------------------
+
+ZIPS=()
+
+for arch in x64 arm64; do
+    triple=$([[ $arch == arm64 ]] && echo aarch64 || echo x86_64)
+    out=build-cross-$triple
+
+    echo "==> clean Release build, Windows $arch"
+    rm -rf $out/app   # the app from scratch; the third-party libraries in $out/deps are kept
+    G2_WIN_CONFIG=Release G2_WIN_VERSION="$VERSION" ./tools/do-windows $arch | /usr/bin/grep -E '^(built|needs):'
+
+    # GUI subsystem, or the user gets a console window behind the editor
+    subsystem=$(PATH=${LLVM_MINGW:-$HOME/Developer/llvm-mingw}/bin:$PATH $triple-w64-mingw32-objdump -p $out/G2_Editor.exe \
+                | awk '/^Subsystem/ {print $2}')
+
+    if [[ $subsystem != 00000002 ]]; then
+        echo "error: $out/G2_Editor.exe is not a GUI program (subsystem $subsystem) - check cmake/platform.cmake" >&2
+        exit 1
+    fi
+
+    # The version is in the binary, or the About box would say "development build"
+    if ! /usr/bin/grep -q -a -F "$VERSION" $out/G2_Editor.exe; then
+        echo "error: $VERSION is not in $out/G2_Editor.exe" >&2
+        exit 1
+    fi
+
+    name="G2-Edit-$VERSION_CLEAN-windows-$arch"
+    mkdir -p "$STAGE/$name"
+    cp $out/G2_Editor.exe "$STAGE/$name/G2 Editor.exe"
+    cp "platform/windows/Read Me First.txt" LICENSE "$STAGE/$name/"
+
+    zip="$DIST/$name.zip"
+    rm -f "$zip"
+    (cd "$STAGE" && zip -q -r -X "$zip" "$name")
+    ZIPS+=("$zip")
+done
+
+echo
+for zip in $ZIPS; do
+    echo "done: $zip ($(du -h "$zip" | cut -f1))"
+done
+echo "contents: G2 Editor.exe, Read Me First.txt, LICENSE - no plug-ins on Windows yet"
+echo "signature: none - SmartScreen warns on first run (More info > Run anyway)"
+
+if [[ -n $NEW_TAG ]]; then
+    echo
+    echo "$NEW_TAG does not exist yet. Once you are happy with the .zips (and the Mac .dmg):"
+    echo
+    echo "    git tag -a $NEW_TAG -m \"$NEW_TAG\""
+    echo "    git push origin $NEW_TAG"
+fi

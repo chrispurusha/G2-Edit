@@ -49,6 +49,11 @@ if(WIN32)
         endif()
     endforeach()
 
+    # miniaudio (WASAPI) for audioOutputWin.c: its implementation in a file of its own, without our warnings
+    list(APPEND G2_PLATFORM_SOURCES platform/windows/miniaudioImpl.c)
+    set_source_files_properties(platform/windows/miniaudioImpl.c PROPERTIES COMPILE_OPTIONS "-w")
+    list(APPEND G2_PLATFORM_LIBS ole32 avrt)
+
     # misc.mm's five functions (setup_main_menu, platform_begin/end_audio_activity,
     # register_sleep_wake_notifications, platform_any_mouse_button_down)
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows/miscWin.c)
@@ -63,4 +68,15 @@ if(WIN32)
 
     # _POSIX_THREAD_SAFE_FUNCTIONS: MinGW's time.h declares localtime_r() only with it
     list(APPEND G2_PLATFORM_DEFINES _USE_MATH_DEFINES _POSIX_THREAD_SAFE_FUNCTIONS=200112L)
+
+    # A Release .exe is a GUI program: no console window behind the editor. Debug keeps it, for the log.
+    # Redirecting the output (G2_Editor.exe > log.txt 2>&1) works either way.
+    list(APPEND G2_PLATFORM_LIBS $<$<CONFIG:Release>:-mwindows>)
+
+    # The version the About box shows; do-release-windows passes the release's tag
+    set(G2_VERSION "" CACHE STRING "version string for the About box, empty for a development build")
+
+    if(NOT G2_VERSION STREQUAL "")
+        list(APPEND G2_PLATFORM_DEFINES SYNTHLIB_VERSION_STRING="${G2_VERSION}")
+    endif()
 endif()

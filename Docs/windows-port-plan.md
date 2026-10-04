@@ -134,6 +134,46 @@ Still open in step 1: five warnings stand between it and -Werror (`long` is 32 b
 console-subsystem program (opens a console window); `deviceSync.c` builds its Recovery folder from `$HOME` and
 `Library/Application Support`; load `PatchTestFiles/` and compare with the Mac.
 
+Rule while the port is young (CT): Windows differences are CONDITIONAL - `#if defined (_WIN32)` or
+`platform/windows/` - and the Mac compiles exactly what it did.
+
+**State at the end of 2026-10-04:** steps 1-3 done in their first form - the editor draws, talks to the G2
+over USB (WinUSB via Device Manager) and plays the sound engine through WASAPI, cross-built on the Mac
+(`tools/do-windows arm64`) and run in Parallels on Apple silicon. Dial dragging works (hidden pointer, CT 2026-10-04). Since then: no console window in a Release .exe
+(`-mwindows`, cmake/platform.cmake; Debug keeps it for the log), the Recovery folder under %APPDATA%\G2-Edit
+beside the prefs (`deviceSync.c`), and `./do-release-windows` - the same version arguments as `./do-release`,
+one .zip per architecture (exe, Read Me with the SmartScreen step, LICENSE) to the Desktop, checking each exe
+is a GUI program carrying the version. Still open: the four warnings in the way of -Werror, MIDI input and
+output (stubs), a comparison of patches against the Mac, and step 4, the plug-ins - a VST3 only (no AU on
+Windows) whose editor needs an HWND-side view wrapper drawing through the OpenGL backend; wait for a Windows
+host to test it in.
+
+**2026-10-04, Mac (cross-built), after the first run on Windows.** The cross-built x64 and ARM64 editors run in
+the Parallels VM. The G2: Zadig FAILED to install WinUSB on Windows on ARM; Device Manager's built-in "WinUsb
+Device" (README, "Windows") worked - the editor went Online, then every send timed out ("Mismatch: actual length
+0"). Changed, all `_WIN32` only, the Mac unchanged:
+
+- `usbComms.c`, from a LIBUSB_DEBUG log: on Windows the open is the claim alone (no reset, no clear_halt -
+  clearing 0x81's halt took 5 s and silenced the G2), and the timeouts are longer - send 1 s, poll 250 ms,
+  acknowledgement 1.5 s, data 5 s, cancel drain 3 s - because the Mac's 50 ms send cut every write off under
+  Parallels (usbComms notes §75, §76). The mismatch line names the libusb error on Windows. WORKS: the
+  cross-built ARM64 editor stays online with the G2 under Parallels (CT, 2026-10-04).
+  BUT only after a power cycle: a restart without one failed, and every cancelled incoming read stalled the
+  device ~5 s under WinUSB. Since then Windows never cancels a read while open - one stays pending on each
+  incoming pipe and arrivals are queued; the first 400 ms of arrivals (the last session's) are discarded
+  (usbComms notes §77). The bulk pipe is read only while wanted (the G2 answers an idle bulk read with an empty
+  packet) and the interrupt read is exactly one packet (16 bytes; a 64-byte read never completed). WORKS:
+  re-runs without a power cycle connect (CT, 2026-10-04) - one early failure may have been a stale build;
+  watch for it.
+  Every change `#if defined (_WIN32)`: the Mac's preprocessed source is identical to before but for one pair
+  of parentheses.
+- Sound: `platform/windows/audioOutputWin.c` is real now - WASAPI through miniaudio, same API and prefs
+  (code-notes/audioOutputWin.c.md). WORKS on Windows on ARM under Parallels (CT, 2026-10-04).
+- Vertical/horizontal dial drags: the pointer is hidden, not locked, on Windows - Parallels' absolute pointer
+  cannot be re-centred, so a locked drag never moved (mouseHandle notes §37). NOT YET TRIED.
+- The WinUSB steps are in README.md ("Windows") and in `platform/windows/Read Me First.txt`, which
+  tools/do-windows puts beside the .exe.
+
 ## Rules that still hold on Windows
 
 - `CLAUDE.md` at the root of the GitHub folder on the Mac carries the project's rules; the essentials: comments
