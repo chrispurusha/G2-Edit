@@ -120,6 +120,8 @@ uint32_t sound_engine_voices_sounding(void);
 // peak. Approaching 100 % means the engine is running out of its deadline, which is what crackling
 // is; well below it means a crackle is something else.
 uint32_t sound_engine_load_percent(void);
+uint32_t sound_engine_late_blocks(void);   // sound-engine-notes §207
+uint32_t sound_engine_stats_epoch(void);
 
 // UI thread. Reads the current selection and publishes a parameter snapshot for the audio thread.
 // Cheap enough to call on every redraw, which is what graphics.c does — every parameter change
@@ -143,6 +145,9 @@ typedef enum {
 } tSplitMode;
 
 void sound_engine_set_split_mode(uint32_t mode);
+
+// sound-engine-notes §208 - the output device's os_workgroup_t, which the voice threads join; NULL withdraws it
+void sound_engine_set_audio_workgroup(void * workgroup);
 
 // sound-engine-notes §205 - the graph at the device's rate below 88.2 kHz: half the CPU, not the G2's laws
 void sound_engine_set_economy(bool on);

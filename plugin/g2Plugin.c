@@ -555,10 +555,10 @@ static void build_state_record(tG2Plugin * g2) {
     used += (size_t)snprintf(text + used, sizeof(text) - used, "%s", G2_STATE_HEADER);
     used += (size_t)snprintf(text + used, sizeof(text) - used, "perfmode=%u\nselected=%u\n",
                              (unsigned)gGlobalSettings.perfMode, (unsigned)gSlot);
-    // notes §10 - the editor's mouse mode and the engine's drone mode too.
-    used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndrone=%d\ndac=%d\n",
-                             (int)synthlib_dial_mode(), (sound_engine_drone_mode() == true) ? 1 : 0,
-                             (sound_engine_dac_emulation() == true) ? 1 : 0);
+    // notes §10 - the editor's mouse mode too. Drone mode is no longer a setting (soundEngine notes §206);
+    // a record that still says drone= is read past like any key this build does not know.
+    used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndac=%d\n",
+                             (int)synthlib_dial_mode(), (sound_engine_dac_emulation() == true) ? 1 : 0);
     used += (size_t)snprintf(text + used, sizeof(text) - used, "economy=%d\n", (sound_engine_economy() == true) ? 1 : 0);
     // notes §10 - the performance's name, which its image does not carry
     used += (size_t)snprintf(text + used, sizeof(text) - used, "perfname=%s\n", gGlobalSettings.perfName);
@@ -619,7 +619,6 @@ typedef struct {
     int32_t perfMode;
     int32_t selected;
     int32_t dialMode;
-    int32_t drone;
     int32_t dac;
     int32_t economy;     // soundEngine notes §205 - -1, absent, keeps the prefs file's setting
 
@@ -648,8 +647,6 @@ static void parse_state_line(tG2State * state, char * line) {
         state->selected = atoi(value);
     } else if (strcmp(key, "dialmode") == 0) {
         state->dialMode = atoi(value);
-    } else if (strcmp(key, "drone") == 0) {
-        state->drone = atoi(value);
     } else if (strcmp(key, "dac") == 0) {
         state->dac = atoi(value);
     } else if (strcmp(key, "economy") == 0) {
@@ -699,7 +696,6 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     state->perfMode = -1;
     state->selected = -1;
     state->dialMode = -1;
-    state->drone    = -1;
     state->dac      = -1;
     state->economy  = -1;
 
@@ -779,7 +775,6 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
                                                        ? SPLIT_POS_MAX : state->split[slot]);
         }
     }
-    sound_engine_set_drone_mode(state->drone != 0);     // notes §10 - absent (-1) is the default, on
     if (state->dac >= 0) {
         sound_engine_set_dac_emulation(state->dac != 0);    // absent keeps the prefs file's setting
     }

@@ -92,13 +92,10 @@ on it actually wants, and it takes anything plugged in LATER too — the setup-c
 notification reconnects. It was already the startup state, with no way back to it once a
 single source had been chosen.
 
-## 12. `action_toggle_drone()`
+## 12. (removed 2026-10-04) `action_toggle_drone()`
 
-PLUG-IN ONLY (2026-09-15, CT). The application always drones, as the instrument does. G2 Alike
-offers the choice because every instance on an idle track pays for the voices drone mode keeps
-running (sound-engine-notes §20). It acts on the engine of the instance whose editor the menu
-was opened from, and is saved with the host's project (g2Plugin.c notes §10). The tick follows
-the View menu's pattern: a "*" and the green.
+The plug-in's Drone Mode toggle, and the application's briefly. Gone: the engine now decides per patch
+whether voice 0 needs to run at rest (sound-engine-notes §206), so there is nothing left to choose.
 
 ## 13-14. `open_patch_menu()` and `open_performance_menu()`
 

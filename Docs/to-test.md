@@ -382,6 +382,20 @@ Shape mod input, which the engine ignores.
   MorphSplitEnv (Vel on an envelope's Sustain, Keyb on its Decay - this entry's case) and
   MorphSameDxLevel (both on one Operator Level - the case still 7.7% out). Load each on the G2 and in
   the editor and compare; none of §26.2 has ever been heard against the instrument.
+- ***NEW PATCH STOPS THE VOICES (2026-10-04)*** - sound-engine-notes §171. From a droning or self-playing patch
+  (18 Unreal Dreams) load a simple one (04 Chris' Pad): it must be silent until played. Re-cabling while a
+  key is held now stops the note, as the G2's recalculation does.
+- ***VOICE THREAD SCHEDULING (2026-10-04)*** - sound-engine-notes §208. A heavy patch (Ice Pad, Unreal Dreams on
+  Half) with the app's window behind Terminal or another app: no more break-up than in front; "late" should
+  not climb faster in the background.
+- ***LATE BLOCKS IN THE STATUS (2026-10-04)*** - sound-engine-notes §207. When a heavy patch breaks up, the
+  status line's "late N" should be climbing; if the sound breaks up while it stays at 0, the cause is not
+  the engine's time and wants looking at again.
+  The status figures (late, load, overruns) clear on a new patch, re-cabling, or another slot selected.
+- ***VOICES RETIRE / DRONE PER PATCH (2026-10-04)*** - sound-engine-notes §170, §206. A patch whose sound needs a key now idles at a fraction of the load (CS80 ~13%, Mini Emulator
+  ~8%); a patch that sounds at rest (07, 09, 10, 13, 15, 16, 18) still does, and an edit that makes a patch
+  sound at rest (an oscillator wired past its envelope) starts it droning at once. After a chord on a poly
+  patch, the load falls back once the releases end; nothing cut short. (No Drone Mode switch any more.)
 - ***ECONOMY ENGINE RATE (2026-10-04)*** - sound-engine-notes §205. In the app at 48 kHz: Settings > Audio >
   Engine Rate > 48 kHz economy while a patch plays - the device reopens with a short gap, the load halves,
   the stage patches sound the same; switch back and nothing is left changed. Listen above all to reverb
@@ -390,7 +404,9 @@ Shape mod input, which the engine ignores.
   Plug-in: Settings > Half Rate (economy) while playing - the load drops at once, a held note is cut and
   the next plays; save and reopen the project and the setting comes back; a new instance takes the last
   setting chosen.
-- ***FOUR SLOTS (2026-10-04)*** - sound-engine-notes §204. In the app with the engine on: patches in A and B,
+- ***FOUR SLOTS (2026-10-04)*** - sound-engine-notes §204. ONLY ACTIVE SLOTS PLAY (fixed the same day - inactive
+  slots were sounding): with the G2's slots B-D inactive, nothing sounds at rest unless the selected patch
+  does; Shift+slot on the G2 to make one active and its patch joins in. In the app with the engine on: patches in A and B,
   play - only the selected slot sounds, switching slot while a key is held still releases it. Performance
   mode with Keyboard on for A and B: both sound; with Key Range on and split ranges, each its own half.
   A slot's own MIDI channel from another controller plays that slot. In the plug-in: a performance file
@@ -866,11 +882,6 @@ CROSS-PROJECT
   fade out after 2 s; it now plays until stolen, as on the hardware. Check a drone patch holds, and that ordinary notes
   still free their voices when they go quiet. Voice 0 also now plays at rest in every patch (notes §179): an Osc
   wired past the envelope to an Out should sound on load with no key; enveloped sounds must stay silent at rest
-- ***PLUG-IN DRONE MODE TOGGLE (2026-09-15, notes §20/§190) - NEEDS A HOST.*** Settings > Drone Mode, ticked by default.
-  Unticked: a note sounding past its envelope stops 2 s after the envelope ends with a short fade, and an Osc droning
-  past the envelope at rest holds 2 s then fades - no click. A long release (EnvADSR R of several seconds) must play
-  out in full. Save the project unticked and reopen: still unticked. Two instances keep their own setting. The
-  standalone app has no such item and always drones
 - ***VOICE AREA METERS FALL WHEN THE SOUND STOPS (2026-09-15, notes §191) - NEEDS EYES.*** They froze at their last
   reading once voice 0 stopped, so a drone that had faded out still showed. They now read the sum of the voices and
   fall to zero with the sound. Check one note reads as before against the G2, and compare a chord: the engine now

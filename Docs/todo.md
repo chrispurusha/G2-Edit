@@ -9,6 +9,8 @@ General (priority order)
 - Control rate (notes §203): EnvFollow, PitchTrack and ZeroCnt not up-rated run at 24 kHz on the instrument with their 96 kHz words (times fourfold) - measure one on the G2 (EnvFollow fed by an LFO, release time un-up-rated vs up-rated) before following it; no stage patch uses them
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations and/or multi-core threading as below.
+- 18 Unreal Dreams renders differently run to run with the voice thread on (serial is repeatable): its own NoteSend notes probably reach the voices at a moment that depends on how the two threads interleave - every other stage patch is bit-identical threaded and inline (sound-engine-notes §202)
+- DEFERRED (owner, 2026-10-04) - voices across several threads: a self-playing patch keeps all its voices sounding (18 Unreal Dreams, 32 voices, ~130% of one core in the Debug app at 48 kHz/256) and today every voice runs on ONE worker. Shape: two or three voice workers each rendering a share of the voices, synchronised every sub-block (~32 samples, 0.33 ms at 96 kHz) with note events and allocation applied on those boundaries (the G2 itself quantises keys to its 24 kHz tick), partial sums added by the FX pass (sound-engine-notes §202, §207)
 - Four slots, next (sound-engine-notes §204): render the slots concurrently - today they run one after another on the audio thread, each with its own voice thread
 - Edit each slot's MIDI channel (and the global channel) in the editor, as on the hardware - not urgent (owner, 2026-10-04)
 - Plug-in: route host MIDI by channel to the slots (today every host note is the keyboard, so the selected slot or the performance's keyboard slots)
@@ -264,7 +266,7 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
 - NEWPATCH leaves the editor's patch Volume at the last patch's value while the G2's new patch is at 100 (dataBase.c init_patch -> ensure_patch_volume returns early) - set it to NEW_PATCH_VOLUME
 - The editor forwards incoming MIDI notes to the G2 (midiInput.c): a note that also reaches the G2 directly plays twice on a poly patch - decide whether to forward only when the G2 has no MIDI of its own, or make it a setting
 - OscShpA TriSaw at Shape 0 has 15 dB more 2nd harmonic than the G2's (captured 2026-10-04)
-- Engine split, next: one thread per slot once four-slot playback exists (the worker and ring are per engine already, notes §202); join the device's audio workgroup; report the 32-sample lag to plug-in hosts
+- Engine split, next: one thread per slot (the worker and ring are per engine already, notes §202); the AU plug-in's host workgroup (kAudioOutputUnitProperty_OSWorkgroup on the AU's side, notes §208 - the app joins its device's since 2026-10-04); report the 32-sample lag to plug-in hosts
 - CPU profile per module: sampled cycle counts per node (one block in N), per voice, slot and FX area; a backdoor CPUDUMP table and a file-gated log for the plug-in - first input to multi-threading the 4 slots and FX (engine-multicore-design.md)
 - Operator inputs from cables (§14.1): Gate, Note and Vel come from the voice, and Freq, Pitch and AMod are not read - the instrument reads all six off the Operator
 - Pulse ignores its Mode (Plus/Minus, §18)

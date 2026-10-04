@@ -421,12 +421,6 @@ static void action_open_notes(int index) {
 
 #ifdef SYNTHLIB_PLUGIN_BUILD
 
-// notes §12
-static void action_toggle_drone(int index) {
-    (void)index;
-    sound_engine_set_drone_mode(sound_engine_drone_mode() == false);
-}
-
 // soundEngine notes §205 - the graph at half the rate; the engine applies it at its next block
 static void action_toggle_plugin_economy(int index) {
     bool on = (sound_engine_economy() == false);
@@ -457,7 +451,6 @@ void open_settings_menu(tCoord anchor) {
         // the standing decision for this family of panels.
         {"MIDI Controller List", (tRgb)RGB_GREY_3, action_open_midi_cc_list,     0, NULL, 0, 0.0},
 #ifdef SYNTHLIB_PLUGIN_BUILD
-        {"Drone Mode",           (tRgb)RGB_GREY_3, action_toggle_drone,          0, NULL, 0, 0.0},
         {"G2 Output Filter",     (tRgb)RGB_GREY_3, action_toggle_plugin_dac,     0, NULL, 0, 0.0},
         {"Half Rate (economy)",  (tRgb)RGB_GREY_3, action_toggle_plugin_economy, 0, NULL, 0, 0.0},
 #endif
@@ -465,15 +458,11 @@ void open_settings_menu(tCoord anchor) {
     };
 
 #ifdef SYNTHLIB_PLUGIN_BUILD
-    tMenuItem *      drone   = &items[(sizeof(items) / sizeof(items[0])) - 4];
     tMenuItem *      dac     = &items[(sizeof(items) / sizeof(items[0])) - 3];
     tMenuItem *      economy = &items[(sizeof(items) / sizeof(items[0])) - 2];
-    bool             on      = sound_engine_drone_mode();
     bool             dacOn   = sound_engine_dac_emulation();
     bool             ecoOn   = sound_engine_economy();
 
-    drone->label    = on ? "* Drone Mode" : "  Drone Mode";
-    drone->colour   = on ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
     dac->label      = dacOn ? "* G2 Output Filter" : "  G2 Output Filter";
     dac->colour     = dacOn ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
     economy->label  = ecoOn ? "* Half Rate (economy)" : "  Half Rate (economy)";
@@ -1171,6 +1160,7 @@ void open_experimental_menu(tCoord anchor) {
                 "Engine Rate", (tRgb)RGB_GREY_3, NULL, 0, rates, 0, 0.0
             };
         }
+
 
         // Output level. A patch can arrive hot — several oscillators through two mixers is well
         // within the G2's own headroom but not within a DAC's — and a fixed trim is easier to

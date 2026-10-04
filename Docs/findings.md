@@ -12242,3 +12242,18 @@ the patch worked, which is why it "used to".
 TRAP, same day: the engine's note queue held 64 events, and a burst of more between two render calls drops
 the oldest (notes §72). A test harness sending note-off to all 128 keys lost the held key's note-off, and
 every "release" window measured that day was a still-held note. Now 1024.
+
+====================================================================================================
+
+## 2026-10-04 - Every played voice rendered forever: the voice-finished test never saw an idle envelope
+
+A loaded CS80 cost 19% whether or not anything played, and drone off saved nothing. Since the envelope
+rewrite of 2026-09-19 an idle envelope's stage is ENV_STAGE_IDLE (0xFFFFFFFF); voice_is_finished() still
+compared it with the old enum's eEnvIdle (0), so no voice with an envelope ever finished and each one played
+kept rendering silence until a new note stole it - in a poly patch, the CPU of every voice touched (notes
+§170). The old enum is gone. With drone mode off a released CS80 voice now retires and the load falls to
+the FX area's 12.5%; the application has a Drone Mode switch for that (Experimental), on by default.
+
+Same day: drone mode now decides per patch whether voice 0 can sound at rest, from the graph (notes §206).
+Checked by forcing voice 0 on in 51 patches: every patch judged silent at rest was. 12 of 19 stage patches
+now idle at about half the load.

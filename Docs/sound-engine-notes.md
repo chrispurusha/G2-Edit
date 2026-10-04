@@ -2876,6 +2876,12 @@ Asking the envelopes rather than watching the output level is deliberate: an env
 has finished, where a level has to be watched for long enough to be sure it is not just passing
 through zero.
 
+FIXED 2026-10-04: the test compared each envelope's stage with an old enum's idle value (0) where the
+envelopes since 2026-09-19 mark idle as ENV_STAGE_IDLE (all ones), so no envelope ever counted as finished
+and a voice, once played, rendered until a new note stole it - silent, but at full cost. CS80 one note
+released: 19.5% until stolen before, 12.5% (the FX area alone) once its release ends now. Output unchanged
+bar a residue 94 dB or more below peak at the retirement.
+
 ## 171. in `sound_engine_render()`
 
 WORTH LOGGING, because reset_node_state() below empties every delay line and reverb buffer
@@ -2890,6 +2896,12 @@ unstable and the wipe is the symptom rather than the cause. Debug builds only.
 Not the explanation for every such report: 45 s of idle playing, 120 parameter edits and
 repeated select/deselect cycles all produced ZERO changes here, so whatever else may cut a
 delay short, it is not this under those conditions.
+
+UPDATED 2026-10-04: a change of topology also stops every voice (`reset_voices()`), except on the first build.
+A self-playing patch (18 Unreal Dreams sends its own notes) left voices with their gates open, and the next
+patch's envelopes opened on them - 04 Chris' Pad droned after it. The instrument too recalculates a slot on a
+new patch or a re-cabling with a moment's silence (manual p.37). Checked: Unreal Dreams -> 04 Chris' Pad is
+silent after the first quarter second, plays and releases normally; single-patch renders are unchanged.
 
 ## 172. in `sound_engine_render()`
 
@@ -3334,8 +3346,12 @@ Which engine a call reaches is `sEngineSlot`, a thread-local the render, a route
 thread set; left at -1, a call reaches the SELECTED slot's engine - so the editor's meters, LEDs, morph
 readouts and debug text follow the slot on screen with no change to their callers.
 
-- **Render.** Every slot whose engine is active and has a chain to an output (`gHasChain`, published with
-  each snapshot) is rendered and the slots summed. An empty slot costs nothing: it is not rendered, and
+- **Render.** Every slot whose engine is active, has a chain to an output (`gHasChain`, published with
+  each snapshot) AND is an ACTIVE SLOT on the instrument - the selected slot, or one whose Active flag is
+  set (`gGlobalSettings.slot[].enabled`, the lower slot LED; manual p.17: an inactive slot holds its patch
+  but uses no resources) - is rendered and the slots summed. FIXED the same day: the first version rendered
+  every slot holding a patch, so the G2's inactive slots B-D played whenever their patches sounded on
+  their own. Notes and MIDI channels reach active slots only. An empty slot costs nothing: it is not rendered, and
   its voice thread (§202) is started only once it has a chain, on the patch-update path and never on the
   audio thread. One slot alone renders straight into the caller's buffer, so a single-patch render is
   bit-identical to the engine before this change. Each slot's own Volume is already in its snapshot
@@ -3407,3 +3423,67 @@ ON HARDWARE 2026-10-04: the application on the Fireface at 44.1 kHz, CS80 one no
 peak load per block 94-96% at Full and 72-73% at Half, no overloads either way, and back again on switching.
 Switching a running engine (offline, 48 kHz): CS80 32% -> 22% -> 32%, Big Pad 15% -> 10% -> 15%, Unreal Dreams
 34% -> 25% -> 35%, levels within about 1 dB.
+
+## 206. Drone mode decided per patch (`rest_live_analysis()`, `snapshot.restLive`)
+
+Drone mode (§179) runs voice 0 with no key held, as the instrument runs every voice. In most patches that
+voice can make no sound at rest - its amp is an envelope only a key opens - and rendering it cost as much as
+a held note (CS80 19%). Drone mode is no longer a setting in the application or the plug-in (removed the same day, CT); it is always on,
+but voice 0 now runs at rest only in a patch where
+something can reach a voice Out (or cross into the FX area) with no key held, decided from the graph when
+the snapshot is built:
+
+- Each node's output legs are marked LIVE AT REST from the sources down, repeated to a fixed point so a
+  loop settles. Unknown kinds count as sources: when in doubt, it drones.
+- Sources: everything not listed as passive - oscillators, LFOs, noise, clocks, sequencers, constants,
+  logic that is high on a low input, DX routers whose Operators rest above the bottom of their L4 table.
+- The keyboard's Gate (and MonoKey's) is low at rest; its Pitch and Vel hold their last values.
+- An envelope is live at rest when its Gate input is, or when its output type is high at an idle level
+  (the inverted and negative types); its VCA output also needs its audio input live.
+- LevMult needs both its inputs; filters, EQs, amps, shapers, ModAmt, EnvFollow and the Pan/Fade family
+  take only their AUDIO input into account - a modulation cannot make sound from silence.
+- Passive kinds (mixers, delays, reverb, chorus and the rest of `node_kind_is_passive()`) are live when any
+  input is.
+
+`G2_DRONE_ALWAYS=1` restores voice 0 at rest in every patch, for comparison. A patch edit that changes the
+answer reaches the render with the next snapshot; voice 0 then leaves through the hand-back of §190.
+
+CHECKED 2026-10-04 on 51 patches (19 stage, 32 test) by rendering five seconds at rest with voice 0
+forced on: every patch judged silent at rest was silent (-300 dB), so nothing that drones was stopped. 12 of
+the 19 stage patches rest: at rest 01 Mini Emulator 17.3% -> 7.5%, 14 CS80 19.4% -> 12.9%, 08 Ice Pad 11.7% ->
+6.4%, 19 DxPiano 2.1% -> 1.1%. The 7 that sound at rest (07, 09, 10, 13, 15, 16, 18) drone as before and
+render bit-identically. Played chords in the resting patches move within about 1 dB a band: voice 0 has not
+run before the first key, so phases and voice choice start differently. Not modelled: a sequencer or S&H in
+a resting voice does not advance at rest (only oscillator and LFO phases are carried, §174), so the first
+note finds it where it stopped rather than where the instrument's would be.
+
+## 207. Late blocks (`sound_engine_late_blocks()`)
+
+A block whose render takes longer than it plays for is a gap in the sound. CoreAudio reports an overload
+only when the device's driver says so, so the engine counts its own: every render longer than
+`frames / device rate` adds one, per G2, shown in the status line as "late N" beside the load. The engine's
+figures (late, load) start again whenever the patch on show changes - a new patch or re-cabling in the
+selected slot, or another slot selected - and `sound_engine_stats_epoch()` moves on at the same moment, which
+is how the application's overrun count (audioOutput.c notes §5) restarts with them. MEASURED 2026-10-04 in the application (Debug, QU-24, 48 kHz, 256): 18 Unreal Dreams plays
+itself - its clocks gate every voice's envelopes - and climbs to all 32 voices sounding within seconds of a
+chord, ~130% of one core; late blocks and overloads both mounted. Offline the same chord reaches 103% of
+the deadline at -O1 and 88% at -O2. What helps today: Half (economy, §205), about 30% here, and a Release
+build. What would fix it: voices spread over several threads (todo, deferred).
+
+## 208. The voice thread's scheduling (`split_thread_set_period()`, `sound_engine_set_audio_workgroup()`)
+
+Break-up got worse with the application's window behind another (CT, 2026-10-04). App Nap was already held
+off (misc.mm notes §2a); the voice thread was the weak point. It declared a real-time budget of 1 ms in every
+5 while rendering 3-4 ms of voices in each 5.3 ms block, and macOS demotes a time-constraint thread that keeps
+overrunning what it declared - to ordinary priority, which loses to whatever window is in front.
+
+Now the thread declares the block it is actually given: period and constraint the block's duration
+(`sp->count` graph samples at the graph rate), computation SPLIT_RT_BUDGET (75%) of it, reset whenever the
+block changes by more than 5%. And in the application it joins the output device's audio workgroup
+(`kAudioOutputUnitProperty_OSWorkgroup`, set when the device starts and withdrawn when it stops), which is
+Apple's way of scheduling a helper thread with the device's own - on the performance cores, as one job.
+The plug-in offers no workgroup yet (an Audio Unit host has one to give; a VST3 host does not).
+Scheduling only: threaded renders stay bit-identical to inline.
+
+CHECKED the same day in the application (QU-24, 48 kHz, 256, Debug): 08 Ice Pad, 12-note chord, load 86-87%;
+6 late blocks in the chord's first moments with the app in front, none more in 8 s with Terminal in front.

@@ -44,6 +44,7 @@ extern "C" {
 #include "prefs.h"
 #include "synthlibGlobals.h"  // synthlib_request_redraw() - the rate listener wakes the loop
 #include "audioOutput.h"
+#include <os/workgroup.h>
 #include "soundEngine.h"
 #include "misc.h"            // platform_begin_audio_activity() - misc.mm notes §2a
 
@@ -952,12 +953,25 @@ bool audio_output_start(void) {
     }
     gRunning = true;
     platform_begin_audio_activity();   // misc.mm notes §2a - no App Nap while we are rendering
+
+    // soundEngine notes §208 - the device's audio workgroup, for the engine's voice threads to join
+    {
+        os_workgroup_t workgroup = NULL;
+        UInt32         size      = sizeof(workgroup);
+
+        if (  (AudioUnitGetProperty(gOutputUnit, kAudioOutputUnitProperty_OSWorkgroup, kAudioUnitScope_Global, 0,
+                                    &workgroup, &size) == noErr)
+           && (workgroup != NULL)) {
+            sound_engine_set_audio_workgroup((void *)workgroup);
+        }
+    }
     LOG_DEBUG("Sound engine: audio output started at %.0f Hz\n", gSampleRate);
     return true;
 }
 
 void audio_output_stop(void) {
-    platform_end_audio_activity();   // misc.mm notes §2a
+    platform_end_audio_activity();          // misc.mm notes §2a
+    sound_engine_set_audio_workgroup(NULL); // soundEngine notes §208 - the threads leave it at their next block
 
     if (gOutputUnit == NULL) {
         gRunning    = false;
@@ -995,9 +1009,19 @@ static void stop_listening_for_rate_changes(void) {
     gRateListenerDevice = 0;
 }
 
-// notes §5 - how many IO cycles CoreAudio has reported as overrun since the output was opened.
+// notes §5 - how many IO cycles CoreAudio has reported as overrun since the output was opened, or since the
+// selected slot's patch last changed (soundEngine notes §207), whichever is later
 uint32_t audio_output_overload_count(void) {
-    return atomic_load(&gOverloadCount);
+    static uint32_t seenEpoch = 0;
+    static uint32_t base      = 0;
+    uint32_t        epoch     = sound_engine_stats_epoch();
+    uint32_t        count     = atomic_load(&gOverloadCount);
+
+    if (epoch != seenEpoch) {
+        seenEpoch = epoch;
+        base      = count;
+    }
+    return (count >= base) ? (count - base) : count;
 }
 
 // notes §4 - called from the render loop. Re-opening the unit is what re-reads the format and tells

@@ -121,9 +121,9 @@ before this change opens as it always did.
 of the patch, so once the host stores the patch DATA the divider is restored with it and this key goes.
 It exists because the patch data is not stored yet and the divider was being lost in the meantime.
 
-UPDATED 2026-09-15: and the engine's drone mode - `drone=0|1`, Settings > Drone Mode (sound-engine-notes §20).
-Per instance, unlike the mouse mode. A record without it, from a project saved before it existed, gets the
-default, on: the record replaces what the instance holds (§11).
+UPDATED 2026-09-15, REMOVED 2026-10-04: the engine's drone mode was `drone=0|1` here; the engine now decides per
+patch whether voice 0 runs at rest (sound-engine-notes §206), so the key is no longer written, and a record
+that still carries it is read past like any other key this build does not know.
 
 NO FILE NAMES AT ALL SINCE 2026-09-16 (CT). The record used to identify each slot's patch by PATH -
 `perf=` in performance mode, otherwise `slot0=`..`slot3=` - and g2_set_state() reopened them, so a
@@ -135,7 +135,6 @@ state only:
     perfmode=0|1
     selected=0..3
     dialmode=0|1|2
-    drone=0|1
     split=<slot0>,<slot1>,<slot2>,<slot3>
 
 ```

@@ -32,6 +32,7 @@ extern "C" {
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 #include <mach/thread_policy.h>
+#include <os/workgroup.h>
 #else
 #include <semaphore.h>
 #endif
@@ -99,6 +100,17 @@ static bool engine_no_free_run(void) {
 
 // notes §179 - voice 0 runs with no key held. Drone mode does it for every patch, as the instrument does;
 // without it only a patch with no envelope, which is the only kind audible at rest.
+// notes §206 - G2_DRONE_ALWAYS=1 runs voice 0 at rest in every patch again, for comparison
+static bool drone_always(void) {
+    static int cached = -1;
+
+    if (cached < 0) {
+        const char * v = getenv("G2_DRONE_ALWAYS");
+        cached = ((v != NULL) && (v[0] == '1')) ? 1 : 0;
+    }
+    return cached == 1;
+}
+
 static bool free_voice_runs(uint32_t v, bool chainHasEnvelope, bool droneMode) {
     return (v == 0) && (engine_no_free_run() == false) && ((droneMode == true) || (chainHasEnvelope == false));
 }
@@ -1219,6 +1231,7 @@ typedef struct {
     tDxOperator   dxOp[MAX_DX_OPERATORS];   // §14 - each DXRouter node's six, from its dxBase
     uint32_t      dxOpCount;
     double        slotGain;                 // §63 - the patch's own Volume and its on switch
+    bool          restLive;                 // notes §206 - something can reach an Out with no key held
     uint32_t      backCount;                // notes §192 - loop-closing legs, each a slot in gBackValue
     tSeqConfig    seq[MAX_SEQ_LINES];       // §58 - each sequencer's step table and the words its switches set
     tClkGenConfig clkGen[MAX_CLKGEN_LINES]; // §59
@@ -1598,6 +1611,8 @@ static _Atomic uint32_t       gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
 #define gLoadPercent    (gLoadPercentBank[SE])
 // notes §204 - the whole render's cost, all slots, against the buffer's deadline
 static _Atomic uint32_t       gRenderLoadPercent[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];
+static _Atomic uint32_t       gRenderLateBlocks[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];
+static _Atomic uint32_t       gStatsEpoch[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];   // notes §207 - a new patch on the selected slot
 
 static void reset_voices(void);
 static uint32_t voice_count_for_patch(uint32_t slot);
@@ -2107,6 +2122,8 @@ static uint32_t   gDxTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGIN
 // §70.13 - a controller as it arrived; `listened` says the slot's own channel takes it too
 // notes §204 - which slots the keyboard plays: the selected one, or in a performance every slot whose
 // Keyboard is on, within its range when ranges are on
+static bool slot_is_active(uint32_t slot);
+
 static uint32_t keyboard_slot_mask(int32_t note) {
     uint32_t mask = 0;
 
@@ -2115,7 +2132,7 @@ static uint32_t keyboard_slot_mask(int32_t note) {
     }
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        if (gPerfSettings.slot[slot].keyboardEnabled == 0u) {
+        if ((gPerfSettings.slot[slot].keyboardEnabled == 0u) || (slot_is_active(slot) == false)) {
             continue;
         }
 
@@ -2134,7 +2151,7 @@ static uint32_t channel_slot_mask(uint32_t channel) {
     uint32_t mask = 0;
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        if (gSynthSettings.midiChanSlot[slot] == channel) {
+        if ((gSynthSettings.midiChanSlot[slot] == channel) && (slot_is_active(slot) == true)) {
             mask |= 1u << slot;
         }
     }
@@ -2823,10 +2840,10 @@ const char * sound_engine_status_text(void) {
         {
             // The voice figures are what say whether a chord is being cut short: sounding against
             // allowed, the second being the patch's own Poly count.
-            snprintf(text, sizeof(text), "Playing %u module%s, %u/%u voices, load %u%%%s",
+            snprintf(text, sizeof(text), "Playing %u module%s, %u/%u voices, load %u%%, late %u%s",
                      (unsigned)gPlayingCount, (gPlayingCount == 1) ? "" : "s",
                      (unsigned)sound_engine_voices_sounding(), (unsigned)sound_engine_voice_count(),
-                     (unsigned)sound_engine_load_percent(),
+                     (unsigned)sound_engine_load_percent(), (unsigned)sound_engine_late_blocks(),
                      (midi_input_connected_count() > 0) ? " - MIDI in" : " - Virtual Keyboard");
             return text;
         }
@@ -3296,6 +3313,16 @@ static void voice_note_off(int32_t note, uint8_t release) {
 
 // Peak render load since the last read, as a percentage of real time. READING IT CLEARS IT, so the
 // figure is always "the worst buffer since you last looked".
+// notes §207 - moves on whenever the selected slot gets a new patch, so a caller can restart its own counts
+uint32_t sound_engine_stats_epoch(void) {
+    return atomic_load(&gStatsEpoch[ENGINE_DOC]);
+}
+
+// notes §207 - blocks rendered later than their deadline since the selected slot's patch arrived
+uint32_t sound_engine_late_blocks(void) {
+    return atomic_load(&gRenderLateBlocks[ENGINE_DOC]);
+}
+
 uint32_t sound_engine_load_percent(void) {
     return atomic_exchange(&gRenderLoadPercent[ENGINE_DOC], 0);
 }
@@ -6740,6 +6767,179 @@ static void add_note_senders(tSoundEngineParams * params, uint32_t variation) {
 }
 
 // The whole chain from the patch, at the per-voice morph amounts in sBuildAxis. Database read lock held.
+static double env_output(const tEngineNode * spec, double level);
+
+// notes §206 - kinds whose output is silent while every input is: they make no signal of their own
+static bool node_kind_is_passive(tNodeKind kind) {
+    switch (kind) {
+        case eNodeFilter:
+        case eNodeLevAmp:
+        case eNodeMix:
+        case eNodeChorus:
+        case eNodeCompress:
+        case eNodeDelay:
+        case eNodeReverb:
+        case eNodePassThru:
+        case eNodeShaper:
+        case eNodeFade:
+        case eNodeMixStereo:
+        case eNodeFltMulti:
+        case eNodeEq:
+        case eNodeFltComb:
+        case eNodeModAmt:
+        case eNodeDlySingle:
+        case eNodePhaser:
+        case eNodeFltVoice:
+        case eNodeFreqShift:
+        case eNodeDlyStereo:
+        case eNodeFltPhase:
+        case eNodeMinMax:
+        case eNodeEnvFollow:
+        case eNodeWahWah:
+        case eNodeMultiTap:
+        case eNodeFlanger:
+        case eNodePShift:
+        case eNodeVocoder:
+        case eNodeNoiseGate:
+        case eNodeOut:
+        {
+            return true;
+        }
+        default:
+        {
+            return false;
+        }
+    }
+}
+
+// notes §206 - whether any output of the voice can carry signal with no key held: each node's legs
+// marked live from the sources down, to a fixed point so a loop settles
+static bool rest_live_analysis(const tSoundEngineParams * p) {
+    static _Thread_local bool live[MAX_ENGINE_NODES][NODE_OUTPUTS];
+    bool                      changed = true;
+
+    memset(live, 0, sizeof(live));
+
+    for (uint32_t pass = 0; (changed == true) && (pass <= p->nodeCount + 1u); pass++) {
+        changed = false;
+
+        for (uint32_t n = 0; n < p->nodeCount; n++) {
+            const tEngineNode * spec  = &p->node[n];
+            bool                anyIn = false;
+            bool                in[MAX_NODE_INPUTS];
+
+            if (spec->postMix == true) {
+                continue;
+            }
+
+            for (uint32_t c = 0; c < spec->inCount; c++) {
+                int32_t src = spec->in[c];
+
+                in[c] = (src >= 0) && ((uint32_t)src < p->nodeCount) && (p->node[src].postMix == false)
+                        && (live[src][spec->srcLeg[c] % NODE_OUTPUTS] == true);
+                anyIn = anyIn || in[c];
+            }
+
+            for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
+                bool now = false;
+
+                switch (spec->kind) {
+                    case eNodeKeyboard:
+                    case eNodeMonoKey:
+                    {
+                        now = (leg != 1u);    // Pitch and Vel hold their last values; Gate is low
+                        break;
+                    }
+                    case eNodeEnv:
+                    {
+                        bool gate  = (spec->inCount > ENV_INPUT_GATE) && in[ENV_INPUT_GATE];
+                        bool level = gate || (env_output(spec, 0.0) != 0.0);
+
+                        now = (leg == 0u) ? level : (level && (spec->inCount > 0u) && in[0]);
+                        break;
+                    }
+                    case eNodeLevMult:
+                    {
+                        now = (spec->inCount > 1u) && in[0] && in[1];
+                        break;
+                    }
+                    // a modulation input cannot make sound from silence: only the audio decides
+                    case eNodeFilter:
+                    case eNodeFltMulti:
+                    case eNodeFltComb:
+                    case eNodeFltPhase:
+                    case eNodeFltVoice:
+                    case eNodePhaser:
+                    case eNodeWahWah:
+                    case eNodeEq:
+                    case eNodeLevAmp:
+                    case eNodeModAmt:
+                    case eNodeEnvFollow:
+                    {
+                        now = (spec->inCount > 0u) && in[0];
+                        break;
+                    }
+                    case eNodeShaper:
+                    {
+                        uint32_t audio = (spec->shaper.signalLeg == 0u) ? 0u : 1u;
+
+                        now = (spec->inCount > audio) && in[audio];
+                        break;
+                    }
+                    case eNodeFade:
+                    {
+                        bool oneIn = (spec->fadeKind == eFadePan) || (spec->fadeKind == eFadeOneToTwo);
+
+                        now = ((spec->inCount > 0u) && in[0]) || ((oneIn == false) && (spec->inCount > 1u) && in[1]);
+                        break;
+                    }
+                    // §14 - the Operators' envelopes rest at L4: silent there unless one rests above the bottom
+                    case eNodeDx:
+                    {
+                        now = anyIn;
+
+                        for (uint32_t op = 0; (op < DX_OPERATORS) && (now == false); op++) {
+                            now = ((spec->dxBase + op) < p->dxOpCount) && ((uint32_t)p->dxOp[spec->dxBase + op].level[3] > kDxLevelWords[0]);
+                        }
+
+                        break;
+                    }
+                    default:
+                    {
+                        now = (node_kind_is_passive(spec->kind) == true) ? anyIn : true;
+                        break;
+                    }
+                }
+
+                if ((now == true) && (live[n][leg] == false)) {
+                    live[n][leg] = true;
+                    changed      = true;
+                }
+            }
+        }
+    }
+
+    // live at a voice Out, or crossing from the voice into the area after the mix
+    for (uint32_t n = 0; n < p->nodeCount; n++) {
+        const tEngineNode * spec = &p->node[n];
+
+        for (uint32_t c = 0; c < spec->inCount; c++) {
+            int32_t src = spec->in[c];
+
+            if ((src < 0) || ((uint32_t)src >= p->nodeCount) || (p->node[src].postMix == true)) {
+                continue;
+            }
+
+            if (  ((spec->kind == eNodeOut) || (spec->postMix == true))
+               && (live[src][spec->srcLeg[c] % NODE_OUTPUTS] == true)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 static void build_snapshot(tSoundEngineParams * out) {
     SE_LOCAL;
 
@@ -6977,6 +7177,7 @@ static void build_snapshot(tSoundEngineParams * out) {
     }
     snapshot.topology   = topology_signature(&snapshot);
     snapshot.voiceCount = voice_count_for_patch(engine_slot());
+    snapshot.restLive   = rest_live_analysis(&snapshot);
 
     memcpy(out, &snapshot, sizeof(snapshot));
 }
@@ -14348,6 +14549,8 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     gOutHistoryPos = (gOutHistoryPos + 1) % OUT_DECIMATE_TAPS;
 }
 
+#define SPLIT_RT_BUDGET    (0.75)   // notes §208 - the share of each block the voice thread declares
+
 // notes §202 - the two platform pieces the split needs: a semaphore the audio thread can signal without
 // blocking, and a worker scheduled like the audio thread it works for.
 #if defined (__APPLE__)
@@ -14365,19 +14568,51 @@ static void split_sem_wait(tSplitSem sem) {
     (void)dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
 }
 
-static void split_thread_make_realtime(void) {
+// notes §208 - real time with the block's own period and a budget it can keep. The first version
+// promised 1 ms in 5 while rendering 3-4 ms of voices in 5.3, and the scheduler demotes a thread that keeps
+// overrunning what it declared - to ordinary priority, which loses to every window in front of the app.
+static void split_thread_set_period(double blockSeconds) {
     mach_timebase_info_data_t            base;
     thread_time_constraint_policy_data_t policy;
 
     (void)mach_timebase_info(&base);
-    double                               perMs = 1.0e6 * (double)base.denom / (double)base.numer;
+    double                               perSecond = 1.0e9 * (double)base.denom / (double)base.numer;
+    double                               period    = fmin(fmax(blockSeconds, 0.0005), 0.05);
 
-    policy.period      = (uint32_t)(5.0 * perMs);
-    policy.computation = (uint32_t)(1.0 * perMs);
-    policy.constraint  = (uint32_t)(5.0 * perMs);
+    policy.period      = (uint32_t)(period * perSecond);
+    policy.computation = (uint32_t)(SPLIT_RT_BUDGET * period * perSecond);
+    policy.constraint  = (uint32_t)(period * perSecond);
     policy.preemptible = 1;
     (void)thread_policy_set(mach_thread_self(), THREAD_TIME_CONSTRAINT_POLICY,
                             (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+}
+
+static void split_thread_make_realtime(void) {
+    split_thread_set_period(0.005);
+}
+
+// notes §208 - the output device's audio workgroup, when the application has one to offer
+static _Atomic(void *) gAudioWorkgroup = NULL;
+
+void sound_engine_set_audio_workgroup(void * workgroup) {
+    atomic_store(&gAudioWorkgroup, workgroup);
+}
+
+static void split_thread_follow_workgroup(void ** joined, os_workgroup_join_token_s * token) {
+    void * wanted = atomic_load(&gAudioWorkgroup);
+
+    if (wanted == *joined) {
+        return;
+    }
+
+    if (*joined != NULL) {
+        os_workgroup_leave((os_workgroup_t)*joined, token);
+        *joined = NULL;
+    }
+
+    if ((wanted != NULL) && (os_workgroup_join((os_workgroup_t)wanted, token) == 0)) {
+        *joined = wanted;
+    }
 }
 #else
 typedef sem_t * tSplitSem;
@@ -14401,6 +14636,14 @@ static void split_sem_wait(tSplitSem sem) {
 }
 
 static void split_thread_make_realtime(void) {
+}
+
+static void split_thread_set_period(double blockSeconds) {
+    (void)blockSeconds;
+}
+
+void sound_engine_set_audio_workgroup(void * workgroup) {
+    (void)workgroup;
 }
 #endif
 
@@ -14581,7 +14824,13 @@ static void split_prime(tSplit * sp, uint64_t topology, uint32_t mode) {
 }
 
 static void * split_worker(void * arg) {
-    tSplit * sp = (tSplit *)arg;
+    tSplit *                  sp            = (tSplit *)arg;
+    double                    periodSeconds = 0.0;
+
+#if defined (__APPLE__)
+    void *                    joined        = NULL;
+    os_workgroup_join_token_s token;
+#endif
 
     split_thread_make_realtime();
 
@@ -14589,6 +14838,21 @@ static void * split_worker(void * arg) {
         split_sem_wait(sp->go);
         gDoc        = sp->doc;   // the engine's document, and with it the engine's banks
         sEngineSlot = sp->slot;
+
+        // notes §208 - scheduled for the block it is actually given, beside the device's own thread
+        {
+            SE_LOCAL;
+
+            double block = (gSampleRateBank[SE] > 0.0) ? ((double)sp->count / gSampleRateBank[SE]) : 0.0;
+
+            if ((block > 0.0) && (fabs(block - periodSeconds) > (0.05 * block))) {
+                periodSeconds = block;
+                split_thread_set_period(block);
+            }
+        }
+#if defined (__APPLE__)
+        split_thread_follow_workgroup(&joined, &token);
+#endif
 
         for (uint64_t i = 0; i < sp->count; i++) {
             split_produce_one(sp, sp->params, &sp->ctx);
@@ -14674,8 +14938,22 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
         LOG_DEBUG("TOPOLOGY CHANGE %llu -> %llu, nodes %u, tap %d — delay and reverb buffers cleared\n",
                   (unsigned long long)gSeenTopology, (unsigned long long)params.topology,
                   (unsigned)params.nodeCount, params.tap);
+
+        // notes §171 - a new patch, or a re-cabled one, starts with no voice playing: a gate left open by
+        // the old patch (a self-playing one sends its own notes) would otherwise open the new patch's
+        // envelopes and drone. Not on the first build, which has no voices to clear.
+        if (gSeenTopology != 0u) {
+            reset_voices();
+        }
         gSeenTopology = params.topology;
         reset_node_state();
+
+        // notes §207 - the status figures start again with the patch on show
+        if (engine_current_slot() == ((uint32_t)gSlot % MAX_SLOTS)) {
+            atomic_store(&gRenderLateBlocks[ENGINE_DOC], 0u);
+            atomic_store(&gRenderLoadPercent[ENGINE_DOC], 0u);
+            atomic_fetch_add(&gStatsEpoch[ENGINE_DOC], 1u);
+        }
     }
     // notes §172
 
@@ -14700,7 +14978,8 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
         }
     }
 
-    bool droneMode = atomic_load(&gDroneMode);
+    // notes §206 - drone mode runs voice 0 at rest only in a patch that can sound there
+    bool droneMode = (atomic_load(&gDroneMode) == true) && ((params.restLive == true) || (drone_always() == true));
 
     // notes §190
     if (  (droneMode == false) && (gDroneSeen == true)
@@ -14894,10 +15173,16 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
     }
 }
 
+// notes §204 - as on the instrument, a slot plays only while it is active (its lower LED); the focused
+// one always is. An inactive slot still holds its patch but costs and sounds nothing.
+static bool slot_is_active(uint32_t slot) {
+    return (slot == ((uint32_t)gSlot % MAX_SLOTS)) || (gGlobalSettings.slot[slot].enabled != 0u);
+}
+
 static bool slot_renders(void) {
     SE_LOCAL;
 
-    return (atomic_load(&gActive) == true) && (atomic_load(&gHasChain) == true);
+    return (atomic_load(&gActive) == true) && (atomic_load(&gHasChain) == true) && (slot_is_active(engine_current_slot()) == true);
 }
 
 #define RENDER_MIX_FLOATS    (8192u)
@@ -14954,22 +15239,36 @@ static double slot_device_rate(void) {
 }
 
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
-    struct timespec started  = {0};
-    struct timespec finished = {0};
+    static int32_t  shownSlot[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS] = {[(0) ... (SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS) - 1] = -1};
+    struct timespec started                                         = {0};
+    struct timespec finished                                        = {0};
 
+    // notes §207 - another slot selected is another patch on show: its figures start again too
+    if (shownSlot[ENGINE_DOC] != (int32_t)((uint32_t)gSlot % MAX_SLOTS)) {
+        shownSlot[ENGINE_DOC] = (int32_t)((uint32_t)gSlot % MAX_SLOTS);
+        atomic_store(&gRenderLateBlocks[ENGINE_DOC], 0u);
+        atomic_store(&gRenderLoadPercent[ENGINE_DOC], 0u);
+        atomic_fetch_add(&gStatsEpoch[ENGINE_DOC], 1u);
+    }
     (void)clock_gettime(CLOCK_MONOTONIC, &started);
     render_slots(out, frameCount, channelCount);
     (void)clock_gettime(CLOCK_MONOTONIC, &finished);
 
-    double          spent    = ((double)(finished.tv_sec - started.tv_sec)) + (((double)(finished.tv_nsec - started.tv_nsec)) / 1.0e9);
-    double          rate     = slot_device_rate();
-    double          deadline = (rate > 0.0) ? ((double)frameCount / rate) : 0.0;
+    double          spent                                           = ((double)(finished.tv_sec - started.tv_sec)) + (((double)(finished.tv_nsec - started.tv_nsec)) / 1.0e9);
+    double          rate                                            = slot_device_rate();
+    double          deadline                                        = (rate > 0.0) ? ((double)frameCount / rate) : 0.0;
 
     if ((deadline > 0.0) && (spent >= 0.0)) {
         uint32_t percent = (uint32_t)((spent / deadline) * 100.0);
 
         if (percent > atomic_load(&gRenderLoadPercent[ENGINE_DOC])) {
             atomic_store(&gRenderLoadPercent[ENGINE_DOC], percent);
+        }
+
+        // notes §207 - a block that took longer than it plays for is a gap in the sound, whether or not
+        // the device reports an overload
+        if (spent > deadline) {
+            atomic_fetch_add(&gRenderLateBlocks[ENGINE_DOC], 1u);
         }
     }
 }
