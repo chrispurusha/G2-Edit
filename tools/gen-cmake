@@ -1,0 +1,411 @@
+#!/usr/bin/env python3
+#
+# The G2 Editor application.
+#
+# Copyright (C) 2026 Chris Turner <chris_purusha@icloud.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# gen-cmake - writes CMakeLists.txt from "G2 Editor.xcodeproj". THE XCODE PROJECT IS THE MASTER
+# (Docs/windows-port-plan.md): re-run this whenever the project, or the files in its synchronized
+# folders, change, and never edit the output. What a port does differently goes in cmake/platform.cmake,
+# which the output includes.
+#
+#   tools/gen-cmake            writes ./CMakeLists.txt
+#   tools/gen-cmake --check    exits 1 if ./CMakeLists.txt is not what it would write
+
+import os
+import re
+import sys
+
+HERE    = os.path.dirname(os.path.abspath(__file__))
+ROOT    = os.path.dirname(HERE)
+PROJECT = os.path.join(ROOT, 'G2 Editor.xcodeproj', 'project.pbxproj')
+OUTPUT  = os.path.join(ROOT, 'CMakeLists.txt')
+
+SOURCE_EXTENSIONS = ('.c', '.cpp', '.cc', '.m', '.mm')
+APPLE_ONLY        = ('.m', '.mm')
+
+
+# ── The project file: an OpenStep property list ──────────────────────────────────────────────
+
+class Parser:
+    def __init__(self, text):
+        self.text = text
+        self.at   = 0
+
+    def skip(self):
+        while self.at < len(self.text):
+            c = self.text[self.at]
+            if c.isspace():
+                self.at += 1
+            elif self.text.startswith('//', self.at):
+                self.at = self.text.index('\n', self.at) + 1
+            elif self.text.startswith('/*', self.at):
+                self.at = self.text.index('*/', self.at) + 2
+            else:
+                return
+
+    def value(self):
+        self.skip()
+        c = self.text[self.at]
+        if c == '{':
+            return self.dictionary()
+        if c == '(':
+            return self.array()
+        if c == '"':
+            return self.quoted()
+        return self.bare()
+
+    def dictionary(self):
+        self.at += 1
+        out = {}
+        while True:
+            self.skip()
+            if self.text[self.at] == '}':
+                self.at += 1
+                return out
+            key = self.value()
+            self.skip()
+            assert self.text[self.at] == '=', 'expected = at %d' % self.at
+            self.at += 1
+            out[key] = self.value()
+            self.skip()
+            assert self.text[self.at] == ';', 'expected ; at %d' % self.at
+            self.at += 1
+
+    def array(self):
+        self.at += 1
+        out = []
+        while True:
+            self.skip()
+            if self.text[self.at] == ')':
+                self.at += 1
+                return out
+            out.append(self.value())
+            self.skip()
+            if self.text[self.at] == ',':
+                self.at += 1
+
+    def quoted(self):
+        self.at += 1
+        out = []
+        while self.text[self.at] != '"':
+            if self.text[self.at] == '\\':
+                self.at += 1
+                out.append({'n': '\n', 't': '\t'}.get(self.text[self.at], self.text[self.at]))
+            else:
+                out.append(self.text[self.at])
+            self.at += 1
+        self.at += 1
+        return ''.join(out)
+
+    def bare(self):
+        m = re.compile(r'[A-Za-z0-9_$./\-:+\[\]*=]+').match(self.text, self.at)
+        assert m, 'unexpected text at %d' % self.at
+        word = m.group(0)
+        # a bare word never contains '=' - that is the separator after a key
+        if '=' in word:
+            word = word[:word.index('=')]
+        self.at += len(word)
+        return word
+
+
+def load_project():
+    with open(PROJECT, encoding='utf-8') as f:
+        text = f.read()
+    return Parser(text[text.index('{'):]).value()
+
+
+# ── What the project says ─────────────────────────────────────────────────────────────────────
+
+def settings_for(objects, config_list_id, name):
+    for cid in objects[config_list_id]['buildConfigurations']:
+        config = objects[cid]
+        if config['name'] == name:
+            return config.get('buildSettings', {})
+    return {}
+
+
+def unconditional(settings):
+    # "KEY[arch=*]" applies everywhere; any other condition (an SDK, one architecture) is Apple's alone
+    out = {}
+    for key, value in settings.items():
+        if '[' in key:
+            if key.endswith('[arch=*]'):
+                out[key[:key.index('[')]] = value
+            continue
+        out.setdefault(key, value)
+    return out
+
+
+def merged(project_settings, target_settings):
+    out = dict(unconditional(project_settings))
+    for key, value in unconditional(target_settings).items():
+        if isinstance(value, list) and '$(inherited)' in value and isinstance(out.get(key), list):
+            at    = value.index('$(inherited)')
+            value = value[:at] + out[key] + value[at + 1:]
+        out[key] = value
+    for key, value in out.items():
+        if isinstance(value, list):
+            out[key] = [v for v in value if v != '$(inherited)']
+    return out
+
+
+def as_list(value):
+    if value is None:
+        return []
+    return value if isinstance(value, list) else value.split()
+
+
+def expand(path):
+    return path.replace('$(PROJECT_DIR)', '${CMAKE_CURRENT_SOURCE_DIR}').replace('$(SRCROOT)', '${CMAKE_CURRENT_SOURCE_DIR}')
+
+
+def read_target(model):
+    objects  = model['objects']
+    root     = objects[model['rootObject']]
+    targets  = [objects[t] for t in root['targets']]
+    apps     = [t for t in targets if t.get('productType') == 'com.apple.product-type.application']
+    assert len(apps) == 1, 'expected one application target'
+    target   = apps[0]
+
+    folders    = []
+    exceptions = set()
+    for gid in target.get('fileSystemSynchronizedGroups', []):
+        group = objects[gid]
+        folders.append(group['path'])
+        for eid in group.get('exceptions', []):
+            for path in objects[eid].get('membershipExceptions', []):
+                exceptions.add(os.path.join(group['path'], path))
+
+    frameworks = []
+    for pid in target['buildPhases']:
+        phase = objects[pid]
+        if phase['isa'] == 'PBXFrameworksBuildPhase':
+            for bid in phase['files']:
+                ref  = objects[objects[bid]['fileRef']]
+                name = ref.get('name', os.path.basename(ref['path']))
+                frameworks.append(name.replace('.framework', ''))
+
+    configs = {}
+    for name in ('Debug', 'Release'):
+        configs[name] = merged(settings_for(objects, root['buildConfigurationList'], name),
+                               settings_for(objects, target['buildConfigurationList'], name))
+
+    return target['name'], folders, exceptions, frameworks, configs
+
+
+def sources(folders, exceptions):
+    found = []
+    for folder in folders:
+        for dirpath, dirnames, filenames in os.walk(os.path.join(ROOT, folder)):
+            dirnames[:] = sorted(d for d in dirnames if not d.startswith('.') and not d.endswith('.xcassets'))
+            for name in sorted(filenames):
+                rel = os.path.relpath(os.path.join(dirpath, name), ROOT)
+                if name.endswith(SOURCE_EXTENSIONS) and rel not in exceptions:
+                    found.append(rel)
+    return found
+
+
+# ── Xcode's warning switches, as compiler flags ───────────────────────────────────────────────
+# Only the ones this project turns on. The clang-only ones are emitted under a Clang test, so a GCC
+# build (MSYS2's UCRT64 rather than CLANG64) still configures.
+
+WARNINGS = [
+    ('GCC_WARN_UNUSED_FUNCTION',               'YES',       '-Wunused-function',       False),
+    ('GCC_WARN_UNUSED_VARIABLE',               'YES',       '-Wunused-variable',       False),
+    ('GCC_WARN_ABOUT_RETURN_TYPE',             'YES_ERROR', '-Werror=return-type',     False),
+    ('GCC_WARN_UNINITIALIZED_AUTOS',           None,        '-Wuninitialized',         False),
+    ('CLANG_WARN_EMPTY_BODY',                  'YES',       '-Wempty-body',            False),
+    ('CLANG_WARN_INT_CONVERSION',              'YES',       '-Wint-conversion',        False),
+    ('CLANG_WARN_ENUM_CONVERSION',             'YES',       '-Wenum-conversion',       False),
+    ('CLANG_WARN_STRICT_PROTOTYPES',           'YES',       '-Wstrict-prototypes',     False),
+    ('GCC_WARN_64_TO_32_BIT_CONVERSION',       'YES',       '-Wshorten-64-to-32',      True),
+    ('CLANG_WARN_COMMA',                       'YES',       '-Wcomma',                 True),
+    ('CLANG_WARN_BOOL_CONVERSION',             'YES',       '-Wbool-conversion',       True),
+    ('CLANG_WARN_CONSTANT_CONVERSION',         'YES',       '-Wconstant-conversion',   True),
+    ('CLANG_WARN_INFINITE_RECURSION',          'YES',       '-Winfinite-recursion',    True),
+    ('CLANG_WARN_UNREACHABLE_CODE',            'YES',       '-Wunreachable-code',      True),
+    ('CLANG_WARN_DOCUMENTATION_COMMENTS',      'YES',       '-Wdocumentation',         True),
+]
+
+
+def warning_flags(settings, clang):
+    out = []
+    for key, wanted, flag, clang_only in WARNINGS:
+        value = settings.get(key)
+        if value is None or clang_only != clang:
+            continue
+        if (wanted is None and value not in ('NO', '')) or value == wanted:
+            out.append(flag)
+    return out
+
+
+def defines(settings):
+    return [d for d in as_list(settings.get('GCC_PREPROCESSOR_DEFINITIONS'))]
+
+
+def other_cflags(settings):
+    # "-isystem <path>" pairs become include directories; everything else is passed as it stands
+    flags, systems, words, i = [], [], as_list(settings.get('OTHER_CFLAGS')), 0
+    while i < len(words):
+        if words[i] == '-isystem' and i + 1 < len(words):
+            systems.append(expand(words[i + 1]))
+            i += 2
+        else:
+            flags.append(words[i])
+            i += 1
+    return flags, systems
+
+
+# ── The output ────────────────────────────────────────────────────────────────────────────────
+
+def cmake_list(items, indent='    '):
+    return '\n'.join(indent + ('"%s"' % i if (' ' in i or '$' in i) else i) for i in items)
+
+
+def generate():
+    name, folders, exceptions, frameworks, configs = read_target(load_project())
+    files    = sources(folders, exceptions)
+    portable = [f for f in files if not f.endswith(APPLE_ONLY)]
+    apple    = [f for f in files if f.endswith(APPLE_ONLY)]
+    debug    = configs['Debug']
+    release  = configs['Release']
+    cflags, systems = other_cflags(debug)
+    headers  = [expand(p) for p in as_list(debug.get('HEADER_SEARCH_PATHS'))]
+    target   = re.sub(r'[^A-Za-z0-9_]', '_', name)
+    c_std    = re.sub(r'\D', '', debug.get('GCC_C_LANGUAGE_STANDARD', 'gnu17')) or '17'
+    cxx_std  = re.sub(r'\D', '', debug.get('CLANG_CXX_LANGUAGE_STANDARD', 'gnu++20')) or '20'
+    debug_o  = debug.get('GCC_OPTIMIZATION_LEVEL', '0')
+    rel_o    = release.get('GCC_OPTIMIZATION_LEVEL', 's')      # Xcode's own default for Release
+    werror   = 'ON' if debug.get('GCC_TREAT_WARNINGS_AS_ERRORS') == 'YES' else 'OFF'
+    libs     = [expand(l) for l in as_list(debug.get('OTHER_LDFLAGS')) if l.endswith('.a')]
+    objc_flags = ';'.join(f for f, key in (('-fobjc-arc', 'CLANG_ENABLE_OBJC_ARC'), ('-fmodules', 'CLANG_ENABLE_MODULES'))
+                          if debug.get(key) == 'YES')
+
+    return f'''# GENERATED by tools/gen-cmake from "G2 Editor.xcodeproj" - do not edit. The Xcode project is the master:
+# change it, then re-run tools/gen-cmake. Port-specific choices go in cmake/platform.cmake, included below.
+# See Docs/windows-port-plan.md.
+
+cmake_minimum_required(VERSION 3.20)
+
+set(CMAKE_OSX_DEPLOYMENT_TARGET {debug.get('MACOSX_DEPLOYMENT_TARGET', '12.0')} CACHE STRING "")   # before project(), or it is ignored
+
+if(APPLE)
+    project({target} LANGUAGES C CXX OBJC OBJCXX)
+else()
+    project({target} LANGUAGES C CXX)
+endif()
+
+set(CMAKE_C_STANDARD {c_std})
+set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_CXX_STANDARD {cxx_std})
+set(CMAKE_CXX_EXTENSIONS ON)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+# Xcode treats warnings as errors; a new port usually wants to see them first (cmake -DG2_WERROR=OFF)
+option(G2_WERROR "warnings are errors, as in the Xcode project" {werror})
+
+# The synchronized folders {', '.join(folders)}, every source file in them{' except the project\'s exceptions' if exceptions else ''}.
+set(G2_SOURCES
+{cmake_list(portable)}
+)
+
+# Objective-C: Apple only
+set(G2_APPLE_SOURCES
+{cmake_list(apple)}
+)
+
+# cmake/platform.cmake can change G2_SOURCES and add G2_PLATFORM_SOURCES, G2_PLATFORM_LIBS,
+# G2_PLATFORM_DEFINES and G2_PLATFORM_INCLUDES before the target is made
+set(G2_PLATFORM_SOURCES "")
+set(G2_PLATFORM_LIBS "")
+set(G2_PLATFORM_DEFINES "")
+set(G2_PLATFORM_INCLUDES "")
+include(${{CMAKE_CURRENT_SOURCE_DIR}}/cmake/platform.cmake OPTIONAL)
+
+if(APPLE)
+    add_executable({target} MACOSX_BUNDLE ${{G2_SOURCES}} ${{G2_APPLE_SOURCES}} ${{G2_PLATFORM_SOURCES}})
+    set_target_properties({target} PROPERTIES OUTPUT_NAME "{name}")
+    # Xcode's CLANG_ENABLE_OBJC_ARC and CLANG_ENABLE_MODULES - the modules are what link Metal and the
+    # rest the framework list leaves out, as Xcode does by itself
+    set_source_files_properties(${{G2_APPLE_SOURCES}} PROPERTIES COMPILE_OPTIONS "{objc_flags}")
+else()
+    add_executable({target} ${{G2_SOURCES}} ${{G2_PLATFORM_SOURCES}})
+endif()
+
+target_include_directories({target} PRIVATE
+{cmake_list(headers)}
+    ${{G2_PLATFORM_INCLUDES}}
+)
+
+if(APPLE)
+    # the bundled third-party headers and static libraries, as the Xcode project uses them
+    target_include_directories({target} SYSTEM PRIVATE
+{cmake_list(systems, '        ')}
+    )
+    target_link_libraries({target} PRIVATE
+{cmake_list(libs, '        ')}
+{cmake_list(['-framework %s' % f for f in frameworks], '        ')}
+    )
+endif()
+
+target_compile_definitions({target} PRIVATE
+    $<$<CONFIG:Debug>:{';'.join(defines(debug))}>
+    $<$<CONFIG:Release>:{';'.join(defines(release))}>
+    ${{G2_PLATFORM_DEFINES}}
+)
+
+target_compile_options({target} PRIVATE
+    $<$<CONFIG:Debug>:-O{debug_o}>
+    $<$<CONFIG:Debug>:-g>
+    $<$<CONFIG:Release>:-O{rel_o}>
+{cmake_list(cflags)}
+{cmake_list(warning_flags(debug, False))}
+)
+
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    target_compile_options({target} PRIVATE
+{cmake_list(warning_flags(debug, True), '        ')}
+    )
+endif()
+
+if(G2_WERROR)
+    target_compile_options({target} PRIVATE -Werror)
+endif()
+
+target_link_libraries({target} PRIVATE ${{G2_PLATFORM_LIBS}})
+'''
+
+
+def main():
+    text = generate()
+    if '--check' in sys.argv:
+        current = open(OUTPUT, encoding='utf-8').read() if os.path.exists(OUTPUT) else ''
+        if current != text:
+            print('CMakeLists.txt is out of date: run tools/gen-cmake')
+            sys.exit(1)
+        print('CMakeLists.txt is up to date')
+        return
+    with open(OUTPUT, 'w', encoding='utf-8') as f:
+        f.write(text)
+    print('wrote %s' % os.path.relpath(OUTPUT, os.getcwd()))
+
+
+if __name__ == '__main__':
+    main()
