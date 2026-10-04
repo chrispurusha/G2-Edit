@@ -1142,6 +1142,7 @@ typedef struct {
     // everything in the FX Area, for the three module kinds that own a shared delay buffer wherever
     // they sit, and for anything downstream of one of those. See mark_post_mix_nodes().
     bool postMix;
+    bool ctlRate;   // notes §203 - evaluated at the G2's control rate, its outputs held between
 } tEngineNode;
 
 static void keyquant_build(tEngineNode * node, tModule * module, uint32_t variation);
@@ -1502,10 +1503,13 @@ static bool engine_master_running(void) {
 }
 
 
-static double gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
+static double               gDeviceRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 48000.0};
 #define gDeviceRate    (gDeviceRateBank[SE])
-static double gSampleRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
-#define gSampleRate    (gSampleRateBank[SE])
+static double               gSampleRateBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 96000.0};
+// notes §203 - while a control-rate node is evaluated, the rate it sees is the control rate
+static _Thread_local double sCtlRate;
+#define CTL_RATE_HZ    (24000.0)   // the G2's control rate, a quarter of its audio rate
+#define gSampleRate    ((sCtlRate > 0.0) ? sCtlRate : gSampleRateBank[SE])
 
 // notes §30
 typedef struct {
@@ -2304,9 +2308,9 @@ bool sound_engine_active(void) {
 static void set_oversampling(double deviceRate) {
     SE_LOCAL;
 
-    gOversample    = (deviceRate >= ENGINE_GRAPH_RATE_MIN) ? 1u : (uint32_t)ENGINE_OVERSAMPLE;
-    gSampleRate    = deviceRate * (double)gOversample;
-    gOscOversample = (gSampleRate >= OSC_GRAPH_RATE_MIN) ? 1u : (uint32_t)OSC_OVERSAMPLE;
+    gOversample         = (deviceRate >= ENGINE_GRAPH_RATE_MIN) ? 1u : (uint32_t)ENGINE_OVERSAMPLE;
+    gSampleRateBank[SE] = deviceRate * (double)gOversample;
+    gOscOversample      = (gSampleRate >= OSC_GRAPH_RATE_MIN) ? 1u : (uint32_t)OSC_OVERSAMPLE;
 }
 
 // The device's rate; the ENGINE runs at gOversample times this (§29a). gSampleRate is the internal
@@ -2345,11 +2349,24 @@ void sound_engine_set_start_phase_seed(uint32_t seed) {
     gStartPhaseSeed = (seed == 0u) ? START_PHASE_FIRST_SEED : seed;
 }
 
+// notes §203 - a control-rate node's outputs between its ticks, per voice (voice 0 also serves the nodes
+// after the mix), and each pass's position on the control-rate grid
+static double gCtlHoldBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][NODE_OUTPUTS];
+#define gCtlHold          (gCtlHoldBank[SE])
+static double gCtlPhaseVoiceBank[SOUND_ENGINE_MAX_ENGINES];
+#define gCtlPhaseVoice    (gCtlPhaseVoiceBank[SE])
+static double gCtlPhaseFxBank[SOUND_ENGINE_MAX_ENGINES];
+#define gCtlPhaseFx       (gCtlPhaseFxBank[SE])
+
 static void reset_node_state(void) {
     SE_LOCAL;
 
     uint32_t i = 0;
     uint32_t v = 0;
+
+    memset(gCtlHold, 0, sizeof(gCtlHold));   // notes §203
+    gCtlPhaseVoice = 1.0;                    // the first sample is a tick
+    gCtlPhaseFx    = 1.0;
 
     if (gStartPhaseSeed == 0u) {
         gStartPhaseSeed = START_PHASE_FIRST_SEED;
@@ -5096,6 +5113,48 @@ static void dx_build(tSoundEngineParams * params, tEngineNode * node, tModule * 
 // notes §192
 static _Thread_local bool sNodeBuilding[locationMax][MAX_NUM_MODULES];
 
+// notes §203 - the G2's own rule: a module whose outputs are all blue or yellow runs at the control rate
+// unless something red or orange has up-rated it. The kinds held out run detectors or delay lines tied to
+// the audio rate in this engine, and stay there until each has been checked.
+static bool node_kind_can_tick_slowly(tNodeKind kind) {
+    switch (kind) {
+        case eNodeResonator:
+        case eNodePShift:
+        case eNodeNoiseGate:
+        case eNodePitchTrack:
+        case eNodeEnvFollow:
+        case eNodeRatePass:
+        {
+            return false;
+        }
+        default:
+        {
+            return true;
+        }
+    }
+}
+
+static bool node_runs_at_control_rate(const tModule * module, tNodeKind kind) {
+    uint32_t outputs = 0;
+
+    if ((module->upRate != 0u) || (node_kind_can_tick_slowly(kind) == false)) {
+        return false;
+    }
+
+    for (uint32_t i = 0; i < array_size_connector_location_list(); i++) {
+        if ((connectorLocationList[i].moduleType != module->type) || (connectorLocationList[i].direction != connectorDirOut)) {
+            continue;
+        }
+
+        if (connectorLocationList[i].type == connectorTypeAudio) {
+            return false;
+        }
+        outputs++;
+    }
+
+    return outputs > 0u;
+}
+
 static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t variation, uint32_t depth) {
     SE_LOCAL;
 
@@ -5248,6 +5307,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     node->moduleIndex = module->key.index;
     node->location    = module->key.location;
     node->inCount     = inCount;
+    node->ctlRate     = node_runs_at_control_rate(module, kind);
     {
         // counted back from the end, in the order input_connectors() appends them
         bool     oscKind     = ((kind == eNodeOsc) || (kind == eNodeOscShp));
@@ -12943,7 +13003,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 state[1] = (state[0] != 0.0) ? (gSampleRate / STATUS_TICK_HZ) : 0.0;
                 state[0] = (double)spec->select;
             }
-            value[n][0] = LOGIC_HIGH_LEVEL;
+            value[n][0] = 0.0;   // §70.13 - Patch Active reads low on the instrument
             value[n][1] = (state[1] > 0.0) ? 0.0 : LOGIC_HIGH_LEVEL;
             state[1]   -= 1.0;
             value[n][2] = (spec->postMix == true) ? 0.0 : ((double)(voice & 0x1fu) * 4.0 / UNITS_PER_FULL_SCALE);
@@ -13684,6 +13744,19 @@ typedef struct {
     double glideStep;
 } tStageCtx;
 
+// notes §203 - whether this sample is on the control-rate grid: one sample in four at 96 kHz
+static bool ctl_tick(double * phase) {
+    SE_LOCAL;
+
+    *phase += CTL_RATE_HZ / gSampleRateBank[SE];
+
+    if (*phase >= 1.0) {
+        *phase -= 1.0;
+        return true;
+    }
+    return false;
+}
+
 static void stage_smooth(const tSoundEngineParams * p, double rampSamples, tSmoothWhich which) {
     SE_LOCAL;
 
@@ -13732,6 +13805,7 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
 
     uint32_t n       = 0;
     double   voiceSum[MAX_ENGINE_NODES][NODE_OUTPUTS];
+    bool     ctlTick = ctl_tick(&gCtlPhaseVoice);   // notes §203
 
     // One event per sample. A chord's worth of note-ons arriving together therefore lands over
     // consecutive samples rather than all but the last being thrown away, and every note takes
@@ -13832,13 +13906,23 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
                 voice->fade = 0.0;
             }
         }
-        double level   = ((ctx->chainHasEnvelope == true) ? 1.0 : voice->envelope) * voice->fade;
+        double level = ((ctx->chainHasEnvelope == true) ? 1.0 : voice->envelope) * voice->fade;
 
         for (n = 0; n < p->nodeCount; n++) {
             if (p->node[n].postMix == true) {
                 continue;
             }
-            eval_node(v, n, p, value, voicePitch);
+
+            if (p->node[n].ctlRate == false) {
+                eval_node(v, n, p, value, voicePitch);
+            } else if (ctlTick == true) {
+                sCtlRate = CTL_RATE_HZ;
+                eval_node(v, n, p, value, voicePitch);
+                sCtlRate = 0.0;
+                memcpy(gCtlHold[v][n], value[n], sizeof(value[n]));
+            } else {
+                memcpy(value[n], gCtlHold[v][n], sizeof(value[n]));
+            }
         }
 
         // The voices SUM, which is what playing more than one note at once means. Only the
@@ -13900,14 +13984,25 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     SE_LOCAL;
 
     uint32_t n            = 0;
-    double   sample[2][2] = {{0.0, 0.0}, {0.0, 0.0}};   // [output pair][channel]
+    double   sample[2][2] = {{0.0, 0.0}, {0.0, 0.0}}; // [output pair][channel]
+    bool     ctlTick      = ctl_tick(&gCtlPhaseFx);   // notes §203
 
     // notes §183
     for (n = 0; n < p->nodeCount; n++) {
         if (p->node[n].postMix == false) {
             continue;
         }
-        eval_node(0, n, p, value, KEYBOARD_PITCH_ZERO);    // §16.2a - no key after the mix: E4, 0 units
+
+        if (p->node[n].ctlRate == false) {
+            eval_node(0, n, p, value, KEYBOARD_PITCH_ZERO);    // §16.2a - no key after the mix: E4, 0 units
+        } else if (ctlTick == true) {
+            sCtlRate = CTL_RATE_HZ;
+            eval_node(0, n, p, value, KEYBOARD_PITCH_ZERO);
+            sCtlRate = 0.0;
+            memcpy(gCtlHold[0][n], value[n], sizeof(value[n]));
+        } else {
+            memcpy(value[n], gCtlHold[0][n], sizeof(value[n]));
+        }
     }
 
     if (p->tap >= 0) {
@@ -14575,7 +14670,7 @@ static void engine_reset_state(void) {
     memset(&gStatus, 0, sizeof(gStatus));
     memset(&gPlayingCount, 0, sizeof(gPlayingCount));
     memset(&gDeviceRate, 0, sizeof(gDeviceRate));
-    memset(&gSampleRate, 0, sizeof(gSampleRate));
+    memset(&gSampleRateBank[SE], 0, sizeof(gSampleRateBank[SE]));
     memset(&gVoice, 0, sizeof(gVoice));
     memset(&gVoiceClock, 0, sizeof(gVoiceClock));
     memset(&gEngineVoices, 0, sizeof(gEngineVoices));
@@ -14650,16 +14745,16 @@ static void engine_reset_state(void) {
     memset(&gSustainPedal, 0, sizeof(gSustainPedal));
     memset(&gSustainSeen, 0, sizeof(gSustainSeen));
     pthread_mutex_init(&gParamsWriteMutex, NULL);
-    gOutputGainMilli  = 1000;
-    gStatus           = eStatusOff;
-    gDeviceRate       = 48000.0;
-    gSampleRate       = 96000.0;
-    gEngineVoices     = 1;
-    sLastTypeBank[SE] = UINT32_MAX;    // no layout yet: the first call resets
-    gPatchSlot        = -1;
-    gDroneMode        = true;
-    gDroneSeen        = true;
-    gDacEmulation     = true;
+    gOutputGainMilli    = 1000;
+    gStatus             = eStatusOff;
+    gDeviceRate         = 48000.0;
+    gSampleRateBank[SE] = 96000.0;
+    gEngineVoices       = 1;
+    sLastTypeBank[SE]   = UINT32_MAX;  // no layout yet: the first call resets
+    gPatchSlot          = -1;
+    gDroneMode          = true;
+    gDroneSeen          = true;
+    gDacEmulation       = true;
 }
 #endif
 

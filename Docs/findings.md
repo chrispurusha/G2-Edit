@@ -12214,3 +12214,27 @@ TRAPS - each of these produced a confident wrong lead first:
   once input and output came from ONE take (four outputs at once, a second FX 2-Out on Out 3/4).
 - Reverb, StChorus, Compress, DelayA, ModAmt, LevAmp and Fx-In all match the G2 here; the Reverb checked
   with each input alone and from a single take of its real inputs.
+
+====================================================================================================
+
+## 2026-10-04 - Control modules at the control rate: CS80 from 43.6% to 24.4% of a block
+
+The engine evaluated every node every 96 kHz sample; the G2 runs blue and yellow modules at 24 kHz unless
+up-rated. Following the instrument's own rule (its connector colours and the patch's up-rate flags) took
+14 CS80project72 from 43.6% to 30.3% of a 256-frame block single-threaded, 24.4% with the voice thread, and
+its worst block from 62.6% to 29.2% (notes §203).
+
+TRAP: SeqOscExp looked broken (-4.9 dB held, +28 dB in the release) - but with a four-note chord that
+patch is silent, -110 to -157 dBFS in both versions: the "difference" was one rounding floor against
+another. Compare absolute levels before believing a dB difference, and check a test patch makes sound.
+
+====================================================================================================
+
+## 2026-10-04 - SeqOscExp silent since Status was built: Patch Active is low on the G2
+
+SeqOscExp (two SeqVals clocked by OscA, each restarting the other through its Link) rendered silent in
+the engine. The restart path runs through AND(Link, Invert(Status Patch Active)); the engine held Patch
+Active high as the manual says, which shut the gate. On the G2 an Invert on Patch Active stays lit during
+a held note, whether the patch was sent from the editor or loaded from a bank (5:23) - Patch Active reads
+low. The engine follows the instrument (reference §70.13). Before 09-27 Status was not built, read 0, and
+the patch worked, which is why it "used to".

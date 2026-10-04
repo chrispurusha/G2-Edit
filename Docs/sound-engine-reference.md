@@ -2801,7 +2801,10 @@ been compared with the instrument yet.
     Gain dial at 127 is 8.02 dB an octave, and a positive dial raises the keys on its side.
   - **Outputs.** Level is the gain (1.0 = 0 dB), saturated at 4; Out is In x Level.
 - **70.13 The MIDI and panel modules.** Status (the reference model, 2026-10-02): Patch Active
-  goes high when the patch is made active and stays there; Var Active is high, and low for one 24 kHz
+  is LOW - read off the G2 2026-10-04 (an Invert on it lit, held note, the patch sent from the editor and
+  loaded from a bank alike), though the manual says it goes high on load. SeqOscExp depends on it: its two
+  sequencers restart each other through Invert(Patch Active) and an AND Gate, and with Patch Active high
+  the chain stops and the patch is silent; Var Active is high, and low for one 24 kHz
   tick after the variation changes - a trigger, not a level; Voice No. is the voice's index (its low five
   bits) x 4 units, 0 in the FX area.
   Device gives the wheel, aftertouch, control pedal (morph group 5), sustain, pitch stick, and the G2X

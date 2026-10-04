@@ -6,7 +6,8 @@ Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
 -
-- TOP PRIORITY - CPU: evaluate control-rate modules (envelopes, LFOs, sequencers, logic, DX envelopes) once per four 96 kHz samples, at the G2's own 24 kHz, holding their outputs between; eval_node's per-node dispatch is ~3/4 of the voice cost (multicore design note)
+- Control rate (notes §203), next: check the held-back kinds one by one (Resonator, Scratch, NoiseGate, PitchTrack, EnvFollow, Red2Blue) and move each that is safe
+- Engine note queue holds 64 events: more between two render calls (a 128-key all-notes-off sweep) drops the oldest, and a dropped note-off hangs the voice - drain into the note stack or treat a sweep as all-off
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations and/or multi-core threading as below.
 - Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works anyhow.

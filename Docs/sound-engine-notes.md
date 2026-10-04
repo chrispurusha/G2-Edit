@@ -3300,3 +3300,23 @@ multicore design note predicted.
 The worker is a real-time thread on macOS (THREAD_TIME_CONSTRAINT_POLICY); it does not yet join the
 device's audio workgroup. The plug-in does not report the lag to the host. The semaphore and the
 priority are the only platform code, behind `split_sem_*()` and `split_thread_make_realtime()`.
+
+## 203. Control-rate modules evaluated at the control rate (`node_runs_at_control_rate()`, `ctl_tick()`)
+
+The G2 runs every module whose outputs are blue or yellow at 24 kHz, a quarter of its audio rate, unless
+something red or orange reaches one of its inputs and up-rates it (manual p.71). The engine now does the
+same: a node is `ctlRate` when its module has outputs and none of them is audio, and its `upRate` is 0 -
+the flag the editor keeps for the cable colours and every patch from the G2 carries. Such a node is
+evaluated on one sample in four (an accumulator, so 88.2 kHz works too) and its outputs held in between,
+per voice (`gCtlHold`), which is what an audio module on the instrument reads from it. While it is
+evaluated, `gSampleRate` reads 24000 (a thread-local override, `sCtlRate`), so every rate-derived step
+inside it - LFO phases, envelope and clock ticks, pulse lengths - advances by a control sample.
+
+Held at the audio rate until each is checked: Resonator, Scratch, NoiseGate, PitchTrack, EnvFollow and
+Red2Blue, which run detectors or delay lines tied to the audio rate here.
+
+CHECKED 2026-10-04 against the engine before it, 8 patches with a four-note chord: level and band levels
+unchanged to 0.01 dB; sample differences are the stepping and triggers landing on the next control tick.
+Threaded and inline split stay bit-identical. Cost, 256-frame blocks at 96 kHz: 14 CS80project72 43.6% ->
+30.3% single-threaded, 24.4% with the voice thread (worst block 62.6% -> 29.2%); 02 Big Pad 15.1% ->
+10.6%. A patch with few control modules (Dx) is unchanged.

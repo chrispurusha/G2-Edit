@@ -382,6 +382,10 @@ Shape mod input, which the engine ignores.
   MorphSplitEnv (Vel on an envelope's Sustain, Keyb on its Decay - this entry's case) and
   MorphSameDxLevel (both on one Operator Level - the case still 7.7% out). Load each on the G2 and in
   the editor and compare; none of §26.2 has ever been heard against the instrument.
+- ***STATUS PATCH ACTIVE LOW (2026-10-04)*** - reference §70.13. LISTEN: SeqOscExp (bank 5:23) plays in the app and plug-in as on the G2;
+  any other patch using Status Patch Active still behaves.
+- ***CONTROL MODULES AT 24 kHz (2026-10-04)*** - sound-engine-notes §203. LISTEN: patches heavy in LFOs,
+  envelopes and sequencers against before - no change in sound or timing expected; the CPU readout lower.
 - ***RENDER AHEAD (2026-10-04)*** - audioOutput.c notes §7, Settings > Audio > Render Ahead. On the Intel MacBook,
   a patch that breaks up: does 10 or 20 ms cure it, and does Off behave exactly as before.
 - ***THE VOICES ON THEIR OWN THREAD (2026-10-04)*** - sound-engine-notes §202. LISTEN: patches with an FX area
