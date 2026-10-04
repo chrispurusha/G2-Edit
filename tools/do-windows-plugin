@@ -1,0 +1,109 @@
+#!/bin/zsh
+#
+# do-windows-plugin - cross-builds the G2 Alike VST3 for Windows on this Mac, with llvm-mingw.
+#
+#   tools/do-windows-plugin            x64
+#   tools/do-windows-plugin arm64      native Windows on ARM - Parallels on Apple silicon
+#
+# Result: build-cross-<arch>/G2 Alike.vst3/Contents/<arch>-win/G2 Alike.vst3, the VST3 bundle layout
+# Windows hosts expect - copy the whole "G2 Alike.vst3" folder into C:\Program Files\Common Files\VST3.
+#
+# THE SOURCE LIST IS ../do-plugin's, read from it, so the two cannot drift: everything except the Mac's
+# window code (g2View.m, the Metal backend, the Cocoa VST3 view) and the Audio Unit, which has no Windows.
+# In their place: plugin/g2ViewWin.c, SynthLib's renderBackendGL.c and synthlibPluginVst3ViewWin.cpp.
+# Needs tools/do-windows to have built the libraries for that architecture first (FreeType).
+#
+# Environment: G2_WIN_VERSION (the About box; do-release-windows sets it), VST3_SDK, LLVM_MINGW.
+
+set -e
+HERE=${0:A:h}
+ROOT=${HERE:h}
+LLVM_MINGW=${LLVM_MINGW:-$HOME/Developer/llvm-mingw}
+SDK=${VST3_SDK:-$HOME/Documents/vst3sdk}
+ARCH=x86_64
+
+for arg in "$@"; do
+    case $arg in
+        arm64|aarch64) ARCH=aarch64 ;;
+        x64|x86_64)    ARCH=x86_64 ;;
+        *) echo "usage: tools/do-windows-plugin [x64|arm64]" >&2; exit 2 ;;
+    esac
+done
+
+TRIPLE=$ARCH-w64-mingw32
+OUT=$ROOT/build-cross-$ARCH
+DEPS=$OUT/deps
+CC=$LLVM_MINGW/bin/$TRIPLE-clang
+CXX=$LLVM_MINGW/bin/$TRIPLE-clang++
+NAME="G2 Alike"
+WINARCH=$([[ $ARCH == aarch64 ]] && echo arm64-win || echo x86_64-win)
+
+[[ -x $CC ]]                        || { echo "error: no llvm-mingw at $LLVM_MINGW" >&2; exit 1; }
+[[ -d $SDK/pluginterfaces ]]        || { echo "error: VST3 SDK not found at $SDK" >&2; exit 1; }
+[[ -f $DEPS/lib/libfreetype.a ]]    || { echo "error: run tools/do-windows ${ARCH/aarch64/arm64} first (FreeType)" >&2; exit 1; }
+
+# do-plugin's SOURCES and CXX_SOURCES, with HERE pointing at the project as they expect
+eval "$(sed -n '/^SOURCES=(/,/^)/p; /^CXX_SOURCES=(/,/^)/p' $ROOT/do-plugin | sed "s|\$HERE|$ROOT|g")"
+
+SOURCES+=(
+    "$ROOT/plugin/g2ViewWin.c"
+    "$ROOT/SynthLib/src/renderBackendGL.c"
+)
+VST3_CXX=(
+    "$ROOT/SynthLib/plugin/synthlibPluginVst3.cpp"
+    "$ROOT/SynthLib/plugin/synthlibPluginVst3ViewWin.cpp"
+    "$SDK/pluginterfaces/base/funknown.cpp"
+    "$SDK/pluginterfaces/base/coreiids.cpp"
+    "$SDK/public.sdk/source/vst/vstinitiids.cpp"
+    "$SDK/public.sdk/source/common/commoniids.cpp"
+    "$SDK/pluginterfaces/base/ustring.cpp"
+    "$SDK/pluginterfaces/base/conststringtable.cpp"
+)
+
+VERSION_STRING=${G2_WIN_VERSION:-$(git -C $ROOT describe --tags --always --dirty 2>/dev/null || echo 'development build')}
+DEFS=(-DSYNTHLIB_VERSION_STRING="\"$VERSION_STRING\"" -DSYNTHLIB_PLUGIN_BUILD=1
+      -D_USE_MATH_DEFINES -D_POSIX_THREAD_SAFE_FUNCTIONS=200112L)
+INCLUDES=(-I$ROOT/src -I$ROOT/SynthLib/src -I$ROOT/SynthLib/plugin -I$ROOT/plugin
+          -I$ROOT/SynthLib/ThirdParty/glfw/include -I$DEPS/include/freetype2 -isystem $SDK)
+# Not -Werror yet: the Windows application has four warnings to fix first (Docs/windows-port-plan.md)
+FLAGS=(-O2 -include $ROOT/platform/windows/winCompat.h)
+
+OBJ=$OUT/plugin-obj
+rm -rf $OBJ
+mkdir -p $OBJ
+OBJECTS=()
+
+echo "==> $NAME VST3 for $TRIPLE (${#SOURCES[@]} C, $(( ${#CXX_SOURCES[@]} + ${#VST3_CXX[@]} )) C++)"
+
+for src in $SOURCES; do
+    o=$OBJ/${${src:t}%.*}.o
+    $CC -std=gnu11 $FLAGS $DEFS $INCLUDES -c $src -o $o &
+    OBJECTS+=($o)
+done
+
+for src in $CXX_SOURCES $VST3_CXX; do
+    o=$OBJ/${${src:t}%.*}.oxx
+    quiet=()
+    [[ $src == $SDK/* ]] && quiet=(-w)    # Steinberg's own files, theirs to warn about
+    $CXX -std=gnu++17 $FLAGS $quiet -Wno-pragma-pack $DEFS $INCLUDES -c $src -o $o &
+    OBJECTS+=($o)
+done
+wait
+
+for o in $OBJECTS; do
+    [[ -f $o ]] || { echo "error: compile failed for ${o:t}" >&2; exit 1; }
+done
+
+BUNDLE="$OUT/$NAME.vst3"
+DLL="$BUNDLE/Contents/$WINARCH/$NAME.vst3"
+rm -rf "$BUNDLE"
+mkdir -p "${DLL:h}"
+
+# One self-contained DLL: the C++ runtime and winpthreads linked in, so nothing beside it is needed
+$CXX -shared -static -o "$DLL" $OBJECTS $DEPS/lib/libfreetype.a \
+     -lopengl32 -lgdi32 -luser32 -lole32 -lwinmm -lpthread -Wl,--exclude-all-symbols
+
+echo
+echo "built: $BUNDLE ($(du -h "$DLL" | cut -f1), $TRIPLE)"
+echo "exports: $(PATH=$LLVM_MINGW/bin:$PATH $TRIPLE-objdump -p "$DLL" | awk '/Ordinal +RVA +Name/ {on=1; next} on && NF==3 {print $3} on && NF<3 {on=0}' | tr '\n' ' ')"
+echo "needs: $(PATH=$LLVM_MINGW/bin:$PATH $TRIPLE-objdump -p "$DLL" | grep 'DLL Name' | awk '{print $3}' | tr '\n' ' ')"

@@ -22,7 +22,13 @@
 
 #define GL_SILENCE_DEPRECATION    1
 
+#if defined (_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <GL/gl.h>
+#else
 #include <OpenGL/gl.h>
+#endif
 
 #include "sysIncludes.h"
 // notes §2
@@ -72,7 +78,11 @@
 // Same font the application loads, and by the same absolute path — it is a system file, not a bundle
 // resource, which is the one reason fonts are not a problem for a plug-in. A plug-in's bundle is not
 // the app's, so anything loaded relative to it would have to be found all over again.
+#if defined (_WIN32)
+#define FONT_PATH     "C:/Windows/Fonts/arial.ttf"   // the application's, graphics.c
+#else
 #define FONT_PATH     "/System/Library/Fonts/Supplemental/Arial.ttf"
+#endif
 #define FONT_PRELOAD_SIZE    (72.0)
 
 static bool gFontReady = false;

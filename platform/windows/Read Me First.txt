@@ -4,9 +4,10 @@ G2 Editor for Windows (experimental)
 WHAT IS IN HERE
 
   G2 Editor.exe    the editor - one file, nothing to install
+  G2 Alike.vst3    the sound engine as a VST3 instrument, editor included (experimental)
   LICENSE          the GNU General Public License, version 3
 
-Put it anywhere and double-click it. Windows 10 or 11: the "x64" download for
+Put the editor anywhere and double-click it. Windows 10 or 11: the "x64" download for
 an ordinary PC, "arm64" for Windows on ARM (including Parallels on an Apple
 silicon Mac).
 
@@ -43,8 +44,23 @@ choose the G2 (USB ID 0FFC 0002), target driver WinUSB, Install Driver. It does
 the same, but it fails on some machines - Windows on ARM among them - where the
 Device Manager route above works.
 
+PARALLELS: switching the G2 off and on can hand it back to the Mac, and the
+editor then never goes Online. Devices > USB & Bluetooth > the G2 gives it back
+(disconnect and reconnect it there if it is ticked already).
+
 NOTE: while the G2 has WinUSB, Clavia's own editor cannot see it. To go back,
 Device Manager > the G2 > Update driver, and choose Clavia's driver.
+
+THE G2 ALIKE PLUG-IN (VST3, EXPERIMENTAL)
+
+G2 Alike plays G2 patches in a music program, with the editor's own canvas as
+its window. It needs no G2. Copy the whole "G2 Alike.vst3" folder into
+
+  C:\Program Files\Common Files\VST3
+
+and rescan plug-ins in the host. It loads with an empty patch: open one from its
+own File menu. Use the download that matches the host - x64 for an ordinary PC,
+arm64 for a native Windows on ARM host.
 
 PLAYING PATCHES WITHOUT A G2
 

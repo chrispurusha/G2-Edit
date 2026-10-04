@@ -184,7 +184,11 @@ static void * rebuild_worker(void * arg) {
 
     // This thread's engine, exactly as every host entry point does it (enter()).
     g2_document_select(g2->doc);
+#if defined (_WIN32)
+    pthread_setname_np(pthread_self(), "G2 Alike rebuild");
+#else
     pthread_setname_np("G2 Alike rebuild");
+#endif
 
     while (atomic_load(&g2->rebuildStop) == false) {
         // soundEngine notes §205 - a new Engine Rate leaves positions and words built at the old one

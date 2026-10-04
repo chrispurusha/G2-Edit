@@ -71,6 +71,11 @@ bool g2_input_key(int character, bool cmdHeld);
 // took it, in which case nothing else should see it.
 bool g2_input_popup_key(unsigned short macKeyCode, const char * characters, bool isRepeat);
 
+#if defined (_WIN32)
+// The same for the Windows editor: a GLFW key code, or GLFW_KEY_UNKNOWN and a typed character
+bool g2_input_popup_key_glfw(int glfwKey, unsigned int codepoint, bool isRepeat);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

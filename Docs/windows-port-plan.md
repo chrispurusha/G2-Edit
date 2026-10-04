@@ -144,9 +144,18 @@ over USB (WinUSB via Device Manager) and plays the sound engine through WASAPI, 
 beside the prefs (`deviceSync.c`), and `./do-release-windows` - the same version arguments as `./do-release`,
 one .zip per architecture (exe, Read Me with the SmartScreen step, LICENSE) to the Desktop, checking each exe
 is a GUI program carrying the version. Still open: the four warnings in the way of -Werror, MIDI input and
-output (stubs), a comparison of patches against the Mac, and step 4, the plug-ins - a VST3 only (no AU on
-Windows) whose editor needs an HWND-side view wrapper drawing through the OpenGL backend; wait for a Windows
-host to test it in.
+output (stubs), a comparison of patches against the Mac, and testing the plug-in in a real host.
+
+**Step 4 started 2026-10-04: G2 Alike as a Windows VST3.** `tools/do-windows-plugin [arm64]` cross-builds
+`build-cross-<arch>/G2 Alike.vst3/Contents/<arch>-win/G2 Alike.vst3`, one self-contained DLL exporting
+GetPluginFactory/InitDll/ExitDll. Its source list is read from `do-plugin`, so the two cannot drift; the
+Mac's window code is swapped for `plugin/g2ViewWin.c` (Win32 + WGL, notes in code-notes/g2ViewWin.c.md)
+and SynthLib's `synthlibPluginVst3ViewWin.cpp` (the HWND IPlugView), and the canvas draws through
+`renderBackendGL.c`. Shared files changed only under `_WIN32` (DLL entry points, Arial's path, a GLFW-key
+popup entry, pthread_setname_np's signature); the Mac plug-in builds and those files preprocess as before.
+`do-release-windows` puts it in each zip; the Read Me says where it goes. NOT YET LOADED IN A HOST -
+REAPER (free evaluation, native ARM64) is the suggested first. Open: DPI scaling
+(IPlugViewContentScaleSupport), no Audio Unit on Windows by nature.
 
 **2026-10-04, Mac (cross-built), after the first run on Windows.** The cross-built x64 and ARM64 editors run in
 the Parallels VM. The G2: Zadig FAILED to install WinUSB on Windows on ARM; Device Manager's built-in "WinUsb

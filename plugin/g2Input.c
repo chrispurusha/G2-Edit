@@ -476,3 +476,21 @@ bool g2_input_popup_key(unsigned short macKeyCode, const char * characters, bool
     }
     return used;
 }
+
+#if defined (_WIN32)
+// The Windows editor's keys (g2ViewWin.c), already GLFW key codes or a typed character: the same route as above
+bool g2_input_popup_key_glfw(int glfwKey, unsigned int codepoint, bool isRepeat) {
+    bool used = false;
+
+    if (glfwKey != GLFW_KEY_UNKNOWN) {
+        used = synthlib_popups_dispatch_key(glfwKey, 0, isRepeat ? GLFW_REPEAT : GLFW_PRESS);
+    } else if ((codepoint >= 0x20u) && (codepoint != 0x7Fu)) {
+        used = synthlib_popups_dispatch_char(codepoint);
+    }
+
+    if (used) {
+        synthlib_request_redraw();
+    }
+    return used;
+}
+#endif

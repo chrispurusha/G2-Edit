@@ -18,8 +18,10 @@
 # the next version out from the newest tag. Never creates or pushes the tag.
 #
 # Writes one .zip per architecture - G2-Edit-<version>-windows-x64.zip (any PC) and -arm64.zip (Windows on
-# ARM, Parallels on Apple silicon) - each holding "G2 Editor.exe", "Read Me First.txt" and LICENSE. The
-# .exe is self-contained and unsigned: SmartScreen warns on first run, and the Read Me says what to do.
+# ARM, Parallels on Apple silicon) - each holding "G2 Editor.exe", the "G2 Alike.vst3" plug-in, "Read Me
+# First.txt" and LICENSE. Both are self-contained and unsigned: SmartScreen warns on the editor's first
+# run, and the Read Me says what to do. The plug-in needs the VST3 SDK (tools/do-windows-plugin);
+# G2_RELEASE_SKIP_PLUGINS=1 releases the editor alone.
 # Cross-built by tools/do-windows with llvm-mingw - see Docs/windows-port-plan.md.
 
 set -e
@@ -151,6 +153,10 @@ for arch in x64 arm64; do
     rm -rf $out/app   # the app from scratch; the third-party libraries in $out/deps are kept
     G2_WIN_CONFIG=Release G2_WIN_VERSION="$VERSION" ./tools/do-windows $arch | /usr/bin/grep -E '^(built|needs):'
 
+    if [[ -z $G2_RELEASE_SKIP_PLUGINS ]]; then
+        G2_WIN_VERSION="$VERSION" ./tools/do-windows-plugin $arch | /usr/bin/grep -E '^(built|exports):'
+    fi
+
     # GUI subsystem, or the user gets a console window behind the editor
     subsystem=$(PATH=${LLVM_MINGW:-$HOME/Developer/llvm-mingw}/bin:$PATH $triple-w64-mingw32-objdump -p $out/G2_Editor.exe \
                 | awk '/^Subsystem/ {print $2}')
@@ -171,6 +177,10 @@ for arch in x64 arm64; do
     cp $out/G2_Editor.exe "$STAGE/$name/G2 Editor.exe"
     cp "platform/windows/Read Me First.txt" LICENSE "$STAGE/$name/"
 
+    if [[ -z $G2_RELEASE_SKIP_PLUGINS ]]; then
+        cp -R "$out/G2 Alike.vst3" "$STAGE/$name/"
+    fi
+
     zip="$DIST/$name.zip"
     rm -f "$zip"
     (cd "$STAGE" && zip -q -r -X "$zip" "$name")
@@ -181,7 +191,11 @@ echo
 for zip in $ZIPS; do
     echo "done: $zip ($(du -h "$zip" | cut -f1))"
 done
-echo "contents: G2 Editor.exe, Read Me First.txt, LICENSE - no plug-ins on Windows yet"
+if [[ -z $G2_RELEASE_SKIP_PLUGINS ]]; then
+    echo "contents: G2 Editor.exe, G2 Alike.vst3, Read Me First.txt, LICENSE"
+else
+    echo "contents: G2 Editor.exe, Read Me First.txt, LICENSE - NO plug-in (G2_RELEASE_SKIP_PLUGINS was set)"
+fi
 echo "signature: none - SmartScreen warns on first run (More info > Run anyway)"
 
 if [[ -n $NEW_TAG ]]; then
