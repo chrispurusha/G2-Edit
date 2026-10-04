@@ -1412,16 +1412,18 @@ typedef struct {
 } tNoteEvent;
 
 static tNoteEvent           gNoteQueueBank[SOUND_ENGINE_MAX_ENGINES][NOTE_QUEUE_SIZE];
-#define gNoteQueue    (gNoteQueueBank[SE])
+#define gNoteQueue     (gNoteQueueBank[SE])
 static _Atomic uint32_t     gNoteWriteBank[SOUND_ENGINE_MAX_ENGINES];
-#define gNoteWrite    (gNoteWriteBank[SE])
+#define gNoteWrite     (gNoteWriteBank[SE])
 static uint32_t             gNoteReadBank[SOUND_ENGINE_MAX_ENGINES];        // audio thread only
-#define gNoteRead     (gNoteReadBank[SE])
+#define gNoteRead      (gNoteReadBank[SE])
 
 static _Atomic bool         gActiveBank[SOUND_ENGINE_MAX_ENGINES];
-#define gActive       (gActiveBank[SE])
+#define gActive        (gActiveBank[SE])
 static _Atomic bool         gHasChainBank[SOUND_ENGINE_MAX_ENGINES];   // notes §204 - a patch with an output to render
-#define gHasChain     (gHasChainBank[SE])
+#define gHasChain      (gHasChainBank[SE])
+static _Atomic bool         gVoice0FreeBank[SOUND_ENGINE_MAX_ENGINES]; // voice 0 running with no key (drone), for the count
+#define gVoice0Free    (gVoice0FreeBank[SE])
 
 // Morph positions, 0..1, one per group. Written by the MIDI thread as controllers move, read by the
 // UI thread when it builds a snapshot. Plain atomics: each is independent and a torn read is not
@@ -3369,7 +3371,8 @@ uint32_t sound_engine_voices_sounding(void) {
     }
 
     for (uint32_t v = 0; v < voices; v++) {
-        if (gVoice[v].sounding == true) {
+        // a voice playing a note, or voice 0 droning with none - audible either way (notes §206)
+        if ((gVoice[v].sounding == true) || ((v == 0u) && (atomic_load(&gVoice0Free) == true))) {
             count++;
         }
     }
@@ -14910,6 +14913,8 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
     }
     memset(out, 0, (size_t)frameCount * channelCount * sizeof(float));
 
+    atomic_store(&gVoice0Free, false);   // set again below while it really runs
+
     if (atomic_load(&gActive) == false) {
         return;
     }
@@ -14980,6 +14985,8 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
 
     // notes §206 - drone mode runs voice 0 at rest only in a patch that can sound there
     bool droneMode = (atomic_load(&gDroneMode) == true) && ((params.restLive == true) || (drone_always() == true));
+
+    atomic_store(&gVoice0Free, free_voice_runs(0, chainHasEnvelope, droneMode));
 
     // notes §190
     if (  (droneMode == false) && (gDroneSeen == true)
