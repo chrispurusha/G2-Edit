@@ -65,8 +65,9 @@ static void document_defaults(void) {
     pthread_rwlock_init(&gDatabaseLock, NULL);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        gLastDeviceMidiCC[slot]   = -1;
-        gLastDeviceMidiChan[slot] = -1;
+        gLastDeviceMidiCC[slot]           = -1;
+        gLastDeviceMidiChan[slot]         = -1;
+        gSynthSettings.midiChanSlot[slot] = (uint8_t)slot;   // A-D on channels 1-4 until a G2 says otherwise
     }
 }
 

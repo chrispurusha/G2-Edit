@@ -12238,3 +12238,7 @@ Active high as the manual says, which shut the gate. On the G2 an Invert on Patc
 a held note, whether the patch was sent from the editor or loaded from a bank (5:23) - Patch Active reads
 low. The engine follows the instrument (reference §70.13). Before 09-27 Status was not built, read 0, and
 the patch worked, which is why it "used to".
+
+TRAP, same day: the engine's note queue held 64 events, and a burst of more between two render calls drops
+the oldest (notes §72). A test harness sending note-off to all 128 keys lost the held key's note-off, and
+every "release" window measured that day was a still-held note. Now 1024.

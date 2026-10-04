@@ -30,10 +30,11 @@ extern "C" {
 
 // How many engines a process can hold. One in the application; in the plug-in each instance takes
 // one, and a performance will one day take four. Unused banks are zero-fill and cost no memory.
+// One engine per slot, four per G2 (sound-engine-notes §204): the application has one G2, a plug-in up to 16
 #ifdef SYNTHLIB_PLUGIN_BUILD
-#define SOUND_ENGINE_MAX_ENGINES    (32)
+#define SOUND_ENGINE_MAX_ENGINES    (64)
 #else
-#define SOUND_ENGINE_MAX_ENGINES    (1)
+#define SOUND_ENGINE_MAX_ENGINES    (4)
 #endif
 
 // notes §1
@@ -147,12 +148,8 @@ void sound_engine_set_split_mode(uint32_t mode);
 bool sound_engine_attach(void);
 void sound_engine_detach(void);
 
-// The current document's engine index - for state kept per engine outside this file (noteStack.c).
+// The current document's index among the engines' owners - for state kept per G2 outside this file (noteStack.c).
 uint32_t sound_engine_index(void);
-
-// Binds the current engine to one slot of its document; -1 (the default) follows the selected slot.
-// For performance mode, which will run one engine per slot - not built yet.
-void sound_engine_bind_slot(int32_t slot);
 
 #ifdef __cplusplus
 }

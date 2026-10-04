@@ -382,6 +382,11 @@ Shape mod input, which the engine ignores.
   MorphSplitEnv (Vel on an envelope's Sustain, Keyb on its Decay - this entry's case) and
   MorphSameDxLevel (both on one Operator Level - the case still 7.7% out). Load each on the G2 and in
   the editor and compare; none of §26.2 has ever been heard against the instrument.
+- ***FOUR SLOTS (2026-10-04)*** - sound-engine-notes §204. In the app with the engine on: patches in A and B,
+  play - only the selected slot sounds, switching slot while a key is held still releases it. Performance
+  mode with Keyboard on for A and B: both sound; with Key Range on and split ranges, each its own half.
+  A slot's own MIDI channel from another controller plays that slot. In the plug-in: a performance file
+  plays its keyboard slots together. Meters and LEDs follow the selected slot.
 - ***STATUS PATCH ACTIVE LOW (2026-10-04)*** - reference §70.13. LISTEN: SeqOscExp (bank 5:23) plays in the app and plug-in as on the G2;
   any other patch using Status Patch Active still behaves.
 - ***CONTROL MODULES AT 24 kHz (2026-10-04)*** - sound-engine-notes §203. LISTEN: patches heavy in LFOs,

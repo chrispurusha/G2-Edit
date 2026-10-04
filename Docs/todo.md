@@ -7,10 +7,13 @@ Built-but-unchecked work goes in to-test.md.
 General (priority order)
 -
 - Control rate (notes §203), next: check the held-back kinds one by one (Resonator, Scratch, NoiseGate, PitchTrack, EnvFollow, Red2Blue) and move each that is safe
-- Engine note queue holds 64 events: more between two render calls (a 128-key all-notes-off sweep) drops the oldest, and a dropped note-off hangs the voice - drain into the note stack or treat a sweep as all-off
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations and/or multi-core threading as below.
-- Plugin needs to have 4 slots running simultaneously and later support performance mode. We might have to at least use different cores/threads for each slot and the effects section separately. That might be closer to how the G2 works anyhow.
+- Four slots, next (sound-engine-notes §204): render the slots concurrently - today they run one after another on the audio thread, each with its own voice thread
+- Edit each slot's MIDI channel (and the global channel) in the editor, as on the hardware - not urgent (owner, 2026-10-04)
+- Plug-in: route host MIDI by channel to the slots (today every host note is the keyboard, so the selected slot or the performance's keyboard slots)
+- Sleep a slot whose output has been silent for some seconds with no notes, waking on a note, MIDI or edit - a loaded slot costs its whole patch when idle (CS80 19%); careful with patches that sound by themselves
+- Read the performance's Key Range switch from the G2: the parse reads it into a local (protocol.c, rangeEnable) and the engine uses gPerfSettings.keyboardRange, which only the settings panel sets
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
 - Bypass, the rest: a module switched off still has its INPUTS evaluated (an LFO into a switched-off oscillator keeps running) - prune the chain behind an Off module whose output is silence or a plain pass-through. Each module itself now skips its work when off (2026-10-03)
 - Implement arpeggiator.
@@ -125,7 +128,6 @@ PROTOCOL AND SECOND OPINIONS (each is a code comment needing hardware or a manua
 VST3
 - ./do-uncrustify does not cover plugin/ or SynthLib/plugin/, so the plug-in sources and both format wrappers are unformatted
 - G2 Alike instances share EDITOR state: each has its own document (four slots) and engine since 2026-09-11, but two open editors still share palette.c, menus.c, splitView.c, mutatorUI.c, paramOverlay.c and SynthLib's click regions and popups, plus the panels and drag flags kept out of the document because static tables point at them (gTopbarControls, gPatchSettingsEdit, gPerfSettingsEdit, gPatchParamsEdit, gPatchNotesEdit, gPatchParamRects) - scroll, zoom and an open panel follow you between editors
-- Performance playback in the engine: an instance holds all four slots but plays only the selected one; bind one engine per slot (sound_engine_bind_slot()) and mix them, with each slot's keyboard range and channel
 - The plug-in build's engine is ~5% slower than the application's (2.24 s vs 2.14 s CPU for 30 s of a 4-voice chord; it was 13% before SE_LOCAL, 2026-09-11). The thread-local read is now ~1% in a profile; the rest is indexing each banked access by a variable instead of the constant 0 - only a per-engine state struct reached through one pointer would recover it
 - At most SOUND_ENGINE_MAX_ENGINES (32) G2 Alike instances per process; the 33rd fails to load. Raise it if anyone hits it - unused banks are zero-fill
 - g2Menu.c's loaded-patch name is still one per process, so two editors show whichever file was opened last

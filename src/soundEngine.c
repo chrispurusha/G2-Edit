@@ -1225,36 +1225,36 @@ typedef struct {
     uint32_t      backLeg[MAX_BACK_EDGES];
 } tSoundEngineParams;
 
-// notes §23
-#ifdef SYNTHLIB_PLUGIN_BUILD
-#define SE          (tEngineIdx)
-#define SE_LOCAL    const uint32_t tEngineIdx                                      = gDoc->engineIndex
-#else
-#define SE          (0u)
-#define SE_LOCAL    (void)0
-#endif
+// notes §204 - one engine per slot: the slot a render or a routed note names, otherwise the selected one
+static _Thread_local int32_t         sEngineSlot                                     = -1;
 
-// WHICH SLOT THIS ENGINE PLAYS: -1 follows the document's selected slot, which is all there is today;
-// a performance will bind one engine to each slot. See sound_engine_bind_slot().
-static int32_t gPatchSlotBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = -1};
-#define gPatchSlot    (gPatchSlotBank[SE])
-
-// The reverb type each engine last laid its delay lines out for - see the reverb's reset.
-static uint32_t                    sLastTypeBank[SOUND_ENGINE_MAX_ENGINES]         = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = UINT32_MAX};
-
-static uint32_t engine_slot(void) {
-    SE_LOCAL;
-
-    return (gPatchSlot >= 0) ? (uint32_t)gPatchSlot : (uint32_t)gSlot;
+static inline uint32_t engine_current_slot(void) {
+    return (sEngineSlot >= 0) ? (uint32_t)sEngineSlot : ((uint32_t)gSlot % MAX_SLOTS);
 }
 
-static tSoundEngineParams          gParamsBank[SOUND_ENGINE_MAX_ENGINES];
+// notes §23
+#ifdef SYNTHLIB_PLUGIN_BUILD
+#define ENGINE_DOC    (gDoc->engineIndex)
+#else
+#define ENGINE_DOC    (0u)
+#endif
+#define SE            (tEngineIdx)
+#define SE_LOCAL      const uint32_t tEngineIdx                                      = (ENGINE_DOC * MAX_SLOTS) + engine_current_slot()
+
+// The reverb type each engine last laid its delay lines out for - see the reverb's reset.
+static uint32_t sLastTypeBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = UINT32_MAX};
+
+static uint32_t engine_slot(void) {
+    return engine_current_slot();
+}
+
+static tSoundEngineParams            gParamsBank[SOUND_ENGINE_MAX_ENGINES];
 #define gParams       (gParamsBank[SE])
-static _Atomic uint32_t            gParamsSeqBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic uint32_t              gParamsSeqBank[SOUND_ENGINE_MAX_ENGINES];
 #define gParamsSeq    (gParamsSeqBank[SE])
 
 // notes §24
-static pthread_mutex_t             gParamsWriteMutexBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = PTHREAD_MUTEX_INITIALIZER};
+static pthread_mutex_t               gParamsWriteMutexBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = PTHREAD_MUTEX_INITIALIZER};
 #define gParamsWriteMutex       (gParamsWriteMutexBank[SE])
 
 #define PARAMS_READ_ATTEMPTS    (4)   // then keep last good — a retry loop must not spin in audio
@@ -1335,12 +1335,26 @@ _Static_assert(((DX_OPERATORS * sizeof(tDxOperator)) % MORPH_WORD_BYTES) == 0u, 
 _Static_assert(NODE_WORDS <= (MORPH_MASK_WORDS * 64u), "MORPH_MASK_WORDS is too small for tEngineNode");
 _Static_assert(DX_SET_WORDS <= (MORPH_MASK_WORDS * 64u), "MORPH_MASK_WORDS is too small for an Operator set");
 
-static tVoiceMorphs         gVoiceMorphsBank[SOUND_ENGINE_MAX_ENGINES];
-#define gVoiceMorphs          (gVoiceMorphsBank[SE])
+// notes §204 - 10 MB an engine each, so on the heap: as statics, 64 engines pass the 2 GB an x86_64
+// image can address directly
+static tVoiceMorphs *       gVoiceMorphsBank[SOUND_ENGINE_MAX_ENGINES];
+#define gVoiceMorphs         (*gVoiceMorphsBank[SE])
 static _Atomic uint32_t     gVoiceMorphsSeqBank[SOUND_ENGINE_MAX_ENGINES];
-#define gVoiceMorphsSeq       (gVoiceMorphsSeqBank[SE])
-static tVoiceMorphs         gVoiceMorphsAudioBank[SOUND_ENGINE_MAX_ENGINES];          // audio thread only
-#define gVoiceMorphsAudio     (gVoiceMorphsAudioBank[SE])
+#define gVoiceMorphsSeq      (gVoiceMorphsSeqBank[SE])
+static tVoiceMorphs *       gVoiceMorphsAudioBank[SOUND_ENGINE_MAX_ENGINES];          // audio thread only
+#define gVoiceMorphsAudio    (*gVoiceMorphsAudioBank[SE])
+
+// Before main() or the plug-in's first call. calloc'd pages cost nothing until an engine writes them.
+__attribute__((constructor)) static void voice_morphs_allocate(void) {
+    for (uint32_t e = 0; e < SOUND_ENGINE_MAX_ENGINES; e++) {
+        gVoiceMorphsBank[e]      = (tVoiceMorphs *)calloc(1, sizeof(tVoiceMorphs));
+        gVoiceMorphsAudioBank[e] = (tVoiceMorphs *)calloc(1, sizeof(tVoiceMorphs));
+
+        if ((gVoiceMorphsBank[e] == NULL) || (gVoiceMorphsAudioBank[e] == NULL)) {
+            abort();
+        }
+    }
+}
 static uint32_t             gVoiceMorphsSeenBank[SOUND_ENGINE_MAX_ENGINES];           // audio thread only
 #define gVoiceMorphsSeen      (gVoiceMorphsSeenBank[SE])
 static bool                 gVoiceMorphsUsableBank[SOUND_ENGINE_MAX_ENGINES];         // audio thread only
@@ -1374,7 +1388,7 @@ static bool                 gSustainSeenBank[SOUND_ENGINE_MAX_ENGINES];         
 #define gSustainSeen       (gSustainSeenBank[SE])
 
 // notes §25
-#define NOTE_QUEUE_SIZE    (64)
+#define NOTE_QUEUE_SIZE    (1024)   // notes §72 - holds a 128-key sweep of note-offs several times over
 
 typedef struct {
     int32_t          note;
@@ -1392,6 +1406,8 @@ static uint32_t             gNoteReadBank[SOUND_ENGINE_MAX_ENGINES];        // a
 
 static _Atomic bool         gActiveBank[SOUND_ENGINE_MAX_ENGINES];
 #define gActive       (gActiveBank[SE])
+static _Atomic bool         gHasChainBank[SOUND_ENGINE_MAX_ENGINES];   // notes §204 - a patch with an output to render
+#define gHasChain     (gHasChainBank[SE])
 
 // Morph positions, 0..1, one per group. Written by the MIDI thread as controllers move, read by the
 // UI thread when it builds a snapshot. Plain atomics: each is independent and a torn read is not
@@ -1572,6 +1588,8 @@ static uint8_t                gKeyReleaseVelocityBank[SOUND_ENGINE_MAX_ENGINES][
 // notes §32
 static _Atomic uint32_t       gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
 #define gLoadPercent    (gLoadPercentBank[SE])
+// notes §204 - the whole render's cost, all slots, against the buffer's deadline
+static _Atomic uint32_t       gRenderLoadPercent[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];
 
 static void reset_voices(void);
 static uint32_t voice_count_for_patch(uint32_t slot);
@@ -2080,7 +2098,44 @@ typedef enum {
 } tEnvStage;
 
 // §70.13 - a controller as it arrived; `listened` says the slot's own channel takes it too
-void sound_engine_midi_cc(uint32_t channel, uint32_t controller, uint32_t value, bool listened) {
+// notes §204 - which slots the keyboard plays: the selected one, or in a performance every slot whose
+// Keyboard is on, within its range when ranges are on
+static uint32_t keyboard_slot_mask(int32_t note) {
+    uint32_t mask = 0;
+
+    if (gGlobalSettings.perfMode == 0u) {
+        return 1u << ((uint32_t)gSlot % MAX_SLOTS);
+    }
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        if (gPerfSettings.slot[slot].keyboardEnabled == 0u) {
+            continue;
+        }
+
+        if (  (note >= 0) && (gPerfSettings.keyboardRange != 0u)
+           && ((note < gPerfSettings.slot[slot].rangeLower) || (note > gPerfSettings.slot[slot].rangeUpper))) {
+            continue;
+        }
+        mask |= 1u << slot;
+    }
+
+    return mask;
+}
+
+// notes §204 - the slots whose own MIDI channel this is
+static uint32_t channel_slot_mask(uint32_t channel) {
+    uint32_t mask = 0;
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        if (gSynthSettings.midiChanSlot[slot] == channel) {
+            mask |= 1u << slot;
+        }
+    }
+
+    return mask;
+}
+
+static void midi_cc_one(uint32_t channel, uint32_t controller, uint32_t value, bool listened) {
     SE_LOCAL;
 
     if ((channel >= 16u) || (controller >= MIDI_KEY_COUNT)) {
@@ -2095,7 +2150,7 @@ void sound_engine_midi_cc(uint32_t channel, uint32_t controller, uint32_t value,
 }
 
 // §70.13 - a note as it arrived, on or off with its velocity
-void sound_engine_midi_note(uint32_t channel, uint32_t note, uint32_t velocity, bool on, bool listened) {
+static void midi_note_one(uint32_t channel, uint32_t note, uint32_t velocity, bool on, bool listened) {
     SE_LOCAL;
 
     if ((channel >= 16u) || (note >= MIDI_KEY_COUNT)) {
@@ -2114,7 +2169,7 @@ void sound_engine_midi_note(uint32_t channel, uint32_t note, uint32_t velocity, 
     }
 }
 
-void sound_engine_pitch_bend(double bend) {
+static void pitch_bend_one(double bend) {
     SE_LOCAL;
 
     if (bend < -1.0) {
@@ -2125,7 +2180,7 @@ void sound_engine_pitch_bend(double bend) {
     atomic_store(&gBendMilli, (int32_t)(bend * 1000.0));
 }
 
-void sound_engine_set_output_level_db(double db) {
+static void set_output_level_db_one(double db) {
     SE_LOCAL;
 
     double gain = pow(10.0, db / 20.0);
@@ -2136,7 +2191,7 @@ void sound_engine_set_output_level_db(double db) {
     atomic_store(&gOutputGainMilli, (int32_t)((gain * 1000.0) + 0.5));
 }
 
-void sound_engine_set_drone_mode(bool on) {
+static void set_drone_mode_one(bool on) {
     SE_LOCAL;
 
     atomic_store(&gDroneMode, on);
@@ -2148,7 +2203,7 @@ bool sound_engine_drone_mode(void) {
     return atomic_load(&gDroneMode);
 }
 
-void sound_engine_set_dac_emulation(bool on) {
+static void set_dac_emulation_one(bool on) {
     SE_LOCAL;
 
     atomic_store(&gDacEmulation, on);
@@ -2189,7 +2244,7 @@ static void dac_filter_design(double rate) {
 
 #define SUSTAIN_PEDAL_DOWN    (0.5)   // CC64 at 64 and above, as MIDI has it
 
-bool sound_engine_set_morph(uint32_t group, double amount) {
+static bool set_morph_one(uint32_t group, double amount) {
     SE_LOCAL;
 
     uint32_t scaled = 0;
@@ -2318,7 +2373,7 @@ static void set_oversampling(double deviceRate) {
 // coefficients, LFO and oscillator increments — scales with no further change.
 static void build_decimator(void);
 
-void sound_engine_set_sample_rate(double sampleRate) {
+static void set_sample_rate_one(double sampleRate) {
     SE_LOCAL;
 
     if (sampleRate > 0.0) {
@@ -2343,7 +2398,7 @@ void sound_engine_set_sample_rate(double sampleRate) {
 // this seed, and it is deliberately never reset, so two engines started in turn sound different - as
 // two power-ups of the instrument do. That also means a measurement cannot be repeated, which is what
 // pinning it here is for. Neither the application nor the plug-in calls it.
-void sound_engine_set_start_phase_seed(uint32_t seed) {
+static void set_start_phase_seed_one(uint32_t seed) {
     SE_LOCAL;
 
     gStartPhaseSeed = (seed == 0u) ? START_PHASE_FIRST_SEED : seed;
@@ -2566,56 +2621,128 @@ static void engine_prime(void) {
     gNoteRead = atomic_load(&gNoteWrite);
     reset_node_state();
     reset_voices();
-    split_worker_ensure();
 }
 
 // For a plug-in host: prime the engine and mark it live, but leave the audio device alone. The
 // caller drives sound_engine_render() from its own process callback.
-void sound_engine_start_hosted(double sampleRate) {
+static void note_queue_one(int32_t note, uint8_t velocity, bool on);
+
+static void set_active_one(bool on) {
     SE_LOCAL;
 
-    sound_engine_set_sample_rate(sampleRate);
+    atomic_store(&gActive, on);
+}
+
+static void start_hosted_one(double sampleRate) {
+    set_sample_rate_one(sampleRate);
     engine_prime();
-    atomic_store(&gActive, true);
+    set_active_one(true);
+}
+
+// notes §204 - calls that hold for the whole instrument reach all four slots' engines
+#define FOR_EACH_SLOT_ENGINE(...)                                  \
+   do {                                                            \
+       int32_t forEachWas = sEngineSlot;                           \
+       for (int32_t forEach = 0; forEach < MAX_SLOTS; forEach++) { \
+           sEngineSlot = forEach;                                  \
+           __VA_ARGS__;                                            \
+       }                                                           \
+       sEngineSlot = forEachWas;                                   \
+   } while (0)
+
+void sound_engine_set_sample_rate(double sampleRate) {
+    FOR_EACH_SLOT_ENGINE(set_sample_rate_one(sampleRate));
+}
+
+void sound_engine_set_start_phase_seed(uint32_t seed) {
+    FOR_EACH_SLOT_ENGINE(set_start_phase_seed_one(seed));
+}
+
+void sound_engine_set_output_level_db(double db) {
+    FOR_EACH_SLOT_ENGINE(set_output_level_db_one(db));
+}
+
+void sound_engine_set_drone_mode(bool on) {
+    FOR_EACH_SLOT_ENGINE(set_drone_mode_one(on));
+}
+
+void sound_engine_set_dac_emulation(bool on) {
+    FOR_EACH_SLOT_ENGINE(set_dac_emulation_one(on));
+}
+
+// For a plug-in host: prime the engines and mark them live, but leave the audio device alone. The
+// caller drives sound_engine_render() from its own process callback.
+void sound_engine_start_hosted(double sampleRate) {
+    FOR_EACH_SLOT_ENGINE(start_hosted_one(sampleRate));
 }
 
 void sound_engine_stop_hosted(void) {
-    SE_LOCAL;
-
-    atomic_store(&gActive, false);
+    FOR_EACH_SLOT_ENGINE(set_active_one(false));
 }
 
 bool sound_engine_start(void) {
-    SE_LOCAL;
-
-    if (atomic_load(&gActive) == true) {
+    if (sound_engine_active() == true) {
         return true;
     }
-    build_decimator();
     // notes §66
-    gNoteRead = atomic_load(&gNoteWrite);
-    reset_node_state();
-    reset_voices();
-    split_worker_ensure();
+    FOR_EACH_SLOT_ENGINE(engine_prime());
 
     if (audio_output_start() == false) {
         return false;
     }
-    atomic_store(&gActive, true);
+    FOR_EACH_SLOT_ENGINE(set_active_one(true));
 
     return true;
 }
 
 void sound_engine_stop(void) {
-    SE_LOCAL;
-
-    if (atomic_load(&gActive) == false) {
+    if (sound_engine_active() == false) {
         return;
     }
-    // Clear the flag first: the device teardown below waits for any render in flight to finish, and
-    // that render should already be seeing an inactive engine.
-    atomic_store(&gActive, false);
+    // Clear the flags first: the device teardown below waits for any render in flight to finish, and
+    // that render should already be seeing inactive engines.
+    FOR_EACH_SLOT_ENGINE(set_active_one(false));
     audio_output_stop();
+}
+
+// notes §204 - a note the input takes as the keyboard plays the keyboard's slots; one on another channel,
+// the slots listening on it
+void sound_engine_midi_note(uint32_t channel, uint32_t note, uint32_t velocity, bool on, bool listened) {
+    uint32_t keyboard = listened ? keyboard_slot_mask((int32_t)note) : 0u;
+    uint32_t own      = ((listened == false) && (channel < 16u)) ? channel_slot_mask(channel) : 0u;
+
+    FOR_EACH_SLOT_ENGINE(midi_note_one(channel, note, velocity, on, (((keyboard | own) >> forEach) & 1u) != 0u));
+
+    // a slot on this channel that the keyboard did not already play
+    FOR_EACH_SLOT_ENGINE(
+        if ((((own & ~keyboard) >> forEach) & 1u) != 0u) {
+        note_queue_one((int32_t)note, (uint8_t)((velocity > 127u) ? 127u : velocity), on);
+    });
+}
+
+void sound_engine_midi_cc(uint32_t channel, uint32_t controller, uint32_t value, bool listened) {
+    uint32_t keyboard = listened ? keyboard_slot_mask(-1) : 0u;
+    uint32_t own      = ((listened == false) && (channel < 16u)) ? channel_slot_mask(channel) : 0u;
+
+    FOR_EACH_SLOT_ENGINE(midi_cc_one(channel, controller, value, (((keyboard | own) >> forEach) & 1u) != 0u));
+}
+
+void sound_engine_pitch_bend(double bend) {
+    uint32_t keyboard = keyboard_slot_mask(-1);
+
+    FOR_EACH_SLOT_ENGINE(if (((keyboard >> forEach) & 1u) != 0u) {
+        pitch_bend_one(bend);
+    });
+}
+
+bool sound_engine_set_morph(uint32_t group, double amount) {
+    uint32_t keyboard = keyboard_slot_mask(-1);
+    bool     changed  = false;
+
+    FOR_EACH_SLOT_ENGINE(if (((keyboard >> forEach) & 1u) != 0u) {
+        changed = set_morph_one(group, amount) || changed;
+    });
+    return changed;
 }
 
 const char * sound_engine_status_text(void) {
@@ -2786,7 +2913,7 @@ const char * sound_engine_debug_text(void) {
     return text;
 }
 
-void sound_engine_note(int32_t note, uint8_t velocity, bool on) {
+static void note_queue_one(int32_t note, uint8_t velocity, bool on) {
     SE_LOCAL;
 
     uint32_t claim = atomic_fetch_add(&gNoteWrite, 1);
@@ -2798,6 +2925,16 @@ void sound_engine_note(int32_t note, uint8_t velocity, bool on) {
 
     // Published last: the consumer treats a slot as filled only once this matches.
     atomic_store(&gNoteQueue[slot].sequence, claim + 1);
+}
+
+// notes §204 - a key goes to the keyboard's slots; a release, which may outlive a change of slot or
+// range, to all four
+void sound_engine_note(int32_t note, uint8_t velocity, bool on) {
+    uint32_t mask = ((on == true) && (note >= 0)) ? keyboard_slot_mask(note) : ((1u << MAX_SLOTS) - 1u);
+
+    FOR_EACH_SLOT_ENGINE(if (((mask >> forEach) & 1u) != 0u) {
+        note_queue_one(note, velocity, on);
+    });
 }
 
 // ── VOICE ALLOCATION (audio thread) ─────────────────────────────────────────────────────────────
@@ -3120,9 +3257,7 @@ static void voice_note_off(int32_t note, uint8_t release) {
 // Peak render load since the last read, as a percentage of real time. READING IT CLEARS IT, so the
 // figure is always "the worst buffer since you last looked".
 uint32_t sound_engine_load_percent(void) {
-    SE_LOCAL;
-
-    return atomic_exchange(&gLoadPercent, 0);
+    return atomic_exchange(&gRenderLoadPercent[ENGINE_DOC], 0);
 }
 
 // Unlocked, like sound_engine_voices_sounding() below: a key moving between two reads is one poly
@@ -6764,8 +6899,6 @@ static void build_snapshot(tSoundEngineParams * out) {
 
 // §26.2 - one module's node alone, at the morph amounts in sBuildAxis. Its wiring is the base build's.
 static bool build_module_node(const tEngineNode * base, uint32_t variation, tEngineNode * out, tDxOperator * opsOut) {
-    SE_LOCAL;
-
     static _Thread_local tSoundEngineParams part;
     tModule *                               module = get_module_slot(engine_slot(), base->location, base->moduleIndex);
 
@@ -6876,8 +7009,6 @@ static uint32_t shared_words(uint8_t * out, uint32_t words, const uint64_t * vel
 static void build_pair_table(tPairTable * pair, const tSoundEngineParams * base, uint32_t n,
                              const uint64_t * velMoves, const uint64_t * keyMoves,
                              const uint64_t * velDxMoves, const uint64_t * keyDxMoves, uint32_t variation) {
-    SE_LOCAL;
-
     static _Thread_local tEngineNode cell;
     static _Thread_local tDxOperator ops[DX_OPERATORS];
 
@@ -6980,7 +7111,7 @@ static void build_axis_table(tMorphAxis axis, const tSoundEngineParams * base, c
     table->count = count;
 }
 
-void sound_engine_update_from_patch(void) {
+static void update_from_patch_one(void) {
     SE_LOCAL;
 
     static _Thread_local tSoundEngineParams snapshot;
@@ -7080,6 +7211,17 @@ void sound_engine_update_from_patch(void) {
     memcpy(&gParams, &snapshot, sizeof(snapshot));
     atomic_fetch_add(&gParamsSeq, 1);    // even again, snapshot is whole
     pthread_mutex_unlock(&gParamsWriteMutex);
+    atomic_store(&gHasChain, (snapshot.tap >= 0) && (snapshot.nodeCount > 0u));
+
+    // notes §204 - a slot's voice thread exists only once it has something to play, and starts here,
+    // never on the audio thread
+    if (atomic_load(&gHasChain) == true) {
+        split_worker_ensure();
+    }
+}
+
+void sound_engine_update_from_patch(void) {
+    FOR_EACH_SLOT_ENGINE(update_from_patch_one());
 }
 
 // §26.2 - audio thread: take the per-voice tables when new ones are whole, and use them only with
@@ -8735,8 +8877,6 @@ bool sound_engine_module_meter(uint32_t location, uint32_t moduleIndex, uint32_t
 
 void sound_engine_render_chorus(double deviceRate, uint32_t detuneValue, uint32_t amountValue,
                                 const float * in, float * out, uint32_t frames) {
-    SE_LOCAL;
-
     if ((in == NULL) || (out == NULL) || (frames == 0) || (deviceRate <= 0.0)) {
         return;
     }
@@ -14170,6 +14310,7 @@ typedef struct {
     _Atomic uint64_t           consumed;
     // the job, written before `go` is signalled and left alone until `busy` clears
     tG2Document *              doc;
+    int32_t                    slot;
     const tSoundEngineParams * params;
     tStageCtx                  ctx;
     uint64_t                   count;
@@ -14281,8 +14422,6 @@ static bool split_plan(const tSoundEngineParams * p, tSplit * sp) {
 }
 
 static void split_produce_one(tSplit * sp, const tSoundEngineParams * p, const tStageCtx * ctx) {
-    SE_LOCAL;
-
     double         value[MAX_ENGINE_NODES][NODE_OUTPUTS];
     uint64_t       at  = atomic_load_explicit(&sp->produced, memory_order_relaxed);
 
@@ -14301,8 +14440,6 @@ static void split_produce_one(tSplit * sp, const tSoundEngineParams * p, const t
 }
 
 static void split_consume_one(tSplit * sp, const tSoundEngineParams * p, double rampSamples) {
-    SE_LOCAL;
-
     double               value[MAX_ENGINE_NODES][NODE_OUTPUTS];
     uint64_t             at  = atomic_load_explicit(&sp->consumed, memory_order_relaxed);
 
@@ -14337,7 +14474,8 @@ static void * split_worker(void * arg) {
 
     for ( ; ;) {
         split_sem_wait(sp->go);
-        gDoc = sp->doc;     // the engine's document, and with it the engine's banks
+        gDoc        = sp->doc;   // the engine's document, and with it the engine's banks
+        sEngineSlot = sp->slot;
 
         for (uint64_t i = 0; i < sp->count; i++) {
             split_produce_one(sp, sp->params, &sp->ctx);
@@ -14378,7 +14516,7 @@ void sound_engine_set_split_mode(uint32_t mode) {
     atomic_store(&gSplitMode, (mode <= eSplitThreaded) ? mode : eSplitThreaded);
 }
 
-void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
+static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channelCount) {
     SE_LOCAL;
 
     static _Thread_local tSoundEngineParams params;    // notes §18 - too big for a callback's stack
@@ -14527,6 +14665,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
     if ((split == true) && (splitMode == eSplitThreaded)) {
         sp->doc    = gDoc;
+        sp->slot   = (int32_t)engine_current_slot();
         sp->params = &params;
         sp->ctx    = ctx;
         sp->count  = (uint64_t)frameCount * gOversample;
@@ -14632,6 +14771,86 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             if (percent > atomic_load(&gLoadPercent)) {
                 atomic_store(&gLoadPercent, percent);
             }
+        }
+    }
+}
+
+static bool slot_renders(void) {
+    SE_LOCAL;
+
+    return (atomic_load(&gActive) == true) && (atomic_load(&gHasChain) == true);
+}
+
+#define RENDER_MIX_FLOATS    (8192u)
+
+// notes §204 - every slot holding a patch, summed. One alone renders straight into the caller's buffer.
+static void render_slots(float * out, uint32_t frameCount, uint32_t channelCount) {
+    static _Thread_local float mix[RENDER_MIX_FLOATS];
+    uint32_t                   mask        = 0;
+    uint32_t                   count       = 0;
+    int32_t                    was         = sEngineSlot;
+
+    if ((out == NULL) || (channelCount == 0)) {
+        return;
+    }
+    FOR_EACH_SLOT_ENGINE(if (slot_renders() == true) {
+        mask |= 1u << forEach;
+        count++;
+    });
+
+    if (count <= 1u) {
+        sEngineSlot = (count == 1u) ? __builtin_ctz(mask) : (int32_t)engine_current_slot();
+        engine_render_slot(out, frameCount, channelCount);
+        sEngineSlot = was;
+        return;
+    }
+    memset(out, 0, (size_t)frameCount * channelCount * sizeof(float));
+
+    uint32_t                   chunkFrames = RENDER_MIX_FLOATS / channelCount;
+
+    for (uint32_t done = 0; done < frameCount; done += chunkFrames) {
+        uint32_t frames = ((frameCount - done) < chunkFrames) ? (frameCount - done) : chunkFrames;
+        float *  dest   = out + ((size_t)done * channelCount);
+
+        for (int32_t slot = 0; slot < MAX_SLOTS; slot++) {
+            if (((mask >> slot) & 1u) == 0u) {
+                continue;
+            }
+            sEngineSlot = slot;
+            engine_render_slot(mix, frames, channelCount);
+
+            for (uint32_t k = 0; k < (frames * channelCount); k++) {
+                dest[k] += mix[k];
+            }
+        }
+    }
+
+    sEngineSlot = was;
+}
+
+static double slot_device_rate(void) {
+    SE_LOCAL;
+
+    return gDeviceRate;
+}
+
+void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
+    struct timespec started  = {0};
+    struct timespec finished = {0};
+
+    (void)clock_gettime(CLOCK_MONOTONIC, &started);
+    render_slots(out, frameCount, channelCount);
+    (void)clock_gettime(CLOCK_MONOTONIC, &finished);
+
+    double          spent    = ((double)(finished.tv_sec - started.tv_sec)) + (((double)(finished.tv_nsec - started.tv_nsec)) / 1.0e9);
+    double          rate     = slot_device_rate();
+    double          deadline = (rate > 0.0) ? ((double)frameCount / rate) : 0.0;
+
+    if ((deadline > 0.0) && (spent >= 0.0)) {
+        uint32_t percent = (uint32_t)((spent / deadline) * 100.0);
+
+        if (percent > atomic_load(&gRenderLoadPercent[ENGINE_DOC])) {
+            atomic_store(&gRenderLoadPercent[ENGINE_DOC], percent);
         }
     }
 }
@@ -14751,7 +14970,6 @@ static void engine_reset_state(void) {
     gSampleRateBank[SE] = 96000.0;
     gEngineVoices       = 1;
     sLastTypeBank[SE]   = UINT32_MAX;  // no layout yet: the first call resets
-    gPatchSlot          = -1;
     gDroneMode          = true;
     gDroneSeen          = true;
     gDacEmulation       = true;
@@ -14761,17 +14979,17 @@ static void engine_reset_state(void) {
 // ── Engines for documents ───────────────────────────────────────────────────────────────────────
 
 #ifdef SYNTHLIB_PLUGIN_BUILD
-static _Atomic bool gEngineClaimed[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic bool gEngineClaimed[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];   // one per document
 #endif
 
 bool sound_engine_attach(void) {
 #ifdef SYNTHLIB_PLUGIN_BUILD
-    for (uint32_t i = 0; i < SOUND_ENGINE_MAX_ENGINES; i++) {
+    for (uint32_t i = 0; i < (SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS); i++) {
         bool expected = false;
 
         if (atomic_compare_exchange_strong(&gEngineClaimed[i], &expected, true)) {
             gDoc->engineIndex = i;
-            engine_reset_state();
+            FOR_EACH_SLOT_ENGINE(engine_reset_state());
             return true;
         }
     }
@@ -14783,27 +15001,19 @@ bool sound_engine_attach(void) {
 }
 
 void sound_engine_detach(void) {
-    SE_LOCAL;
-
 #ifdef SYNTHLIB_PLUGIN_BUILD
     uint32_t index = gDoc->engineIndex;
 
-    atomic_store(&gActive, false);
+    FOR_EACH_SLOT_ENGINE(set_active_one(false));
 
-    if (index < SOUND_ENGINE_MAX_ENGINES) {
+    if (index < (SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS)) {
         atomic_store(&gEngineClaimed[index], false);
     }
 #endif
 }
 
+// The document's index among the engines' owners - one per G2, whichever slot is selected
 uint32_t sound_engine_index(void) {
-    SE_LOCAL;
-
-    return SE;
+    return ENGINE_DOC;
 }
 
-void sound_engine_bind_slot(int32_t slot) {
-    SE_LOCAL;
-
-    gPatchSlot = ((slot >= 0) && (slot < MAX_SLOTS)) ? slot : -1;
-}

@@ -3320,3 +3320,38 @@ unchanged to 0.01 dB; sample differences are the stepping and triggers landing o
 Threaded and inline split stay bit-identical. Cost, 256-frame blocks at 96 kHz: 14 CS80project72 43.6% ->
 30.3% single-threaded, 24.4% with the voice thread (worst block 62.6% -> 29.2%); 02 Big Pad 15.1% ->
 10.6%. A patch with few control modules (Dx) is unchanged.
+
+## 204. Four slots, one engine each (`engine_current_slot()`, `sound_engine_render()`, `keyboard_slot_mask()`)
+
+Every slot of a G2 plays at once, as on the instrument. A document owns four engines, one per slot, and an
+engine's index is the document's x 4 plus the slot: the application has 4 engines, a plug-in 64 (16 G2s).
+Which engine a call reaches is `sEngineSlot`, a thread-local the render, a routed note and the slot's voice
+thread set; left at -1, a call reaches the SELECTED slot's engine - so the editor's meters, LEDs, morph
+readouts and debug text follow the slot on screen with no change to their callers.
+
+- **Render.** Every slot whose engine is active and has a chain to an output (`gHasChain`, published with
+  each snapshot) is rendered and the slots summed. An empty slot costs nothing: it is not rendered, and
+  its voice thread (§202) is started only once it has a chain, on the patch-update path and never on the
+  audio thread. One slot alone renders straight into the caller's buffer, so a single-patch render is
+  bit-identical to the engine before this change. Each slot's own Volume is already in its snapshot
+  (§63). A loaded slot costs CPU when nothing is played, because its voices, LFOs and FX area run as on
+  the instrument.
+- **Notes.** The keyboard (the editor's keyboard, and MIDI the input accepts as the keyboard) plays the
+  selected slot in patch mode, and in performance mode every slot whose Keyboard is on, inside its range
+  when the performance's Key Range is on. A note on another channel plays the slots whose MIDI channel
+  (the G2's synth settings, A-D on 1-4 until a G2 says otherwise) it is. A release goes to all four, so
+  a key released after the slot or range changed still stops. Bend and the morph controllers (wheel,
+  pedal, sustain, aftertouch) go to the keyboard's slots. CtrlRcv and NoteRcv hear everything in every
+  slot, with "This" meaning that slot's own channel or the keyboard.
+- **Everything else** that holds for the whole instrument - rate, output level, drone, DAC, start and
+  stop - reaches all four (`FOR_EACH_SLOT_ENGINE`). A patch update rebuilds all four snapshots: 0.9 ms with
+  one patch loaded, 2.4 ms with four (CS80, measured 2026-10-04).
+- **Load.** `sound_engine_load_percent()` is the whole render, every slot, against the buffer.
+- **Memory.** Each engine holds about 44 MB of static state, virtual until touched. The two per-voice
+  morph tables (10 MB each) are on the heap, because as statics 64 engines pass the 2 GB an x86_64 image
+  can address directly and the plug-in would not link.
+
+CHECKED 2026-10-04: one slot bit-identical to the engine before, five patches, serial and threaded; CS80 in
+A plus Big Pad in B equal to each alone, summed (-150 dB); a split at 55 sends 48 to A and 55, 60 to B
+(-145 dB); in patch mode only the selected slot sounds, bit-identical to it alone. Slots render one after
+another on the audio thread, each with its own voice thread: A+B threaded is 34.4% against 23.5% + 10.9%.
