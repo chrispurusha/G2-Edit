@@ -16,6 +16,7 @@ General (priority order)
 - "GlassCathedral" sounds like it has slow phasing on Engine.
 - "schtraengt" sounds like the balance between tones is not the same engine vs. g2.
 - "Flows\_DZ" has more notes in the sequence on G2 than vs. engine. Sounds very different. Other tones in there on G2 too.
+- Windows plugin seems to be in several nested folders. Maybe the file shouldn't be in nested folders? 
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Implement audio input, for processing external signals.
 - Effects version of the plugin, for audio processing.
