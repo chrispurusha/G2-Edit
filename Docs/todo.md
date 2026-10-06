@@ -6,6 +6,17 @@ Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
 -
+- "14 Sweep Lots" shows that the keyboard-track enabled drone OscShpB oscillators on engine are starting on a different note compared to the G2 itself. Engine is starting with a much lower note. Possible other oscillator types do similar?
+- "AnalogClassic" sounds like 2 oscillators are diverging in pitch more than the hardware running the same patch.
+- "ChorusSaw" has 2 pitches playing on engine vs. 1 on G2. 
+- "Alarm DX" patch is playing higher notes on engine vs G2, when triggered by same midi note.
+- "FMFunkNL2" is mostly white noise on engine, but has a tone on G2.
+- "AccBass 1 DX" is brighter on hardware g2.
+- "MicroWaves" makes no sound on engine, whereas G2 does.
+- "GlassCathedral" sounds like it has slow phasing on Engine.
+- "schtraengt" sounds like the balance between tones is not the same engine vs. g2.
+- "Flows\_DZ" has more notes in the sequence on G2 than vs. engine. Sounds very different. Other tones in there on G2 too.
+- I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Control rate (notes §203): EnvFollow, PitchTrack and ZeroCnt not up-rated run at 24 kHz on the instrument with their 96 kHz words (times fourfold) - measure one on the G2 (EnvFollow fed by an LFO, release time un-up-rated vs up-rated) before following it; no stage patch uses them
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations and/or multi-core threading as below.
