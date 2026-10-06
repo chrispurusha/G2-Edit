@@ -18,6 +18,7 @@ General (priority order)
 - "Flows\_DZ" has more notes in the sequence on G2 than vs. engine. Sounds very different. Other tones in there on G2 too.
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Implement audio input, for processing external signals.
+- Effects version of the plugin, for audio processing.
 - Control rate (notes §203): EnvFollow, PitchTrack and ZeroCnt not up-rated run at 24 kHz on the instrument with their 96 kHz words (times fourfold) - measure one on the G2 (EnvFollow fed by an LFO, release time un-up-rated vs up-rated) before following it; no stage patch uses them
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations and/or multi-core threading as below.
