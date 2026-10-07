@@ -2341,8 +2341,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMix2to1B,   paramTypeMenu,           {{ 21,   6}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, expStrMap,                             NULL          },            // 66 ExpLinDB
     // 67 Unknown
     // 68 ClkGen
-    {moduleTypeClkGen,     paramTypeCommonDial,     {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                     // 68 Tempo *** needs new dial 24-214 BPM
-    {moduleTypeClkGen,     paramTypeBypass,         {{ 70, -17}, { 5,  5}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  NULL          },                     // 68 Bypass
+    {moduleTypeClkGen,     paramTypeCommonDial,     {{ 42, -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                     // 68 Tempo *** needs new dial 24-214 BPM
+    {moduleTypeClkGen,     paramTypeBypass,         {{ -3, 3}, { 5,  5}}, anchorTopRight,  NULL,             2,   1, NULL,                                  NULL          },                     // 68 Bypass
     {moduleTypeClkGen,     paramTypeMenu,           {{  3,   0}, { 7,  7}}, anchorBottomLeft,  "Source",         2,   0, clkSrcStrMap,                          NULL          },                     // 68 Clk Source
     {moduleTypeClkGen,     paramTypeMenu,           {{ 60,   0}, { 7,  7}}, anchorBottomLeft,  "Sync every",     6,   2, clkGenBeatSyncStrMap,                  NULL          },                     // 68 BeatSync
     {moduleTypeClkGen,     paramTypeSwing,          {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Swing",        128,   0, NULL,                                  NULL          },                     // 68 Swing
@@ -3485,9 +3485,9 @@ const tConnectorLocation connectorLocationList[] = {
     // 67 Unknown
     // 68 ClkGen
     {moduleTypeClkGen,      connectorDirIn,  connectorTypeLogic,   {{  3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",         labelLocRight},        // 68 Reset
-    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1/96",          labelLocLeft },        // 68 1/96
-    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1/16",          labelLocLeft },        // 68 1/16
-    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3,  -24}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "ClkActive",     labelLocLeft },        // 68 ClkActive
+    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3,  -21}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1/96",          labelLocLeft },        // 68 1/96
+    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3,  -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1/16",          labelLocLeft },        // 68 1/16
+    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "ClkActive",     labelLocLeft },        // 68 ClkActive
     {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Sync",          labelLocLeft },        // 68 Sync
     // 69 ClkDiv
     {moduleTypeClkDiv,      connectorDirIn,  connectorTypeLogic,   {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",         labelLocRight},        // 69 Clock
@@ -4155,7 +4155,7 @@ const tModeLocation      modeLocationList[] = {
     {moduleTypeDelay,      paramTypeMenu,   {{-13,  0}, { 7, 7}}, anchorBottomRight, "Mode",  3, 0, logicDelayModeStrMap}, // 42 Mode
     {moduleTypeGate,       paramTypeMenu,   {{ 25,  2}, { 7, 7}}, anchorMiddleLeft,  "G1",    6, 0, gateTypeStrMap      }, // 64 Gate 1 Type
     {moduleTypeGate,       paramTypeMenu,   {{ 75,  2}, { 7, 7}}, anchorMiddleLeft,  "G2",    6, 0, gateTypeStrMap      }, // 64 Gate 2 Type
-    {moduleTypeClkDiv,     paramTypeMenu,   {{ 80,  0}, { 7, 7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap       }, // 69 DivMode
+    {moduleTypeClkDiv,     paramTypeMenu,   {{ 74,  0}, { 7, 7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap       }, // 69 DivMode
     {moduleTypeFltLP,      paramTypeMenu,   {{ 67,  0}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 0, fltLPSlopeStrMap    }, // 87 FltLP
     {moduleTypeFlipFlop,   paramTypeMenu,   {{ 45,  0}, { 7, 7}}, anchorBottomLeft,  "Type",  2, 0, flipFlopStrMap      }, // 91 Selector
     {moduleTypeOscD,       paramTypeMenu,   {{-18,  0}, { 7, 7}}, anchorMiddleRight, "Wave",  6, 0, shapeOscATypeStrMap }, // 96 Wave
