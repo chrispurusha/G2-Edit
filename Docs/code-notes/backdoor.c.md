@@ -44,9 +44,12 @@ caller polls for the command file's disappearance to know it's done.
                       reaches the canvas
                       right-click menu does. Local only; check the result with DUMP
   SNDSTATUS         — what the sound engine's status line currently reads
-  SNDDUMP           — the resolved chain, the parameters read, and the peak level since last read
+  SNDDUMP           — the resolved chain, the parameters read, every input as node:output (ins=), and the peak level since last read
   NOTE <n> [vel]|OFF — play/release a note on the sound engine (LOCAL engine, not the G2); vel defaults to 100
   RENDERNOTE <note> <vel> <ms> — render the local engine into memory with the note held; reports the peak. Only while no device renders it
+  RENDERWAV <path> <ms> [note vel] — render the local engine to a 48 kHz 16-bit stereo .wav, with a note held if given. Only while no device renders it
+  ENGINEOFFLINE on|off — prepare the engine without opening an audio device (as the plug-in does), so RENDERWAV can run with nothing audible
+  CLOCK             — the master clock as the G2 last reported it (masterClock=<bpm> running=<0|1>); 0 BPM with no G2
   BANKLOAD <PATCH|PERF> <bank> <loc> — Load from Bank with no dialog (replaces the slot/perf ON THE G2)
   ORIGIN            — each slot's bank origin and source serial; what Save and Store Back would do
   ENGMORPH <group> <amount> — move the local engine's morph group (4 = sustain pedal, down from 0.5)

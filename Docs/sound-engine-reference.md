@@ -1892,7 +1892,9 @@ Clk and Rst in, one output. The Divider dial reads **one more than it holds**, s
   count** - so an odd divider halves the frequency again. A divider of 3 divides by one and a half
   (manual p.236).
 - **Rst is the barred arrow**: the reset does not act at once but waits for the next positive edge
-  of Clk.
+  of Clk. It is the **rising edge** of Rst that arms it (2026-10-07): until that date a Rst held high
+  reset the count on every clock, so 14 pattern seq's ClkDiv, reset from ClkGen's ClkActive, passed
+  every pulse and clocked its SeqEvents sixteen times too fast. On the G2 the patch steps once a bar.
 
 ## 38.5 S&H
 
@@ -2447,6 +2449,10 @@ transposes the keyboard by whole octaves. It is stored 0..4 with 2 as no shift, 
 instrument holds it; the engine ignored it until 2026-09-28, which put 11, 14 and 17 an octave high and
 05, 06 and 16 an octave low. The editor's own Patch Settings panel read and wrote it as a signed -2..+2
 and so showed "+2" for no shift; both now use the stored form.
+
+**The settings are per variation (2026-10-07).** Octave Shift, Glide, Vibrato and Bend are stored in
+each variation like Volume, and the engine reads the ACTIVE one. Until this date it read variation 1's
+whatever was playing: ALARM DX plays variation 8, whose Octave Shift is -1, and sounded an octave high.
 
 ## 64. RndClkA and RndTrig
 

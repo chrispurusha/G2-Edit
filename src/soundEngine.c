@@ -1225,6 +1225,8 @@ typedef struct {
     double        octaveSemis;              // §63a - the patch's Octave Shift, in semitones
     double        bendSemitones;            // 0 when the patch has bend switched off
     uint64_t      topology;                 // changes shape => the audio thread resets its per-node state
+    int32_t       storedNote;               // notes §209: the patch's own current note, -1 if it has none
+    uint32_t      storedNoteSeq;            // ... and which delivery of it this is
     uint32_t      voiceCount;               // how many voices this patch may sound at once, 1 for Mono/Legato
     uint64_t      build;                    // which build this is - the velocity table names the one it belongs to
     tEngineNode   node[MAX_ENGINE_NODES];
@@ -1576,9 +1578,15 @@ typedef struct {
 } tVoice;
 
 static tVoice                 gVoiceBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES];
-#define gVoice         (gVoiceBank[SE])
+#define gVoice    (gVoiceBank[SE])
+
+// notes §209
+static int32_t                gLastKeyBank[SOUND_ENGINE_MAX_ENGINES]      = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = (int32_t)KEYBOARD_PITCH_ZERO};
+static uint32_t               gStoredNoteSeenBank[SOUND_ENGINE_MAX_ENGINES];
+#define gLastKey           (gLastKeyBank[SE])
+#define gStoredNoteSeen    (gStoredNoteSeenBank[SE])
 static uint64_t               gVoiceClockBank[SOUND_ENGINE_MAX_ENGINES];
-#define gVoiceClock    (gVoiceClockBank[SE])
+#define gVoiceClock        (gVoiceClockBank[SE])
 
 // notes §31
 static _Atomic uint32_t       gEngineVoicesBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1};
@@ -2948,6 +2956,18 @@ const char * sound_engine_debug_text(void) {
                              (double)atomic_exchange(&gPeakMilli, 0) / 1000.0,
                              (double)atomic_exchange(&gRawPeakMilli, 0) / 1000.0);
 
+    {
+        // the patch's Octave Shift as the engine applies it, and as each variation stores it (§63a)
+        tModule * sustain = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleSustain);
+
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "octave=%+.0f stored=", gParams.octaveSemis);
+
+        for (uint32_t v = 0; (v < NUM_VARIATIONS) && (used < sizeof(text)); v++) {
+            used += (size_t)snprintf(text + used, sizeof(text) - used, "%u", (sustain != NULL) ? (unsigned)sustain->param[v][OCTAVE_SHIFT].value : 9u);
+        }
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "\n");
+    }
+
     for (i = 0; (i < gParams.nodeCount) && (used < sizeof(text)); i++) {
         const tEngineNode * n = &gParams.node[i];
 
@@ -2955,7 +2975,7 @@ const char * sound_engine_debug_text(void) {
                                  "[%u] %-8s mod=%u n=%u in=%d/%d src=%u/%u active=%d "
                                  "wave=%d kbt=%d pitch=%.2f shape=%.2f "
                                  "cut=%.1f res=%.2f poles=%u env=%.2f fltkbt=%.2f "
-                                 "a=%.3f d=%.3f s=%.2f r=%.3f gain=%.2f time=%.3f mix=%.2f fb=%.2f\n",
+                                 "a=%.3f d=%.3f s=%.2f r=%.3f gain=%.2f time=%.3f mix=%.2f fb=%.2f ins=",
                                  (unsigned)i,
                                  (n->kind < (sizeof(kindName) / sizeof(kindName[0]))) ? kindName[n->kind] : "?",
                                  (unsigned)n->moduleIndex,
@@ -2967,6 +2987,15 @@ const char * sound_engine_debug_text(void) {
                                  flt_cutoff_hz(n->cutoffParam), n->resonance, (unsigned)n->extraPoles, n->modAmount, n->fltKbt,
                                  n->attack, n->decay, n->sustain, n->release, n->gain,
                                  n->timeSeconds, n->amount, n->depth);
+
+        // every input as node:output, -1 where nothing is patched
+        for (uint32_t c = 0; (c < n->inCount) && (c < MAX_NODE_INPUTS) && (used < sizeof(text)); c++) {
+            used += (size_t)snprintf(text + used, sizeof(text) - used, "%s%d:%u", (c == 0) ? "" : ",", (int)n->in[c], (unsigned)n->srcOut[c]);
+        }
+
+        if (used < sizeof(text)) {
+            used += (size_t)snprintf(text + used, sizeof(text) - used, "\n");
+        }
     }
 
     return text;
@@ -3158,6 +3187,7 @@ static void voice_start_note(uint32_t chosen, int32_t note, uint8_t velocity,
     if (voice->glidePitch < 0.0) {
         voice->glidePitch = (double)note;   // first note this voice has had: start where it is played
     }
+    gLastKey                  = note;       // notes §209
     voice->note               = note;
     voice->velocity           = velocity;
     gKeyMorphShift            = params->octaveSemis;
@@ -6972,36 +7002,39 @@ static void build_snapshot(tSoundEngineParams * out) {
     {
         tModule * glide = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleGlide);
         tModule * bend  = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleBend);
+        uint32_t  var   = gPatchDescr[engine_slot()].activeVariation;   // §63a - settings are per variation
+
+        var = (var < NUM_VARIATIONS) ? var : 0u;
 
         // §63a - the patch's Octave Shift transposes the keyboard, stored 0..4 with 2 as none
         {
             tModule * sustain = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleSustain);
             // a patch begun in the editor has no settings module, and its zeroes would read as -2 octaves
-            uint32_t  shift   = ((sustain != NULL) && (sustain->active == true)) ? sustain->param[0][OCTAVE_SHIFT].value : OCTAVE_SHIFT_ZERO;
+            uint32_t  shift   = ((sustain != NULL) && (sustain->active == true)) ? sustain->param[var][OCTAVE_SHIFT].value : OCTAVE_SHIFT_ZERO;
 
             snapshot.octaveSemis = 12.0 * ((double)((shift <= 4u) ? shift : OCTAVE_SHIFT_ZERO) - OCTAVE_SHIFT_ZERO);
         }
 
         if (glide != NULL) {
-            uint32_t mode = glide->param[0][GLIDE_TYPE].value;
+            uint32_t mode = glide->param[var][GLIDE_TYPE].value;
 
             snapshot.glideMode    = (mode <= (uint32_t)eGlideAuto) ? (tGlideMode)mode : eGlideOff;
-            snapshot.glideSeconds = glide_time_seconds(glide->param[0][GLIDE_SPEED].value);
+            snapshot.glideSeconds = glide_time_seconds(glide->param[var][GLIDE_SPEED].value);
         }
         {
             tModule * vibrato = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleVibrato);
 
             if (vibrato != NULL) {
                 // §15.6 - depth is in cents as the dial reads it; the rate is vibrato_rate_hz().
-                snapshot.vibratoSource = vibrato->param[0][VIBRATO_MOD].value;
-                snapshot.vibratoCents  = (double)vibrato->param[0][VIBRATO_DEPTH].value;
-                snapshot.vibratoHz     = vibrato_rate_hz((double)vibrato->param[0][VIBRATO_RATE].value);
+                snapshot.vibratoSource = vibrato->param[var][VIBRATO_MOD].value;
+                snapshot.vibratoCents  = (double)vibrato->param[var][VIBRATO_DEPTH].value;
+                snapshot.vibratoHz     = vibrato_rate_hz((double)vibrato->param[var][VIBRATO_RATE].value);
             }
         }
 
-        if ((bend != NULL) && (bend->param[0][BEND_ON_OFF].value != 0)) {
+        if ((bend != NULL) && (bend->param[var][BEND_ON_OFF].value != 0)) {
             // The dial reads one more than it stores, so 0 is a single semitone.
-            snapshot.bendSemitones = (double)bend->param[0][BEND_RANGE].value + 1.0;
+            snapshot.bendSemitones = (double)bend->param[var][BEND_RANGE].value + 1.0;
         }
     }
 
@@ -7178,9 +7211,11 @@ static void build_snapshot(tSoundEngineParams * out) {
             }
         }
     }
-    snapshot.topology   = topology_signature(&snapshot);
-    snapshot.voiceCount = voice_count_for_patch(engine_slot());
-    snapshot.restLive   = rest_live_analysis(&snapshot);
+    snapshot.topology      = topology_signature(&snapshot);
+    snapshot.storedNote    = (gNote2Size[engine_slot()] > 0u) ? (int32_t)(gNote2[engine_slot()][0] >> 1) : -1; // notes §209
+    snapshot.storedNoteSeq = gNote2Seq[engine_slot()];
+    snapshot.voiceCount    = voice_count_for_patch(engine_slot());
+    snapshot.restLive      = rest_live_analysis(&snapshot);
 
     memcpy(out, &snapshot, sizeof(snapshot));
 }
@@ -9458,9 +9493,9 @@ static void seq16_step(tSeqState * st, const tSeqConfig * cfg, const int32_t in[
 
         memcpy(X, kX, sizeof(kX));
         memset(Y, 0, sizeof(st->y));
-        Y[1]             = 0x10;
+        Y[1]             = cfg->length + 1;   // notes §210 - the reference model's 0x10/0x11 are these at 16 steps
         Y[3]             = 0x200000;
-        Y[5]             = 0x11;
+        Y[5]             = cfg->length + 2;
         Y[6]             = 0x2B;
         memcpy(st->rx, kRecX, sizeof(kRecX));
         Y[SEQREC_Y]      = SEQREC_LAST_STEP;
@@ -10204,7 +10239,7 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
     bool                 tick              = (gEnvTick[voice][node] <= 0.0);
 
     // §14.4 - what the Operators' Note and Vel inputs carry from the Keyboard
-    int32_t              noteWord          = (gVoice[voice].note >= 0) ? ((gVoice[voice].note - (int32_t)KEYBOARD_PITCH_ZERO) * OP_NOTE_WORD) : 0;
+    int32_t              noteWord          = (((gVoice[voice].note >= 0) ? gVoice[voice].note : gLastKey) - (int32_t)KEYBOARD_PITCH_ZERO) * OP_NOTE_WORD;
     uint32_t             velIndex          = (((uint32_t)gVoice[voice].velocity * (uint32_t)DSP_WORD_PER_ENGINE) / 127u) >> DX_VEL_INDEX_SHIFT;
 
     velIndex               = (velIndex > 127u) ? 127u : velIndex;
@@ -11273,7 +11308,7 @@ static void keyboard_step(uint32_t voice, double voicePitch, double * out) {
     out[KEYBOARD_OUT_GATE]    = (v->gate == true) ? 1.0 : 0.0;
     out[KEYBOARD_OUT_LIN]     = lin;
     out[KEYBOARD_OUT_RELEASE] = (double)v->release / 127.0;
-    out[KEYBOARD_OUT_NOTE]    = ((v->note >= 0) ? ((double)v->note - KEYBOARD_PITCH_ZERO) : 0.0) / PITCH_MOD_SEMITONES;
+    out[KEYBOARD_OUT_NOTE]    = ((double)((v->note >= 0) ? v->note : gLastKey) - KEYBOARD_PITCH_ZERO) / PITCH_MOD_SEMITONES;
     out[KEYBOARD_OUT_EXP]     = lin * lin * lin;
 }
 
@@ -11442,6 +11477,7 @@ static bool gate_result(uint32_t type, bool a, bool b) {
 
 #define LOGIC_PREV_CLOCK    (1u)
 #define LOGIC_PREV_DATA     (2u)
+#define LOGIC_PREV_ARMED    (4u)   // §38.4 - ClkDiv: a Rst edge seen, waiting for the next Clk edge
 
 static int32_t saturate_word(int64_t x) {
     return (x > 0x7FFFFF) ? 0x7FFFFF : ((x < -0x800000) ? -0x800000 : (int32_t)x);
@@ -13747,11 +13783,14 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             bool    wasHigh = ((prev & LOGIC_PREV_CLOCK) != 0u);
             bool    rise    = (clock == true) && (wasHigh == false);
             bool    fall    = (clock == false) && (wasHigh == true);
+            bool    armed   = ((prev & LOGIC_PREV_ARMED) != 0u) || ((reset == true) && ((prev & LOGIC_PREV_DATA) == 0u));
 
-            // The Rst input is the barred arrow: the reset waits for the next rising edge.
-            if ((reset == true) && (rise == true)) {
+            // §38.4 - a Rst EDGE arms the reset and the next rising Clk edge carries it out; a Rst held
+            // high (14 pattern seq's ClkActive) resets once, not on every pulse
+            if ((armed == true) && (rise == true)) {
                 gLogicCount[voice][n] = 0u;
                 gLogicState[voice][n] = false;
+                armed                 = false;
             } else if (spec->logicToggled == true) {
                 if ((rise == true) || (fall == true)) {
                     gLogicCount[voice][n]++;
@@ -13764,7 +13803,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             } else if (rise == true) {
                 gLogicCount[voice][n] = (gLogicCount[voice][n] + 1u) % spec->divider;
             }
-            gLogicPrev[voice][n] = (uint8_t)(clock ? LOGIC_PREV_CLOCK : 0u);
+            gLogicPrev[voice][n] = (uint8_t)((clock ? LOGIC_PREV_CLOCK : 0u) | (reset ? LOGIC_PREV_DATA : 0u) | (armed ? LOGIC_PREV_ARMED : 0u));
 
             // Gated passes the clock itself while the count is on the chosen pulse.
             value[n][0]          = (spec->logicToggled == true)
@@ -14331,7 +14370,7 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
                 voice->glidePitch = (double)voice->note;
             }
         }
-        double voicePitch = voice->glidePitch + bend + vibrato + p->octaveSemis;
+        double voicePitch = ((voice->glidePitch >= 0.0) ? voice->glidePitch : (double)gLastKey) + bend + vibrato + p->octaveSemis; // notes §209
 
         // The anti-click ramp, per voice. Only used when the patch has no EnvADSR to shape
         // the note itself — with one, this would just double up on it.
@@ -14926,6 +14965,15 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
     }
     params = read_params();
     refresh_voice_morphs(params.build);
+
+    // notes §209 - a patch arriving brings its own current note; until a key is played, that is the key
+    if (params.storedNoteSeq != gStoredNoteSeen) {
+        gStoredNoteSeen = params.storedNoteSeq;
+
+        if (params.storedNote >= 0) {
+            gLastKey = params.storedNote;
+        }
+    }
 
     // §26.2.2 - new tables, so every merged node is stale. Once per build, not once per block.
     if (gMergedBuild != params.build) {

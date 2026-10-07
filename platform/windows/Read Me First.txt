@@ -54,7 +54,7 @@ Device Manager > the G2 > Update driver, and choose Clavia's driver.
 THE G2 ALIKE PLUG-IN (VST3, EXPERIMENTAL)
 
 G2 Alike plays G2 patches in a music program, with the editor's own canvas as
-its window. It needs no G2. Copy the whole "G2 Alike.vst3" folder into
+its window. It needs no G2. Copy the file "G2 Alike.vst3" into
 
   C:\Program Files\Common Files\VST3
 

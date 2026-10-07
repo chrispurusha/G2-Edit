@@ -1603,6 +1603,90 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
         snprintf(text, sizeof(text), "OK held-peak=%.4f first-100ms-after-release=%.4f\n", peak, released);
         backdoor_write_result(text);
+    } else if (strcmp(cmd, "CLOCK") == 0) {
+        // CLOCK - the master clock as the G2 last reported it (what a Master-sourced ClkGen follows)
+        char text[96];
+
+        snprintf(text, sizeof(text), "OK masterClock=%u running=%u\n", (unsigned)gGlobalSettings.masterClock,
+                 (unsigned)gGlobalSettings.masterClockRunning);
+        backdoor_write_result(text);
+    } else if (strcmp(cmd, "ENGINEOFFLINE") == 0) {
+        // ENGINEOFFLINE on|off - run the local engine with NO audio device, as the plug-in does, so
+        // RENDERNOTE / RENDERWAV can render it without anything reaching a speaker or interface.
+        if ((arg != NULL) && (strcmp(arg, "off") == 0)) {
+            sound_engine_stop_hosted();
+        } else {
+            sound_engine_start_hosted(48000.0);
+            sound_engine_update_from_patch();
+        }
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "RENDERWAV") == 0) {
+        // RENDERWAV <path> <ms> [<note> <velocity>] - render the local engine offline into a 48 kHz stereo
+        // 16-bit WAV, holding the note for the whole time if one is given, nothing played if not. For
+        // measuring the engine with the same analysis as a hardware capture. Refused while a device renders.
+        char         path[1024] = {0};
+        int32_t      ms         = 0;
+        int32_t      note       = -1;
+        int32_t      velocity   = 100;
+
+        if (sscanf(arg, "%1023s %d %d %d", path, &ms, &note, &velocity) < 2) {
+            backdoor_write_result("ERROR: expected 'RENDERWAV <path> <ms> [<note> <velocity>]'\n");
+            return;
+        }
+        (void)sound_engine_load_percent();
+        usleep(200000);
+
+        if ((sound_engine_active() == false) || (sound_engine_load_percent() != 0)) {
+            backdoor_write_result("ERROR: the engine is off, or a device is rendering it\n");
+            return;
+        }
+        FILE *       f          = fopen(path, "wb");
+
+        if (!f) {
+            backdoor_write_result("ERROR: cannot write the file\n");
+            return;
+        }
+        enum {WAV_BLOCK = 256};
+        static float block[WAV_BLOCK * 2];
+        uint32_t     frames     = (uint32_t)(((uint64_t)ms * 48000u) / 1000u);
+        uint32_t     bytes      = frames * 4u;
+        uint8_t      hdr[44]    = {
+            'R',  'I',  'F', 'F',    0,    0,    0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ', 16, 0, 0, 0, 1, 0, 2, 0,
+            0x80, 0xBB,   0,   0, 0x00, 0xEE, 0x02, 0,   4,   0,  16,   0, 'd', 'a', 't', 'a',  0, 0, 0, 0
+        };
+
+        hdr[4]  = (uint8_t)((bytes + 36u) & 0xFF);
+        hdr[5]  = (uint8_t)(((bytes + 36u) >> 8) & 0xFF);
+        hdr[6]  = (uint8_t)(((bytes + 36u) >> 16) & 0xFF);
+        hdr[7]  = (uint8_t)((bytes + 36u) >> 24);
+        hdr[40] = (uint8_t)(bytes & 0xFF);
+        hdr[41] = (uint8_t)((bytes >> 8) & 0xFF);
+        hdr[42] = (uint8_t)((bytes >> 16) & 0xFF);
+        hdr[43] = (uint8_t)(bytes >> 24);
+        fwrite(hdr, 1, sizeof(hdr), f);
+
+        if (note >= 0) {
+            sound_engine_note(note, (uint8_t)((velocity < 1) ? 1 : ((velocity > 127) ? 127 : velocity)), true);
+        }
+
+        for (uint32_t done = 0; done < frames; done += WAV_BLOCK) {
+            uint32_t n = ((frames - done) < WAV_BLOCK) ? (frames - done) : WAV_BLOCK;
+
+            sound_engine_render(block, WAV_BLOCK, 2);
+
+            for (uint32_t i = 0; i < (n * 2u); i++) {
+                float   v = block[i];
+                int16_t q = (int16_t)lrintf(((v > 1.0f) ? 1.0f : ((v < -1.0f) ? -1.0f : v)) * 32767.0f);
+
+                fwrite(&q, 2, 1, f);
+            }
+        }
+
+        if (note >= 0) {
+            sound_engine_note(note, 0, false);
+        }
+        fclose(f);
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "SNDSTATUS") == 0) {
         // Reads back what the Experimental menu would show, so a test can assert on why the engine
         // is or is not making a sound without taking a screenshot of a menu.

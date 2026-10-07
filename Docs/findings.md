@@ -12257,3 +12257,27 @@ the FX area's 12.5%; the application has a Drone Mode switch for that (Experimen
 Same day: drone mode now decides per patch whether voice 0 can sound at rest, from the graph (notes §206).
 Checked by forcing voice 0 on in 51 patches: every patch judged silent at rest was. 12 of 19 stage patches
 now idle at about half the load.
+
+## 2026-10-07 - 14 pattern seq: a held Rst reset ClkDiv on every pulse; short cycling sequencers never started
+
+The todo said the engine played 14 pattern seq lower and with more notes, and that SeqEvent fired
+regardless of its steps. Captured the G2 (QU-24 inputs 5/6, G2Bugs/g2-14pattern.wav) and
+tracked the pitch every 25 ms against an engine render. Taking the patch apart one branch at a time on
+both: the OscPerc alone was C#5 on both; one SeqNote straight into the oscillator played all 16 steps and
+rested at zero on the G2, but sat on its first step on the engine.
+
+The cause was ClkDiv. Its Rst comes from ClkGen's ClkActive, which is high the whole time the clock runs.
+The engine read Rst as a level at each clock edge, so the divider reset on every pulse and passed them
+all: the SeqEvents stepped every sixteenth instead of every bar and re-looped the SeqNotes before they
+finished. The reset is now armed by a rising edge of Rst and carried out at the next Clk edge (reference
+§38.4). Afterwards the engine's pitch track matches the G2's note for note.
+
+Found on the way, with a small test patch built for it (G2Bugs/test-seqnote-loop.pch2): a sequencer's
+start words were the reference model's constants for 16 steps, so a cycling SeqEvent shorter than 16 steps began
+past its wrap point and never fired until reset. The G2 runs it from load. Both words now follow Length
+(sound-engine-notes §210). A fresh Cycle-off SeqNote stays parked until Loop or Rst on the G2 too, so
+that part of the engine was right.
+
+The "lower pitch" was the same bug: KeyQuant snaps a parked SeqNote's zero to one below the base, while
+the engine's always-restarted SeqNote held its first step, fifteen semitones down.
+

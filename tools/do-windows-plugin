@@ -5,8 +5,9 @@
 #   tools/do-windows-plugin            x64
 #   tools/do-windows-plugin arm64      native Windows on ARM - Parallels on Apple silicon
 #
-# Result: build-cross-<arch>/G2 Alike.vst3/Contents/<arch>-win/G2 Alike.vst3, the VST3 bundle layout
-# Windows hosts expect - copy the whole "G2 Alike.vst3" folder into C:\Program Files\Common Files\VST3.
+# Result: build-cross-<arch>/G2 Alike.vst3, ONE FILE (the DLL) - copy it into C:\Program Files\Common Files\VST3.
+# Not the bundle layout (G2 Alike.vst3/Contents/<arch>-win/G2 Alike.vst3): the DLL carries everything it needs,
+# so the folders only nested it three deep, and every Windows host loads a single-file .vst3 as well.
 #
 # THE SOURCE LIST IS ../do-plugin's, read from it, so the two cannot drift: everything except the Mac's
 # window code (g2View.m, the Metal backend, the Cocoa VST3 view) and the Audio Unit, which has no Windows.
@@ -36,7 +37,6 @@ DEPS=$OUT/deps
 CC=$LLVM_MINGW/bin/$TRIPLE-clang
 CXX=$LLVM_MINGW/bin/$TRIPLE-clang++
 NAME="G2 Alike"
-WINARCH=$([[ $ARCH == aarch64 ]] && echo arm64-win || echo x86_64-win)
 
 [[ -x $CC ]]                        || { echo "error: no llvm-mingw at $LLVM_MINGW" >&2; exit 1; }
 [[ -d $SDK/pluginterfaces ]]        || { echo "error: VST3 SDK not found at $SDK" >&2; exit 1; }
@@ -94,16 +94,14 @@ for o in $OBJECTS; do
     [[ -f $o ]] || { echo "error: compile failed for ${o:t}" >&2; exit 1; }
 done
 
-BUNDLE="$OUT/$NAME.vst3"
-DLL="$BUNDLE/Contents/$WINARCH/$NAME.vst3"
-rm -rf "$BUNDLE"
-mkdir -p "${DLL:h}"
+DLL="$OUT/$NAME.vst3"
+rm -rf "$DLL"   # also clears a bundle folder left by an older build
 
 # One self-contained DLL: the C++ runtime and winpthreads linked in, so nothing beside it is needed
 $CXX -shared -static -o "$DLL" $OBJECTS $DEPS/lib/libfreetype.a \
      -lopengl32 -lgdi32 -luser32 -lole32 -lwinmm -lpthread -Wl,--exclude-all-symbols
 
 echo
-echo "built: $BUNDLE ($(du -h "$DLL" | cut -f1), $TRIPLE)"
+echo "built: $DLL ($(du -h "$DLL" | cut -f1), $TRIPLE)"
 echo "exports: $(PATH=$LLVM_MINGW/bin:$PATH $TRIPLE-objdump -p "$DLL" | awk '/Ordinal +RVA +Name/ {on=1; next} on && NF==3 {print $3} on && NF<3 {on=0}' | tr '\n' ' ')"
 echo "needs: $(PATH=$LLVM_MINGW/bin:$PATH $TRIPLE-objdump -p "$DLL" | grep 'DLL Name' | awk '{print $3}' | tr '\n' ' ')"

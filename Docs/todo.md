@@ -6,8 +6,7 @@ Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
 -
-- "14 Sweep Lots" shows that the keyboard-track enabled drone OscShpB oscillators on engine are starting on a different note compared to the G2 itself. Engine is starting with a much lower note. Possible other oscillator types do similar?
-- "AnalogClassic" sounds like 2 oscillators are diverging in pitch more than the hardware running the same patch.
+- "AnalogClassic" sounds like 2 oscillators are diverging in pitch more than the hardware running the same patch. OscShpB's partial mode might not be correctly pitching on engine.
 - "ChorusSaw" has 2 pitches playing on engine vs. 1 on G2. 
 - "Alarm DX" patch is playing higher notes on engine vs G2, when triggered by same midi note.
 - "FMFunkNL2" is mostly white noise on engine, but has a tone on G2.
@@ -16,7 +15,6 @@ General (priority order)
 - "GlassCathedral" sounds like it has slow phasing on Engine.
 - "schtraengt" sounds like the balance between tones is not the same engine vs. g2.
 - "Flows\_DZ" has more notes in the sequence on G2 than vs. engine. Sounds very different. Other tones in there on G2 too.
-- Windows plugin seems to be in several nested folders. Maybe the file shouldn't be in nested folders? 
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Implement audio input, for processing external signals.
 - Effects version of the plugin, for audio processing.

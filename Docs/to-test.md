@@ -4,6 +4,16 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***WINDOWS VST3 AS ONE FILE (2026-10-07)*** - tools/do-windows-plugin. The zip now holds a single "G2 Alike.vst3" file
+  (the DLL) instead of the bundle's three nested folders. CHECK on Windows: copy it into C:\Program Files\Common
+  Files\VST3, rescan, and the host lists and opens G2 Alike as before
+- ***LAST KEY BEFORE ANY IS PLAYED (2026-10-07)*** - sound-engine-notes §209. LISTEN: 16 Sweep Lots (bank 1:51) on the
+  engine should drone at the G2's pitch from load, with no key played (the patch's stored note, then the last key).
+  The engine render matched the G2's harmonics; your ears have not checked it. The last key also survives Experimental >
+  Disable/Enable Sound Engine: play a key, toggle the engine, and a drone should come back on that key
+- ***14 PATTERN SEQ (2026-10-07)*** - reference §38.4, sound-engine-notes §210. LISTEN: 14 pattern seq (bank 5:9) on
+  the engine against the G2 - same notes, same C5 centre, a SeqEvent step once a bar. The pitch tracks match the
+  G2's capture note for note; worth checking Flows_DZ alongside, which is also sequencer-driven
 - ***RESONATOR FROM THE INSTRUMENT (2026-10-03)*** - reference §70.4a. LISTEN against the G2: a Resonator on String1
   struck by a short noise burst into In1, Pos swept - the pitch should hold and the timbre move like a pluck
   position; Out2 sounds, Out1 is silent on String1. Then a Tube with a Driver (Reed) closing the loop through

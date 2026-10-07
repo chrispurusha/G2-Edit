@@ -178,7 +178,7 @@ for arch in x64 arm64; do
     cp "platform/windows/Read Me First.txt" LICENSE "$STAGE/$name/"
 
     if [[ -z $G2_RELEASE_SKIP_PLUGINS ]]; then
-        cp -R "$out/G2 Alike.vst3" "$STAGE/$name/"
+        cp "$out/G2 Alike.vst3" "$STAGE/$name/"
     fi
 
     zip="$DIST/$name.zip"

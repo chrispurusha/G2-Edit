@@ -94,6 +94,7 @@ typedef struct tG2Document {
     tSelectedParam   gSelectedParam[MAX_SLOTS];
     uint32_t         gMorphCount[MAX_SLOTS];
     uint32_t         gNote2Size[MAX_SLOTS];
+    uint32_t         gNote2Seq[MAX_SLOTS];       // bumped each time a patch delivers its current-note section
     // Bumped every time a current-note reply lands, so a caller can wait for a FRESH one rather than
     // reading whatever happens to be in the buffer — see the DEVNOTES backdoor command.
     _Atomic uint32_t gNote2Updates;
@@ -262,6 +263,7 @@ tG2Document * g2_document_current(void);
 #define gSelectedParam                   (gDoc->gSelectedParam)
 #define gMorphCount                      (gDoc->gMorphCount)
 #define gNote2Size                       (gDoc->gNote2Size)
+#define gNote2Seq                        (gDoc->gNote2Seq)
 #define gNote2Updates                    (gDoc->gNote2Updates)
 #define gNote2                           (gDoc->gNote2)
 #define gAssignedVoices                  (gDoc->gAssignedVoices)

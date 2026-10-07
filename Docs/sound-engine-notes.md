@@ -3487,3 +3487,30 @@ Scheduling only: threaded renders stay bit-identical to inline.
 
 CHECKED the same day in the application (QU-24, 48 kHz, 256, Debug): 08 Ice Pad, 12-note chord, load 86-87%;
 6 late blocks in the chord's first moments with the app in front, none more in 8 s with Terminal in front.
+
+## 209. The last key, before and after any is played
+
+A keyboard-tracked voice that has not played a note yet - a drone, or a self-playing patch - still sounds at
+some key. Measured on the G2 (2026-10-07, 16 Sweep Lots, outputs 1/2 on the QU-24, no key played): it sounds
+at the patch's own stored current note (the patch file's current-note section, its first seven bits; D#4 = 63
+in that patch), and after a key is played and released it sounds at that key instead (C3 played -> the drone
+followed to C3). Loading the patch again went back to the stored note. The engine had started such voices at
+note -1, five octaves down.
+
+So each engine keeps `gLastKey`: the patch's stored note when a patch arrives (its delivery is counted per
+slot, `gNote2Seq`, so loading the same patch again still resets it), every note-on after that, and E4 for a
+patch that has no current-note section. It is not cleared when voices are reset, so the key survives the
+engine being switched off and on, as the G2's does across anything short of a patch load. A voice that has
+never played sounds at `gLastKey`; its own first note still starts without a glide, as before. The Keyboard
+module's Note output and the Operators' note input read it the same way.
+
+## 210. A sequencer's start state follows its Length
+
+The 16-step stage's program starts with the step word at 0x10 and the "last" word at 0x11: length + 1
+and length + 2 for a 16-step sequence. Kept as constants, they suited only 16 steps. With Cycle on and a
+shorter Length, the step counter began past the wrap point (step == length + 1) and never came back, so
+the sequencer stayed silent until a Rst or Loop reached it. On the G2 (2026-10-07,
+G2Bugs/g2-test-loop.wav) a 2-step cycling SeqEvent with nothing on Rst runs from load.
+The engine now sets both words from Length at load, which reproduces the reference model's own values at 16
+steps. Open: what the instrument does when Length shrinks below the current step while running; the
+words are still set only at load.
