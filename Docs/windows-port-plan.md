@@ -147,7 +147,8 @@ is a GUI program carrying the version. Still open: the four warnings in the way 
 output (stubs), a comparison of patches against the Mac, and testing the plug-in in a real host.
 
 **Step 4 started 2026-10-04: G2 Alike as a Windows VST3.** `tools/do-windows-plugin [arm64]` cross-builds
-`build-cross-<arch>/G2 Alike.vst3/Contents/<arch>-win/G2 Alike.vst3`, one self-contained DLL exporting
+`build-cross-<arch>/G2 Alike.vst3` (since 2026-10-07 a single file, not the bundle's
+`G2 Alike.vst3/Contents/<arch>-win/G2 Alike.vst3`, which only nested it three folders deep), one self-contained DLL exporting
 GetPluginFactory/InitDll/ExitDll. Its source list is read from `do-plugin`, so the two cannot drift; the
 Mac's window code is swapped for `plugin/g2ViewWin.c` (Win32 + WGL, notes in code-notes/g2ViewWin.c.md)
 and SynthLib's `synthlibPluginVst3ViewWin.cpp` (the HWND IPlugView), and the canvas draws through

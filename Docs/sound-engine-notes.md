@@ -1623,6 +1623,10 @@ free-running LfoShpA fires a Pulse into the module under test. Without this the 
 that patch correctly, all nine nodes and the right topology, and then refuses to play it, so the
 one patch designed for comparing engine against instrument could be rendered by neither.
 
+AN LFO COUNTS TOO (2026-10-07). MicroWaves makes its whole sound from eight LfoC/LfoShpA modules at
+their top rate, mixed by a Mix8-1B. With no oscillator in the chain the engine called it "Nothing is
+patched into it" and played silence, while the G2 plays it.
+
 ## 97. `out_module_is_audible()`
 
 With nothing selected, play the patch: find the Out module that is actually the end of it.
@@ -2614,6 +2618,13 @@ quarters. The old stages ran a fixed-length ramp from wherever they began.
 Since 2026-09-14 the gate is read at the envelope tick and a new stage starts from the next tick,
 as the instrument's envelope does - a gate change is up to two ticks (83 us) late, on both.
 
+Since 2026-10-07 the gate must RISE to start the envelope; being high is not enough. The old test
+started any idle envelope while the gate was up. An ADSR never goes idle while gated, so only the
+one-shots showed it: an EnvADR in Decay mode, an EnvAHD, an EnvD finished and immediately started again,
+looping for as long as the key was held. FMFunkNL2's ModEnv1 (Attack 0, Decay 0, into Osc1's pitch at
+level 120) therefore sat high all note long and threw Osc1 far off its 65 Hz; on the G2 it is a blip.
+The same rule EnvMulti already followed (its gate last seen).
+
 ## 151. `osc_waveform()`
 
 One sample of the raw waveform, at whatever rate the caller is stepping the phase. `voice` and `node`
@@ -3083,16 +3094,14 @@ clamp afterwards is only a guard against a bug producing something enormous.
 
 ## 188. in `sound_engine_render()`
 
-FOUR CHANNELS IF THE CALLER ASKED FOR THEM, otherwise the two pairs are SUMMED.
+FOUR CHANNELS IF THE CALLER ASKED FOR THEM, otherwise Out 1/2 ALONE (2026-10-07, CT).
 
-The summing is what keeps the application unchanged: its device is stereo, every Out
-module used to be added together whatever pair it fed, and a patch sending anything to
-Out 3/4 would fall silent if this suddenly routed by destination. A caller that wants
-them apart — the measurement harness, which needs the rig's dry reference on one pair
-and its processed signal on the other — asks for four and gets them.
-
-Choosing WHICH pair a stereo device should monitor, rather than always summing, wants
-a menu item; see the todo. Summing is the answer that changes nothing until then.
+Until that date a stereo caller got the two pairs SUMMED, so that a patch sending only to Out 3/4
+did not fall silent on a stereo device. But it is not what the instrument does: ChorusSaw sends its
+dry signal to Out 1/2 and its StChorus to Out 3/4, and the summed engine played the chorus over the
+dry sound - "two pitches where the G2 has one". Now Out 3/4 goes only where there are channels for
+it: a four-channel device's 3 and 4, and the plug-in's second output bus ("Out 3/4", for the DAW to
+route). A patch sending only to Out 3/4 is silent on a stereo device, as the G2's 1/2 sockets are.
 
 ## 189. in `voice_note_off()`
 

@@ -240,6 +240,11 @@ Pitch mod dial and played every OscD as Semi (revert record row 92). 08 Ice Pad'
 Partial at Coarse 75/73/71/69 - the 12th, 10th, 8th and 6th harmonics - and were playing 11, 9, 7 and 5
 semitones up instead.
 
+**OscShpA and OscShpB read it too (2026-10-07).** Both keep the drop-down at parameter 4, and the
+engine read their Tune as Semi until this date. AnalogClassic's three OscShpBs are on Partial: the
+middle one at Tune 63 (1:2) played a semitone below the others instead of an octave below, which was
+the reported "two oscillators diverging in pitch".
+
 ## 7. Noise
 
 **7.1 Model.** White noise through a one-pole low-pass whose corner the Color dial sets; each voice has
@@ -2453,6 +2458,11 @@ and so showed "+2" for no shift; both now use the stored form.
 **The settings are per variation (2026-10-07).** Octave Shift, Glide, Vibrato and Bend are stored in
 each variation like Volume, and the engine reads the ACTIVE one. Until this date it read variation 1's
 whatever was playing: ALARM DX plays variation 8, whose Octave Shift is -1, and sounded an octave high.
+
+**Every module sees the shifted key (2026-10-07).** The shift transposes the keyboard, so the Keyboard
+module's Note output and the Operators' key (their level and rate scaling, §14.4) carry it, as its
+Pitch output and the oscillators always did. Until this date those two read the key as played, so a
+DX patch with an Octave Shift scaled its levels an octave away from where it sounds.
 
 ## 64. RndClkA and RndTrig
 

@@ -1512,6 +1512,23 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         strncpy(msg.patchFileData.filePath, arg, sizeof(msg.patchFileData.filePath) - 1);
         msg_send(&gToUsbThread, &msg);
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "SAVEPERF") == 0) {
+        // SAVEPERF <path> - all four slots as a .prf2, as File > Save Performance writes it
+        tMessageContent msg = {0};
+
+        if ((arg == NULL) || (arg[0] == '\0')) {
+            backdoor_write_result("ERROR: expected 'SAVEPERF <path>'\n");
+            return;
+        }
+
+        if (!device_ready()) {
+            backdoor_write_result((write_perf_to_file(arg) == EXIT_SUCCESS) ? "OK\n" : "ERROR: write failed\n");
+            return;
+        }
+        msg.cmd = eMsgCmdSavePerfFile;
+        strncpy(msg.patchFileData.filePath, arg, sizeof(msg.patchFileData.filePath) - 1);
+        msg_send(&gToUsbThread, &msg);
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "NOTE") == 0) {
         // NOTE <midi note> plays, NOTE OFF releases. The last thing that needed a mouse to test the
         // sound engine end to end.

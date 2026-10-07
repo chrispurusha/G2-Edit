@@ -49,6 +49,7 @@ caller polls for the command file's disappearance to know it's done.
   RENDERNOTE <note> <vel> <ms> — render the local engine into memory with the note held; reports the peak. Only while no device renders it
   RENDERWAV <path> <ms> [note vel] — render the local engine to a 48 kHz 16-bit stereo .wav, with a note held if given. Only while no device renders it
   ENGINEOFFLINE on|off — prepare the engine without opening an audio device (as the plug-in does), so RENDERWAV can run with nothing audible
+  SAVEPERF <path>   — all four slots as a .prf2, as File > Save Performance writes it (what a G2 Alike state record carries)
   CLOCK             — the master clock as the G2 last reported it (masterClock=<bpm> running=<0|1>); 0 BPM with no G2
   BANKLOAD <PATCH|PERF> <bank> <loc> — Load from Bank with no dialog (replaces the slot/perf ON THE G2)
   ORIGIN            — each slot's bank origin and source serial; what Save and Store Back would do

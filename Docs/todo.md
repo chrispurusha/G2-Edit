@@ -6,14 +6,9 @@ Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
 -
-- "AnalogClassic" sounds like 2 oscillators are diverging in pitch more than the hardware running the same patch. OscShpB's partial mode might not be correctly pitching on engine.
-- "ChorusSaw" has 2 pitches playing on engine vs. 1 on G2. 
-- "Alarm DX" patch is playing higher notes on engine vs G2, when triggered by same midi note.
-- "FMFunkNL2" is mostly white noise on engine, but has a tone on G2.
-- "AccBass 1 DX" is brighter on hardware g2.
-- "MicroWaves" makes no sound on engine, whereas G2 does.
+- "MicroWaves" plays now but has only odd harmonics on the engine (262/785/1308 Hz) where the G2 has even ones too (523/2093) - its eight audio-rate LFOs or the Mix8-1B
+- "AccBass 1 DX" is still a few dB darker on the engine above the 8th harmonic (6 dB at the 10th, was 19) after the octave-shifted key fix
 - "GlassCathedral" sounds like it has slow phasing on Engine.
-- "schtraengt" sounds like the balance between tones is not the same engine vs. g2.
 - "Flows\_DZ" has more notes in the sequence on G2 than vs. engine. Sounds very different. Other tones in there on G2 too.
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Implement audio input, for processing external signals.
@@ -29,6 +24,7 @@ General (priority order)
 - Sleep a slot whose output has been silent for some seconds with no notes, waking on a note, MIDI or edit - a loaded slot costs its whole patch when idle (CS80 19%); careful with patches that sound by themselves
 - Read the performance's Key Range switch from the G2: the parse reads it into a local (protocol.c, rangeEnable) and the engine uses gPerfSettings.keyboardRange, which only the settings panel sets
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
+- Plug-in Audio Unit: offer Out 3/4 as a second output element, as the VST3 does since 2026-10-07 (SynthLib AU wrapper renders one element; it needs the block rendered at the first element and held for the others)
 - Bypass, the rest: a module switched off still has its INPUTS evaluated (an LFO into a switched-off oscillator keeps running) - prune the chain behind an Off module whose output is silence or a plain pass-through. Each module itself now skips its work when off (2026-10-03)
 - Implement arpeggiator.
 - Engine-only wavetable and sample playback modules (plug-in and app engine; wavetable first). A slot holding one stops writing to the G2 - every live edit, whole-patch send and Store to Bank - with a top-bar warning naming the slots ("the G2 is playing an older version"); ask once on adding the first with a G2 connected; deleting the last offers one full resend. Settle the file format (sidecar) and where samples live (embedded) in a design note first

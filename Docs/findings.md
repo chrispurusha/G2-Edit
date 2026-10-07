@@ -12281,3 +12281,43 @@ that part of the engine was right.
 The "lower pitch" was the same bug: KeyQuant snaps a parked SeqNote's zero to one below the base, while
 the engine's always-restarted SeqNote held its first step, fifteen semitones down.
 
+## 2026-10-07 - Nine reported patches against the G2: five engine faults
+
+Each patch was loaded into slot A from the G2's banks, played on the G2 with C4 held (DEVNOTE) and captured
+from Out 1/2 on the QU-24, then rendered by the engine with the same note (backdoor RENDERWAV). Captures and
+the G2's own copies of the patches are in G2Bugs/patches. Compared by spectral peaks and by
+harmonic levels relative to the strongest (the QU-24 captures sit ~16 dB low, so their noise floor makes
+the centroid useless).
+
+- **Patch settings read from variation 1 whatever was playing** (reference §63a). ALARM DX plays variation 8,
+  Octave Shift -1, and sounded an octave high. Octave Shift, Glide, Vibrato and Bend now follow the active
+  variation, as Volume already did.
+- **The Octave Shift reached the oscillators only.** The Keyboard's Note output and the DX operators' key
+  (level and rate scaling) used the key as played. AccBass1 DX (shift -1) was 19 dB dark at the 10th
+  harmonic; 6 dB now.
+- **OscShpA/OscShpB ignored Pitch Type** (reference §6.1a). AnalogClassic's three OscShpBs are on Partial; the
+  middle one, Tune 63 = 1:2, played a semitone below the others instead of an octave. Now the G2's C3 series.
+- **A one-shot envelope looped while the gate was held** (notes §150). An idle envelope restarted on a HIGH
+  gate rather than a rising one; ADSRs never go idle while gated, so only EnvADR/EnvAHD/EnvD showed it.
+  FMFunkNL2's ModEnv1 (A 0, D 0) into Osc1's pitch at level 120 sat high all note long and smeared the
+  spectrum; schtraengt had extra partials from the same cause. Both now match the G2's peaks.
+- **A patch made only of LFOs was "Nothing is patched into it"** (notes §96). MicroWaves plays at the right
+  pitch now; its timbre still differs (todo).
+
+Not engine faults: ChorusSaw's second pitch is its StChorus on Out 3/4, which the engine sums with Out 1/2
+(todo, a decision). Still open: Flows_DZ (pulses every sixteenth on the engine, once a second on the G2)
+and GlassCathedral (not examined yet).
+
+## 2026-10-07 - Out 3/4 is no longer mixed into Out 1/2 (CT)
+
+CT: "we shouldn't mix 3/4 into 1/2. We should have 3/4 as outputs for the DAW to route." The engine already
+rendered the two pairs apart and summed them only for a stereo caller (notes §188); a stereo caller now gets
+Out 1/2 alone, so the application (a stereo device) plays what the G2's 1/2 sockets play. G2 Alike's VST3 has a
+second output bus, "Out 3/4" (aux, active by default so a host offers it), fed from the engine's four-channel
+render. SynthLib's VST3 wrapper hands process() every output bus's channels in order, not just the first; a bus
+the host has not activated arrives as NULL channels (SynthLib code-notes synthlibPlugin.h §12). The Audio Unit
+offers Out 1/2 only for now (todo). tools/vst3host gained --bus-test (each output bus's level over a held note)
+and the backdoor SAVEPERF (a .prf2 to wrap as a state record, header "G2Alike state 2"): ChorusSaw gives -21.5
+dBFS on Out 1/2 (dry) and -29.2 on Out 3/4 (chorus), and the engine's stereo render no longer carries the
+chorus's 6.7 Hz sidebands. auval passes; SynthLib's plugin/test/do-test passes.
+

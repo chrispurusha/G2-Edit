@@ -4,6 +4,14 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***OUT 3/4 AS ITS OWN VST3 BUS (2026-10-07)*** - g2Plugin notes §8. CHECK in Ableton: load ChorusSaw (1:1) in G2
+  Alike; its track plays the dry sound only, and a second audio track set to "Audio From: G2 Alike / Out 3/4"
+  plays the StChorus. tools/vst3host --bus-test already shows -21.5 dBFS on Out 1/2 and -29.2 on Out 3/4. The
+  application now plays Out 1/2 only on a stereo device; a patch sending everything to Out 3/4 is silent there
+- ***ENGINE PATCH FIXES (2026-10-07)*** - findings 2026-10-07. LISTEN against the G2: ALARM DX (4:41, an octave too
+  high - patch settings are per variation), AnalogClassic (1:36, OscShpB Partial), FMFunkNL2 (3:3) and schtraengt
+  (2:80) (one-shot envelopes looped while the key was held), MicroWaves (3:2, was silent), AccBass1 DX (4:11,
+  brighter now). All matched the G2's spectrum on a held C4 capture; none heard yet
 - ***WINDOWS VST3 AS ONE FILE (2026-10-07)*** - tools/do-windows-plugin. The zip now holds a single "G2 Alike.vst3" file
   (the DLL) instead of the bundle's three nested folders. CHECK on Windows: copy it into C:\Program Files\Common
   Files\VST3, rescan, and the host lists and opens G2 Alike as before

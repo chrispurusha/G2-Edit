@@ -236,6 +236,7 @@ typedef enum {
 #define SHPA_PARAM_CENT          (1)
 #define SHPA_PARAM_KBT           (2)
 #define SHPA_PARAM_PITCH_MOD     (3)
+#define SHPA_PARAM_PITCH_TYPE    (4)
 #define SHPA_PARAM_SHAPE         (7)
 #define SHPA_PARAM_WAVEFORM      (9)
 #define SHPA_PARAM_ACTIVE        (10)
@@ -2101,6 +2102,8 @@ static uint32_t   gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE
 // past it, a note-on has asked for a restart that the gate alone cannot show - see envelope_step().
 static uint32_t   gEnvTriggerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvTrigger    (gEnvTriggerBank[SE])
+static bool       gEnvGateWasBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];   // notes §150 - the gate at the last tick
+#define gEnvGateWas    (gEnvGateWasBank[SE])
 
 // §14 - per voice, per Operator of every DXRouter node: phase, envelope (its log level, segment and
 // the amplitude read from it), and its last output for the feedback loop; per voice and node, the gate
@@ -2543,7 +2546,8 @@ static void reset_node_state(void) {
             gEnvQ[v][i]        = 0;
             gEnvTick[v][i]     = 0.0;
             gEnvStage[v][i]    = ENV_STAGE_IDLE;
-            gEnvTrigger[v][i]  = gVoice[v].trigger;     // nothing pending: idle already attacks on a gate
+            gEnvTrigger[v][i]  = gVoice[v].trigger;     // nothing pending: a rising gate attacks
+            gEnvGateWas[v][i]  = false;
             gCompEnv[v][i]     = 0.0;
             gPulseCount[v][i]  = 0;
             gPulsePrev[v][i]   = 0.0;
@@ -2965,6 +2969,7 @@ const char * sound_engine_debug_text(void) {
         for (uint32_t v = 0; (v < NUM_VARIATIONS) && (used < sizeof(text)); v++) {
             used += (size_t)snprintf(text + used, sizeof(text) - used, "%u", (sustain != NULL) ? (unsigned)sustain->param[v][OCTAVE_SHIFT].value : 9u);
         }
+
         used += (size_t)snprintf(text + used, sizeof(text) - used, "\n");
     }
 
@@ -5623,7 +5628,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeOscShp:
         {
             // notes §81
-            bool isShpA = (module->type == moduleTypeOscShpA);
+            bool isShpA    = (module->type == moduleTypeOscShpA);
 
             if (isShpA == true) {
                 // A's six waveforms onto B's eight: the first five coincide and A's SymPulse is B's
@@ -5636,13 +5641,19 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             } else {
                 node->wave = (tOscWave)module->mode[SHPB_MODE_WAVEFORM].value;
             }
+            // §6.1a - Tune through the Pitch Type menu, as every other oscillator reads it
+            bool absolute  = false;
+            bool silent    = false;
+            int  pitchType = (int)param_value(module, variation, isShpA ? SHPA_PARAM_PITCH_TYPE : SHPB_PARAM_PITCH_TYPE);
+
             node->oscKbt         = (param_value(module, variation,
                                                 isShpA ? SHPA_PARAM_KBT : SHPB_PARAM_KBT) != 0.0);
-            node->basePitch      = param_value(module, variation,
-                                               isShpA ? SHPA_PARAM_TUNE : SHPB_PARAM_TUNE)
+            node->basePitch      = osc_base_pitch(pitchType, param_value(module, variation, isShpA ? SHPA_PARAM_TUNE : SHPB_PARAM_TUNE),
+                                                  &absolute, &silent)
                                    + (osc_fine_cents(param_value(module, variation,
                                                                  isShpA ? SHPA_PARAM_CENT
                                                             : SHPB_PARAM_CENT)) / 100.0);
+            node->oscKbt         = node->oscKbt && (absolute == false);
             // notes §82
             node->shape          = param_value(module, variation,
                                                isShpA ? SHPA_PARAM_SHAPE : SHPB_PARAM_SHAPE) / 127.0;
@@ -5650,7 +5661,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                                                                   isShpA ? SHPA_PARAM_PITCH_MOD
                                                              : SHPB_PARAM_PITCH_MOD));
             node->active         = (param_value(module, variation,
-                                                isShpA ? SHPA_PARAM_ACTIVE : SHPB_PARAM_ACTIVE) != 0.0);
+                                                isShpA ? SHPA_PARAM_ACTIVE : SHPB_PARAM_ACTIVE) != 0.0) && (silent == false);
             node->shapeModAmount = shape_mod_amount(module, variation);
             set_osc_fm(node, module, variation);
             break;
@@ -6669,7 +6680,8 @@ static bool node_is_generator(tNodeKind kind) {
            || (kind == eNodeOscPM)
            || (kind == eNodeDx)
            || (kind == eNodeDrumSynth)
-           || (kind == eNodeMetNoise);   // §66
+           || (kind == eNodeMetNoise)    // §66
+           || (kind == eNodeLfo);        // notes §96 - MicroWaves is LFOs at audio rate
 }
 
 static bool chain_has_source(const tSoundEngineParams * params) {
@@ -10239,7 +10251,7 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
     bool                 tick              = (gEnvTick[voice][node] <= 0.0);
 
     // §14.4 - what the Operators' Note and Vel inputs carry from the Keyboard
-    int32_t              noteWord          = (((gVoice[voice].note >= 0) ? gVoice[voice].note : gLastKey) - (int32_t)KEYBOARD_PITCH_ZERO) * OP_NOTE_WORD;
+    int32_t              noteWord          = (((gVoice[voice].note >= 0) ? gVoice[voice].note : gLastKey) + (int32_t)lround(gKeyMorphShift) - (int32_t)KEYBOARD_PITCH_ZERO) * OP_NOTE_WORD;   // §63a
     uint32_t             velIndex          = (((uint32_t)gVoice[voice].velocity * (uint32_t)DSP_WORD_PER_ENGINE) / 127u) >> DX_VEL_INDEX_SHIFT;
 
     velIndex               = (velIndex > 127u) ? 127u : velIndex;
@@ -10322,11 +10334,6 @@ static bool dx_voice_sounding(const tSoundEngineParams * params, const tEngineNo
     }
 
     return false;
-}
-
-// A stage at or past the held one: a gate rising there restarts the envelope rather than continuing.
-static bool env_stage_is_release(const tEngineNode * spec, uint32_t index) {
-    return (spec->envSustainStage >= 0) && (index > (uint32_t)spec->envSustainStage);
 }
 
 // §17.3 - one tick of a segment in the instrument's integer arithmetic: the doubled product rounded
@@ -10479,14 +10486,17 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
                 }
             }
         }
-        gEnvQ[voice][node]     = (q > ENV_TOP) ? ENV_TOP : q;
-        gEnvLevel[voice][node] = (double)gEnvQ[voice][node] / ENV_FULL_SCALE_STEPS;
+        gEnvQ[voice][node]       = (q > ENV_TOP) ? ENV_TOP : q;
+        gEnvLevel[voice][node]   = (double)gEnvQ[voice][node] / ENV_FULL_SCALE_STEPS;
 
         // §17.3 - the gate is read at the tick and takes effect from the next one, as on the instrument.
+        bool rising = (gate == true) && (gEnvGateWas[voice][node] == false);
+
+        gEnvGateWas[voice][node] = gate;
+
         if (gate == true) {
-            // notes §150
-            if (  (gEnvStage[voice][node] == ENV_STAGE_IDLE)
-               || (env_stage_is_release(spec, gEnvStage[voice][node]) == true)
+            // notes §150 - a RISING gate (from idle, release or anywhere), or a new key on a held one
+            if (  (rising == true)
                || ((spec->envKeyGate == true) && (gEnvTrigger[voice][node] != gVoice[voice].trigger))) {
                 gEnvStage[voice][node]   = 0u;           // from the level it is at - §17.3
                 gEnvTrigger[voice][node] = gVoice[voice].trigger;
@@ -11308,7 +11318,7 @@ static void keyboard_step(uint32_t voice, double voicePitch, double * out) {
     out[KEYBOARD_OUT_GATE]    = (v->gate == true) ? 1.0 : 0.0;
     out[KEYBOARD_OUT_LIN]     = lin;
     out[KEYBOARD_OUT_RELEASE] = (double)v->release / 127.0;
-    out[KEYBOARD_OUT_NOTE]    = ((double)((v->note >= 0) ? v->note : gLastKey) - KEYBOARD_PITCH_ZERO) / PITCH_MOD_SEMITONES;
+    out[KEYBOARD_OUT_NOTE]    = ((double)((v->note >= 0) ? v->note : gLastKey) + gKeyMorphShift - KEYBOARD_PITCH_ZERO) / PITCH_MOD_SEMITONES;   // §63a - the shifted key
     out[KEYBOARD_OUT_EXP]     = lin * lin * lin;
 }
 
@@ -15193,7 +15203,7 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
             for (channel = 0; channel < channelCount; channel++) {
                 double v = (channelCount >= 4)
                            ? outSample[channel & 3U]
-                           : (outSample[channel & 1U] + outSample[2U + (channel & 1U)]);
+                           : outSample[channel & 1U];   // a stereo caller hears Out 1/2 alone, as the G2's 1/2 sockets
 
                 out[(frame * channelCount) + channel] = (float)v;
             }
@@ -15426,6 +15436,7 @@ static void engine_reset_state(void) {
     memset(&gSmoothPrimed, 0, sizeof(gSmoothPrimed));
     memset(&gEnvStage, 0, sizeof(gEnvStage));
     memset(&gEnvTrigger, 0, sizeof(gEnvTrigger));
+    memset(&gEnvGateWas, 0, sizeof(gEnvGateWas));
     memset(&gVoiceMorphs, 0, sizeof(gVoiceMorphs));
     memset(&gVoiceMorphsSeq, 0, sizeof(gVoiceMorphsSeq));
     memset(&gVoiceMorphsAudio, 0, sizeof(gVoiceMorphsAudio));

@@ -246,6 +246,7 @@ static void usage(void) {
             "  --size WxH     ask each view for this size in points before attaching\n"
             "  --instances N  load N instances into this one process, each with its own window\n"
             "  --patch PATH   hand the next instance this state (a raw patch path, for G2 Alike)\n"
+            "  --bus-test     render two seconds of a held note on every output bus and print each one's level\n"
             "  --offset-test N render a note placed at sample N of a block and report where the sound\n"
             "                 starts - use a patch that is silent without a note, and compare with N=0\n"
             "  --reopen N     close and re-create the first editor N times, as a host does when the\n"
@@ -253,6 +254,86 @@ static void usage(void) {
             "  --dump-state   print the state each instance saves, after --patch has been applied\n"
             "  --state-file F hand the next instance the state saved in F (see --save-state)\n"
             "  --save-state F write the first instance's state to F\n");
+}
+
+// Renders two seconds with a note held, giving EVERY output bus the component declares its own
+// buffers (activated, as a host routing it would), and prints each bus's level - the check that a
+// second bus such as G2 Alike's "Out 3/4" carries what the patch sends there and nothing else.
+static void bus_probe(IComponent * component, int instance) {
+    IAudioProcessor * proc = nullptr;
+
+    if ((component->queryInterface(IAudioProcessor::iid, (void **)&proc) != kResultTrue) || (proc == nullptr)) {
+        printf("instance %d: no IAudioProcessor\n", instance);
+        return;
+    }
+    const int32      kBlock = 512;
+    int32            buses  = component->getBusCount(kAudio, kOutput);
+
+    buses = (buses > 8) ? 8 : buses;
+
+    static float     samples[8][8][512];
+    float *          chans[8][8];
+    AudioBusBuffers  outBus[8] = {};
+    double           sum[8]    = {0};
+    double           count     = 0.0;
+    ProcessSetup     setup     = {kRealtime, kSample32, kBlock, 48000.0};
+    ProcessData      data      = {};
+    OneNote          note(60, 0);
+
+    for (int32 b = 0; b < buses; b++) {
+        BusInfo info = {};
+
+        component->getBusInfo(kAudio, kOutput, b, info);
+        component->activateBus(kAudio, kOutput, b, true);
+        outBus[b].numChannels      = (info.channelCount > 8) ? 8 : info.channelCount;
+        for (int c = 0; c < 8; c++) {
+            chans[b][c] = samples[b][c];
+        }
+        outBus[b].channelBuffers32 = (Sample32 **)chans[b];
+    }
+    proc->setupProcessing(setup);
+    component->setActive(true);
+    proc->setProcessing(true);
+    data.processMode        = kRealtime;
+    data.symbolicSampleSize = kSample32;
+    data.numSamples         = kBlock;
+    data.numOutputs         = buses;
+    data.outputs            = outBus;
+
+    for (int block = 0; block < (2 * 48000) / kBlock; block++) {
+        data.inputEvents = (block == 0) ? &note : nullptr;
+        proc->process(data);
+
+        for (int32 b = 0; b < buses; b++) {
+            for (int32 c = 0; c < outBus[b].numChannels; c++) {
+                for (int32 i = 0; i < kBlock; i++) {
+                    sum[b] += (double)samples[b][c][i] * samples[b][c][i];
+                }
+            }
+        }
+        count += kBlock;
+    }
+    proc->setProcessing(false);
+    component->setActive(false);
+    proc->release();
+
+    for (int32 b = 0; b < buses; b++) {
+        BusInfo info = {};
+        char    name[128];
+
+        component->getBusInfo(kAudio, kOutput, b, info);
+        for (int i = 0; i < 127; i++) {
+            name[i] = (char)info.name[i];
+            if (info.name[i] == 0) {
+                break;
+            }
+        }
+        name[127] = '\0';
+        double rms = sqrt(sum[b] / (count * ((outBus[b].numChannels > 0) ? outBus[b].numChannels : 1)));
+
+        printf("instance %d: output bus %d \"%s\" (%d ch, %s): %.1f dBFS\n", instance, (int)b, name, (int)info.channelCount,
+               (info.busType == kMain) ? "main" : "aux", (rms > 0.0) ? 20.0 * log10(rms) : -999.0);
+    }
 }
 
 // Renders a few silent blocks, then one with a note-on at `offset`, and returns the first frame of
@@ -314,6 +395,7 @@ int main(int argc, const char ** argv) {
     int                        wantH      = 0;
     int                        count      = 1;
     int                        offsetTest = -1;
+    bool                       busTest    = false;
     int                        reopen     = 0;
     bool                       dumpState  = false;
     std::vector<std::string>   patches;
@@ -358,6 +440,8 @@ int main(int argc, const char ** argv) {
             dumpState = true;
         } else if ((strcmp(argv[i], "--reopen") == 0) && ((i + 1) < argc)) {
             reopen = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--bus-test") == 0) {
+            busTest = true;
         } else if ((strcmp(argv[i], "--offset-test") == 0) && ((i + 1) < argc)) {
             offsetTest = atoi(argv[++i]);
         } else {
@@ -521,6 +605,10 @@ int main(int argc, const char ** argv) {
                    in.controller->getParameterCount());
 
             // ONE PROBE PER INSTANCE: a note left held by an earlier probe would still be sounding.
+            if (busTest == true) {
+                bus_probe(in.component, n + 1);
+            }
+
             if (offsetTest >= 0) {
                 printf("instance %d: a note at sample %d is heard from frame %d\n",
                        n + 1, offsetTest, offset_probe(in.component, (int32)offsetTest));

@@ -39,10 +39,13 @@ Settings > Privacy & Security, scroll down and click **Open Anyway**.
 ### Windows (experimental)
 
 There is no Windows installer: a release has a `.zip` per architecture - `windows-x64` for an ordinary
-PC, `windows-arm64` for Windows on ARM (Parallels on an Apple silicon Mac) - holding one file,
-`G2 Editor.exe`, and its `Read Me First.txt`. It is unsigned, so Windows SmartScreen warns on the first
-run: More info > Run anyway. No plug-ins on Windows yet. See [Docs/windows-port-plan.md](./Docs/windows-port-plan.md)
-for how it is built.
+PC, `windows-arm64` for Windows on ARM (Parallels on an Apple silicon Mac) - holding `G2 Editor.exe`,
+the G2 Alike plug-in and a `Read Me First.txt`. It is unsigned, so Windows SmartScreen warns on the first
+run: More info > Run anyway. The plug-in (experimental, VST3 only) is the single file `G2 Alike.vst3`:
+copy it into `C:\Program Files\Common Files\VST3` (deleting any `G2 Alike.vst3` *folder* an older release put
+there) and rescan in the host. Use the zip that matches the
+host - x64 for an ordinary PC, arm64 for a native Windows on ARM host. See
+[Docs/windows-port-plan.md](./Docs/windows-port-plan.md) for how it is built.
 
 **The G2 needs Windows' generic USB driver, WinUSB, once** - Clavia's driver will not work with this
 editor. With the G2 connected (in Parallels: Devices > USB & Bluetooth > the G2): Device Manager > the G2,

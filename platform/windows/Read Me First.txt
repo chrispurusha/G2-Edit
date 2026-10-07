@@ -60,7 +60,8 @@ its window. It needs no G2. Copy the file "G2 Alike.vst3" into
 
 and rescan plug-ins in the host. It loads with an empty patch: open one from its
 own File menu. Use the download that matches the host - x64 for an ordinary PC,
-arm64 for a native Windows on ARM host.
+arm64 for a native Windows on ARM host. Releases before October 2026 installed a
+FOLDER called "G2 Alike.vst3" there; delete that folder before copying the file.
 
 PLAYING PATCHES WITHOUT A G2
 

@@ -95,6 +95,11 @@ and the render carries on from there - so a note lands where the host put it rat
 start of the block, which at 512 frames and 44.1 kHz was up to 12 ms early. The engine takes
 queued notes one per internal sample, so a chord still spreads over consecutive samples.
 
+TWO OUTPUT BUSES (2026-10-07, CT): "Out 1/2" and "Out 3/4", the G2's two pairs of sockets, so a DAW can
+route a patch's Out 3/4 (ChorusSaw's chorus, a drum voice) to its own track. The engine renders four
+channels; the second bus is written only where the host gave it buffers. The VST3 has both; the Audio
+Unit offers Out 1/2 alone until SynthLib's AU wrapper renders more than one output element.
+
 ## 9. `g2_note_on()`
 
 THROUGH THE SHARED NOTE STACK, NOT STRAIGHT TO THE ENGINE. The engine is monophonic, so releasing

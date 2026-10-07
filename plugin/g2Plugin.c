@@ -155,7 +155,7 @@ typedef struct {
     // sound_engine_render() writes INTERLEAVED frames and both plug-in formats hand over one buffer
     // per channel, so it renders here and is de-interleaved out. Bounded by G2_MAX_BLOCK and looped,
     // so an unusually large host buffer cannot overrun it.
-    float            scratch[G2_MAX_BLOCK * 2];
+    float            scratch[G2_MAX_BLOCK * 4];
 
     // The state record, built when a host asks its size and handed over by the call that follows -
     // so the two agree, and the performance is written once per save, not twice.
@@ -348,8 +348,9 @@ static void g2_reset(void * inst) {
     note_stack_all_off();
 }
 
-// Renders `frames` into out[0..1] starting at `from`, in chunks the scratch buffer can hold.
-static void render_span(tG2Plugin * g2, float ** out, uint32_t from, uint32_t frames) {
+// Renders `frames` into out[0..1] (Out 1/2) and, where the host gave them, out[2..3] (Out 3/4),
+// starting at `from`, in chunks the scratch buffer can hold.
+static void render_span(tG2Plugin * g2, float ** out, uint32_t numOut, uint32_t from, uint32_t frames) {
     uint32_t done = 0;
 
     while (done < frames) {
@@ -358,11 +359,14 @@ static void render_span(tG2Plugin * g2, float ** out, uint32_t from, uint32_t fr
         if (chunk > (uint32_t)G2_MAX_BLOCK) {
             chunk = (uint32_t)G2_MAX_BLOCK;
         }
-        sound_engine_render(g2->scratch, chunk, 2);
+        sound_engine_render(g2->scratch, chunk, 4);
 
-        for (uint32_t i = 0; i < chunk; i++) {
-            out[0][from + done + i] = g2->scratch[i * 2];
-            out[1][from + done + i] = g2->scratch[(i * 2) + 1];
+        for (uint32_t c = 0; (c < 4u) && (c < numOut); c++) {
+            if (out[c] != NULL) {
+                for (uint32_t i = 0; i < chunk; i++) {
+                    out[c][from + done + i] = g2->scratch[(i * 4) + c];
+                }
+            }
         }
         done += chunk;
     }
@@ -407,7 +411,7 @@ static void g2_process(void * inst,
         uint32_t at = (g2->events[i].offset < frames) ? g2->events[i].offset : frames;
 
         if (at > pos) {
-            render_span(g2, out, pos, at - pos);
+            render_span(g2, out, numOut, pos, at - pos);
             pos = at;
         }
         apply_note(&g2->events[i]);
@@ -415,7 +419,7 @@ static void g2_process(void * inst,
     g2->eventCount = 0;
 
     if (pos < frames) {
-        render_span(g2, out, pos, frames - pos);
+        render_span(g2, out, numOut, pos, frames - pos);
     }
 }
 
@@ -838,8 +842,10 @@ static void g2_editor_width_save(long width) {
 // The descriptor
 // ------------------------------------------------------------------------------------------------
 
-static const tSynthLibBus gOutputs[1] = {
-    { "Output", 2, false, true }
+// notes §8 - the G2's Out 1/2 and Out 3/4 as two buses, for the DAW to route separately
+static const tSynthLibBus gOutputs[2] = {
+    { "Out 1/2", 2, false, true },
+    { "Out 3/4", 2, true,  true }
 };
 
 static const tSynthLibPluginDesc gDescriptor = {
@@ -854,7 +860,7 @@ static const tSynthLibPluginDesc gDescriptor = {
     .inputs            = NULL,
     .numInputs         = 0,
     .outputs           = gOutputs,
-    .numOutputs        = 1,
+    .numOutputs        = 2,
     .wantsMidiIn       = true,
     .wantsTransport    = false,
 
