@@ -54,7 +54,8 @@ typedef enum {
     canvasGestureModule     = 1u << 1,   // moving one module or a whole selection
     canvasGestureCable      = 1u << 2,   // dragging a cable end towards a connector
     canvasGestureRubberBand = 1u << 3,   // sweeping out a selection over empty canvas
-    canvasGestureAll        = 0x0Fu
+    canvasGesturePanel      = 1u << 4,   // a patch-settings knob on the front panel (frontPanel.c)
+    canvasGestureAll        = 0x1Fu
 } tCanvasGesture;
 
 // Everything a phase might need, so the table's rows can share one signature. A shell fills in what

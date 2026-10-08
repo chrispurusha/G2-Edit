@@ -1634,6 +1634,13 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         snprintf(text, sizeof(text), "OK masterClock=%u running=%u\n", (unsigned)gGlobalSettings.masterClock,
                  (unsigned)gGlobalSettings.masterClockRunning);
         backdoor_write_result(text);
+    } else if (strcmp(cmd, "CLOCKRUN") == 0) {
+        // CLOCKRUN on|off - run or stop the master clock, as the topbar's Run/Stop does
+        bool running = (arg != NULL) && (strcmp(arg, "on") == 0);
+
+        gGlobalSettings.masterClockRunning = (uint8_t)running;
+        send_master_clock_run((uint32_t)running);
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "ENGINEOFFLINE") == 0) {
         // ENGINEOFFLINE on|off - run the local engine with NO audio device, as the plug-in does, so
         // RENDERNOTE / RENDERWAV can render it without anything reaching a speaker or interface.

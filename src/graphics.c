@@ -69,6 +69,7 @@ extern "C" {
 #include "deviceSync.h"
 #include "mutatorUI.h"
 #include "mousePanels.h"
+#include "frontPanel.h"
 #include "paramPages.h"
 #include "paramOverview.h"
 #include "midiCcList.h"
@@ -176,6 +177,7 @@ void init_graphics(void) {
     bank_browser_set_priority_categories(priorityCategories, ARRAY_SIZE(priorityCategories));
 
     split_view_init();   // one pane showing the Voice Area — the pre-split behaviour, as the default
+    front_panel_load_preference();
     register_glfw_wake_cb(wake_glfw);
     register_full_patch_change_notify_cb(notify_full_patch_change);
     topbar_init_controls();
@@ -998,7 +1000,7 @@ void render_frame(void) {
 
     param_overlay_begin_frame();   // hoisted out of render_modules(): one queue per FRAME, not per pane
 
-    for (uint32_t pane = 0; pane < module_pane_count(); pane++) {
+    for (uint32_t pane = 0; (pane < module_pane_count()) && !front_panel_active(); pane++) {
         set_module_pane(pane);
         gLocation = (tLocation)split_view_location_for_pane(pane);
         module_pane_clip_begin();
@@ -1014,9 +1016,13 @@ void render_frame(void) {
     set_module_pane(focusPane);
     gLocation = focusLocation;
 
-    render_split_bar();
+    if (front_panel_active()) {
+        front_panel_render();    // front-panel-mode-design.md - in place of the panes
+    } else {
+        render_split_bar();
+    }
 
-    if (gCableDrag.active == true) {
+    if ((gCableDrag.active == true) && !front_panel_active()) {
         if (gCableDrag.rerouting) {
             // ONE DRAGGED LINE PER CABLE. A Ctrl-drag picks up the whole hole, so all of its cables
             // are following the cursor — drawing only the one whose far end happens to be recorded
@@ -1060,8 +1066,10 @@ void render_frame(void) {
     // notes §39
     render_menu_bar(gAppMenuBar, app_menu_bar_rect());
     render_morph_groups();
-    render_scrollbars();
 
+    if (!front_panel_active()) {
+        render_scrollbars();
+    }
     // notes §40
     synthlib_popups_render();
 

@@ -115,7 +115,7 @@ void send_patch_setting_param(uint32_t slot, uint32_t moduleIndex, uint32_t para
     };
     msg.paramData.param     = paramIndex;
     msg.paramData.value     = value;
-    msg.paramData.variation = 0;
+    msg.paramData.variation = patch_settings_variation(slot);
     msg_send(&gToUsbThread, &msg);
 }
 
@@ -124,13 +124,14 @@ static void action_patch_setting_u8(int index) {
     uint32_t   slot     = (uint32_t)gPatchParamsEdit.slot;
     tModuleKey key      = {slot, (uint32_t)locationMorph, gPatchSettingModule};
     tModule *  module   = get_module(key);
-    uint32_t   oldValue = module ? module->param[0][gPatchSettingParam].value : newValue;
+    uint32_t   var      = patch_settings_variation(slot);
+    uint32_t   oldValue = module ? module->param[var][gPatchSettingParam].value : newValue;
 
     if (module != NULL) {
-        module->param[0][gPatchSettingParam].value = (uint8_t)newValue;
+        module->param[var][gPatchSettingParam].value = (uint8_t)newValue;
     }
     send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, newValue);
-    undo_push_param_change(key, gPatchSettingParam, 0, oldValue, newValue);
+    undo_push_param_change(key, gPatchSettingParam, var, oldValue, newValue);
 }
 
 static void action_patch_setting_i8(int index) {
@@ -138,13 +139,14 @@ static void action_patch_setting_i8(int index) {
     uint32_t   slot     = (uint32_t)gPatchParamsEdit.slot;
     tModuleKey key      = {slot, (uint32_t)locationMorph, gPatchSettingModule};
     tModule *  module   = get_module(key);
-    uint32_t   oldValue = module ? module->param[0][gPatchSettingParam].value : newValue;
+    uint32_t   var      = patch_settings_variation(slot);
+    uint32_t   oldValue = module ? module->param[var][gPatchSettingParam].value : newValue;
 
     if (module != NULL) {
-        module->param[0][gPatchSettingParam].value = (uint8_t)newValue;
+        module->param[var][gPatchSettingParam].value = (uint8_t)newValue;
     }
     send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, newValue);
-    undo_push_param_change(key, gPatchSettingParam, 0, oldValue, newValue);
+    undo_push_param_change(key, gPatchSettingParam, var, oldValue, newValue);
 }
 
 // ── Patch descriptor action targets ────────────────────────────────────────
@@ -2130,14 +2132,15 @@ void toggle_patch_on_off(uint32_t moduleIndex, uint32_t paramIndex) {
     uint32_t   slot     = (uint32_t)gPatchParamsEdit.slot;
     tModuleKey key      = {slot, (uint32_t)locationMorph, moduleIndex};
     tModule *  module   = get_module(key);
-    uint32_t   oldValue = module ? module->param[0][paramIndex].value : 0;
+    uint32_t   var      = patch_settings_variation(slot);
+    uint32_t   oldValue = module ? module->param[var][paramIndex].value : 0;
     uint32_t   newValue = oldValue ? 0 : 1;
 
     if (module != NULL) {
-        module->param[0][paramIndex].value = (uint8_t)newValue;
+        module->param[var][paramIndex].value = (uint8_t)newValue;
     }
     send_patch_setting_param(slot, moduleIndex, paramIndex, newValue);
-    undo_push_param_change(key, paramIndex, 0, oldValue, newValue);
+    undo_push_param_change(key, paramIndex, var, oldValue, newValue);
 }
 
 void open_patch_on_off_dropdown(tCoord coord, uint32_t moduleIndex, uint32_t paramIndex) {
@@ -2153,22 +2156,19 @@ void open_patch_on_off_dropdown(tCoord coord, uint32_t moduleIndex, uint32_t par
 }
 
 void open_arp_rate_dropdown(tCoord coord) {
-    static const char * rateLabels[] = {
-        "1/96", "1/48", "1/32", "1/24", "1/16T", "1/16",
-        "1/8T", "1/8",  "1/4T", "1/4",  "1/2T",  "1/2",
-        "3/4",  "1/1",
-    };
-    static tMenuItem    items[15];
+    // sound-engine-reference §72 - the instrument's four, 12, 8, 6 and 4 clock ticks a step
+    static const char * rateLabels[] = {"1/8", "1/8T", "1/16", "1/16T"};
+    static tMenuItem    items[5];
     static bool         initialized  = false;
 
     if (!initialized) {
-        for (int i = 0; i < 14; i++) {
+        for (int i = 0; i < 4; i++) {
             items[i] = (tMenuItem){
                 rateLabels[i], RGB_GREY_3, action_patch_setting_u8, (uint32_t)i, NULL
             };
         }
 
-        items[14]   = (tMenuItem){
+        items[4]    = (tMenuItem){
             NULL, RGB_BLACK, NULL, 0, NULL
         };
         initialized = true;

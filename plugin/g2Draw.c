@@ -59,6 +59,7 @@
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "splitView.h"
+#include "frontPanel.h"
 #include "palette.h"      // palette_band_height and palette_render — the band the topbar grows
 #include "fileBrowser.h"
 #include "msgQueue.h"
@@ -351,7 +352,7 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
         tLocation focusLocation = gLocation;
         uint32_t  focusPane     = split_view_focused_pane();
 
-        for (uint32_t pane = 0; pane < module_pane_count(); pane++) {
+        for (uint32_t pane = 0; (pane < module_pane_count()) && !front_panel_active(); pane++) {
             set_module_pane(pane);
             gLocation = (tLocation)split_view_location_for_pane(pane);
             module_pane_clip_begin();
@@ -364,13 +365,17 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
         gLocation = focusLocation;
     }
 
-    render_split_bar();
-    render_pane_scrollbars();
+    if (front_panel_active()) {
+        front_panel_render();    // front-panel-mode-design.md - in place of the panes
+    } else {
+        render_split_bar();
+        render_pane_scrollbars();
+    }
 
     // The cable being dragged, if any. Drawn AFTER the settled ones, as render_frame() does — it is
     // the thing under the pointer and belongs on top. Without it a cable drag is invisible until it
     // lands, which reads as nothing happening at all.
-    if (gCableDrag.active == true) {
+    if ((gCableDrag.active == true) && !front_panel_active()) {
         tModule * from = get_module(gCableDrag.fromModuleKey);
 
         if (from != NULL) {

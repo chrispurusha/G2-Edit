@@ -43,6 +43,7 @@
 #include "utils.h"
 #include "splitView.h"
 #include "mouseHandle.h"
+#include "frontPanel.h"
 #include "canvasDrag.h"
 
 // notes §1
@@ -225,6 +226,10 @@ bool canvas_drag_motion(tCoord coord) {
 
 bool canvas_empty_press(tCoord coord, bool additive) {
     tCoord moduleCoord = {0};
+
+    if (front_panel_active()) {
+        return true;    // the canvas is not on screen: nothing to select
+    }
 
     if (within_rectangle(coord, module_area()) == false) {
         return false;
@@ -551,6 +556,9 @@ bool canvas_param_drag_release(void) {
 bool canvas_right_click(tCoord coord, uint32_t slot, uint32_t location) {
     bool                  found  = false;
 
+    if (front_panel_active()) {
+        return front_panel_right_click(coord);
+    }
     // notes §12
     const tCanvasWidget * widget = canvas_widget_at(coord);
 
@@ -1410,6 +1418,10 @@ static bool rubber_band_gesture_motion(const tCanvasGestureEvent * event) {
     return rubber_band_motion(event->coord);
 }
 
+static bool panel_gesture_motion(const tCanvasGestureEvent * event) {
+    return front_panel_drag_motion(event->coord, event->rawX, event->rawY);
+}
+
 static bool param_gesture_release(const tCanvasGestureEvent * event) {
     (void)event;
     return canvas_param_drag_release();
@@ -1444,6 +1456,7 @@ static const tCanvasGestureRow sGestures[] = {
     {"module",     canvasGestureModule,     module_gesture_motion,      module_gesture_release     },
     {"cable",      canvasGestureCable,      cable_gesture_motion,       cable_gesture_release      },
     {"rubberBand", canvasGestureRubberBand, rubber_band_gesture_motion, rubber_band_gesture_release},
+    {"panel",      canvasGesturePanel,      panel_gesture_motion,       NULL                       },   // released by its own click region
 };
 
 tCanvasGesture canvas_gesture_motion(const tCanvasGestureEvent * event) {
@@ -1497,6 +1510,7 @@ void stop_dragging(void) {
     gVibAmountDragging        = false;
     gGlideTimeDragging        = false;
     gRubberBand.active        = false;
+    front_panel_drag_cancel();
 
     // notes §27
     cursor_release();

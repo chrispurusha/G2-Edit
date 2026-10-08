@@ -50,6 +50,12 @@ void database_write_unlock(void) {
 }
 
 // Called from both threads — no internal locking.
+uint32_t patch_settings_variation(uint32_t slot) {
+    uint32_t variation = (slot < MAX_SLOTS) ? gPatchDescr[slot].activeVariation : 0u;
+
+    return (variation < NUM_VARIATIONS) ? variation : 0u;
+}
+
 tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index) {
     if ((slot < MAX_SLOTS) && (location < (uint32_t)locationMax) && (index < MAX_NUM_MODULES)) {
         return &gModule[slot][location][index];

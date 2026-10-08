@@ -182,7 +182,11 @@ continued (2026-10-02, the wave stages run with the word swept -1..+1):
 - Sine1, Sine2, TriSaw: the mirror of +y - the same wave reversed in time and inverted, so the steep
   segment moves to the other side of the peak. Their shortest segments (two, four, two samples) hold
   whichever side is steep. Sine2's gain is 1 + |y|.
-- DblSaw: the second saw's offset y/2 wraps, so -y sounds as +y.
+- DblSaw: the second saw's offset y/2 wraps, so -y sounds as +y. OscB's DualSaw likewise - MEASURED on
+  the G2 2026-10-08 (OscB DualSaw at E4, Shape Mod from a Constant): +-0.5 and +-0.75 give identical
+  harmonics, the 2nd and 6th gone at +-0.5, and y = 0 the plain saw's series; the engine matches to 0.1
+  dB at every setting. It had clamped below zero, which held the wave still for half of every cycle of
+  a bipolar LFO and jumped it at each reset - DualSawModel's click (findings 2026-10-08).
 - Pulse: OscB's law - +-1 plus y, high for (1 - y)/2 of the cycle - silent at -1.
 - SymPulse: exactly the wave at +y.
 - Sine3, Sine4: the module saturates the ratio at zero; below zero they are the Shape 0 sine.
@@ -2928,3 +2932,28 @@ clamped to 0..1. Dry is (1 - d)^2 and wet 1 - (1 - d)^2, so Drive 0 is transpare
 **71.4 Checked.** Against the G2 inside 14 CS80project72 (OverDrive Soft, Sym, Drive 32): the energy above
 6 kHz after it is -41.5 dB in the engine and -41.6 on the G2; the fitted curve gave -40.2. At 0.5 units the
 old curve made the 5th and 7th harmonics 18 dB too strong.
+
+## 72. The arpeggiator
+
+Added 2026-10-08, from the instrument's own arpeggiator; its timing CHECKED on the G2 the same day. A patch
+setting (hidden module patchModuleArpeggiator: On 0, Rate 1, Direction 2, Range 3), read in the active
+variation (§63a), one per slot.
+
+**72.1 The clock.** It steps on the master clock's ticks, 24 to a quarter note, at the master clock's
+tempo - running or STOPPED: on the G2 at 126 BPM a 1/16 arpeggio stepped every 120 ms with the clock
+stopped as well as running (the manual says both; the instrument settles it). Rate is a tick divisor:
+1/8, 1/8T, 1/16, 1/16T are 12, 8, 6 and 4 ticks, so a step every 0.5, 1/3, 1/4 and 1/6 of a beat. There
+are four rates; the editor's dropdown offered fourteen until the same day. A step falls where the tick
+count is a multiple of the rate.
+
+**72.2 The steps.** The held keys, sorted by note, repeated an octave up for each extra octave of Range
+(1-4 octaves). Up plays them in that order; Down from the top octave's highest down; Up/Down up then back
+down without repeating the top or bottom note; Random any step at random. The step played is (tick /
+rate) modulo the number of steps, so it follows the clock rather than restarting with each chord. A note
+above 127 comes down by octaves.
+
+**72.3 Each step** releases the note before it (release velocity 80) and plays the next at the velocity
+its own key was struck with. A key pressed into an empty arpeggio on a step boundary plays at once;
+otherwise the arpeggio picks it up at the next step, and a key let go leaves at the next step too.
+Switching the arpeggiator on releases every voice and takes in the keys already held; off releases
+them again. KB Hold is not modelled.

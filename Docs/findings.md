@@ -12447,3 +12447,42 @@ Fireface UC User's Guide). Inputs 5-8 have no analog gain stage, only that refer
 - output: a 1.0 oscillator = -15.1 dBu, word full scale (4.0) = -3.1 dBu;
 - In -> Out through a 2-In and a 2-Out at Pad 0 dB = -7.0 dB: unity word to word inside, the output converter
   running about 7 dB below the input converter.
+
+## 2026-10-08 - DualSawModel's click: OscB's DualSaw clamped a negative shape
+
+CT's report (todo): a click roughly every second, timed by the LfoC labelled "Phase". That LFO is a
+bipolar saw at 2.3 Hz (a reset every 0.436 s) driving OscB's Shape Mod at full depth through a Sw4-1,
+the OscB on DualSaw. The engine took any shape below zero as zero, so the wave stood still for the
+negative half of each LFO cycle and jumped from the octave-up wave (y = +1) back to two saws in phase at
+every reset. On the G2 the shape wraps (reference §6.7): +-0.5 and +-0.75 measured identical, so the reset
+from +1 to -1 changes nothing. Shown on the engine alone (OscB soloed, its pitch modulation unplugged,
+each sample against the one a period earlier): the old law's residual is 1.4-2.3x its typical size at
+every reset, the new one 0.9-1.2x. Revert record row 141.
+
+THREE METRICS THAT DID NOT SHOW IT, for the next click: a 10 ms level step across the reset (the two
+waves differ by only a few dB and the patch's own modulation moves the level more), the second
+difference (a saw's own edges are jumps), and high-frequency bursts in the full patch (they follow the
+filter's slow modulation). The period residual is the one that isolates a jump in a periodic wave.
+Also: Out 1/2 had come unplugged from the Fireface mid-session - every input read below -77 dBFS while
+the G2's own meter showed signal; check `capture` on all inputs before believing a silent take.
+
+## 2026-10-08 - The arpeggiator, from the instrument's own (reference §72)
+
+Built in the engine (it had none). The instrument's arpeggiator settled three things the editor had
+open: there are FOUR rates (1/8, 1/8T, 1/16, 1/16T, as 12, 8, 6, 4 ticks of a 24-per-quarter clock - the
+Patch Settings dropdown's fourteen were invented and are gone), the directions' exact orders (§72.2),
+and how a key joins or leaves (§72.3). The manual contradicts itself on whether a stopped master clock
+stops it; the G2 does not stop it: SimpleLead made percussive, arpeggiator 1/16 Up, C-E-G held at
+126 BPM, stepped every 120 ms with the clock stopped and running alike (backdoor CLOCKRUN, added for
+this). The engine steps every 119 ms; its step order, read off a traced build, is the instrument's for
+all four directions at Range 2.
+
+## 2026-10-08 - Patch settings are written in the active variation
+
+The engine has read Glide, Vibrato, Bend, Octave Shift and the rest in the ACTIVE variation since 10-07
+(reference §63a: ALARM DX's variation 8 carries its own Octave Shift, and the G2 plays it), and the
+manual says a variation holds "the global patch parameter settings" too. The Patch Settings panel
+nevertheless read, wrote, sent and undid them in variation 0 - so with any other variation selected an edit
+changed a variation nobody was playing - and the topbar Volume drag took its undo start value from variation
+0. All of it, and the front panel, now go through `patch_settings_variation()` (dataBase.c). Built; not yet
+checked against the G2 (to-test).

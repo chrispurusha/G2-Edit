@@ -181,7 +181,7 @@ bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
             gParamDragging.moduleKey  = volKey;
             gParamDragging.type3      = paramType3Param;
             gParamDragging.param      = VOLUME_LEVEL;
-            gParamDragging.startValue = volMod ? volMod->param[0][VOLUME_LEVEL].value : 0;
+            gParamDragging.startValue = volMod ? volMod->param[patch_settings_variation(slot)][VOLUME_LEVEL].value : 0;
             gParamDragging.active     = true;
 
             if (synthlib_dial_mode() != eDialModeRotary) {

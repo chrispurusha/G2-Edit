@@ -449,6 +449,19 @@ Alternative, if you would rather not use Terminal: double-click the app in
 Applications, dismiss the warning, then open System Settings > Privacy &
 Security, scroll down, and click "Open Anyway".
 
+ACCESS TO DOCUMENTS, DESKTOP AND DOWNLOADS
+
+The first time the editor's file browser opens one of those folders, macOS asks
+whether $APP_NAME may access it. Click Allow. If you clicked Don't Allow, the
+folder will look empty (the browser says it cannot be read). To switch it back
+on: System Settings > Privacy & Security > Files & Folders > $APP_NAME, and turn
+on the folder. Or, in Terminal, reset the answer so macOS asks again next launch:
+
+    tccutil reset SystemPolicyDocumentsFolder Purusha.G2-Editor
+
+(SystemPolicyDesktopFolder and SystemPolicyDownloadsFolder for the other two.)
+An update may ask again, because each release is signed afresh.
+
 PLAYING PATCHES WITHOUT A G2 (EXPERIMENTAL)
 
 The editor can play the patch it shows through your Mac's audio, with or without

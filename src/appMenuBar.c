@@ -52,6 +52,7 @@ extern "C" {
 #include "menus.h"
 #include <unistd.h>
 
+#include "frontPanel.h"
 #include "appMenuBar.h"
 #include "helpPanel.h"
 #include "synthlibPersistence.h"
@@ -388,6 +389,11 @@ static void action_open_midi_cc_list(int index) {
 static void action_open_param_overview(int index) {
     (void)index;
     settings_menu_open_param_overview();
+}
+
+static void action_toggle_front_panel(int index) {
+    (void)index;
+    front_panel_toggle();
 }
 
 static void action_open_virtual_keyboard(int index) {
@@ -900,7 +906,7 @@ static void action_deassign_midi_cc_selection(int index) {
 }
 
 void open_tools_menu(tCoord anchor) {
-    static tMenuItem items[10];  // 8 entries + the NULL terminator, with room to grow
+    static tMenuItem items[11];  // 9 entries + the NULL terminator, with room to grow
     // The two selection entries have nothing to act on without one, and the original greys them
     // the same way rather than letting the click be a silent no-op.
     bool             haveSelection = gSelection.count > 0;
@@ -910,6 +916,10 @@ void open_tools_menu(tCoord anchor) {
     // notes §9
     items[i++] = (tMenuItem){
         gMutator.active ? "Close Mutator" : "Open Mutator", (tRgb)RGB_GREY_3, action_toggle_mutator, 0, NULL, 0, 0.0
+    };
+    // front-panel-mode-design.md - the G2's panel in place of the canvas, and back
+    items[i++] = (tMenuItem){
+        front_panel_active() ? "Show Editor" : "Show Front Panel", (tRgb)RGB_GREY_3, action_toggle_front_panel, 0, NULL, 0, 0.0
     };
     // Tools is where the original keeps the Virtual Keyboard (manual p.128), alongside its
     // Parameter Pages/Overview — those two sit under Settings here by the owner's earlier call.

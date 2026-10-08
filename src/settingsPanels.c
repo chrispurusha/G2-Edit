@@ -360,11 +360,12 @@ void render_patch_params_panel(void) {
     tModule *  sustMod       = get_module_slot(slot, (uint32_t)locationMorph, patchModuleSustain);
     tModule *  vibMod        = get_module_slot(slot, (uint32_t)locationMorph, patchModuleVibrato);
     tModule *  glideMod      = get_module_slot(slot, (uint32_t)locationMorph, patchModuleGlide);
-    uint8_t    sustainPedal  = sustMod ? sustMod->param[0][SUSTAIN_PEDAL].value : 0;
-    int8_t     octaveShift   = sustMod ? (int8_t)((int32_t)sustMod->param[0][OCTAVE_SHIFT].value - OCTAVE_SHIFT_ZERO) : 0;
-    uint8_t    vibratoRate   = vibMod ? vibMod->param[0][VIBRATO_RATE].value : 0;
-    uint8_t    vibratoAmount = vibMod ? vibMod->param[0][VIBRATO_DEPTH].value : 0;
-    uint8_t    glideTime     = glideMod ? glideMod->param[0][GLIDE_SPEED].value : 0;
+    uint32_t   var           = patch_settings_variation(slot);
+    uint8_t    sustainPedal  = sustMod ? sustMod->param[var][SUSTAIN_PEDAL].value : 0;
+    int8_t     octaveShift   = sustMod ? (int8_t)((int32_t)sustMod->param[var][OCTAVE_SHIFT].value - OCTAVE_SHIFT_ZERO) : 0;
+    uint8_t    vibratoRate   = vibMod ? vibMod->param[var][VIBRATO_RATE].value : 0;
+    uint8_t    vibratoAmount = vibMod ? vibMod->param[var][VIBRATO_DEPTH].value : 0;
+    uint8_t    glideTime     = glideMod ? glideMod->param[var][GLIDE_SPEED].value : 0;
     char       buf[16]       = {0};
 
     gPatchParamsEdit.panel.titleBarRect = draw_panel_chrome(mainArea, box, titleH, "Patch Settings");

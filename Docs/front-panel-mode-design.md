@@ -54,7 +54,7 @@ undo all see a panel edit exactly as they see a canvas edit. Nothing here talks 
 
 ## Decisions proposed
 
-1. **The switch is a TOPBAR button, not a menu-bar one** (CT 2026-10-08). The topbar is drawn by the
+1. **SUPERSEDED - the switch is a Tools menu item** (CT 2026-10-08, later the same day). Was: **a TOPBAR button, not a menu-bar one**. The topbar is drawn by the
    same code in the application and G2 Alike and stays on screen in both modes; a button at the far
    right of the menu bar would not survive a host's narrow window, and the menu bar is not the same
    bar in the plug-in (`gPluginMenuBar`). Place it on the top row between Redo (x 335) and the clock
@@ -110,54 +110,12 @@ once this is in use. The keyboard stays the separate Virtual Keyboard panel.
 - Keyboard: separate, as now.
 - Button label: "Panel" / "Editor".
 
-## Progress (2026-10-08, session ended mid-build)
+## Progress
 
-First-version scope adds the PATCH SETTINGS / GLOBAL PANEL button (CT): one press shows the eight
-patch settings, Shift or a quick second press the Global Parameter Pages, a press again the patch's pages.
-
-DONE, uncommitted, builds (app and plug-in):
-- `globalVars.h`: per-document `gFrontPanelMode`, `gFrontPanelView`, `gFrontPanelPage[2]`,
-  `gFrontPanelBank[2]` ([0] patch pages, [1] global); zero-fill = editor mode, pages, A1.
-- `paramPages.c/.h`: `param_pages_release_target()` public (toggle cycles / menu opens on release),
-  and the Parameter Pages panel now sets `gParamDragging.rect` at press - rotary drags there turned
-  about whatever dial the canvas last captured.
-- `menus.c/.h`: `send_master_clock_bpm()` (moved from mouseHandle.c, which the plug-in does not
-  compile), `send_patch_setting_param()`, `send_patch_descr_update()` now public.
-- `src/frontPanel.h`: the interface. `frontPanel.c` NOT written yet.
-
-DECIDED, from reading the code:
-- Knobs on the Parameter Pages are drawn with `render_param_common()`: it registers the canvas's
-  own click region per widget, so press, drag (rotary rect captured), toggle and menu all work in both
-  builds with no new input code. Its name and value rows sit ABOVE the dial (value at dialY - textH,
-  name at dialY - 2 textH, left-aligned at the dial's x), so the display box runs down to the dial:
-  line 1 the module name (dashes when the previous position is the same module, as on the G2), lines
-  2-3 the widget's own text. Text is black: pale LCD display colour, red panel.
-- A position with `isLed` = 1 is a BUTTON assignment: drawn as a lit button below the dial, its own
-  click region (eClickLayerPanel) calling `param_pages_release_target()` on release.
-- Patch settings need their own drag (the canvas gives every locationMorph param a range of 128):
-  a new row in canvasDrag.c's `sGestures` (`canvasGesturePanel`, motion only), started from the knob's
-  own region on press, undo pushed on release / release-outside; `stop_dragging()` cancels it.
-  Pairs: Clock rate 30-240 / Run (gGlobalSettings, send_master_clock_*); Voices 0-31 shown +1 / Poly-
-  Mono-Legato (gPatchDescr, send_patch_descr_update, undo_push_patch_descr); Arp ARP_SPEED (4) /
-  ARP_ON_OFF; ARP_DIRECTION / ARP_OCTAVES; VIBRATO_DEPTH (101, "cnt") / VIBRATO_MOD (Off, AfTouch,
-  Wheel); GLIDE_SPEED (patch_settings_glideStrMap) / GLIDE_TYPE (Off, Normal, Auto); BEND_RANGE (24,
-  +1 semi) / BEND_ON_OFF; VOLUME_LEVEL (active variation, send_param_value, patch_volume_db) /
-  VOLUME_MUTE. All but Volume go through variation 0 and send_patch_setting_param, as the Patch
-  Settings panel does.
-- Routing guards in panel mode: `canvas_empty_press()` consumes (no rubber band);
-  `canvas_right_click()` hands to `front_panel_right_click()` (canvas widget first, then the panel's
-  buttons); the app's split-bar and scrollbar clicks and the plug-in's are skipped (their rects are
-  last canvas frame's); scroll wheel returns after the palette in both; key_callback ignores Delete,
-  Backspace, arrows, bare V and Cmd-C/X/V/A; the plug-in's bare V likewise. Entering the mode clears
-  the selection.
-- Frame: graphics.c and plugin/g2Draw.c draw `front_panel_render()` instead of the pane loop, split
-  bar, scrollbars and dragged cable; `set_click_region_clip(NULL)` first. Area: from
-  MENU_BAR_HEIGHT + TOP_BAR_HEIGHT + palette_band_height() to the bottom.
-- Topbar: `X(topbarFrontPanelId, 380, 8, "Panel", ...)` after Redo; its label comes from
-  `front_panel_button_label()` ("Panel"/"Editor"), green while active; mouseTopbar.c toggles.
-- Remembered: app pref `frontPanelMode` (written only by the app build); G2 Alike state line `panel=`.
-
-TODO next session: frontPanel.c and Docs/code-notes/frontPanel.c.md; the hooks above; add
-src/frontPanel.c to do-plugin's source list; build both; screenshot both; to-test entry.
-Also noticed: the Patch Settings panel's arp rate shows 4 values (1/8 .. 1/16T) but its dropdown
-offers 14 (1/96 .. 1/1) - settle which the G2 has.
+BUILT 2026-10-08 (first version), app and G2 Alike - `src/frontPanel.c`, notes in
+`Docs/code-notes/frontPanel.c.md`. The switch is Tools > Show Front Panel / Show Editor, NOT a topbar
+button (CT changed the decision the same day); the mode is remembered (app preference `frontPanelMode`,
+G2 Alike state `panel=`). Four displays, eight knobs and buttons, PARAMETER PAGES buttons laid out as on
+the G2 (A-E down the right, 1-3 left of E), PATCH SETTINGS / GLOBAL PANEL. Seen in screenshots of both
+builds; a settings button click and a settings knob drag checked by hand-driven clicks. Not yet tried:
+undo of a panel edit, the Global Panel view, a button (isLed) assignment, rotary/horizontal dial modes.

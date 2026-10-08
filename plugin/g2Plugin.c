@@ -28,6 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "frontPanel.h"
 #include "synthlibGlobals.h"
 #include "sysIncludes.h"
 #include "defs.h"                   // TARGET_FRAME_BUFF_WIDTH / _HEIGHT - the locked canvas ratio
@@ -574,6 +575,7 @@ static void build_state_record(tG2Plugin * g2) {
     used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndac=%d\n",
                              (int)synthlib_dial_mode(), (sound_engine_dac_emulation() == true) ? 1 : 0);
     used += (size_t)snprintf(text + used, sizeof(text) - used, "economy=%d\n", (sound_engine_economy() == true) ? 1 : 0);
+    used += (size_t)snprintf(text + used, sizeof(text) - used, "panel=%d\n", front_panel_active() ? 1 : 0);
     // notes §10 - the performance's name, which its image does not carry
     used += (size_t)snprintf(text + used, sizeof(text) - used, "perfname=%s\n", gGlobalSettings.perfName);
 
@@ -635,6 +637,7 @@ typedef struct {
     int32_t dialMode;
     int32_t dac;
     int32_t economy;     // soundEngine notes §205 - -1, absent, keeps the prefs file's setting
+    int32_t panel;       // front panel mode; -1, absent, leaves the instance in editor mode
 
     // Per slot: each slot holds its own patch and so its own divider. -1 is "the record did not say".
     // Written 2026-09-16 only; a record with patch data carries the dividers in that instead.
@@ -665,6 +668,8 @@ static void parse_state_line(tG2State * state, char * line) {
         state->dac = atoi(value);
     } else if (strcmp(key, "economy") == 0) {
         state->economy = atoi(value);
+    } else if (strcmp(key, "panel") == 0) {
+        state->panel = atoi(value);
     } else if (strcmp(key, "perfname") == 0) {
         state->havePerfName = true;
         snprintf(state->perfName, sizeof(state->perfName), "%s", value);
@@ -712,6 +717,7 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     state->dialMode = -1;
     state->dac      = -1;
     state->economy  = -1;
+    state->panel    = -1;
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         state->split[slot] = -1;
@@ -794,6 +800,10 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     }
     if (state->economy >= 0) {
         sound_engine_set_economy(state->economy != 0);       // applied at the engine's next block
+    }
+
+    if (state->panel >= 0) {
+        front_panel_set_active(state->panel != 0);
     }
     free(state);
 

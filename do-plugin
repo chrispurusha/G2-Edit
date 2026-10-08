@@ -150,6 +150,7 @@ SOURCES=(
     "$HERE/src/mutatorUI.c"
     "$HERE/src/mutator.c"
     "$HERE/src/paramPages.c"
+    "$HERE/src/frontPanel.c"
     "$HERE/src/paramOverview.c"
     "$HERE/src/paramOverlay.c"
     "$HERE/src/midiCcList.c"

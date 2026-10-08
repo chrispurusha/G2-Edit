@@ -38,6 +38,7 @@
 #include "g2Menu.h"
 #include "splitView.h"
 #include "fileBrowser.h"
+#include "frontPanel.h"
 #include "synthlibPopups.h"    // synthlib_popups_dispatch_scroll() — the wheel, as the app routes it
 #include "mouseTopbar.h"
 #include "topbarResourcesAccess.h"
@@ -164,11 +165,11 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         }
 
         // Then the canvas chrome, above the modules for the same reason as during a drag.
-        if (handle_split_bar_mouse(gMouse, mouseButtonLeftDown) == true) {
+        if (!front_panel_active() && (handle_split_bar_mouse(gMouse, mouseButtonLeftDown) == true)) {
             return true;
         }
 
-        if (handle_pane_scrollbar_click(gMouse) == true) {
+        if (!front_panel_active() && (handle_pane_scrollbar_click(gMouse) == true)) {
             return true;
         }
 
@@ -308,8 +309,8 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
     }
 
     // notes §17
-    if (palette_scroll(deltaY / WHEEL_SCROLL_STEP, gMouse) == true) {
-        return;
+    if ((palette_scroll(deltaY / WHEEL_SCROLL_STEP, gMouse) == true) || front_panel_active()) {
+        return;    // the panel has nothing to scroll or zoom
     }
     pane = split_view_pane_at(gMouse);
 
@@ -397,7 +398,7 @@ bool g2_input_key(int character, bool cmdHeld) {
     // p64). It stands aside while a name is being typed, as every bare-letter shortcut must — the
     // application gets that from where its branch sits in key_callback()'s chain, and this one has
     // to ask outright.
-    if (((character == 'v') || (character == 'V')) && (any_name_edit_active() == false)) {
+    if (((character == 'v') || (character == 'V')) && (any_name_edit_active() == false) && !front_panel_active()) {
         split_view_toggle_voice_area_only();
         return true;
     }

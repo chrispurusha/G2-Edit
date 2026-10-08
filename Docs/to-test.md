@@ -4,6 +4,27 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***ARPEGGIATOR (2026-10-08)*** - reference §72. LISTEN on the engine (app or G2 Alike): Patch Settings > Arpeggiator
+  On, hold a chord - each Direction and Range, each Rate against the topbar tempo; it runs with the master clock
+  stopped too, as the G2's does. Step timing and order are checked offline and against the G2's take; nobody
+  has played it by hand
+- ***DUALSAWMODEL CLICK (2026-10-08)*** - findings 2026-10-08, reference §6.7, revert record 141. LISTEN: DualSawModel
+  on the engine (app or G2 Alike) should no longer click once a cycle of the "Phase" LFO; the law is measured on
+  the G2 and the engine matches it, but nobody has heard the patch since
+- ***FRONT PANEL MODE (2026-10-08)*** - front-panel-mode-design.md, code-notes/frontPanel.c.md. CHECK in the app and
+  G2 Alike: Tools > Show Front Panel; turn a dial knob, a switch/list knob (drag steps it, a click cycles or opens
+  the list), a button assignment; Cmd-Z undoes each; Patch Settings (one press), Global Panel (Shift or double
+  press); the page buttons; the mode comes back after a restart / project reopen; with a G2 attached the knobs
+  change the G2
+- ***PATCH SETTINGS PER VARIATION (2026-10-08)*** - dataBase.h patch_settings_variation(), code-notes/frontPanel.c.md §4.
+  The front panel AND the Patch Settings panel now read, write and send the active variation's settings. CHECK
+  with a G2: select Variation 3, change Glide, Bend or the Arpeggiator from either, then switch between Variations
+  1 and 3 - the setting should follow the variation on the G2's own panel and in the engine; Cmd-Z undoes it in
+  the variation it was made in
+- ***DOCUMENTS ACCESS (2026-10-08)*** - SynthLib code-notes/fileBrowser.cpp.md §1a. CHECK: the macOS prompt for
+  Documents now carries "G2 Editor opens and saves patches..." (a fresh build may ask again); after Don't Allow,
+  the file browser's list says the folder cannot be read and where to switch it on, rather than looking empty;
+  Read Me First has the new ACCESS TO DOCUMENTS section
 - ***G2 ALIKE SIDE-CHAIN AS IN 1/2, THE AUDIO UNIT (2026-10-08)*** - reference §37, g2Plugin notes §8. The VST3 side-chain
   is confirmed in a host (CT ran audio through a patch's reverb). CHECK the AU in Logic: G2 Alike on an instrument
   track, its side-chain menu set to an audio track, and a 2-In (In 1/2) -> 2-Out patch should play it

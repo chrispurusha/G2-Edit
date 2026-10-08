@@ -188,6 +188,6 @@ Device" (README, "Windows") worked - the editor went Online, then every send tim
 
 - `CLAUDE.md` at the root of the GitHub folder on the Mac carries the project's rules; the essentials: comments
   live in `Docs/code-notes/<file>.md` with `// notes §k` pointers; the owner commits and pushes, Claude never
-
+  does; never cite non-public or reverse-engineered sources in the repo.
 - Run `./do-uncrustify` after edits (MSYS2: `pacman -S mingw-w64-clang-x86_64-uncrustify`).
 - Re-run `tools/gen-cmake` after any change to the set of source files, on whichever machine made it.

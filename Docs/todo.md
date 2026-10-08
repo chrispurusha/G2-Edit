@@ -5,7 +5,6 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
-- "DualSawModel" has a click roughly every second on engine. Timing seems to be related to the LfoC module labelled "Phase".
 - I'm still not sure the poly voice limit we get back from G2 is correct. Seems like it's offset by 1. I'm loading patches which are set to 16 voices, but the limit is showing as 15. Are we off by 1?
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Audio input in the application: an input device in Settings > Audio feeding sound_engine_set_input() (the engine and the plug-in's side-chain have it since 2026-10-08, reference §37)
@@ -21,11 +20,11 @@ General (priority order)
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
 - Plug-in Audio Unit: offer Out 3/4 as a second output element, as the VST3 does since 2026-10-07 (SynthLib AU wrapper renders one element; it needs the block rendered at the first element and held for the others)
 - Bypass, the rest: a module switched off still has its INPUTS evaluated (an LFO into a switched-off oscillator keeps running) - prune the chain behind an Off module whose output is silence or a plain pass-through. Each module itself now skips its work when off (2026-10-03)
-- Implement arpeggiator.
 - Engine-only wavetable and sample playback modules (plug-in and app engine; wavetable first). A slot holding one stops writing to the G2 - every live edit, whole-patch send and Store to Bank - with a top-bar warning naming the slots ("the G2 is playing an older version"); ask once on adding the first with a G2 connected; deleting the last offers one full resend. Settle the file format (sidecar) and where samples live (embedded) in a design note first
 - At a 176.4/192 kHz device the engine's noise is ~3 dB low (white drawn per graph sample, not per 96 kHz one) and DrumSynth's noise filter goes 3-20 dB dark (its Chamberlin retuned off 96 kHz) - findings 2026-09-27
 - Fireface loopback at 192 kHz (an output cabled to an input, sine sweep to 48 kHz) to confirm the G2 output droop is not partly the interface's (sound-engine-notes §199)
-- Front panel mode: a mode representing the G2 keyboard's front panel and back again to editor mode, switched from a topbar button so the plug-in has it too - planned in front-panel-mode-design.md, nothing built
+- Front panel mode, next: decide what follows the first version (front-panel-mode-design.md, Order of work) - Variation/Morph buttons, System Functions
+- Front panel: the LED ring round each knob (manual: the coarse value; in morph mode the first and last LED of the range), and what the two small LEDs under each knob show - to be watched on the G2
 - Iteratively improve modules using the recent methods, especially those where we need graphical representation of wave/filter.
 - Zoom to Fit from a right click on module area, fitting the area under the cursor. Zoom to fit on main menu takes largest of VA/VX.
 - Separate zoom for VA and FX. Possibly scaling/zooming for top-bar too.
@@ -55,7 +54,6 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Add a dedicated master-clock/tempo panel
 - Virtual keyboard velocity: two computer-keyboard keys to step it down/up, and matching -/+ buttons in the Virtual Keyboard panel (CT 2026-09-28). Engine only - the G2 plays the editor's notes at 127 whatever is sent (code-notes/virtualKeyboard.c.md §11), so show that when a G2 is connected
 
-- Patch Settings arp rate: the panel shows 4 values (1/8, 1/8T, 1/16, 1/16T), its dropdown offers 14 (1/96 .. 1/1) - check which the G2 has and make them agree
 
 MODULES AND GRAPHICS
 - Mix4-1S: the G2 sends 8 parameters where the module tables hold 9 (logged loading the patch library, 2026-09-25)

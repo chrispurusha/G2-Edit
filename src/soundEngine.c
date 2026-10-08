@@ -1223,6 +1223,12 @@ typedef struct {
     // Patch-wide settings, from the hidden modules in the Morph location rather than from any module
     // on the canvas. Vibrato is how a patch gets aftertouch vibrato with no LFO in it anywhere.
     uint32_t      vibratoSource; // 0 off, 1 aftertouch, 2 wheel
+    // §72 - the patch's arpeggiator, and the master clock's tempo it steps to
+    bool          arpOn;
+    uint32_t      arpRateTicks;  // clock ticks a step, 24 to a quarter note
+    uint32_t      arpMode;       // 0 Up, 1 Down, 2 Up/Down, 3 Random
+    uint32_t      arpRange;      // extra octaves, 0-3
+    double        arpBpm;
     double        vibratoCents;
     double        vibratoHz;
     tGlideMode    glideMode;                // patch-wide, not per node
@@ -1419,11 +1425,12 @@ typedef struct {
 } tNoteEvent;
 
 static tNoteEvent           gNoteQueueBank[SOUND_ENGINE_MAX_ENGINES][NOTE_QUEUE_SIZE];
-#define gNoteQueue     (gNoteQueueBank[SE])
+#define gNoteQueue    (gNoteQueueBank[SE])
 static _Atomic uint32_t     gNoteWriteBank[SOUND_ENGINE_MAX_ENGINES];
-#define gNoteWrite     (gNoteWriteBank[SE])
+#define gNoteWrite    (gNoteWriteBank[SE])
 static uint32_t             gNoteReadBank[SOUND_ENGINE_MAX_ENGINES];        // audio thread only
-#define gNoteRead      (gNoteReadBank[SE])
+#define gNoteRead     (gNoteReadBank[SE])
+
 
 static _Atomic bool         gActiveBank[SOUND_ENGINE_MAX_ENGINES];
 #define gActive        (gActiveBank[SE])
@@ -1582,36 +1589,62 @@ typedef struct {
     uint8_t  stealVelocity;
 } tVoice;
 
-static tVoice                 gVoiceBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES];
+static tVoice           gVoiceBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES];
 #define gVoice    (gVoiceBank[SE])
 
 // notes §209
-static int32_t                gLastKeyBank[SOUND_ENGINE_MAX_ENGINES]      = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = (int32_t)KEYBOARD_PITCH_ZERO};
-static uint32_t               gStoredNoteSeenBank[SOUND_ENGINE_MAX_ENGINES];
+static int32_t          gLastKeyBank[SOUND_ENGINE_MAX_ENGINES]      = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = (int32_t)KEYBOARD_PITCH_ZERO};
+static uint32_t         gStoredNoteSeenBank[SOUND_ENGINE_MAX_ENGINES];
 #define gLastKey           (gLastKeyBank[SE])
 #define gStoredNoteSeen    (gStoredNoteSeenBank[SE])
-static uint64_t               gVoiceClockBank[SOUND_ENGINE_MAX_ENGINES];
+static uint64_t         gVoiceClockBank[SOUND_ENGINE_MAX_ENGINES];
 #define gVoiceClock        (gVoiceClockBank[SE])
 
 // notes §31
-static _Atomic uint32_t       gEngineVoicesBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1};
+static _Atomic uint32_t gEngineVoicesBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1};
 #define gEngineVoices    (gEngineVoicesBank[SE])
 
 // Whether the patch is in LEGATO voice mode, the one mode where a key played while another is held
 // does not restart the envelopes. Published beside gEngineVoices for the same reason: it is read by
 // voice_note_on() on the audio thread, per note, where copying the snapshot to ask would be absurd.
-static _Atomic bool           gEngineLegatoBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic bool     gEngineLegatoBank[SOUND_ENGINE_MAX_ENGINES];
 #define gEngineLegato    (gEngineLegatoBank[SE])
 
 // Mono OR Legato: the modes where releasing the sounding key goes back to one still held. §15.2
-static _Atomic bool           gEngineMonoBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic bool     gEngineMonoBank[SOUND_ENGINE_MAX_ENGINES];
 #define gEngineMono    (gEngineMonoBank[SE])
 
 
 // §15.1 - the keys held down, as a count per key. Audio thread only: voice_note_on/off keep it.
-#define MIDI_KEY_COUNT    (128)
+#define MIDI_KEY_COUNT     (128)
+
+// §72 - the arpeggiator, one per engine (so per slot), audio thread only
+#define ARP_MAX_KEYS       (32u)
+#define ARP_MAX_STEPS      (ARP_MAX_KEYS * 4u * 2u)    // four octaves, and Up/Down's way back
+#define ARP_RELEASE_VEL    (80u)
+typedef struct {
+    bool     running;
+    uint32_t keyCount;
+    uint8_t  key[ARP_MAX_KEYS];            // in the order they were pressed
+    uint8_t  keyVelocity[ARP_MAX_KEYS];
+    uint32_t stepCount;
+    uint8_t  stepKey[ARP_MAX_STEPS];        // which entry of key[] a step plays
+    uint8_t  stepOctave[ARP_MAX_STEPS];
+    uint32_t mode;
+    uint32_t range;
+    bool     playing;
+    int32_t  playingNote;
+    uint32_t tick;
+    double   tickPhase;
+    bool     changeTick;                   // the tick now is a step boundary
+    uint32_t random;
+    uint8_t  held[MIDI_KEY_COUNT];         // the keyboard, kept whether the arpeggiator runs or not
+    uint8_t  heldVelocity[MIDI_KEY_COUNT];
+} tArp;
+static tArp                   gArpBank[SOUND_ENGINE_MAX_ENGINES];
+#define gArp        (gArpBank[SE])
 static uint8_t                gKeyHeldBank[SOUND_ENGINE_MAX_ENGINES][MIDI_KEY_COUNT];
-#define gKeyHeld          (gKeyHeldBank[SE])
+#define gKeyHeld    (gKeyHeldBank[SE])
 
 // §35 - the velocity each held key was played at, as the instrument keeps one beside its held
 // count. Audio thread only, like gKeyHeld above.
@@ -3443,6 +3476,178 @@ static void sustain_pedal_follow(void) {
     gSustainSeen = down;
 }
 
+// ── ARPEGGIATOR (audio thread) - §72 ─────────────────────────────────────────────────────────────
+
+// The steps in playing order: the keys sorted, repeated an octave up for each octave of Range;
+// Down from the top; Up/Down up then back without repeating either end; Random picks from Up's.
+static void arp_sort(void) {
+    SE_LOCAL;
+
+    tArp *   arp  = &gArp;
+    uint32_t keys = arp->keyCount;
+    uint8_t  order[ARP_MAX_KEYS];
+    bool     down = (arp->mode == 1u);
+
+    for (uint32_t i = 0; i < keys; i++) {
+        order[i] = (uint8_t)i;
+    }
+
+    for (uint32_t i = 1; i < keys; i++) {    // by note, ascending
+        uint8_t  k = order[i];
+        uint32_t j = i;
+
+        while ((j > 0) && (arp->key[order[j - 1]] > arp->key[k])) {
+            order[j] = order[j - 1];
+            j--;
+        }
+        order[j] = k;
+    }
+
+    arp->stepCount = keys * (arp->range + 1u);
+
+    for (uint32_t octave = 0; octave <= arp->range; octave++) {
+        for (uint32_t i = 0; i < keys; i++) {
+            uint32_t step = (octave * keys) + i;
+
+            arp->stepKey[step]    = down ? order[keys - 1u - i] : order[i];
+            arp->stepOctave[step] = (uint8_t)(down ? (arp->range - octave) : octave);
+        }
+    }
+
+    if ((arp->mode == 2u) && (arp->stepCount > 2u)) {
+        uint32_t n = arp->stepCount;
+
+        for (uint32_t i = 0; i < (n - 2u); i++) {
+            arp->stepKey[n + i]    = arp->stepKey[n - 2u - i];
+            arp->stepOctave[n + i] = arp->stepOctave[n - 2u - i];
+        }
+
+        arp->stepCount = (2u * n) - 2u;
+    }
+}
+
+// The step due at this tick: the last note released, the next played at its key's own velocity
+static void arp_note_change(const tSoundEngineParams * params) {
+    SE_LOCAL;
+
+    tArp *   arp  = &gArp;
+    uint32_t step = 0;
+
+    if (arp->playing) {
+        voice_note_off(arp->playingNote, ARP_RELEASE_VEL);
+        arp->playing = false;
+    }
+
+    if ((arp->keyCount == 0u) || (arp->stepCount == 0u)) {
+        return;
+    }
+
+    if (arp->mode == 3u) {
+        arp->random = (arp->random * 1103515245u) + 12345u;
+        step        = (arp->random >> 8) % arp->stepCount;
+    } else {
+        step = (arp->tick / ((params->arpRateTicks > 0u) ? params->arpRateTicks : 6u)) % arp->stepCount;
+    }
+    int32_t  note = (int32_t)arp->key[arp->stepKey[step]] + (12 * (int32_t)arp->stepOctave[step]);
+
+    while (note > 127) {
+        note -= 12;
+    }
+    voice_note_on(note, arp->keyVelocity[arp->stepKey[step]], params);
+    arp->playing     = true;
+    arp->playingNote = note;
+}
+
+// Every sample: follow the patch's On switch, then count master-clock ticks, 24 to a quarter note -
+// running or stopped, as the instrument does
+static void arp_clock(const tSoundEngineParams * params) {
+    SE_LOCAL;
+
+    tArp * arp = &gArp;
+
+    if (params->arpOn != arp->running) {
+        voice_note_off(-1, ARP_RELEASE_VEL);
+        arp->playing  = false;
+        arp->keyCount = 0u;
+        arp->running  = params->arpOn;
+
+        for (uint32_t note = 0; arp->running && (note < MIDI_KEY_COUNT) && (arp->keyCount < ARP_MAX_KEYS); note++) {
+            if (arp->held[note] != 0u) {    // the keys already down join it
+                arp->key[arp->keyCount]         = (uint8_t)note;
+                arp->keyVelocity[arp->keyCount] = arp->heldVelocity[note];
+                arp->keyCount++;
+            }
+        }
+
+        arp_sort();
+    }
+
+    if ((arp->mode != params->arpMode) || (arp->range != params->arpRange)) {
+        arp->mode  = params->arpMode;
+        arp->range = params->arpRange;
+        arp_sort();
+    }
+
+    if (!arp->running) {
+        return;
+    }
+    uint32_t rate = (params->arpRateTicks > 0u) ? params->arpRateTicks : 6u;
+
+    arp->tickPhase += (params->arpBpm * 24.0) / (60.0 * gSampleRate);
+
+    while (arp->tickPhase >= 1.0) {
+        arp->tickPhase -= 1.0;
+        arp->tick++;
+        arp->changeTick = ((arp->tick % rate) == 0u);
+
+        if (arp->changeTick) {
+            arp_note_change(params);
+        }
+    }
+}
+
+// A key, while the arpeggiator runs: into its list, or out of it. The note sounding plays on to the
+// next step; a key into an empty list on a step boundary starts at once.
+static void arp_key(int32_t note, uint8_t velocity, bool on, const tSoundEngineParams * params) {
+    SE_LOCAL;
+
+    tArp * arp = &gArp;
+
+    if (on) {
+        bool wasEmpty = (arp->keyCount == 0u);
+        bool present  = false;
+
+        for (uint32_t i = 0; i < arp->keyCount; i++) {
+            present = present || (arp->key[i] == (uint8_t)note);
+        }
+
+        if (!present && (arp->keyCount < ARP_MAX_KEYS)) {
+            arp->key[arp->keyCount]         = (uint8_t)note;
+            arp->keyVelocity[arp->keyCount] = velocity;
+            arp->keyCount++;
+            arp_sort();
+        }
+
+        if (wasEmpty && arp->changeTick) {
+            arp_note_change(params);
+        }
+        return;
+    }
+
+    for (uint32_t i = 0; i < arp->keyCount; i++) {
+        if (arp->key[i] == (uint8_t)note) {
+            for (uint32_t j = i; (j + 1u) < arp->keyCount; j++) {
+                arp->key[j]         = arp->key[j + 1u];
+                arp->keyVelocity[j] = arp->keyVelocity[j + 1u];
+            }
+
+            arp->keyCount--;
+            arp_sort();
+            break;
+        }
+    }
+}
+
 static bool take_next_note_event(const tSoundEngineParams * params) {
     SE_LOCAL;
 
@@ -3464,11 +3669,23 @@ static bool take_next_note_event(const tSoundEngineParams * params) {
     if (atomic_load(&gNoteQueue[slot].sequence) != (gNoteRead + 1)) {
         return false;   // claimed but not yet written; it will be there next time round
     }
+    int32_t  note  = gNoteQueue[slot].note;
+    bool     on    = (gNoteQueue[slot].on == true) && (note >= 0);
 
-    if ((gNoteQueue[slot].on == true) && (gNoteQueue[slot].note >= 0)) {
-        voice_note_on(gNoteQueue[slot].note, gNoteQueue[slot].velocity, params);
+    // §72 - the keyboard as held, whether or not the arpeggiator is taking it
+    if ((note >= 0) && (note < MIDI_KEY_COUNT)) {
+        gArp.held[note]         = on ? 1u : 0u;
+        gArp.heldVelocity[note] = gNoteQueue[slot].velocity;
+    } else if (note < 0) {
+        memset(gArp.held, 0, sizeof(gArp.held));
+    }
+
+    if (gArp.running && (note >= 0) && (note < MIDI_KEY_COUNT)) {
+        arp_key(note, gNoteQueue[slot].velocity, on, params);
+    } else if (on) {
+        voice_note_on(note, gNoteQueue[slot].velocity, params);
     } else {
-        voice_note_off(gNoteQueue[slot].note, gNoteQueue[slot].velocity);
+        voice_note_off(note, gNoteQueue[slot].velocity);
     }
     gNoteRead++;
     return true;
@@ -7093,6 +7310,19 @@ static void build_snapshot(tSoundEngineParams * out) {
             snapshot.glideSeconds = glide_time_seconds(glide->param[var][GLIDE_SPEED].value);
         }
         {
+            // §72 - the arpeggiator: On, Rate (1/8, 1/8T, 1/16, 1/16T as 12, 8, 6, 4 ticks), Direction, Range
+            static const uint32_t kArpRateTicks[4] = {12u, 8u, 6u, 4u};
+            tModule *             arp              = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleArpeggiator);
+
+            if ((arp != NULL) && (arp->active == true)) {
+                snapshot.arpOn        = (arp->param[var][ARP_ON_OFF].value != 0u);
+                snapshot.arpRateTicks = kArpRateTicks[arp->param[var][ARP_SPEED].value & 3u];
+                snapshot.arpMode      = arp->param[var][ARP_DIRECTION].value & 3u;
+                snapshot.arpRange     = arp->param[var][ARP_OCTAVES].value & 3u;
+            }
+            snapshot.arpBpm = engine_master_bpm();
+        }
+        {
             tModule * vibrato = get_module_slot(engine_slot(), (uint32_t)locationMorph, patchModuleVibrato);
 
             if (vibrato != NULL) {
@@ -10709,9 +10939,10 @@ static double osc_waveform(uint32_t voice, uint32_t node, const tEngineNode * sp
         }
         case eOscWaveDualSaw:
         {
-            double offset = 0.5 * fmin(fmax(shape, 0.0), 1.0);
+            // §6.7 - a negative shape wraps, as OscShpB's DblSaw: -y sounds as +y
+            double offset = 0.5 * fmin(fmax(shape, -1.0), 1.0);
 
-            return osc_rising_saw(phase, edge) + osc_rising_saw(fmod(phase + offset, 1.0), edge);
+            return osc_rising_saw(phase, edge) + osc_rising_saw(fmod(phase + 1.0 + offset, 1.0), edge);
         }
         case eOscWaveDual:
         {
@@ -14421,6 +14652,7 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
     // consecutive samples rather than all but the last being thrown away, and every note takes
     // effect where it actually arrived instead of at the next buffer boundary.
     start_pending_steals(p);   // §15.3a - before the queue: a voice about to trig is busy
+    arp_clock(p);              // §72
     (void)take_next_note_event(p);
 
     // notes §176
@@ -15551,6 +15783,7 @@ static void engine_reset_state(void) {
     memset(&gNoteQueue, 0, sizeof(gNoteQueue));
     memset(&gNoteWrite, 0, sizeof(gNoteWrite));
     memset(&gNoteRead, 0, sizeof(gNoteRead));
+    memset(&gArp, 0, sizeof(gArp));
     memset(&gActive, 0, sizeof(gActive));
     memset(&gMorphMilli, 0, sizeof(gMorphMilli));
     memset(&gMorphPeakMilli, 0, sizeof(gMorphPeakMilli));

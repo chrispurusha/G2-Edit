@@ -54,6 +54,7 @@ extern "C" {
 #include "splitView.h"
 #include "globalVars.h"
 #include "protocol.h"
+#include "frontPanel.h"
 #include "menus.h"
 #include "mousePanels.h"
 #include "mouseTopbar.h"
@@ -257,7 +258,7 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
 
     // The split bar owns its own strip, and it sits between the panes rather than inside either, so
     // it gets first refusal before anything tries to interpret the click as a canvas click.
-    if (handle_split_bar_mouse(coord, mouseButton)) {
+    if (!front_panel_active() && handle_split_bar_mouse(coord, mouseButton)) {
         synthlib_request_redraw();
         return;
     }
@@ -284,7 +285,7 @@ void mouse_button(tCoord coord, tMouseButton mouseButton, int mods) {
                 found = palette_left_down(coord);
             }
 
-            if (!found) {
+            if (!found && !front_panel_active()) {
                 found = handle_scrollbar_click(coord);
             }
 
@@ -531,7 +532,8 @@ static bool handle_patch_param_drag_motion(uint32_t slot, double xCoord, double 
         if (module == NULL) {
             return true;   // armed on a module that is not there: consumed, as the original's NULL check was
         }
-        uint8_t *                     param  = &module->param[0][target->param].value;
+        uint32_t                      var    = patch_settings_variation(key.slot);
+        uint8_t *                     param  = &module->param[var][target->param].value;
         int                           newVal = (int)*param;
 
         if (synthlib_dial_mode() == eDialModeHorizontal) {
@@ -555,7 +557,7 @@ static bool handle_patch_param_drag_motion(uint32_t slot, double xCoord, double 
 
         if (*param != (uint8_t)newVal) {
             *param = (uint8_t)newVal;
-            send_param_value(slot, key, target->param, 0, (uint32_t)newVal);
+            send_param_value(slot, key, target->param, var, (uint32_t)newVal);
         }
         return true;
     }
@@ -688,8 +690,8 @@ void scroll_event(double x, double y) {
 
     // Over the palette band the wheel scrolls the TILES sideways - a group wider than the window is
     // otherwise unreachable, and the band is above both panes so no pane wants this event anyway.
-    if (palette_scroll(y, coord)) {
-        return;
+    if (palette_scroll(y, coord) || front_panel_active()) {
+        return;    // the panel has nothing to scroll or zoom
     }
     int32_t hovered = split_view_pane_at(coord);
 
@@ -840,6 +842,29 @@ static int key_step_direction(int key, int scancode) {
         return -1;
     }
     return 0;
+}
+
+// Keys that act on the canvas's modules or its focused parameter: Delete, the arrows, V, and with
+// Cmd the selection's cut, copy, paste and select-all. Undo and zoom stay.
+static bool canvas_only_key(int key) {
+    switch (key) {
+        case GLFW_KEY_DELETE:
+        case GLFW_KEY_BACKSPACE:
+        case GLFW_KEY_UP:
+        case GLFW_KEY_DOWN:
+        case GLFW_KEY_LEFT:
+        case GLFW_KEY_RIGHT:
+        case GLFW_KEY_V:
+            return true;
+
+        case GLFW_KEY_C:
+        case GLFW_KEY_X:
+        case GLFW_KEY_A:
+            return gCommandKeyPressed;
+
+        default:
+            return false;
+    }
 }
 
 void key_callback(int key, int scancode, int action, int mods) {
@@ -1193,6 +1218,8 @@ void key_callback(int key, int scancode, int action, int mods) {
         toggle_mouse_crosshair(); // TEMPORARY debug aid — Debug builds only
         synthlib_request_redraw();
 #endif
+    } else if (front_panel_active() && canvas_only_key(key)) {
+        // front-panel-mode-design.md - these act on modules, and none is on screen
     } else if ((key == GLFW_KEY_DELETE || key == GLFW_KEY_BACKSPACE) && action == GLFW_PRESS) {
         if (gSelection.count > 0) {
             undo_push_delete_selection();

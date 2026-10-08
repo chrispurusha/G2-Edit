@@ -27,6 +27,9 @@
 tModule * get_module(tModuleKey key);
 uint32_t count_active_modules(uint32_t slot);
 bool slot_has_modules(uint32_t slot);
+// The variation a slot's patch settings (the locationMorph modules) are read and written in: the active
+// one - they are stored per variation (sound-engine-reference §63a)
+uint32_t patch_settings_variation(uint32_t slot);
 // Held across a WHOLE operation, never inside an accessor - see the note on the definition in
 // dataBase.c. Read for a render pass or a snapshot build, write for a patch parse. Not recursive:
 // nesting either kind on one thread can deadlock.

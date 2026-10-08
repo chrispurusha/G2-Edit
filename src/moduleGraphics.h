@@ -59,6 +59,10 @@ uint32_t canvas_widget_index(const tCanvasWidget * widget);
 
 // Returns the rectangle the widget was actually drawn and registered at — see the definition.
 tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex);
+// True where a module graph, not a widget, draws this parameter (render_param_common() draws nothing)
+bool param_drawn_by_graph(uint32_t moduleType, uint32_t paramIndex);
+// The value text the last render_param_common() call formatted, as its widget shows it
+const char * render_param_last_value_text(void);
 void render_cables(void);
 void render_morph_groups(void);
 void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle moduleArea);

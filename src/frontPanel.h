@@ -38,7 +38,6 @@ bool front_panel_active(void);
 void front_panel_set_active(bool on);
 void front_panel_toggle(void);
 void front_panel_load_preference(void);         // the application's, at start
-const char * front_panel_button_label(void);    // what the topbar switch says now
 
 // Drawn in place of the module panes; registers its own click regions
 void front_panel_render(void);

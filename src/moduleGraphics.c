@@ -529,8 +529,14 @@ static void render_param_focus_marks(tRectangle rect) {
 #define KEYQUANT_FIRST_NOTE_PARAM    (2)
 
 // notes §84
-static bool param_drawn_by_graph(uint32_t moduleType, uint32_t paramIndex) {
+bool param_drawn_by_graph(uint32_t moduleType, uint32_t paramIndex) {
     return (moduleType == moduleTypeKeyQuant) && (paramIndex >= KEYQUANT_FIRST_NOTE_PARAM);
+}
+
+static char sLastValueText[16];
+
+const char * render_param_last_value_text(void) {
+    return sLastValueText;
 }
 
 tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
@@ -741,6 +747,7 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
     register_click_region(widgetRect, eClickLayerCanvas, param_click_handler,
                           &sParamClickCtx[module->key.slot][module->key.location][module->key.index][paramIndex]);
     param_overlay_note_param(module, paramIndex, rectangle, buff);
+    COPY_STRING(sLastValueText, buff);
 
     if (  gParamFocus.valid
        && (gParamFocus.moduleKey.slot == module->key.slot)
