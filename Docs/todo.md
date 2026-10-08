@@ -5,7 +5,8 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
-- Cross-slot control, as performance 1:2 BCHydro_DZLW uses it: slot A's SeqVals drive CtrlSends (one is CC 70 to Slot D - the Variation select), the engine renders nothing for CtrlSend. Needs CtrlSend to a slot, the target slot acting on it (CtrlRcv, CC-assigned parameters, CC 70 switching variation), and a variation change driven from the audio side without a snapshot rebuild per step - design first. Its .prf2 and an 8 s G2 capture are in G2Bugs (BCHydro_DZLW-*)
+- Front panel mode: the Module Bar has no place there - hide its topbar button while the panel is up (and close the bar on entering)
+- Cross-slot control, as performance 1:2 BCHydro_DZLW uses it: slot A's SeqVals drive CtrlSends (one is CC 70 to Slot D - the Variation select), the engine renders nothing for CtrlSend. Needs CtrlSend to a slot, the target slot acting on it (CtrlRcv, CC-assigned parameters, CC 70 switching variation), and a variation change driven from the audio side without a snapshot rebuild per step - design first. Its .prf2 and 8 s / 30 s G2 captures are in G2Bugs (BCHydro_DZLW-*). Without it the engine already plays the performance (clock running): -39.4 dB mean against the G2's -34.1 (rig offset removed), 18.2 vs 19.1 dB of spread - slot A is control-only, B-D sound
 - Slots' ClkGens each count on their own: check two slots' sequencers stay in step on the engine as they do on the G2
 - I'm still not sure the poly voice limit we get back from G2 is correct. Seems like it's offset by 1. I'm loading patches which are set to 16 voices, but the limit is showing as 15. Are we off by 1?
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
