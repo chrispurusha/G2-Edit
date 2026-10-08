@@ -779,6 +779,7 @@ typedef enum {
 
 // notes §17
 #define VOICE_GAIN                  (0.15)
+#define AUDIO_IN_GAIN               (1.0 / VOICE_GAIN)   // §37 - In to Out at unity, until a G2 capture says otherwise
 
 // Where the output starts bending rather than shearing.
 #define OUTPUT_KNEE                 (0.80)
@@ -879,7 +880,7 @@ typedef enum {
     eNodeValSw,          // §34 - ValSw2-1: In 2 while Ctrl equals the value
     eNodeMonoKey,        // §35 - the keyboard's last/lowest/highest key, shared by every voice
     eNodeGlide,          // §36 - a slew for control signals
-    eNodeAudioIn,        // §37 - 2-In: the engine has no audio input, so silence
+    eNodeAudioIn,        // §37 - 2-In and 4-In from the jacks: the host's or the device's input
     eNodeInvert,         // §38.1 - two logic inverters
     eNodeGate,           // §38.2 - two two-input gates, each with its own type
     eNodeFlipFlop,       // §38.3 - D-type or Set-Reset
@@ -1118,7 +1119,8 @@ typedef struct {
 
     uint32_t        levConvIn;      // §31 - the range read,  levConvStrMap {Bip, Pos, Neg}
     uint32_t        levConvOut;     // §31 - the range written, posStrMap {Pos, PosInv, ... BipInv}
-    uint32_t        select;         // §33 - which input a Sw2-1/Sw8-1 passes; §35 MonoKey's priority
+    uint32_t        select;         // §33 - which input a Sw2-1/Sw8-1 passes; §35 MonoKey's priority; §37 the first jack
+    uint32_t        audioInLegs;    // §37 - 2 for a 2-In, 4 for a 4-In
     uint32_t        gateType[2];    // §38.2 - one per gate
     uint32_t        divider;        // §38.4 - 1 to 128
     bool            logicToggled;   // §38.4 - Toggled rather than Gated; §38.3 RS rather than D
@@ -1625,7 +1627,7 @@ static _Atomic uint32_t       gLoadPercentBank[SOUND_ENGINE_MAX_ENGINES];
 // notes §204 - the whole render's cost, all slots, against the buffer's deadline
 static _Atomic uint32_t       gRenderLoadPercent[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];
 static _Atomic uint32_t       gRenderLateBlocks[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];
-static _Atomic uint32_t       gStatsEpoch[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];   // notes §207 - a new patch on the selected slot
+static _Atomic uint32_t       gStatsEpoch[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];      // notes §207 - a new patch on the selected slot
 
 static void reset_voices(void);
 static uint32_t voice_count_for_patch(uint32_t slot);
@@ -1687,13 +1689,13 @@ static double                 gNoiseLpBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES]
 #define gPhase                    (gPhaseBank[SE])
 static double                 gLfoLastPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gLfoLastPhase             (gLfoLastPhaseBank[SE])
-static double                 gLfoMonoPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];                               // §42
+static double                 gLfoMonoPhaseBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];                                    // §42
 #define gLfoMonoPhase             (gLfoMonoPhaseBank[SE])
-static double                 gLfoMonoRateBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];                                // §50 - its rate, as a voice last read it
+static double                 gLfoMonoRateBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];                                     // §50 - its rate, as a voice last read it
 #define gLfoMonoRate              (gLfoMonoRateBank[SE])
-static double                 gBackValueBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_BACK_EDGES];                        // notes §192
+static double                 gBackValueBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_BACK_EDGES];                             // notes §192
 #define gBackValue                (gBackValueBank[SE])
-static double                 gFreqShiftBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_FREQSHIFT_LINES][FREQSHIFT_STATES]; // §57
+static double                 gFreqShiftBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_FREQSHIFT_LINES][FREQSHIFT_STATES];      // §57
 // §58 - each sequencer's working words, the module's own state words, per voice
 typedef struct {
     int32_t x[SEQ_X_WORDS];
@@ -1831,7 +1833,7 @@ static float                  gCombLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES
 #define gCombLine              (gCombLineBank[SE])
 static uint32_t               gCombWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];
 #define gCombWrite             (gCombWriteBank[SE])
-static double                 gCombFbBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];    // §13.4 - c x the last tap
+static double                 gCombFbBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];      // §13.4 - c x the last tap
 #define gCombFb                (gCombFbBank[SE])
 #define gDelayLine             (gDelayLineBank[SE])
 static uint32_t               gDelayWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES];
@@ -1868,7 +1870,7 @@ static _Atomic uint8_t        gMidiCcValueBank[SOUND_ENGINE_MAX_ENGINES][MIDI_RO
 #define gMidiCcValue     (gMidiCcValueBank[SE])
 static _Atomic uint32_t       gMidiCcCountBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
 #define gMidiCcCount     (gMidiCcCountBank[SE])
-static _Atomic uint8_t        gMidiNoteVelBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];    // 0 while up
+static _Atomic uint8_t        gMidiNoteVelBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];      // 0 while up
 #define gMidiNoteVel     (gMidiNoteVelBank[SE])
 static _Atomic uint8_t        gMidiNoteRelBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
 #define gMidiNoteRel     (gMidiNoteRelBank[SE])
@@ -3752,6 +3754,7 @@ static uint32_t node_output_legs(tNodeKind kind) {
             return 3u;
         }
         case eNodeIn4Bus:              // §69.12 - four outputs
+        case eNodeAudioIn:             // §37 - a 4-In's four; a 2-In uses the first two
         {
             return 4u;
         }
@@ -4054,7 +4057,7 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
         }
         case moduleType2toIn:
         {
-            // §37 - the jacks on the back are silent here; §61 - a bus is the Voice area's own 2-Outs,
+            // §37 - the jacks on the back are the input; §61 - a bus is the Voice area's own 2-Outs,
             // bridged like the FX input (twoToInSourceStrMap: In 1/2, In 3/4, Bus 1/2, Bus 3/4)
             uint32_t source = module->param[gPatchDescr[module->key.slot].activeVariation][0].value;
 
@@ -4063,7 +4066,7 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
         }
         case moduleType4toIn:
         {
-            // §69.12 - the jacks are silent here; Bus is both buses, bridged as 2-In's are (fourToInSourceStrMap)
+            // §37 - the jacks are the input; §69.12 - Bus is both buses, bridged as 2-In's are (fourToInSourceStrMap)
             uint32_t source = module->param[gPatchDescr[module->key.slot].activeVariation][0].value;
 
             *kind = (source == 1u) ? eNodeIn4Bus : eNodeAudioIn;
@@ -4787,7 +4790,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             return 0;
         }
         case eNodeMonoKey:          // §35 - the keyboard is its input
-        case eNodeAudioIn:          // §37 - the jacks on the back, which this engine does not have
+        case eNodeAudioIn:          // §37 - the jacks on the back, fed from outside the patch
         {
             *connectors = none;
             return 0;
@@ -6470,6 +6473,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeFxIn:
         case eNodeIn4Bus:
+        case eNodeAudioIn:
         {
             // db12PadStrMap is {"+6dB", "0dB", "-6dB", "-12dB"}, and the default is the FIRST entry,
             // so a freshly created FxtoIn is boosting by 6 dB rather than sitting at unity.
@@ -6478,6 +6482,15 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
             node->active = (param_value(module, variation, FXIN_PARAM_ACTIVE) != 0.0);
             node->gain   = padGain[(pad < 4) ? pad : 1];
+
+            // §37 - a 2-In's In 3/4 starts at the third jack; a 4-In takes all four
+            if (module->type == moduleType4toIn) {
+                node->select      = 0u;
+                node->audioInLegs = 4u;
+            } else {
+                node->select      = (param_value(module, variation, FXIN_PARAM_SOURCE) == 1.0) ? 2u : 0u;
+                node->audioInLegs = 2u;
+            }
             break;
         }
         case eNodeMix:
@@ -6726,6 +6739,7 @@ static bool node_is_generator(tNodeKind kind) {
            || (kind == eNodeDx)
            || (kind == eNodeDrumSynth)
            || (kind == eNodeMetNoise)    // §66
+           || (kind == eNodeAudioIn)     // §37
            || (kind == eNodeLfo);        // notes §96 - MicroWaves is LFOs at audio rate
 }
 
@@ -13059,6 +13073,25 @@ static bool osc_sync_edge(uint32_t voice, uint32_t n, const tEngineNode * spec, 
     return (high == true) && (wasHigh == false);
 }
 
+// §37 - the input brought up to the graph rate a block at a time, through the output filter run as an
+// interpolator. Each pass reads it at its own position, so the voice thread and the FX pass agree:
+// gInPosVoice for the voice pass, gInPosFx for the pass after the mix. gInBlockLen is 0 when unused.
+// IN_BLOCK_FRAMES is device frames per block; a longer call is rendered in pieces.
+#define IN_BLOCK_FRAMES     (1024u)
+#define IN_BLOCK_SAMPLES    (IN_BLOCK_FRAMES * ENGINE_OVERSAMPLE)
+static float    gInBlockBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_INPUT_CHANNELS][IN_BLOCK_SAMPLES];
+#define gInBlock            (gInBlockBank[SE])
+static float    gInHistoryBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_INPUT_CHANNELS][OUT_DECIMATE_TAPS];
+#define gInHistory          (gInHistoryBank[SE])
+static uint32_t gInHistoryPosBank[SOUND_ENGINE_MAX_ENGINES];
+#define gInHistoryPos       (gInHistoryPosBank[SE])
+static uint32_t gInBlockLenBank[SOUND_ENGINE_MAX_ENGINES];
+#define gInBlockLen         (gInBlockLenBank[SE])
+static uint32_t gInPosVoiceBank[SOUND_ENGINE_MAX_ENGINES];
+#define gInPosVoice         (gInPosVoiceBank[SE])
+static uint32_t gInPosFxBank[SOUND_ENGINE_MAX_ENGINES];
+#define gInPosFx            (gInPosFxBank[SE])
+
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
                       double value[][NODE_OUTPUTS], double voicePitch) {
     SE_LOCAL;
@@ -13286,7 +13319,15 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeAudioIn:
         {
-            break;   // §37 - the engine has no audio input; both legs stay at zero
+            // §37 - this pass's sample of the input, through the module's Pad
+            uint32_t at = (spec->postMix == true) ? gInPosFx : gInPosVoice;
+
+            if ((spec->active == true) && (at < gInBlockLen)) {
+                for (uint32_t leg = 0; (leg < spec->audioInLegs) && ((spec->select + leg) < SOUND_ENGINE_INPUT_CHANNELS); leg++) {
+                    value[n][leg] = (double)gInBlock[spec->select + leg][at] * AUDIO_IN_GAIN * spec->gain;
+                }
+            }
+            break;
         }
         case eNodeInvert:
         {
@@ -14167,7 +14208,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeStatus:
         case eNodeDevice:
         case eNodeCtrlRcv:
-        case eNodeAudioIn:      // §37 - silent, both legs already zero
+        case eNodeAudioIn:      // §37 - writes its own legs
         case eNodeOut:
         {
             break;
@@ -14546,6 +14587,8 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
             meter_node(&p->node[n], n, value[n][0], value[n][1]);
         }
     }
+
+    gInPosVoice++;   // §37
 }
 
 static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS]) {
@@ -14661,6 +14704,7 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
 
     // ONE position for both lines: they are written in lockstep, so one cursor serves.
     gOutHistoryPos = (gOutHistoryPos + 1) % OUT_DECIMATE_TAPS;
+    gInPosFx++;      // §37
 }
 
 #define SPLIT_RT_BUDGET    (0.75)   // notes §208 - the share of each block the voice thread declares
@@ -15007,9 +15051,90 @@ void sound_engine_set_split_mode(uint32_t mode) {
     atomic_store(&gSplitMode, (mode <= eSplitThreaded) ? mode : eSplitThreaded);
 }
 
+// What the caller handed sound_engine_set_input(), and how far into it the block being rendered starts
+static _Thread_local const float * sInput[SOUND_ENGINE_INPUT_CHANNELS];
+static _Thread_local uint32_t      sInputFrom;
+
+void sound_engine_set_input(const float *const * in, uint32_t channelCount) {
+    for (uint32_t c = 0; c < SOUND_ENGINE_INPUT_CHANNELS; c++) {
+        sInput[c] = ((in != NULL) && (c < channelCount)) ? in[c] : NULL;
+    }
+}
+
+// §37 - this block's input at the graph rate, for both passes, and each pass back to its first sample.
+// Only a patch that reads the jacks pays for it.
+static void input_prepare(const tSoundEngineParams * p, uint32_t frameCount) {
+    SE_LOCAL;
+
+    bool     wanted = false;
+
+    for (uint32_t n = 0; n < p->nodeCount; n++) {
+        if ((p->node[n].kind == eNodeAudioIn) && (p->node[n].active == true)) {
+            wanted = true;
+            break;
+        }
+    }
+
+    gInPosVoice = 0;
+    gInPosFx    = 0;
+    gInBlockLen = (wanted == true) ? (frameCount * gOversample) : 0u;
+
+    if (wanted == false) {
+        return;
+    }
+    uint32_t m      = gOversample;
+
+    for (uint32_t c = 0; c < SOUND_ENGINE_INPUT_CHANNELS; c++) {
+        const float * src  = sInput[c];
+        float *       dest = gInBlock[c];
+        uint32_t      pos  = gInHistoryPos;
+
+        for (uint32_t f = 0; f < frameCount; f++) {
+            float x = (src != NULL) ? src[sInputFrom + f] : 0.0f;
+
+            if (m == 1u) {
+                dest[f] = x;
+                continue;
+            }
+            gInHistory[c][pos] = x;
+
+            // zero-stuffed by m, so only every m-th tap meets a sample: phase s takes taps s, s+m, ...
+            for (uint32_t s = 0; s < m; s++) {
+                double   acc = 0.0;
+                uint32_t at  = pos;
+
+                for (uint32_t tap = s; tap < OUT_DECIMATE_TAPS; tap += m) {
+                    acc += gOutDecimate[tap] * (double)gInHistory[c][at];
+                    at   = (at == 0u) ? (OUT_DECIMATE_TAPS - 1u) : (at - 1u);
+                }
+
+                dest[(f * m) + s] = (float)(acc * (double)m);
+            }
+
+            pos                = (pos + 1u) % OUT_DECIMATE_TAPS;
+        }
+    }
+
+    gInHistoryPos = (gInHistoryPos + frameCount) % OUT_DECIMATE_TAPS;
+}
+
 static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channelCount) {
     SE_LOCAL;
 
+    // §37 - the input block holds IN_BLOCK_FRAMES, so a longer call is rendered as several
+    if (frameCount > IN_BLOCK_FRAMES) {
+        uint32_t from = sInputFrom;
+
+        for (uint32_t done = 0; done < frameCount; done += IN_BLOCK_FRAMES) {
+            uint32_t frames = ((frameCount - done) < IN_BLOCK_FRAMES) ? (frameCount - done) : IN_BLOCK_FRAMES;
+
+            sInputFrom = from + done;
+            engine_render_slot((out != NULL) ? (out + ((size_t)done * channelCount)) : NULL, frames, channelCount);
+        }
+
+        sInputFrom = from;
+        return;
+    }
     static _Thread_local tSoundEngineParams params;    // notes §18 - too big for a callback's stack
     uint32_t                                frame            = 0;
     bool                                    chainHasEnvelope = false;
@@ -15163,6 +15288,8 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
     double    glideStep    = (params.glideSeconds > 0.0)
                           ? (12.0 / (params.glideSeconds * gSampleRate)) : 0.0;
     tStageCtx ctx          = {chainHasEnvelope, droneMode, envelopeStep, rampSamples, glideStep};
+
+    input_prepare(&params, frameCount);
 
     // notes §202 - split this block if the graph allows; a new graph or mode starts a fresh ring
     uint32_t  splitMode    = atomic_load(&gSplitMode);
@@ -15348,6 +15475,7 @@ static void render_slots(float * out, uint32_t frameCount, uint32_t channelCount
                 continue;
             }
             sEngineSlot = slot;
+            sInputFrom  = done;
             engine_render_slot(mix, frames, channelCount);
 
             for (uint32_t k = 0; k < (frames * channelCount); k++) {
@@ -15357,6 +15485,7 @@ static void render_slots(float * out, uint32_t frameCount, uint32_t channelCount
     }
 
     sEngineSlot = was;
+    sInputFrom  = 0;
 }
 
 static double slot_device_rate(void) {
@@ -15379,6 +15508,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     }
     (void)clock_gettime(CLOCK_MONOTONIC, &started);
     render_slots(out, frameCount, channelCount);
+    sound_engine_set_input(NULL, 0);   // §37 - one block's: the caller's buffers are not ours to keep
     (void)clock_gettime(CLOCK_MONOTONIC, &finished);
 
     double          spent                                           = ((double)(finished.tv_sec - started.tv_sec)) + (((double)(finished.tv_nsec - started.tv_nsec)) / 1.0e9);
@@ -15449,6 +15579,9 @@ static void engine_reset_state(void) {
     memset(&gOutHistory, 0, sizeof(gOutHistory));
     memset(&gOutHistoryPos, 0, sizeof(gOutHistoryPos));
     memset(&gOutCoupling, 0, sizeof(gOutCoupling));
+    memset(&gInHistory, 0, sizeof(gInHistory));
+    memset(&gInHistoryPos, 0, sizeof(gInHistoryPos));
+    memset(&gInBlockLen, 0, sizeof(gInBlockLen));
     memset(&gDacState, 0, sizeof(gDacState));
     memset(&gDacStateOut, 0, sizeof(gDacStateOut));
     gDacCoefRate = 0.0;

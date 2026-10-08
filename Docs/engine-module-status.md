@@ -62,8 +62,8 @@ A patch of nothing but **Not implemented** modules reports "Nothing is patched i
 mixes the two plays its modelled part, which is why an unfinished patch sounds thin rather than
 broken - and why 02 Big Pad played for months while quietly missing its velocity-to-filter path.
 
-`2 Inputs` is listed as Working but plays SILENCE - the engine has no audio input (§37). It is
-modelled and not pruned, which is what stops a patch containing one reading as unsupported.
+`2 Inputs` and `4 Inputs` play whatever the caller feeds the engine (§37): G2 Alike's side-chain as
+In 1/2. The application has no input device yet, so there they are silent.
 
 The palette offers 170 of the 210 types in `types.h`; the rest the G2 does not offer from its own
 menus. `Operator` and `Name` sit outside `module_kind()` - an Operator plays only as part of the

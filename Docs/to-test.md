@@ -4,6 +4,9 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***G2 ALIKE SIDE-CHAIN AS IN 1/2, THE AUDIO UNIT (2026-10-08)*** - reference §37, g2Plugin notes §8. The VST3 side-chain
+  is confirmed in a host (CT ran audio through a patch's reverb). CHECK the AU in Logic: G2 Alike on an instrument
+  track, its side-chain menu set to an audio track, and a 2-In (In 1/2) -> 2-Out patch should play it
 - ***ENVAHD HOLD, FLTCOMB PITCH, FLTMULTI FREQM (2026-10-08)*** - findings 2026-10-08, reference §17.11a, §13.1a,
   §10.1a. Each measured against the G2 with a cut-down patch; LISTEN to the whole patches: Flows_DZ (EnvAHD notes now
   last their Hold), GlassCathedral (no slow phasing), MicroWaves (unchanged in the engine, matched once rendered at

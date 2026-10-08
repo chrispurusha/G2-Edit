@@ -6,8 +6,9 @@ Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
-- Implement audio input, for processing external signals.
-- Effects version of the plugin, for audio processing.
+- Audio input in the application: an input device in Settings > Audio feeding sound_engine_set_input() (the engine and the plug-in's side-chain have it since 2026-10-08, reference §37)
+- Effects version of the plugin, for audio processing: a second descriptor (aufx, its own VST3 UIDs, MIDI in kept) whose main input is In 1/2 - GenBridge's two-variant pattern
+- 2-In/4-In level: capture a sine at a known level into the G2's In 1 read off Out 1 - the engine's In to Out is unity by assumption (reference §37)
 - Control rate (notes §203): EnvFollow, PitchTrack and ZeroCnt not up-rated run at 24 kHz on the instrument with their 96 kHz words (times fourfold) - measure one on the G2 (EnvFollow fed by an LFO, release time un-up-rated vs up-rated) before following it; no stage patch uses them
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations and/or multi-core threading as below.

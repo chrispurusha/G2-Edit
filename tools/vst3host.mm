@@ -258,7 +258,9 @@ static void usage(void) {
 
 // Renders two seconds with a note held, giving EVERY output bus the component declares its own
 // buffers (activated, as a host routing it would), and prints each bus's level - the check that a
-// second bus such as G2 Alike's "Out 3/4" carries what the patch sends there and nothing else.
+// second bus such as G2 Alike's "Out 3/4" carries what the patch sends there and nothing else. Every
+// INPUT bus, a side-chain included, is activated too and fed a 1 kHz sine at -12 dBFS (-15 dBFS RMS),
+// so a patch reading its In 1/2 shows that level on whichever output it is sent to.
 static void bus_probe(IComponent * component, int instance) {
     IAudioProcessor * proc = nullptr;
 
@@ -279,6 +281,28 @@ static void bus_probe(IComponent * component, int instance) {
     ProcessSetup     setup     = {kRealtime, kSample32, kBlock, 48000.0};
     ProcessData      data      = {};
     OneNote          note(60, 0);
+    int32            inBuses   = component->getBusCount(kAudio, kInput);
+
+    inBuses = (inBuses > 8) ? 8 : inBuses;
+
+    static float     inSamples[8][8][512];
+    float *          inChans[8][8];
+    AudioBusBuffers  inBus[8]  = {};
+    double           inPhase   = 0.0;
+
+    for (int32 b = 0; b < inBuses; b++) {
+        BusInfo info = {};
+
+        component->getBusInfo(kAudio, kInput, b, info);
+        component->activateBus(kAudio, kInput, b, true);
+        inBus[b].numChannels      = (info.channelCount > 8) ? 8 : info.channelCount;
+        for (int c = 0; c < 8; c++) {
+            inChans[b][c] = inSamples[b][c];
+        }
+        inBus[b].channelBuffers32 = (Sample32 **)inChans[b];
+        printf("instance %d: input bus %d (%d ch, %s) fed 1 kHz at -12 dBFS\n", instance, (int)b, (int)info.channelCount,
+               (info.busType == kMain) ? "main" : "aux");
+    }
 
     for (int32 b = 0; b < buses; b++) {
         BusInfo info = {};
@@ -299,8 +323,20 @@ static void bus_probe(IComponent * component, int instance) {
     data.numSamples         = kBlock;
     data.numOutputs         = buses;
     data.outputs            = outBus;
+    data.numInputs          = inBuses;
+    data.inputs             = (inBuses > 0) ? inBus : nullptr;
 
     for (int block = 0; block < (2 * 48000) / kBlock; block++) {
+        for (int32 i = 0; i < kBlock; i++) {
+            float x = (float)(0.25118864 * sin(inPhase));
+
+            inPhase += 2.0 * M_PI * 1000.0 / 48000.0;
+            for (int32 b = 0; b < inBuses; b++) {
+                for (int32 c = 0; c < inBus[b].numChannels; c++) {
+                    inSamples[b][c][i] = x;
+                }
+            }
+        }
         data.inputEvents = (block == 0) ? &note : nullptr;
         proc->process(data);
 

@@ -100,6 +100,14 @@ route a patch's Out 3/4 (ChorusSaw's chorus, a drum voice) to its own track. The
 channels; the second bus is written only where the host gave it buffers. The VST3 has both; the Audio
 Unit offers Out 1/2 alone until SynthLib's AU wrapper renders more than one output element.
 
+A SIDE-CHAIN AS IN 1/2 (2026-10-08). "In 1/2" is an aux input bus, off by default - GenBridge's shape,
+because an instrument with a MAIN input makes a host look for a source and refuse it when there is
+none. Live fills it from another track's side-chain chooser (GenBridge findings 2026-09-09: an audio
+track carrying the source; a MIDI track's chooser does not offer Ext. In). `render_span()` hands the
+engine each chunk's slice of it with `sound_engine_set_input()`; a patch's 2-In or 4-In reads it
+(sound-engine-reference §37). In 3/4 stays silent. The Audio Unit has the same input element, pulled
+by SynthLib's AU wrapper as for an effect; `auval` passes with it.
+
 ## 9. `g2_note_on()`
 
 THROUGH THE SHARED NOTE STACK, NOT STRAIGHT TO THE ENGINE. The engine is monophonic, so releasing

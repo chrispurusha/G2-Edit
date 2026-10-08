@@ -349,16 +349,24 @@ static void g2_reset(void * inst) {
 }
 
 // Renders `frames` into out[0..1] (Out 1/2) and, where the host gave them, out[2..3] (Out 3/4),
-// starting at `from`, in chunks the scratch buffer can hold.
-static void render_span(tG2Plugin * g2, float ** out, uint32_t numOut, uint32_t from, uint32_t frames) {
+// starting at `from`, in chunks the scratch buffer can hold. The side-chain, where the host fills it,
+// is the patch's In 1/2.
+static void render_span(tG2Plugin * g2, const float * const * in, uint32_t numIn,
+                        float ** out, uint32_t numOut, uint32_t from, uint32_t frames) {
     uint32_t done = 0;
 
     while (done < frames) {
-        uint32_t chunk = frames - done;
+        uint32_t      chunk = frames - done;
+        const float * jack[SOUND_ENGINE_INPUT_CHANNELS] = {NULL, NULL, NULL, NULL};
 
         if (chunk > (uint32_t)G2_MAX_BLOCK) {
             chunk = (uint32_t)G2_MAX_BLOCK;
         }
+
+        for (uint32_t c = 0; (in != NULL) && (c < numIn) && (c < SOUND_ENGINE_INPUT_CHANNELS); c++) {
+            jack[c] = (in[c] != NULL) ? (in[c] + from + done) : NULL;
+        }
+        sound_engine_set_input(jack, SOUND_ENGINE_INPUT_CHANNELS);
         sound_engine_render(g2->scratch, chunk, 4);
 
         for (uint32_t c = 0; (c < 4u) && (c < numOut); c++) {
@@ -391,10 +399,8 @@ static void g2_process(void * inst,
                        const tSynthLibTransport * transport) {
     tG2Plugin * g2 = enter(inst);
 
-    // An instrument: there is no input, and the transport is not read. The engine free-runs and has
-    // nothing to sync to - a patch is a patch whether the host is rolling or not.
-    (void)in;
-    (void)numIn;
+    // The transport is not read. The engine free-runs and has nothing to sync to - a patch is a patch
+    // whether the host is rolling or not.
     (void)transport;
 
     if ((numOut < 2u) || (out == NULL)) {
@@ -411,7 +417,7 @@ static void g2_process(void * inst,
         uint32_t at = (g2->events[i].offset < frames) ? g2->events[i].offset : frames;
 
         if (at > pos) {
-            render_span(g2, out, numOut, pos, at - pos);
+            render_span(g2, in, numIn, out, numOut, pos, at - pos);
             pos = at;
         }
         apply_note(&g2->events[i]);
@@ -419,7 +425,7 @@ static void g2_process(void * inst,
     g2->eventCount = 0;
 
     if (pos < frames) {
-        render_span(g2, out, numOut, pos, frames - pos);
+        render_span(g2, in, numIn, out, numOut, pos, frames - pos);
     }
 }
 
@@ -842,6 +848,12 @@ static void g2_editor_width_save(long width) {
 // The descriptor
 // ------------------------------------------------------------------------------------------------
 
+// The G2's In 1/2, as a side-chain: an instrument with a MAIN input makes a host look for a source
+// and refuse it when there is none. Off until the host is asked to fill it.
+static const tSynthLibBus gInputs[1] = {
+    { "In 1/2", 2, true, false }
+};
+
 // notes §8 - the G2's Out 1/2 and Out 3/4 as two buses, for the DAW to route separately
 static const tSynthLibBus gOutputs[2] = {
     { "Out 1/2", 2, false, true },
@@ -857,8 +869,8 @@ static const tSynthLibPluginDesc gDescriptor = {
 
     .isInstrument      = true,
     .vst3SubCategory   = NULL,          // "Instrument|Synth", from isInstrument
-    .inputs            = NULL,
-    .numInputs         = 0,
+    .inputs            = gInputs,
+    .numInputs         = 1,
     .outputs           = gOutputs,
     .numOutputs        = 2,
     .wantsMidiIn       = true,

@@ -136,6 +136,11 @@ const char * sound_engine_debug_text(void);
 void sound_engine_set_sample_rate(double sampleRate);
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount);
 
+// §37 - the G2's In 1-4 for the NEXT sound_engine_render() on this thread: one buffer per channel at
+// the device rate, frameCount long. Channels past channelCount, and a NULL in, are silence.
+#define SOUND_ENGINE_INPUT_CHANNELS    (4)
+void sound_engine_set_input(const float *const * in, uint32_t channelCount);
+
 // notes §202 - the voices on a worker thread, the FX pass trailing them on the audio thread. Inline is
 // the same pipeline run on one thread, which the threaded one must match sample for sample.
 typedef enum {

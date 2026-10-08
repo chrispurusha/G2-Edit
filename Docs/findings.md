@@ -12386,3 +12386,30 @@ different Detune, so the upper harmonics swell and dip irregularly - between -29
 8 s - and a single snapshot lands anywhere in that. Over the 8 s the G2 and the engine agree: harmonics 4-8
 average +4.5 dB against H1 on both, ranging -29.4..+26.9 on the G2 and -28.1..+25.8 in the engine. The
 10-07 reading (6 dB dark at the 10th) was one window, rendered at velocity 100. Removed from todo.
+
+
+## 2026-10-08 - Audio input: the engine plays 2-In and 4-In, G2 Alike takes a side-chain as In 1/2
+
+The engine's In 1-4 come from `sound_engine_set_input()` (reference §37): four channels at the device
+rate, brought up to the graph rate per block by the output decimator's filter run as an interpolator,
+read by the voice pass and the pass after the mix at their own positions so the voice thread and the
+FX pass agree. 2-In reads In 1/2 or In 3/4, 4-In all four, through On and Pad. In to Out is unity by
+assumption (not captured). G2 Alike declares "In 1/2" as an aux input bus, off by default, the shape
+GenBridge's instrument already proved in Live; the AU gets the same input element and `auval` passes.
+The application has no input device yet (todo).
+
+Checked offline with a scratch harness (a 2-In or 4-In wired straight to SimpleLead's 2-Out, 1 kHz at
+-12 dBFS): 0.00 dB in the FX area at 48 and 96 kHz, serial and threaded; In 3/4 silent with two channels
+fed; 20 Hz -1.3 dB (the output's AC coupling, notes §198) and 18 kHz -0.03 dB; the Voice area through
+the FX chain, serial and threaded within 0.01 dB. tools/vst3host --bus-test now feeds every input bus
+that sine: with that patch as a state record, Out 1/2 reads -15.0 dBFS RMS, the input's own level.
+
+TWO TRAPS IN THE TEST, NOT THE CODE. `vst3host --patch` hands over a bare path, which G2 Alike has
+ignored since 09-16 - every bus reads -999 dBFS, before this change as after. And a state record's
+`data=` is only found after a newline inside the settings, so a record with nothing between the header
+and `data=` restores an empty Init: put at least one setting line first. ChorusSaw, wrapped that way,
+reads -21.3 / -22.2 dBFS on Out 1/2 and 3/4 with the code from before this change too, not the 10-07
+entry's -21.5 / -29.2 - a different record, or the engine changes since; not chased.
+
+CONFIRMED IN A HOST (2026-10-08, CT): "I've successfully used the mechanism to add reverb" - external audio
+through G2 Alike's side-chain into a patch's reverb. The Audio Unit's input is still unheard (to-test).

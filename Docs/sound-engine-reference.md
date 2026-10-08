@@ -1880,11 +1880,32 @@ on - 07 Unstable Lead's Keyboard Gate into Glide On through a Logic Delay - land
 and only the notes after it glide; the engine had been gliding into the first note too (revert record
 row 93).
 
-## 37. 2-In
+## 37. 2-In and 4-In from the jacks
 
-Added 2026-09-19. The jacks on the back of the instrument, which this engine does not have: two
-outputs, both silent. It exists as a node so a patch containing one is not reported as unmodelled
-and its face is not greyed out. 01 Mini Emulator has one, switched off in its mixer.
+Added 2026-09-19 as a silent node; PLAYS since 2026-10-08. The jacks on the back of the instrument are
+whatever the caller hands `sound_engine_set_input()` before a render: four channels at the device
+rate, In 1-4. G2 Alike's side-chain ("In 1/2", an aux bus off by default) is In 1/2; the application
+has no input device yet, so In 1-4 are silent there.
+
+- **2-In** reads In 1/2 (In from 0) or In 3/4 (1) on its two outputs; **4-In** from In reads all four.
+  Both through the module's On and Pad (db12PadStrMap, +6/0/-6/-12 dB, as the FX input).
+- **Level: In to Out at unity.** A full-scale input reads as 1/VOICE_GAIN in the engine, so a 2-In
+  wired straight to a 2-Out at Volume 100 plays at the input's own level. A PLACEHOLDER: what the G2's
+  converters do (a sine at a known level into In 1, read off Out 1) has not been captured.
+- **Rate.** The input is brought up to the graph rate a block at a time, zero-stuffed and filtered by
+  the output decimator's own 64-tap filter run as an interpolator: 32 graph samples (0.33 ms at 96 kHz)
+  of delay, flat to within 0.03 dB at 18 kHz. A graph at the device's rate takes it as it comes.
+- **Both passes read it** (notes §202): the block is filled before the voice thread starts, and the voice
+  pass and the pass after the mix each keep their own position in it. A 2-In in the Voice area is a
+  source, so a patch with one drones voice 0 at rest (§206).
+- Only a patch with a 2-In or 4-In switched on pays for the conversion. A call longer than 1024 frames
+  is rendered in pieces, because the block buffer holds that many.
+
+CHECKED 2026-10-08, offline (a 2-In or 4-In wired to SimpleLead's 2-Out, a 1 kHz sine at -12 dBFS on
+In 1/2): unity in the FX area at 48 and 96 kHz, serial and threaded; In 3/4 silent with only two
+channels fed; in the Voice area through the patch's FX chain, serial and threaded within 0.01 dB. In
+G2 Alike, tools/vst3host --bus-test feeds its side-chain and reads -15.0 dBFS RMS on Out 1/2, the
+input's own level.
 
 ## 38. The Logic group
 
@@ -2449,7 +2470,7 @@ Added 2026-09-26 from the reference model: Out = In x Range, saturated, Range v 
 
 2026-09-26. A 2-In set to Bus 1/2 or Bus 3/4 reads the Voice area's 2-Outs sent there, through the same
 bridge as the FX input (18 Unreal Dreams sends its voices through Bus 1/2 into its FX area). From In
-1/2 or In 3/4 it is silent as before (§37).
+1/2 or In 3/4 it is the input (§37).
 
 ## 62. NoteSend
 
@@ -2633,7 +2654,7 @@ identical exactly to its part.
   voice alike. The instrument writes Vel at note-on and RVel at note-off, each as v x 2^14 - v / 128, so 127
   reads 0.992 - and RVel holds until that key's next release (2026-09-27; before, RVel read 0 and Vel
   was v / 127, revert record row 85).
-- **69.12 4-In** is silent from the jacks, as 2-In is (§37). From Bus (2026-10-02) it is both buses, bridged as
+- **69.12 4-In** from the jacks is In 1-4 (§37). From Bus (2026-10-02) it is both buses, bridged as
   2-In's are: outputs 1-2 are the Voice area's 2-Outs sent to Bus 1/2, outputs 3-4 those sent to Bus 3/4,
   through the same On and Pad.
 - **Not yet: Rnd Clock B and Rnd Pattern.** Their RndState and RndLoop parts hand values to each other
