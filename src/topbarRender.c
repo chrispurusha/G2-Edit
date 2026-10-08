@@ -182,6 +182,7 @@ void render_top_bar(void) {
         }
     }
 
+#ifndef SYNTHLIB_PLUGIN_BUILD    // the plug-in has no G2 to be on or off line with
     commsStateColour = (tRgb)RGB_BACKGROUND_GREY;
 
     // The connection, not the load sequence — see gDeviceConnected in globalVars.h.
@@ -218,6 +219,14 @@ void render_top_bar(void) {
     commsStateRect = draw_button(mainArea, rectangle, commsStateText, commsStateColour);
     draw_button(mainArea, (tRectangle){{txrxX, onlineY}, {boxW, boxH}}, "", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
     draw_button(mainArea, (tRectangle){{txrxX, onlineY + boxH + txrxGap}, {boxW, boxH}}, "", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+#else
+    (void)commsState;
+    (void)commsStateText;
+    (void)commsStateColour;
+    (void)commsStateRect;
+    (void)txActive;
+    (void)rxActive;
+#endif // SYNTHLIB_PLUGIN_BUILD
 
     // notes §3
 

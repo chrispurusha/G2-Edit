@@ -4,11 +4,12 @@ Characterising a module by measurement rather than by guesswork. The engine's `K
 (`src/soundEngine.h`) are mostly questions these can answer: reverb delay lengths and room sizes,
 filter responses, envelope times, static transfer curves.
 
-Nothing here is part of the application build. `capture` is a single C file; the two Python scripts are
+Nothing here is part of the application build. `capture` and `tone` are single C files; the two Python scripts are
 stdlib only, deliberately, so they run wherever the editor builds.
 
 ```
 cc -O2 -Wall -o capture capture.c -framework CoreAudio -framework AudioToolbox -framework CoreFoundation
+cc -O2 -Wall -o tone tone.c -framework CoreAudio -framework AudioToolbox -framework CoreFoundation
 ./do-vst3host      # the VST3 host; needs the VST3 SDK, same as ../do-plugin
 ./do-auhost        # the Audio Unit host; needs no SDK at all
 ```
@@ -18,6 +19,7 @@ cc -O2 -Wall -o capture capture.c -framework CoreAudio -framework AudioToolbox -
 | | |
 |---|---|
 | `capture.c` | Multichannel recorder, through CoreAudio's HAL. `./capture --list`, then `--device Fireface --out f.wav --seconds N`. **`--channels 4,5` keeps only those inputs** (0-indexed, in that order) and records their original numbers in the file's INFO comment - use it: the QU-24 presents 32 inputs, and a whole-desk take of a two-minute sweep is 1.3 GB. |
+| `tone.c` | `capture`'s other half: a sine out of chosen outputs of an interface, every other output silent, for driving the G2's inputs (Fireface outputs 0-3 go to the G2's In 1-4). `./tone --list`, then `--device Fireface --channels 0 --db -12 --hold 4`. **`--db` takes a list** - `--db -48,-40,-30,-24,-18,-12,-6,0 --hold 2.5` steps one continuous sine through them, printing each level as it starts, so a reading taken over the backdoor (LEDDUMP's `vols=` is the G2's own meter) can be matched to it. Refuses anything above 0 dBFS. See `Docs/code-notes/tone.c.md`. |
 | `measure.py` | Steps a parameter or a mode on the hardware while `capture` records, and writes a `.json` sidecar describing the plan. |
 | `analyse_ir.py` | Turns a capture into numbers: pre-delay, arrivals, recirculating delays, decay time, spectra. `--selftest` checks it against a synthetic response with known answers. |
 | `vst3host.mm` + `do-vst3host` | A minimal VST3 host, for looking at our own editor. `./vst3host "../build/G2 Alike.vst3" --shot out.png`. Loads the bundle, instantiates component and controller, asks for the editor view and puts it in a window it owns — the one relationship with a plug-in view that cannot be tested any other way. `--seconds N` and `--shot PATH` make it scriptable, so a plug-in rendering change is diffed exactly like an application one. `--instances N` loads N instances into one process with a window each, `--patch PATH` (repeatable) hands the next instance its state, and `--offset-test N` reports where a note placed at sample N is actually heard. `--reopen N` closes and re-creates the first editor N times, three a second, as a host does when the user opens and shuts it - the check for leaked surfaces, stray timers and exhausted window slots. `--dump-state` prints the state each instance saves, after any `--patch` has been applied - the project-state round trip, readable because G2 Alike's own record is text. `--save-state F` writes the first instance's state to F, and `--state-file F` hands the next instance a state read from F, bytes and all - load, save, load again and `cmp` the two saves to check the round trip. It connects processor and controller through a real `IHostApplication`, as a host does, and pairs them by `getControllerClassId()` - before 2026-09-11 it did neither, so it only ever exercised the wrappers' single-instance fallback. **It proves the plug-in works, not that a host will accept it** — read the header comment before trusting it. |

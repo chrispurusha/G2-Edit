@@ -15,6 +15,8 @@ hardware. "Dial" means the raw 0-127 value.
 7 + the binary exponent of the peak (0.5-1 reads 7, 0.25-0.5 reads 6, under 2^-7 reads 0). At and
 above full scale it skips: 1-2 reads 9, 2-4 reads 11, 4 and over reads 12 with the clip bit (0x40).
 Boundaries within 0.6 dB of -6.02 dB × n; sine, saw and square agree to 0.3 dB.
+The 2-In's meter follows the same law (2026-10-08, §37) and sends 2-4 as 43, i.e. 11 with 0x20 set; the
+canvas draws the low nibble and the clip bit only, so the bit changes nothing on screen. What it means is unknown.
 
 **1.2 Engine.** A 200 ms peak follower per metered module, then the law above via `frexp`. Engine and
 G2 agree on 67 of 80 steps of a saw sweep; the rest are one value high at boundaries, where the
@@ -1889,9 +1891,21 @@ has no input device yet, so In 1-4 are silent there.
 
 - **2-In** reads In 1/2 (In from 0) or In 3/4 (1) on its two outputs; **4-In** from In reads all four.
   Both through the module's On and Pad (db12PadStrMap, +6/0/-6/-12 dB, as the FX input).
-- **Level: In to Out at unity.** A full-scale input reads as 1/VOICE_GAIN in the engine, so a 2-In
-  wired straight to a 2-Out at Volume 100 plays at the input's own level. A PLACEHOLDER: what the G2's
-  converters do (a sine at a known level into In 1, read off Out 1) has not been captured.
+- **Level: the converter's full scale is a word's full scale, 4.0** (DSP_FULL_SCALE, notes §196; an
+  oscillator is 1.0), before the Pad, and the input clips there. MEASURED 2026-10-08 off the G2's own
+  2-In meter (law §1.1; 43 is 0x20 | 11, a flag seen only on this meter, and 76 is 12 with the clip
+  bit), a 1 kHz sine from the Fireface into In 1, 1 dB steps:
+  - Pad 0 dB: -48 dBFS reads 3, -40 4, -30 6, -24 7, -18 9, -15 and -12 11, -9 to 0 12 + clip. One gain
+    fits every step, the 2-In carrying 11.3-12.5 x the Fireface's amplitude.
+  - Pad -6 dB holds at 9 (just under 2.0) from -15 dBFS to 0; Pad -12 dB holds at 7 (just under 1.0)
+    from -12 to 0. Unclipped, both would have reached 12 + clip: the input saturates before the Pad,
+    at word full scale. Pad +6 reads one octave above Pad 0 throughout (db12PadStrMap order confirmed).
+  - The converter's full scale sits between -12 and -9 dBFS of THAT Fireface output - a property of
+    the interface's output level, not of the G2.
+  So a host's full scale is the converter's, and a 2-In wired straight to a 2-Out plays 4 x VOICE_GAIN
+  (-4.4 dB) against its input, the output trim every source goes through (notes §17). Two earlier
+  versions the same day read full scale as 1/VOICE_GAIN (unity In to Out) and then 1.0; the second was
+  12 dB short of the instrument.
 - **Rate.** The input is brought up to the graph rate a block at a time, zero-stuffed and filtered by
   the output decimator's own 64-tap filter run as an interpolator: 32 graph samples (0.33 ms at 96 kHz)
   of delay, flat to within 0.03 dB at 18 kHz. A graph at the device's rate takes it as it comes.
@@ -1902,10 +1916,10 @@ has no input device yet, so In 1-4 are silent there.
   is rendered in pieces, because the block buffer holds that many.
 
 CHECKED 2026-10-08, offline (a 2-In or 4-In wired to SimpleLead's 2-Out, a 1 kHz sine at -12 dBFS on
-In 1/2): unity in the FX area at 48 and 96 kHz, serial and threaded; In 3/4 silent with only two
+In 1/2, at the first version's unity gain): unity in the FX area at 48 and 96 kHz, serial and threaded; In 3/4 silent with only two
 channels fed; in the Voice area through the patch's FX chain, serial and threaded within 0.01 dB. In
-G2 Alike, tools/vst3host --bus-test feeds its side-chain and reads -15.0 dBFS RMS on Out 1/2, the
-input's own level.
+G2 Alike, tools/vst3host --bus-test feeds its side-chain: Out 1/2 reads -19.4 dBFS RMS at 4.0 (-15.0 at
+the first version's gain). The engine's 2-In and 4-In meters follow the input (2026-10-08).
 
 ## 38. The Logic group
 

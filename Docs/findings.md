@@ -12413,3 +12413,37 @@ entry's -21.5 / -29.2 - a different record, or the engine changes since; not cha
 
 CONFIRMED IN A HOST (2026-10-08, CT): "I've successfully used the mechanism to add reverb" - external audio
 through G2 Alike's side-chain into a patch's reverb. The Audio Unit's input is still unheard (to-test).
+
+LEVEL CHANGED THE SAME DAY (CT agreed): the input now enters at 1.0 for full scale, not 1/VOICE_GAIN.
+VOICE_GAIN is the engine's output trim (notes §17), not a property of the instrument, so unity In to Out
+had put a full-scale input 16.5 dB above any oscillator inside the patch - overdriving shapers, filters,
+compressors and followers. A straight In -> Out patch is now 16.5 dB below its input, as every source is.
+
+THE LEVEL, MEASURED (2026-10-08, CT cabled Fireface outputs 0-3 to the G2's In 1-4). Read off the G2's own
+2-In meter over the backdoor's LEDDUMP while a scratch tone player swept a 1 kHz sine into In 1: the 2-In
+saturates at a word's full scale (4.0 in the engine) BEFORE its Pad - Pad -6 holds at 9 and Pad -12 at 7
+however hard it is driven. The engine now takes a host's full scale as 4.0 and clips the input there
+(reference §37 has the readings). The 1.0 of an hour earlier was 12 dB short. Also fixed: the engine
+never drove the 2-In/4-In meters (meter_node() listed only mixers, Fx-In and the Outs), which CT saw as
+2-In meters dead while the Outs they fed moved.
+
+THE RIG, BOTH ENDS (2026-10-08, same session; tools/tone into In 1, tools/capture on Fireface inputs 5/6):
+- NO TOTALMIX LOOP from Fireface inputs 5/6 back to outputs 0-3: with an OscA sine on the G2's Out 1/2, an
+  unconnected 2-In read 0 from In 1/2 and from In 3/4. Checked before any In -> Out patch was built.
+  Inputs 7/8 (the G2's Out 3/4) were not driven, so that pair is unchecked.
+- OUTPUT: an OscA sine (1.0 in the engine, patch Volume at its default) reaches Fireface input 5 at -28.1 dBFS
+  peak; the engine renders the same patch (saved from the editor) at -16.5 (1.0 x VOICE_GAIN). On this rig,
+  with TotalMix's input gains as they are, a G2 capture sits 11.6 dB BELOW the engine's render of the same patch.
+- IN -> OUT: a 2-In wired to a 2-Out in the FX area, -20 dBFS out of Fireface output 0 comes back at -27.0
+  dBFS peak (-7.0 dB); the 2-In and 2-Out meters both read 9. Consistent with the two ends: the 2-In carries
+  11.3 x the Fireface's output amplitude (converter full scale at about -9.0 dBFS of that output), and 1.13
+  leaves at -28.1 + 1.1 dB.
+None of these is a property of the G2 alone - each depends on the Fireface's output level and input gain -
+so they calibrate captures, not the engine. The engine's own law (reference §37) stands.
+
+IN VOLTS (CT: TotalMix Line In 5-8 and Line Out 1-6 both at +4 dBu, i.e. 0 dBFS = +13 dBu each side, per the
+Fireface UC User's Guide). Inputs 5-8 have no analog gain stage, only that reference. So on the G2:
+- input converter full scale (word full scale, 4.0 in the engine) = about +4 dBu (1.23 V RMS sine, 1.74 V peak);
+- output: a 1.0 oscillator = -15.1 dBu, word full scale (4.0) = -3.1 dBu;
+- In -> Out through a 2-In and a 2-Out at Pad 0 dB = -7.0 dB: unity word to word inside, the output converter
+  running about 7 dB below the input converter.

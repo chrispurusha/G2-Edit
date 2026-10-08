@@ -779,7 +779,7 @@ typedef enum {
 
 // notes §17
 #define VOICE_GAIN                  (0.15)
-#define AUDIO_IN_GAIN               (1.0 / VOICE_GAIN)   // §37 - In to Out at unity, until a G2 capture says otherwise
+#define AUDIO_IN_GAIN               (DSP_FULL_SCALE)     // §37 - the converter's full scale is a word's
 
 // Where the output starts bending rather than shearing.
 #define OUTPUT_KNEE                 (0.80)
@@ -11277,6 +11277,7 @@ static void meter_node(const tEngineNode * spec, uint32_t n, double left, double
         case eNodeMix:
         case eNodeMixStereo:
         case eNodeFxIn:
+        case eNodeAudioIn:  // §37 - a 4-In's first two of four
         case eNodeOut:
         {
             break;
@@ -15090,7 +15091,7 @@ static void input_prepare(const tSoundEngineParams * p, uint32_t frameCount) {
         uint32_t      pos  = gInHistoryPos;
 
         for (uint32_t f = 0; f < frameCount; f++) {
-            float x = (src != NULL) ? src[sInputFrom + f] : 0.0f;
+            float x = (src != NULL) ? fminf(fmaxf(src[sInputFrom + f], -1.0f), 1.0f) : 0.0f;   // §37 - the converter clips
 
             if (m == 1u) {
                 dest[f] = x;

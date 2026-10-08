@@ -8,7 +8,6 @@ General (priority order)
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Audio input in the application: an input device in Settings > Audio feeding sound_engine_set_input() (the engine and the plug-in's side-chain have it since 2026-10-08, reference §37)
 - Effects version of the plugin, for audio processing: a second descriptor (aufx, its own VST3 UIDs, MIDI in kept) whose main input is In 1/2 - GenBridge's two-variant pattern
-- 2-In/4-In level: capture a sine at a known level into the G2's In 1 read off Out 1 - the engine's In to Out is unity by assumption (reference §37)
 - Control rate (notes §203): EnvFollow, PitchTrack and ZeroCnt not up-rated run at 24 kHz on the instrument with their 96 kHz words (times fourfold) - measure one on the G2 (EnvFollow fed by an LFO, release time un-up-rated vs up-rated) before following it; no stage patch uses them
 - Any place-holder engine guesses we made, to be swept up by usual methods e.g. capturing audio etc.
 - CPU bandwidth optimisations and/or multi-core threading as below.
@@ -34,7 +33,7 @@ General (priority order)
 - Estimate whether a patch fits the G2's DSP/memory budget and WARN when it is over - never limit the emulation to match; resource model decoded, per-module record and voice placer open (g2-budget-estimate-design.md)
 - Render poly voices across cores (engine-multicore-design.md) - the long-term answer to patches whose voices never finish: 18 Unreal Dreams at 32 voices needs 120% of one core, and the engine manages ~9 (CT 2026-09-28); check first that VST3/AUv2 hosts let a plug-in join the audio workgroup
 - Engine voice count should follow the G2's own assignment, not the patch's request: 18 asks for 32 and the G2 gives 15 - use the G2's reported count when connected, the budget estimate's voice placer offline (g2-budget-estimate-design.md)
-- 18 Unreal Dreams: engine ~9 dB louder than the G2 capture at 32 voices - check the rig calibration first, then the voice level path (§62.1)
+- 18 Unreal Dreams: engine ~9 dB louder than the G2 capture at 32 voices - the rig alone puts Fireface 5/6 captures 11.6 dB below engine renders (findings 2026-10-08), so find which input and gain that capture used before suspecting the voice level path (§62.1)
 - 04 Chris Pad brightness: re-listen after the exact Vel/Keyb morphs (§26.2); the captures matched to 12 kHz once the G2's filter was confirmed on, and the first capture had its FltClassic switched off - find out what switched it (findings 2026-09-28 late)
 - Diavolo Sync patch is brighter on the G2 than in the engine (CT 2026-09-28) - capture both; G2 outputs 1/2 are on the Fireface again
 - OscShpB Pulse at Shape +-1: the residual one-sample click is -33 dB (+1) / -43 dB (-1) per harmonic in the engine, -41 dB at both on the G2 (§6.7)
