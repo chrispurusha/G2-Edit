@@ -3046,6 +3046,16 @@ const char * sound_engine_debug_text(void) {
     return text;
 }
 
+// §62.2 - a NoteSend's note into one slot's queue: its own for This, or the slot it names. Not the
+// keyboard's routing, which in a performance would play every slot with Keyboard on.
+static void note_to_slot(uint32_t slot, int32_t note, uint8_t velocity, bool on) {
+    int32_t was = sEngineSlot;
+
+    sEngineSlot = (int32_t)(slot % MAX_SLOTS);
+    note_queue_one(note, velocity, on);
+    sEngineSlot = was;
+}
+
 static void note_queue_one(int32_t note, uint8_t velocity, bool on) {
     SE_LOCAL;
 
@@ -6444,12 +6454,13 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeNoteSend:
         {
             // §62 - Vel v x 2^14, Note v x 2^15 + 2^14 (a half to round with); midiChanStrMap 16 is This,
-            // 17-20 Slot A-D. Only a note to this slot plays here; the rest would leave by MIDI.
+            // 17-20 Slot A-D (§62.2). Channels 1-16 would leave by MIDI, and are dropped.
             uint32_t channel = (uint32_t)module->param[variation][2].value;
 
             node->depth    = floor(param_value(module, variation, 0)) * 16384.0;
             node->constant = (floor(param_value(module, variation, 1)) * 32768.0) + 16384.0;
-            node->active   = (channel == 16u) || (channel == (17u + module->key.slot));
+            node->active   = (channel >= 16u) && (channel <= 20u);
+            node->select   = (channel == 16u) ? (module->key.slot % MAX_SLOTS) : ((channel - 17u) % MAX_SLOTS);
             break;
         }
         case eNodeNoteScaler:
@@ -13951,9 +13962,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                     note                  = (note > 127) ? 127 : note;
                     vel                   = (vel > 127) ? 127 : vel;
                     gPulseCount[voice][n] = (uint32_t)note + 1u;   // what the release must name
-                    sound_engine_note(note, (uint8_t)vel, true);
+                    note_to_slot(spec->select, note, (uint8_t)vel, true);
                 } else if (gPulseCount[voice][n] > 0u) {
-                    sound_engine_note((int32_t)gPulseCount[voice][n] - 1, 0, false);
+                    note_to_slot(spec->select, (int32_t)gPulseCount[voice][n] - 1, 0, false);
                     gPulseCount[voice][n] = 0u;
                 }
             }

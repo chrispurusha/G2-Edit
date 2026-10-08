@@ -4,6 +4,9 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***NOTESEND TO ANOTHER SLOT (2026-10-08)*** - reference §62.2. LISTEN in a performance: a sequencer patch whose
+  NoteSend names Slot B, with B active, should play B's sound on the engine as on the G2; a NoteSend on This
+  should play only its own slot even with several slots on the keyboard. Checked offline only
 - ***ARPEGGIATOR (2026-10-08)*** - reference §72. LISTEN on the engine (app or G2 Alike): Patch Settings > Arpeggiator
   On, hold a chord - each Direction and Range, each Rate against the topbar tempo; it runs with the master clock
   stopped too, as the G2's does. Step timing and order are checked offline and against the G2's take; nobody

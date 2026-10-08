@@ -2498,6 +2498,14 @@ Vel In x 2 per unit, both clipped to 0-127. A NoteSend to "This" or to its own s
 own voices - which is how 18 Unreal Dreams plays itself from its sequencers; other channels would
 leave by MIDI and are dropped.
 
+**62.2 To another slot (2026-10-08).** Slot A-D sends the note to that slot's own voices, and This to the
+module's own slot - each straight into that slot's note queue. Before this date a NoteSend to another
+slot was dropped, and This went through the KEYBOARD's routing, so in a performance it played every slot
+with Keyboard on. Checked offline: 18 Unreal Dreams in slot A (its own output muted), SimpleLead in slot B -
+with the NoteSends on Slot B, B plays A's sequence at -29 dB; on This or on the empty Slot C, silence. A
+slot that is not active renders nothing, as on the instrument, so its notes are not heard. Channels 1-16
+would leave by MIDI and are still dropped.
+
 **62.1 A NoteSend is a root of the graph (2026-09-28).** The chain is built backwards from the Out
 modules, and a NoteSend feeds none, so until this date it and everything driving it (18's two
 SeqNotes, their ClkGen) were pruned: 18 never played its sequences, and the 2026-09-26 "plays
