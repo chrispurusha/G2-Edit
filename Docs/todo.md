@@ -5,7 +5,6 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
--
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Implement audio input, for processing external signals.
 - Effects version of the plugin, for audio processing.
@@ -14,9 +13,7 @@ General (priority order)
 - CPU bandwidth optimisations and/or multi-core threading as below.
 - 18 Unreal Dreams renders differently run to run with the voice thread on (serial is repeatable): its own NoteSend notes probably reach the voices at a moment that depends on how the two threads interleave - every other stage patch is bit-identical threaded and inline (sound-engine-notes §202)
 - DEFERRED (owner, 2026-10-04) - voices across several threads: a self-playing patch keeps all its voices sounding (18 Unreal Dreams, 32 voices, ~130% of one core in the Debug app at 48 kHz/256) and today every voice runs on ONE worker. Shape: two or three voice workers each rendering a share of the voices, synchronised every sub-block (~32 samples, 0.33 ms at 96 kHz) with note events and allocation applied on those boundaries (the G2 itself quantises keys to its 24 kHz tick), partial sums added by the FX pass (sound-engine-notes §202, §207)
-- Four slots, next (sound-engine-notes §204): render the slots concurrently - today they run one after another on the audio thread, each with its own voice thread
-- Edit each slot's MIDI channel (and the global channel) in the editor, as on the hardware - not urgent (owner, 2026-10-04)
-- Plug-in: route host MIDI by channel to the slots (today every host note is the keyboard, so the selected slot or the performance's keyboard slots)
+- Four slots, next (sound-engine-notes §204, §202): render the slots concurrently, one thread per slot - today they run one after another on the audio thread, each with its own voice thread; the worker and ring are per engine already
 - Sleep a slot whose output has been silent for some seconds with no notes, waking on a note, MIDI or edit - a loaded slot costs its whole patch when idle (CS80 19%); careful with patches that sound by themselves
 - Read the performance's Key Range switch from the G2: the parse reads it into a local (protocol.c, rangeEnable) and the engine uses gPerfSettings.keyboardRange, which only the settings panel sets
 - On plugin only - more outputs selectable over and above output 1/2 and 3/4, routable to the DAW. If editor tries to send a patch with > 3/4 to G2, it should clamp at output 1/2 on the protocol. Would allow building of a drum-machine with separate DAW outputs per drum synth.
@@ -52,7 +49,6 @@ USER REQUESTS (reported 2026-08-22; none blocking)
 - Open Recent for patches loaded from a bank
 - Move Delete Unused Cables out of the cable popup to a top-level menu
 - Local mode button: draw a wave across sequencer columns, ultimately as a wave-representation mode. Allow wavetable (wav file) loading.
-- Plug-in only wavetable and sample playback modules.
 - Add performance keyboard split/layer/zone UI (manual: "Layering Patches")
 - Add a dedicated master-clock/tempo panel
 - Virtual keyboard velocity: two computer-keyboard keys to step it down/up, and matching -/+ buttons in the Virtual Keyboard panel (CT 2026-09-28). Engine only - the G2 plays the editor's notes at 127 whatever is sent (code-notes/virtualKeyboard.c.md §11), so show that when a G2 is connected
@@ -76,6 +72,7 @@ MODULES AND GRAPHICS
 - Verify the remaining 117 unverified module types against the hardware
 - Delay Time dial range in Time mode: owner reports highest raw = 1 s, lowest = 0.01 ms
 - Fill the 39 Unknown slots in gModuleProperties (of 209) by sweeping factory banks for type numbers
+- Bottom of the module grid is not a hard wall: a module created (or grown by a replace) near row 127 extends past MAX_ROWS instead of being raised or refused - shift_fit_row() guards collisions with other modules but not the grid edge. Pre-existing, affects plain Add Module identically, and needs a decision on whether the last row should be a wall at all
 
 FILTERS
 - EqPeak/Eq3band deep wide cuts above ~1 kHz: the instrument's Chamberlin form is unstable there - measure what it actually does (§11.5)
@@ -99,14 +96,28 @@ SOUND ENGINE
 - ShpStatic Inv x3/Inv x2: the engine plays exponents 1/3 and 1/2, the 2026-08-24 capture measured 0.49 and 0.65 (the picker icon draws those) - reconcile
 - Audit the other positionally-initialised tables for the tFilterParams trap (see findings.md)
 - Run the engine-vs-hardware diff: both sides can produce the file, the comparison has not been run
-- Notes are not sent to the G2 while the local engine is sounding (owner's request)
 - OscD's face draws a "Pitch" dial at parameter 3, where the module tables have Tune Md (a Semi/Freq/Factor/Partial drop-down) - check against the instrument and fix the face
-- Free-run RENDER is gated on the patch having no per-voice envelope; the exact test is "does a node
-  reach an Out without passing a gated envelope" - phase already advances for every patch
+- Free-run RENDER is gated on the patch having no per-voice envelope; the exact test is "does a node reach an Out without passing a gated envelope" - phase already advances for every patch
 - Option to reset oscillator phase on note-on, for predictable bass; hardware free-runs, so not default
 - Let oscillators free-run rather than only while a note sounds - some patches depend on it; make it configurable
 - OscNoise computes sin, exp and sqrt every sample for every voice (engine load 13% for a two-module patch against 6-8% for Noise) - with nothing patched into Pitch or Width the coefficients are constant and could be computed once per block
 - The engine costs ~2% of a core while SILENT (SimpleLead, no notes: 0.62 s CPU per 30 s, output all zero; a 4-voice chord is 2.2 s) - every instance on an idle track pays it. The time is the whole graph running: per-sample parameter smoothing of every node's 12 values, the voice loop, the reverb. A 'sleep when silent' mode (no voice sounding and the post-mix output below a floor for a second) would recover it, but must keep LFO and oscillator phase advancing and let effect tails finish - not a quick change. (Hoisting the per-sample exp() coefficients was tried 2026-09-11 and gained nothing: the compiler already does it)
+- ModADSR/ModAHD: the ATTACK and SUSTAIN mod jacks, and all of ModAHD's, are implemented but unmeasured (reference §17.10) - only the decay is checked against the G2
+- DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
+- OscDual (§12.5): compare the new code sample for sample with the reference model (note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
+- OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
+- NEWPATCH leaves the editor's patch Volume at the last patch's value while the G2's new patch is at 100 (dataBase.c init_patch -> ensure_patch_volume returns early) - set it to NEW_PATCH_VOLUME
+- The editor forwards incoming MIDI notes to the G2 (midiInput.c): a note that also reaches the G2 directly plays twice on a poly patch - decide whether to forward only when the G2 has no MIDI of its own, or make it a setting
+- OscShpA TriSaw at Shape 0 has 15 dB more 2nd harmonic than the G2's (captured 2026-10-04)
+- CPU profile per module: sampled cycle counts per node (one block in N), per voice, slot and FX area; a backdoor CPUDUMP table and a file-gated log for the plug-in - first input to multi-threading the 4 slots and FX (engine-multicore-design.md)
+- Operator inputs from cables (§14.1): Gate, Note and Vel come from the voice, and Freq, Pitch and AMod are not read - the instrument reads all six off the Operator
+- Pulse ignores its Mode (Plus/Minus, §18)
+- 14 CS80project72: the G2's strongest partial, 527 Hz, is missing from the engine (1061/2112/3161 match; Fireface capture 09-27, findings 09-27)
+- Voice-area delays and Reverb per voice (findings 2026-09-27): allocate each voice's line at build time, sized by Range (the instrument's 513 .. 259212 samples); fit polyphony to a memory budget as the voice placer does
+- ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither
+- Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play
+- 03 Chris' Lead coverage left: OscShpB waves (above), reference-model check of Mix4-1C/Mix4-1S
+- CPU: run nodes over short blocks (16-32 samples) where no loop or per-sample event forbids it, to amortise the dispatch and let it vectorise - the same restructure per-voice threading needs
 
 MEASUREMENT PROGRAMME
 - Finish the EnvADSR oracle (kept outside the repo): it compiles and runs but outputs zero until the state-block layout and the time tables contents are worked out
@@ -130,16 +141,19 @@ PROTOCOL AND SECOND OPINIONS (each is a code comment needing hardware or a manua
 - send_deassign_midi_cc(): the original's deassign (0x23) may write a 1-bit field we do not
 - send_perf_mode_change() takes ~3 sends (500 ms retries) before the 0x1f response arrives
 - SUB_RESPONSE_PARAM_LIST (0x4d): confirm the fix in parse_command_response() is right
+- The G2 and the editor DIVERGE on cable deletes (2026-09-12): after ~80 scripted cable edits in one patch, DELCABLE of X-Fade Out -> 2-Out L and R updated the editor but not the G2 - the patch read back from the G2 held both deleted cables plus the new ones into the same inputs, and the G2 went silent while the engine played; repro in findings.md, cause not isolated (edit count, deleting a fanned-out output's cables, or both)
 
-VST3
+PLUG-IN (VST3 AND AU)
 - ./do-uncrustify does not cover plugin/ or SynthLib/plugin/, so the plug-in sources and both format wrappers are unformatted
 - G2 Alike instances share EDITOR state: each has its own document (four slots) and engine since 2026-09-11, but two open editors still share palette.c, menus.c, splitView.c, mutatorUI.c, paramOverlay.c and SynthLib's click regions and popups, plus the panels and drag flags kept out of the document because static tables point at them (gTopbarControls, gPatchSettingsEdit, gPerfSettingsEdit, gPatchParamsEdit, gPatchNotesEdit, gPatchParamRects) - scroll, zoom and an open panel follow you between editors
 - The plug-in build's engine is ~5% slower than the application's (2.24 s vs 2.14 s CPU for 30 s of a 4-voice chord; it was 13% before SE_LOCAL, 2026-09-11). The thread-local read is now ~1% in a profile; the rest is indexing each banked access by a variable instead of the constant 0 - only a per-engine state struct reached through one pointer would recover it
-- At most SOUND_ENGINE_MAX_ENGINES (32) G2 Alike instances per process; the 33rd fails to load. Raise it if anyone hits it - unused banks are zero-fill
+- At most 16 G2 Alike instances per process (SOUND_ENGINE_MAX_ENGINES 64, four engines per instance since 2026-10-04); the 17th fails to load. Raise it if anyone hits it - unused banks are zero-fill
 - g2Menu.c's loaded-patch name is still one per process, so two editors show whichever file was opened last
 - Plug-in editors in tools/vst3host own ~350 MB of GPU memory that is NOT this code's (49 x 8 MB 'owned unmapped (graphics)' regions; the backend allocates one 1120x1660 target, its 4x MSAA copy and six small atlases, ~37 MB), and it barely changes with editor size (431 MB at a quarter of the area). The apps show nothing like it (EmuUtility 128 MB total). Check Live's own footprint per editor before chasing - it may be the harness. In G2 Alike it belongs to the FIRST editor: after closing and re-creating the editor 40 times (vst3host --reopen) the process sat at 196 MB, drawing correctly; GenBridge and MidiSyncTool stayed at ~470 MB either way
-
+- tools/vst3host crashed once on EXIT (2026-09-09, CT saw it too): EXC_BAD_ACCESS in objc_release, from objc_autoreleasePoolPop in main - an over-release of something the harness holds, at teardown only. Three clean runs since, so intermittent; the plug-in had already returned from every teardown call by then, but rule out the editor view before blaming the harness
 - The Audio Unit's version number is in two places that must agree: G2_AU_VERSION in plugin/g2Plugin.c and AU_VERSION in do-plugin
+- The AU plug-in joining its HOST's audio workgroup (macOS 12 kAudioUnitProperty_RenderContextObserver hands the AU the workgroup; needs a SynthLib AU-wrapper change and a descriptor callback, so all three projects; a VST3 host offers none; notes §208 - the app joins its device's since 2026-10-04); report the 32-sample lag to plug-in hosts
+- Plug-in Multi-threading on/off in its own menu, saved with the host project - low priority; the plug-in always splits today (sound-engine-notes §202)
 
 ARCHITECTURE AND SHARED CODE
 - Adopt GenBridge's audio/MIDI selector in place of the Audio Device and MIDI Input flyouts (appMenuBar.c:902/1035) - per-device remembered settings, real channel limits, a None entry; see GenBridge findings 2026-09-02
@@ -154,15 +168,10 @@ ARCHITECTURE AND SHARED CODE
 - Move any remaining TODOs out of the code and into this file
 - Variables should be lowerCamelCase, not underscore_separated - too many underscores were generated
 - SynthLib file-naming consistency - deferred, cross-repo, coordinate carefully
+- write_perf_to_file() does not round-trip a .prf2: ArpTrance.prf2 (Version=22, 8456 bytes) saved by it (Version=23, 8108 bytes) reloads with Morph 8's source label "Group 8" shown as "Knob" and the yellow cable-filter button changed - shared by the app and G2 Alike; diff the two files section by section (morph labels, cable visibility) to find what is dropped
 
 BUILD
-- Cross-platform build (Windows/Linux) - the render backend seam is in place, the rest is not
-- ModADSR/ModAHD: the ATTACK and SUSTAIN mod jacks, and all of ModAHD's, are implemented but unmeasured (reference §17.10) - only the decay is checked against the G2
-- Never measure an envelope or any other time constant THROUGH a resonant filter. Tracking a
-  cutoff sweep with an 80 ms window on a filter at high Res said our ModADSR attack was 4x slow
-  (40 ms against 160); measured directly through the module's own VCA on a sine the two agreed
-  within 4 ms. The window cannot resolve the attack and the ring smears the edge. Put the envelope
-  on a VCA and read the amplitude.
+- Linux build - Windows cross-builds since 2026-10-04 (windows-port-plan.md); the render backend seam is in place, the rest is not
 
 DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from this file, the constraint is not)
 
@@ -222,9 +231,13 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
   limit, the aspect lock and the saved-height derivation, while UI scale comes from
   synthlib_scale_init(TARGET_FRAME_BUFF_WIDTH), i.e. WIDTH only. EmuUtility's content is all
   top-anchored, so 16:9 just leaves more empty grey below it.
+- Never measure an envelope or any other time constant THROUGH a resonant filter. Tracking a
+  cutoff sweep with an 80 ms window on a filter at high Res said our ModADSR attack was 4x slow
+  (40 ms against 160); measured directly through the module's own VCA on a sine the two agreed
+  within 4 ms. The window cannot resolve the attack and the ring smears the edge. Put the envelope
+  on a VCA and read the amplitude.
 - The Seq park LED's exclusion from the LED stream is CORRECT and must STAY — it is what keeps the
-  module's other real stream LEDs aligned. (See the open Seq park-LED item above for what is still
-  unknown.)
+  module's other real stream LEDs aligned.
 - render_volume_meter stays G2-local in moduleGraphics.c. Moving it to SynthLib alongside
   utilsGraphics.c was considered and DROPPED: it is pure G2 domain (tVolumeType /
   tVolumeMeterConfig / volumeMeterStyle* enum + G2 value-bit decode) built entirely on primitives that
@@ -257,27 +270,3 @@ DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from th
   contextMenu.c) is already fully shared via SynthLib. G2-Edit's menus.c is still 2125 lines
   (EmuUtility/SynthEdit's are 26/95), but what remains is legitimately G2-specific domain action logic
   operating on tModule/tParam/tCable, which do not exist in the other two apps.
-- Bottom of the module grid is not a hard wall: a module created (or grown by a replace) near row 127 extends past MAX_ROWS instead of being raised or refused - shift_fit_row() guards collisions with other modules but not the grid edge. Pre-existing, affects plain Add Module identically, and needs a decision on whether the last row should be a wall at all
-- write_perf_to_file() does not round-trip a .prf2: ArpTrance.prf2 (Version=22, 8456 bytes) saved by it (Version=23, 8108 bytes) reloads with Morph 8's source label "Group 8" shown as "Knob" and the yellow cable-filter button changed - shared by the app and G2 Alike; diff the two files section by section (morph labels, cable visibility) to find what is dropped
-- The G2 and the editor DIVERGE on cable deletes (2026-09-12): after ~80 scripted cable edits in one patch, DELCABLE of X-Fade Out -> 2-Out L and R updated the editor but not the G2 - the patch read back from the G2 held both deleted cables plus the new ones into the same inputs, and the G2 went silent while the engine played; repro in findings.md, cause not isolated (edit count, deleting a fanned-out output's cables, or both)
-- tools/vst3host crashed once on EXIT (2026-09-09, CT saw it too): EXC_BAD_ACCESS in objc_release, from objc_autoreleasePoolPop in main - an over-release of something the harness holds, at teardown only. Three clean runs since, so intermittent; the plug-in had already returned from every teardown call by then, but rule out the editor view before blaming the harness
-
-## Sound engine - open at 2026-09-14 (session cut short; see findings.md 2026-09-14 OSCSHPB entry)
-
-- DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
-- OscDual (§12.5): compare the new code sample for sample with the reference model (note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
-- OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
-- NEWPATCH leaves the editor's patch Volume at the last patch's value while the G2's new patch is at 100 (dataBase.c init_patch -> ensure_patch_volume returns early) - set it to NEW_PATCH_VOLUME
-- The editor forwards incoming MIDI notes to the G2 (midiInput.c): a note that also reaches the G2 directly plays twice on a poly patch - decide whether to forward only when the G2 has no MIDI of its own, or make it a setting
-- OscShpA TriSaw at Shape 0 has 15 dB more 2nd harmonic than the G2's (captured 2026-10-04)
-- Engine split, next: one thread per slot (the worker and ring are per engine already, notes §202); the AU plug-in joining its HOST's audio workgroup (macOS 12 kAudioUnitProperty_RenderContextObserver hands the AU the workgroup; needs a SynthLib AU-wrapper change and a descriptor callback, so all three projects; a VST3 host offers none; notes §208 - the app joins its device's since 2026-10-04); report the 32-sample lag to plug-in hosts
-- CPU profile per module: sampled cycle counts per node (one block in N), per voice, slot and FX area; a backdoor CPUDUMP table and a file-gated log for the plug-in - first input to multi-threading the 4 slots and FX (engine-multicore-design.md)
-- Operator inputs from cables (§14.1): Gate, Note and Vel come from the voice, and Freq, Pitch and AMod are not read - the instrument reads all six off the Operator
-- Pulse ignores its Mode (Plus/Minus, §18)
-- 14 CS80project72: the G2's strongest partial, 527 Hz, is missing from the engine (1061/2112/3161 match; Fireface capture 09-27, findings 09-27)
-- Voice-area delays and Reverb per voice (findings 2026-09-27): allocate each voice's line at build time, sized by Range (the instrument's 513 .. 259212 samples); fit polyphony to a memory budget as the voice placer does
-- ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither
-- Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play
-- 03 Chris' Lead coverage left: OscShpB waves (above), reference-model check of Mix4-1C/Mix4-1S
-- CPU: run nodes over short blocks (16-32 samples) where no loop or per-sample event forbids it, to amortise the dispatch and let it vectorise - the same restructure per-voice threading needs
-- Plug-in Multi-threading on/off in its own menu, saved with the host project - low priority; the plug-in always splits today (sound-engine-notes §202)
