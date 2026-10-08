@@ -79,7 +79,12 @@ void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation);
 // Synth settings dropdowns
 void send_synth_settings_msg(void);
 void send_perf_settings_msg(void);
+void send_master_clock_bpm(uint32_t bpm);
 void send_master_clock_run(uint32_t running);
+// A patch setting (a parameter of one of the hidden modules in locationMorph), and the patch
+// descriptor (voices, mono/poly, category), to the G2
+void send_patch_setting_param(uint32_t slot, uint32_t moduleIndex, uint32_t paramIndex, uint32_t value);
+void send_patch_descr_update(uint32_t slot);
 void open_midi_chan_dropdown(tCoord coord, _Atomic uint8_t * target);
 void open_sysex_id_dropdown(tCoord coord, _Atomic uint8_t * target);
 void open_tune_semi_dropdown(tCoord coord, _Atomic int8_t * target);

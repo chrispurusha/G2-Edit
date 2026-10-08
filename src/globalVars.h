@@ -207,6 +207,12 @@ typedef struct tG2Document {
     // Formerly file-static in globalVars.c - see variation_is_linked() below.
     uint32_t         gVariationLinks[MAX_SLOTS];
 
+    // The front panel mode and what it shows - frontPanel.c
+    bool             gFrontPanelMode;
+    uint32_t         gFrontPanelView;                                                  // tFrontPanelView
+    uint32_t         gFrontPanelPage[2];                                               // [0] the patch's pages, [1] the global ones: 0-4, A-E
+    uint32_t         gFrontPanelBank[2];                                               // 0-2, columns 1-3
+
     // ── Not reached through a macro: named here only by the code that owns them ──────────────────
     // Which bank of the sound engine's state this document plays through - soundEngine.c. Always 0
     // in the application, which has one engine; each plug-in instance claims its own.
@@ -256,6 +262,10 @@ tG2Document * g2_document_current(void);
 #define gDeviceOpInProgress              (gDoc->gDeviceOpInProgress)
 #define gDeviceOpLabel                   (gDoc->gDeviceOpLabel)
 #define gMorphGroupFocus                 (gDoc->gMorphGroupFocus)
+#define gFrontPanelMode                  (gDoc->gFrontPanelMode)
+#define gFrontPanelView                  (gDoc->gFrontPanelView)
+#define gFrontPanelPage                  (gDoc->gFrontPanelPage)
+#define gFrontPanelBank                  (gDoc->gFrontPanelBank)
 #define gSlot                            (gDoc->gSlot)
 #define gPatchDescr                      (gDoc->gPatchDescr)
 #define gKnobArray                       (gDoc->gKnobArray)

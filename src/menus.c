@@ -84,6 +84,14 @@ void send_perf_settings_msg(void) {
     msg_send(&gToUsbThread, &msg);
 }
 
+void send_master_clock_bpm(uint32_t bpm) {
+    tMessageContent msg = {0};
+
+    msg.cmd                    = eMsgCmdSetMasterClockBPM;
+    msg.masterClockBPMData.bpm = bpm;
+    msg_send(&gToUsbThread, &msg);
+}
+
 void send_master_clock_run(uint32_t running) {
     tMessageContent msg = {0};
 
@@ -97,7 +105,7 @@ static void action_perf_setting_u8(int index) {
     send_perf_settings_msg();
 }
 
-static void send_patch_setting_param(uint32_t slot, uint32_t moduleIndex, uint32_t paramIndex, uint32_t value) {
+void send_patch_setting_param(uint32_t slot, uint32_t moduleIndex, uint32_t paramIndex, uint32_t value) {
     tMessageContent msg = {0};
 
     msg.cmd                 = eMsgCmdSetValue;
@@ -141,7 +149,7 @@ static void action_patch_setting_i8(int index) {
 
 // ── Patch descriptor action targets ────────────────────────────────────────
 
-static void send_patch_descr_update(uint32_t slot) {
+void send_patch_descr_update(uint32_t slot) {
     tMessageContent messageContent = {0};
 
     messageContent.cmd  = eMsgCmdWritePatchDescr;

@@ -508,6 +508,7 @@ static bool press_knob_widget(tCoord coord) {
         gParamDragging.param           = target.paramIndex;
         gParamDragging.startValue      = target.module->param[variation][target.paramIndex].value;
         gParamDragging.startMorphRange = target.module->param[variation][target.paramIndex].morphRange[gMorphGroupFocus];
+        gParamDragging.rect            = gParamPages.knobWidget[pos];   // rotary mode turns about this
         gParamDragging.active          = true;
 
         if ((synthlib_dial_mode() != eDialModeRotary) || (paramType == paramTypeSlider)) {
@@ -522,38 +523,38 @@ static bool press_knob_widget(tCoord coord) {
 // Mouse-up on a knob's widget, for the param types that aren't dragged: toggles cycle to their
 // next value, menus open their picker. Mirrored handle_module_release_for_module(), which was the
 // canvas's legacy fallback release path — deleted 2026-08-09; see git history.
+bool param_pages_release_target(const tKnobTarget * target, tCoord coord) {
+    if ((target == NULL) || !target->assigned) {
+        return false;
+    }
+    tParamType paramType = paramLocationList[target->paramRef].type;
+    uint32_t   variation = gPatchDescr[target->key.slot].activeVariation;
+    tParam *   param     = &target->module->param[variation][target->paramIndex];
+
+    if ((paramType == paramTypeMenu) || (paramType == paramTypeCustomData)) {
+        open_toggle_menu(coord, target->key, target->paramIndex, target->paramRef);
+        return true;
+    }
+
+    if ((paramType == paramTypeToggle) || (paramType == paramTypeBypass) || (paramType == paramTypeEnable)) {
+        uint32_t range    = paramLocationList[target->paramRef].range;
+        uint32_t oldValue = param->value;
+
+        param->value = (param->value + 1) % range;
+        send_param_value(target->key.slot, target->key, target->paramIndex, variation, param->value);
+        undo_push_param_change(target->key, target->paramIndex, variation, oldValue, param->value);
+        send_param_value_to_links(target->key.slot, target->key, target->paramIndex, variation, param->value);
+    }
+    return true;
+}
+
 static bool release_knob_widget(tCoord coord) {
     for (uint32_t pos = 0; pos < NUM_KNOBS_PER_BANK; pos++) {
-        tKnobTarget target    = {0};
+        if (within_rectangle(coord, gParamPages.knobWidget[pos])) {
+            tKnobTarget target = knob_target(pos);
 
-        if (!within_rectangle(coord, gParamPages.knobWidget[pos])) {
-            continue;
+            return param_pages_release_target(&target, coord);
         }
-        target = knob_target(pos);
-
-        if (!target.assigned) {
-            return false;
-        }
-        tParamType  paramType = paramLocationList[target.paramRef].type;
-        uint32_t    variation = gPatchDescr[target.key.slot].activeVariation;
-        tParam *    param     = &target.module->param[variation][target.paramIndex];
-
-        if ((paramType == paramTypeMenu) || (paramType == paramTypeCustomData)) {
-            open_toggle_menu(coord, target.key, target.paramIndex, target.paramRef);
-            return true;
-        }
-
-        if ((paramType == paramTypeToggle) || (paramType == paramTypeBypass) || (paramType == paramTypeEnable)) {
-            uint32_t range    = paramLocationList[target.paramRef].range;
-            uint32_t oldValue = param->value;
-
-            param->value = (param->value + 1) % range;
-            send_param_value(target.key.slot, target.key, target.paramIndex, variation, param->value);
-            undo_push_param_change(target.key, target.paramIndex, variation, oldValue, param->value);
-            send_param_value_to_links(target.key.slot, target.key, target.paramIndex, variation, param->value);
-            return true;
-        }
-        return true;
     }
 
     return false;

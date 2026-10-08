@@ -210,6 +210,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"HEADER_SEARCH_PATHS[arch=*]" = "$(PROJECT_DIR)/SynthLib/src";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "G2 Editor opens and saves patches, performances and bank backups in the folders you browse to.";
+				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "G2 Editor opens and saves patches, performances and bank backups in the folders you browse to.";
+				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "G2 Editor opens and saves patches, performances and bank backups in the folders you browse to.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainNibFile = MainMenu;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -268,6 +271,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"HEADER_SEARCH_PATHS[arch=*]" = "$(PROJECT_DIR)/SynthLib/src";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "G2 Editor opens and saves patches, performances and bank backups in the folders you browse to.";
+				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "G2 Editor opens and saves patches, performances and bank backups in the folders you browse to.";
+				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "G2 Editor opens and saves patches, performances and bank backups in the folders you browse to.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainNibFile = MainMenu;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;

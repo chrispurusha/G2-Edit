@@ -85,14 +85,6 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     synthlib_mouse_coord(coord);
 }
 
-static void send_master_clock_bpm(uint32_t bpm) {
-    tMessageContent messageContent = {0};
-
-    messageContent.cmd                    = eMsgCmdSetMasterClockBPM;
-    messageContent.masterClockBPMData.bpm = bpm;
-    msg_send(&gToUsbThread, &messageContent);
-}
-
 // notes §1
 
 // Registered with GLFW so a modifier released while another application has the keyboard cannot

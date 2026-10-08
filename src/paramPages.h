@@ -44,6 +44,10 @@ tKnobTarget param_pages_knob_target(bool showGlobal, uint32_t slot, uint32_t ind
 // The module's patch-given name if it has one, else its type name.
 const char * param_pages_module_display_name(const tModule * module);
 
+// The release half of a click on an assigned knob that is not dragged: a toggle steps to its next
+// value, a menu opens its picker - as on the canvas. False for an unassigned target.
+bool param_pages_release_target(const tKnobTarget * target, tCoord coord);
+
 // The label render_param_common() will put on this param — a name the patch carries for it wins
 // over the paramLocationList one, which is the precedence that function itself applies.
 const char * param_pages_knob_param_label(const tKnobTarget * target);
