@@ -12379,3 +12379,10 @@ The other filters' modulation depth, checked the same day after the FltComb and 
   the day's changes are bit-identical except Flows_DZ, GlassCathedral and schtraengt (intended) and
   fmfunk, MicroWaves and 14 pattern seq, which differ from themselves between two renders on the same
   engine (random and free-running sources).
+
+**AccBass 1 DX is not darker** (checked the same day on the Fireface, velocity 127, the 2-Out pointed at
+Out 1/2 so the FX area's delay, chorus and reverb are out of it). Its operators free-run (Sync off) with
+different Detune, so the upper harmonics swell and dip irregularly - between -29 and +27 dB against H1 over
+8 s - and a single snapshot lands anywhere in that. Over the 8 s the G2 and the engine agree: harmonics 4-8
+average +4.5 dB against H1 on both, ranging -29.4..+26.9 on the G2 and -28.1..+25.8 in the engine. The
+10-07 reading (6 dB dark at the 10th) was one window, rendered at velocity 100. Removed from todo.

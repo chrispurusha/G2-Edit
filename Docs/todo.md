@@ -6,7 +6,6 @@ Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
 -
-- "AccBass 1 DX" is still a few dB darker on the engine above the 8th harmonic (6 dB at the 10th, was 19) after the octave-shifted key fix
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Implement audio input, for processing external signals.
 - Effects version of the plugin, for audio processing.
