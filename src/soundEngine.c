@@ -709,20 +709,21 @@ static double lfo_shape_dial(double v) {
 
 // The G2 caps the total pitch modulation reaching an oscillator or filter at +/-64 semitones
 // (manual p.78), which is what an Env amount of 100% corresponds to.
-#define FULL_MOD_SEMITONES      (64.0)
+#define FULL_MOD_SEMITONES         (64.0)
 
 // notes §14
-#define PITCH_MOD_SEMITONES     (64.0)
+#define PITCH_MOD_SEMITONES        (64.0)
+#define FLTMULTI_PITCHVAR_SCALE    (2.0)  // §10.1a - FltMulti's PitchVar, at full FreqM, moves twice its Pitch input
 
 // §26 - the Keyboard module's six outputs, in its connector order
-#define KEYBOARD_OUT_PITCH      (0)
-#define KEYBOARD_OUT_GATE       (1)
-#define KEYBOARD_OUT_LIN        (2)
-#define KEYBOARD_OUT_RELEASE    (3)
-#define KEYBOARD_OUT_NOTE       (4)
-#define KEYBOARD_OUT_EXP        (5)
-#define KEYBOARD_OUTPUTS        (6)
-#define KEYBOARD_PITCH_ZERO     (64.0)    // E4 is 0 units (manual p.158)
+#define KEYBOARD_OUT_PITCH         (0)
+#define KEYBOARD_OUT_GATE          (1)
+#define KEYBOARD_OUT_LIN           (2)
+#define KEYBOARD_OUT_RELEASE       (3)
+#define KEYBOARD_OUT_NOTE          (4)
+#define KEYBOARD_OUT_EXP           (5)
+#define KEYBOARD_OUTPUTS           (6)
+#define KEYBOARD_PITCH_ZERO        (64.0) // E4 is 0 units (manual p.158)
 
 // notes §15
 static double type_ii_attenuator(double dial) {
@@ -962,7 +963,8 @@ typedef struct {
     int8_t  modLeg;     // §17.10 - the node input carrying this stage's time mod, or -1
     uint8_t dial;       // its own time dial, so the mod can re-read the stage from dial + offset
     uint8_t modAmount;  // the mod amount dial
-    uint8_t pad[3];
+    uint8_t hold;       // §17.9a - a flat timed stage (ModAHD's Hold, EnvH's H): `add` is its length in ticks
+    uint8_t pad[2];
 } tEnvSegment;
 
 typedef struct {
@@ -2097,6 +2099,8 @@ static bool       gSmoothPrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
 
 static uint32_t   gEnvStageBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gEnvStage        (gEnvStageBank[SE])
+static uint32_t   gEnvHoldBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+#define gEnvHold         (gEnvHoldBank[SE])      // §17.9a - ticks spent in a timed hold stage
 
 // The voice's trigger count this envelope last started an attack for. When the voice's count moves
 // past it, a note-on has asked for a restart that the gate alone cannot show - see envelope_step().
@@ -2546,6 +2550,7 @@ static void reset_node_state(void) {
             gEnvQ[v][i]        = 0;
             gEnvTick[v][i]     = 0.0;
             gEnvStage[v][i]    = ENV_STAGE_IDLE;
+            gEnvHold[v][i]     = 0u;
             gEnvTrigger[v][i]  = gVoice[v].trigger;     // nothing pending: a rising gate attacks
             gEnvGateWas[v][i]  = false;
             gCompEnv[v][i]     = 0.0;
@@ -3519,6 +3524,13 @@ static double env_ticks(double seconds) {
     return fmax(seconds * ENV_TICK_HZ, 1.0);
 }
 
+// §17.9a - a counter from full scale, less the Lin attack word for the dial each tick, lit while above zero
+static int32_t env_hold_ticks(double dial) {
+    double step = fmax(floor(ENV_FULL_SCALE_STEPS / env_ticks(adr_time_seconds(dial))), 1.0);
+
+    return (int32_t)fmax(ceil((ENV_FULL_SCALE_STEPS - 1.0) / step) - 1.0, 1.0);
+}
+
 // §17.9 - one stage's per-tick words. A rise uses the attack shapes of §17.3, a fall the decay one.
 static void env_stage_rates(tEnvSegment * stage, double seconds, uint32_t shape, bool rising) {
     double ticks  = env_ticks(seconds);
@@ -3584,6 +3596,31 @@ static void envmulti_stages_build(tEngineNode * node, tModule * module, uint32_t
     node->envMulti        = true;
 }
 
+// §17.11a - EnvAHD is EnvMulti's own parts with three segments: Attack to full, Hold at full, Decay to
+// nothing, the last held and nothing held for the gate, so its fall is ignored.
+#define ENVAHD_SEGMENTS    (3u)
+
+static void envahd_stages_build(tEngineNode * node, tModule * module, uint32_t variation, uint32_t shape) {
+    static const uint32_t timeParam[ENVAHD_SEGMENTS] = {1u, 2u, 4u};   // Attack, Hold, Decay
+    static const int32_t  target[ENVAHD_SEGMENTS]    = {ENV_TOP, ENV_TOP, 0};
+
+    for (uint32_t i = 0; i < ENVAHD_SEGMENTS; i++) {
+        tEnvSegment * stage = &node->envStage[i];
+        double        time  = param_value(module, variation, timeParam[i]);
+
+        memset(stage, 0, sizeof(*stage));
+        stage->target  = target[i];
+        stage->sustain = (uint8_t)(i == (ENVAHD_SEGMENTS - 1u));
+        stage->modLeg  = -1;
+        stage->decay   = env_q23(exp(-ENV_FALL_SHARPNESS / env_ticks(env_time_seconds(time))));
+        env_stage_rates(stage, env_attack_seconds(time, shape), shape, true);
+    }
+
+    node->envStageCount   = ENVAHD_SEGMENTS;
+    node->envSustainStage = -1;
+    node->envMulti        = true;
+}
+
 // §17.9 - the whole stage list, from the map the module shares with its face.
 static void env_stages_build(tEngineNode * node, tModule * module, uint32_t variation) {
     tEnvGraph map;
@@ -3621,6 +3658,7 @@ static void env_stages_build(tEngineNode * node, tModule * module, uint32_t vari
         stage->modLeg    = -1;
         stage->dial      = 0u;
         stage->modAmount = 0u;
+        stage->hold      = 0u;
 
         if ((segment->timeParam >= 0) && (segment->timeModParam >= 0)) {
             stage->modLeg    = (int8_t)(ENV_INPUT_MOD + segment->timeParam);
@@ -3633,6 +3671,11 @@ static void env_stages_build(tEngineNode * node, tModule * module, uint32_t vari
             node->envSustainQ     = stage->target;   // §17.6 - where the bipolar types centre
             stage->half           = ENV_HALF_UNITY;
             stage->add            = 0;
+        } else if ((segment->timeParam >= 0) && (level == from)) {
+            // §17.9a - neither rises nor falls, so no level test can end it: it lasts its dial's time
+            stage->hold = 1u;
+            stage->half = ENV_HALF_UNITY;
+            stage->add  = env_hold_ticks(param_value(module, variation, (uint32_t)segment->timeParam));
         } else {
             // A rise reads its time through the attack curve, as §17.1 has it; a fall through §17.2.
             double seconds = (segment->timeParam >= 0)
@@ -3649,6 +3692,8 @@ static void env_stages_build(tEngineNode * node, tModule * module, uint32_t vari
 
     if (module->type == moduleTypeEnvMulti) {
         envmulti_stages_build(node, module, variation, map.shape);
+    } else if (module->type == moduleTypeEnvAHD) {
+        envahd_stages_build(node, module, variation, map.shape);
     }
 }
 
@@ -5770,7 +5815,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         {
             // Freq 0, FreqM 1, KBT 2, GComp 3, Res 4, dB/Oct 5, On 6 - §10.1
             node->cutoffParam = param_value(module, variation, 0);
-            node->modAmount   = dial_fraction(param_value(module, variation, 1));
+            node->modAmount   = FLTMULTI_PITCHVAR_SCALE * dial_fraction(param_value(module, variation, 1));   // §10.1a
             node->fltKbt      = param_value(module, variation, 2) * 0.25;
             node->fltGainComp = (module->param[variation][3].value != 0);
             node->resonance   = param_value(module, variation, 4) / 127.0;
@@ -5792,7 +5837,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         {
             // Freq 0, Pitch 1, Kbt 2, FB 3, FB Mod 4, Type 5, Level 6, On 7 - §13.1
             node->cutoffParam  = param_value(module, variation, 0);
-            node->modAmount    = dial_fraction(param_value(module, variation, 1));
+            node->modAmount    = type_ii_attenuator(param_value(module, variation, 1));   // §13.1a
             node->fltKbt       = param_value(module, variation, 2) * 0.25;
             node->combFeedback = flt_comb_feedback(param_value(module, variation, 3));
             node->combFbMod    = dial_fraction(param_value(module, variation, 4));
@@ -10370,6 +10415,10 @@ static const tEnvSegment * env_stage_modulated(const tEngineNode * spec, const t
     }
     *scratch = *stage;
 
+    if (stage->hold != 0u) {
+        scratch->add = env_hold_ticks(dial);   // §17.9a
+        return scratch;
+    }
     double seconds = (stage->rising != 0u)
                      ? env_attack_seconds(dial, (uint32_t)spec->wave)
                      : env_time_seconds(dial);
@@ -10401,14 +10450,14 @@ static double envmulti_step(uint32_t voice, uint32_t node, const tEngineNode * s
             gEnvTrigger[voice][node] = gVoice[voice].trigger;
 
             if (spec->envReset == true) {
-                level = spec->envStage[ENVMULTI_SEGMENTS - 1u].target;    // Reset restarts from L4
+                level = spec->envStage[spec->envStageCount - 1u].target;    // Reset restarts from the last level
             }
         } else if ((gate == false) && (was == true) && (spec->envSustainStage >= 0)) {
             seg = (uint32_t)spec->envSustainStage + 1u;    // a release starts the segment after the held one
         }
         state[3]               = (gate == true) ? 1.0 : 0.0;
 
-        if (seg < ENVMULTI_SEGMENTS) {
+        if (seg < spec->envStageCount) {
             const tEnvSegment * s        = &spec->envStage[seg];
             bool                entered  = (state[2] != (double)(seg + 1u));
 
@@ -10468,6 +10517,14 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
 
             if (stage->sustain != 0u) {
                 q = env_segment(q, stage->half, stage->add, stage->target);
+            } else if (stage->hold != 0u) {
+                // §17.9a - the level stays where the stage before left it, for the stage's ticks
+                gEnvHold[voice][node]++;
+
+                if (gEnvHold[voice][node] >= (uint32_t)stage->add) {
+                    gEnvHold[voice][node]  = 0u;
+                    gEnvStage[voice][node] = ((index + 1u) < spec->envStageCount) ? (index + 1u) : ENV_STAGE_IDLE;
+                }
             } else {
                 q = env_segment(q, stage->half, stage->add, (stage->rising != 0u) ? 0 : stage->target);
 
@@ -10499,6 +10556,7 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
             if (  (rising == true)
                || ((spec->envKeyGate == true) && (gEnvTrigger[voice][node] != gVoice[voice].trigger))) {
                 gEnvStage[voice][node]   = 0u;           // from the level it is at - §17.3
+                gEnvHold[voice][node]    = 0u;
                 gEnvTrigger[voice][node] = gVoice[voice].trigger;
 
                 // §17.7 - Reset starts it from zero, in the tick the gate rises
@@ -10512,6 +10570,7 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
             // to jump past and a one-shot runs on to its end, which is what EnvAHD and EnvD want.
             if (spec->envSustainStage >= 0) {
                 gEnvStage[voice][node] = (uint32_t)spec->envSustainStage + 1u;
+                gEnvHold[voice][node]  = 0u;
             }
         }
     }
@@ -14224,8 +14283,11 @@ static bool voice_is_finished(const tSoundEngineParams * paramsIn, uint32_t v, b
         if ((paramsIn->node[n].kind != eNodeEnv) || (paramsIn->node[n].postMix == true)) {
             continue;
         }
+        // §17.11 - a part-driven envelope never goes idle: it stays on its last segment
+        bool lastSegment = (paramsIn->node[n].envMulti == true)
+                           && ((gEnvStage[v][n] + 1u) >= paramsIn->node[n].envStageCount);
 
-        if ((gEnvStage[v][n] != ENV_STAGE_IDLE) || (fabs(gEnvLevel[v][n]) > 1.0e-5)) {
+        if (((gEnvStage[v][n] != ENV_STAGE_IDLE) && (lastSegment == false)) || (fabs(gEnvLevel[v][n]) > 1.0e-5)) {
             return false;
         }
     }

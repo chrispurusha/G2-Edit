@@ -12321,3 +12321,61 @@ and the backdoor SAVEPERF (a .prf2 to wrap as a state record, header "G2Alike st
 dBFS on Out 1/2 (dry) and -29.2 on Out 3/4 (chorus), and the engine's stereo render no longer carries the
 chorus's 6.7 Hz sidebands. auval passes; SynthLib's plugin/test/do-test passes.
 
+
+## 2026-10-08 - Three reported patches narrowed by simplifying them on both: three engine faults, one rig fault
+
+MicroWaves, Flows_DZ and GlassCathedral (todo) were each loaded into slot A, cut down a branch at a time
+with the backdoor (DELCABLE, SET, PUSH), and every cut played on the G2 (DEVNOTE C4, Out 1/2 on the QU-24)
+and rendered by the engine with the same note. Captures in G2Bugs/2026-10-08 are the
+session's; slot A was backed up first (slotA-before-2026-10-08.pch2) and restored after.
+
+- **The rig: DEVNOTE plays velocity 127; the engine renders had used 100.** MicroWaves plays variation 8,
+  whose FltClassic Freq has a Velocity morph of +26 - half its "odd harmonics only" difference was the
+  cutoff sitting five semitones lower in the render. At 127 the static patch matches the G2 within 1 dB
+  per harmonic. Render at velocity 127 whenever the G2 side is a DEVNOTE.
+- **MicroWaves is otherwise right.** Raw Mux8-1X output, the HP and the filter each matched; the LFO
+  into the Mux matched in period once its key sync was switched on (3.10 s both). What still differs is
+  the phase of its free-running LFOs - the ModLfo and the eight audio-rate oscillators are never reset,
+  so their phase at the key is arbitrary on the G2. Removed from todo.
+- **Flows_DZ: EnvAHD's Hold took no time** (reference §17.11a). Voice A's notes were 18 ms on the engine
+  against 70 on the G2 - Attack 5 + Hold 54 + Decay 14 ms. The walker built Hold as a stage from full to
+  full and its level test passed on the first tick. EnvAHD is now played as EnvMulti's own part with
+  three segments, which is how the instrument builds it; the Hold sweep on the G2 matches within 2%.
+  A first pass of G2 captures at Hold 8-40 read 4-100 ms and looked like a different law; the same
+  settings captured again read 10-130 ms and agree with the engine, so those takes were bad.
+- **GlassCathedral: FltComb's Pitch attenuator was linear** (reference §13.1a). It is the mixer's Exp
+  taper, so the patch's Pitch 17 barely moves its comb on the G2 while the engine swept it eight
+  semitones - the slow phasing. Measured with a Constant into PitchVar and the comb's period read off
+  the autocorrelation (note: the G2's second peak, at twice the period, can be the taller one).
+- **FltMulti's FreqM was half the instrument's** (reference §10.1a), found by the same rig while
+  checking the comb: linear, but a unit on PitchVar at full FreqM moves the cutoff two semitones.
+
+Later the same day, the two items this left open:
+
+- **Decay 0 was not a fault.** Read on a 6.6 kHz carrier instead of 262 Hz, the G2 and the engine fall
+  identically (-8, -15, -23, -33 dB at each 0.1 ms); the "5 ms" was the envelope of a low tone smearing
+  the step. Sending EnvAHD's Env output straight to the 2-Out showed the same abrupt step on the G2.
+- **EnvH's and ModAHD's holds** now take EnvH's counter law (reference §17.9a) and match the G2.
+- **THE CAPTURE TRAP AGAIN.** Two G2 takes in this session read a hold far from the law (Hold 32 at 36 and
+  40.7 ms, Hold 16 at 10 ms) and each looked like evidence of a different law. Ten notes in one take
+  all read 54.8. tools/capture starts late, so a single note played 0.3 s after starting it can be cut
+  short: play several notes inside one long take and use the middle ones.
+
+The other filters' modulation depth, checked the same day after the FltComb and FltMulti fixes:
+
+- **FltNord** agrees with the G2 (noise into it at Res 120, +8 units in): Pitch 64/127 give 709/1105 Hz on
+  the G2 and 693/1126 in the engine; FM Lin 64/127 give 2349/4351 and 2347/4320.
+- **FltLP and FltHP** share FltMulti's coefficient stage, so their FM input moves the cutoff two semitones
+  a unit at full amount - which the engine already did (notes §160). The QU-24 capture read the corner
+  20-30% further than the engine (+0.81 against +0.61 octave at amount 64), but the engine's own render
+  read 10% short of what its code applies, so the -6 dB crossing on that rig cannot settle a difference
+  that size. SETTLED on the Fireface the same day: with the output chain divided out (each setting's
+  level well above the corner against the same rig's FM 0), +8 units into FM gain +2.00, +4.22, +6.07,
+  +7.89 dB at FM 32, 64, 96, 127 on the G2 and +1.99, +4.00, +6.01, +7.97 in the engine (Freq 60; Freq 84
+  within its noise). A -6 dB crossing read off the raw spectrum is not a corner measurement: it caught
+  noise dips and the G2's own output roll-off, and read the G2's unmodulated corner 2.7 semitones low.
+- **FltPhase** runs its part exactly, Pitch word included (§67); not measured.
+- **Regression:** the 47 patches in PatchTestFiles and G2Bugs rendered on the engine before and after
+  the day's changes are bit-identical except Flows_DZ, GlassCathedral and schtraengt (intended) and
+  fmfunk, MicroWaves and 14 pattern seq, which differ from themselves between two renders on the same
+  engine (random and free-running sources).

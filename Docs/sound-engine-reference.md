@@ -374,6 +374,12 @@ reported as having nothing patched into it.
 75, 100%), GComp 3, Res 4, dB/Oct 5 (0 = 6 dB, 1 = 12 dB), On 6. Inputs In, PitchVar, Pitch; outputs
 LP, BP, HP - the node's three legs (§9.3).
 
+**10.1a FreqM is twice the Pitch input** (2026-10-08, from the reference model): the module forms 4 x (PitchVar x FreqM + Pitch x 0.5), FreqM being v/128, so at full FreqM a unit on PitchVar moves the
+cutoff two semitones where a unit on Pitch moves it one. Measured on the G2 with +8 units: FreqM 32, 64,
+96 and 127 give +3.7, +7.8, +12.0 and +15.8 semitones; the engine had half of each and now agrees within
+1%. FltLP and FltHP are built on the same coefficient stage, and their FM input was already
+at two semitones a unit (notes §160).
+
 **10.2 Filter (from the reference model, confirmed by 10.3).** A Chamberlin state-variable filter, one per
 voice, run at the engine rate:
 
@@ -534,6 +540,12 @@ Runs at the engine rate. NOT YET compared sample for sample with the harness - s
 
 **13.1 Parameters and connections.** Freq 0, Pitch 1 (the PitchVar attenuator), Kbt 2 (Off, 25-100%),
 FB 3, FB Mod 4, Type 5 (Notch, Peak, Deep), Level 6, On 7. Inputs In, Pitch, PitchVar, FB Mod.
+
+**13.1a The Pitch attenuator is the mixer's Exp taper** (2026-10-08, from the reference model):
+the Pitch dial reaches the part through the same curve as the mixer levels (§3.2, `type_ii_attenuator()`),
+not linearly. Measured on the G2 with +63 units into PitchVar: Pitch 17 moves the teeth +0.2 semitone and
+64 moves them +8.4; the engine had +8.5 and +32. GlassCathedral's LFO at Pitch 17 had swept its comb by
+eight semitones - the "slow phasing" - where the G2's barely moves.
 
 **13.2 Tuning.** The comb's delay is 96000/f - 1 samples at 96 kHz, where f is the Freq curve NINE
 SEMITONES DOWN, `flt_cutoff_hz(Freq - 9)`: the teeth sit a major sixth below what the dial reads. Fits
@@ -917,7 +929,7 @@ a face and the sound cannot disagree about what an envelope does.
 |---|---|
 | EnvADSR, ModADSR | A, D, hold, R |
 | EnvADR | A, R - and a hold between them in Release mode while gated |
-| EnvAHD, ModAHD | A, H, D - no hold, a one-shot |
+| EnvAHD, ModAHD | A, H, D - no hold, a one-shot (EnvAHD is played by 17.11 since 2026-10-08, 17.11a) |
 | EnvD | to full at once, then D |
 | EnvH | to full at once, H, then off at once |
 | EnvADDSR | A, D1, D2, hold, R - the hold at L1 or L2 as its own switch says |
@@ -1002,6 +1014,27 @@ the held one. With Sustain "none" nothing is held but segment 4 and the gate's f
 are v/128 (127 full). All four steps happen in the tick the gate changes. Checked against the reference model run
 tick by tick with the instrument's own time tables: 0 difference over 128 runs (four Shapes, four
 Sustain places, Reset on and off, rising and falling segments, short and long gates).
+
+**17.11a EnvAHD is EnvMulti with three segments (2026-10-08).** The instrument builds EnvAHD from the
+very stages EnvMulti uses - the same envelope stage and the same segment stage, three of them - so the engine
+now plays it through 17.11 rather than the stage walker of 17.9: Attack to full, Hold at full, Decay to
+nothing, the Decay segment held at its end and nothing held for the gate, whose fall is ignored. The HOLD
+is a segment like the others: its progress word steps by the attack recurrence for its own Time dial and
+the Shape, and it ends when that passes full scale, the level staying put meanwhile. Under the walker it
+had lasted no time at all - a stage from full to full passed its level test on the first tick - so every
+EnvAHD played Attack straight into Decay (Flows_DZ's notes were a quarter of their length). Checked
+against the G2 (OscA > EnvAHD > 2-Out, Attack and Decay 0, C4): Hold 16, 32, 40, 48, 56, 64, 72, 80 sound
+10, 58, 130, 272, 544, 1030, 1880, 3350 ms on the G2 and 10, 56, 128, 272, 544, 1034, 1892, 3348 in the
+engine.
+
+**17.9a A flat stage in the walker is timed (2026-10-08).** For the envelopes the walker still plays
+(ModAHD's Hold, EnvH's H), a stage that neither rises nor falls lasts as long as the instrument's EnvH
+part holds: a counter loaded with full scale on the trigger loses the Lin attack word for the dial each
+envelope tick, and the output stays on while it is above zero (`env_hold_ticks()`). Checked against the G2
+(an OscA at 6.6 kHz through the module, six notes a take): EnvH Hold 12, 16, 20, 24, 32, 48, 64 sound 4.1,
+7.3, 12.6, 21.2, 54.2, 269.5, 1025.0 ms on the G2 and 4.1, 7.3, 12.7, 21.3, 54.3, 269.5, 1025.1 in the
+engine. ModAHD, which has a part of its own, is within 0.3% (Hold 32: 54.7 against 54.6; Hold 64: 1028.4
+against 1025.3), the G2 about a millisecond longer at short settings.
 
 ## 18. Pulse
 

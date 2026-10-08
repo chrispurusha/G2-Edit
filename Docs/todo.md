@@ -6,10 +6,7 @@ Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
 -
-- "MicroWaves" plays now but has only odd harmonics on the engine (262/785/1308 Hz) where the G2 has even ones too (523/2093) - its eight audio-rate LFOs or the Mix8-1B
 - "AccBass 1 DX" is still a few dB darker on the engine above the 8th harmonic (6 dB at the 10th, was 19) after the octave-shifted key fix
-- "GlassCathedral" sounds like it has slow phasing on Engine.
-- "Flows\_DZ" has more notes in the sequence on G2 than vs. engine. Sounds very different. Other tones in there on G2 too.
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Implement audio input, for processing external signals.
 - Effects version of the plugin, for audio processing.

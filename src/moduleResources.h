@@ -2341,13 +2341,13 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMix2to1B,   paramTypeMenu,           {{ 21,   6}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, expStrMap,                             NULL          },            // 66 ExpLinDB
     // 67 Unknown
     // 68 ClkGen
-    {moduleTypeClkGen,     paramTypeCommonDial,     {{ 42, -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                     // 68 Tempo *** needs new dial 24-214 BPM
-    {moduleTypeClkGen,     paramTypeBypass,         {{ -3, 3}, { 5,  5}}, anchorTopRight,  NULL,             2,   1, NULL,                                  NULL          },                     // 68 Bypass
-    {moduleTypeClkGen,     paramTypeMenu,           {{  3,   0}, { 7,  7}}, anchorBottomLeft,  "Source",         2,   0, clkSrcStrMap,                          NULL          },                     // 68 Clk Source
-    {moduleTypeClkGen,     paramTypeMenu,           {{ 60,   0}, { 7,  7}}, anchorBottomLeft,  "Sync every",     6,   2, clkGenBeatSyncStrMap,                  NULL          },                     // 68 BeatSync
-    {moduleTypeClkGen,     paramTypeSwing,          {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Swing",        128,   0, NULL,                                  NULL          },                     // 68 Swing
+    {moduleTypeClkGen,     paramTypeCommonDial,     {{ 42,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                 // 68 Tempo *** needs new dial 24-214 BPM
+    {moduleTypeClkGen,     paramTypeBypass,         {{ -3,   3}, { 5,  5}}, anchorTopRight,    NULL,             2,   1, NULL,                                  NULL          },                 // 68 Bypass
+    {moduleTypeClkGen,     paramTypeMenu,           {{  3,   0}, { 7,  7}}, anchorBottomLeft,  "Source",         2,   0, clkSrcStrMap,                          NULL          },                 // 68 Clk Source
+    {moduleTypeClkGen,     paramTypeMenu,           {{ 60,   0}, { 7,  7}}, anchorBottomLeft,  "Sync every",     6,   2, clkGenBeatSyncStrMap,                  NULL          },                 // 68 BeatSync
+    {moduleTypeClkGen,     paramTypeSwing,          {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Swing",        128,   0, NULL,                                  NULL          },                 // 68 Swing
     // 69 ClkDiv
-    {moduleTypeClkDiv,     paramTypeCommonDial,     {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 69 Divider *** needs other UI element
+    {moduleTypeClkDiv,     paramTypeCommonDial,     {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                 // 69 Divider *** needs other UI element
 
     // 70 Unknown
     // 71 EnvFollow

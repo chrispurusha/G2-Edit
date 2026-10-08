@@ -4,6 +4,11 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***ENVAHD HOLD, FLTCOMB PITCH, FLTMULTI FREQM (2026-10-08)*** - findings 2026-10-08, reference §17.11a, §13.1a,
+  §10.1a. Each measured against the G2 with a cut-down patch; LISTEN to the whole patches: Flows_DZ (EnvAHD notes now
+  last their Hold), GlassCathedral (no slow phasing), MicroWaves (unchanged in the engine, matched once rendered at
+  velocity 127). Every stage patch with an EnvAHD, a FltComb with Pitch in use or a FltMulti with FreqM in use
+  will sound different - say if one got worse
 - ***OUT 3/4 AS ITS OWN VST3 BUS (2026-10-07)*** - g2Plugin notes §8. CHECK in Ableton: load ChorusSaw (1:1) in G2
   Alike; its track plays the dry sound only, and a second audio track set to "Audio From: G2 Alike / Out 3/4"
   plays the StChorus. tools/vst3host --bus-test already shows -21.5 dBFS on Out 1/2 and -29.2 on Out 3/4. The

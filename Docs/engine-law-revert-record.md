@@ -208,3 +208,12 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 | 134 | OverDrive | a soft limiter x / (1 + |x|^n)^(1/n), knee n and drive by Type (2/16/3/6, 8/8/24/32), crossfaded with the dry by Drive/127 | the instrument's: a fifth-order polynomial applied twice after a tube term and a type gain, a 7 Hz high-pass, dry (1 - d)^2 and wet 1 - (1 - d)^2, Heavy's feedback (§71) | `308b1b0` `src/paramCurves.c` `shaper_transfer()` case eShaperOverdrive
 | 135 | Rate of control modules | every node evaluated every audio sample | a module with only blue/yellow outputs and not up-rated is evaluated at 24 kHz, its outputs held between (notes §203) | `a0d565f` `src/soundEngine.c` the voice and FX passes, `stage_voices()` / `stage_fx()`
 | 136 | Status Patch Active | high from the start (the manual: high as soon as a patch is loaded) | held low, as the G2 reads (§70.13) | `a0d565f` `src/soundEngine.c` `eval_node()` case eNodeStatus
+
+## 2026-10-08
+
+| # | What | Old | New | Old code at |
+|---|---|---|---|---|
+| 137 | EnvAHD | the stage walker of §17.9; its Hold, a stage from full to full, ended on its first tick, so Hold took no time | EnvMulti's part with three segments, Hold timed by its progress word like any segment (§17.11a) | `cc67baf` `src/soundEngine.c` `env_stages_build()`, `envelope_step()` |
+| 138 | Walker stages that neither rise nor fall (ModAHD's Hold, EnvH's H) | no time | EnvH's counter: full scale less the Lin attack word a tick, `env_hold_ticks()` (§17.9a) | `cc67baf` `src/soundEngine.c` `envelope_step()` |
+| 139 | FltComb Pitch attenuator | dial/128, linear | the mixer's Exp taper, `type_ii_attenuator()` (§13.1a) | `cc67baf` `src/soundEngine.c` `add_node()` case eNodeFltComb |
+| 140 | FltMulti FreqM | dial/128 | 2 x dial/128 (§10.1a) | `cc67baf` `src/soundEngine.c` `add_node()` case eNodeFltMulti |

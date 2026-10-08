@@ -370,6 +370,13 @@ static void backdoor_param_dump(void) {
                 }
             }
 
+            // The values the active variation actually plays, which a patch saved on variation 8 differs on.
+            fprintf(file, "\nvarparams loc=%s index=%u variation=%u:", locNames[l], (unsigned)index, (unsigned)variation);
+
+            for (uint32_t p = 0; (p < module->actualParamCount) && (p < MAX_NUM_PARAMETERS); p++) {
+                fprintf(file, " %u", (unsigned)module->param[variation][p].value);
+            }
+
             fprintf(file, "\n");
         }
     }
