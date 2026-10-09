@@ -21,6 +21,34 @@ replaces the single verdict with one state per ASPECT of each module.
 | Level / gain | absolute output level against a known reference (an OscA sine, a Constant) | every module that makes or scales a signal |
 | Modes / On-Off | drop-down modes, and what Off does - pass the input, go silent or hold | every module with a mode, a bypass or an On/Off |
 
+Further aspects (CT, 2026-10-09):
+
+| Aspect | Covers |
+|---|---|
+| Rate | audio rate or the 24 kHz control tick, and correct behaviour when up-rated or not (notes §203) |
+| Voicing | per-voice or shared state, Mono/Poly, what a new note resets, how a voice's tail ends |
+| Start state | what the module holds at patch load (random phases, seeds, Logic Delay's Neg high, ClkGen's first tick) |
+| Control response | knob smoothing and zipper, morph and Vel/Keyb per voice, MIDI CC |
+| Headroom / precision | saturation points and fixed-point truncation (tails reaching exact zero, 0x7FFFFF not 4.0) |
+| Rate dependence | behaviour at other graph rates: 48 kHz economy, 44.1 kHz hosts |
+| Area | Voice area against FX area (no key in the FX area, evaluation after the mix) |
+| Limits | pool sizes (`MAX_*_LINES` and the like) - instances the engine drops where the G2 runs them |
+| Meters / LEDs | the module's lamp and meter against the instrument's law |
+| Cross-slot / area | only for NoteSend, CtrlSend, CtrlRcv, NoteRcv, ClkGen, Status, FX Input, 2-In/4-In from a bus: points at the engine-behaviour table below |
+
+## Engine behaviours (not per module)
+
+A second table in the status doc, same states, for what belongs to the engine rather than to a module:
+
+| Behaviour | Covers |
+|---|---|
+| Slot to slot | NoteSend/CtrlSend delivery and timing, controller 70 variation switching at the next snapshot rebuild |
+| Master clock | one position shared by every slot: ClkGen on Master, LFO Clk/BPM, the arpeggiator |
+| Voice to FX | the 2-Out / FX In / bus bridge and its timing |
+| Threads | voice workers: determinism (18 Unreal Dreams differs threaded and serial), resets on the worker, one-block silences |
+| Variations | a change landing between blocks; per-variation patch settings |
+| Latency | each path's delay, application and plug-in |
+
 Each aspect takes the states the status doc already uses: Confirmed on the G2, Modelled, Approximate, and
 Unknown (nothing documented either way). An aspect that does not apply is left out, not marked.
 
