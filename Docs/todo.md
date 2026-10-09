@@ -5,6 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
+- 04 Chris' Pad shows clipping on engine, on the 4 channel mixer. Might need to check if G2 shows the same and check levels or level indications.
 - Module aspect audit: one state per aspect (core law, timing, dials, mod inputs, level, modes/On-Off) in engine-module-status.md - Docs/module-aspect-audit-design.md; step 1 (generator enumerates aspects) next
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Audio input in the application: an input device in Settings > Audio feeding sound_engine_set_input() (the engine and the plug-in's side-chain have it since 2026-10-08, reference §37)
