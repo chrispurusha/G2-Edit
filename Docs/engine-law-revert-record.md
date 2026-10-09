@@ -219,3 +219,4 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 | 140 | FltMulti FreqM | dial/128 | 2 x dial/128 (§10.1a) | `cc67baf` `src/soundEngine.c` `add_node()` case eNodeFltMulti |
 | 141 | OscB DualSaw below zero shape (a bipolar Shape Mod) | clamped to 0: `offset = 0.5 * fmin(fmax(shape, 0.0), 1.0)` | wraps, as OscShpB's DblSaw: offset 0.5 x shape in -1..1, so -y sounds as +y (§6.7). MEASURED on the G2 the same day | `b92bb7f` `src/soundEngine.c` `oscillator_wave()` case eOscWaveDualSaw |
 | 142 | Pulse trigger (§18.4) | rising edge only, through 0.5 (`PULSE_THRESHOLD`), whatever the Mode | the module's zero crossing: Plus on a rise, Minus on a fall | `81ae8d0` `src/soundEngine.c` `pulse_step()` |
+| 143 | Sequencer Length / Cycle changed while running (§58.2) | only the length words follow; the step stays where it was | the step goes back to 0, as the instrument's update does | `43a6151` `src/soundEngine.c` `seq16_step()` |

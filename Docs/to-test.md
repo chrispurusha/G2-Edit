@@ -4,6 +4,9 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***BCHYDRO SEQUENCERS, AGAIN (2026-10-09)*** - findings of that date. LISTEN to 1:2 on the engine through all eight
+  variations (about a minute): B, C and D's sequences should run whole, variation 7 included (slot D's four-step
+  cycle), with no restarts between bar lines
 - ***GRAPH RESET OFF THE AUDIO THREAD (2026-10-09)*** - sound-engine-notes §212. LISTEN: edit cables while a patch plays,
   in the app and the plug-in - the edited slot should drop out for about a block and come back as before, other
   slots carrying on; loading patches should start as cleanly as ever

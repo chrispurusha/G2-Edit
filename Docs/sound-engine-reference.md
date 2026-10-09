@@ -2457,6 +2457,15 @@ every length, cycle, gate mode and polarity). Checked on the G2 at 192 kHz (find
   the clock is high (two ticks late); a Gate row holds it.
 - Up to 8 sequencers per patch.
 
+**58.2 Length and Cycle while running (2026-10-09, from the reference model).** A Length
+change writes the module's length words (the last step, last + 1 and last - 1) and, unless the patch is being
+loaded, puts the step word back to 0, so the sequence starts again from its first step at the new
+length. Cycle switched on likewise puts the step back to 0; switched off it only removes the wrap. A
+variation change sends every parameter that differs, so a variation with another Length or Cycle
+restarts that sequencer on the G2 - performance 1:2 BCHydro_DZLW's slot D does it in variation 7
+(Length 4, Cycle on). Until this date the engine kept the old step, which could sit past the new end
+and stall the sequencer (notes §210's open question).
+
 **58.1 SeqNote's record stage** (2026-10-01, from the instrument's own record stage and the code that links
 it). SeqNote runs a second stage after the 16-step one. It takes the value row (the step plus the Note
 input), RecVal (input 6) and RecEnable (input 7), and is what drives the Note output:

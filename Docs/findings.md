@@ -2365,7 +2365,7 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   NOT SWITCHED TO THE FORMULA: the table is what the dial prints, and the project's rule is that
   what is heard and what is shown come from one place. The formula is recorded because it says what
   KIND of curve the hardware uses, which the table alone does not.
-  WHAT THE DEMO DOES: it calculates. Its envelope's audio-rate stage consumes a pre-computed
+  WHAT THE REFERENCE MODEL DOES: it calculates. Its envelope's audio-rate stage consumes a pre-computed
   COEFFICIENT rather than looking up a time, and the coefficient stages evaluate polynomials — the
   filter's coefficient routine visibly squares and cubes its input. Consistent with the power-law
   fit above: a polynomial, not a 128-entry lookup.
@@ -12553,3 +12553,21 @@ per document and a fresh Master ClkGen starts from it (sound-engine-notes §211)
 within one 24 kHz tick. A trap on the way: the module reads its run flag a tick late, so a ClkGen started
 mid-run spends its first tick "stopped" and puts its phase back to the top - the first attempt changed
 nothing until the delayed flag was set too.
+
+## 2026-10-09 - BCHydro_DZLW's sequencers in the engine: a ClkGen start regression, and Length changed mid-run
+
+CT, listening to 1:2 on the engine: "the sound reproduction is stunningly good", but B, C and D's sequencers
+were reset or cut short now and then, some perhaps not running - "it may be just some variations". Traced
+offline (each sequencer's step word over 75 s):
+- A REGRESSION OF THE SAME DAY: the shared master position (notes §211) also applied at the very start,
+  when the position is still 0, and marked every fresh ClkGen running at once. The part spends its first
+  tick stopped and its ClkActive rises a tick later; patches reset on that rise. Slot A then switched
+  variations every 3.82 s instead of every 7.64 s. Now the alignment applies only once the master clock
+  has moved on (position > 0); slot A is back to 7.64 s.
+- LENGTH AND CYCLE CHANGED WHILE RUNNING (reference §58.2): slot D's variation 7 gives one SeqLev Length 4
+  and Cycle on. The instrument's update for a Length change, or Cycle switched on, puts the step back to
+  0; the engine kept the old step, which could sit past the new end, and the sequencer stalled until a
+  bar line. With the variation forced mid-sequence (2.5 s) the old engine went 1.3 s without a step; now
+  it restarts at once and cycles its four steps. Offline, slot A's own switches land on bar lines, where
+  both agree - it bites when a switch lands mid-sequence, as the regression made it.
+Nothing else resets: no graph change in 75 s through every variation, and every pair hands over on time.

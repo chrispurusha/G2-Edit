@@ -3521,8 +3521,8 @@ shorter Length, the step counter began past the wrap point (step == length + 1) 
 the sequencer stayed silent until a Rst or Loop reached it. On the G2 (2026-10-07,
 G2Bugs/g2-test-loop.wav) a 2-step cycling SeqEvent with nothing on Rst runs from load.
 The engine now sets both words from Length at load, which reproduces the reference model's own values at 16
-steps. Open: what the instrument does when Length shrinks below the current step while running; the
-words are still set only at load.
+steps. What a Length change does while running is settled in reference §58.2: the step goes back to
+the start.
 
 ## 211. Master ClkGens share the master clock's position (`master_clock_advance()`, `gMasterPositionBank`)
 

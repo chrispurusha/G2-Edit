@@ -1745,6 +1745,8 @@ typedef struct {
     int32_t loaded[2 * SEQ_STEPS];   // the table as last copied in: a recorded step stays until its dial moves
     int32_t held[3];                 // §58 - the outputs between a control-rate stage's ticks
     double  tick;                    // time to its next tick, in ticks
+    int32_t lengthWas;               // §58.2 - the Length and Cycle it last ran with
+    uint8_t cycleWas;
     bool    ready;
 } tSeqState;
 static tSeqState              gSeqBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_SEQ_LINES];
@@ -9908,7 +9910,20 @@ static void seq16_step(tSeqState * st, const tSeqConfig * cfg, const int32_t in[
             st->loaded[k] = cfg->table[k];
         }
 
+        st->lengthWas    = cfg->length;
+        st->cycleWas     = cfg->cycle;
         st->ready        = true;
+    }
+
+    // §58.2 - a Length change, or Cycle switched on, while it runs puts the step back to the start
+    if (cfg->length != st->lengthWas) {
+        st->lengthWas = cfg->length;
+        Y[1]          = 0;
+    }
+
+    if (cfg->cycle != st->cycleWas) {
+        st->cycleWas = cfg->cycle;
+        Y[1]         = (cfg->cycle != 0u) ? 0 : Y[1];
     }
     // the words the switches set, every sample, so a change applies without a restart
     X[8]  = cfg->length;
@@ -10122,8 +10137,9 @@ static void clkgen_tick(tClkGenState * st, const tClkGenConfig * cfg, int32_t rs
             Y[k] = sext24(kY[k]);
         }
 
-        // notes §211 - on Master it starts where the master clock is, not at the top of its period
-        if (masterPhase >= 0) {
+        // notes §211 - on Master it starts where the master clock is, not at the top of its period; at
+        // the top itself it starts as the module does, its ClkActive rising a tick later
+        if (masterPhase > 0) {
             X[7] = sext24((int32_t)(((uint64_t)masterPhase - 1u) & 0xFFFFFFu));
             X[8] = X[7];
             X[3] = X[2];    // already running: the module's one-tick-late copy would read a stop
