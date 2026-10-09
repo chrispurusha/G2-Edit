@@ -1198,3 +1198,4 @@ from a capture, so they are the ones most likely to be right.
   0-14 as one undo step. Param 15 is now the On button. Checked offline in the editor (values, undo,
   redo, "none"). STILL TO CHECK ON THE G2: a chosen preset sounds and reads the same on the
   instrument, the G2 shows the same name, and the On button mutes the module.
+- Economy switch (2026-10-09): the reset now runs on the slot's voice worker (sound-engine-notes §212). Flip Half Rate (economy) while a patch with a long reverb plays: one short gap, no click or stuck note, and new notes play straight after
