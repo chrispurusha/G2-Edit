@@ -492,6 +492,14 @@ ITS Type SELECTOR DOES NOT CHANGE THE GAIN. Lin and dB were swept separately and
 decimal places at every one of the 33 positions, so this function is right to ignore the
 parameter. Whatever Type does, it is not this.
 
+
+DIAL 127 IS THE INSTRUMENT'S WORD 0x7FFFFF, NOT 4.0 (2026-10-09). The instrument's gain table holds
+0x200000 for unity (64), 0x400000 for 2x (96) and 0x7FFFFF at 127 - one step short of 4, its largest
+positive word - and its multiply truncates. The formula above meets every other entry of that table
+within 0.0015%; at 127 it now returns 0x7FFFFF / 2^21. Inaudible on audio, decisive on control: a
+LevAmp at 127 on the way to a CtrlSend leaves every value a hair under its multiple, the CtrlSend's
+>> 14 truncates it, and performance 1:2 BCHydro_DZLW selects one variation lower than 4.0 would give.
+
 ## 30. `CLIP_PARAM_LEVEL_MOD`
 
 SHAPER GROUP - Clip, Overdrive, Saturate, ShpExp, WaveWrap, ShpStatic and Rect (manual p.204-207).

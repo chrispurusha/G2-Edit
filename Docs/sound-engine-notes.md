@@ -3570,3 +3570,13 @@ since the first graph needs nothing; only a graph changed mid-render would see a
 depends on the worker's timing. The Economy switch (§205) still resets inside the callback - a rare,
 deliberate user action.
 
+THE MASTER CLOCK'S STEP IS EXACT (2026-10-09, later). A ClkGen on Internal steps its phase by the tempo
+word x (0x55555 >> sync) >> 23, truncated - the module's own arithmetic, kept exactly. On Master the
+instrument changes the reference model to read the master clock's position instead, and the master clock
+is exact: a ClkGen on Master timed on the G2 over 30 s ran within 7, 9 and 17 ppm of 102, 120 and 60 BPM.
+The truncated step is 300 ppm slow at 102 BPM (297.09 words a tick becomes 297), which put the engine
+22 ms behind the G2 a minute into BCHydro_DZLW. A Master ClkGen now steps by the exact amount
+(`clkgen_master_step()`: words x 2^32, the part below a word carried tick to tick in `fraction`), and
+the shared position above advances by the same exact steps. Afterwards the engine stays within 1-4 ms of
+the G2 at every variation switch over 66 s.
+

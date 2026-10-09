@@ -2495,7 +2495,8 @@ Tempo v reading 24 + 2v BPM below 32, 56 + v to 95 and 2v - 40 above (24-214 BPM
 gives 24 pulses a beat (30% duty), 1/16 four (swing moves every second one - 3380/2629 ticks at 32,
 4495/1514 at 127), Sync a short pulse at the start of each period, ClkActive high while on. Rst
 restarts the phase. **Master** follows the instrument's global clock (notes §200; 120 BPM when none is known),
-its position as well as its tempo: every Master ClkGen in every slot shares one phase (notes §211).
+its position as well as its tempo: every Master ClkGen in every slot shares one phase, stepped exactly rather
+than by the truncated tempo word, which a ClkGen on Internal keeps (notes §211).
 
 ## 60. NoteScaler
 
@@ -2526,7 +2527,10 @@ would leave by MIDI and are still dropped.
 **62.3 CtrlSend, and controller 70 (2026-10-09).** A CtrlSend sends its controller to a slot (Channel as
 NoteSend's: This or Slot A-D; 1-16 would leave by MIDI and are dropped) whenever its value changes - the
 Value dial plus the Value input, NoteSend's Vel arithmetic, 0-127 - and on a rising Send input (manual
-p.256). Like NoteSend it is a root of the graph and counts as a source, so a patch that only controls other
+p.256). The last value sent starts at 0 (the reference model), so a CtrlSend at 0 sends nothing at start and
+one at any other value sends it at once. Its input is TRUNCATED to a whole word before the >> 14, as the
+instrument's arithmetic leaves it - with LevAmp at 127 being 0x7FFFFF (paramCurves notes §29), rounding to
+nearest put BCHydro_DZLW's slots one variation ahead of the G2 (findings 2026-10-09). Like NoteSend it is a root of the graph and counts as a source, so a patch that only controls other
 slots runs. At the slot it names, controller 70 selects the variation (manual: the Variation buttons are
 "hard-wired to MIDI Controller #70") as value >> 4 - eight variations across 0-127 - the instrument's
 own mapping, and it sends a variation change as variation << 4. Performance 1:2 BCHydro_DZLW's scaling

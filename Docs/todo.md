@@ -5,7 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
-- BCHydro_DZLW (perf 1:2): the whole matches the G2 within 0.2 dB, but slot C is 2.1 dB and slot D 1.2 dB louder in the engine - compare their voices as slot B's were (findings 2026-10-09; solo files in G2Bugs)
+- Patch Level Mute: the G2 fades a slot out over about 250 ms when a variation mutes it, the engine cuts at once (BCHydro_DZLW slot B, variation 8; findings 2026-10-09 late) - measure the fade and match it
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Audio input in the application: an input device in Settings > Audio feeding sound_engine_set_input() (the engine and the plug-in's side-chain have it since 2026-10-08, reference §37)
 - Effects version of the plugin, for audio processing: a second descriptor (aufx, its own VST3 UIDs, MIDI in kept) whose main input is In 1/2 - GenBridge's two-variant pattern

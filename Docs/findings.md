@@ -12571,3 +12571,33 @@ offline (each sequencer's step word over 75 s):
   it restarts at once and cycles its four steps. Offline, slot A's own switches land on bar lines, where
   both agree - it bites when a switch lands mid-sequence, as the regression made it.
 Nothing else resets: no graph change in 75 s through every variation, and every pair hands over on time.
+
+## 2026-10-09 (later) - BCHydro_DZLW one variation ahead: a 4.0 that is 0x7FFFFF on the instrument
+
+CT: "variation 2 and 3 possibly diverge from G2, but possibly re-sync at variation 4". Method (CT's idea): the
+G2's sequencer LEDs (backdoor LEDDUMP, `vols=` is the step) give its selector's timeline - and showed the G2
+runs this performance at 102 BPM, not the 126 my renders had used. Then 80 s captured from a fresh load of
+the whole performance and of each slot alone, against the engine at 102, compared in 9.42 s sections: the
+engine was ONE VARIATION AHEAD from the second section on (slot C: G2 -44.4/-43.1/-50.7/-41.3 dB, engine
+-43.3/-51.0/-41.2/-40.2). The cause: slot A builds each CC 70 value through a LevAmp at 127, which the
+instrument's gain table holds as 0x7FFFFF (4 less one step) and multiplies with truncation, so every value
+lands a hair under its multiple of 16 and the CtrlSend's >> 14 makes it 15, 31, 47 ... - variations 1 to 8.
+The engine's 4.0 and round-to-nearest gave 16, 32 ... - variations 2 to 8, then 8 twice. Fixed both (revert
+record 144, 145). Afterwards every section of every slot correlates 0.75-0.98 with the G2 (was 0.1-0.5) and
+the levels agree within half a dB. Also: the CtrlSend's last value sent starts at 0 (the reference model),
+so it no longer sends a 0 first.
+STILL OPEN: the engine drifts about 20 ms ahead of the G2 over a minute (500 ppm - tempo word, or the two
+clocks); slot B's variation 8 is 10 dB quieter in the engine (-55.0 against -45.2).
+
+## 2026-10-09 (late) - BCHydro_DZLW: the drift was the engine's master step; variation 8 is a mute on both
+
+- DRIFT: measured switch by switch it was steady, not a jump - the G2 3 ms ahead at 6 s growing to 22 ms
+  at 63 s (330 ppm), the same before and after every variation switch, so a switch costs the G2 no time.
+  The G2's own master clock, timed directly (backdoor CLOCKBPM, new; a ClkGen on Master into a 2-Out,
+  30 s at 102/120/60 BPM): within 7/9/17 ppm of exact. The engine's Master ClkGens used the Internal
+  path's truncated step, 300 ppm slow at 102 BPM. Now exact (notes §211, revert record 146): within
+  1-4 ms of the G2 at every switch over 66 s.
+- SLOT B, VARIATION 8: its patch settings mute the slot in that variation (Volume on/off 0), and both mute
+  it - the G2 to its noise floor (-95 dB), the engine to digital silence, at the same moment. The section
+  figures (-45 against -55) were the moment before the mute plus a noise floor against silence. The G2
+  fades over about 250 ms where the engine cuts at once - the one difference left.

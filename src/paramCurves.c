@@ -805,7 +805,7 @@ double lev_amp_gain(double paramValue) {
     }
 
     if (value >= 127.0) {
-        return 4.0;
+        return 8388607.0 / 2097152.0;    // notes §29 - the instrument's word, 4 less one step
     }
 
     if (value <= LEV_AMP_LINEAR_TOP) {

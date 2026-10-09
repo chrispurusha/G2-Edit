@@ -1206,13 +1206,20 @@ static void seq_config_build(tSeqConfig * cfg, tModule * module, uint32_t variat
 
 // §59 - what a ClkGen's dials make of its part's words
 typedef struct {
-    int32_t tempo;     // the tempo word, floor(BPM x 279.625)
-    int32_t sync;      // Sync every: 2^sync beats
-    int32_t swing;
-    uint8_t active;
-    uint8_t master;    // Source is Master: notes §211
-    uint8_t pad[2];
+    int32_t  tempo;    // the tempo word, floor(BPM x 279.625)
+    int32_t  sync;     // Sync every: 2^sync beats
+    int32_t  swing;
+    uint8_t  active;
+    uint8_t  master;       // Source is Master: notes §211
+    uint8_t  pad[2];
+    uint64_t masterStep;   // notes §211 - the master clock's exact phase step a tick, 32 bits below the word
 } tClkGenConfig;
+
+// notes §211 - the exact phase step a tick of a Master ClkGen on Sync every 2^sync beats, in words x 2^32:
+// a period of 2^24 words is 2^sync beats, a beat 60 / BPM s, a tick 1/24000 s
+static uint64_t clkgen_master_step(double bpm, uint32_t sync) {
+    return (uint64_t)llround((bpm * 72057594037927936.0) / (1440000.0 * (double)(1u << sync)));
+}
 
 // notes §211 - the master clock's position, one per document: the summed phase step of a Master ClkGen
 // at each Sync every setting since the clock started running, and its 24 kHz tick count
@@ -1756,6 +1763,7 @@ typedef struct {
     int32_t  x[16];
     int32_t  y[16];
     int32_t  out[4];
+    uint32_t fraction;   // notes §211 - a Master ClkGen's step below a word, carried tick to tick
     uint32_t wait;
     bool     ready;
 } tClkGenState;
@@ -6550,15 +6558,16 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                                         : ((index < 32u) ? (24.0 + (2.0 * index))
                                            : ((index < 96u) ? (56.0 + index) : ((2.0 * index) - 40.0)));
 
-                cfg->tempo  = (int32_t)floor(bpm * 279.625);
-                cfg->sync   = (int32_t)module->param[variation][CLKGEN_PARAM_SYNC].value;
-                cfg->swing  = (int32_t)module->param[variation][CLKGEN_PARAM_SWING].value;
+                cfg->tempo      = (int32_t)floor(bpm * 279.625);
+                cfg->sync       = (int32_t)module->param[variation][CLKGEN_PARAM_SYNC].value;
+                cfg->swing      = (int32_t)module->param[variation][CLKGEN_PARAM_SWING].value;
                 // §59 - on Master it reads the master clock's own count, so a stopped master stops it
                 bool            master = (module->param[variation][CLKGEN_PARAM_SOURCE].value != 0);
 
-                cfg->active = (uint8_t)(  (module->param[variation][CLKGEN_PARAM_ACTIVE].value != 0)
-                                       && ((master == false) || (engine_master_running() == true)));
-                cfg->master = (uint8_t)master;
+                cfg->active     = (uint8_t)(  (module->param[variation][CLKGEN_PARAM_ACTIVE].value != 0)
+                                           && ((master == false) || (engine_master_running() == true)));
+                cfg->master     = (uint8_t)master;
+                cfg->masterStep = clkgen_master_step(bpm, (uint32_t)cfg->sync);
             }
             break;
         }
@@ -10171,7 +10180,16 @@ static void clkgen_tick(tClkGenState * st, const tClkGenConfig * cfg, int32_t rs
     if (cfg->active == 0u) {
         running = 0;
     }
-    int32_t  phase     = X[7] + word_mulhi(Y[2], Y[1]);
+    int32_t  step      = word_mulhi(Y[2], Y[1]);
+
+    // notes §211 - on Master the step is the master clock's, exact: the part below a word is carried
+    if (cfg->master != 0u) {
+        uint64_t exact = (uint64_t)st->fraction + cfg->masterStep;
+
+        step         = (int32_t)(exact >> 32);
+        st->fraction = (uint32_t)exact;
+    }
+    int32_t  phase     = X[7] + step;
 
     X[8]       = seq_sat(phase);
     phase      = sext24(phase);
@@ -14085,15 +14103,19 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeCtrlSend:
         {
             // §62.3 - sent on each change of the value, and on a rising Send
-            bool    send    = (signal_in(spec, value, 0) > 0.0);
-            bool    wasHigh = ((gLogicPrev[voice][n] & LOGIC_PREV_CLOCK) != 0u);
-            int64_t word    = (int64_t)spec->depth + llround(signal_in(spec, value, 1) * DSP_WORD_PER_ENGINE);
-            int32_t level   = (int32_t)((word < 0) ? 0 : (seq_sat(word * 4) >> 16));
+            bool     send     = (signal_in(spec, value, 0) > 0.0);
+            bool     wasHigh  = ((gLogicPrev[voice][n] & LOGIC_PREV_CLOCK) != 0u);
+            // §62.3 - truncated to a word, as the instrument's arithmetic leaves it (1e-6 of a word allowed)
+            int64_t  word     = (int64_t)spec->depth + (int64_t)floor((signal_in(spec, value, 1) * DSP_WORD_PER_ENGINE) + 1e-6);
+            int32_t  level    = (int32_t)((word < 0) ? 0 : (seq_sat(word * 4) >> 16));
 
             level                = (level > 127) ? 127 : level;
             gLogicPrev[voice][n] = send ? LOGIC_PREV_CLOCK : 0u;
 
-            if ((spec->active == true) && ((gPulseCount[voice][n] != ((uint32_t)level + 1u)) || (send && !wasHigh))) {
+            // §62.3 - the last value sent starts at 0, as the module's own does: a 0 at start sends nothing
+            uint32_t lastSent = (gPulseCount[voice][n] == 0u) ? 0u : (gPulseCount[voice][n] - 1u);
+
+            if ((spec->active == true) && (((uint32_t)level != lastSent) || (send && !wasHigh))) {
                 gPulseCount[voice][n] = (uint32_t)level + 1u;
                 cc_to_slot(spec->select, (uint32_t)spec->constant, (uint32_t)level);
             }
@@ -14119,7 +14141,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                     int64_t               master = -1;
 
                     if ((st->ready == false) && (cfg->master != 0u) && (cfg->active != 0u)) {
-                        master = (int64_t)atomic_load(&gMasterPositionBank[SE / MAX_SLOTS].phase[(uint32_t)cfg->sync % CLKGEN_SYNC_SETTINGS]);
+                        master = (int64_t)(atomic_load(&gMasterPositionBank[SE / MAX_SLOTS].phase[(uint32_t)cfg->sync % CLKGEN_SYNC_SETTINGS]) >> 32);
                     }
                     clkgen_tick(st, cfg, seq_sat(llround(a * DSP_WORD_PER_ENGINE)), master);
                     st->wait = (ticks > 0u) ? ticks : 1u;
@@ -15932,14 +15954,11 @@ static void master_clock_advance(uint32_t frameCount) {
     }
     double                 exact = pos->tickRemainder + (((double)frameCount * CLKGEN_TICK_HZ) / rate);
     uint64_t               ticks = (uint64_t)exact;
-    int32_t                tempo = (int32_t)floor(engine_master_bpm() * 279.625);
 
     pos->tickRemainder = exact - (double)ticks;
 
     for (uint32_t n = 0; n < CLKGEN_SYNC_SETTINGS; n++) {
-        uint64_t step = (uint64_t)word_mulhi(tempo, 0x55555 >> n);
-
-        atomic_store(&pos->phase[n], atomic_load(&pos->phase[n]) + (ticks * step));
+        atomic_store(&pos->phase[n], atomic_load(&pos->phase[n]) + (ticks * clkgen_master_step(engine_master_bpm(), n)));
     }
 }
 

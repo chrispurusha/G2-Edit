@@ -977,7 +977,8 @@ static void parse_select_param(uint32_t slot, uint8_t * buff, uint32_t * bitPos)
 static void parse_select_variation(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     uint8_t variation = read_bit_stream(buff, bitPos, 8);
 
-    LOG_DEBUG("Got variation select\n");
+    LOG_DEBUG("Got variation select: slot %u variation %u at %llu ms\n", (unsigned)slot, (unsigned)variation + 1u,
+              (unsigned long long)get_time_ms());
     gPatchDescr[slot].activeVariation = variation;
     set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
                                    (tTopbarControlId)(topbarVariation1Id + variation));
