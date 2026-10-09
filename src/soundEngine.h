@@ -127,6 +127,8 @@ uint32_t sound_engine_stats_epoch(void);
 // Cheap enough to call on every redraw, which is what graphics.c does — every parameter change
 // forces one, so nothing else needs to poll.
 void sound_engine_update_from_patch(void);
+// §62.3 - a CtrlSend has selected another variation for a slot; the next update_from_patch() applies it
+bool sound_engine_variation_pending(void);
 
 // notes §6
 const char * sound_engine_debug_text(void);

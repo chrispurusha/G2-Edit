@@ -96,6 +96,12 @@ here — and skipping it would write yet another file with no parameter values, 
 breakage forward every time such a patch is re-saved. The module's type knows how many
 parameters it has, so fall back to that.
 
+A PATCH SETTING HAS NO TYPE (2026-10-09). `init_patch()` created the Morph and Volume records
+with a count of 0 (it now creates all seven with their counts, dataBase notes §5), and
+`module_param_count(0)` is 0 too, so a patch made with File > New (or the backdoor's NEWPATCH) was
+saved - and pushed - with neither: its Patch Level and Mute came
+back as 127 and on whatever they had been set to. A record with no count now falls back to `patch_setting_param_count()` (dataBase notes §6).
+
 ## 10. in `parse_param_names()`
 
 AN ENTRY IS THREE BYTES OF HEADER PLUS ITS PAYLOAD, so there has to be room for all three
@@ -259,6 +265,8 @@ allocating, matching this codebase's static-buffer convention (see sBankUploadCo
 A patch the editor saved before 2026-09-27 carries no Volume at all: new patches then had none,
 and the writer writes only what the database holds. Left alone, the slot's Volume stays inactive, so
 the top bar draws no dial and the engine reads the empty module as Level 0, off - silence with no
-control to lift it (reference §63). Such a patch is given the full level, switched on. A patch from
+control to lift it (reference §63). Such a patch is given Level 100, switched on - what the G2 itself
+plays it at (measured 2026-10-09: a pushed patch with no Volume came out 6.1 dB under the same patch at
+127, which is the G2's own 127-to-100 step to the tenth; until then it was given 127). A patch from
 the G2 always carries one, so this changes nothing for it; a USB parse of a single section may fill
 the default in first, and the section that carries the real Volume overwrites it.

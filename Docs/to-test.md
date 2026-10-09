@@ -4,6 +4,17 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***GRAPH RESET OFF THE AUDIO THREAD (2026-10-09)*** - sound-engine-notes §212. LISTEN: edit cables while a patch plays,
+  in the app and the plug-in - the edited slot should drop out for about a block and come back as before, other
+  slots carrying on; loading patches should start as cleanly as ever
+- ***PULSE MODE AND ITS ZERO THRESHOLD (2026-10-09)*** - reference §18.4. CHECK on the G2 against the engine: a bipolar
+  LFO into Pulse, Mode Plus then Minus - Plus should fire as the LFO rises through zero, Minus as it falls (the engine
+  used to fire Plus only, and half way up)
+- ***MASTER CLKGENS SHARE ONE POSITION (2026-10-09)*** - sound-engine-notes §211. LISTEN: in a performance with
+  sequencers on Master ClkGens in two slots (BCHydro_DZLW), load or edit one slot while it plays - its sequence
+  should stay on the others' bar, not restart from wherever the edit landed
+- ***CTRLSEND AND CC 70 (2026-10-09)*** - reference §62.3. LISTEN: performance 1:2 BCHydro_DZLW on the engine should
+  move slots B-D on a variation every four bars, as the G2 does; and a CtrlSend to a slot's CtrlRcv should reach it
 - ***NOTESEND TO ANOTHER SLOT (2026-10-08)*** - reference §62.2. LISTEN in a performance: a sequencer patch whose
   NoteSend names Slot B, with B active, should play B's sound on the engine as on the G2; a NoteSend on This
   should play only its own slot even with several slots on the keyboard. Checked offline only

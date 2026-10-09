@@ -493,7 +493,9 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
         paramCount = module->actualParamCount;
 
         // notes §9
-        if (paramCount == 0) {
+        if ((paramCount == 0) && (location == locationMorph)) {
+            paramCount = patch_setting_param_count(i);
+        } else if (paramCount == 0) {
             paramCount = module_param_count(module->type);
         }
 

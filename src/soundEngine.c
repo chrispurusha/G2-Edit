@@ -248,10 +248,7 @@ typedef enum {
 #define PULSE_PARAM_RANGE      (2)
 #define PULSE_DIAL_TOP         (127.0)
 
-// What counts as a logic high. The G2's logic signals are full-scale 0/1, so anything near the
-// middle separates them; the envelope that drives this in the measurement patch sweeps the whole
-// range, so the exact threshold is not delicate.
-#define PULSE_THRESHOLD    (0.5)
+#define PULSE_MODE_MINUS       (1u) // §18.4 - pulseModeStrMap: Plus fires on a rise, Minus on a fall
 
 // §3.1 - where each summing mixer keeps its controls; -1 is "has none".
 typedef struct {
@@ -946,6 +943,7 @@ typedef enum {
     eNodeCtrlRcv,        // §70.13 - no MIDI CC stream reaches the engine: both outputs 0
     eNodeSink,           // §70.13 - MIDI senders and routers: nothing to render
     eNodeIn4Bus,         // §69.12 - 4-In from Bus: Bus 1/2 on outputs 1-2, Bus 3/4 on 3-4
+    eNodeCtrlSend,       // §62.3 - a controller to a slot on each change of its value
     eNodeOut,
 } tNodeKind;
 
@@ -1212,8 +1210,18 @@ typedef struct {
     int32_t sync;      // Sync every: 2^sync beats
     int32_t swing;
     uint8_t active;
-    uint8_t pad[3];
+    uint8_t master;    // Source is Master: notes §211
+    uint8_t pad[2];
 } tClkGenConfig;
+
+// notes §211 - the master clock's position, one per document: the summed phase step of a Master ClkGen
+// at each Sync every setting since the clock started running, and its 24 kHz tick count
+#define CLKGEN_SYNC_SETTINGS    (6u)
+typedef struct {
+    _Atomic uint64_t phase[CLKGEN_SYNC_SETTINGS];
+    double           tickRemainder;     // audio thread only
+} tMasterClockPosition;
+static tMasterClockPosition gMasterPositionBank[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];
 
 typedef struct {
     uint32_t      nodeCount;
@@ -2705,9 +2713,10 @@ static void engine_prime(void) {
 
     build_decimator();
     // notes §65
-    gNoteRead = atomic_load(&gNoteWrite);
+    gNoteRead     = atomic_load(&gNoteWrite);
     reset_node_state();
     reset_voices();
+    gSeenTopology = 0u;    // notes §212 - so the first graph finds this state as it is
 }
 
 // For a plug-in host: prime the engine and mark it live, but leave the audio device alone. The
@@ -3044,6 +3053,41 @@ const char * sound_engine_debug_text(void) {
     }
 
     return text;
+}
+
+// §62.3 - a slot's variation as controller 70 last selected it, -1 for none; set by the audio thread,
+// taken by the next snapshot rebuild (sound_engine_update_from_patch()), which owns the database
+#define MIDI_CC_VARIATION    (70u)
+static _Atomic int32_t gVariationRequestBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = -1};
+#define gVariationRequest    (gVariationRequestBank[SE])
+
+// §62.3 - a CtrlSend's controller into one slot: 70 selects its variation; any other reaches it as if it
+// had arrived on that slot's own channel, so its CtrlRcv modules hear it
+static void cc_to_slot(uint32_t slot, uint32_t controller, uint32_t value) {
+    int32_t was = sEngineSlot;
+
+    sEngineSlot = (int32_t)(slot % MAX_SLOTS);
+
+    {
+        SE_LOCAL;
+
+        if (controller == MIDI_CC_VARIATION) {
+            // §62.3 - the instrument's mapping: value >> 4, eight variations across 0-127
+            uint32_t variation = value / 16u;
+
+            atomic_store(&gVariationRequest, (int32_t)((variation < 8u) ? variation : 7u));
+        } else {
+            uint32_t channel = gSynthSettings.midiChanSlot[slot % MAX_SLOTS];
+
+            if (channel < 16u) {
+                midi_cc_one(channel, controller, value, true);
+            } else if (controller < MIDI_KEY_COUNT) {
+                atomic_store(&gMidiCcValue[MIDI_ROW_THIS][controller], (uint8_t)value);    // a slot on Off still hears This
+                atomic_fetch_add(&gMidiCcCount[MIDI_ROW_THIS][controller], 1u);
+            }
+        }
+    }
+    sEngineSlot = was;
 }
 
 // §62.2 - a NoteSend's note into one slot's queue: its own for This, or the slot it names. Not the
@@ -4519,6 +4563,10 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             return true;
         }
         case moduleTypeCtrlSend:
+        {
+            *kind = eNodeCtrlSend;   // §62.3
+            return true;
+        }
         case moduleTypePCSend:
         case moduleTypeAutomate:
         case moduleTypeNoteZone:
@@ -5052,6 +5100,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         case eNodeClkGen:           // §59 - Rst
         case eNodeNoteScaler:       // §60 - In
         case eNodeNoteSend:         // §62 - Gate, Vel, Note
+        case eNodeCtrlSend:         // §62.3 - Send, Value
         case eNodeRndClkA:          // §64 - Clk, Rst, Seed
         case eNodeRndTrig:          // §64 - Clk, Rst, Seed, Prob
         case eNodeDlyStereo:        // §65 - In
@@ -6463,6 +6512,17 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->select   = (channel == 16u) ? (module->key.slot % MAX_SLOTS) : ((channel - 17u) % MAX_SLOTS);
             break;
         }
+        case eNodeCtrlSend:
+        {
+            // §62.3 - Ctrl, Value (v x 2^14, as NoteSend's Vel), Channel as NoteSend's
+            uint32_t channel = (uint32_t)module->param[variation][2].value;
+
+            node->constant = floor(param_value(module, variation, 0));
+            node->depth    = floor(param_value(module, variation, 1)) * 16384.0;
+            node->active   = (channel >= 16u) && (channel <= 20u);
+            node->select   = (channel == 16u) ? (module->key.slot % MAX_SLOTS) : ((channel - 17u) % MAX_SLOTS);
+            break;
+        }
         case eNodeNoteScaler:
         {
             // §60 - the Range word v x 2^16, 127 reading full scale
@@ -6496,6 +6556,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
                 cfg->active = (uint8_t)(  (module->param[variation][CLKGEN_PARAM_ACTIVE].value != 0)
                                        && ((master == false) || (engine_master_running() == true)));
+                cfg->master = (uint8_t)master;
             }
             break;
         }
@@ -6924,6 +6985,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->pulseRange   = (uint32_t)param_value(module, variation, PULSE_PARAM_RANGE);
             node->pulseTimeMod = param_value(module, variation, PULSE_PARAM_TIMEMOD);
             node->pulseSeconds = pulse_time_seconds(node->pulseDial, node->pulseRange);
+            node->select       = module->mode[0].value;    // §18.4
             break;
         }
         case eNodeLevAmp:
@@ -6968,6 +7030,8 @@ static bool node_is_generator(tNodeKind kind) {
            || (kind == eNodeDrumSynth)
            || (kind == eNodeMetNoise)    // §66
            || (kind == eNodeAudioIn)     // §37
+           || (kind == eNodeNoteSend)    // §62.3 - a patch that only plays or controls other slots
+           || (kind == eNodeCtrlSend)
            || (kind == eNodeLfo);        // notes §96 - MicroWaves is LFOs at audio rate
 }
 
@@ -7091,7 +7155,7 @@ static void add_note_senders(tSoundEngineParams * params, uint32_t variation) {
         for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
             tModule * module = get_module_slot(engine_slot(), location, index);
 
-            if ((module != NULL) && (module->type == moduleTypeNoteSend)) {
+            if ((module != NULL) && ((module->type == moduleTypeNoteSend) || (module->type == moduleTypeCtrlSend))) {
                 (void)add_node(params, module, variation, 0);
             }
         }
@@ -7855,7 +7919,29 @@ static void update_from_patch_one(void) {
     }
 }
 
+// §62.3 - a variation a CtrlSend selected, made the slot's own before the snapshot is built from it
+static void take_variation_request(void) {
+    SE_LOCAL;
+
+    int32_t variation = atomic_exchange(&gVariationRequest, -1);
+
+    if ((variation >= 0) && (variation < (int32_t)NUM_VARIATIONS)) {
+        gPatchDescr[engine_slot()].activeVariation = (uint8_t)variation;
+    }
+}
+
+bool sound_engine_variation_pending(void) {
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        if (atomic_load(&gVariationRequestBank[(ENGINE_DOC * MAX_SLOTS) + slot]) >= 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void sound_engine_update_from_patch(void) {
+    FOR_EACH_SLOT_ENGINE(take_variation_request());
     FOR_EACH_SLOT_ENGINE(update_from_patch_one());
 }
 
@@ -9018,7 +9104,11 @@ static double pulse_step(uint32_t voice, uint32_t node, double input, double mod
 
     gPulsePrev[voice][node] = input;
 
-    if ((prev <= PULSE_THRESHOLD) && (input > PULSE_THRESHOLD)) {
+    // §18.4 - an edge is the input crossing zero, tested on the two samples
+    bool     edge    = (spec->select == PULSE_MODE_MINUS) ? ((prev > 0.0) && (input <= 0.0))
+                : ((prev <= 0.0) && (input > 0.0));
+
+    if (edge) {
         gPulseCount[voice][node] = 1u;
     }
 
@@ -10014,7 +10104,7 @@ static int32_t word_mulhi(int32_t a, int32_t b) {
 
 // §59 - one control tick of ClkGen (internal clock). The phase covers one "sync every" period and
 // steps by tempo x 0x55555 >> sync; out[] is 1/96, 1/16, Sync, Active in the module's own order.
-static void clkgen_tick(tClkGenState * st, const tClkGenConfig * cfg, int32_t rst) {
+static void clkgen_tick(tClkGenState * st, const tClkGenConfig * cfg, int32_t rst, int64_t masterPhase) {
     int32_t * X = st->x;
     int32_t * Y = st->y;
 
@@ -10032,6 +10122,12 @@ static void clkgen_tick(tClkGenState * st, const tClkGenConfig * cfg, int32_t rs
             Y[k] = sext24(kY[k]);
         }
 
+        // notes §211 - on Master it starts where the master clock is, not at the top of its period
+        if (masterPhase >= 0) {
+            X[7] = sext24((int32_t)(((uint64_t)masterPhase - 1u) & 0xFFFFFFu));
+            X[8] = X[7];
+            X[3] = X[2];    // already running: the module's one-tick-late copy would read a stop
+        }
         st->ready = true;
     }
     // the words the dials set
@@ -13970,6 +14066,23 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             }
             break;
         }
+        case eNodeCtrlSend:
+        {
+            // §62.3 - sent on each change of the value, and on a rising Send
+            bool    send    = (signal_in(spec, value, 0) > 0.0);
+            bool    wasHigh = ((gLogicPrev[voice][n] & LOGIC_PREV_CLOCK) != 0u);
+            int64_t word    = (int64_t)spec->depth + llround(signal_in(spec, value, 1) * DSP_WORD_PER_ENGINE);
+            int32_t level   = (int32_t)((word < 0) ? 0 : (seq_sat(word * 4) >> 16));
+
+            level                = (level > 127) ? 127 : level;
+            gLogicPrev[voice][n] = send ? LOGIC_PREV_CLOCK : 0u;
+
+            if ((spec->active == true) && ((gPulseCount[voice][n] != ((uint32_t)level + 1u)) || (send && !wasHigh))) {
+                gPulseCount[voice][n] = (uint32_t)level + 1u;
+                cc_to_slot(spec->select, (uint32_t)spec->constant, (uint32_t)level);
+            }
+            break;
+        }
         case eNodeNoteScaler:
         {
             int32_t in = seq_sat(llround(a * DSP_WORD_PER_ENGINE));
@@ -13985,9 +14098,14 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 tClkGenState * st = &gClkGen[voice][spec->line];
 
                 if ((st->ready == false) || (st->wait == 0u)) {
-                    uint32_t ticks = (uint32_t)lround(gSampleRate / CLKGEN_TICK_HZ);
+                    uint32_t              ticks  = (uint32_t)lround(gSampleRate / CLKGEN_TICK_HZ);
+                    const tClkGenConfig * cfg    = &paramsIn->clkGen[spec->line];
+                    int64_t               master = -1;
 
-                    clkgen_tick(st, &paramsIn->clkGen[spec->line], seq_sat(llround(a * DSP_WORD_PER_ENGINE)));
+                    if ((st->ready == false) && (cfg->master != 0u) && (cfg->active != 0u)) {
+                        master = (int64_t)atomic_load(&gMasterPositionBank[SE / MAX_SLOTS].phase[(uint32_t)cfg->sync % CLKGEN_SYNC_SETTINGS]);
+                    }
+                    clkgen_tick(st, cfg, seq_sat(llround(a * DSP_WORD_PER_ENGINE)), master);
                     st->wait = (ticks > 0u) ? ticks : 1u;
                 }
                 st->wait--;
@@ -15078,7 +15196,12 @@ typedef struct {
     uint8_t                    pairLeg[SPLIT_MAX_PAIRS];
     uint64_t                   primedTopology;
     uint32_t                   primedMode;
-    bool                       primed;     // the last block ran split, on this ring
+    bool                       primed;        // the last block ran split, on this ring
+    // notes §212 - a new graph's reset_node_state(), run here rather than in the callback
+    bool                       resetJob;      // this job is the reset, not a block
+    uint64_t                   resetTopology; // audio thread: the graph it was asked for, 0 none
+    uint64_t                   resetAsked;    // audio thread
+    _Atomic uint64_t           resetDone;     // the worker, once that reset has run
     tSplitRecord               ring[SPLIT_RING];
 } tSplit;
 
@@ -15256,14 +15379,49 @@ static void * split_worker(void * arg) {
         split_thread_follow_workgroup(&joined, &token);
 #endif
 
-        for (uint64_t i = 0; i < sp->count; i++) {
-            split_produce_one(sp, sp->params, &sp->ctx);
+        if (sp->resetJob == true) {
+            reset_node_state();   // notes §212
+            atomic_store(&sp->resetDone, sp->resetAsked);
+        } else {
+            for (uint64_t i = 0; i < sp->count; i++) {
+                split_produce_one(sp, sp->params, &sp->ctx);
+            }
         }
-
         atomic_store_explicit(&sp->busy, false, memory_order_release);
     }
 
     return NULL;
+}
+
+// notes §212 - true once the new graph's state is clear: at once where there is no worker, otherwise
+// when the worker has run the reset, the slot staying silent until then
+static bool reset_node_state_off_callback(uint64_t topology) {
+    SE_LOCAL;
+
+    tSplit * sp = &gSplit;
+
+    if (sp->started == false) {
+        reset_node_state();
+        return true;
+    }
+
+    if (atomic_load_explicit(&sp->busy, memory_order_acquire) == true) {
+        return false;
+    }
+
+    if ((sp->resetTopology == topology) && (atomic_load(&sp->resetDone) == sp->resetAsked)) {
+        sp->resetTopology = 0u;
+        return true;
+    }
+    sp->resetJob      = true;
+    sp->resetTopology = topology;
+    sp->resetAsked++;
+    sp->doc           = gDoc;
+    sp->slot          = (int32_t)engine_current_slot();
+    sp->count         = 0u;
+    atomic_store_explicit(&sp->busy, true, memory_order_release);
+    split_sem_signal(sp->go);
+    return false;
 }
 
 // Started once per engine, outside the audio callback, and left waiting between blocks.
@@ -15428,6 +15586,11 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
     }
 
     if (params.topology != gSeenTopology) {
+        // notes §212 - the first graph finds the state as engine_prime() cleared it; a later one has
+        // the clearing done by the worker, this slot silent until it is
+        if ((gSeenTopology != 0u) && (reset_node_state_off_callback(params.topology) == false)) {
+            return;
+        }
         // notes §171
         LOG_DEBUG("TOPOLOGY CHANGE %llu -> %llu, nodes %u, tap %d — delay and reverb buffers cleared\n",
                   (unsigned long long)gSeenTopology, (unsigned long long)params.topology,
@@ -15440,7 +15603,6 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
             reset_voices();
         }
         gSeenTopology = params.topology;
-        reset_node_state();
 
         // notes §207 - the status figures start again with the patch on show
         if (engine_current_slot() == ((uint32_t)gSlot % MAX_SLOTS)) {
@@ -15560,11 +15722,12 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
     sp->primed = split;
 
     if ((split == true) && (splitMode == eSplitThreaded)) {
-        sp->doc    = gDoc;
-        sp->slot   = (int32_t)engine_current_slot();
-        sp->params = &params;
-        sp->ctx    = ctx;
-        sp->count  = (uint64_t)frameCount * gOversample;
+        sp->resetJob = false;
+        sp->doc      = gDoc;
+        sp->slot     = (int32_t)engine_current_slot();
+        sp->params   = &params;
+        sp->ctx      = ctx;
+        sp->count    = (uint64_t)frameCount * gOversample;
         atomic_store_explicit(&sp->busy, true, memory_order_release);
         split_sem_signal(sp->go);
     }
@@ -15738,6 +15901,32 @@ static double slot_device_rate(void) {
     return gDeviceRate;
 }
 
+// notes §211 - after the block: the master clock moves on by the block's ticks, or back to the top when stopped
+static void master_clock_advance(uint32_t frameCount) {
+    tMasterClockPosition * pos   = &gMasterPositionBank[ENGINE_DOC];
+    double                 rate  = slot_device_rate();
+
+    if ((engine_master_running() == false) || (rate <= 0.0)) {
+        for (uint32_t n = 0; n < CLKGEN_SYNC_SETTINGS; n++) {
+            atomic_store(&pos->phase[n], 0u);
+        }
+
+        pos->tickRemainder = 0.0;
+        return;
+    }
+    double                 exact = pos->tickRemainder + (((double)frameCount * CLKGEN_TICK_HZ) / rate);
+    uint64_t               ticks = (uint64_t)exact;
+    int32_t                tempo = (int32_t)floor(engine_master_bpm() * 279.625);
+
+    pos->tickRemainder = exact - (double)ticks;
+
+    for (uint32_t n = 0; n < CLKGEN_SYNC_SETTINGS; n++) {
+        uint64_t step = (uint64_t)word_mulhi(tempo, 0x55555 >> n);
+
+        atomic_store(&pos->phase[n], atomic_load(&pos->phase[n]) + (ticks * step));
+    }
+}
+
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
     static int32_t  shownSlot[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS] = {[(0) ... (SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS) - 1] = -1};
     struct timespec started                                         = {0};
@@ -15752,6 +15941,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     }
     (void)clock_gettime(CLOCK_MONOTONIC, &started);
     render_slots(out, frameCount, channelCount);
+    master_clock_advance(frameCount);
     sound_engine_set_input(NULL, 0);   // §37 - one block's: the caller's buffers are not ours to keep
     (void)clock_gettime(CLOCK_MONOTONIC, &finished);
 

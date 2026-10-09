@@ -3523,3 +3523,50 @@ G2Bugs/g2-test-loop.wav) a 2-step cycling SeqEvent with nothing on Rst runs from
 The engine now sets both words from Length at load, which reproduces the reference model's own values at 16
 steps. Open: what the instrument does when Length shrinks below the current step while running; the
 words are still set only at load.
+
+## 211. Master ClkGens share the master clock's position (`master_clock_advance()`, `gMasterPositionBank`)
+
+On the G2 the master clock is global to the whole instrument (manual: "when several Slots are active
+they can all sync to and follow the current Master Clock rate"), and a ClkGen on Master follows it -
+its Sync output even tracks MIDI Song Position. Until 2026-10-09 the engine shared only the TEMPO: every
+ClkGen kept its own phase (the module's word X7), starting at the top of its period whenever its node
+state was reset. So two slots were in step only if they happened to start together and neither had
+been rebuilt since - a slot loaded later, or one whose graph changed under an edit, ran its bars
+displaced from the others for good (BCHydro_DZLW with slot C's ClkGens restarted at 10 s: its Sync
+pulses 0.45 s off the other slots' from then on).
+
+Now each document keeps the master clock's position: for each of the six Sync every settings, the sum
+of the phase steps a Master ClkGen on that setting would have taken (tempo word x 0x55555 >> n, the module's own step) since the clock started running, advanced once per block after the slots render and
+put back to zero while the clock is stopped - which is also when every Master ClkGen is treated as off
+(notes §200), so a restart lines them up from the top as before. A Master ClkGen whose state is fresh
+takes its phase from that position (X7 = position - 1, the -1 being the module's own starting word) and
+marks itself already running (X3 = X2: the module reads its run flag a tick late, and a fresh one would
+otherwise spend its first tick stopped, which puts the phase back to the top). From then on it steps
+exactly as the others do. Measured on BCHydro_DZLW with the same restart: within one 24 kHz tick of the
+other slots. The position is a block's start, so a ClkGen that starts mid-block, or in the FX pass
+behind the voice pass's lag (§202), is out by at most that much. A ClkGen on Internal is untouched.
+
+## 212. A new graph's state cleared off the audio callback (`reset_node_state_off_callback()`)
+
+A topology change - a patch loaded, a cable or module added or removed - used to run `reset_node_state()`
+inside the audio callback: every delay line, the reverb ring, the FX buffers, comb lines and the
+control-rate holds cleared in bulk, 0.28 ms for 02 Big Pad and 0.59 ms for 01 Mini Emulator, 5-11% of a
+256-frame budget. Not what broke anything up, but bulk work inside the callback.
+
+Now:
+- THE FIRST GRAPH NEEDS NO RESET. engine_prime() has just cleared everything and nothing has run since,
+  so gSeenTopology is put back to 0 there and a first graph is taken as it is. (This drops the second of
+  the two resets the engine used to run at start, so the start-phase seed (notes §63) has advanced one
+  step fewer and every oscillator starts at a different - equally random - phase. Otherwise a render is
+  bit-identical: checked on BCHydro_DZLW and SimpleLead against a copy keeping both resets.)
+- A LATER GRAPH has its state cleared by the slot's own voice worker (§202), handed the reset as a job
+  instead of a block. The worker runs only when the callback hands it something, so it cannot be inside
+  a block for that slot while it clears. Until it is done the slot is silent - normally one block in real
+  time - and the callback carries on from there with the rest of what a topology change does (voices
+  reset, figures restarted). A slot with no worker resets inline, as before.
+
+Rendering faster than real time (an offline harness, a host's offline bounce) still gets an exact start,
+since the first graph needs nothing; only a graph changed mid-render would see a silence whose length
+depends on the worker's timing. The Economy switch (§205) still resets inside the callback - a rare,
+deliberate user action.
+

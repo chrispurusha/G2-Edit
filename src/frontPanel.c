@@ -325,6 +325,7 @@ void front_panel_set_active(bool on) {
     if (on && !gFrontPanelMode) {
         selection_clear();    // notes §6
         stop_dragging();
+        palette_set_open(false);
     }
     gFrontPanelMode = on;
     synthlib_request_redraw();

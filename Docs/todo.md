@@ -5,10 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
-- Front panel mode: the Module Bar has no place there - hide its topbar button while the panel is up (and close the bar on entering)
-- Cross-slot control, as performance 1:2 BCHydro_DZLW uses it: slot A's SeqVals drive CtrlSends (one is CC 70 to Slot D - the Variation select), the engine renders nothing for CtrlSend. Needs CtrlSend to a slot, the target slot acting on it (CtrlRcv, CC-assigned parameters, CC 70 switching variation), and a variation change driven from the audio side without a snapshot rebuild per step - design first. Its .prf2 and 8 s / 30 s G2 captures are in G2Bugs (BCHydro_DZLW-*). Without it the engine already plays the performance (clock running): -39.4 dB mean against the G2's -34.1 (rig offset removed), 18.2 vs 19.1 dB of spread - slot A is control-only, B-D sound
-- Slots' ClkGens each count on their own: check two slots' sequencers stay in step on the engine as they do on the G2
-- I'm still not sure the poly voice limit we get back from G2 is correct. Seems like it's offset by 1. I'm loading patches which are set to 16 voices, but the limit is showing as 15. Are we off by 1?
+- BCHydro_DZLW (perf 1:2): the whole matches the G2 within 0.2 dB, but slot C is 2.1 dB and slot D 1.2 dB louder in the engine - compare their voices as slot B's were (findings 2026-10-09; solo files in G2Bugs)
 - I've had an instance of the VST3 plugin becoming silent after a patch change. Only recovering when the DAW was restarted.
 - Audio input in the application: an input device in Settings > Audio feeding sound_engine_set_input() (the engine and the plug-in's side-chain have it since 2026-10-08, reference §37)
 - Effects version of the plugin, for audio processing: a second descriptor (aufx, its own VST3 UIDs, MIDI in kept) whose main input is In 1/2 - GenBridge's two-variant pattern
@@ -37,7 +34,7 @@ General (priority order)
 - Estimate whether a patch fits the G2's DSP/memory budget and WARN when it is over - never limit the emulation to match; resource model decoded, per-module record and voice placer open (g2-budget-estimate-design.md)
 - Render poly voices across cores (engine-multicore-design.md) - the long-term answer to patches whose voices never finish: 18 Unreal Dreams at 32 voices needs 120% of one core, and the engine manages ~9 (CT 2026-09-28); check first that VST3/AUv2 hosts let a plug-in join the audio workgroup
 - Engine voice count should follow the G2's own assignment, not the patch's request: 18 asks for 32 and the G2 gives 15 - use the G2's reported count when connected, the budget estimate's voice placer offline (g2-budget-estimate-design.md)
-- 18 Unreal Dreams: engine ~9 dB louder than the G2 capture at 32 voices - the rig alone puts Fireface 5/6 captures 11.6 dB below engine renders (findings 2026-10-08), so find which input and gain that capture used before suspecting the voice level path (§62.1)
+- 18 Unreal Dreams: the level matches (both channels' power -26.9 G2, -27.0 engine) but the G2 leans RIGHT by 8 dB where the engine is within 1.5 dB of centre - capture G2Bugs/UnrealDreams-18-layer1/2.pch2 (each voice layer alone, 20 s, 120 BPM, Outs 1/2) to see which Pan layer leans (findings 2026-10-09)
 - 04 Chris Pad brightness: re-listen after the exact Vel/Keyb morphs (§26.2); the captures matched to 12 kHz once the G2's filter was confirmed on, and the first capture had its FltClassic switched off - find out what switched it (findings 2026-09-28 late)
 - Diavolo Sync patch is brighter on the G2 than in the engine (CT 2026-09-28) - capture both; G2 outputs 1/2 are on the Fireface again
 - OscShpB Pulse at Shape +-1: the residual one-sample click is -33 dB (+1) / -43 dB (-1) per harmonic in the engine, -41 dB at both on the G2 (§6.7)
@@ -93,7 +90,7 @@ FILTERS
 - Re-check FltComb FB 127 and FltPhase FB 127 with the level-tracking test, as FltClassic/FltNord were
 
 SOUND ENGINE
-- `reset_node_state()` runs on the AUDIO THREAD on a topology change - 0.28 ms for 02 Big Pad, 0.59 ms for 01 Mini Emulator, 5-11% of a 256-frame budget. Not the break-up, but bulk clearing inside the callback is an RT rule broken; move it to the publisher or do it incrementally
+- The Economy switch (sound-engine-notes §205) still runs reset_node_state() inside the audio callback; a topology change no longer does (§212)
 - Engine headroom: no attenuation anywhere for polyphony, so a pad at full voices sits on the rail at the default 0 dB. Decide whether the Out module, the output stage or nothing should scale with voice count - the G2 itself does not clip here
 - Voice count: the engine gives a Poly patch voiceCount+1 voices capped at MAX_VOICES (32) - CONFIRMED right (02 Big Pad asks for and gets 14, 2026-09-19) - but the G2 assigns by DSP load and reports what it actually got (findings 2026-08-29, "15 (16)"), so the topbar should show a requested/assigned pair as the original does
 - Only the FIRST node a patch morphs on both axes gets a pair table (MAX_PAIR_NODES 1, reference §26.2.3) - raise it if a patch ever needs two
@@ -111,12 +108,10 @@ SOUND ENGINE
 - DRONES: only ONE voice drones at rest where the hardware runs every voice (notes §179)
 - OscDual (§12.5): compare the new code sample for sample with the reference model (note its increment is HALF the output pitch), mix levels, Soft, PW/phase inputs and over-range PW wrap; then remove the now-unused oversampling path in oscillator_step() and the decimator if nothing else needs them
 - OscShpB TriSaw: the two samples beside the peak (harness sign unsettled, §27.5); a hardware capture at a high pitch would settle it
-- NEWPATCH leaves the editor's patch Volume at the last patch's value while the G2's new patch is at 100 (dataBase.c init_patch -> ensure_patch_volume returns early) - set it to NEW_PATCH_VOLUME
 - The editor forwards incoming MIDI notes to the G2 (midiInput.c): a note that also reaches the G2 directly plays twice on a poly patch - decide whether to forward only when the G2 has no MIDI of its own, or make it a setting
 - OscShpA TriSaw at Shape 0 has 15 dB more 2nd harmonic than the G2's (captured 2026-10-04)
 - CPU profile per module: sampled cycle counts per node (one block in N), per voice, slot and FX area; a backdoor CPUDUMP table and a file-gated log for the plug-in - first input to multi-threading the 4 slots and FX (engine-multicore-design.md)
-- Operator inputs from cables (§14.1): Gate, Note and Vel come from the voice, and Freq, Pitch and AMod are not read - the instrument reads all six off the Operator
-- Pulse ignores its Mode (Plus/Minus, §18)
+- NEXT SESSION (CT 2026-10-09): Operator inputs from cables (§14.1) - Freq from a LevConv and AMod from an X-Fade, chained Operator to Operator, in G2Bugs/patches/alarmdx.pch2 and accbass.pch2 (nothing on file uses Pitch; Gate/Note/Vel only ever come from the Keyboard). Decode the three laws from the reference model; the DX node takes no inputs today and needs a short list of distinct sources (MAX_NODE_INPUTS 10)
 - 14 CS80project72: the G2's strongest partial, 527 Hz, is missing from the engine (1061/2112/3161 match; Fireface capture 09-27, findings 09-27)
 - Voice-area delays and Reverb per voice (findings 2026-09-27): allocate each voice's line at build time, sized by Range (the instrument's 513 .. 259212 samples); fit polyphony to a memory budget as the voice placer does
 - ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither

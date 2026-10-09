@@ -78,20 +78,25 @@ Patches loaded from file or from the G2 carry their own value and are untouched 
 
 ## 5. in `init_patch()`
 
-database_delete_modules_by_slot() above zeroes every module for this slot, including the
-morph-groups pseudo-module (locationMorph/patchModuleMorph) that every patch structurally has.
-render_morph_groups() reads it via get_module(), which returns NULL unless active is set, so
-without this the morph knobs would silently render nothing for a freshly-initialised patch —
-reactivate it here with its key set, same as parse_module_list() does when a real patch
-arrives from the device.
+ALL SEVEN PATCH SETTINGS, AS THE INSTRUMENT'S OWN NEW PATCH HAS THEM (2026-10-09). database_delete_modules_by_slot()
+above zeroes every module for this slot, the settings records in locationMorph included, so each is
+re-created here: active, keyed, and with its parameter count. Until this date only Morph and Volume
+were re-created, both with a count of 0 - the writer then dropped them (protocol notes §9), and a
+new patch saved or pushed reached the G2 with no settings at all, which the instrument plays at
+Level 100 with its own defaults for the rest. That is what made the 2026-10-08 rig calibration
+6.1 dB wrong (findings 2026-10-09).
 
-## 6. in `init_patch()`
+render_morph_groups() reads the Morph record via get_module(), which returns NULL unless active is
+set, so without it the morph knobs would render nothing for a freshly-initialised patch.
 
-Each morph group's "mode" param (index i+NUM_MORPHS) is 0 for plain manual-knob mode,
-nonzero for assigned-to-a-fixed-source mode (see render_morph_groups()'s isKnob check) —
-default every group to its fixed source (Wheel, Vel, Keyb, ... per morphStrMap[i]) rather
-than leaving all 8 as unnamed knobs, across every variation so it holds regardless of
-which one is active.
+## 6. `kNewPatchSetting` and `patch_setting_param_count()`
+
+THE VALUES ARE THE SIX EDITOR-AUTHORED REFERENCE PATCHES' (PatchTestFiles/Module layouts:
+DelayLevel, EnvFx, ioosc, LogicMidi, RndFilter, SwitchSeqNote), which all agree: Morph dials 0
+with every group on its fixed source (mode 1 - Wheel, Vel, Keyb ... per morphStrMap), Volume 100
+on, Glide 0 / 28, Bend on / 1, Vibrato 0 / 50 / 64, Arpeggiator off / 3 / 0 / 0, Sustain 2 / 1 -
+and the counts are what they declare: 16, 2, 2, 2, 3, 4, 2. The writer falls back to the same
+counts for a record that came with none.
 
 ## 7. `ensure_patch_volume()`
 

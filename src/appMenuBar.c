@@ -700,8 +700,8 @@ void open_view_menu(tCoord anchor) {
     snprintf(paletteLabel, sizeof(paletteLabel), "%s Module Palette",
              palette_is_open() ? "*" : " ");
     items[i++] = (tMenuItem){
-        paletteLabel, palette_is_open() ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3,
-        action_toggle_palette, 0, NULL, 0, 0.0
+        paletteLabel, front_panel_active() ? (tRgb)RGB_GREY_5 : (palette_is_open() ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3),
+        front_panel_active() ? NULL : action_toggle_palette, 0, NULL, 0, 0.0
     };
 
     // The five overlay views, the active one ticked. overlayModeNone isn't offered as an entry of

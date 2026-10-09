@@ -39,6 +39,7 @@
 #include "utils.h"
 #include "graphics.h"
 #include "topbarRender.h"
+#include "frontPanel.h"
 #include "palette.h"
 
 #define RESOURCE_FULL_PERCENT    (100.0)   // a resource at this share of the DSP is full
@@ -139,6 +140,15 @@ void render_top_bar(void) {
     for (int i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
         const tTopbarControlDef * def = topbar_control_def((tTopbarControlId)i);
 
+        if ((i == (int)topbarPaletteId) && front_panel_active()) {
+            gTopbarControls[i].rectangle = (tRectangle){{
+                                                            0.0, 0.0
+                                                        }, {
+                                                            0.0, 0.0
+                                                        }
+            };                                                                     // nothing to click
+            continue;
+        }
         rectangle = (tRectangle){
             def->coord, {
                 get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT

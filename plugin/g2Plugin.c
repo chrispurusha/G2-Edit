@@ -195,7 +195,7 @@ static void * rebuild_worker(void * arg) {
         // soundEngine notes §205 - a new Engine Rate leaves positions and words built at the old one
         bool rateChanged = sound_engine_take_rate_changed();
 
-        if ((atomic_exchange(&g2->morphSnapshotDirty, false) == true) || (rateChanged == true)) {
+        if ((atomic_exchange(&g2->morphSnapshotDirty, false) == true) || (rateChanged == true) || sound_engine_variation_pending()) {
             sound_engine_update_from_patch();
         }
         usleep(G2_REBUILD_POLL_US);

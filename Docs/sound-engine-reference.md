@@ -1056,6 +1056,13 @@ position (the module interpolates its own table between dial steps). Pulse compa
 rising edge with the current time, so a Mod that moves during a pulse moves where it ends. The Logic
 Delay (§46) runs its time through the same part. Unpatched, both are exactly as before.
 
+**18.4 Mode and the edge (2026-10-09, from the reference model).** Plus fires on a rising edge, Minus
+on a falling one - the mode changes one step of the module. Both test the previous and the current
+input for a crossing (their product, exactly, at or below zero); Plus then fires if the current input
+is above zero, Minus if the previous one was. So the threshold is ZERO, for logic and for any other
+signal - an LFO into Pulse fires as it crosses zero, not half way up (the engine used 0.5, a guess,
+until this date). An edge during a pulse restarts its time, which is the manual's "extend".
+
 ## 19. StChorus
 
 The instrument's own law, adopted 2026-09-14 (from the reference model, run sample by sample). The engine
@@ -2478,7 +2485,8 @@ period of 2^n beats and steps by tempo x 0x55555 >> n; the tempo word is floor(B
 Tempo v reading 24 + 2v BPM below 32, 56 + v to 95 and 2v - 40 above (24-214 BPM). At 120 BPM: 1/96
 gives 24 pulses a beat (30% duty), 1/16 four (swing moves every second one - 3380/2629 ticks at 32,
 4495/1514 at 127), Sync a short pulse at the start of each period, ClkActive high while on. Rst
-restarts the phase. **Master** follows the instrument's global clock (notes §200; 120 BPM when none is known).
+restarts the phase. **Master** follows the instrument's global clock (notes §200; 120 BPM when none is known),
+its position as well as its tempo: every Master ClkGen in every slot shares one phase (notes §211).
 
 ## 60. NoteScaler
 
@@ -2505,6 +2513,19 @@ with Keyboard on. Checked offline: 18 Unreal Dreams in slot A (its own output mu
 with the NoteSends on Slot B, B plays A's sequence at -29 dB; on This or on the empty Slot C, silence. A
 slot that is not active renders nothing, as on the instrument, so its notes are not heard. Channels 1-16
 would leave by MIDI and are still dropped.
+
+**62.3 CtrlSend, and controller 70 (2026-10-09).** A CtrlSend sends its controller to a slot (Channel as
+NoteSend's: This or Slot A-D; 1-16 would leave by MIDI and are dropped) whenever its value changes - the
+Value dial plus the Value input, NoteSend's Vel arithmetic, 0-127 - and on a rising Send input (manual
+p.256). Like NoteSend it is a root of the graph and counts as a source, so a patch that only controls other
+slots runs. At the slot it names, controller 70 selects the variation (manual: the Variation buttons are
+"hard-wired to MIDI Controller #70") as value >> 4 - eight variations across 0-127 - the instrument's
+own mapping, and it sends a variation change as variation << 4. Performance 1:2 BCHydro_DZLW's scaling
+sends exactly those values (0, 16, 32 ...). The audio thread only posts the request; the next snapshot rebuild makes it the slot's active
+variation (the application's redraw, the plug-in's 4 ms rebuild poll). Any other controller reaches the
+slot as if it had arrived on that slot's own MIDI channel, so its CtrlRcv modules hear it. Checked offline
+on 1:2: slot A steps B, C and D a variation every 7.64 s (four bars at 126 BPM), and the whole performance
+sits within 0.2 dB of the G2's capture over 30 s (findings 2026-10-09).
 
 **62.1 A NoteSend is a root of the graph (2026-09-28).** The chain is built backwards from the Out
 modules, and a NoteSend feeds none, so until this date it and everything driving it (18's two

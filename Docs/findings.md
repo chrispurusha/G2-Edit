@@ -12431,6 +12431,8 @@ THE RIG, BOTH ENDS (2026-10-08, same session; tools/tone into In 1, tools/captur
 - NO TOTALMIX LOOP from Fireface inputs 5/6 back to outputs 0-3: with an OscA sine on the G2's Out 1/2, an
   unconnected 2-In read 0 from In 1/2 and from In 3/4. Checked before any In -> Out patch was built.
   Inputs 7/8 (the G2's Out 3/4) were not driven, so that pair is unchecked.
+- [CORRECTED 2026-10-09: the patch carried no Volume, so the G2 played it at Patch Level 100 and the engine at
+  127 - the true offset is 5.5 dB, see that day's entry.]
 - OUTPUT: an OscA sine (1.0 in the engine, patch Volume at its default) reaches Fireface input 5 at -28.1 dBFS
   peak; the engine renders the same patch (saved from the editor) at -16.5 (1.0 x VOICE_GAIN). On this rig,
   with TotalMix's input gains as they are, a G2 capture sits 11.6 dB BELOW the engine's render of the same patch.
@@ -12486,3 +12488,68 @@ nevertheless read, wrote, sent and undid them in variation 0 - so with any other
 changed a variation nobody was playing - and the topbar Volume drag took its undo start value from variation
 0. All of it, and the front panel, now go through `patch_settings_variation()` (dataBase.c). Built; not yet
 checked against the G2 (to-test).
+
+## 2026-10-09 - BCHydro_DZLW (perf 1:2) matches; the 11.6 dB rig offset was 5.5, a writer bug behind it
+
+CROSS-SLOT CONTROL BUILT (reference §62.3): CtrlSend to a slot, controller 70 selecting its variation as value >> 4.
+On 1:2 slot A steps B-D a variation every 7.64 s, as the G2 does. That left the engine 5.5-6.3 dB under the G2.
+
+LOCATING IT. Solo files (other slots' Patch Level muted in every variation, captured on the G2 and rendered by the
+engine from the same .prf2): every slot short, then every voice of slot B short by 6-7 dB - OscPerc, DrumSynth and
+two noise hats alike - and still 6.5 dB short with the bare OscPerc wired straight to the 2-Out. So not a module.
+
+THE CAUSE: the calibration patch of 2026-10-08 was built with NEWPATCH and saved/pushed by the editor, and the
+writer dropped every patch setting whose record had no parameter count - init_patch() creates Morph and Volume
+with count 0, and a setting has no module type to fall back on (protocol notes §9). The G2 therefore played the
+sine at its default Patch Level, 100, while the engine rendered it at 127. Re-measured with the writer fixed,
+Patch Level 127/100/94/64 on the G2 against the engine: -25.0/-31.1/-32.7/-42.6 against -19.5/-25.7/-27.3/-37.1
+(engine with 5.5 dB taken off) - the Patch Level law agrees to 0.1 dB at every step, and THE RIG OFFSET IS 5.5 dB:
+a G2 capture on Fireface inputs 5-8 sits 5.5 dB below the engine's render of the same patch. Yesterday's
+-28.1 dBFS peak is today's Level 100 reading to the tenth, which also settles what the G2 plays a patch with no
+Volume at: 100 (MISSING_PATCH_VOLUME was 127). The In -> Out reading of 10-08 came from a NEWPATCH patch too, so
+it is 6.1 dB low as well: 2-In -> 2-Out is about -0.9 dB at Level 127, not -7.0. The volts follow: a 1.0
+oscillator leaves at about -9.0 dBu, word full scale about +3.0 dBu - the output converter's full scale about
+1 dB under the input's. The input law (§37, from the 2-In meters) is unaffected.
+
+BCHYDRO RE-SCORED with 5.5 dB (30 s each, RMS): whole performance -30.6 on the G2 against -30.8 in the engine;
+slot B -0.6 dB, C +2.1, D +1.2 (engine minus G2); slot B's four voices -0.7 to +0.2. Files: G2Bugs
+BCHydro_DZLW-solo{B,C,D}.prf2, -B-ch{1..4}.prf2 (one voice of B, delay send cut) and -B-at-{mix,levamp,env,osc}.prf2
+(points of the kick's chain wired straight to the 2-Out).
+
+## 2026-10-09 - 18 Unreal Dreams re-scored: the "9 dB louder" was the rig; the G2 leans right
+
+The 09-28 note (engine ~9 dB louder) compared raw levels with no rig correction. With today's 5.5 dB
+(G2Captures/stage/18_unreal_dreams_g2_var1_192k.wav - Fireface, Outs 1/2, 120 BPM - against the engine at
+the same tempo): left -35.5 on the G2 against -30.8, right -27.5 against -29.3. The power of the two
+channels together agrees to 0.1 dB (-26.9 / -27.0), so the level is right - THE STEREO BALANCE IS NOT: the
+G2 leans 8 dB to the right, the engine 1.5 dB. The voice count barely matters (32 against the G2's 15
+voices moves the engine 0.4 dB - few sound at once). Today's calibration sine reads the same on both
+channels to 0.1 dB, so the rig is balanced.
+
+Where the balance forms in the engine (each stage soloed into the 2-Out): after the Pans 1.7 dB right,
+after the Phasers 1.9, after the DelayAs 1.5 - every stage treats both sides alike, and Pan, Phaser and
+DelayA are all the instrument's own laws (reference §4, §55, §24). The voices come in two layers, each
+through its own Pan: layer 1 (Pan1 at 53, unmodulated, Env3) is 13 dB under layer 2 (Pan2 at 49, swept by
+LfoC2 at full depth, Bip). Files for the G2, each layer alone: G2Bugs/UnrealDreams-18-layer1/2.pch2
+(engine, left/right: layer 1 -43.5/-44.2, layer 2 -31.1/-29.4, rig offset applied).
+
+## 2026-10-09 - The voice limit is not off by one: a 16-voice patch the G2 gives 15 is the G2's choice
+
+CT (todo): patches set to 16 voices show a limit of 15. The editor reads the G2's assigned-voices reply
+(0x05) one byte per slot and shows it as it comes; the patch header's own 5-bit field is stored as the
+count minus one and shown + 1. Both are the instrument's encodings: its own editor reads that header
+field as value + 1 and prints the reply's byte unadjusted beside it ("15 (16)"). And it has been seen
+equal: 02 Big Pad asks for 14 and the G2 reports 14 (2026-09-19) - an off-by-one would have read 13.
+So 15 of 16 is the G2 assigning by DSP load, as it gives 18 Unreal Dreams 15 of its 32. The red voice
+count on the top bar, and the red entries in its menu above the assigned figure, say exactly that.
+
+## 2026-10-09 - Master ClkGens in different slots drifted apart after a rebuild; now one shared position
+
+The todo asked whether two slots' sequencers stay in step. Loaded together they do - every slot's ClkGen
+starts at the same block - but each kept its own phase, sharing only the master tempo. Restarting slot
+C's ClkGens at 10 s (what a rebuild after an edit does) left its Sync pulses 0.45 s off slots A, B and D
+for the rest of the render. On the G2 the master clock is one global position. Now the engine keeps one
+per document and a fresh Master ClkGen starts from it (sound-engine-notes §211): the same test lands
+within one 24 kHz tick. A trap on the way: the module reads its run flag a tick late, so a ClkGen started
+mid-run spends its first tick "stopped" and puts its phase back to the top - the first attempt changed
+nothing until the delayed flag was set too.

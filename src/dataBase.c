@@ -312,6 +312,25 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
     LOG_DEBUG("Patch name from file: '%s'\n", patchName);
 }
 
+// notes §6 - a patch setting's parameter count, by tPatchModuleIndex, as the G2 writes them
+uint32_t patch_setting_param_count(uint32_t index) {
+    static const uint32_t kCount[] = {0, 16, 2, 2, 2, 3, 4, 2};
+
+    return (index < (sizeof(kCount) / sizeof(kCount[0]))) ? kCount[index] : 0u;
+}
+
+// notes §6 - what the instrument's own new patch holds: Morph (8 dials at 0, each group on its fixed
+// source), Volume, Glide, Bend, Vibrato, Arpeggiator and Sustain
+static const uint8_t kNewPatchSetting[patchModuleSustain + 1][16] = {
+    [patchModuleMorph]       = {                0,  0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+    [patchModuleVolume]      = {NEW_PATCH_VOLUME,  1},
+    [patchModuleGlide]       = {                0,28},
+    [patchModuleBend]        = {                1, 1},
+    [patchModuleVibrato]     = {                0, 50,64},
+    [patchModuleArpeggiator] = {                0,  3, 0,0},
+    [patchModuleSustain]     = {OCTAVE_SHIFT_ZERO, 1},
+};
+
 // notes §7 - the patch Volume the top bar shows and the engine plays (reference §63)
 void ensure_patch_volume(uint32_t slot, uint32_t level) {
     if (slot >= MAX_SLOTS) {
@@ -355,24 +374,23 @@ void init_patch(uint32_t slot) {
     database_delete_modules_by_slot(slot);
     gMorphCount[slot]                 = 8; // Check default!?
 
-    // notes §5
-    {
-        tModule * morphModule = get_module_slot(slot, (uint32_t)locationMorph, patchModuleMorph);
+    // notes §5 - all seven patch settings, at the instrument's own new-patch values
+    for (uint32_t index = (uint32_t)patchModuleMorph; index <= (uint32_t)patchModuleSustain; index++) {
+        tModule * setting = get_module_slot(slot, (uint32_t)locationMorph, index);
 
-        morphModule->active = true;
-        morphModule->key    = (tModuleKey){
-            slot, (uint32_t)locationMorph, patchModuleMorph
+        setting->active           = true;
+        setting->key              = (tModuleKey){
+            slot, (uint32_t)locationMorph, index
         };
+        setting->actualParamCount = patch_setting_param_count(index);
 
-        // notes §6
         for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
-            for (uint32_t morph = 0; morph < NUM_MORPHS; morph++) {
-                morphModule->param[variation][morph + NUM_MORPHS].value = 1;
+            for (uint32_t param = 0; param < setting->actualParamCount; param++) {
+                setting->param[variation][param].value = kNewPatchSetting[index][param];
             }
         }
     }
 
-    ensure_patch_volume(slot, NEW_PATCH_VOLUME);
     gNote2Size[slot]                  = 0;
     gControllerCount[slot]            = 0; // Seems to default to 2, so might need to set up defaults
     gPatchNotesSize[slot]             = 0;

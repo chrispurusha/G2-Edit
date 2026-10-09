@@ -1108,7 +1108,7 @@ void do_graphics_loop(void) {
         }
 
         // notes §43
-        if (sound_engine_meters_dirty()) {
+        if (sound_engine_meters_dirty() || sound_engine_variation_pending()) {
             synthlib_request_redraw();
         }
         reDraw = synthlib_consume_redraw();

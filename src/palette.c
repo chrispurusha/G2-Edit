@@ -33,6 +33,7 @@
 #include "splitView.h"
 #include "moduleGraphics.h"
 #include "clickRegion.h"
+#include "frontPanel.h"
 #include "palette.h"
 #include "utils.h"
 #include "geometry.h"
@@ -124,6 +125,10 @@ void palette_select_group(tPaletteGroup group) {
 // The canvas origin is derived from the theme's topBarHeight and nothing else, so opening the band
 // is one call — see the note on configure_synthlib_theme() in graphics.c.
 void palette_set_open(bool open) {
+    if (open && front_panel_active()) {
+        return;     // nothing to drop modules on - front-panel-mode-design.md
+    }
+
     if (gOpen == open) {
         return;
     }
