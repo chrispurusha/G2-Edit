@@ -258,7 +258,7 @@ them to.
 
 ### What to expect
 
-The plug-in inherits exactly what the sound engine can do. 169 of the 170 module types are modelled on the instrument's own behaviour and the remaining one is working approximations, still being refined - see [Docs/engine-module-status.md](./Docs/engine-module-status.md). All four slots play at once - the active ones, as on the instrument - with performance-mode keyboard ranges; a NoteSend aimed at another slot, or at MIDI out, is still dropped.
+The plug-in inherits exactly what the sound engine can do. Of the 170 module types, 152 are fully modelled - 61 of them compared against a real G2 so far - 12 are approximations still to be refined, and the rest make no sound of their own; [Docs/engine-module-status.md](./Docs/engine-module-status.md) lists the evidence for every one. All four slots play at once - the active ones, as on the instrument - with performance-mode keyboard ranges; a NoteSend or CtrlSend aimed at MIDI out is still dropped.
 
 See [THIRD_PARTY.md](./THIRD_PARTY.md) for open-source acknowledgments.
 
