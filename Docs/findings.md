@@ -12599,5 +12599,8 @@ clocks); slot B's variation 8 is 10 dB quieter in the engine (-55.0 against -45.
   1-4 ms of the G2 at every switch over 66 s.
 - SLOT B, VARIATION 8: its patch settings mute the slot in that variation (Volume on/off 0), and both mute
   it - the G2 to its noise floor (-95 dB), the engine to digital silence, at the same moment. The section
-  figures (-45 against -55) were the moment before the mute plus a noise floor against silence. The G2
-  fades over about 250 ms where the engine cuts at once - the one difference left.
+  figures (-45 against -55) were the moment before the mute plus a noise floor against silence. An apparent
+  250 ms fade on the G2 was the 250 ms analysis window: measured directly (a sine, Patch Level Mute switched
+  off and on three times, 96 kHz), the G2 CUTS within 0.33 ms and comes back within a cycle, as the engine
+  does. What follows a cut on the G2 is its output stage settling - about -35 dB falling ~0.25 dB/ms -
+  the AC coupling, not a fade. Nothing to change.
