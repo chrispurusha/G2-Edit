@@ -1544,6 +1544,8 @@ static _Atomic bool         gEconomyBank[SOUND_ENGINE_MAX_ENGINES];
 #define gEconomy                (gEconomyBank[SE])
 static bool                 gEconomyAppliedBank[SOUND_ENGINE_MAX_ENGINES];          // what the graph rate was last set for
 #define gEconomyApplied         (gEconomyAppliedBank[SE])
+static bool                 gEconomyResetBank[SOUND_ENGINE_MAX_ENGINES];            // notes §212 - its state still to clear
+#define gEconomyReset           (gEconomyResetBank[SE])
 static _Atomic bool         gRateChangedBank[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS]; // per document, for a rebuild
 static uint32_t             gOversampleBank[SOUND_ENGINE_MAX_ENGINES]    = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = ENGINE_OVERSAMPLE};
 #define gOversample             (gOversampleBank[SE])
@@ -2469,30 +2471,37 @@ static void set_oversampling(double deviceRate) {
 static void build_decimator(void);
 static void reset_node_state(void);
 
+// True when the graph or oscillator factor changed, which leaves the state tuned to the old rate.
+static bool apply_sample_rate(double sampleRate) {
+    SE_LOCAL;
+
+    uint32_t wasGraph = gOversample;
+    uint32_t wasOsc   = gOscOversample;
+
+    gDeviceRate = sampleRate;
+    set_oversampling(sampleRate);
+
+    // §29a - THE DECIMATORS ARE BUILT FROM THESE, so a rate that changes either factor has to
+    // rebuild them. sound_engine_start() primes the engine BEFORE audio_output_start() tells it
+    // the device's rate, so the application builds them once against whatever the factors were
+    // and then learns the rate - which did not matter while the factor was a compile-time
+    // constant and does now.
+    if ((gOversample == wasGraph) && (gOscOversample == wasOsc)) {
+        return false;
+    }
+    build_decimator();
+    return true;
+}
+
 static void set_sample_rate_one(double sampleRate) {
     SE_LOCAL;
 
-    if (sampleRate > 0.0) {
-        uint32_t wasGraph = gOversample;
-        uint32_t wasOsc   = gOscOversample;
-
-        gDeviceRate = sampleRate;
-        set_oversampling(sampleRate);
-
-        // §29a - THE DECIMATORS ARE BUILT FROM THESE, so a rate that changes either factor has to
-        // rebuild them. sound_engine_start() primes the engine BEFORE audio_output_start() tells it
-        // the device's rate, so the application builds them once against whatever the factors were
-        // and then learns the rate - which did not matter while the factor was a compile-time
-        // constant and does now.
-        if ((gOversample != wasGraph) || (gOscOversample != wasOsc)) {
-            build_decimator();
-
-            // notes §205 - a running engine keeps nothing tuned to the old graph rate; one not yet
-            // started is primed afterwards anyway
-            if (atomic_load(&gActive) == true) {
-                reset_node_state();
-                reset_voices();   // a voice left sounding over reset state never finishes
-            }
+    if (apply_sample_rate(sampleRate) == true) {
+        // notes §205 - a running engine keeps nothing tuned to the old graph rate; one not yet
+        // started is primed afterwards anyway
+        if (atomic_load(&gActive) == true) {
+            reset_node_state();
+            reset_voices();   // a voice left sounding over reset state never finishes
         }
     }
 }
@@ -2727,6 +2736,7 @@ static void engine_prime(void) {
     reset_node_state();
     reset_voices();
     gSeenTopology = 0u;    // notes §212 - so the first graph finds this state as it is
+    gEconomyReset = false;
 }
 
 // For a plug-in host: prime the engine and mark it live, but leave the audio device alone. The
@@ -15436,6 +15446,8 @@ static void * split_worker(void * arg) {
     return NULL;
 }
 
+#define ECONOMY_RESET_KEY    (UINT64_MAX)   // what an Economy reset is asked under in place of a topology
+
 // notes §212 - true once the new graph's state is clear: at once where there is no worker, otherwise
 // when the worker has run the reset, the slot staying silent until then
 static bool reset_node_state_off_callback(uint64_t topology) {
@@ -15601,9 +15613,18 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
     }
 
     // notes §205 - a change of Engine Rate reaches a running engine here, between blocks
-    if (atomic_load(&gEconomy) != gEconomyApplied) {
-        set_sample_rate_one(gDeviceRate);
+    if ((gEconomyReset == false) && (atomic_load(&gEconomy) != gEconomyApplied)) {
+        gEconomyReset = (gDeviceRate > 0.0) && (apply_sample_rate(gDeviceRate) == true);
         atomic_store(&gRateChangedBank[ENGINE_DOC], true);
+    }
+
+    // notes §212 - its state cleared by the worker as a new graph's is, this slot silent until then
+    if (gEconomyReset == true) {
+        if (reset_node_state_off_callback(ECONOMY_RESET_KEY) == false) {
+            return;
+        }
+        reset_voices();   // a voice left sounding over reset state never finishes
+        gEconomyReset = false;
     }
     params = read_params();
     refresh_voice_morphs(params.build);

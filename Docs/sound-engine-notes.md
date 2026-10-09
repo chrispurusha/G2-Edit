@@ -3567,8 +3567,10 @@ Now:
 
 Rendering faster than real time (an offline harness, a host's offline bounce) still gets an exact start,
 since the first graph needs nothing; only a graph changed mid-render would see a silence whose length
-depends on the worker's timing. The Economy switch (§205) still resets inside the callback - a rare,
-deliberate user action.
+depends on the worker's timing. The Economy switch (§205) is handled the same way since 2026-10-09: the
+callback changes the rate and rebuilds the decimators, asks the worker for the reset (under
+`ECONOMY_RESET_KEY` in place of a topology), stays silent until it is done and then resets the voices.
+Changing the rate from outside the callback (`sound_engine_set_sample_rate()`) still resets inline.
 
 THE MASTER CLOCK'S STEP IS EXACT (2026-10-09, later). A ClkGen on Internal steps its phase by the tempo
 word x (0x55555 >> sync) >> 23, truncated - the module's own arithmetic, kept exactly. On Master the
