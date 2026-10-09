@@ -1042,6 +1042,12 @@ envelope tick, and the output stays on while it is above zero (`env_hold_ticks()
 engine. ModAHD, which has a part of its own, is within 0.3% (Hold 32: 54.7 against 54.6; Hold 64: 1028.4
 against 1025.3), the G2 about a millisecond longer at short settings.
 
+The stage after a held one is never flat, whatever the levels say: it starts wherever the gate fell, so a
+release from a sustain of 0 (an ADSR with S 0, an ADDSR sustaining at an L2 of 0) is a fall to zero, not a
+hold (`env_follows_sustain()`). The gate falling jumps past the held stage ONCE; jumping every tick reset a
+hold's count for ever and pulled an ADDSR sustaining at L1 back into D2, and both hung the note (Bright
+Tine, 2026-10-09).
+
 ## 18. Pulse
 
 **18.1 Width.** The Sub range's width in 96 kHz samples is the dial's displayed time (the Lo display,

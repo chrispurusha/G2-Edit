@@ -3904,6 +3904,11 @@ static void envahd_stages_build(tEngineNode * node, tModule * module, uint32_t v
     node->envMulti        = true;
 }
 
+// §17.9a - the stage being built starts wherever the gate fell, so no level test makes it flat
+static bool env_follows_sustain(const tEngineNode * node) {
+    return (node->envSustainStage >= 0) && ((uint32_t)node->envSustainStage + 1u == node->envStageCount);
+}
+
 // §17.9 - the whole stage list, from the map the module shares with its face.
 static void env_stages_build(tEngineNode * node, tModule * module, uint32_t variation) {
     tEnvGraph map;
@@ -3954,7 +3959,7 @@ static void env_stages_build(tEngineNode * node, tModule * module, uint32_t vari
             node->envSustainQ     = stage->target;   // §17.6 - where the bipolar types centre
             stage->half           = ENV_HALF_UNITY;
             stage->add            = 0;
-        } else if ((segment->timeParam >= 0) && (level == from)) {
+        } else if ((segment->timeParam >= 0) && (level == from) && (env_follows_sustain(node) == false)) {
             // §17.9a - neither rises nor falls, so no level test can end it: it lasts its dial's time
             stage->hold = 1u;
             stage->half = ENV_HALF_UNITY;
@@ -10953,7 +10958,7 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
         } else if (gEnvStage[voice][node] != ENV_STAGE_IDLE) {
             // §17.9 - the gate falling jumps PAST the held stage. With no held stage there is nothing
             // to jump past and a one-shot runs on to its end, which is what EnvAHD and EnvD want.
-            if (spec->envSustainStage >= 0) {
+            if ((spec->envSustainStage >= 0) && (gEnvStage[voice][node] <= (uint32_t)spec->envSustainStage)) {
                 gEnvStage[voice][node] = (uint32_t)spec->envSustainStage + 1u;
                 gEnvHold[voice][node]  = 0u;
             }
