@@ -26,12 +26,12 @@ module that is not offered or not modelled.
 | Group | Confirmed on the G2 | Modelled | Approximate | Partial | No sound | Not implemented |
 |---|---|---|---|---|---|---|
 | **Oscillators** | Osc A, Osc B, Osc C, Osc D, Osc Shape B, Osc Dual, Noise Osc, Noise, Osc Percussion, Drum Synth, FM Operator, DX Router | Osc Phase Mod, Osc Shape A, Metallic Noise, Osc String, Driver, Resonator, Osc Master | - | - | - | - |
-| **Filters** | Multi Filter, Comb Filter, Eq 2-band, Eq Peak | LP Filter, HP Filter, Nord Filter, Classic Filter, Phase Filter, Static Filter, FltVoice, WahWah, Vocoder | - | Eq 3-band | - | - |
+| **Filters** | Multi Filter, Comb Filter, Eq 2-band, Eq 3-band, Eq Peak | LP Filter, HP Filter, Nord Filter, Classic Filter, Phase Filter, Static Filter, FltVoice, WahWah, Vocoder | - | - | - | - |
 | **Envelopes** | Envelope ADSR, Envelope AHD, Envelope H, Envelope Mod AHD, Envelope Mod ADSR | Envelope ADR, Envelop ADDSR, Envelope D, Envelope Multi | - | - | - | - |
 | **LFOs** | LFO A, LFO Shp A, Clock Generator | LFO B, LFO C | - | - | - | - |
 | **Mixers** | Mixer 1-1 A, Mixer 1-1 S, Mixer 2-1 A, Mixer 4-1 A, Mixer 4-1 B, Mixer 4-1 C, Mixer 4-1 S, Mixer 2-1 B, Mixer 8-1 A, Mixer 8-1 B, MixFader, MixStereo, Fade 1-2, Fade 2-1, X-Fade, Pan | - | - | - | - | - |
-| **Level** | Constant, LevAmp | ConstSwM, ConstSwT, CompLev, CompSig, LevAdd, LevConv, LevMod, MinMax, ModAmt, NoiseGate, EnvFollow, Red2Blue, Blue2Red | LevMult | - | - | - |
-| **Shapers** | OverDrive | - | Saturate, Clip, ShpExp, WaveWrap, ShpStatic, Rect | - | - | - |
+| **Level** | Constant, LevAmp | ConstSwM, ConstSwT, CompLev, CompSig, LevAdd, LevConv, LevMod, LevMult, MinMax, ModAmt, NoiseGate, EnvFollow, Red2Blue, Blue2Red | - | - | - | - |
+| **Shapers** | OverDrive | Saturate, Clip, ShpExp, WaveWrap, ShpStatic, Rect | - | - | - | - |
 | **Delays** | Delay A, Delay B | Delay Single A, Delay Single B, Delay Stereo, Delay Clock, DlyShiftReg | Delay Dual, Delay Quad, Delay Eight | - | - | - |
 | **Effects** | Chorus, Reverb | Compressor, Digitizer, FreqShift, Flanger, Phaser, PShift, Scratch | - | - | - | - |
 | **In/Out** | 2 Outputs, 4 Outputs, 2 Inputs, FX Input, Keyboard, Monophonic Keyboard, Status | 4 Inputs, Note Detector | Device | - | Name Bar | - |
@@ -41,7 +41,7 @@ module that is not offered or not modelled.
 | **Random** | - | Random A, Random B, Rnd Clock A, Rnd Clock B, Rnd Trig, Rnd Pattern | - | - | - | - |
 | **Note** | - | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide, Pitch Tracker, Zero Crossing Counter, Level Scaler | - | - | - | - |
 | **MIDI** | CtrlSend | CtrlRcv, NoteRcv | - | NoteSend | PCSend, NoteZone, Automate | - |
-| **Total 170** | **61** | **91** | **12** | **2** | **4** | **0** |
+| **Total 170** | **62** | **98** | **5** | **1** | **4** | **0** |
 
 ### Oscillators
 
@@ -82,9 +82,9 @@ module that is not offered or not modelled.
 | FltVoice | Modelled | §56 | - | - |
 | WahWah | Modelled | §69.9 | - | - |
 | Vocoder | Modelled | §70.8 | - | - |
-| Eq 2-band | Confirmed on the G2 | §11.2 | 43 noise settings across the EQs, 0.53 dB mean (09-12) | bypass not checked; deep cuts use a stable SVF (§11.5) |
-| Eq 3-band | Partial | §11.3 | 0.66 dB mean, 1.42 worst (09-12) | mid-band width is an assumed 1-octave formula |
-| Eq Peak | Confirmed on the G2 | §11.3 | 0.57 dB mean (09-12) | deep cuts use a stable SVF (§11.5) |
+| Eq 2-band | Confirmed on the G2 | §11.2 | 43 noise settings across the EQs, 0.53 dB mean (09-12) | high shelf changed 10-09 (0.3-0.7 dB near 3 kHz), not re-captured |
+| Eq 3-band | Confirmed on the G2 | §11 | 0.66 dB mean, 1.42 worst (09-12) | the 1.42 dB setting (mid -13.5 dB at 8 kHz) not explained by the model |
+| Eq Peak | Confirmed on the G2 | §11.3, §11.5 | 0.57 dB mean (09-12) | - |
 
 ### Envelopes
 
@@ -144,7 +144,7 @@ module that is not offered or not modelled.
 | LevAmp | Confirmed on the G2 | paramCurves notes §29 | 33 dial positions (08-30); 127 as 0x7FFFFF settled BCHydro_DZLW (10-09) | - |
 | LevConv | Modelled | §31 | - | - |
 | LevMod | Modelled | §69.3 | - | - |
-| LevMult | Approximate | - | - | never compared |
+| LevMult | Modelled | §74 | - | - |
 | MinMax | Modelled | §43 | - | - |
 | ModAmt | Modelled | §29 | parameter display only (param-validation) | - |
 | NoiseGate | Modelled | §70.6 | - | - |
@@ -156,13 +156,13 @@ module that is not offered or not modelled.
 
 | Module | State | Reference | On the G2 | Open |
 |---|---|---|---|---|
-| Saturate | Approximate | - | - | one ramp per mode would capture it (capture-inventory) |
-| Clip | Approximate | - | - | as Saturate |
+| Saturate | Modelled | paramCurves notes §33 | - | one ramp per mode would capture it |
+| Clip | Modelled | paramCurves notes §36 | - | one ramp per mode would capture it |
 | OverDrive | Confirmed on the G2 | §71 | energy above 6 kHz in 14 CS80project72: -41.5 against -41.6 dB (10-04) | - |
-| ShpExp | Approximate | - | - | as Saturate |
-| WaveWrap | Approximate | - | - | as Saturate |
-| ShpStatic | Approximate | - | - | as Saturate |
-| Rect | Approximate | - | - | - |
+| ShpExp | Modelled | paramCurves notes §32 | - | one ramp per mode would capture it |
+| WaveWrap | Modelled | §73, paramCurves notes §34 | - | one ramp per mode would capture it |
+| ShpStatic | Modelled | paramCurves notes §31 | - | one ramp per mode would capture it |
+| Rect | Modelled | paramCurves notes §30 | - | one ramp per mode would capture it |
 
 ### Delays
 

@@ -2219,7 +2219,7 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   sample-code idiom — a bare `else if (key == GLFW_KEY_ESCAPE) glfwSetWindowShouldClose(window,
   GL_TRUE)` — which is fine for a demo and wrong for an editor: it quit with unsaved patch edits and
   no confirmation, on the one key whose meaning everywhere else in this app is "close the thing in
-  front of me". Present since 2026-06-29 (1d926f2), unrelated to that day's window-bootstrap work.
+  front of me". Present since 2026-06-29 (d1cd620), unrelated to that day's window-bootstrap work.
   REMOVED. Escape now does nothing when there is nothing to dismiss; quitting is Cmd-Q, the Quit item
   in the application menu (GLFW's Cocoa backend populates both) or the window's close button.
   WHICH POP-UPS FELL THROUGH: the owner named them the same day — Virtual Keyboard closed on Escape,
@@ -3575,7 +3575,7 @@ OPEN WORK
   break.
 
 - (superseded, kept for the measurement) WARNINGS AS ERRORS — measured 2026-08-09, and SMALLER THAN IT LOOKS. Prompted by a real
-  cost: `bool altHeld = (altHeld);` in canvasDrag.c (from eb26908) was reported by -Wuninitialized in
+  cost: `bool altHeld = (altHeld);` in canvasDrag.c (from c0dd36c) was reported by -Wuninitialized in
   EVERY build for months, went unread among the other warnings, and only became visible as a bug when
   an unrelated refactor changed the stack frame above it and every plain dial drag started writing the
   morph offset. GCC_WARN_UNINITIALIZED_AUTOS was already YES_AGGRESSIVE — the warning was never the
@@ -3766,7 +3766,7 @@ resources already hold.
   work measured the G2 as carrying 8x (18 dB) between a nominal module output and DSP saturation,
   which makes the principled value 1/8 = 0.125: nominal lands at 0.125 and saturation arrives at 8x
   nominal, reproducing the hardware's relationship instead of a trim. The code went 0.25 -> 0.15 in
-  commit 58e0725 with no derivation recorded anywhere. So the decision is smaller than it looks —
+  commit 76a0fd7 with no derivation recorded anywhere. So the decision is smaller than it looks —
   mostly "adopt 0.125, or say why not" — but it is a ~1.6 dB level change and wants an ear.
 - Module coverage: 23 of the G2's modules as of 2026-08-20 (count the `case moduleType` labels in
   soundEngine.c rather than trusting this line). FltLP added 2026-08-07 with a per-module filter param
@@ -7135,7 +7135,7 @@ removing the title bar altogether - is deliberately NOT done here.
 
 
 2026-08-30 — THE TITLE BAR IS GONE AND Y COVERS THE WHOLE MODULE AGAIN (CT). This reverses the body
-inset of 2026-08-29 (commit 5c3c7c8), now that nothing needs reserving at the top of a face.
+inset of 2026-08-29 (commit 2144d22), now that nothing needs reserving at the top of a face.
 
   THREE CHANGES, ONE OF THEM 1852 ROWS:
     - The lighter-coloured strip across the top is not drawn. It was the drag handle; the whole face
@@ -8851,7 +8851,7 @@ cable-filter button changes. 8456 bytes (Version=22) in, 8108 (Version=23) out. 
 
 2026-09-12  NOTE DETECTOR WAS IN THE CREATE MENU TWICE
 ------------------------------------------------------------------------------------------------------
-The create-module menus have been built from gPaletteList since 6de3554, with every label unchanged
+The create-module menus have been built from gPaletteList since 6322d75, with every label unchanged
 from the sixteen static arrays they replaced. One module was listed twice: NoteDet, as "Note
 Detector" in In/Out and "NoteDet" in MIDI (the old arrays had both copies in MIDI). The G2 manual
 describes it in the In/Out group only - its MIDI group is CtrlSend, PCSend, NoteSend, CtrlRcv,
@@ -10674,7 +10674,7 @@ cannot deliver its stated benefit and can cost something real, with the evidence
 explained away, is worth removing rather than leaving in place on the chance it helps: reverted in
 `scroll_event()` and `defs.h`, and code-note §28a with them.
 
-The original reasoning is preserved in commit `03af6c8` if the trackpad case is ever seen on its
+The original reasoning is preserved in commit `c8f5543` if the trackpad case is ever seen on its
 own - which would mean horizontal drift on a machine with no horizontal scroll device, and that is
 the test that was never run.
 
@@ -11965,7 +11965,7 @@ patches render with finite, non-silent output after the changes. Revert record r
 - **Pulse and Logic Delay Time Mod (§18.3):** the shared time stage moves the dial by Mod x TimeMod steps
   and reads the time law there. Pulse now follows a moving width.
 - **Checked bit-exact:** with the output filter off, SimpleLead, BigPad, MiniEmulator, Dx, PulseMeasure,
-  ChorusSaw, FxMeasure and 18 of the 19 stage patches render byte-identical to 301e555; 07 Unstable Lead
+  ChorusSaw, FxMeasure and 18 of the 19 stage patches render byte-identical to 311a13f; 07 Unstable Lead
   differs, as its Lin Glides should. (15's master-clock change and 01's ValSw only show with a set tempo
   and Ctrl values in the switching band.)
 - Parked, with reasons: FltComb (581-line part; the stage patch's settings already fit the capture to its
@@ -11990,7 +11990,7 @@ patches render with finite, non-silent output after the changes. Revert record r
 - **OscPM (§53)**: its triangle is OscC/OscD's part, so it takes their corner correction.
 - **FreqShift Sub**: the instrument writes 0x80 (0.73 Hz at full) where its own readout says 8.78 Hz. A G2
   check decides; the engine keeps the word.
-- Regression against 2b94849 (filter off): only 10 Troll changes among 7 test and 19 stage patches.
+- Regression against 55261c1 (filter off): only 10 Troll changes among 7 test and 19 stage patches.
   Engine 139 Working / 31 Partial. Revert record rows 82-86.
 
 ## 2026-09-27 (night) - FreqShift Sub settled from the reference model

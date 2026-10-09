@@ -30,7 +30,7 @@ OUT_BOT_RIGHT = at(-3, -3, BR)    # the main output
 # family -> (params, connectors); each maps a module name to its rows in table order
 FAMILIES = {
     "Level": ({
-        "Constant":  [at(70, -3, BL), at(0, 0, MM)],     # the owner's own, centred selector (93e1df0)
+        "Constant":  [at(70, -3, BL), at(0, 0, MM)],     # the owner's own, centred selector (6b0ed7c)
         "ConstSwT":  [at(44, -3, BL), at(28, -1, BL), at(12, -1, BL)],
         "ConstSwM":  [at(44, -3, BL), at(28, -1, BL), at(12, -1, BL)],
         "CompLev":   [at(28, -3, BL)],

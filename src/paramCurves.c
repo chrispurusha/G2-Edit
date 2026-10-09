@@ -859,6 +859,11 @@ double constant_level(double paramValue, bool bipolar) {
 #define WRAP_PARAM_AMOUNT_MOD      (0)
 #define WRAP_PARAM_AMOUNT          (1)
 #define WRAP_PARAM_ACTIVE          (2)
+#define WRAP_WORD                  (8388608.0)
+#define WRAP_AMOUNT_SLOPE          (127.0 / 2.0)        // notes §34 - the Amount word per 1/256 of a dial step
+#define WRAP_AMOUNT_BASE           (32768.0)            // and at dial 0, 1/256 of a word
+#define WRAP_GAIN_MIN              (131073.0 / 8388608.0)
+#define WRAP_OUT_SCALE_MIN         (0.25)
 
 #define SHPSTATIC_PARAM_MODE       (0)
 #define SHPSTATIC_PARAM_ACTIVE     (1)
@@ -920,9 +925,13 @@ bool shaper_settings_build(tModule * module, uint32_t variation, tParamReader di
         {
             // In is connector 0 and Mod connector 1, as for every shaper (the instrument's connector
             // routing; the module table had them the other way round until 2026-09-27)
+            double amountDial = dial(module, variation, WRAP_PARAM_AMOUNT);
+            double modDial    = dial(module, variation, WRAP_PARAM_AMOUNT_MOD);
+
+            // notes §34 - the gain at no modulation, and Wrap M as the share of the Mod input it adds
             out->kind      = eShaperWaveWrap;
-            out->amount    = dial(module, variation, WRAP_PARAM_AMOUNT) / 127.0;
-            out->mod       = dial(module, variation, WRAP_PARAM_AMOUNT_MOD) / 127.0;
+            out->amount    = 4.0 * ((floor(amountDial * 256.0) * WRAP_AMOUNT_SLOPE) + WRAP_AMOUNT_BASE) / WRAP_WORD;
+            out->mod       = (modDial >= 127.0) ? 1.0 : (modDial / 128.0);
             out->signalLeg = 0;
             out->active    = (dial(module, variation, WRAP_PARAM_ACTIVE) != 0.0);
             return true;
@@ -1090,8 +1099,11 @@ double shaper_transfer(const tShaperSettings * settings, double amount, double i
         }
         case eShaperWaveWrap:
         {
-            // notes §34
-            return shaper_fold(x * (1.0 + (amount * 8.0)));
+            // notes §34 - fold at 16 G, scaled back by 1 / 64 G but never below a quarter
+            double gain  = fmax(amount, WRAP_GAIN_MIN);
+            double scale = fmax(1.0 / (64.0 * gain), WRAP_OUT_SCALE_MIN);
+
+            return 4.0 * scale * shaper_fold(16.0 * gain * x);
         }
         case eShaperOverdrive:
         {

@@ -724,7 +724,7 @@ different work; collapsing them needs observation 1, not another table.
 A BUG THIS REFACTOR FLUSHED OUT, worth knowing because it was not caused by it: removing two
 now-unused locals from `cursor_pos()` changed the stack frame, and `canvas_param_drag_motion()`
 contained `bool altHeld = (altHeld);` — a local shadowing the parameter and initialised from itself,
-present since eb26908. The garbage byte it read had been zero and became non-zero, so every plain dial
+present since c0dd36c. The garbage byte it read had been zero and became non-zero, so every plain dial
 drag started writing the morph offset. `-Wuninitialized` had reported it in every build for months.
 `OTHER_CFLAGS = "-Werror=uninitialized"` is now set in both configurations and verified to reject that
 exact line; see todo.md for what stands between here and a project-wide `-Werror`.

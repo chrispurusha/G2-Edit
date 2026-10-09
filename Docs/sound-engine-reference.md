@@ -452,7 +452,11 @@ mixer's Exp taper (§3.2), `mix_level_gain()`: Level 64 is -17.6 dB, not -6.
 **11.2 Shelves (from the reference model, confirmed by 11.6, EXACT since 2026-09-18).** Low shelf
 y = x + (G - 1)·lp, lp a one-pole low-pass at the Lo Freq corner. High shelf y = x + (G - 1)·hp, hp a
 one-pole high-pass with unity gain at Nyquist. Both corner tables are now read from the instrument
-rather than fitted, and both agree with the 2026-09-12 capture:
+rather than fitted, and both agree with the 2026-09-12 capture. Both one-poles are BILINEAR: each table entry
+is tan(pi f / 96000), the low-pass coefficient 2T/(T + 1) and the high-pass pole (1 - T)/(1 + T), and a cut
+divides (low) or multiplies (high) T by the gain (§11.4). Until 2026-10-09 the high shelf's pole was the
+matched e^(-2 pi f / fs), 0.31 dB short at 3.2 kHz on a +18 dB boost at 8 kHz and 0.67 dB at 12 kHz
+(revert record 148); at the low shelf's 80-160 Hz the two agree to the sixth decimal.
 
 | setting | Lo Freq | Hi Freq |
 |---|---|---|
@@ -476,7 +480,9 @@ EqPeak's CENTRE, SETTLED 2026-09-18: 20 × 800^(Freq/127) Hz, 20 Hz at 0 to 16 k
 (`eq_peak_centre_hz()`), which the instrument's own coefficient table matches to 0.0074% across all
 128 values. It is NOT `flt_cutoff_hz()`, the filter modules' curve, which the engine and the dial both
 used before and which is up to 45% away - the two agree only near Freq 73, which is why the capture
-fit could not separate them. Eq3band's mid has no BW dial: it fits q = 1.36, and the engine uses the
+fit could not separate them. Eq3band's mid has no BW dial: its damping is set once, when the module is linked, to sqrt 2 - EqPeak's
+at BW 64 (the instrument writes the word 0xb50481) - which is the 1-octave formula's value exactly (2026-10-09).
+The 2026-09-12 capture fitted q = 1.36, and the engine uses the
 formula's 1 octave, 1.41 (`EQ_MID_OCTAVES`); its centre, 100 × 80^(Freq/127), was already the
 instrument's.
 
@@ -484,10 +490,15 @@ instrument's.
 damping becomes q/G, a low shelf's corner rises to fc/G, a high shelf's falls to fc × G. A cut is
 therefore far wider than the boost it mirrors. `eq_mirror_cuts()`.
 
-**11.5 Engine filter.** The instrument's peak is the Chamberlin filter of §10.2, which is unstable once
-F × q passes 2 - a deep, wide cut above about 1 kHz. The engine uses a topology-preserving SVF instead,
-stable at any damping and the same response below a few kHz. What the instrument does there is not
-known; the one poorly fitting measurement (Eq3band mid at -13.5 dB and 8 kHz, 1.4 dB) is such a setting.
+**11.5 Engine filter (corrected 2026-10-09).** The instrument's peak is NOT the Chamberlin filter of §10.2:
+its coefficients are a bilinear design on t = tan(pi f / 96000) and the damping d, normalised by
+1/sqrt(1 + t d + t^2), and the engine's topology-preserving SVF with the same t and d gives the same response.
+Both are stable at any setting - a -18 dB cut at 8 kHz included. Checked 2026-10-09 against the reference model of all
+four Eq3band stages (input level, shelves, peak, output) and `eq_step()` with steady sines from 30 Hz to 18 kHz:
+every band alone, boost and cut, every shelf corner, and all three together, within 0.004 dB (0.003 at full
+level; smaller signals meet the 24-bit floor). The earlier claim that the instrument goes unstable for deep
+wide cuts was a guess from the Chamberlin form, and the one poorly fitting measurement it explained
+(Eq3band mid at -13.5 dB and 8 kHz, 1.4 dB) remains unexplained - a capture issue, as the model has it exact.
 
 **11.6 Measurement.** 2026-09-12 - white noise through each EQ at 43 settings, divided by the
 unfiltered noise. With 11.1-11.4: EqPeak shape 0.57 dB mean (0.82 worst), Eq2Band 0.53 (0.63), Eq3band
@@ -540,7 +551,7 @@ RISES and steps at phase Phase/128 (Phase dial through dial/128, 127 = 1); the s
 low first; all three with the two-sample edge of §6.3; Soft = one-pole, coefficient 8 inc96, times 2. NO shelf on
 the sub: the measured 190 Hz shelf was very likely the capture chain's own high-pass (§6.3 found -4 dB at 110 Hz on
 that chain). The inputs' depths are §12.4's; over-range PW wraps.
-Runs at the engine rate. NOT YET compared sample for sample with the harness - see todo.md.
+Runs at the engine rate. NOT YET compared sample for sample with the reference model - see todo.md.
 
 ## 13. FltComb
 
@@ -1618,7 +1629,7 @@ basic oscillators (§6.3), against the reference model sample for sample (a test
 - Sine1 peaks at half a cycle: argument phase + 0.5 + rise/2, rise = max((1 - y)/2, 2 inc96). -82 dB.
 - Sine2's positive lobe ends at half a cycle: phase + 0.5 + lobe, lobe = max((1 - y)/2, 4 inc96). -62 dB.
 - Sine3/Sine4 start 0.75 of a cycle on. -80 dB, except Shape 120-127 below ~1.5 kHz where the engine keeps the
-  hardware-measured ratio cap (§27.3), which the harness (missing its level stage) does not have.
+  hardware-measured ratio cap (§27.3), which the reference model (missing its level stage) does not have.
 - TriSaw: FALLS from +1 at p = -y to -1, rises over max(1 - y, 2x); corners rounded by
   turn x (2 - |d|)^3 / 24 (turn = 2/rise + 2/(2 - rise)) at the peak (down) and at the phase wrap p = 1 (up; skipped
   at y = 1, where the peak is the wrap). -43 to -77 dB below 1.5 kHz, -25 to -32 dB at 6 kHz: the reference model's own division flips the sign of the samples beside the peak with tiny pitch changes, so those two samples
@@ -2182,7 +2193,7 @@ What the instrument already gives, read off the parameter conversion (2026-09-20
 | 7 Noise Filter Res | `dial/512`, capped at a QUARTER of full scale |
 | 8 Noise Filter Sweep | `dial/128`, full scale at 127 |
 
-**Captures taken 2026-09-20 as EVIDENCE FOR the harness - what its output has to reproduce - and
+**Captures taken 2026-09-20 as EVIDENCE FOR the reference model - what its output has to reproduce - and
 explicitly not as laws to fit.** Rig: Keyboard -> DrumSynth -> LevAmp -> 2-Out in Slot A, Kick 1's
 settings, contributors isolated by zeroing the others.
 
@@ -2743,7 +2754,7 @@ identical exactly to its part.
   through the same On and Pad.
 - **Not yet: Rnd Clock B and Rnd Pattern.** Their RndState and RndLoop parts hand values to each other
   through shared registers and read a host word not yet identified, so they need the whole module run
-  in the harness, not part by part.
+  as a whole, not stage by stage.
 
 ## 70. Basic versions of the remaining modules
 
@@ -3023,3 +3034,23 @@ its own key was struck with. A key pressed into an empty arpeggio on a step boun
 otherwise the arpeggio picks it up at the next step, and a key let go leaves at the next step too.
 Switching the arpeggiator on releases every voice and takes in the keys already held; off releases
 them again. KB Hold is not modelled.
+
+## 73. WaveWrap
+
+The instrument's law (2026-10-09), in paramCurves notes §34 with the code. A gain G = 4 x (the Amount word +
+Wrap M x the Mod input), held between 1/64 and full scale; the Amount word is dial x 127/2 + 1/256 of a word
+(the dial read at 1/256 of a step), Wrap M dial/128 with 127 counting as 1. Then
+
+    out = 4 x max(1/4, 1/(64 G)) x fold(16 G x)
+
+with fold a triangle reflecting at +-1 and x in engine units. At Amount 0 the module is transparent up to the
++-4 headroom; from G = 1/16 up its output is held to +-1 unit while the folds multiply, sixteen to a unit at the
+top of the dial. Checked against the reference model over 528,255 points (every third Amount, Wrap M 0, 63 and
+126, the Mod input at -0.3, 0 and +0.3, inputs across the whole range): within 1e-4 units, the model's own
+division rounding. Not yet captured off the G2.
+
+## 74. LevMult
+
+The instrument's (2026-10-09): a single stage that multiplies its two inputs and shifts left two - in engine units,
+Out = In x Mod, saturated at the word (+-4 units, notes §196). An unpatched input reads zero, so a LevMult
+with either jack empty is silent. The engine's plain product is exactly this.

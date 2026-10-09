@@ -5370,7 +5370,10 @@ static double eq_step(uint32_t voice, uint32_t node, const tEngineNode * spec, d
     }
 
     if (eq->highHz > 0.0) {
-        double pole = exp(-2.0 * M_PI * eq->highHz / gSampleRate);
+        // §11.2 - the bilinear pole, a cut scaling the corner's tangent by the gain (§11.4 moved the corner)
+        double cut  = (eq->highGain < 1.0) ? eq->highGain : 1.0;
+        double t    = tan(M_PI * fmin(eq->highHz / cut, gSampleRate * 0.45) / gSampleRate) * cut;
+        double pole = (1.0 - t) / (1.0 + t);
         double half = 0.5 * (1.0 + pole) * signal;
         double high = state[1] + half;
 

@@ -519,17 +519,11 @@ the mod dial first but the In jack first; Saturate and ShpExp list the amount fi
 these came from the layout tables in moduleResources.h, and none is confirmed against the
 instrument yet.
 
-HOW MUCH OF THIS IS KNOWN. Rect is EXACT: the manual states all four operations in words, and
-there is no dial to get wrong. ShpStatic's four labels - Inv x3, Inv x2, x2, x3 - name their own
-curves (but see §31). Everything else here is structurally right and numerically a guess: the
-manual describes the family (a logarithmic curve for Saturate, an exponential one for ShpExp,
-four named overdrive characters, a fold rather than a clip for WaveWrap) but names no constant
-anywhere.
-
-THESE ARE THE CHEAPEST MEASUREMENTS LEFT. A memoryless module gives up its ENTIRE transfer
-function to one capture: send a slow full-scale ramp - or simply a low sine, which sweeps every
-input level twice per cycle - through it and plot output against input. One capture per mode,
-no impulse, no windowing, no decay fitting. See to-test.md.
+HOW MUCH OF THIS IS KNOWN (2026-10-09). Every one is now the instrument's own law: ShpStatic §31,
+ShpExp §32, Saturate §33, WaveWrap §34, OverDrive §35, Clip §36, and Rect exactly as the manual states
+it. None has been captured off the G2 yet. That is the cheapest check left: a memoryless module gives up
+its ENTIRE transfer function to one capture - a slow full-scale ramp, or a low sine, through it, output
+plotted against input. One capture per mode. See to-test.md.
 
 ## 31. in `shaper_transfer()`
 
@@ -558,14 +552,19 @@ holds and at none it passes. Until then this was a normalised log curve with an 
 
 ## 34. in `shaper_transfer()`
 
-Amplify, then fold. Up to 19 dB of drive, which is four folds on a full-scale input -
-the "deep distortion and FM-like characteristics" of the manual.
+WAVEWRAP, the instrument's (2026-10-09; reference §73). A gain G = 4 x (the Amount word + Wrap M x the Mod
+input), held between 1/64 and full scale. The Amount word is dial x 127/2 + 1/256 of a word, the dial read
+at 1/256 of a step; Wrap M is dial/128 with 127 counting as 1. The input times 16 G is folded - a triangle
+reflecting at +-1 - and scaled back by 1/(64 G), never below a quarter:
 
-THE MAXIMUM DRIVE IS ODD ON PURPOSE. shaper_fold() returns exactly zero at every EVEN
-integer, so an even maximum - 16 was the first thing written here - sends full scale
-to silence at the top of the dial, and a full-scale input then vanishes exactly where
-the module should be at its most extreme. Nine folds full scale back to full scale.
+    out = 4 x max(1/4, 1/(64 G)) x fold(16 G x)
 
+So at Amount 0 (G = 1/64) the module passes its input untouched up to the +-4 headroom, and from G = 1/16 up
+the output is held to +-1 while the folds keep multiplying, sixteen to a unit at the top of the dial.
+`amount` carries G and `mod` Wrap M, so the engine's Amount + Mod x input is G itself.
+
+Until then this was a guess: up to 9x of gain before a fold at +-1, the output never scaled back - too
+quiet at low Amount (the input folded at a quarter of the instrument's headroom) and too few folds at the top.
 ## 35. in `shaper_transfer()`
 
 OverDrive is the instrument's own since 2026-10-04 - sound-engine-reference §71. Here it is drawn at a steady
