@@ -109,7 +109,6 @@ SOUND ENGINE
 - The editor forwards incoming MIDI notes to the G2 (midiInput.c): a note that also reaches the G2 directly plays twice on a poly patch - decide whether to forward only when the G2 has no MIDI of its own, or make it a setting
 - OscShpA TriSaw at Shape 0 has 15 dB more 2nd harmonic than the G2's (captured 2026-10-04)
 - CPU profile per module: sampled cycle counts per node (one block in N), per voice, slot and FX area; a backdoor CPUDUMP table and a file-gated log for the plug-in - first input to multi-threading the 4 slots and FX (engine-multicore-design.md)
-- NEXT SESSION (CT 2026-10-09): Operator inputs from cables (§14.1) - Freq from a LevConv and AMod from an X-Fade, chained Operator to Operator, in G2Bugs/patches/alarmdx.pch2 and accbass.pch2 (nothing on file uses Pitch; Gate/Note/Vel only ever come from the Keyboard). Decode the three laws from the reference model; the DX node takes no inputs today and needs a short list of distinct sources (MAX_NODE_INPUTS 10)
 - 14 CS80project72: the G2's strongest partial, 527 Hz, is missing from the engine (1061/2112/3161 match; Fireface capture 09-27, findings 09-27)
 - Voice-area delays and Reverb per voice (findings 2026-09-27): allocate each voice's line at build time, sized by Range (the instrument's 513 .. 259212 samples); fit polyphony to a memory budget as the voice placer does
 - ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither

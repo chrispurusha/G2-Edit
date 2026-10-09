@@ -1199,3 +1199,4 @@ from a capture, so they are the ones most likely to be right.
   redo, "none"). STILL TO CHECK ON THE G2: a chosen preset sounds and reads the same on the
   instrument, the G2 shows the same name, and the On button mutes the module.
 - Economy switch (2026-10-09): the reset now runs on the slot's voice worker (sound-engine-notes §212). Flip Half Rate (economy) while a patch with a long reverb plays: one short gap, no click or stuck note, and new notes play straight after
+- Operator AMod and Pitch inputs (2026-10-09, reference §14.6): on the G2, an LFO into AMod at A-Mod 3 and 7, and a Constant into Pitch at 64 and 96 with KBT on, against the engine; and that a Constant into Freq changes nothing

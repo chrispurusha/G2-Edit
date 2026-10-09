@@ -614,8 +614,8 @@ routes, with the one exception in 14.5.
 What the node reads from the voice rather than from cables: gate, Note and Vel - the Keyboard's Gate,
 Note and Lin, which is how every DX patch on file cables all six Operators. The instrument reads the
 Operator's own Gate, Note and Vel inputs, so a patch putting something else into them is NOT YET
-MODELLED, nor are the Freq, Pitch and AMod inputs and the router's Out1-Out6 used anywhere else. An
-unpatched AMod reads full scale on the instrument and changes nothing, as EnvADSR's AM does (17.5).
+MODELLED, nor are the router's Out1-Out6 used anywhere else. The AMod and Pitch inputs are read
+(14.6); the Freq input is not, on the instrument or here.
 
 **14.2 The envelope.** It moves a LOG level, 0 to 0x7fffff, once a 24 kHz tick. The amplitude is
 `kDxAmpWords[level >> 16]`, read linearly between whole steps by the low 16 bits: 129 points, 0x200000
@@ -681,6 +681,24 @@ modulator only (`alsoMain`). CONFIRMED ON THE G2: one Operator through Main at a
 
 Pitch is the instrument's: Ratio is the played note (Kbt on) or E4 (off) times Coarse (0 is a half)
 x (1 + Fine/100); Fixed is 1, 10, 100 or 1000 Hz x 10^(Fine/100); Detune is 1 cent a step.
+
+**14.6 AMod, Pitch and Freq inputs (2026-10-09, from the reference model).** The DX node gathers what
+feeds each Operator's AMod and Pitch jacks as its own input legs, one per distinct source
+(`dx_gather_jacks()`), so one cable chained through all six Operators costs one leg.
+
+- AMOD scales the envelope's amplitude each tick by 1 + 2k(u - 1), k = A-Mod/7, u the input in engine
+  units, never below zero and at most 8 (the 24-bit word against unity's 0x100000). Unpatched it reads
+  full scale, u = 1, and changes nothing whatever the dial. At A-Mod 7 the Operator is silent for u up
+  to 0.5. Checked offline: an LFO into AMod swings the output 17 dB at A-Mod 3 and cuts it at 7.
+- PITCH is a linear factor on the frequency, 2u, and takes the place of the key: patched, the Operator
+  plays its Ratio against E4 times 2u whatever the note (manual: +32 units no change, 0 units 0 Hz,
+  +64 units twice the pitch). The instrument puts KBT on the same connection, which is why a patched
+  Pitch replaces it. Fixed mode takes the factor too.
+- FREQ is not taken by any part of the module, so it does nothing. Both patches on file that cable it
+  (alarmdx, accbass) hold it at +32 units through a LevConv, and the G2 plays them at the written pitch;
+  read as an exponential pitch input that would be 32 semitones sharp.
+
+None of the patches on file moves AMod or uses Pitch, so neither law has been heard on the G2 yet.
 
 ## 15. Voicing: Mono, Legato, stealing and glide
 

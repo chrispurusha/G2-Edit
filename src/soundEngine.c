@@ -816,10 +816,17 @@ typedef enum {
 #define DX_VEL_INDEX_SHIFT          (14)         // §14.4 - Vel's word to its kDxVelocityWords index
 #define DX_DETUNE_CENTS_PER_STEP    (1.0)
 #define DX_E4_HZ                    (329.6276)
-#define DX_FM_CYCLES_PER_UNIT       ((0x345487 / 8388608.0) * 64.0 / 2.0 / DSP_FULL_SCALE)   // §14.3
+// §14.6 - the Operator jacks the DX node reads from cables, by their place among its inputs
+enum {
+    eDxJackAMod = 0,
+    eDxJackPitch,
+    DX_JACKS
+};
+static const uint32_t kDxJackInput[DX_JACKS] = {4u, 6u};
+#define DX_FM_CYCLES_PER_UNIT    ((0x345487 / 8388608.0) * 64.0 / 2.0 / DSP_FULL_SCALE)      // §14.3
 
 // notes §19
-#define MAX_VOICES                  (32)
+#define MAX_VOICES               (32)
 
 // What counts as an inaudible voice, and how long it has to stay that way before the voice can be
 // handed to another note. -80 dB is below anything that survives the output stage; the window is
@@ -1188,6 +1195,8 @@ typedef struct {
     int32_t breakPoint;            // a note word
     int32_t lDepth;
     int32_t rDepth;
+    double  aMod;                  // §14.6 - A-Mod / 7
+    int8_t  jackLeg[DX_JACKS];     // §14.6 - the router node's input leg on AMod and Pitch, -1 unpatched
 } tDxOperator;
 
 // §58 - what a step sequencer's parameters make of the shared part's words
@@ -5496,6 +5505,7 @@ static void oscdual_build(tEngineNode * node, tModule * module, uint32_t variati
 #define OP_PARAM_RDEPTH             (21)
 #define OP_PARAM_LEVEL              (22)
 #define OP_PARAM_ACTIVE             (23)
+#define OP_PARAM_AMOD               (16)
 #define OP_SEVENTH_WORD             (0x124924)   // §14.4 - Vel as sevenths
 #define OP_RATESCALE_WORD           (0x84210)
 #define OP_DEPTH_WORD               (0xffff)     // L-Depth and R-Depth, 0-99
@@ -5646,7 +5656,8 @@ static int32_t dx_feedback_word(uint32_t algorithm, double value) {
 
 // §14.1 - the router and the Operators on its six inputs, gathered into one node: their FM runs
 // through the router in both directions, which a chain of separate nodes cannot evaluate.
-static void dx_build(tSoundEngineParams * params, tEngineNode * node, tModule * router, uint32_t variation) {
+static void dx_build(tSoundEngineParams * params, tEngineNode * node, tModule * router, uint32_t variation,
+                     const int8_t jackLeg[][DX_JACKS]) {
     node->dxAlgorithm  = (uint32_t)param_value(router, variation, DXROUTER_PARAM_ALGORITHM);
     node->dxFeedback   = dx_feedback_word(node->dxAlgorithm, param_value(router, variation, DXROUTER_PARAM_FEEDBACK)) / DSP_WORD_SCALE;
     node->active       = false;
@@ -5664,6 +5675,7 @@ static void dx_build(tSoundEngineParams * params, tEngineNode * node, tModule * 
         tModule *     source       = (connector >= 0) ? module_feeding(router, (uint32_t)connector, &sourceOutput) : NULL;
 
         memset(op, 0, sizeof(*op));
+        memcpy(op->jackLeg, jackLeg[k], sizeof(op->jackLeg));
 
         if ((source == NULL) || (source->type != moduleTypeOperator)) {
             continue;
@@ -5687,6 +5699,7 @@ static void dx_build(tSoundEngineParams * params, tEngineNode * node, tModule * 
         op->rCurve     = (uint8_t)source->param[variation][OP_PARAM_RCURVE].value;
         op->lDepth     = (int32_t)lround(param_value(source, variation, OP_PARAM_LDEPTH)) * OP_DEPTH_WORD;
         op->rDepth     = (int32_t)lround(param_value(source, variation, OP_PARAM_RDEPTH)) * OP_DEPTH_WORD;
+        op->aMod       = param_value(source, variation, OP_PARAM_AMOD) / 7.0;
 
         for (uint32_t s = 0; s < 4; s++) {
             op->rate[s]  = dx_rate(param_value(source, variation, OP_PARAM_R1 + (2 * s)));
@@ -5781,6 +5794,49 @@ static bool node_steps_at_96k(const tModule * module, tNodeKind kind) {
     }
 }
 
+static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t variation, uint32_t depth);
+
+// §14.6 - what feeds each Operator's AMod and Pitch jacks, as the router node's input legs. A
+// source feeding several jacks (one cable chained through all six Operators) takes one leg.
+static void dx_gather_jacks(tSoundEngineParams * params, tModule * router, uint32_t variation, uint32_t depth,
+                            int32_t * legIn, uint32_t * legOut, uint32_t * legCount, int8_t jackLeg[][DX_JACKS]) {
+    for (uint32_t k = 0; k < DX_OPERATORS; k++) {
+        int       connector = connector_index_for_input(router->type, k, anyConnectorType);
+        uint32_t  unused    = 0;
+        tModule * op        = (connector >= 0) ? module_feeding(router, (uint32_t)connector, &unused) : NULL;
+
+        if ((op == NULL) || (op->type != moduleTypeOperator)) {
+            continue;
+        }
+
+        for (uint32_t j = 0; j < DX_JACKS; j++) {
+            int       jack   = connector_index_for_input(moduleTypeOperator, kDxJackInput[j], anyConnectorType);
+            uint32_t  output = 0;
+            tModule * source = (jack >= 0) ? module_feeding(op, (uint32_t)jack, &output) : NULL;
+            int32_t   built  = (source != NULL) ? add_node(params, source, variation, depth + 1) : -1;
+            uint32_t  leg    = 0;
+
+            if (built < 0) {
+                continue;
+            }
+
+            while ((leg < *legCount) && ((legIn[leg] != built) || (legOut[leg] != output))) {
+                leg++;
+            }
+
+            if (leg == *legCount) {
+                if (*legCount >= MAX_NODE_INPUTS) {
+                    continue;   // more distinct sources than a node has legs: this jack stays unpatched
+                }
+                legIn[leg]  = built;
+                legOut[leg] = output;
+                (*legCount)++;
+            }
+            jackLeg[k][j] = (int8_t)leg;
+        }
+    }
+}
+
 static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t variation, uint32_t depth) {
     SE_LOCAL;
 
@@ -5799,6 +5855,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     bool          backLeg[MAX_NODE_INPUTS]        = {false};
     uint8_t       backModule[MAX_NODE_INPUTS]     = {0};
     uint8_t       backOut[MAX_NODE_INPUTS]        = {0};
+    int8_t        dxJackLeg[DX_OPERATORS][DX_JACKS];
+
+    memset(dxJackLeg, -1, sizeof(dxJackLeg));
 
     if (depth == 0) {
         memset(sNodeBuilding, 0, sizeof(sNodeBuilding));   // notes §192
@@ -5894,6 +5953,11 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 resolvedSrcOut[(2u * f) + 1u] = 1;
                 inCount                       = 2u * (f + 1u);
             }
+        }
+
+        // §14.6 - the Operators' AMod and Pitch jacks, one leg per distinct source
+        if (kind == eNodeDx) {
+            dx_gather_jacks(params, module, variation, depth, resolvedIn, resolvedSrcOut, &inCount, dxJackLeg);
         }
 
         // notes §79
@@ -6977,7 +7041,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeDx:
         {
-            dx_build(params, node, module, variation);
+            dx_build(params, node, module, variation, dxJackLeg);
             break;
         }
         case eNodeEnv:
@@ -10683,7 +10747,20 @@ static double dx_amplitude(int32_t level) {
 }
 
 // §14 - one sample of a DXRouter and its Operators, for one voice.
-static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, const tDxOperator * ops, double voicePitch) {
+#define DX_PITCH_JACK_UNITY    (0.5)   // §14.6 - +32 units on the Pitch jack is the key's own pitch
+#define DX_AMOD_GAIN_MAX       (8.0)   // §14.6 - the 24-bit word at 0x7fffff against unity's 0x100000
+
+static double signal_in(const tEngineNode * spec, double value[][NODE_OUTPUTS], uint32_t input);
+
+// §14.6 - an Operator jack's value, or `unpatched` where nothing is cabled to it
+static double dx_jack(const tEngineNode * spec, double value[][NODE_OUTPUTS], const tDxOperator * op, uint32_t jack, double unpatched) {
+    int8_t leg = op->jackLeg[jack];
+
+    return (leg >= 0) ? signal_in(spec, value, (uint32_t)leg) : unpatched;
+}
+
+static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, const tDxOperator * ops, double voicePitch,
+                      double value[][NODE_OUTPUTS]) {
     SE_LOCAL;
 
     const tDxAlgorithm * alg               = dx_algorithm(spec->dxAlgorithm);
@@ -10734,7 +10811,10 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
             } else if (gate == false) {
                 gDxEnvStage[voice][slot] = eDxRelease;
             }
-            gDxAmp[voice][slot] = dx_amplitude(gDxLevel[voice][slot]);
+            // §14.6 - the AMod jack scales the amplitude, at full scale (unpatched) not at all
+            double aModGain = 1.0 + (2.0 * op->aMod * (dx_jack(spec, value, op, eDxJackAMod, 1.0) - 1.0));
+
+            gDxAmp[voice][slot] = dx_amplitude(gDxLevel[voice][slot]) * fmin(fmax(aModGain, 0.0), DX_AMOD_GAIN_MAX);
         }
 
         for (uint32_t m = (uint32_t)k + 1u; m < DX_OPERATORS; m++) {
@@ -10746,7 +10826,14 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
         if ((uint32_t)k == (alg->feedbackTo - 1u)) {    // §14.3 - the source's last sample
             fm += spec->dxFeedback * gDxOut[voice][spec->dxBase + alg->feedbackFrom - 1u][0];
         }
-        hz                     = op->fixed ? op->fixedHz : ((op->kbt ? noteHz : DX_E4_HZ) * op->ratio);
+        // §14.6 - the Pitch jack is a linear factor in place of the key
+        {
+            int8_t pitchLeg = op->jackLeg[eDxJackPitch];
+            double linear   = (pitchLeg >= 0) ? (signal_in(spec, value, (uint32_t)pitchLeg) / DX_PITCH_JACK_UNITY)
+                              : ((op->kbt && (op->fixed == false)) ? (noteHz / DX_E4_HZ) : 1.0);
+
+            hz = (op->fixed ? op->fixedHz : (DX_E4_HZ * op->ratio)) * linear;
+        }
         gDxPhase[voice][slot] += (hz * op->detune) / gSampleRate;
         gDxPhase[voice][slot] -= floor(gDxPhase[voice][slot]);
 
@@ -13580,7 +13667,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             if (ops == NULL) {
                 ops = &paramsIn->dxOp[spec->dxBase];
             }
-            value[n][0] = (spec->active == true) ? dx_step(voice, n, spec, ops, voicePitch) : 0.0;
+            value[n][0] = (spec->active == true) ? dx_step(voice, n, spec, ops, voicePitch, value) : 0.0;
             value[n][1] = value[n][0];
             break;
         }
