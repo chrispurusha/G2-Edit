@@ -205,6 +205,7 @@ bool g2_plugin_parse_perf_image(const uint8_t * buff, int64_t size) {
     }
     gGlobalSettings.perfMode = 1;
     parse_perf((uint8_t *)(buff + body), (int)((size - body) - 2));
+    sound_engine_start_performance();   // soundEngine notes §216
     return true;
 }
 

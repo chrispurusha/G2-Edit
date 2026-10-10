@@ -279,3 +279,12 @@ the Sampler went from two to five on 2026-10-10. A file saved before that carrie
 count would then have been written back on every later save, so the newer dials never reached the file (CT:
 "params like release aren't saving with the patch .pchx"). Such a module is read at its full count instead:
 the file's values first, the rest at their defaults in every variation.
+
+## 25. `parse_module_list()` - a module saved with fewer modes than its type has
+
+A patch file from an older format can carry a module with fewer modes than the instrument now gives its
+type. Every ClkDiv in an old backup of BCHydro_DZLW (format version 19) carries none, where the G2 has one,
+DivMode. Loaded as it was, the module went to the instrument with no mode, and the clock dividers - and
+everything they clock - ran wrongly on the G2 (CT: sequences cut short, a pad wobbling as if under an LFO),
+while the same performance loaded from the G2's own flash played correctly. The missing modes are now filled
+from the mode table's defaults, so the module is whole both for the engine and for what is sent to the G2.

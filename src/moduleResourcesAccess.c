@@ -165,6 +165,22 @@ uint32_t module_param_default(tModuleType moduleType, uint32_t paramIndex) {
     return 0;
 }
 
+// The value a new module's mode starts at - its row's default in the mode table
+uint32_t module_mode_default(tModuleType moduleType, uint32_t modeIndex) {
+    uint32_t seen = 0;
+
+    for (uint32_t i = 0; i < (uint32_t)array_size_mode_location_list(); i++) {
+        if (modeLocationList[i].moduleType == moduleType) {
+            if (seen == modeIndex) {
+                return modeLocationList[i].defaultValue;
+            }
+            seen++;
+        }
+    }
+
+    return 0;
+}
+
 uint32_t module_param_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};

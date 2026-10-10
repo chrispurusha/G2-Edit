@@ -12777,3 +12777,15 @@ a Sampler first saved when it had two parameters kept writing two, so the three 
 never reached the file. An engine-only module is now read at its full count, the missing parameters at their
 defaults (protocol.c notes §24). Proved with a file made by a build with the old two-parameter table: it loads
 as 33 1 0 49 0, and Rel 100 / Vel 80 then survive a save and reload.
+
+## 2026-10-10 (late) - an old backup played wrongly on the G2: its ClkDivs had no mode
+
+CT: BCHydro_DZLW from the G2's flash plays correctly; loaded from an old .prf2 backup (format version 19) the
+G2 itself plays it wrongly - sequences cut short, slot D's pad wobbling as if under an LFO. Compared parameter by
+parameter, all variations, the backup and the G2's flash copy agree in every value; what differs is that every
+ClkDiv (13 of them across the four slots) carries NO mode in the backup, where the G2 has one, DivMode (0,
+Gated). The editor passed the module on to the G2 without it. Now a module read with fewer modes than its type
+has gets the rest at their defaults (protocol.c notes §25). Also: the engine read ClkDiv's Gated/Toggled from a
+parameter slot ClkDiv does not have (param 1) instead of its mode - fixed. And: renders while connected are not
+repeatable (the G2 switches variations on its own clock as the engine renders), so an online A/B between builds
+proves nothing; offline, today's engine and the 10-09 engine render this performance sample-identically.

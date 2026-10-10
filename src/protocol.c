@@ -260,6 +260,17 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             LOG_MODULE_DATA("Mode index %u = %u\n", j, modeValue);
         }
 
+        // notes §25 - a file older than a mode carries fewer than its type has: the rest at their defaults,
+        // so the module is whole when it is played or sent to the instrument
+        uint32_t typeModes = module_mode_count(type);
+
+        if ((module->modeCount < typeModes) && (typeModes <= MAX_NUM_MODES)) {
+            for (j = module->modeCount; j < typeModes; j++) {
+                module->mode[j].value = module_mode_default(type, j);
+            }
+
+            module->modeCount = typeModes;
+        }
         LOG_MODULE_DATA("Number connectors for module %u\n", module_connector_count(type));
     }
 }

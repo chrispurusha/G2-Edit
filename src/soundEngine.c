@@ -198,6 +198,9 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define ENV_PARAM_SUSTAIN          (3)
 #define SAMPLER_PARAM_VEL          (2) // notes §213
 #define SAMPLER_PARAM_REL          (3)
+// notes §213 - a Sampler keeps Vel and Rel in level[], which only mixers use, so the node needs no new words
+#define SAMPLER_LEVEL_VEL          (0)   // how far velocity scales its level, 0..1
+#define SAMPLER_LEVEL_REL          (1)   // seconds for a released note to fall 60 dB
 #define SAMPLER_PARAM_PITCH_MOD    (4)
 #define SAMPLER_IN_PITCH           (1)
 #define SAMPLER_IN_PITCH_VAR       (2)
@@ -412,7 +415,6 @@ static const tMixSpec * mix_spec(tModuleType type) {
 #define FLIPFLOP_PARAM_TYPE     (0)      // flipFlopStrMap {D-type, RS-type}
 #define FLIPFLOP_TYPE_RS        (1)
 #define CLKDIV_PARAM_DIVIDER    (0)      // reads 1 to 128: the dial plus one
-#define CLKDIV_PARAM_MODE       (1)      // divModeStrMap {Gated, Toggled}
 #define CLKDIV_MODE_TOGGLED     (1)
 
 // §39 - DrumSynth, in the module table's order. Each dial's conversion is the instrument's own:
@@ -983,8 +985,6 @@ typedef struct {
 typedef struct {
     tNodeKind           kind;
     const tNordSample * sample;      // notes §213 - the Sampler's file, shared through nordSample.c's cache
-    double              samplerVel;  // notes §213 - how far velocity scales its level, 0..1
-    double              samplerRel;  // notes §213 - seconds for a released note to fall 60 dB
     uint32_t            moduleIndex; // so per-node audio state can survive a knob turn (see topology_signature)
     uint32_t            location;    // Voice or FX — the two areas number their modules independently
 
@@ -1345,7 +1345,7 @@ typedef enum {
 #define MORPH_WORD_BYTES    (8u)
 #define NODE_WORDS          ((uint32_t)(sizeof(tEngineNode) / MORPH_WORD_BYTES))
 #define DX_SET_WORDS        ((uint32_t)((DX_OPERATORS * sizeof(tDxOperator)) / MORPH_WORD_BYTES))
-#define MORPH_MASK_WORDS    (5u)       // 320 bits, checked against both of the above below
+#define MORPH_MASK_WORDS    (4u)       // 256 bits, checked against both of the above below
 
 typedef struct {
     uint32_t    count;                     // nodes in the table; 0 when nothing is morphed on this axis
@@ -1707,11 +1707,23 @@ static void reset_voices(void);
 static uint32_t voice_count_for_patch(uint32_t slot);
 
 static double                 gVibratoPhaseBank[SOUND_ENGINE_MAX_ENGINES];
-#define gVibratoPhase        (gVibratoPhaseBank[SE])
+#define gVibratoPhase          (gVibratoPhaseBank[SE])
 static tSoundEngineParams     gLastGoodParamsBank[SOUND_ENGINE_MAX_ENGINES];
-#define gLastGoodParams      (gLastGoodParamsBank[SE])
+#define gLastGoodParams        (gLastGoodParamsBank[SE])
 static uint64_t               gSeenTopologyBank[SOUND_ENGINE_MAX_ENGINES];
-#define gSeenTopology        (gSeenTopologyBank[SE])
+#define gSeenTopology          (gSeenTopologyBank[SE])
+
+// notes §216 - a performance starts its slots together, from the top of the master clock
+#define PERF_START_SETTLE_S    (0.2)
+typedef struct {
+    _Atomic uint32_t asked;         // sound_engine_start_performance()
+    uint32_t         taken;         // audio thread only, from here down
+    bool             holding;
+    double           quietFrames;   // since a slot's graph last changed while holding
+} tPerfStart;
+static tPerfStart             gPerfStartBank[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS];
+static bool                   gPerfResetBank[SOUND_ENGINE_MAX_ENGINES];
+#define gPerfReset           (gPerfResetBank[SE])
 
 // notes §33
 #define OSC_OVERSAMPLE       (4 / ENGINE_OVERSAMPLE)   // the MAXIMUM; gOscOversample is what runs
@@ -3105,6 +3117,11 @@ const char * sound_engine_debug_text(void) {
 #define MIDI_CC_VARIATION    (70u)
 static _Atomic int32_t gVariationRequestBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = -1};
 #define gVariationRequest    (gVariationRequestBank[SE])
+static void(*_Atomic sVariationWake)(void);    // notes §215
+
+void sound_engine_set_variation_wake(void ( *wake )(void)) {
+    atomic_store(&sVariationWake, wake);
+}
 
 // §62.3 - a CtrlSend's controller into one slot: 70 selects its variation; any other reaches it as if it
 // had arrived on that slot's own channel, so its CtrlRcv modules hear it
@@ -3117,10 +3134,20 @@ static void cc_to_slot(uint32_t slot, uint32_t controller, uint32_t value) {
         SE_LOCAL;
 
         if (controller == MIDI_CC_VARIATION) {
-            // §62.3 - the instrument's mapping: value >> 4, eight variations across 0-127
-            uint32_t variation = value / 16u;
+            // notes §214 - with the G2 connected it runs the same CtrlSend and reports each change it makes,
+            // which the database follows; a second switch from here would step the slot twice as often
+            if (!device_ready()) {
+                // §62.3 - the instrument's mapping: value >> 4, eight variations across 0-127
+                uint32_t variation = value / 16u;
 
-            atomic_store(&gVariationRequest, (int32_t)((variation < 8u) ? variation : 7u));
+                atomic_store(&gVariationRequest, (int32_t)((variation < 8u) ? variation : 7u));
+
+                void     (*wake)(void) = atomic_load(&sVariationWake);
+
+                if (wake != NULL) {
+                    wake();   // notes §215 - the rebuild that makes it the slot's variation, now rather than next tick
+                }
+            }
         } else {
             uint32_t channel = gSynthSettings.midiChanSlot[slot % MAX_SLOTS];
 
@@ -6289,12 +6316,12 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeSampler:
         {
-            node->gain       = dial_fraction(param_value(module, variation, 0));
-            node->samplerVel = dial_fraction(param_value(module, variation, SAMPLER_PARAM_VEL));
-            node->samplerRel = adr_time_seconds(param_value(module, variation, SAMPLER_PARAM_REL));
-            node->modAmount  = type_ii_attenuator(param_value(module, variation, SAMPLER_PARAM_PITCH_MOD));
-            node->sample     = nord_sample_get(sampler_file(module->key));   // notes §213 - NULL: no file, or unreadable
-            node->active     = (param_value(module, variation, 1) != 0.0) && (node->sample != NULL);
+            node->gain                     = dial_fraction(param_value(module, variation, 0));
+            node->level[SAMPLER_LEVEL_VEL] = dial_fraction(param_value(module, variation, SAMPLER_PARAM_VEL));
+            node->level[SAMPLER_LEVEL_REL] = adr_time_seconds(param_value(module, variation, SAMPLER_PARAM_REL));
+            node->modAmount                = type_ii_attenuator(param_value(module, variation, SAMPLER_PARAM_PITCH_MOD));
+            node->sample                   = nord_sample_get(sampler_file(module->key)); // notes §213 - NULL: no file, or unreadable
+            node->active                   = (param_value(module, variation, 1) != 0.0) && (node->sample != NULL);
             break;
         }
         case eNodeMixStereo:
@@ -6840,7 +6867,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         {
             // §38.4 - the dial reads one more than it holds, 1 to 128.
             node->divider      = (uint32_t)module->param[variation][CLKDIV_PARAM_DIVIDER].value + 1u;
-            node->logicToggled = (module->param[variation][CLKDIV_PARAM_MODE].value == CLKDIV_MODE_TOGGLED);
+            node->logicToggled = (module->mode[0].value == CLKDIV_MODE_TOGGLED);   // §38.4 - DivMode is a mode, not a parameter
             break;
         }
         case eNodeDrumSynth:
@@ -8072,9 +8099,21 @@ bool sound_engine_variation_pending(void) {
     return false;
 }
 
+#include <mach/mach_time.h>
+
 void sound_engine_update_from_patch(void) {
+    bool     pendingT = sound_engine_variation_pending();
+    uint64_t t0T      = mach_absolute_time();
+
     FOR_EACH_SLOT_ENGINE(take_variation_request());
     FOR_EACH_SLOT_ENGINE(update_from_patch_one());
+
+    if (pendingT) {
+        mach_timebase_info_data_t tb;
+
+        mach_timebase_info(&tb);
+        fprintf(stderr, "TIMING variation rebuild %.2f ms\n", (double)(mach_absolute_time() - t0T) * tb.numer / tb.denom / 1e6);
+    }
 }
 
 // §26.2 - audio thread: take the per-voice tables when new ones are whole, and use them only with
@@ -13703,7 +13742,7 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
 
     // notes §213 - the damper: from the key's release the note falls 60 dB in Release's time
     if (selfReleased && (gVoice[voice].gate == false)) {
-        state[5] *= pow(SAMPLER_SILENT, 1.0 / (fmax(spec->samplerRel, SAMPLER_MIN_REL_SECONDS) * gSampleRate));
+        state[5] *= pow(SAMPLER_SILENT, 1.0 / (fmax(spec->level[SAMPLER_LEVEL_REL], SAMPLER_MIN_REL_SECONDS) * gSampleRate));
 
         if (state[5] < SAMPLER_SILENT) {
             state[5] = 0.0;
@@ -13715,7 +13754,7 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
     if (zone->looped && (state[0] >= (double)zone->loopEnd)) {
         state[0] -= (double)(zone->loopEnd - zone->loopStart);
     }
-    double            vel  = (1.0 - spec->samplerVel) + (spec->samplerVel * ((double)gVoice[voice].velocity / 127.0));
+    double            vel  = (1.0 - spec->level[SAMPLER_LEVEL_VEL]) + (spec->level[SAMPLER_LEVEL_VEL] * ((double)gVoice[voice].velocity / 127.0));
     double            gain = spec->gain * vel * zone->gain * (selfReleased ? state[5] : 1.0);
 
     *left     = sampler_read(zone, state[0], 0u) * gain;
@@ -15972,8 +16011,13 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
 
         merge_last_nodes(&params);
     }
+    tPerfStart * perfStart = &gPerfStartBank[ENGINE_DOC];
 
-    if (params.topology != gSeenTopology) {
+    if ((params.topology != gSeenTopology) && (perfStart->holding == true)) {
+        perfStart->quietFrames = 0.0;   // notes §216 - a patch still arriving
+    }
+
+    if ((params.topology != gSeenTopology) || (gPerfReset == true)) {
         // notes §212 - the first graph finds the state as engine_prime() cleared it; a later one has
         // the clearing done by the worker, this slot silent until it is
         if ((gSeenTopology != 0u) && (reset_node_state_off_callback(params.topology) == false)) {
@@ -15991,6 +16035,7 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
             reset_voices();
         }
         gSeenTopology = params.topology;
+        gPerfReset    = false;
 
         // notes §207 - the status figures start again with the patch on show
         if (engine_current_slot() == ((uint32_t)gSlot % MAX_SLOTS)) {
@@ -15998,6 +16043,10 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
             atomic_store(&gRenderLoadPercent[ENGINE_DOC], 0u);
             atomic_fetch_add(&gStatsEpoch[ENGINE_DOC], 1u);
         }
+    }
+
+    if (perfStart->holding == true) {
+        return;   // notes §216 - silent until every slot can start together
     }
     // notes §172
 
@@ -16296,7 +16345,7 @@ static void master_clock_advance(uint32_t frameCount) {
     tMasterClockPosition * pos   = &gMasterPositionBank[ENGINE_DOC];
     double                 rate  = slot_device_rate();
 
-    if ((engine_master_running() == false) || (rate <= 0.0)) {
+    if ((engine_master_running() == false) || (rate <= 0.0) || (gPerfStartBank[ENGINE_DOC].holding == true)) {
         for (uint32_t n = 0; n < CLKGEN_SYNC_SETTINGS; n++) {
             atomic_store(&pos->phase[n], 0u);
         }
@@ -16314,6 +16363,46 @@ static void master_clock_advance(uint32_t frameCount) {
     }
 }
 
+// notes §216 - before the block: take a new start, and let the slots go once all are cleared and settled
+static void perf_start_before_block(void) {
+    tPerfStart * ps      = &gPerfStartBank[ENGINE_DOC];
+    uint32_t     asked   = atomic_load(&ps->asked);
+    bool         waiting = false;
+
+    if (asked != ps->taken) {
+        ps->taken       = asked;
+        ps->holding     = true;
+        ps->quietFrames = 0.0;
+
+        for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+            gPerfResetBank[(ENGINE_DOC * MAX_SLOTS) + slot] = true;
+        }
+    }
+
+    if (ps->holding == false) {
+        return;
+    }
+    FOR_EACH_SLOT_ENGINE(if ((slot_renders() == true) && (gPerfResetBank[(ENGINE_DOC * MAX_SLOTS) + (uint32_t)forEach] == true)) {
+        waiting = true;
+    });
+
+    if ((waiting == false) && (ps->quietFrames >= (PERF_START_SETTLE_S * slot_device_rate()))) {
+        ps->holding = false;
+    }
+}
+
+static void perf_start_after_block(uint32_t frameCount) {
+    tPerfStart * ps = &gPerfStartBank[ENGINE_DOC];
+
+    if (ps->holding == true) {
+        ps->quietFrames += (double)frameCount;
+    }
+}
+
+void sound_engine_start_performance(void) {
+    atomic_fetch_add(&gPerfStartBank[ENGINE_DOC].asked, 1u);
+}
+
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
     static int32_t  shownSlot[SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS] = {[(0) ... (SOUND_ENGINE_MAX_ENGINES / MAX_SLOTS) - 1] = -1};
     struct timespec started                                         = {0};
@@ -16327,8 +16416,10 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         atomic_fetch_add(&gStatsEpoch[ENGINE_DOC], 1u);
     }
     (void)clock_gettime(CLOCK_MONOTONIC, &started);
+    perf_start_before_block();
     render_slots(out, frameCount, channelCount);
     master_clock_advance(frameCount);
+    perf_start_after_block(frameCount);
     sound_engine_set_input(NULL, 0);   // §37 - one block's: the caller's buffers are not ours to keep
     (void)clock_gettime(CLOCK_MONOTONIC, &finished);
 

@@ -179,6 +179,7 @@ void init_graphics(void) {
     split_view_init();   // one pane showing the Voice Area — the pre-split behaviour, as the default
     front_panel_load_preference();
     register_glfw_wake_cb(wake_glfw);
+    sound_engine_set_variation_wake(wake_glfw);   // soundEngine notes §215
     register_full_patch_change_notify_cb(notify_full_patch_change);
     topbar_init_controls();
 
@@ -323,6 +324,7 @@ void read_file_into_memory_and_process(const char * filepath) {
             }
             gGlobalSettings.perfMode = 1;
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
+            sound_engine_start_performance();   // soundEngine notes §216
         }
     } else {
         LOG_WARNING("CRC check failed\n");

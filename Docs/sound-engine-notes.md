@@ -3610,6 +3610,54 @@ The truncated step is 300 ppm slow at 102 BPM (297.09 words a tick becomes 297),
 the shared position above advances by the same exact steps. Afterwards the engine stays within 1-4 ms of
 the G2 at every variation switch over 66 s.
 
+## 214. With the G2 connected, the G2 switches the variations (`cc_to_slot()`)
+
+A CtrlSend sending controller 70 to another slot selects that slot's variation (§62.3) - BCHydro_DZLW's slot A
+steps B, C and D through theirs. With the G2 connected, the instrument runs the same CtrlSend and reports each
+change it makes; the database follows it, and the engine plays the database's variation. Applying the
+engine's own switch as well made two masters a little out of step: the slots stepped twice as often or more,
+and each extra switch cut their sequences short (CT, 2026-10-10: "slot A's control of the variation is
+happening twice or 4 times as fast"). So while connected the engine leaves controller 70 to the instrument;
+offline, and in the plug-in, it selects the variation itself as before. Every other controller still goes
+through.
+
+## 215. A CtrlSend's variation change is applied at once (`sound_engine_set_variation_wake()`)
+
+A variation change a CtrlSend posts (§62.3) becomes the slot's when the next snapshot is built, and in the
+application that happens on the GUI loop - which, with the engine on and nothing else to do, sleeps up to 50 ms
+between passes (100 ms while the comms lamps are lit). So a slot changed variation anywhere up to a tenth of a
+second late, where the instrument changes within a millisecond or two; a change that restarts a sequence (§58.2)
+restarted it late, and that slot ran behind the others until a later change happened to realign it (CT,
+2026-10-10, BCHydro_DZLW: "variation 5 sounds like the kick is not aligned ... it does seem to resync when
+variation changes"). The engine now calls the host's wake (the application's wake_glfw(), safe from any
+thread) as it posts the change, and the loop rebuilds on its next pass. The plug-in already rebuilds on a 4 ms
+poll. What remains is the rebuild's own time.
+
+## 216. A performance starts its slots together (`sound_engine_start_performance()`, `perf_start_before_block()`)
+
+On the G2 a performance load is one link of all four slots, and the end of every link restarts the master
+clock's count while the clock runs: its next 24-a-beat tick is the top of the bar, and every Master ClkGen
+realigns to it. So the slots start together, on a downbeat. The engine started each slot when its own
+new graph reached it, one after another as the patches arrived, while the master position (§211) ran on
+through the load. Master ClkGens agreed with each other but joined mid-bar, and each slot's sequencers
+counted from their own slot's start, so the slots of BCHydro_DZLW began whole steps apart (CT, 2026-10-10:
+"I'm not sure that when we load the performance for engine, the sequencers are properly initialised at
+the correct starting point").
+
+Now a performance load asks the engine to start the performance (the three file loaders, and a
+performance from a G2 bank or the G2's panel as its slots come back - usbComms.c, up to all four or 5 s).
+At the next block every slot of the document is marked for a reset; each is cleared as a new graph is
+(§212), and every slot stays silent while the master position is held at zero. When every slot that
+renders has been cleared and no slot's graph has changed for PERF_START_SETTLE_S (0.2 s - long enough for
+the rebuilt snapshots to arrive after a load, and for a slot coming back from the G2 later than the rest)
+they all start on the same block with the master clock at the top. A slot that changes graph during the
+hold restarts the settle time, so a performance arriving slot by slot still starts as one.
+
+Checked offline (backdoor, BCHydro_DZLW, 2026-10-10): rendered fresh, then played 5 s and loaded again,
+the second start matches the first at zero lag (envelope correlation 0.95-0.97); with the request
+disabled it came back 1.8 s displaced (correlation -0.2). What a link does to a running slot that did not
+change - an edit in one slot of a playing performance - is not settled; the engine leaves those as before.
+
 ## 213. The Sampler (`eNodeSampler`, `sampler_step()`) - the first engine-only module
 
 A module the G2 does not have: type 209, past the instrument's last (`moduleTypeSampler`), kept off the
@@ -3630,8 +3678,9 @@ stereo sample with no LevMult per channel; unpatched, the sample plays at full l
 envelope's Release, held by the sustain pedal, ends the note. Vel (2026-10-10, CT): the
 note's level is (1 - Vel) + Vel x velocity/127 - at 0 velocity does nothing, at full it scales linearly
 (velocity 32 plays 12 dB below 127). Linear is a choice, not a measurement. The face went to three rows for it,
-leaving room above for the sample's name. The node's new field pushed tEngineNode past 256 words, so the morph
-masks grew to five words. Rel (2026-10-10, CT) - the damper: with nothing in Amp the Sampler ends its own
+leaving room above for the sample's name. Vel and Rel live in the node's level[] (only mixers use it,
+and they smooth only levelCount entries), so the node keeps its size and the morph masks stay at four words -
+the G2's own modules carry nothing for the Sampler (CT). Rel (2026-10-10, CT) - the damper: with nothing in Amp the Sampler ends its own
 notes, falling 60 dB in Rel's time from the key's release, exponentially as a damped string does; the dial
 is the envelopes' time law (0 = a few ms, 49 = 0.3 s, the default; 127 = 45 s). The sustain pedal holds the key
 down (§26.3), so it is the damper pedal with no morph needed. Such a Sampler counts as the voice's envelope:

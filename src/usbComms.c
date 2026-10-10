@@ -47,6 +47,7 @@ extern "C" {
 #include "nameCache.h"
 #include "graphics.h"      // set_patch_name_from_filename / write_database_to_file (extern "C")
 #include "patchWrite.h"
+#include "soundEngine.h"
 #include "mouseHandle.h"   // init_patch (extern "C")
 #include <stdatomic.h>
 #include <pthread.h>
@@ -77,6 +78,10 @@ static _Atomic bool gotBadConnectionIndication          = false;
 static _Atomic bool gotPatchChangeIndication[MAX_SLOTS] = {0};
 // The bank location a Load from Bank asked for, per slot, until that slot's patch arrives. USB thread only.
 static int32_t      sPendingBankOrigin[MAX_SLOTS]       = {0};
+// soundEngine notes §216 - a performance asked for from a bank: the slots it has brought back, and until when
+#define PERF_START_WAIT_MS    (5000u)
+static uint32_t     sPerfStartSlots                     = 0;
+static uint64_t     sPerfStartUntilMs                   = 0;
 
 // The G2 has put something else in this slot (BANK_ORIGIN_PERF: the performance and every slot), so a
 // remembered file is no longer where this came from.
@@ -2447,6 +2452,8 @@ static int load_patch_from_bank(uint32_t bank, uint32_t location, bool isPerf) {
     result = send_retrieve_patch(domain, bank, location);
 
     if ((result == EXIT_SUCCESS) && isPerf) {
+        sPerfStartSlots               = 0;
+        sPerfStartUntilMs             = (uint64_t)get_time_ms() + PERF_START_WAIT_MS;
         forget_bank_origin(BANK_ORIGIN_PERF);
         g2_replaced_patch(BANK_ORIGIN_PERF);
         gBankOrigin[BANK_ORIGIN_PERF] = BANK_ORIGIN(bank, location);
@@ -4021,6 +4028,7 @@ static int load_perf_from_payload(uint8_t * buff, int64_t byteOffset, int64_t pa
     gGlobalSettings.perfMode        = 1;
     parse_perf(buff + byteOffset, (int)payloadLen);
     free(buff);
+    sound_engine_start_performance();   // soundEngine notes §216
 
     int retVal = push_perf_to_device();
 
@@ -4694,6 +4702,9 @@ static void state_handler(void) {
         send_get_performance_settings();  // TODO - maybe be some more items we need to get here
         send_start();
 
+        sPerfStartSlots                 = 0; // soundEngine notes §216 - its slots follow as patch changes
+        sPerfStartUntilMs               = (uint64_t)get_time_ms() + PERF_START_WAIT_MS;
+
         gSlot                           = 0;
         gPatchDescr[0].activeVariation  = 0;
         set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
@@ -4728,6 +4739,16 @@ static void state_handler(void) {
             }
             sPendingBankOrigin[i]       = BANK_ORIGIN_NONE;
             foundOneChange              = true;
+            sPerfStartSlots            |= 1u << i;
+        }
+    }
+
+    // soundEngine notes §216 - each pass that brings slots of it back starts it again, until all four are in
+    if ((foundOneChange == true) && ((uint64_t)get_time_ms() < sPerfStartUntilMs)) {
+        sound_engine_start_performance();
+
+        if (sPerfStartSlots == ((1u << MAX_SLOTS) - 1u)) {
+            sPerfStartUntilMs = 0;
         }
     }
 
