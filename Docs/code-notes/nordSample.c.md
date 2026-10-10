@@ -40,13 +40,63 @@ Every file a Sampler names is loaded on the first patch build that needs it and 
 a rebuild - which happens at every knob turn - never waits on the disk again and two Samplers on one file
 share it. A file that fails to load is remembered as failed. 32 files at most; the cache is never emptied.
 
-## 5. The loop (`tNordZone.looped`, `loopStart`, `loopEnd`)
+## 5. The loop (`tNordZone.looped`, `loopStart`)
 
-The two loop positions are where their blocks begin; the encoder starts a block of raw, unpredicted samples
-at each, so a player can enter there. The samples after the loop end are not a copy of the loop start but
-the sound's own continuation, a few hundred samples of it, to crossfade with: on reaching the loop end the
-player jumps back by the loop's length, and over the next (length - loop end) samples fades from that
-continuation into the loop start (soundEngine.c `sampler_step()`). Both halves of the fade join their
-neighbours exactly, so the seam does not click. Checked: a 4 s note at 61, 79 and 48 holds its level, and
-its largest sample-to-sample step is within a quarter of the 99.9th percentile of its own.
+The position at 0x24 is the LOOP START; the loop runs from there to the zone's last sample and is a whole
+number of cycles of the note (2 to 22 in the Melodica), cut so the last sample leads straight back into the
+first: across all 16 zones the seam matches to an error of 0.0001 or less. The zone plays straight through to
+its end once, then round that short loop for as long as it sounds - no crossfade and no gain. The encoder
+starts a block of raw, unpredicted samples there, so a player can enter at the loop start. (The position at
+0x1b marks an earlier point not used here. Looping from it to 0x24 - the first reading - gave a 0.22 s loop of
+a sound still drifting in pitch and level: beating at the wrap and pitch errors up to 55 cents.)
+
+## 6. The key map (`apply_key_map()`)
+
+The `map` chunk, in the layout of these files: a 24-bit file level and a signed 24-bit detune, three more
+24-bit values, 128 per-key entries of six bytes (a level and a detune each - neutral in the files seen), one
+24-bit value, then 15 bytes per zone: the zone's id (as the first word of its `stk` chunk), its level, its
+detune, its TOP key, then a 16-bit value, a byte and a 16-bit value not used here. Levels are linear in units
+of 2^-20 (0x100000 is 0 dB); detunes are 1/256 of a semitone. Zones are listed from the top down; each plays
+from the key above the previous zone's top to its own, the lowest down to key 0 and the highest up to 127.
+A map of any other size, or one that does not name every zone, is ignored and the nearest root chosen.
+
+Checked against a Nord Wave on the Melodica: keys 48, 61, 64 and 72 sound within 5 cents of it (key 64 at
+330.45 Hz against 330.46). With the nearest root instead, key 64 played the zone above (root 65 for the map's 63)
+and its level wobbled 0.61 dB against the Wave's 0.16; with the map, 0.18.
+
+## 7. Exact pitch (`NSMP_MAX_RETUNE_CENTS`)
+
+Because the loop holds a whole number of cycles, its length over that number is the zone's true period, to a
+fraction of a sample. The zone's rate is set from it so its root key sounds at exactly equal-tempered pitch;
+played at the header's rate the zones sit up to 4.6 cents off. A Nord Wave also plays each zone in tune
+whatever its recording's own tuning - keys 61 and 63, on zones 4.8 cents apart, both come out +4.3 - though
+with a small fixed error of its own per key, up to 4.3 cents in runs of neighbouring keys. The engine is exact:
+0.00 cents at 19 keys from 48 to 85. A retune of more than 50 cents is not trusted and the header rate kept.
+
+## 8. The later layout (`tFormat`, `kFormatLater`)
+
+A file whose fifth byte is 1 (the `.nsmp4` files for later Nord instruments) has the same chunks, zone header
+and coding, laid out differently: chunks start at 0x2c and their headers are 12 bytes - the tag as four bytes
+with the three letters right-aligned behind a zero, then a 32-bit version and a 32-bit length - and the coded
+stream is in 32-bit words, block headers included (the fields in the same bit positions). Header positions
+count 32-bit words from 0x2c: all 176 in a 44-zone file land on block starts. Checked: the 16 Violins in both
+layouts play the same pitch trace at keys 60 and 72. Not read yet: the later key map (version 21: per-key
+entries of a level, a detune and four bytes, then per-zone records that appear to carry velocity layers), so
+these files take the nearest root and no file or zone level - they play about 5.5 dB below the same sound in
+the original layout. Stereo: see §9.
+
+## 9. Stereo (`tNordZone.channels`, `tFormat.wordPerChannel`)
+
+The zone header's byte at 0x08 is its channel count, 1 or 2. A block's samples alternate between the
+channels - sample i is channel i % channels - and each channel runs its own predictor history; the block's
+filter order and bit width are shared. In the later layout each channel also packs its own residuals into
+its own 32-bit words, and the words alternate: the channel that fills a word emits it and hands over, so a
+block's data is channel 0's word 0, channel 1's word 0, channel 0's word 1, and so on - channels x
+ceil((count / channels) x width / 32) words. Read as one interleaved stream, a stereo file breaks after its
+first block. Checked on three Nord Grand 2 pianos (32, 36 and 17 zones): every zone chains exactly to its
+end, and the two channels are separate microphones (correlation 0.2-0.5 at keys 60 and 84). Frames hold the
+channels interleaved; `length` and the loop start count frames. A mono zone plays on both outputs.
+
+Velocity layers: none of the files on hand has more than one (the pianos included - every zone record's
+velocity range is 0-127).
 

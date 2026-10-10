@@ -87,7 +87,7 @@ static const tEvidence kEvidence[] = {
     {"Osc Dual",              eConfirmed,   "§12.4, §12.5",              "levels, duty, phase (09-12); PW and Phase mod (10-03)", "-"},
     {"Noise Osc",             eConfirmed,   "§8.2-§8.5",                 "09-12 capture agrees 110 Hz-1 kHz (the old model's fit)", "level above 1 kHz not re-captured since the §8 model"},
     {"Noise",                 eConfirmed,   "§7.2a",                     "09-12 capture reproduced through the desk's shelf to a constant", "-"},
-    {"Sampler",               ePartial,     "notes §213",                "engine only - the G2 has no such module", "zones by nearest root key until the key map is read; mono files only"},
+    {"Sampler",               ePartial,     "notes §213",                "engine only - the G2 has no such module", "velocity layers not read; .nsmp4 key map not read (no level, nearest root)"},
     {"Metallic Noise",        eModelled,    "§66",                       "-", "no capture"},
     {"Osc Percussion",        eConfirmed,   "§40",                       "8 takes: levels 0.1 dB, decay 2 ms, pitch exact (09-25)", "-"},
     {"Drum Synth",            eConfirmed,   "§39",                       "Master Freq 0.2% (09-21); noise, click, oscillator energies within 0.8 dB (09-25)", "level curve set by §39.3, not fitted to the 09-20 sweeps"},

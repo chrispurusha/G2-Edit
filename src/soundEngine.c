@@ -1500,7 +1500,9 @@ static double               gMeterEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_N
 #define gMeterEnv                  (gMeterEnvBank[SE])
 static uint32_t             gMeterClipHoldBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
 #define gMeterClipHold             (gMeterClipHoldBank[SE])
-static uint32_t             gMeterVoiceBank[SOUND_ENGINE_MAX_ENGINES];   // the voice the face shows - notes §191
+static bool                 gSamplerSelfGateBank[SOUND_ENGINE_MAX_ENGINES]; // notes §213 - no envelope to end its notes
+#define gSamplerSelfGate           (gSamplerSelfGateBank[SE])
+static uint32_t             gMeterVoiceBank[SOUND_ENGINE_MAX_ENGINES];      // the voice the face shows - notes §191
 #define gMeterVoice                (gMeterVoiceBank[SE])
 
 static _Atomic int32_t      gOutputGainMilliBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1000};
@@ -13606,26 +13608,41 @@ static uint32_t gInPosVoiceBank[SOUND_ENGINE_MAX_ENGINES];
 static uint32_t gInPosFxBank[SOUND_ENGINE_MAX_ENGINES];
 #define gInPosFx            (gInPosFxBank[SE])
 
-// notes §213 - one voice's play position through the zone nearest its key, restarted by each note
-static double sampler_read(const tNordZone * zone, double at) {
+// notes §213 - one voice's play position through its zone, restarted by each note; past the zone's end it
+// goes on round the loop, the sample after the last being the loop's first
+static double sampler_read(const tNordZone * zone, double at, uint32_t channel) {
     uint32_t i    = (uint32_t)at;
-    double   frac = at - (double)i;
 
-    return (i + 1u < zone->length) ? (zone->data[i] + (frac * (zone->data[i + 1u] - zone->data[i]))) : 0.0;
+    if (i >= zone->length) {
+        return 0.0;
+    }
+    double   frac = at - (double)i;
+    uint32_t next = (i + 1u < zone->length) ? (i + 1u) : (zone->looped ? zone->loopStart : i);
+    uint32_t c    = (channel < zone->channels) ? channel : 0u;   // a mono zone plays on both outputs
+    double   now  = zone->data[(i * zone->channels) + c];
+
+    return now + (frac * (zone->data[(next * zone->channels) + c] - now));
 }
 
-static double sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double voicePitch) {
+#define SAMPLER_RELEASE_SECONDS    (0.02)
+
+static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double voicePitch, double * left, double * right) {
     SE_LOCAL;
 
     const tNordSample * sample = spec->sample;
-    double *            state  = gLadder[voice][n];   // position, the trigger it started for, zone, looped yet
+    double *            state  = gLadder[voice][n];   // position, the trigger it started for, zone, -, -, release
     double              note   = (voicePitch >= 0.0) ? voicePitch : 60.0;
 
     if (state[1] != (double)gVoice[voice].trigger) {
         uint32_t nearest = 0;
+        int32_t  key     = (int32_t)lround(note);
 
-        for (uint32_t z = 1; z < sample->zoneCount; z++) {
-            if (fabs(sample->zone[z].rootNote - note) < fabs(sample->zone[nearest].rootNote - note)) {
+        // nordSample.c notes §6 - the key map's zone for the key, or the nearest root without one
+        for (uint32_t z = 0; z < sample->zoneCount; z++) {
+            const tNordZone * zone = &sample->zone[z];
+
+            if (sample->mapped ? ((key >= zone->keyLow) && (key <= zone->keyHigh))
+                : (fabs(zone->rootNote - note) < fabs(sample->zone[nearest].rootNote - note))) {
                 nearest = z;
             }
         }
@@ -13633,34 +13650,29 @@ static double sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec,
         state[0] = 0.0;
         state[1] = (double)gVoice[voice].trigger;
         state[2] = (double)nearest;
-        state[3] = 0.0;
+        state[5] = 1.0;
     }
-    const tNordZone *   zone   = &sample->zone[(uint32_t)state[2]];
-    double              out    = 0.0;
+    // notes §213 - with no envelope in the patch the voice would drone on; a sample's note ends with its key
+    *left     = 0.0;
+    *right    = 0.0;
 
-    if (zone->looped) {
-        double loop = (double)(zone->loopEnd - zone->loopStart);
-        double fade = (double)(zone->length - zone->loopEnd - 1u);   // the samples past the loop end
+    if (gSamplerSelfGate && (gVoice[voice].gate == false)) {
+        state[5] = fmax(0.0, state[5] - (1.0 / (SAMPLER_RELEASE_SECONDS * gSampleRate)));
 
-        if (state[0] >= (double)zone->loopEnd) {
-            state[0] -= loop;
-            state[3]  = 1.0;
+        if (state[5] <= 0.0) {
+            return;
         }
-        double into = state[0] - (double)zone->loopStart;
-
-        // notes §213 - after a wrap, the continuation past the loop end fades into the loop start
-        if ((state[3] != 0.0) && (into >= 0.0) && (into < fade)) {
-            double in = into / fade;
-
-            out = (in * sampler_read(zone, state[0])) + ((1.0 - in) * sampler_read(zone, state[0] + loop));
-        } else {
-            out = sampler_read(zone, state[0]);
-        }
-    } else if ((uint32_t)state[0] + 1u < zone->length) {
-        out = sampler_read(zone, state[0]);
     }
-    state[0] += exp2((note - zone->rootNote) / 12.0) * (zone->sampleRate / gSampleRate);
-    return out * spec->gain;
+    const tNordZone * zone = &sample->zone[(uint32_t)state[2]];
+
+    if (zone->looped && (state[0] >= (double)zone->length)) {
+        state[0] -= (double)(zone->length - zone->loopStart);
+    }
+    double            gain = spec->gain * zone->gain * (gSamplerSelfGate ? state[5] : 1.0);
+
+    *left     = sampler_read(zone, state[0], 0u) * gain;
+    *right    = sampler_read(zone, state[0], 1u) * gain;
+    state[0] += exp2((note - zone->rootNote + zone->detune) / 12.0) * (zone->sampleRate / gSampleRate);
 }
 
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
@@ -14614,7 +14626,12 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeSampler:
         {
-            value[n][0] = (spec->active == true) ? sampler_step(voice, n, spec, voicePitch) : 0.0;
+            value[n][0] = 0.0;
+            value[n][1] = 0.0;
+
+            if (spec->active == true) {
+                sampler_step(voice, n, spec, voicePitch, &value[n][0], &value[n][1]);
+            }
             break;
         }
         case eNodeMixStereo:
@@ -14834,6 +14851,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeDevice:
         case eNodeCtrlRcv:
         case eNodeAudioIn:      // §37 - writes its own legs
+        case eNodeSampler:      // notes §213 - L and R
         case eNodeOut:
         {
             break;
@@ -15087,7 +15105,8 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
         }
     }
 
-    gMeterVoice = meterVoice;   // the lamps follow the same voice
+    gMeterVoice      = meterVoice;   // the lamps follow the same voice
+    gSamplerSelfGate = (ctx->chainHasEnvelope == false);
 
     // notes §178
     for (uint32_t v = 0; v < p->voiceCount; v++) {

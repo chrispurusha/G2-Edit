@@ -12694,3 +12694,59 @@ attack the old start search skipped. The loop is a crossfade loop (notes §5). O
 48: C#4 -1 cent, G5 +2, C3 0; level held from 1.0 s to 3.8 s; largest step 209 against a 99.9th percentile
 of 167 at 61 - no click. The Wave's own recording could not settle the loop length by self-similarity: every
 period multiple correlates at 0.98-0.998.
+
+## 2026-10-10 (later) - Sampler beating and stacked notes
+
+CT: a beat around a second into a held note, and repeated notes overlapping. The beat: the loop end sits
+3-22% below its start (the sound still decaying), so every wrap stepped the level up ~1.9 dB, five times a
+second. The Wave decays smoothly at 4.05 dB/s (residual 0.40 dB); the zone's own decay is 4.23 dB/s. Now each
+wrap applies the zone's loop gain: 4.32 dB/s, residual 0.96 dB. The overlap: with no envelope in the patch the
+engine's drone rule (notes §20) kept every voice sounding after key-up - a repeated key read 364 against 261.
+The Sampler now gates itself in that case (20 ms): released notes go silent and a repeat matches the first.
+Also: a stray "f" appended to the end of graphics.c at 15:52 broke the build; removed (file now as committed).
+
+## 2026-10-10 (later) - the loop held level, not decaying
+
+CT: still beating about once a second. Interpolation ruled out first: linear and 4-point cubic resampling of a
+zone's first pass give identical wobble - it is in the recording. The Wave (QU-24 19/20) fades 4.0-4.7 dB/s at
+keys 48, 61, 64, 72 with 0.16-0.26 dB of wobble, whatever zone plays, where the zones' own decays run 1.2-7.8
+dB/s: the Wave holds the sample's sustain level and the fade is its patch envelope. The engine now holds the
+loop level (notes §213): slope 0.00 dB/s at 48, 61, 64, 72; wobble 0.15 dB at 61 (Wave 0.16), but 0.43 at 48
+and 0.61 at 64 against the Wave's 0.26 and 0.16 - probably a different zone, as the engine picks the nearest
+root and the file's key map is not read yet.
+
+
+## 2026-10-10 (later) - the Sampler's key map
+
+The file's `map` chunk gives each zone its top key, a level and a detune (nordSample.c notes §6). Against the
+Wave: keys 48/61/64/72 at 130.93/276.98/330.45/522.97 Hz, the Wave 130.76/277.88/330.46/523.17. Level wobble
+now 0.43/0.15/0.18/0.13 dB against the Wave's 0.26/0.16/0.16/0.24 - keys 64 and 72 had been on the wrong zone
+(nearest root) and wobbled 0.61/0.78. Key 48 remains: the lowest zone pitched down seven semitones.
+
+## 2026-10-10 (later) - the Sampler's real loop, and exact pitch
+
+CT: still beating, and pitch should match exactly. Pitch tracked every 0.2 s showed the engine wandering
+(-11..+5 cents, +55 at each wrap at key 48) where the Wave held steady: the 0.22 s "loop" was the wrong one. The
+stretch from the 0x24 position to the zone's end is a whole number of cycles (2-22) and loops with a seam error
+of 0.0001 or less in every zone - that is the loop (nordSample.c notes §5). With it, pitch holds to a cent and
+level wobble is 0.03-0.47 dB against the Wave's 0.16-0.26. Every zone is then tuned from its loop's period so its
+root is exact (notes §7): 0.00 cents at 19 keys. The Wave measures up to +4.31 cents off at some keys, the same on
+every take (key 61 x4), in runs of neighbours (61-64, 71-73), whatever the zone - its own pitch generation.
+
+## 2026-10-10 (later) - .nsmp4 opens; stereo and velocity have no test file
+
+CT: stereo samples and velocity next. Every Nord sample file on the Mac - 182 .nsmp for the Wave and 185 .nsmp4
+for the Piano 6, all Mellotron/Chamberlin - is mono with one velocity layer (zone header byte 0x08 = 1; key-map
+zone records one layer). The .nsmp4 layout differs only in framing (12-byte chunk headers, 32-bit words, origin
+0x2c; nordSample.c notes §8) and now plays: 16 Violins in both layouts give the same pitch trace at keys 60 and 72.
+Its key map (version 21) is still unread. Stereo and velocity wait for a file that has them.
+
+## 2026-10-10 (later) - Sampler in stereo; the Harmonica's loud zone is in the file
+
+Three Nord Grand 2 pianos (.nsmp4) are stereo, one velocity layer. Their blocks pack each channel's residuals
+into its own words, alternating (nordSample.c notes §9); read as one stream the first block overran. The
+Sampler gained Out L and Out R, and joined the list of nodes that write their own second leg - the default
+copied L over R, which made the first stereo render come out identical in both. CT: the Harmonica has louder
+ranges. Its key map gives keys 60-64 a zone level of 2.2 (+6.9 dB) on a zone already among the loudest, so it
+plays about 15 dB above its neighbours; the level field is linear (2^20 = 0 dB, checked), so that is the file
+as made - comparing the same file on a Nord Wave would settle it.

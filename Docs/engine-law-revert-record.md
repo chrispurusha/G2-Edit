@@ -234,3 +234,4 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 | 150 | Unpatched Out socket (notes §167) | mirrors the cabled socket | silent, as measured on the G2 | `c17674b` `src/soundEngine.c` `eval_node()` `eNodeOut` |
 | 151 | Voice Area meters (notes §191) | the voice sum | the newest held voice, else the newest; clip bit held 1 s | `c17674b` `src/soundEngine.c` `stage_voices()`, `meter_node()` |
 | 152 | Panel lamps (notes §194) | voice 0 publishes | the meters' voice publishes (newest held, else newest); FX Area always | `c17674b` `src/soundEngine.c` `publish_module_led()` |
+| 153 | Sampler loop (notes §213) | 0x1b..0x24 looped, crossfaded, level held | 0x24 to the zone's end, a whole-cycle loop, no crossfade; zones retuned to exact pitch | `f37288c`+ working tree `src/soundEngine.c` `sampler_step()`, `src/nordSample.c` |

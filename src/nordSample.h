@@ -26,16 +26,22 @@
 #define NORD_SAMPLE_MAX_ZONES    (64)
 
 typedef struct {
-    float *  data;          // -1..1, mono
-    uint32_t length;
+    float *  data;          // -1..1, `channels` interleaved
+    uint32_t channels;      // notes §9 - 1 or 2
+    uint32_t length;        // frames
     double   rootNote;      // MIDI note the zone sounds at its own rate (notes §3)
     double   sampleRate;    // the zone's own (notes §3)
-    bool     looped;        // notes §5 - loopStart..loopEnd repeats, crossfaded over length - loopEnd
+    bool     looped;        // notes §5 - loopStart to the zone's end repeats, a whole number of cycles
     uint32_t loopStart;
-    uint32_t loopEnd;
+    uint32_t id;            // notes §6 - how the key map names the zone
+    int32_t  keyLow;        // notes §6 - the keys it plays, from the key map
+    int32_t  keyHigh;
+    double   gain;          // notes §6 - linear, the file's level times the zone's
+    double   detune;        // notes §6 - semitones
 } tNordZone;
 
 typedef struct {
+    bool      mapped;       // notes §6 - zones chosen by the key map, not by the nearest root
     uint32_t  zoneCount;
     tNordZone zone[NORD_SAMPLE_MAX_ZONES];
 } tNordSample;
