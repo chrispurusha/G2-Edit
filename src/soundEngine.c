@@ -5110,10 +5110,14 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             return 0;
         }
         case eNodeNoise:
-        case eNodeSampler:
         {
             *connectors = none;     // a source: no inputs at all
             return 0;
+        }
+        case eNodeSampler:          // notes §213 - Amp
+        {
+            *connectors = oneIn;
+            return 1;
         }
         case eNodeMonoKey:          // §35 - the keyboard is its input
         case eNodeAudioIn:          // §37 - the jacks on the back, fed from outside the patch
@@ -14630,7 +14634,13 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             value[n][1] = 0.0;
 
             if (spec->active == true) {
+                // notes §213 - Amp scales both channels; unpatched, the sample plays at full level
+                bool   patched = (spec->inCount > 0u) && (spec->in[0] >= 0);
+                double amp     = patched ? signal_in(spec, value, 0) : 1.0;
+
                 sampler_step(voice, n, spec, voicePitch, &value[n][0], &value[n][1]);
+                value[n][0] *= amp;
+                value[n][1] *= amp;
             }
             break;
         }

@@ -3320,6 +3320,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 87,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "GWh2",          labelLocUp   }, // 30 Global Wheel 2
     // 31 Noise
     {moduleTypeNoise,       connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   }, // 31 Out
+    {moduleTypeSampler,     connectorDirIn,  connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Amp",           labelLocRight}, // 209 Amp
     {moduleTypeSampler,     connectorDirOut, connectorTypeAudio,   {{-10,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",             labelLocUp   }, // 209 OutL
     {moduleTypeSampler,     connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "R",             labelLocUp   }, // 209 OutR
     // 32 Eq2Band

@@ -3624,7 +3624,10 @@ is inactive and silent. Files are loaded once and shared (nordSample.c notes §4
 (nordSample.c notes §6), falling back to the nearest root for a file without a usable one. Put an envelope after it as with any
 oscillator - it has no amplitude shaping of its own. Two outputs, L and R: a stereo file's channels
 (nordSample.c notes §9), or the same signal on both from a mono one - which is why it is on the list of
-nodes that write their own second leg, not the default that copies the first leg over it.
+nodes that write their own second leg, not the default that copies the first leg over it. An Amp input (2026-10-10, CT) scales both
+channels by whatever is patched into it, unscaled as LevMult does - an envelope's Env output into it shapes a
+stereo sample with no LevMult per channel; unpatched, the sample plays at full level. Any envelope in the
+patch also ends the self-gate below, so the envelope's Release, held by the sustain pedal, ends the note.
 
 THE LOOP (2026-10-10, third reading). The zone plays through to its end, then round a short loop of a whole
 number of cycles back to the loop start (nordSample.c notes §5) - exact, so no crossfade and no level
