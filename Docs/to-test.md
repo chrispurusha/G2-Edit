@@ -1229,5 +1229,3 @@ from a capture, so they are the ones most likely to be right.
 - ***SAMPLER PITCH: BEND, Pitch AND PitchVar INPUTS (2026-10-10)*** - notes §213. PLAY: the bend wheel bends it; Keyboard AftTouch into PitchVar with the Pitch dial up bends it by pressure
 - ***SAMPLER DIALS SAVE IN .pchx (2026-10-10)*** - protocol notes §24. Open a .pchx saved earlier today, set Rel/Vel/Pitch, save, reopen: they stay
 - ***OLD BACKUPS WITH CLKDIVS (2026-10-10)*** - protocol notes §25. Load the old BCHydro_DZLW.prf2 backup onto the G2 from the editor: it should play as the flash copy does (no pad wobble, sequences complete)
-- ***CONNECTED: ENGINE OWNS THE VARIATIONS (2026-10-10)*** - engine notes §214. BCHydro_DZLW with the G2 connected and the engine on: B-D step once per slot-A cycle and stay in step with A as they do offline; the top bar lights each slot's variation as it changes without switching slots
-- ***PERFORMANCE STARTS TOGETHER (2026-10-10)*** - engine notes §216. Load BCHydro_DZLW (from file and from a G2 bank) with the engine on: after a brief silence all four slots start in step, and stay in step through the variations

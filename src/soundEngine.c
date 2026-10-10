@@ -8097,21 +8097,9 @@ bool sound_engine_variation_pending(void) {
     return false;
 }
 
-#include <mach/mach_time.h>
-
 void sound_engine_update_from_patch(void) {
-    bool     pendingT = sound_engine_variation_pending();
-    uint64_t t0T      = mach_absolute_time();
-
     FOR_EACH_SLOT_ENGINE(take_variation_request());
     FOR_EACH_SLOT_ENGINE(update_from_patch_one());
-
-    if (pendingT) {
-        mach_timebase_info_data_t tb;
-
-        mach_timebase_info(&tb);
-        fprintf(stderr, "TIMING variation rebuild %.2f ms\n", (double)(mach_absolute_time() - t0T) * tb.numer / tb.denom / 1e6);
-    }
 }
 
 // §26.2 - audio thread: take the per-voice tables when new ones are whole, and use them only with
