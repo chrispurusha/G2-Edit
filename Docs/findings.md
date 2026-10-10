@@ -12789,3 +12789,21 @@ has gets the rest at their defaults (protocol.c notes §25). Also: the engine re
 parameter slot ClkDiv does not have (param 1) instead of its mode - fixed. And: renders while connected are not
 repeatable (the G2 switches variations on its own clock as the engine renders), so an online A/B between builds
 proves nothing; offline, today's engine and the 10-09 engine render this performance sample-identically.
+
+## 2026-10-10 (late) - BCHydro_DZLW's slots out of step: the start of a performance, and two masters for its variations
+
+CT: the sequencers of BCHydro_DZLW (perf 1:2) get out of step in the engine.
+- THE INSTRUMENT'S START: a performance load is one link of all four slots, and the end of every link
+  restarts the master clock's count while it runs - the next 24-a-beat tick is the top of the bar and every
+  Master ClkGen realigns. A variation change is parameter updates only: no relink, no clock restart, no module
+  reset; CtrlSend sends nothing while a link or a variation change is in progress.
+- THE ENGINE started each slot as its own graph arrived and let the master position run on through a load,
+  so slots began whole steps apart. Now a load (and switching the engine on) clears every slot, holds the
+  master clock at the top and starts them together (notes §216). Offline: a reload matches a fresh start at
+  zero lag (envelope correlation 0.95-0.97); with the start disabled it came back 1.8 s displaced.
+- WITH THE G2 CONNECTED the engine took its variations from the G2's USB reports (§214's first answer), late
+  and uneven against its own clock, and each restart a switch causes (reference §58.2) landed off time. The
+  engine now switches its own slots and ignores the reports while it plays; the top bar draws each slot's
+  variation from its state, so the engine's switches show (topbarRender notes §5). CT: working, connected
+  and not, including a performance already on the G2 when the engine is switched on.
+- OPEN: whether a link from an edit restarts the other slots' sequences on the G2 (todo.md).

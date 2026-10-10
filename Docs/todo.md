@@ -119,6 +119,7 @@ SOUND ENGINE
 - Voice-area delays and Reverb per voice (findings 2026-09-27): allocate each voice's line at build time, sized by Range (the instrument's 513 .. 259212 samples); fit polyphony to a memory budget as the voice placer does
 - ValSw2-1 / ValSw1-2 (§68.2): equality within 1/2 unit (the parts) or threshold (the manual)? One G2 check (to-test), then change both or neither
 - Logic-only chains (ClkGen -> 8Counter -> Out) count as "Nothing is patched": node_is_generator lists only audio sources. Decide whether a clock or constant into an Out should play
+- Edit in one slot of a playing performance: on the G2 every link restarts the master clock's count (engine notes §216); hear whether the OTHER slots' sequences restart too (add a cable in slot B of BCHydro_DZLW), then match it in the engine
 - 03 Chris' Lead coverage left: OscShpB waves (above), reference-model check of Mix4-1C/Mix4-1S
 - CPU: run nodes over short blocks (16-32 samples) where no loop or per-sample event forbids it, to amortise the dispatch and let it vectorise - the same restructure per-voice threading needs
 

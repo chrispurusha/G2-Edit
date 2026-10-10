@@ -235,3 +235,10 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 | 151 | Voice Area meters (notes §191) | the voice sum | the newest held voice, else the newest; clip bit held 1 s | `c17674b` `src/soundEngine.c` `stage_voices()`, `meter_node()` |
 | 152 | Panel lamps (notes §194) | voice 0 publishes | the meters' voice publishes (newest held, else newest); FX Area always | `c17674b` `src/soundEngine.c` `publish_module_led()` |
 | 153 | Sampler loop (notes §213) | 0x1b..0x24 looped, crossfaded, level held | 0x24 to the zone's end, a whole-cycle loop, no crossfade; zones retuned to exact pitch | `f37288c`+ working tree `src/soundEngine.c` `sampler_step()`, `src/nordSample.c` |
+
+## 2026-10-10
+
+| # | What | Old | New | Old code at |
+|---|---|---|---|---|
+| 154 | A performance's start (notes §216) | each slot started when its own graph arrived; the master position ran on through a load and an engine start | every slot cleared and silent, the master clock held at the top until all are in and settled 0.2 s, then all start on one block; also on switching the engine on | `0191d5a` `src/soundEngine.c` `engine_render_slot()`, `master_clock_advance()`, `sound_engine_start()` |
+| 155 | Variation switching with the G2 connected (notes §214) | the G2's reports set the slot's variation; the engine's CtrlSend left controller 70 alone while connected | the engine switches its own slots always; the G2's variation reports are ignored while the engine plays | `0191d5a` `src/soundEngine.c` `cc_to_slot()`, `src/usbComms.c` `parse_select_variation()` |
