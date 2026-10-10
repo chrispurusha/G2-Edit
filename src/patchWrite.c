@@ -29,6 +29,7 @@
 #include "globalVars.h"
 #include "patchWrite.h"
 #include "moduleResourcesAccess.h"
+#include "nordSample.h"
 
 #define PCHX_EXTENSION    ".pchx"
 #define PCH2_EXTENSION    ".pch2"
@@ -94,6 +95,7 @@ void engine_only_header_apply(uint32_t slot, const uint8_t * header, size_t leng
             key.location = (strcmp(area, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
             key.index    = index;
             sampler_file_set(key, line + used);
+            (void)nord_sample_get(line + used);   // notes §2 - read now: the face can say if it failed
         }
         at = end + 1u;
     }

@@ -36,6 +36,8 @@ typedef struct {
     uint32_t id;            // notes §6 - how the key map names the zone
     int32_t  keyLow;        // notes §6 - the keys it plays, from the key map
     int32_t  keyHigh;
+    int32_t  velLow;        // notes §10 - the velocities it plays, 0-127 unless the map says otherwise
+    int32_t  velHigh;
     double   gain;          // notes §6 - linear, the file's level times the zone's
     double   detune;        // notes §6 - semitones
 } tNordZone;
@@ -49,5 +51,13 @@ typedef struct {
 bool nord_sample_load(const char * path, tNordSample * sample);
 void nord_sample_free(tNordSample * sample);
 const tNordSample * nord_sample_get(const char * path);
+
+typedef enum {
+    eNordSampleNotLoaded,   // not asked for yet: the engine loads a file when it builds the patch
+    eNordSampleLoaded,
+    eNordSampleFailed,      // missing, unreadable, or not a Nord sample file this decoder knows
+} tNordSampleStatus;
+
+tNordSampleStatus nord_sample_status(const char * path);   // never loads
 
 #endif

@@ -12750,3 +12750,13 @@ copied L over R, which made the first stereo render come out identical in both. 
 ranges. Its key map gives keys 60-64 a zone level of 2.2 (+6.9 dB) on a zone already among the loudest, so it
 plays about 15 dB above its neighbours; the level field is linear (2^20 = 0 dB, checked), so that is the file
 as made - comparing the same file on a Nord Wave would settle it.
+
+## 2026-10-10 (later) - .nsmp4 key map and zone levels; the load blast
+
+The later key map gives each zone root, top and bottom keys and a velocity range in 16-byte records; each
+zone's level is a dB float in its own header, not in the map (nordSample.c notes §10) - found by matching the
+Piano 6 Mellotron files against their Wave twins, whose maps carry the same levels. The Grand 2 pianos now play
+about 4-9 dB louder and on their own zones. CT heard "a blast of the sample" when a file loaded: a rebuild
+clears the Sampler's per-voice state, so a voice from an earlier note looked new and replayed through the
+0.3 s release - only a held key starts a note now. The module keeps its own name; the file's name is drawn
+under it, red when it could not be read, and Choose Sample refuses a file the decoder cannot read.

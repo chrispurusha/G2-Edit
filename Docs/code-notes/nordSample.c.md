@@ -80,10 +80,7 @@ and coding, laid out differently: chunks start at 0x2c and their headers are 12 
 with the three letters right-aligned behind a zero, then a 32-bit version and a 32-bit length - and the coded
 stream is in 32-bit words, block headers included (the fields in the same bit positions). Header positions
 count 32-bit words from 0x2c: all 176 in a 44-zone file land on block starts. Checked: the 16 Violins in both
-layouts play the same pitch trace at keys 60 and 72. Not read yet: the later key map (version 21: per-key
-entries of a level, a detune and four bytes, then per-zone records that appear to carry velocity layers), so
-these files take the nearest root and no file or zone level - they play about 5.5 dB below the same sound in
-the original layout. Stereo: see §9.
+layouts play the same pitch trace at keys 60 and 72. Its key map is §10; stereo is §9.
 
 ## 9. Stereo (`tNordZone.channels`, `tFormat.wordPerChannel`)
 
@@ -99,4 +96,26 @@ channels interleaved; `length` and the loop start count frames. A mono zone play
 
 Velocity layers: none of the files on hand has more than one (the pianos included - every zone record's
 velocity range is 0-127).
+
+## 10. The later key map and zone levels (`apply_key_map_later()`, `ZONE_LEVEL_DB`)
+
+The map starts, as the original's does, with the file's level (u24, 2^20 = 0 dB), then the same 128-key table
+with 10-byte entries (a level and a detune per key, unity and zero in every file seen, and four bytes not
+used here), 29 bytes more, a zone count (u24) and one 16-byte record per zone: ROOT key, TOP key, BOTTOM key,
+four zero bytes, a 1, the zone id (u32), a zero, a flag (1 in the Mellotrons, 0 in the pianos - not used), and
+the VELOCITY range, bottom and top. A zone plays from its bottom to its top key; the ranges tile the keyboard
+(Bright Piano 1: root 104 plays 102-104, root 101 plays 100-101) and the lowest reaches key 0. The top
+zone is taken on up to 127. Each zone's own level is not in the map but in its header: a float at 0x39, in
+dB - exactly the level the original layout's map gives the same zone (16 Violins: +0.03, +1.47, +2.38 ... dB
+both ways). A zone plays at the file's level times its own.
+
+Velocity: the engine picks the first zone whose key AND velocity ranges hold the note, so velocity layers
+will choose themselves - but every file on hand has 0-127 throughout, so that part is untested.
+
+The file's level in these files is 1.5-2 dB below the original layout's for the same library (16 Violins
++4.05 against +5.75, Flute +7.00 against +9.00), so they play that much quieter; read as written.
+
+Not used: a second header float at 0x3e - 20.0 in every Mellotron zone, and in a piano falling steadily from
+13.7 in the bottom zone to 2.5 at the top, as a piano's sustain does. Perhaps a decay applied after the sample
+has run out; nothing here tests it.
 

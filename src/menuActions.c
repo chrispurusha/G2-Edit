@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "nordSample.h"
 #include "misc.h"
 #include "defs.h"
 #include "types.h"
@@ -639,22 +640,22 @@ static void sampler_chosen(const char * path) {
     if (path == NULL) {
         return;     // cancelled
     }
-    tModule *    module = get_module(sSampleTarget);
+    tModule * module = get_module(sSampleTarget);
 
     if ((module == NULL) || (module->type != moduleTypeSampler)) {
         return;     // deleted, or the index reused, while the browser was open
+    }
+
+    // notes §15 - read it now, so a file the Sampler cannot play is refused here rather than left silent
+    if (nord_sample_get(path) == NULL) {
+        show_alert("Choose Sample", "That file could not be read as a Nord sample file (.nsmp or .nsmp4). The Sampler keeps the file it had.");
+        return;
     }
 
     if (!sampler_file_set(sSampleTarget, path)) {
         show_alert("Choose Sample", "Too many Samplers have files - the limit is 32.");
         return;
     }
-    // The module takes the file's name, as far as a module name goes
-    const char * leaf   = strrchr(path, '/');
-    const char * name   = (leaf != NULL) ? (leaf + 1) : path;
-    size_t       stem   = strcspn(name, ".");
-
-    snprintf(module->name, sizeof(module->name), "%.*s", (int)((stem < CLAVIA_NAME_SIZE) ? stem : CLAVIA_NAME_SIZE), name);
     sound_engine_update_from_patch();
     synthlib_request_redraw();
 }

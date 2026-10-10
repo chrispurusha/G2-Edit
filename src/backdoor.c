@@ -70,6 +70,7 @@ extern "C" {
 #include "moduleGraphics.h"
 #include "virtualKeyboard.h"
 #include "backdoor.h"
+#include "nordSample.h"
 
 // notes §1
 bool backdoor_enabled(void) {
@@ -589,7 +590,12 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         key.slot     = gSlot;
         key.location = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
         key.index    = index;
-        backdoor_write_result(sampler_file_set(key, arg + used) ? "OK\n" : "ERROR: no room\n");
+
+        if (!sampler_file_set(key, arg + used)) {
+            backdoor_write_result("ERROR: no room\n");
+        } else {
+            backdoor_write_result((nord_sample_get(arg + used) != NULL) ? "OK\n" : "OK - but the file could not be read\n");
+        }
         sound_engine_update_from_patch();
     } else if (strcmp(cmd, "DEVSLOT") == 0) {
         // DEVSLOT <0-3|A-D> - select the slot on the DEVICE as well, as the topbar's slot button does

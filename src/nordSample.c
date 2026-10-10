@@ -127,6 +127,7 @@ static bool chains_to_end(const uint8_t * data, uint32_t length, uint32_t start,
 #define ZONE_ROOT_KEY        (0x05)
 #define ZONE_RATE            (0x06)
 #define ZONE_CHANNELS        (0x08)   // notes §9
+#define ZONE_LEVEL_DB        (0x39)   // notes §10 - the later layout: a float, the zone's level in dB
 #define ZONE_FIRST_BLOCK     (0x12)
 #define ZONE_LOOP_START      (0x24)   // notes §5 - the loop runs from here to the zone's end
 #define ZONE_HEADER_BYTES    (0x31)
@@ -246,6 +247,19 @@ static bool decode_zone(const uint8_t * data, uint32_t length, uint32_t at, tNor
     }
     zone->id         = read_u32(data);
     zone->gain       = 1.0;
+    zone->velLow     = 0;
+    zone->velHigh    = 127;
+
+    if (f->wordPerChannel && (length >= (ZONE_LEVEL_DB + 4u))) {
+        union {
+            uint32_t word;
+            float    value;
+        } level = {.word = read_u32(data + ZONE_LEVEL_DB)};
+
+        if (isfinite(level.value) && (fabsf(level.value) < 48.0f)) {
+            zone->gain = pow(10.0, level.value / 20.0);
+        }
+    }
     return true;
 }
 
@@ -341,6 +355,63 @@ static void apply_key_map(const uint8_t * map, uint32_t length, tNordSample * sa
     sample->mapped                               = true;
 }
 
+// notes §10 - the later layout's key map: the same per-key table with 10-byte entries, then one 16-byte
+// record per zone - root, top key, bottom key, the zone id, the velocity range
+#define MAP2_KEY_BYTES        (10)
+#define MAP2_COUNT_AT         (6u + (MAP_KEYS * MAP2_KEY_BYTES) + 29u)
+#define MAP2_ZONE_BYTES       (16)
+#define MAP2_ZONE_HIGH        (1)
+#define MAP2_ZONE_LOW         (2)
+#define MAP2_ZONE_ID          (8)
+#define MAP2_ZONE_VEL_LOW     (14)
+#define MAP2_ZONE_VEL_HIGH    (15)
+
+static void apply_key_map_later(const uint8_t * map, uint32_t length, tNordSample * sample) {
+    if (length < (MAP2_COUNT_AT + 3u)) {
+        return;
+    }
+    uint32_t        entries = read_u24(map + MAP2_COUNT_AT);
+    const uint8_t * entry   = map + MAP2_COUNT_AT + 3u;
+    double          global  = (double)read_u24(map) / MAP_UNITY;
+    uint32_t        found   = 0;
+
+    if ((entries != sample->zoneCount) || ((MAP2_COUNT_AT + 3u + (entries * MAP2_ZONE_BYTES)) > length)) {
+        return;   // only the layout seen in these files: anything else keeps the nearest-root choice
+    }
+
+    for (uint32_t e = 0; e < entries; e++, entry += MAP2_ZONE_BYTES) {
+        for (uint32_t z = 0; z < sample->zoneCount; z++) {
+            tNordZone * zone = &sample->zone[z];
+
+            if (zone->id == read_u32(entry + MAP2_ZONE_ID)) {
+                zone->keyLow  = entry[MAP2_ZONE_LOW];
+                zone->keyHigh = entry[MAP2_ZONE_HIGH];
+                zone->velLow  = entry[MAP2_ZONE_VEL_LOW];
+                zone->velHigh = entry[MAP2_ZONE_VEL_HIGH];
+                zone->gain   *= global;
+                found++;
+            }
+        }
+    }
+
+    if (found != sample->zoneCount) {
+        return;
+    }
+    int32_t top = -1;
+
+    for (uint32_t z = 0; z < sample->zoneCount; z++) {
+        top = (sample->zone[z].keyHigh > top) ? sample->zone[z].keyHigh : top;
+    }
+
+    for (uint32_t z = 0; z < sample->zoneCount; z++) {
+        if (sample->zone[z].keyHigh == top) {
+            sample->zone[z].keyHigh = 127;   // the top zone goes on up, as the bottom one's range reaches 0
+        }
+    }
+
+    sample->mapped = true;
+}
+
 bool nord_sample_load(const char * path, tNordSample * sample) {
     FILE *          file      = fopen(path, "rb");
 
@@ -397,7 +468,9 @@ bool nord_sample_load(const char * path, tNordSample * sample) {
         p += f->chunkHeader + length;
     }
 
-    if (map != NULL) {
+    if ((map != NULL) && f->wordPerChannel) {
+        apply_key_map_later(map, mapLength, sample);
+    } else if (map != NULL) {
         apply_key_map(map, mapLength, sample);
     }
     free(d);
@@ -450,4 +523,23 @@ const tNordSample * nord_sample_get(const char * path) {
     }
     pthread_mutex_unlock(&sCacheLock);
     return found;
+}
+
+tNordSampleStatus nord_sample_status(const char * path) {
+    tNordSampleStatus status = eNordSampleNotLoaded;
+
+    if ((path == NULL) || (path[0] == '\0')) {
+        return status;
+    }
+    pthread_mutex_lock(&sCacheLock);
+
+    for (uint32_t i = 0; i < sCacheCount; i++) {
+        if (strcmp(sCache[i].path, path) == 0) {
+            status = sCache[i].loaded ? eNordSampleLoaded : eNordSampleFailed;
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(&sCacheLock);
+    return status;
 }

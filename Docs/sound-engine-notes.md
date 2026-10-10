@@ -3637,7 +3637,9 @@ is the envelopes' time law (0 = a few ms, 49 = 0.3 s, the default; 127 = 45 s). 
 down (§26.3), so it is the damper pedal with no morph needed. Such a Sampler counts as the voice's envelope:
 the engine's own anti-click ramp - which had cut every envelope-less note a few ms after the key, whatever
 the Sampler did - stays off, and the voice lives until the Sampler's release is over. With Amp patched, the
-envelope there does all of it, as before.
+envelope there does all of it, as before. A note starts only while its key is down: a rebuild - choosing a file, any patch edit - clears the
+Sampler's state, and a voice whose key was already up then looked like a new note and replayed its sample
+through the release (CT: "a blast of the sample" on loading a file).
 
 THE LOOP (2026-10-10, third reading). The zone plays through to its end, then round a short loop of a whole
 number of cycles back to the loop start (nordSample.c notes §5) - exact, so no crossfade and no level

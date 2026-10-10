@@ -13646,19 +13646,28 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
     SE_LOCAL;
 
     const tNordSample * sample       = spec->sample;
-    double *            state        = gLadder[voice][n]; // position, the trigger it started for, zone, -, -, release
+    double *            state        = gLadder[voice][n]; // position, the trigger it started for, zone, silent, -, release
     double              note         = (voicePitch >= 0.0) ? voicePitch : 60.0;
 
     if (state[1] != (double)gVoice[voice].trigger) {
-        uint32_t nearest = 0;
-        int32_t  key     = (int32_t)lround(note);
+        uint32_t nearest  = 0;
+        bool     matched  = false;
+        int32_t  key      = (int32_t)lround(note);
+        int32_t  velocity = gVoice[voice].velocity;
 
-        // nordSample.c notes §6 - the key map's zone for the key, or the nearest root without one
-        for (uint32_t z = 0; z < sample->zoneCount; z++) {
+        // nordSample.c notes §6, §10 - the key map's zone for the key and velocity
+        for (uint32_t z = 0; sample->mapped && (z < sample->zoneCount) && (matched == false); z++) {
             const tNordZone * zone = &sample->zone[z];
 
-            if (sample->mapped ? ((key >= zone->keyLow) && (key <= zone->keyHigh))
-                : (fabs(zone->rootNote - note) < fabs(sample->zone[nearest].rootNote - note))) {
+            if ((key >= zone->keyLow) && (key <= zone->keyHigh) && (velocity >= zone->velLow) && (velocity <= zone->velHigh)) {
+                nearest = z;
+                matched = true;
+            }
+        }
+
+        // ... or, without a map or outside it, the nearest root
+        for (uint32_t z = 0; (matched == false) && (z < sample->zoneCount); z++) {
+            if (fabs(sample->zone[z].rootNote - note) < fabs(sample->zone[nearest].rootNote - note)) {
                 nearest = z;
             }
         }
@@ -13667,9 +13676,17 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
         state[1] = (double)gVoice[voice].trigger;
         state[2] = (double)nearest;
         state[5] = 1.0;
+        // notes §213 - a rebuild clears this state, and a voice whose key is already up would replay its
+        // last note: only a key that is down starts one
+        state[3] = (gVoice[voice].gate == true) ? 0.0 : 1.0;
     }
-    *left     = 0.0;
-    *right    = 0.0;
+    *left  = 0.0;
+    *right = 0.0;
+
+    if (state[3] != 0.0) {
+        state[5] = 0.0;
+        return;
+    }
 
     // notes §213 - the damper: from the key's release the note falls 60 dB in Release's time
     if (selfReleased && (gVoice[voice].gate == false)) {

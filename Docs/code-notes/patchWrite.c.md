@@ -21,7 +21,9 @@ A .pch2 cannot carry a module the G2 does not have: the instrument and the origi
 they do not know. A patch that holds one is saved as .pchx instead - the same file in every byte, except:
 - the binary keeps the engine-only modules and everything that names them (the writers' guard is lifted for
   the thread writing it, `protocol_include_engine_only()`, dataBase.c notes §8);
-- the text header gains a line per Sampler, `Sample=VA,<index>,<path>`, naming its sample file.
+- the text header gains a line per Sampler, `Sample=VA,<index>,<path>`, naming its sample file. Loading reads each
+  file at once, so a Sampler whose file has gone or cannot be read shows it in red on its face
+  (moduleGraphics.c notes §93) rather than only falling silent.
 Every reader skips the text header up to its first zero byte, so the binary parses as it always has, and the
 Sample= lines are applied after it (`engine_only_header_apply()`, called by each of the four readers: the
 application offline and online, and the plug-in's two). Saving chooses the extension: a patch with an

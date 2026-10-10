@@ -107,6 +107,8 @@ the UI thread can do it directly, the same way the backdoor's NEWPATCH already d
 The Sampler's module menu names the module (`sSampleTarget`) and posts eRspShowOpenSample; the render loop
 opens the browser, in the application and the plug-in alike, as every browser is opened - never from inside
 the menu's own callback. The browser remembers its own folder (persistence.c), starting in Nord Sound
-Manager's sample folder. The chosen file is the Sampler's (dataBase.c notes §9), the module takes the file's
-name, and the engine is rebuilt to load it. The module is looked up again when the file comes back: it may
+Manager's sample folder. The chosen file is read first: one that is not a Nord sample file the decoder
+knows is refused with an alert, and the Sampler keeps what it had. Otherwise it becomes the Sampler's
+(dataBase.c notes §9) and the engine is rebuilt to play it. The module keeps its own name - the file's
+name is drawn on the face (moduleGraphics.c notes §93). The module is looked up again when the file comes back: it may
 have been deleted, or its index reused, while the browser was open.

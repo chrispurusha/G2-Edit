@@ -1280,3 +1280,12 @@ THE PARAMETER INDEX IS THE INSTRUMENT'S, 6, not the one the face used to show. R
 instrument 5 is the modulation amount and 6 is Width, and our module tables had the two LABELS the
 wrong way round until 2026-09-19 - the positions and the engine were always right. A graph written
 against the old labels would have followed the mod attenuator and looked broken for no visible reason.
+
+## 93. The Sampler's file (`render_sampler_file()`)
+
+Under the module's name, which stays the module's own and is renamed like any other (CT, 2026-10-10), the
+Sampler shows the file it plays: the file's name without its extension, cut at 44 characters; "No sample" in
+grey with none; the name in red with "- not loaded" when the engine could not read it - a file moved or
+deleted since the patch was saved, or one in a format the decoder does not know. The state comes from the
+sample cache without loading anything (`nord_sample_status()`): drawing must never wait on the disk.
+

@@ -34,6 +34,7 @@ extern "C" {
 #include "waveModels.h"
 #include "moduleGraphics.h"
 #include "soundEngine.h"    // sound_engine_module_meter() - see volume_source()
+#include "nordSample.h"
 #include "splitView.h"
 #include "globalVars.h"
 #include "renderParams.h"
@@ -3192,6 +3193,45 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     }
 }
 
+
+// notes §93 - the Sampler's file, under its name: the file's own name, or why there is no sound
+#define SAMPLER_FILE_MAX_CHARS    (44)
+
+static void render_sampler_file(tArea area, tRectangle moduleRectangle, const tModule * module) {
+    const char * path                              = sampler_file(module->key);
+    char         text[SAMPLER_FILE_MAX_CHARS + 16] = {0};
+    tRgba        colour                            = (tRgba)RGBA_BLACK_ON_TRANSPARENT;
+
+    if ((path == NULL) || (path[0] == '\0')) {
+        snprintf(text, sizeof(text), "No sample - Choose Sample... in its menu");
+        colour = (tRgba){
+            0.3, 0.3, 0.3, 1.0
+        };
+    } else {
+        const char * leaf = strrchr(path, '/');
+        const char * name = (leaf != NULL) ? (leaf + 1) : path;
+        const char * dot  = strrchr(name, '.');
+        int          stem = (dot != NULL) ? (int)(dot - name) : (int)strlen(name);
+
+        if (stem > SAMPLER_FILE_MAX_CHARS) {
+            snprintf(text, sizeof(text), "%.*s...", SAMPLER_FILE_MAX_CHARS - 3, name);
+        } else {
+            snprintf(text, sizeof(text), "%.*s", stem, name);
+        }
+
+        if (nord_sample_status(path) == eNordSampleFailed) {
+            snprintf(text + strlen(text), sizeof(text) - strlen(text), " - not loaded");
+            colour = (tRgba){
+                0.8, 0.0, 0.0, 1.0
+            };
+        }
+    }
+    set_rgba_colour(colour);
+    render_text(area, (tRectangle){{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0 + STANDARD_TEXT_HEIGHT + 4.0},
+                                   {BLANK_SIZE, STANDARD_TEXT_HEIGHT}
+                }, text);
+}
+
 void render_module(tModule * module) {
     double     moduleHeight               = gModuleProperties[module->type].height;
     double     xPos                       = module->column * MODULE_X_SPAN;
@@ -3285,6 +3325,10 @@ void render_module(tModule * module) {
         render_text(moduleArea, (tRectangle){{nameX, moduleRectangle.coord.y + 5.0},
                                              {BLANK_SIZE, STANDARD_TEXT_HEIGHT}
                     }, buff);
+    }
+
+    if (module->type == moduleTypeSampler) {
+        render_sampler_file(moduleArea, moduleRectangle, module);   // notes §93
     }
 
     if (sShowNameBand) {
