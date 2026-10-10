@@ -4,6 +4,8 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***SAMPLER LOOPS (2026-10-10)*** - nordSample.c notes §3, §5. LISTEN: hold a Melodica note for several seconds at
+  low, middle and high keys - it should sustain without a click at the loop, in tune, against a Nord playing the same file
 - ***CHOOSE SAMPLE AND .PCHX (2026-10-10)*** - menuActions.c notes §15, patchWrite.c notes §2. Right-click a Sampler >
   Choose Sample... - the browser opens in Nord Sound Manager's folder, the module takes the file's name and plays it;
   File > Save As with a Sampler writes NAME.pchx whatever extension is typed; reopening it restores the Sampler and its file

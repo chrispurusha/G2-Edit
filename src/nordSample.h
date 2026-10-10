@@ -29,10 +29,13 @@ typedef struct {
     float *  data;          // -1..1, mono
     uint32_t length;
     double   rootNote;      // MIDI note the zone sounds at its own rate (notes §3)
+    double   sampleRate;    // the zone's own (notes §3)
+    bool     looped;        // notes §5 - loopStart..loopEnd repeats, crossfaded over length - loopEnd
+    uint32_t loopStart;
+    uint32_t loopEnd;
 } tNordZone;
 
 typedef struct {
-    double    sampleRate;
     uint32_t  zoneCount;
     tNordZone zone[NORD_SAMPLE_MAX_ZONES];
 } tNordSample;

@@ -13607,11 +13607,18 @@ static uint32_t gInPosFxBank[SOUND_ENGINE_MAX_ENGINES];
 #define gInPosFx            (gInPosFxBank[SE])
 
 // notes §213 - one voice's play position through the zone nearest its key, restarted by each note
+static double sampler_read(const tNordZone * zone, double at) {
+    uint32_t i    = (uint32_t)at;
+    double   frac = at - (double)i;
+
+    return (i + 1u < zone->length) ? (zone->data[i] + (frac * (zone->data[i + 1u] - zone->data[i]))) : 0.0;
+}
+
 static double sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double voicePitch) {
     SE_LOCAL;
 
     const tNordSample * sample = spec->sample;
-    double *            state  = gLadder[voice][n];   // position, the trigger it started for, zone
+    double *            state  = gLadder[voice][n];   // position, the trigger it started for, zone, looped yet
     double              note   = (voicePitch >= 0.0) ? voicePitch : 60.0;
 
     if (state[1] != (double)gVoice[voice].trigger) {
@@ -13626,17 +13633,33 @@ static double sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec,
         state[0] = 0.0;
         state[1] = (double)gVoice[voice].trigger;
         state[2] = (double)nearest;
+        state[3] = 0.0;
     }
     const tNordZone *   zone   = &sample->zone[(uint32_t)state[2]];
-    uint32_t            at     = (uint32_t)state[0];
+    double              out    = 0.0;
 
-    if ((at + 1u) >= zone->length) {
-        return 0.0;
+    if (zone->looped) {
+        double loop = (double)(zone->loopEnd - zone->loopStart);
+        double fade = (double)(zone->length - zone->loopEnd - 1u);   // the samples past the loop end
+
+        if (state[0] >= (double)zone->loopEnd) {
+            state[0] -= loop;
+            state[3]  = 1.0;
+        }
+        double into = state[0] - (double)zone->loopStart;
+
+        // notes §213 - after a wrap, the continuation past the loop end fades into the loop start
+        if ((state[3] != 0.0) && (into >= 0.0) && (into < fade)) {
+            double in = into / fade;
+
+            out = (in * sampler_read(zone, state[0])) + ((1.0 - in) * sampler_read(zone, state[0] + loop));
+        } else {
+            out = sampler_read(zone, state[0]);
+        }
+    } else if ((uint32_t)state[0] + 1u < zone->length) {
+        out = sampler_read(zone, state[0]);
     }
-    double              frac   = state[0] - (double)at;
-    double              out    = zone->data[at] + (frac * (zone->data[at + 1u] - zone->data[at]));
-
-    state[0] += exp2((note - zone->rootNote) / 12.0) * (sample->sampleRate / gSampleRate);
+    state[0] += exp2((note - zone->rootNote) / 12.0) * (zone->sampleRate / gSampleRate);
     return out * spec->gain;
 }
 

@@ -95,29 +95,66 @@ static bool chains_to_end(const uint8_t * data, uint32_t length, uint32_t start,
     return false;
 }
 
-static float * decode_zone(const uint8_t * data, uint32_t length, uint32_t * outLength) {
+// notes §3 - the zone header's fields, at these offsets into the zone's chunk
+#define ZONE_ROOT_KEY        (0x05)
+#define ZONE_RATE            (0x06)
+#define ZONE_FIRST_BLOCK     (0x12)
+#define ZONE_LOOP_START      (0x1b)
+#define ZONE_LOOP_END        (0x24)
+#define ZONE_HEADER_BYTES    (0x31)
+
+// notes §3 - a header position names the coded block at this file offset
+static uint32_t block_offset(uint32_t position) {
+    return NSMP_CHUNKS_START + (position * NSMP_WORD_BYTES);
+}
+
+// notes §1-§3 - decode one zone; `at` is the zone chunk's offset in the file, which the header's positions
+// count from
+static bool decode_zone(const uint8_t * data, uint32_t length, uint32_t at, tNordZone * zone) {
     uint32_t start                   = 0;
     uint32_t samples                 = 0;
+    bool     headed                  = false;
 
-    while ((start < NSMP_HEADER_SEARCH) && !chains_to_end(data, length, start, &samples)) {
+    if (length >= ZONE_HEADER_BYTES) {
+        uint32_t first = block_offset(read_u32(data + ZONE_FIRST_BLOCK));
+
+        headed = (first > at) && ((first - at) < length) && chains_to_end(data, length, first - at, &samples);
+        start  = headed ? (first - at) : 0u;
+    }
+
+    while (!headed && (start < NSMP_HEADER_SEARCH) && !chains_to_end(data, length, start, &samples)) {
         start++;
     }
 
-    if ((start >= NSMP_HEADER_SEARCH) || (samples == 0u)) {
-        return NULL;
+    if ((!headed && (start >= NSMP_HEADER_SEARCH)) || (samples == 0u)) {
+        return false;
     }
+    uint32_t loopStartAt             = headed ? (block_offset(read_u32(data + ZONE_LOOP_START)) - at) : 0u;
+    uint32_t loopEndAt               = headed ? (block_offset(read_u32(data + ZONE_LOOP_END)) - at) : 0u;
+    bool     sawStart                = false;
+    bool     sawEnd                  = false;
     float *  out                     = malloc(sizeof(float) * samples);
     int32_t  history[NSMP_MAX_ORDER] = {0};
     uint32_t written                 = 0;
     uint32_t p                       = start;
 
     if (out == NULL) {
-        return NULL;
+        return false;
     }
 
     for ( ; ;) {
         tBlockHeader header = block_header(data + p);
 
+        // notes §5 - the loop points are the sample counts where these two blocks begin
+        if (headed && (p == loopStartAt)) {
+            zone->loopStart = written;
+            sawStart        = true;
+        }
+
+        if (headed && (p == loopEndAt)) {
+            zone->loopEnd = written;
+            sawEnd        = true;
+        }
         p += NSMP_WORD_BYTES;
 
         if (header.stop) {
@@ -158,8 +195,15 @@ static float * decode_zone(const uint8_t * data, uint32_t length, uint32_t * out
         p += words * NSMP_WORD_BYTES;   // the block's padding, if the last word was not used up
     }
 
-    *outLength = written;
-    return out;
+    zone->data       = out;
+    zone->length     = written;
+    zone->looped     = sawStart && sawEnd && (zone->loopStart < zone->loopEnd) && (zone->loopEnd < written);
+
+    uint32_t rate = headed ? (((uint32_t)data[ZONE_RATE] << 8) | data[ZONE_RATE + 1]) : 0u;
+
+    zone->sampleRate = ((rate >= 8000u) && (rate <= 96000u)) ? (double)rate : NSMP_SAMPLE_RATE;
+    zone->rootNote   = (headed && (data[ZONE_ROOT_KEY] < 128u)) ? (double)data[ZONE_ROOT_KEY] : -1.0;
+    return true;
 }
 
 // notes §3 - the zone's pitch, from its period, until the key map is read
@@ -214,7 +258,6 @@ bool nord_sample_load(const char * path, tNordSample * sample) {
         free(d);
         return false;
     }
-    sample->sampleRate = NSMP_SAMPLE_RATE;
 
     // notes §1 - tagged chunks: tag, type, length, data
     for (uint32_t p = NSMP_CHUNKS_START; (p + NSMP_CHUNK_HEADER) <= (uint32_t)size;) {
@@ -227,10 +270,10 @@ bool nord_sample_load(const char * path, tNordSample * sample) {
         if ((memcmp(d + p, "stk", 3) == 0) && (sample->zoneCount < NORD_SAMPLE_MAX_ZONES)) {
             tNordZone * zone = &sample->zone[sample->zoneCount];
 
-            zone->data = decode_zone(d + p + NSMP_CHUNK_HEADER, length, &zone->length);
-
-            if (zone->data != NULL) {
-                zone->rootNote = zone_root_note(zone, sample->sampleRate);
+            if (decode_zone(d + p + NSMP_CHUNK_HEADER, length, p + NSMP_CHUNK_HEADER, zone)) {
+                if (zone->rootNote < 0.0) {
+                    zone->rootNote = zone_root_note(zone, zone->sampleRate);   // notes §3 - no header to read it from
+                }
                 sample->zoneCount++;
             }
         }

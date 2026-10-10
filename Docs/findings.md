@@ -12683,3 +12683,14 @@ no file is silent; given the Melodica (backdoor SAMPLEFILE, the browser's own pa
 and reloaded into slot B - with slot A cleared - the Sampler, its cables and its file come back and it plays;
 a .pch2 save of the same slot still reloads without it. Choose Sample... (module menu, Sampler only) opens the
 browser in Nord Sound Manager's folder - its click path is not yet exercised (to-test).
+
+## 2026-10-10 (later) - Sampler loops, root keys and per-zone rates
+
+Each zone header gives its root key, its own sample rate (about 35 kHz here) and the file positions of its
+first, loop-start and loop-end blocks (nordSample.c notes §3). A Nord Wave on QU-24 19/20 played note 61 at
+C#4, 277.85 Hz: the root key is a MIDI note and the rate field is real - at an assumed 44.1 kHz every zone
+had measured four semitones sharp. Decoding from the first block also restores up to a few hundred samples of
+attack the old start search skipped. The loop is a crossfade loop (notes §5). Offline, 4 s notes at 61, 79,
+48: C#4 -1 cent, G5 +2, C3 0; level held from 1.0 s to 3.8 s; largest step 209 against a 99.9th percentile
+of 167 at 61 - no click. The Wave's own recording could not settle the loop length by self-similarity: every
+period multiple correlates at 0.98-0.998.
