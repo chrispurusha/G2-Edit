@@ -1,6 +1,6 @@
 # Module aspect audit - design
 
-Living design note, started 2026-10-09. Nothing built yet.
+Living design note, started 2026-10-09. Step 1 built 2026-10-10: `./tools/do-modulestatus --aspects`.
 
 ## Why
 
@@ -85,6 +85,23 @@ with no evidence row, so a new jack or dial cannot slip through unrecorded.
    patches use: oscillators, filters, envelopes, LFOs, mixers.
 3. `findings.md` and `capture-inventory.md` for what was compared on the G2, aspect by aspect.
 4. Regenerate the status doc; rebuild the check queue from it.
+
+## Progress
+
+- **Step 1 (2026-10-10).** 773 aspects over the 170 modules: Core law 168, Timing 27, Dials 121, Inputs 154,
+  Level / gain 111, Modes / On-Off 134, Meters 19, LEDs 39 (code-notes/modulestatus.c.md §1). Two changes from
+  the plan: **Mod inputs became Inputs**, every input jack - the table cannot tell signal from modulation
+  (182 inputs have no label), and what an unpatched SIGNAL socket reads turned out to matter (an unpatched
+  2-Out side is silent on the G2, not a copy of the other); **Level / gain goes by palette group**, since
+  mixers, Pan and the Outs have blue outputs until up-rated. The further aspects (Rate, Voicing, Start
+  state, ...) cannot be read off the tables and come in with the evidence.
+- **Meters and LEDs are two aspects** (CT, 2026-10-10): a meter's law and voice against each lamp's own
+  logic. Each row names what the module shows (mono/stereo/quad meter, gain-reduction LEDs, lamps, a
+  multi-LED group, the sequencers' step position). The engine drives the mixer, Out, In and FX In meters,
+  the Compressor's lamps, the LFO family's and DrumSynth's lamps - and nothing else: six filter and EQ
+  meters, 29 modules' lamps and the step position stay dark without a G2. Those read Partial.
+- 72 aspects have evidence so far, seeded from 2026-10-10's findings: Pan's mod depth, the unpatched Out
+  socket, the meters' one voice, LFO start phase, and the Pads and mixer taper already measured.
 
 Expect some modules to lose standing: a Confirmed module whose mod inputs and Off state were never compared
 becomes Confirmed for its core law and Modelled or Unknown for the rest.

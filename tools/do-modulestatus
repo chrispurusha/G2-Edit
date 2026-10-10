@@ -24,4 +24,10 @@ cc -O2 -std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sign-compare 
    "$HERE/plugin/g2HostIo.c" "$HERE/tools/modulestatus_stubs.c" -lm
 
 echo "built $OUT"
-"$OUT"
+
+# --aspects: the module aspect audit (Docs/module-aspect-audit-design.md) instead of the status tables
+if [ "${1:-}" = "--aspects" ]; then
+    "$OUT" --aspects "$HERE/Docs/param-validation.md"
+else
+    "$OUT"
+fi

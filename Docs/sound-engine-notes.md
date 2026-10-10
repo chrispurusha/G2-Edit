@@ -2840,11 +2840,14 @@ THE TWO LEGS ARE THE LEFT AND RIGHT CHANNELS AND THEY STAY SEPARATE. This used t
 them into one value, which is what made the whole engine mono however stereo the
 modules feeding it were.
 
-AN UNPATCHED SOCKET MIRRORS THE OTHER, and that rule is load-bearing rather than
-tidiness. Cabling only the left socket is very common, and letting signal_in() return
-its usual 0.0 for the absent leg would play such a patch out of one speaker — which
-the instrument never does, both of its sockets being real. Mirroring leaves every
-one-socket patch exactly as it sounded before this change.
+AN UNPATCHED SOCKET IS SILENT (2026-10-10). Until then an unpatched socket mirrored the other, on
+the reasoning that the instrument would never play a one-socket patch out of one speaker. It does.
+Measured on the G2 (an OscA into a 2-Out, Fireface on outputs 1/2): L cabled alone plays on output 1
+only, output 2 at the noise floor (-75 dBFS against -28); R alone plays on output 2 only; the meter
+reads 7,0 and 0,7. The FX bus is the same: a Voice Area 2-Out to FX 1/2 with only L cabled reaches
+Fx-In as 7,0 and an FX-area 2-Out wired L-L, R-R plays on output 1 only. 04 Chris' Pad's "Fx Out"
+is such a module. The engine now reads the unpatched leg as 0, like any other input. A patch that
+cabled one socket and sounded centred in the engine now plays from one side, as on the G2.
 
 WHAT DOES CHANGE IS THE DUAL-MONO PATCH: the same signal cabled to both sockets used
 to be summed to 2a and that sum sent to both channels, i.e. 6 dB hot. It now plays at
@@ -3130,9 +3133,16 @@ stopped rendering - its note retired, or a drone faded out in non-drone mode (§
 them again and they held their last reading indefinitely: a drone that had stopped still showed
 (CT). Now `sound_engine_render()` meters every Voice Area module from the voice sum, after each
 voice's `level`, once per sample whether or not a voice is sounding, so they fall with the sound
-and read zero when nothing plays. One note reads as it did. A chord now reads the sum where it read
-voice 0 alone; what the G2 shows for a chord is not measured. FX Area modules are still metered from
-`eval_node()`, which evaluates them once per sample.
+and read zero when nothing plays. FX Area modules are still metered from `eval_node()`, which
+evaluates them once per sample.
+
+THEY READ ONE VOICE, NOT THE SUM (2026-10-10). The G2 has one meter per module, not one per voice:
+a Voice Area meter shows the voice of the newest note still held, or once every key is up the newest
+voice of all, which it keeps through that voice's release. Measured with 04 Chris' Pad (LEDDUMP,
+velocity 127): one note reads 7-9 on its Osc Mix (Mix4-1C) on both; a four-note chord over MIDI still
+reads 7-9 on the G2, where the voice sum read 11 - red - in the engine (CT: "shows clipping on the 4
+channel mixer"). The engine now picks the same voice by its allocation order (`age`). The FX Area sees
+the sum, as before.
 
 METER_FLOOR. A follower decaying toward zero never gets there, and after a few minutes of silence it
 sinks into denormals, which are slow on Intel. Below 2^-7 the law reads 0 anyway (reference §1.1),
@@ -3181,15 +3191,33 @@ attached to send one over USB (CT, 2026-09-20). `usbComms.c` was the only writer
 and `sound_engine_module_led()` overrides it when the engine has something to say; it just never had
 anything to say beyond the LFO.
 
-Voice 0 publishes and the others return immediately. A poly patch runs one of these per voice and
-the face has one lamp, and the instrument shows a single lamp rather than however many voices
-happen to be sounding. That rule was already the LFO's; it is here now so the next module to grow a
-lamp inherits it rather than restating it.
+One voice publishes and the others return immediately: a poly patch runs one of these per voice and
+the face has one lamp. Since 2026-10-10 it is the voice the meters follow (§191) - the newest note
+still held, else the newest voice - where it used to be voice 0, which in a poly patch showed whatever
+voice 0 last played rather than the note just struck. The instrument reads its lamps and its meters
+the same way, from that one voice. An FX Area module runs once and always publishes.
 
 What drives it is per module and is a question about the instrument, not a free choice: the LFO's
 is its own output's sign, and DrumSynth's is the master envelope (reference §39.5), which is the
 level word the instrument's own lamp reads. Neither is the Trig input, though DrumSynth's LED sits
 beside it.
+
+WHAT EACH LAMP SHOWS (2026-10-10, each compared with the G2's own lamp through LEDDUMP where the
+note says so). Every lamp is one word of the module's own state, lit while it is above zero, except
+the LFO family's and Random's, lit for half of each cycle:
+- Envelopes (all nine): the GATE - lit from note-on, dark at key-up while the release runs on.
+  Compared for EnvADSR.
+- LFOs: half of each cycle. Random A/B: half of each cycle of the clock that draws the values, so
+  it blinks at the rate rather than following the output's sign. Compared for LfoA and RandomA.
+- Pulse, Delay, WindSw, Note Detector: the output (WindSw's Gate). Invert and Gate: both outputs,
+  a lamp each. ValSw2-1/1-2: lit while Ctrl matches. Compared for Invert and Delay.
+- 8Counter and BinCounter: a lamp an output; ADConv its eight bits; Mux8-1/1-8 the input or output
+  in use. Compared for 8Counter. A negative Ctrl shows no Mux LED on the G2 and the first one here.
+- DrumSynth: the master envelope (reference §39.5).
+
+Still dark here: Operator, NoiseGate, Pitch Tracker, FlipFlop, Mux8-1X and the sequencers' step
+position. And a module whose output reaches no Out is never evaluated (the chain is pruned to the
+Outs), so its lamp stays dark where the G2, which runs every module, lights it.
 
 ## 195. `kPercDecayWord[]` - why OscPerc's Decay is a table
 

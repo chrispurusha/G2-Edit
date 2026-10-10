@@ -730,7 +730,7 @@ static bool parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bit
 
                     // notes §12
                     for (uint32_t l = 0; (l < multiBitLeds) && (l < MAX_LEDS_PER_MODULE); l++) {
-                        uint32_t ledValue = ((value & 0x3000) == 0x3000) ? ((value >> l) & 1) : 0;
+                        uint32_t ledValue = ((value & 0x3000) == 0x3000) ? ((value >> l) & 1) : ((value == l) ? 1u : 0u);
 
                         if (module->led.value[l] != ledValue) {
                             module->led.value[l] = ledValue;

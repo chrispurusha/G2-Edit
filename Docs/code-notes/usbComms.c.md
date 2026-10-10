@@ -101,8 +101,11 @@ eight slots each, which is why LEDs looked right until a patch contained one.
 
 The two top flag bits say the value IS a bit set; they are spread
 a bit at a time only when both are present (and only for groups under twelve LEDs,
-which all of these are). Anything else is some other encoding we have not had
-to decode, so show nothing rather than show nonsense.
+which all of these are). BinCounter and ADConv send that. Without the flags the value
+is an INDEX - the one LED lit: 8Counter's position, a Mux's selected input, FlipFlop's
+state (2026-10-10). Until then an unflagged value showed every LED dark, so 8Counter
+and Mux8-1 never lit in the editor however they were clocked, checked against the G2
+with an LFO clocking both.
 
 ## 13. `parse_led_data()`
 

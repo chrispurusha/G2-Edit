@@ -25,6 +25,8 @@ caller polls for the command file's disappearance to know it's done.
 ```
   LOADFILE <path>   — read_file_into_memory_and_process() (works offline)
   SLOT <0-3|A-D>    — select the slot the canvas renders
+  DEVSLOT <0-3|A-D> — SLOT, and select it on the instrument too, as the topbar's slot button does. SLOT
+                      alone leaves the G2 on its own slot, so DEVNOTE plays and LEDDUMP's vols= meter THAT one
   COMMS             — "online" or "offline". ASK THIS BEFORE ANY DEV COMMAND YOU INTEND TO TRUST:
                       every one of them reports OK when the instrument is not listening
   DUMP              — current slot + every module: type, name, location, col/row
@@ -120,7 +122,8 @@ and a blink RATE is invisible in a still; this reports the numbers the renderer 
 caller can poll it and count transitions per module.
 
 leds= is one 0-3 value per LED in ledLocationList order (the order parse_led_data() fills), vols=
-one 0-255 per meter. A module with neither is skipped, which keeps the output to the few modules
+one 0-255 per meter. engleds= and eng= are the local engine's own lamp and meter for the same
+module beside the G2's, "-" where the engine lights or meters nothing (2026-10-10). A module with neither is skipped, which keeps the output to the few modules
 an LED test actually cares about.
 
 ## 4. `backdoor_send_cable()`

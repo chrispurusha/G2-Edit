@@ -140,10 +140,10 @@ static const tEvidence kEvidence[] = {
     {"Mixer 8-1 B",           eConfirmed,   "§3",                        "as Mixer 1-1 A", "-"},
     {"MixFader",              eConfirmed,   "§3",                        "as Mixer 1-1 A", "-"},
     {"MixStereo",             eConfirmed,   "§5",                        "19 settings each, Log and Lin (09-12)", "-"},
-    {"Fade 1-2",              eConfirmed,   "§4.2",                      "19 settings, every point within 0.001 (09-12)", "mod-input depth not captured"},
-    {"Fade 2-1",              eConfirmed,   "§4.2",                      "as Fade 1-2", "mod-input depth not captured"},
-    {"X-Fade",                eConfirmed,   "§4.2",                      "as Fade 1-2", "mod-input depth not captured"},
-    {"Pan",                   eConfirmed,   "§4.2",                      "as Fade 1-2", "mod-input depth not captured"},
+    {"Fade 1-2",              eConfirmed,   "§4.2",                      "19 settings, every point within 0.001 (09-12)", "mod-input depth not captured, still 4 x the input"},
+    {"Fade 2-1",              eConfirmed,   "§4.2",                      "as Fade 1-2", "mod-input depth not captured, still 4 x the input"},
+    {"X-Fade",                eConfirmed,   "§4.2, §4.3",                "as Fade 1-2", "mod-input depth (Pan's law since 10-10) not captured"},
+    {"Pan",                   eConfirmed,   "§4.2, §4.3",                "as Fade 1-2; mod depth, an LFO at 31: +-6.3 dB (10-10)", "-"},
     // Level
     {"Constant",              eConfirmed,   "§16.1",                     "the known input of most G2 checks since 09-13 (OscShpB, OscDual, DrumSynth, FltMulti)", "-"},
     {"ConstSwM",              eModelled,    "§68.1",                     "-", "-"},
@@ -191,7 +191,7 @@ static const tEvidence kEvidence[] = {
     {"Reverb",                eConfirmed,   "§20",                       "19 captures: onsets, stereo, Time law (09)", "captured decays 6-12% long (their fits)"},
     {"Scratch",               eModelled,    "§70.3",                     "-", "-"},
     // In/Out
-    {"2 Outputs",             eConfirmed,   "§63, notes §198",           "Pad +6 dB (09-07); the path every G2 check goes through", "-"},
+    {"2 Outputs",             eConfirmed,   "§63, notes §167, §198",     "Pad +6 dB (09-07); an unpatched socket is silent (10-10); the path every G2 check goes through", "-"},
     {"4 Outputs",             eConfirmed,   "-",                         "Pad +6 dB (09-07)", "-"},
     {"2 Inputs",              eConfirmed,   "§37",                       "full scale and Pad off the G2's own meter (10-08)", "the application has no input device"},
     {"4 Inputs",              eModelled,    "§37, §69.12",               "through 2-In only", "-"},
@@ -301,13 +301,435 @@ static const char * cell(const char * line) {
     return (line[0] != '\0') ? line : "-";
 }
 
-int main(void) {
+// notes §1 - the aspects a module has, read off the module tables (Docs/module-aspect-audit-design.md)
+typedef enum {
+    eAspectCore = 0,
+    eAspectTiming,
+    eAspectDials,
+    eAspectInputs,
+    eAspectLevel,
+    eAspectModes,
+    eAspectMeters,
+    eAspectLeds,
+    ASPECT_COUNT
+} tAspect;
+
+static const char * kAspectName[ASPECT_COUNT] = {"Core law", "Timing", "Dials", "Inputs", "Level / gain", "Modes / On-Off", "Meters", "LEDs"};
+
+#define MAX_NAMED_TYPES  (256)
+#define MAX_NAMED_PARAMS (MAX_NUM_PARAMETERS)
+#define PARAM_NAME_BYTES (24)
+
+// Parameter names by module type and index, from Docs/param-validation.md - the table rows carry few labels
+static char sParamName[MAX_NAMED_TYPES][MAX_NAMED_PARAMS][PARAM_NAME_BYTES];
+
+static void load_param_names(const char * path) {
+    FILE *   file = fopen(path, "r");
+    char     text[512];
+    int      type = -1;
+
+    if (file == NULL) {
+        fprintf(stderr, "cannot read %s - dials will be numbered, not named\n", path);
+        return;
+    }
+
+    while (fgets(text, sizeof(text), file) != NULL) {
+        const char * header = strstr(text, "[module type ");
+        unsigned     index  = 0;
+        int          used   = 0;
+
+        if (header != NULL) {
+            type = ((sscanf(header, "[module type %d]", &type) == 1) && (type < MAX_NAMED_TYPES)) ? type : -1;
+        } else if ((type >= 0) && (sscanf(text, " %u. %n", &index, &used) == 1) && (used > 0) && (index < MAX_NAMED_PARAMS)) {
+            // The name runs up to the first run of two spaces: "Pitch Type  Menu"
+            const char * name = text + used;
+            const char * end  = strstr(name, "  ");
+            size_t       len  = (end != NULL) ? (size_t)(end - name) : strcspn(name, "\n");
+
+            if ((len > 0) && (strncmp(name, "(unnamed)", 9) != 0)) {
+                snprintf(sParamName[type][index], PARAM_NAME_BYTES, "%.*s", (int)len, name);
+            }
+        }
+    }
+    fclose(file);
+}
+
+static bool is_switch_param(tParamType type) {
+    switch (type) {
+        case paramTypeBypass:
+        case paramTypeEnable:
+        case paramTypeToggle:
+        case paramTypePush:
+        case paramTypeMenu:
+        case paramTypeStrMap:
+        case paramTypeRadioEdit:
+        case paramTypeOscWave:
+        case paramTypeCustomData:
+        {
+            return true;
+        }
+        default:
+        {
+            return false;
+        }
+    }
+}
+
+static bool is_time_param(tParamType type) {
+    switch (type) {
+        case paramTypeLFORate:
+        case paramTypeADRTime:
+        case paramTypePulseTime:
+        case paramTypeTime:
+        case paramTypeTimeClk:
+        case paramTypeFlangerRate:
+        case paramTypePhaserRate:
+        {
+            return true;
+        }
+        default:
+        {
+            return false;
+        }
+    }
+}
+
+static void append_item(char * line, uint32_t * n, const char * label, uint32_t index, const char * fallback) {
+    char name[64];
+
+    if ((label != NULL) && (label[0] != '\0')) {
+        snprintf(name, sizeof(name), "%s", label);
+    } else {
+        snprintf(name, sizeof(name), "%s %u", fallback, (unsigned)(index + 1u));
+    }
+    append_name(line, n, name);
+}
+
+// One module's aspects: items[a] lists what the aspect covers (its dials, its jacks), count[a] how many.
+static bool group_has_level(tPaletteGroup group) {
+    switch (group) {
+        case palGroupOsc:
+        case palGroupFilter:
+        case palGroupEnv:
+        case palGroupMixer:
+        case palGroupLevel:
+        case palGroupShaper:
+        case palGroupDelay:
+        case palGroupFx:
+        case palGroupIo:
+        {
+            return true;
+        }
+        default:
+        {
+            return false;
+        }
+    }
+}
+
+static void module_aspects(tModuleType type, tPaletteGroup group, char items[ASPECT_COUNT][LINE_BYTES], uint32_t count[ASPECT_COUNT],
+                           bool has[ASPECT_COUNT]) {
+    uint32_t paramIndex  = 0;
+    bool     anyOut      = false;
+    uint32_t inIndex     = 0;
+
+    memset(items, 0, sizeof(char) * ASPECT_COUNT * LINE_BYTES);
+    memset(count, 0, sizeof(uint32_t) * ASPECT_COUNT);
+    memset(has, 0, sizeof(bool) * ASPECT_COUNT);
+
+    for (uint32_t r = 0; r < array_size_param_location_list(); r++) {
+        const tParamLocation * row = &paramLocationList[r];
+
+        if (row->moduleType != type) {
+            continue;
+        }
+
+        const char * label = ((type < MAX_NAMED_TYPES) && (paramIndex < MAX_NAMED_PARAMS) && (sParamName[type][paramIndex][0] != '\0'))
+                             ? sParamName[type][paramIndex] : row->label;
+
+        if (is_switch_param(row->type)) {
+            append_item(items[eAspectModes], &count[eAspectModes], label, paramIndex, "param");
+        } else {
+            append_item(items[eAspectDials], &count[eAspectDials], label, paramIndex, "dial");
+
+            if (is_time_param(row->type)) {
+                append_item(items[eAspectTiming], &count[eAspectTiming], label, paramIndex, "dial");
+            }
+        }
+        paramIndex++;
+    }
+
+    for (uint32_t r = 0, modeIndex = 0; r < array_size_mode_location_list(); r++) {
+        if (modeLocationList[r].moduleType == type) {
+            append_item(items[eAspectModes], &count[eAspectModes], modeLocationList[r].label, modeIndex++, "mode");
+        }
+    }
+
+    for (uint32_t r = 0; r < array_size_connector_location_list(); r++) {
+        const tConnectorLocation * jack = &connectorLocationList[r];
+
+        if (jack->moduleType != type) {
+            continue;
+        }
+
+        if (jack->direction != connectorDirIn) {
+            anyOut = true;
+            continue;
+        }
+
+        // Every input, signal or modulation: what an unpatched one reads is part of the aspect
+        {
+            static const char * kColour[] = {"red", "blue", "yellow"};
+            char                 fallback[24];
+            bool                 named    = (jack->label != NULL) && (jack->label[0] != '\0') && (strcmp(jack->label, "-") != 0)
+                                            && (strcmp(jack->label, "--") != 0);
+
+            snprintf(fallback, sizeof(fallback), "in %u (%s)", (unsigned)(inIndex + 1u),
+                     ((uint32_t)jack->type < 3u) ? kColour[jack->type] : "?");
+            append_name(items[eAspectInputs], &count[eAspectInputs], named ? jack->label : fallback);
+        }
+        inIndex++;
+    }
+
+    has[eAspectCore]      = anyOut || (group == palGroupIo);
+    has[eAspectLevel]     = (anyOut || (group == palGroupIo)) && group_has_level(group);
+    has[eAspectDials]     = (count[eAspectDials] > 0);
+    has[eAspectTiming]    = (count[eAspectTiming] > 0);
+    has[eAspectInputs] = (count[eAspectInputs] > 0);
+    has[eAspectModes]     = (count[eAspectModes] > 0);
+    // Meters: the level indications. LEDs: the lamps, and the sequencers' step position, which arrives as a
+    // "volume" but is a position, not a level
+    for (uint32_t r = 0; r < array_size_volume_location_list(); r++) {
+        const tVolumeLocation * meter = &volumeLocationList[r];
+
+        if (meter->moduleType != type) {
+            continue;
+        }
+
+        switch (meter->volumeType) {
+            case volumeTypeMono:      append_name(items[eAspectMeters], &count[eAspectMeters], "mono meter");
+                break;
+            case volumeTypeStereo:    append_name(items[eAspectMeters], &count[eAspectMeters], "stereo meter");
+                break;
+            case volumeTypeQuad:      append_name(items[eAspectMeters], &count[eAspectMeters], "quad meter");
+                break;
+            case volumeTypeCompress:  append_name(items[eAspectMeters], &count[eAspectMeters], "gain-reduction LEDs");
+                break;
+            case volumeTypeSequencer: append_name(items[eAspectLeds], &count[eAspectLeds], "step position");
+                break;
+            case volumeTypeNone:
+                break;
+        }
+    }
+    {
+        uint32_t lamps = 0;
+        uint32_t multi = 0;
+        char     text[48];
+
+        for (uint32_t r = 0; r < array_size_led_location_list(); r++) {
+            if (ledLocationList[r].moduleType == type) {
+                lamps += (ledLocationList[r].ledType == ledTypeYes) ? 1u : 0u;
+                multi += (ledLocationList[r].ledType == ledTypeMultiBit) ? 1u : 0u;
+            }
+        }
+
+        if (lamps > 0) {
+            snprintf(text, sizeof(text), (lamps == 1) ? "%u lamp" : "%u lamps", (unsigned)lamps);
+            append_name(items[eAspectLeds], &count[eAspectLeds], text);
+        }
+
+        if (multi > 0) {
+            snprintf(text, sizeof(text), "a %u-LED group on one value", (unsigned)multi);
+            append_name(items[eAspectLeds], &count[eAspectLeds], text);
+        }
+    }
+    has[eAspectMeters] = (count[eAspectMeters] > 0);
+    has[eAspectLeds]   = (count[eAspectLeds] > 0);
+}
+
+typedef struct {
+    const char * module;
+    tAspect      aspect;
+    tState       state;
+    const char * refs;
+    const char * g2;
+    const char * open;
+} tAspectEvidence;
+
+// notes §1 - the evidence one aspect at a time; an aspect with no row reads Unknown
+static const tAspectEvidence kAspectEvidence[] = {
+    {"Mixer 4-1 C", eAspectCore,      eConfirmed, "§3",              "Exp taper 0.99x^3 + 0.01x, 218 steps within 0.01 dB (09-12)", "-"},
+    {"Mixer 4-1 C", eAspectDials,     eConfirmed, "§3",              "as Core law; Pad 0/-6/-12 (09-07)", "-"},
+    {"Mixer 4-1 C", eAspectMeters,    eConfirmed, "§1.1, notes §191", "law on 82 steps (09-12); a chord meters one voice, 7-9 on both (10-10); clip held 1 s", "-"},
+    {"Mixer 4-1 S", eAspectMeters,    eModelled,  "§1.1",            "FX area under a chord: 7-9 on the engine, 6-7 on the G2 (10-10)", "is 04 Chris' Pad's FX side hot? (todo)"},
+    {"Pan",         eAspectCore,      eConfirmed, "§4.2",            "19 settings, Log and Lin, every point within 0.001 (09-12)", "-"},
+    {"Pan",         eAspectInputs,    eConfirmed, "§4.3",            "LFO at PanMod 31: +-6.3 dB on both (10-10)", "the signal input's level not compared"},
+    {"X-Fade",      eAspectCore,      eConfirmed, "§4.2",            "as Pan", "-"},
+    {"X-Fade",      eAspectInputs,    eModelled,  "§4.3",            "-", "mod depth: Pan's law, not captured"},
+    {"Fade 1-2",    eAspectInputs,    eApproximate, "§4.3",          "-", "mod depth still 4 x the input; its dial scales differently from Pan's"},
+    {"Fade 2-1",    eAspectInputs,    eApproximate, "§4.3",          "-", "as Fade 1-2"},
+    {"2 Outputs",   eAspectInputs,    eConfirmed, "notes §167",      "an unpatched socket is silent, outputs 1/2 and the FX bus (10-10)", "-"},
+    {"2 Outputs",   eAspectLevel,     eConfirmed, "§63",             "Pad +6 dB (09-07)", "-"},
+    {"4 Outputs",   eAspectLevel,     eConfirmed, "-",               "Pad +6 dB (09-07)", "-"},
+    {"FX Input",    eAspectLevel,     eConfirmed, "capture-inventory", "Pad +6/0/-6/-12 dB (09-07)", "-"},
+    {"FX Input",    eAspectCore,      eConfirmed, "notes §167",      "a side left unpatched at the 2-Out arrives silent (10-10)", "-"},
+    {"LFO A",       eAspectCore,      eConfirmed, "§28, notes §63",  "never restarted by a note; three notes start at three phases on both (10-10)", "waves not captured"},
+    // Meters and LEDs (2026-10-10): what the engine drives; a module it leaves dark shows only a connected G2's
+    {"Mixer 4-1 B", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"Mixer 8-1 A", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"Mixer 8-1 B", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"MixFader", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"MixStereo", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"2 Outputs", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"4 Outputs", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"2 Inputs", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"4 Inputs", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"FX Input", eAspectMeters, eModelled, "§1.1, notes §191", "the law as Mixer 4-1 C", "-"},
+    {"Compressor", eAspectMeters, eModelled, "§25, notes §122", "-", "gain-reduction lamps not compared"},
+    {"Phase Filter", eAspectMeters, eModelled, "§1.1", "-", "the output's peak since 10-10, as Comb Filter and Eq Peak; not compared"},
+    {"Comb Filter", eAspectMeters, eConfirmed, "§1.1", "its output's peak: 7, now and then 9, on both (10-10)", "-"},
+    {"FltVoice", eAspectMeters, eModelled, "§1.1", "-", "the output's peak since 10-10, as Comb Filter and Eq Peak; not compared"},
+    {"Eq 2-band", eAspectMeters, eModelled, "§1.1", "-", "the output's peak since 10-10, as Comb Filter and Eq Peak; not compared"},
+    {"Eq 3-band", eAspectMeters, eModelled, "§1.1", "-", "the output's peak since 10-10, as Comb Filter and Eq Peak; not compared"},
+    {"Eq Peak", eAspectMeters, eConfirmed, "§1.1", "its output's peak: 7, now and then 9, on both (10-10)", "-"},
+    {"LFO A", eAspectLeds, eConfirmed, "notes §194", "half of each cycle, same rate and duty as the G2's (10-10)", "-"},
+    {"LFO B", eAspectLeds, eModelled, "notes §194", "-", "lit on the positive half; not compared"},
+    {"LFO C", eAspectLeds, eModelled, "notes §194", "-", "lit on the positive half; not compared"},
+    {"LFO Shp A", eAspectLeds, eModelled, "notes §194", "-", "lit on the positive half; not compared"},
+    {"Drum Synth", eAspectLeds, eModelled, "§39.5, notes §194", "-", "the master envelope; not compared"},
+    {"FM Operator", eAspectLeds, ePartial, "notes §194", "-", "the engine lights no lamp here"},
+    {"Envelope ADSR", eAspectLeds, eConfirmed, "notes §194", "the gate: lit at note-on, dark at key-up through a long release, on both (10-10)", "-"},
+    {"Envelope AHD", eAspectLeds, eModelled, "notes §194", "-", "the gate, as Envelope ADSR; not compared"},
+    {"Envelope ADR", eAspectLeds, eModelled, "notes §194", "-", "the gate, as Envelope ADSR; not compared"},
+    {"Envelop ADDSR", eAspectLeds, eModelled, "notes §194", "-", "the gate, as Envelope ADSR; not compared"},
+    {"Envelope H", eAspectLeds, eModelled, "notes §194", "-", "the gate, as Envelope ADSR; not compared"},
+    {"Envelope D", eAspectLeds, eModelled, "notes §194", "-", "the gate, as Envelope ADSR; not compared"},
+    {"Envelope Multi", eAspectLeds, eModelled, "notes §194", "-", "the gate, as Envelope ADSR; not compared"},
+    {"Envelope Mod AHD", eAspectLeds, eModelled, "notes §194", "-", "the gate, as Envelope ADSR; not compared"},
+    {"Envelope Mod ADSR", eAspectLeds, eModelled, "notes §194", "-", "the gate, as Envelope ADSR; not compared"},
+    {"NoiseGate", eAspectLeds, ePartial, "notes §194", "-", "the engine lights no lamp here"},
+    {"Note Detector", eAspectLeds, eModelled, "notes §194", "the output; dark or brief on both in the 10-10 test, never compared lit", "-"},
+    {"ValSw2-1", eAspectLeds, eModelled, "notes §194", "-", "lit while Ctrl matches; not compared"},
+    {"ValSw1-2", eAspectLeds, eModelled, "notes §194", "-", "lit while Ctrl matches; not compared"},
+    {"Mux8-1", eAspectLeds, eModelled, "notes §194", "the input through, mostly the same LEDs (10-10)", "a negative Ctrl shows no LED on the G2, the first LED here"},
+    {"Mux1-8", eAspectLeds, eModelled, "notes §194", "-", "built 10-10; not compared"},
+    {"Mux8-1X", eAspectLeds, ePartial, "notes §194", "-", "the engine lights no lamp here"},
+    {"WindSw", eAspectLeds, eModelled, "notes §194", "the output; dark or brief on both in the 10-10 test, never compared lit", "-"},
+    {"Invert", eAspectLeds, eConfirmed, "notes §194", "the output, toggling with the G2's at the same duty (10-10)", "-"},
+    {"Pulse", eAspectLeds, eModelled, "notes §194", "the output; dark or brief on both in the 10-10 test, never compared lit", "-"},
+    {"Delay", eAspectLeds, eConfirmed, "notes §194", "the output, toggling with the G2's at the same duty (10-10)", "-"},
+    {"Gate", eAspectLeds, eModelled, "notes §194", "the output; dark or brief on both in the 10-10 test, never compared lit", "-"},
+    {"FlipFlop", eAspectLeds, ePartial, "notes §194", "-", "the engine lights no lamp here"},
+    {"8Counter", eAspectLeds, eConfirmed, "notes §194", "the count, one LED stepping up once a clock on both (10-10)", "-"},
+    {"BinCounter", eAspectLeds, eModelled, "notes §194", "-", "built 10-10; not compared"},
+    {"ADConv", eAspectLeds, eModelled, "notes §194", "-", "built 10-10; not compared"},
+    {"Random A", eAspectLeds, eConfirmed, "notes §194", "the rate clock, half of each cycle, at the G2's rate (10-10)", "-"},
+    {"Random B", eAspectLeds, eModelled, "notes §194", "-", "the rate clock, as Random A; not compared"},
+    {"Pitch Tracker", eAspectLeds, ePartial, "notes §194", "-", "the engine lights no lamp here"},
+    {"Sequencer Event", eAspectLeds, ePartial, "-", "-", "the engine sends no step position"},
+    {"Sequencer Values", eAspectLeds, ePartial, "-", "-", "the engine sends no step position"},
+    {"Sequencer Level", eAspectLeds, ePartial, "-", "-", "the engine sends no step position"},
+    {"Sequencer Note", eAspectLeds, ePartial, "-", "-", "the engine sends no step position"},
+    {"Sequencer Controlled", eAspectLeds, ePartial, "-", "-", "the engine sends no step position"},
+};
+
+#define ASPECT_EVIDENCE_COUNT (sizeof(kAspectEvidence) / sizeof(kAspectEvidence[0]))
+
+static int aspect_evidence_index(const char * module, tAspect aspect) {
+    for (uint32_t e = 0; e < ASPECT_EVIDENCE_COUNT; e++) {
+        if ((kAspectEvidence[e].aspect == aspect) && (strcmp(kAspectEvidence[e].module, module) == 0)) {
+            return (int)e;
+        }
+    }
+    return -1;
+}
+
+// --aspects: the audit - every modelled module's aspects, with their evidence where there is some
+static int print_aspects(const char * paramNames) {
+    uint32_t modules                  = 0;
+    uint32_t aspectTotal[ASPECT_COUNT] = {0};
+    uint32_t all                      = 0;
+    uint32_t evidenced                = 0;
+    bool     seen[ASPECT_EVIDENCE_COUNT] = {false};
+    int      result                   = 0;
+
+    load_param_names(paramNames);
+
+    for (uint32_t g = 0; g < GROUP_COUNT; g++) {
+        tModuleType types[256];
+        uint32_t    count = palette_group_modules(kGroups[g].group, types, 256);
+
+        printf("\n### %s\n\n", kGroups[g].name);
+        printf("| Module | Aspect | Covers | State | Evidence |\n");
+        printf("|---|---|---|---|---|\n");
+
+        for (uint32_t i = 0; i < count; i++) {
+            tModule      module = {0};
+            const char * name   = module_name(types[i]);
+            static char  items[ASPECT_COUNT][LINE_BYTES];
+            uint32_t     n[ASPECT_COUNT];
+            bool         has[ASPECT_COUNT];
+
+            module.type = types[i];
+
+            if (sound_engine_models_module(&module) == false) {
+                continue;
+            }
+            module_aspects(types[i], kGroups[g].group, items, n, has);
+            modules++;
+
+            for (uint32_t a = 0; a < ASPECT_COUNT; a++) {
+                int e = aspect_evidence_index(name, (tAspect)a);
+
+                if (has[a] == false) {
+                    if (e >= 0) {
+                        fprintf(stderr, "kAspectEvidence names %s's %s, which it does not have\n", name, kAspectName[a]);
+                        result = 1;
+                    }
+                    continue;
+                }
+
+                if (e >= 0) {
+                    const tAspectEvidence * row = &kAspectEvidence[e];
+
+                    seen[e] = true;
+                    printf("| %s | %s | %s | %s | %s: %s; open: %s |\n", name, kAspectName[a], cell(items[a]),
+                           kStateName[row->state], row->refs, row->g2, row->open);
+                    evidenced++;
+                } else {
+                    printf("| %s | %s | %s | Unknown | - |\n", name, kAspectName[a], cell(items[a]));
+                }
+                aspectTotal[a]++;
+                all++;
+            }
+        }
+    }
+    printf("\n| Aspect | Modules |\n|---|---|\n");
+
+    for (uint32_t a = 0; a < ASPECT_COUNT; a++) {
+        printf("| %s | %u |\n", kAspectName[a], (unsigned)aspectTotal[a]);
+    }
+    printf("| **%u aspects over %u modules, %u with evidence** | |\n", (unsigned)all, (unsigned)modules, (unsigned)evidenced);
+
+    for (uint32_t e = 0; e < ASPECT_EVIDENCE_COUNT; e++) {
+        if (seen[e] == false) {
+            fprintf(stderr, "kAspectEvidence names '%s', which is not a modelled module\n", kAspectEvidence[e].module);
+            result = 1;
+        }
+    }
+    return result;
+}
+
+int main(int argc, char ** argv) {
     uint32_t total[STATE_COUNT + 1]       = {0};    // the last is Not implemented
     bool     evidenceSeen[EVIDENCE_COUNT] = {false};
     int      result                       = 0;
 
     init_module_resource_cache();
 
+    if ((argc > 1) && (strcmp(argv[1], "--aspects") == 0)) {
+        return print_aspects((argc > 2) ? argv[2] : "Docs/param-validation.md");
+    }
     printf("| Group | Confirmed on the G2 | Modelled | Approximate | Partial | No sound | Not implemented |\n");
     printf("|---|---|---|---|---|---|---|\n");
 

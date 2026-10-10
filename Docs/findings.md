@@ -12604,3 +12604,62 @@ clocks); slot B's variation 8 is 10 dB quieter in the engine (-55.0 against -45.
   off and on three times, 96 kHz), the G2 CUTS within 0.33 ms and comes back within a cycle, as the engine
   does. What follows a cut on the G2 is its output stage settling - about -35 dB falling ~0.25 dB/ms -
   the AC coupling, not a fade. Nothing to change.
+
+## 2026-10-10 - 04 Chris' Pad "clipping on the 4 channel mixer": the engine metered the voice SUM
+
+CT: the engine shows clipping on 04's mixer. Compared on the G2 (patch in slot A, LEDDUMP's `vols=` against
+`eng=`, velocity 127; a chord over MIDI on the TM-1, channel 1 - DEVNOTE holds only one key):
+- One note: Osc Mix (Mix4-1C, VA) 7-9 on both; Fx-In, Mix4-1S and 2-Out 6-7 on both.
+- Four-note chord (48 55 60 64): the G2's Osc Mix stays 7-9; the engine's read 11 (red) - it metered the
+  SUM of the voices (notes §191). A G2 Voice Area meter shows ONE voice: the newest note still held, else
+  the newest voice. The engine now follows that voice (notes §191, reference §1.2); re-measured, Osc Mix
+  reads 7-9 on both, twenty readings each.
+- The clip bit (0x40) is held a second after the last 12, and 0x20 a second after the last 11 - the 2-In's
+  "43" is that hold. The engine now holds 0x40; the canvas does not draw 0x20.
+- The FX side (sum of the voices, on both) read 7-9 in the engine against 6-7 on the G2 across 40 readings,
+  and the engine's Compressor reduced (1-7) where the G2's read 0. Not proven to be a gain error: a per-note
+  level test (each chord note alone, RMS against note 60) gave G2 48: -5.2 dB, engine 48: +4.6 dB, but
+  every G2 take started inside the previous note's delay/reverb tail, so the G2 column is contaminated.
+- Fx Out has only its L input cabled. The G2 meters its R as 0 and Fx-In's R as 0, i.e. it does not mirror
+  L into the bus; the engine does (notes §167). Nothing in 04 uses Fx-In's R, so it is inaudible here.
+- Backdoor: `DEVSLOT` selects the slot on the instrument as well (SLOT moves only the canvas) - but the
+  G2 still played and metered slot A after `DEVSLOT B`; not understood, so the test used slot A.
+
+## 2026-10-10 (later) - an unpatched Out socket is silent, not a mirror
+
+Measured on the G2 with an OscA into a 2-Out (Fireface, outputs 1/2): L alone plays on output 1 only
+(-28 dBFS, output 2 at the -75 floor), R alone on output 2 only; via the FX bus (Voice Area 2-Out to FX
+1/2, L only, then Fx-In -> 2-Out L-L R-R) output 1 only. The engine mirrored the cabled socket into the
+other (notes §167) and now reads it as 0. 146 of the 465 patches in G2 Backups have an Out pair with one
+side cabled - among the stage patches 04 and 05 ("Fx Out" L), 10 ("DAVE PECK" L) and 17 ("2-Out1" R,
+"to compressor" L) - so those now play as one-sided on the engine as they do on the G2.
+
+## 2026-10-10 (later) - stage patches "starting hard panned": the Pan's modulation was four times too strong
+
+CT: some stage patches start hard to one side. Five stage patches pan from a modulator: 10 Troll (3 Pans,
+LfoC, attenuator 127), 11 Cosmic Dream (LfoA, 31), 16 Sweep Lots (4 Pans, RandomA, 60), 17 Mighty Nord (LfoA,
+35, Pan 24) and 18 Unreal Dreams (2 Pans, LfoC, 53/49, Pans 0/127). The engine scaled the Pan's mod input by 4
+on top of an input already in its own units, so each swung four times as far (reference §4.3). Measured on the
+G2 (OscA -> EnvADSR -> Pan, LfoA at attenuator 31, Pan 64, Log, outputs 1/2): the balance swings +-6.3 dB; the
+engine now does too (it went hard to each side before), and +-6.3 dB is what the Log law gives for +-0.24.
+The start: three separate notes began at +2.4, +6.2 and -0.4 dB on the G2 and +3.1, -0.5 and -2.2 dB on the
+engine - an LFO is not restarted at note-on, and each voice's LFO starts from its own random phase when the
+patch is linked (notes §63), so an off-centre start is right. It only looked like a hard-panned start while
+the modulation was four times too strong.
+
+## 2026-10-10 (later) - meters and lamps the engine left dark, and the editor's multi-LED decoding
+
+CT: drive the missing meters and lamps. Compared on the G2 with one patch in slot A (an LfoA clocking
+Invert, Pulse, Delay, Gate, WindSw, 8Counter and Mux8-1; RandomA, NoteDet and EnvADSR; OscA through FltComb
+and EqPeak), LEDDUMP polled 30 times with `leds=`/`vols=` (the G2) beside the new `engleds=`/`eng=`:
+- FltComb and EqPeak meters (new): 7 with an occasional 9 on both. The engine now meters all six filter/EQ
+  outputs.
+- EnvADSR's lamp is the GATE: dark at key-up though a 100 release runs on - identical on both.
+- LfoA, Invert, Delay: toggling at the same duty. RandomA's lamp blinks at the rate (its value clock), not
+  with the output's sign - the engine's first version did the latter and was visibly too slow.
+- 8Counter and Mux8-1 never lit IN THE EDITOR on a real G2: they send an index, and parse_volume_indicator()
+  took only a 0x3000-flagged bit set (usbComms notes §12). Fixed: 8Counter now steps one LED a clock in the
+  editor exactly as the engine's does.
+- The engine prunes modules that reach no Out, so their lamps stay dark - the test patch had to route every
+  lamp module into the sound through two mixers before the engine showed any of them.
+- Lamps now follow the metered voice (notes §194), not voice 0.

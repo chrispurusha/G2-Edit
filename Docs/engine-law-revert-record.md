@@ -230,3 +230,7 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 |---|---|---|---|---|
 | 147 | WaveWrap | `shaper_fold(x * (1 + amount * 8))`, Amount and Wrap M over 127 | gain G = 4 (Amount word + Wrap M x mod), 1/64..1; out = 4 max(1/4, 1/(64 G)) fold(16 G x) (§73, paramCurves notes §34) | `b538144` `src/paramCurves.c` `shaper_transfer()` |
 | 148 | Eq2Band / Eq3band high shelf pole (§11.2) | matched: `exp(-2 pi highHz / fs)`, a cut moving the corner to fc x G | bilinear: (1 - T)/(1 + T), T = tan(pi fc / fs) x G for a cut | `b538144` `src/soundEngine.c` `eq_step()` |
+| 149 | Pan / X-Fade modulation (§4.3) | position += 4 x attenuator x input (engine units) | position += attenuator x input (engine units; 4 x on a full-scale fraction) | `c17674b` `src/soundEngine.c` `eval_node()` `eNodeFade` |
+| 150 | Unpatched Out socket (notes §167) | mirrors the cabled socket | silent, as measured on the G2 | `c17674b` `src/soundEngine.c` `eval_node()` `eNodeOut` |
+| 151 | Voice Area meters (notes §191) | the voice sum | the newest held voice, else the newest; clip bit held 1 s | `c17674b` `src/soundEngine.c` `stage_voices()`, `meter_node()` |
+| 152 | Panel lamps (notes §194) | voice 0 publishes | the meters' voice publishes (newest held, else newest); FX Area always | `c17674b` `src/soundEngine.c` `publish_module_led()` |

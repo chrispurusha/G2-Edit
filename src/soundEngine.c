@@ -1489,11 +1489,16 @@ static _Atomic uint32_t     gModuleLedBank[SOUND_ENGINE_MAX_ENGINES][locationMax
 #define gModuleLed    (gModuleLedBank[SE])
 
 // The follower behind the level meters. Per NODE, not per voice: the face has one meter however many
-// voices are sounding, and only voice 0 writes it. About 200 ms of release at 96 kHz.
-#define METER_DECAY    (0.00005)
-#define METER_FLOOR    (0.0078125)         // 2^-7, below which the meter law reads 0 (§1.1)
+// voices are sounding, fed from one voice (notes §191). About 200 ms of release at 96 kHz.
+#define METER_DECAY                (0.00005)
+#define METER_FLOOR                (0.0078125) // 2^-7, below which the meter law reads 0 (§1.1)
+#define METER_CLIP_HOLD_SECONDS    (1.0)       // §1.1 - the clip bit stays up this long after the last clip
 static double               gMeterEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
-#define gMeterEnv      (gMeterEnvBank[SE])
+#define gMeterEnv                  (gMeterEnvBank[SE])
+static uint32_t             gMeterClipHoldBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
+#define gMeterClipHold             (gMeterClipHoldBank[SE])
+static uint32_t             gMeterVoiceBank[SOUND_ENGINE_MAX_ENGINES];   // the voice the face shows - notes §191
+#define gMeterVoice                (gMeterVoiceBank[SE])
 
 static _Atomic int32_t      gOutputGainMilliBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1000};
 static double               gSlotGainNowBank[SOUND_ENGINE_MAX_ENGINES]     = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = -1.0}; // §63
@@ -2679,6 +2684,7 @@ static void reset_node_state(void) {
     memset((void *)gModuleMeter, 0, sizeof(gModuleMeter));   // no stale meters after a stop or reload
     memset((void *)gModuleLed, 0, sizeof(gModuleLed));
     memset(gMeterEnv, 0, sizeof(gMeterEnv));
+    memset(gMeterClipHold, 0, sizeof(gMeterClipHold));
 }
 
 // notes §64
@@ -9657,7 +9663,7 @@ bool sound_engine_meters_dirty(void) {
 bool sound_engine_module_led(uint32_t location, uint32_t moduleIndex, uint32_t ledIndex, uint32_t * value) {
     SE_LOCAL;
 
-    if (  (value == NULL) || (ledIndex != 0u) || (location >= (uint32_t)locationMax)
+    if (  (value == NULL) || (ledIndex >= 8u) || (location >= (uint32_t)locationMax)
        || (moduleIndex >= MAX_NUM_MODULES)) {
         return false;
     }
@@ -9670,7 +9676,7 @@ bool sound_engine_module_led(uint32_t location, uint32_t moduleIndex, uint32_t l
     if ((stored & METER_WRITTEN) == 0u) {
         return false;
     }
-    *value = stored & METER_VALUE_MASK;
+    *value = (stored >> ledIndex) & 1u;   // one bit a lamp
     return true;
 }
 
@@ -11756,6 +11762,10 @@ static void meter_node(const tEngineNode * spec, uint32_t n, double left, double
         case eNodeFxIn:
         case eNodeAudioIn:  // §37 - a 4-In's first two of four
         case eNodeOut:
+        case eNodeEq:       // §1.1 - these four meter their own output, as the mixers do
+        case eNodeFltComb:
+        case eNodeFltPhase:
+        case eNodeFltVoice:
         {
             break;
         }
@@ -11799,8 +11809,14 @@ static void meter_node(const tEngineNode * spec, uint32_t n, double left, double
             } else if (exponent == 2) {
                 level = 11;
             } else {
-                level = 12 | 0x40;      // the instrument's clip bit, alongside its top value
+                level                  = 12;
+                gMeterClipHold[n][leg] = (uint32_t)(METER_CLIP_HOLD_SECONDS * gSampleRate);
             }
+        }
+
+        if (gMeterClipHold[n][leg] > 0u) {
+            gMeterClipHold[n][leg]--;
+            level |= 0x40;              // the instrument's clip bit
         }
 
         if (level < 0) {
@@ -13341,21 +13357,24 @@ static double logic_delay_step(uint32_t voice, uint32_t n, const tEngineNode * s
     return logic_level(out);
 }
 
-// The panel lamp a module shows, published for the face to read (notes §194). Only voice 0
-// publishes: a polyphonic patch runs one of these per voice and the face has one LED, and the
-// instrument shows a single lamp rather than however many voices happen to be sounding.
-static void publish_module_led(uint32_t voice, const tEngineNode * spec, bool lit) {
+// The panel lamps a module shows, one bit each, published for the face to read (notes §194). One voice
+// publishes, the one the meters follow (notes §191); an FX Area module runs once and always does.
+static void publish_module_lamps(uint32_t voice, const tEngineNode * spec, uint32_t lit) {
     SE_LOCAL;
 
-    if (voice != 0u) {
+    if ((spec->postMix == false) && (voice != gMeterVoice)) {
         return;
     }
-    uint32_t lamp = METER_WRITTEN | ((lit == true) ? 1u : 0u);
+    uint32_t lamp = METER_WRITTEN | (lit & METER_VALUE_MASK);
 
     if (atomic_exchange_explicit(&gModuleLed[spec->location][spec->moduleIndex],
                                  lamp, memory_order_relaxed) != lamp) {
         atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
     }
+}
+
+static void publish_module_led(uint32_t voice, const tEngineNode * spec, bool lit) {
+    publish_module_lamps(voice, spec, (lit == true) ? 1u : 0u);
 }
 
 static double drum_clamp(double x) {
@@ -13692,6 +13711,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             // G2's envelopes carry their own VCA, and this patch uses it as the amp.
             value[n][0] = env;
             value[n][1] = a * env;
+            publish_module_led(voice, spec, gate);   // notes §194 - the lamp shows the gate, dark through the release
             break;
         }
         case eNodeLevAmp:
@@ -13762,9 +13782,12 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeValSw:
         {
             // §34 - In 2 while Ctrl EQUALS the value, In 1 otherwise
-            double ctrl = signal_in(spec, value, 2);
+            double ctrl  = signal_in(spec, value, 2);
 
-            value[n][0] = (fabs(ctrl - spec->constant) <= (VALSW_MATCH_UNITS / UNITS_PER_FULL_SCALE)) ? signal_in(spec, value, 1) : a;
+            bool   match = (fabs(ctrl - spec->constant) <= (VALSW_MATCH_UNITS / UNITS_PER_FULL_SCALE));
+
+            value[n][0] = match ? signal_in(spec, value, 1) : a;
+            publish_module_led(voice, spec, match);   // notes §194 - lit while In 2 is through
             break;
         }
         case eNodeMonoKey:
@@ -13813,6 +13836,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             // sits HIGH, which is what an inverter with nothing on it does.
             value[n][0] = logic_level(logic_high(a) == false);
             value[n][1] = logic_level(logic_high(signal_in(spec, value, 1)) == false);
+            publish_module_lamps(voice, spec, (logic_high(value[n][0]) ? 1u : 0u) | (logic_high(value[n][1]) ? 2u : 0u));   // notes §194
             break;
         }
         case eNodeGate:
@@ -13823,6 +13847,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             value[n][1] = logic_level(gate_result(spec->gateType[1],
                                                   logic_high(signal_in(spec, value, 2)),
                                                   logic_high(signal_in(spec, value, 3))));
+            publish_module_lamps(voice, spec, (logic_high(value[n][0]) ? 1u : 0u) | (logic_high(value[n][1]) ? 2u : 0u));   // notes §194
             break;
         }
         case eNodeFlipFlop:
@@ -13878,17 +13903,26 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeValSw12:
         {
             // §68.2 - Out 2 while Ctrl equals the value, Out 1 otherwise
-            value[n][(fabs(signal_in(spec, value, 1) - spec->constant) <= (VALSW_MATCH_UNITS / UNITS_PER_FULL_SCALE)) ? 1 : 0] = a;
+            bool match = (fabs(signal_in(spec, value, 1) - spec->constant) <= (VALSW_MATCH_UNITS / UNITS_PER_FULL_SCALE));
+
+            value[n][match ? 1 : 0] = a;
+            publish_module_led(voice, spec, match);   // notes §194 - lit while Out 2 carries In
             break;
         }
         case eNodeMux8to1:
         {
-            value[n][0] = signal_in(spec, value, mux_select(signal_in(spec, value, 8)));
+            uint32_t select = mux_select(signal_in(spec, value, 8));
+
+            value[n][0] = signal_in(spec, value, select);
+            publish_module_lamps(voice, spec, 1u << select);   // notes §194 - the input through
             break;
         }
         case eNodeMux1to8:
         {
-            value[n][mux_select(signal_in(spec, value, 1))] = a;
+            uint32_t select = mux_select(signal_in(spec, value, 1));
+
+            value[n][select] = a;
+            publish_module_lamps(voice, spec, 1u << select);   // notes §194 - the output in use
             break;
         }
         case eNodeTandH:
@@ -13909,12 +13943,22 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
 
             value[n][0] = in ? a : 0.0;
             value[n][1] = logic_level(in);
+            publish_module_led(voice, spec, in);   // notes §194
             break;
         }
         case eNodeCounter8:
         case eNodeBinCounter:
         {
             counter_step(voice, n, spec, a, signal_in(spec, value, 1), value[n]);
+            {
+                uint32_t lit = 0u;   // notes §194 - a lamp an output
+
+                for (uint32_t bit = 0; bit < 8u; bit++) {
+                    lit |= logic_high(value[n][bit]) ? (1u << bit) : 0u;
+                }
+
+                publish_module_lamps(voice, spec, lit);
+            }
             break;
         }
         case eNodeADConv:
@@ -13925,6 +13969,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             for (uint32_t bit = 0; bit < 8u; bit++) {
                 value[n][bit] = logic_level(((code >> bit) & 1) != 0);
             }
+
+            publish_module_lamps(voice, spec, (uint32_t)code & 0xFFu);   // notes §194 - the bits
 
             break;
         }
@@ -14109,9 +14155,11 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 value[n][0] = logic_level(vel > 0u);
                 value[n][1] = *held;
                 value[n][2] = (double)atomic_load(&gMidiNoteRel[row][spec->select]) / NOTEDET_VELOCITY_SCALE;
+                publish_module_led(voice, spec, vel > 0u);   // notes §194 - the gate
                 break;
             }
             value[n][0] = logic_level(gKeyHeld[spec->select] > 0u);
+            publish_module_led(voice, spec, gKeyHeld[spec->select] > 0u);   // notes §194 - the gate
             value[n][1] = (double)gKeyVelocity[spec->select] / NOTEDET_VELOCITY_SCALE;
             value[n][2] = (double)gKeyReleaseVelocity[spec->select] / NOTEDET_VELOCITY_SCALE;
             break;
@@ -14352,6 +14400,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeLogicDelay:
         {
             value[n][0] = logic_delay_step(voice, n, spec, a, signal_in(spec, value, 1));
+            publish_module_led(voice, spec, value[n][0] > 0.0);   // notes §194
             break;
         }
         case eNodeRandomA:
@@ -14363,6 +14412,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 value[n][0] = random_a_step(gLadder[voice][n], &gNoiseSeed[voice][n], &gPhase[voice][n], spec,
                                             lfo_rate_now(spec, a, signal_in(spec, value, 1), voicePitch));   // §69.10 - RandomB's RateVar
             }
+            // notes §194 - the lamp shows the clock that draws each value, lit for half of each cycle
+            publish_module_led(voice, spec, ((spec->lfoMono == true) ? gRndMono[n].phase : gPhase[voice][n]) < 0.5);
             break;
         }
         case eNodeSandH:
@@ -14428,6 +14479,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodePulse:
         {
             value[n][0] = pulse_step(voice, n, a, signal_in(spec, value, 1), spec);
+            publish_module_led(voice, spec, value[n][0] > 0.0);   // notes §194
             break;
         }
         case eNodeFltMulti:
@@ -14505,7 +14557,9 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeFade:
         {
             bool   oneIn = (spec->fadeKind == eFadePan) || (spec->fadeKind == eFadeOneToTwo);
-            double pos   = shape + (MOD_INPUT_SCALE * spec->fadeMod * signal_in(spec, value, oneIn ? 1u : 2u));
+            // §4.3 - Pan and X-Fade take the input in engine units as it comes
+            double scale = ((spec->fadeKind == eFadePan) || (spec->fadeKind == eFadeCross)) ? 1.0 : MOD_INPUT_SCALE;
+            double pos   = shape + (scale * spec->fadeMod * signal_in(spec, value, oneIn ? 1u : 2u));
             double wa    = 0.0;
             double wb    = 0.0;
 
@@ -14645,22 +14699,10 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         }
         case eNodeOut:
         {
-            // notes §167
+            // notes §167 - an unpatched socket is silent
             if (spec->active == true) {
-                bool   haveLeft  = (spec->inCount > 0) && (spec->in[0] >= 0);
-                bool   haveRight = (spec->inCount > 1) && (spec->in[1] >= 0);
-                double left      = a;
-                double right     = signal_in(spec, value, 1);
-
-                if (haveLeft == false) {
-                    left = right;
-                }
-
-                if (haveRight == false) {
-                    right = left;
-                }
-                value[n][0] = left * gain;
-                value[n][1] = right * gain;
+                value[n][0] = a * gain;
+                value[n][1] = signal_in(spec, value, 1) * gain;
             }
             break;
         }
@@ -14916,9 +14958,10 @@ static void stage_smooth(const tSoundEngineParams * p, double rampSamples, tSmoo
 static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, double value[][NODE_OUTPUTS], tSmoothWhich smooth) {
     SE_LOCAL;
 
-    uint32_t n       = 0;
+    uint32_t n          = 0;
     double   voiceSum[MAX_ENGINE_NODES][NODE_OUTPUTS];
-    bool     ctlTick = ctl_tick(&gCtlPhaseVoice);   // notes §203
+    double   meterValue[MAX_ENGINE_NODES][2];        // the metered voice's own output - notes §191
+    bool     ctlTick    = ctl_tick(&gCtlPhaseVoice); // notes §203
 
     // One event per sample. A chord's worth of note-ons arriving together therefore lands over
     // consecutive samples rather than all but the last being thrown away, and every note takes
@@ -14928,7 +14971,7 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
     (void)take_next_note_event(p);
 
     // notes §176
-    double   vibrato = 0.0;
+    double   vibrato    = 0.0;
 
     if (p->vibratoSource != eVibratoOff) {
         uint32_t group = (p->vibratoSource == eVibratoWheel)
@@ -14942,11 +14985,30 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
         }
         vibrato        = (sin(gVibratoPhase * 2.0 * M_PI) * depth * p->vibratoCents) / 100.0;
     }
-    double   bend    = ((double)atomic_load(&gBendMilli) / 1000.0) * p->bendSemitones;
+    double   bend       = ((double)atomic_load(&gBendMilli) / 1000.0) * p->bendSemitones;
 
     stage_smooth(p, ctx->rampSamples, smooth);
 
     memset(voiceSum, 0, (size_t)p->nodeCount * sizeof(voiceSum[0]));
+    memset(meterValue, 0, (size_t)p->nodeCount * sizeof(meterValue[0]));
+
+    // notes §191 - the newest voice whose key is still down, else the newest of all
+    uint32_t meterVoice = 0;
+    bool     meterGated = false;
+    uint64_t meterAge   = 0;
+
+    for (uint32_t v = 0; v < p->voiceCount; v++) {
+        bool gated = gVoice[v].gate;
+
+        if (  ((gated == true) && ((meterGated == false) || (gVoice[v].age > meterAge)))
+           || ((gated == false) && (meterGated == false) && (gVoice[v].age > meterAge))) {
+            meterVoice = v;
+            meterGated = gated;
+            meterAge   = gVoice[v].age;
+        }
+    }
+
+    gMeterVoice = meterVoice;   // the lamps follow the same voice
 
     // notes §178
     for (uint32_t v = 0; v < p->voiceCount; v++) {
@@ -15053,6 +15115,11 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
                 voiceSum[n][leg] += value[n][leg] * level;
             }
 
+            if (v == meterVoice) {
+                meterValue[n][0] = value[n][0] * level;
+                meterValue[n][1] = value[n][1] * level;
+            }
+
             // What this voice is putting out, measured at its Out modules — the point where
             // it leaves the voice for the mix or for the FX Area.
             if (p->node[n].kind == eNodeOut) {
@@ -15082,14 +15149,14 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
         }
     }
 
-    // What everything after the mix sees of the voices is their SUM, and so do their meters (notes §191).
+    // What everything after the mix sees of the voices is their SUM; their meters see one voice (notes §191).
     for (n = 0; n < p->nodeCount; n++) {
         if (p->node[n].postMix == false) {
             for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
                 value[n][leg] = voiceSum[n][leg];
             }
 
-            meter_node(&p->node[n], n, value[n][0], value[n][1]);
+            meter_node(&p->node[n], n, meterValue[n][0], meterValue[n][1]);
         }
     }
 
@@ -16143,6 +16210,7 @@ static void engine_reset_state(void) {
     memset(&gModuleMeter, 0, sizeof(gModuleMeter));
     memset(&gModuleLed, 0, sizeof(gModuleLed));
     memset(&gMeterEnv, 0, sizeof(gMeterEnv));
+    memset(&gMeterClipHold, 0, sizeof(gMeterClipHold));
     memset(&gOutputGainMilli, 0, sizeof(gOutputGainMilli));
     memset(&gBendMilli, 0, sizeof(gBendMilli));
     memset(&gPeakMilli, 0, sizeof(gPeakMilli));

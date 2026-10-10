@@ -272,6 +272,19 @@ static void backdoor_led_dump(void) {
 
             if (ledCount == 0) {
                 fprintf(file, "-");
+            } else {
+                // engleds=: the engine's lamps for the same module, "-" where it lights none
+                fprintf(file, " engleds=");
+
+                for (uint32_t i = 0; (i < ledCount) && (i < MAX_LEDS_PER_MODULE); i++) {
+                    uint32_t engine = 0;
+
+                    if (sound_engine_module_led(locs[l], index, i, &engine)) {
+                        fprintf(file, "%s%u", (i == 0) ? "" : ",", (unsigned)engine);
+                    } else {
+                        fprintf(file, "%s-", (i == 0) ? "" : ",");
+                    }
+                }
             }
             fprintf(file, " vols=");
 
@@ -560,6 +573,27 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         gSlot                 = slot;
         gPatchParamsEdit.slot = slot; // patch-params panel tracks its own slot copy — keep both in step
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "DEVSLOT") == 0) {
+        // DEVSLOT <0-3|A-D> - select the slot on the DEVICE as well, as the topbar's slot button does
+        uint32_t        slot = 0;
+
+        if ((toupper((unsigned char)arg[0]) >= 'A') && (toupper((unsigned char)arg[0]) <= 'D')) {
+            slot = (uint32_t)(toupper((unsigned char)arg[0]) - 'A');
+        } else if ((sscanf(arg, "%u", &slot) != 1) || (slot > 3)) {
+            backdoor_write_result("ERROR: expected 'DEVSLOT <0-3|A-D>'\n");
+            return;
+        }
+        gSlot                 = slot;
+        gPatchParamsEdit.slot = slot;
+
+        tMessageContent msg  = {0};
+
+        msg.cmd               = eMsgCmdSelectSlot;
+        msg.slot              = slot;
+        msg.slotData.slot     = slot;
+        msg_send(&gToUsbThread, &msg);
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "NEWPATCH") == 0) {

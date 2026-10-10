@@ -16,13 +16,15 @@ hardware. "Dial" means the raw 0-127 value.
 above full scale it skips: 1-2 reads 9, 2-4 reads 11, 4 and over reads 12 with the clip bit (0x40).
 Boundaries within 0.6 dB of -6.02 dB × n; sine, saw and square agree to 0.3 dB.
 The 2-In's meter follows the same law (2026-10-08, §37) and sends 2-4 as 43, i.e. 11 with 0x20 set; the
-canvas draws the low nibble and the clip bit only, so the bit changes nothing on screen. What it means is unknown.
+canvas draws the low nibble and the clip bit only, so the bit changes nothing on screen. 0x20 is a
+one-second hold after any 11, as 0x40 is a one-second hold after any 12: either bit can therefore sit
+on a lower reading. 12 is reached only by a saturated word.
 
 **1.2 Engine.** A 200 ms peak follower per metered module, then the law above via `frexp`. Engine and
 G2 agree on 67 of 80 steps of a saw sweep; the rest are one value high at boundaries, where the
-engine's band-limited saw peaks a fraction of a dB higher. A Voice Area module is metered from the sum
-of the voices after their fades, an FX Area one from its own output (notes §191) - for one note the two
-are the same; what the G2 shows for a chord is not measured.
+engine's band-limited saw peaks a fraction of a dB higher. A Voice Area module is metered from ONE
+voice after its fade - the newest note still held, else the newest voice - and an FX Area one from its
+own output (notes §191). The clip bit is held for a second after the last 12.
 
 **1.3 Rendering.** Low nibble = level; 1-7 green, 8-11 yellow, red above 11 or with bit 0x40.
 
@@ -96,8 +98,13 @@ the same curve.
 Fade1-2 and Fade2-1 STEER rather than crossfade: x = 2u-1, the first side carries -x left of centre,
 the second x right of it, the other is silent - so the centre is silent. Every point fits to 0.001.
 
-**4.3 Modulation (from the reference model).** Position += 4 × attenuator × input: a quarter of full scale
-at a full attenuator sweeps the whole dial. `MOD_INPUT_SCALE`, shared with OscNoise's Width input (§8.5).
+**4.3 Modulation.** Position += 4 × attenuator × input, the input as a fraction of FULL scale: a quarter of
+full scale at a full attenuator sweeps the whole dial. In the engine's units (1.0 = a quarter of full
+scale) that is position += attenuator × input, which Pan and X-Fade now use (2026-10-10). Until then the
+engine applied the 4 to engine units as well, so an LFO into a Pan swung four times too far - 11 Cosmic
+Dream's (attenuator 31) crossed the whole field where it should move about a quarter of it each way, and 10
+Troll's (127) sat hard left or right for most of each cycle. Fade1-2 and Fade2-1 keep `MOD_INPUT_SCALE`
+until their own scaling is checked.
 
 ## 5. MixStereo
 

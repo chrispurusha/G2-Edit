@@ -126,10 +126,10 @@ module that is not offered or not modelled.
 | Mixer 8-1 B | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
 | MixFader | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
 | MixStereo | Confirmed on the G2 | §5 | 19 settings each, Log and Lin (09-12) | - |
-| Fade 1-2 | Confirmed on the G2 | §4.2 | 19 settings, every point within 0.001 (09-12) | mod-input depth not captured |
-| Fade 2-1 | Confirmed on the G2 | §4.2 | as Fade 1-2 | mod-input depth not captured |
-| X-Fade | Confirmed on the G2 | §4.2 | as Fade 1-2 | mod-input depth not captured |
-| Pan | Confirmed on the G2 | §4.2 | as Fade 1-2 | mod-input depth not captured |
+| Fade 1-2 | Confirmed on the G2 | §4.2 | 19 settings, every point within 0.001 (09-12) | mod-input depth not captured, still 4 x the input |
+| Fade 2-1 | Confirmed on the G2 | §4.2 | as Fade 1-2 | mod-input depth not captured, still 4 x the input |
+| X-Fade | Confirmed on the G2 | §4.2, §4.3 | as Fade 1-2 | mod-input depth (Pan's law since 10-10) not captured |
+| Pan | Confirmed on the G2 | §4.2, §4.3 | as Fade 1-2; mod depth, an LFO at 31: +-6.3 dB (10-10) | - |
 
 ### Level
 
@@ -197,7 +197,7 @@ module that is not offered or not modelled.
 
 | Module | State | Reference | On the G2 | Open |
 |---|---|---|---|---|
-| 2 Outputs | Confirmed on the G2 | §63, notes §198 | Pad +6 dB (09-07); the path every G2 check goes through | - |
+| 2 Outputs | Confirmed on the G2 | §63, notes §167, §198 | Pad +6 dB (09-07); an unpatched socket is silent (10-10); the path every G2 check goes through | - |
 | 4 Outputs | Confirmed on the G2 | - | Pad +6 dB (09-07) | - |
 | 2 Inputs | Confirmed on the G2 | §37 | full scale and Pad off the G2's own meter (10-08) | the application has no input device |
 | 4 Inputs | Modelled | §37, §69.12 | through 2-In only | - |

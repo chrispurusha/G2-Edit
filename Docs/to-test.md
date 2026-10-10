@@ -4,6 +4,18 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***LAMPS AND METERS THE ENGINE NOW DRIVES (2026-10-10)*** - notes §194. LOOK in the editor, G2 attached: 8Counter, Mux8-1/1-8
+  and the counters now light their LEDs (they were dark); in engine mode the envelope lamps follow the gate, RandomA blinks
+  at its rate, and the filter/EQ meters move
+- ***LAMPS FOLLOW THE METERED VOICE (2026-10-10)*** - notes §194. LOOK on the engine with a poly patch whose LFO is Poly:
+  the LFO lamp should follow the note just played (the newest held), not voice 0's
+- ***PAN / X-FADE MODULATION A QUARTER AS STRONG (2026-10-10)*** - reference §4.3. LISTEN to 10 Troll, 11 Cosmic Dream,
+  16 Sweep Lots, 17 Mighty Nord and 18 Unreal Dreams against the G2: the LFO panning should now be as wide as the G2's,
+  no longer hard side to side; X-Fade users (01, 02, 07, 08, 13, 14) should sound as the G2 does
+- ***UNPATCHED OUT SOCKET SILENT (2026-10-10)*** - notes §167. LISTEN to 04, 05, 10 and 17 on the engine against the G2:
+  the stereo image should now match (one-sided Outs no longer centred)
+- ***VOICE AREA METERS FOLLOW ONE VOICE (2026-10-10)*** - notes §191. CHECK on the G2 against the engine: play 60, then
+  hold 48 on top and release 60 - both should meter the 48's voice; a clip should stay red for a second after it
 - ***BCHYDRO SEQUENCERS, AGAIN (2026-10-09)*** - findings of that date. LISTEN to 1:2 on the engine through all eight
   variations (about a minute): B, C and D's sequences should run whole, variation 7 included (slot D's four-step
   cycle), with no restarts between bar lines
