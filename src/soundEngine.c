@@ -196,6 +196,8 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define ENV_PARAM_ATTACK         (1)
 #define ENV_PARAM_DECAY          (2)
 #define ENV_PARAM_SUSTAIN        (3)
+#define SAMPLER_PARAM_VEL        (2)   // notes §213
+#define SAMPLER_PARAM_REL        (3)
 #define ENV_PARAM_RELEASE        (4)
 #define ENV_PARAM_OUT_TYPE       (5)   // posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv
 #define ENV_INPUT_GATE           (1)   // node input: 0 is the audio, 1 the Gate jack, 2 AM
@@ -978,6 +980,8 @@ typedef struct {
 typedef struct {
     tNodeKind           kind;
     const tNordSample * sample;      // notes §213 - the Sampler's file, shared through nordSample.c's cache
+    double              samplerVel;  // notes §213 - how far velocity scales its level, 0..1
+    double              samplerRel;  // notes §213 - seconds for a released note to fall 60 dB
     uint32_t            moduleIndex; // so per-node audio state can survive a knob turn (see topology_signature)
     uint32_t            location;    // Voice or FX — the two areas number their modules independently
 
@@ -1338,7 +1342,7 @@ typedef enum {
 #define MORPH_WORD_BYTES    (8u)
 #define NODE_WORDS          ((uint32_t)(sizeof(tEngineNode) / MORPH_WORD_BYTES))
 #define DX_SET_WORDS        ((uint32_t)((DX_OPERATORS * sizeof(tDxOperator)) / MORPH_WORD_BYTES))
-#define MORPH_MASK_WORDS    (4u)       // 256 bits, checked against both of the above below
+#define MORPH_MASK_WORDS    (5u)       // 320 bits, checked against both of the above below
 
 typedef struct {
     uint32_t    count;                     // nodes in the table; 0 when nothing is morphed on this axis
@@ -1500,8 +1504,6 @@ static double               gMeterEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_N
 #define gMeterEnv                  (gMeterEnvBank[SE])
 static uint32_t             gMeterClipHoldBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
 #define gMeterClipHold             (gMeterClipHoldBank[SE])
-static bool                 gSamplerSelfGateBank[SOUND_ENGINE_MAX_ENGINES]; // notes §213 - no envelope to end its notes
-#define gSamplerSelfGate           (gSamplerSelfGateBank[SE])
 static uint32_t             gMeterVoiceBank[SOUND_ENGINE_MAX_ENGINES];      // the voice the face shows - notes §191
 #define gMeterVoice                (gMeterVoiceBank[SE])
 
@@ -6282,9 +6284,11 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeSampler:
         {
-            node->gain   = dial_fraction(param_value(module, variation, 0));
-            node->sample = nord_sample_get(sampler_file(module->key));   // notes §213 - NULL: no file, or unreadable
-            node->active = (param_value(module, variation, 1) != 0.0) && (node->sample != NULL);
+            node->gain       = dial_fraction(param_value(module, variation, 0));
+            node->samplerVel = dial_fraction(param_value(module, variation, SAMPLER_PARAM_VEL));
+            node->samplerRel = adr_time_seconds(param_value(module, variation, SAMPLER_PARAM_REL));
+            node->sample     = nord_sample_get(sampler_file(module->key));   // notes §213 - NULL: no file, or unreadable
+            node->active     = (param_value(module, variation, 1) != 0.0) && (node->sample != NULL);
             break;
         }
         case eNodeMixStereo:
@@ -13628,14 +13632,22 @@ static double sampler_read(const tNordZone * zone, double at, uint32_t channel) 
     return now + (frac * (zone->data[(next * zone->channels) + c] - now));
 }
 
-#define SAMPLER_RELEASE_SECONDS    (0.02)
+#define SAMPLER_SILENT             (0.001) // notes §213 - -60 dB: the released note is over
+#define SAMPLER_MIN_REL_SECONDS    (0.002)
+
+// notes §213 - nothing in its Amp input: the Sampler ends its own notes, by its Release
+static bool sampler_self_released(const tEngineNode * spec) {
+    return (spec->inCount == 0u) || (spec->in[0] < 0);
+}
 
 static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double voicePitch, double * left, double * right) {
+    bool                selfReleased = sampler_self_released(spec);
+
     SE_LOCAL;
 
-    const tNordSample * sample = spec->sample;
-    double *            state  = gLadder[voice][n];   // position, the trigger it started for, zone, -, -, release
-    double              note   = (voicePitch >= 0.0) ? voicePitch : 60.0;
+    const tNordSample * sample       = spec->sample;
+    double *            state        = gLadder[voice][n]; // position, the trigger it started for, zone, -, -, release
+    double              note         = (voicePitch >= 0.0) ? voicePitch : 60.0;
 
     if (state[1] != (double)gVoice[voice].trigger) {
         uint32_t nearest = 0;
@@ -13656,14 +13668,15 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
         state[2] = (double)nearest;
         state[5] = 1.0;
     }
-    // notes §213 - with no envelope in the patch the voice would drone on; a sample's note ends with its key
     *left     = 0.0;
     *right    = 0.0;
 
-    if (gSamplerSelfGate && (gVoice[voice].gate == false)) {
-        state[5] = fmax(0.0, state[5] - (1.0 / (SAMPLER_RELEASE_SECONDS * gSampleRate)));
+    // notes §213 - the damper: from the key's release the note falls 60 dB in Release's time
+    if (selfReleased && (gVoice[voice].gate == false)) {
+        state[5] *= pow(SAMPLER_SILENT, 1.0 / (fmax(spec->samplerRel, SAMPLER_MIN_REL_SECONDS) * gSampleRate));
 
-        if (state[5] <= 0.0) {
+        if (state[5] < SAMPLER_SILENT) {
+            state[5] = 0.0;
             return;
         }
     }
@@ -13672,7 +13685,8 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
     if (zone->looped && (state[0] >= (double)zone->length)) {
         state[0] -= (double)(zone->length - zone->loopStart);
     }
-    double            gain = spec->gain * zone->gain * (gSamplerSelfGate ? state[5] : 1.0);
+    double            vel  = (1.0 - spec->samplerVel) + (spec->samplerVel * ((double)gVoice[voice].velocity / 127.0));
+    double            gain = spec->gain * vel * zone->gain * (selfReleased ? state[5] : 1.0);
 
     *left     = sampler_read(zone, state[0], 0u) * gain;
     *right    = sampler_read(zone, state[0], 1u) * gain;
@@ -14965,6 +14979,15 @@ static bool voice_is_finished(const tSoundEngineParams * paramsIn, uint32_t v, b
     }
 
     for (uint32_t n = 0; n < paramsIn->nodeCount; n++) {
+        // notes §213 - a Sampler releasing its own note holds the voice until it has faded
+        if (  (paramsIn->node[n].kind == eNodeSampler) && (paramsIn->node[n].postMix == false)
+           && sampler_self_released(&paramsIn->node[n])) {
+            if ((paramsIn->node[n].active == true) && (gLadder[v][n][5] > 0.0)) {
+                return false;
+            }
+            continue;
+        }
+
         // Per-voice envelopes only. One after the mix is shaping the effect, not the note, and it
         // has no per-voice state to ask.
         if ((paramsIn->node[n].kind == eNodeDx) && (paramsIn->node[n].postMix == false)) {
@@ -15115,8 +15138,7 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
         }
     }
 
-    gMeterVoice      = meterVoice;   // the lamps follow the same voice
-    gSamplerSelfGate = (ctx->chainHasEnvelope == false);
+    gMeterVoice = meterVoice;        // the lamps follow the same voice
 
     // notes §178
     for (uint32_t v = 0; v < p->voiceCount; v++) {
@@ -15957,7 +15979,9 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
 
     // notes §173
     for (n = 0; n < params.nodeCount; n++) {
-        if (((params.node[n].kind == eNodeEnv) || (params.node[n].kind == eNodeDx)) && (params.node[n].postMix == false)) {
+        if (  (  (params.node[n].kind == eNodeEnv) || (params.node[n].kind == eNodeDx)
+              || ((params.node[n].kind == eNodeSampler) && sampler_self_released(&params.node[n])))  // notes §213
+           && (params.node[n].postMix == false)) {
             chainHasEnvelope = true;   // a DXRouter's Operators carry their own envelopes (§14)
             break;
         }

@@ -1713,16 +1713,18 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "RENDERWAV") == 0) {
-        // RENDERWAV <path> <ms> [<note> <velocity>] - render the local engine offline into a 48 kHz stereo
-        // 16-bit WAV, holding the note for the whole time if one is given, nothing played if not. For
+        // RENDERWAV <path> <ms> [<note> <velocity> [<holdMs>]] - render the local engine offline into a 48 kHz
+        // stereo 16-bit WAV, holding the note for the whole time if one is given (or for holdMs, then
+        // releasing it and rendering on - a release tail), nothing played if not. For
         // measuring the engine with the same analysis as a hardware capture. Refused while a device renders.
         char         path[1024] = {0};
         int32_t      ms         = 0;
         int32_t      note       = -1;
         int32_t      velocity   = 100;
+        int32_t      holdMs     = -1;
 
-        if (sscanf(arg, "%1023s %d %d %d", path, &ms, &note, &velocity) < 2) {
-            backdoor_write_result("ERROR: expected 'RENDERWAV <path> <ms> [<note> <velocity>]'\n");
+        if (sscanf(arg, "%1023s %d %d %d %d", path, &ms, &note, &velocity, &holdMs) < 2) {
+            backdoor_write_result("ERROR: expected 'RENDERWAV <path> <ms> [<note> <velocity> [<holdMs>]]'\n");
             return;
         }
         (void)sound_engine_load_percent();
@@ -1760,10 +1762,16 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         if (note >= 0) {
             sound_engine_note(note, (uint8_t)((velocity < 1) ? 1 : ((velocity > 127) ? 127 : velocity)), true);
         }
+        uint32_t     holdFrames = (holdMs >= 0) ? (uint32_t)(((uint64_t)holdMs * 48000u) / 1000u) : UINT32_MAX;
+        bool         held       = (note >= 0);
 
         for (uint32_t done = 0; done < frames; done += WAV_BLOCK) {
             uint32_t n = ((frames - done) < WAV_BLOCK) ? (frames - done) : WAV_BLOCK;
 
+            if (held && (done >= holdFrames)) {
+                sound_engine_note(note, 0, false);
+                held = false;
+            }
             sound_engine_render(block, WAV_BLOCK, 2);
 
             for (uint32_t i = 0; i < (n * 2u); i++) {
@@ -1774,7 +1782,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             }
         }
 
-        if (note >= 0) {
+        if (held) {
             sound_engine_note(note, 0, false);
         }
         fclose(f);

@@ -1986,7 +1986,7 @@ const tModuleProperties  gModuleProperties[] = {
     {"RndClkB",      3, volumeTypeNone,      ledTypeNo,  moduleGroupRandom   },
     {"Unknown",      0, volumeTypeNone,      ledTypeNo,  moduleGroupNone     },
     {"RndPattern",   3, volumeTypeNone,      ledTypeYes, moduleGroupRandom   },
-    {"Sampler",      2, volumeTypeNone,      ledTypeNo,  moduleGroupOsc      }, };
+    {"Sampler",      3, volumeTypeNone,      ledTypeNo,  moduleGroupOsc      }, };
 
 // moduleType, paramType, position rectangle, anchor, label, range, defaultValue, string map, colour map
 const tParamLocation     paramLocationList[] = {
@@ -2141,6 +2141,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeNoise,      paramTypeBypass,         {{ -3,   3}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          },           // 31 Bypass
     {moduleTypeSampler,    paramTypeCommonDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Level",        128, 100, NULL,                                  NULL          },           // 209 Level
     {moduleTypeSampler,    paramTypeBypass,         {{ -3,   3}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          },           // 209 Bypass
+    {moduleTypeSampler,    paramTypeCommonDial,     {{ 58,  -3}, { 7,  7}}, anchorBottomLeft,  "Vel",          128,   0, NULL,                                  NULL          },           // 209 Vel
+    {moduleTypeSampler,    paramTypeADRTime,        {{ 46,  -3}, { 7,  7}}, anchorBottomLeft,  "Rel",          128,  49, NULL,                                  NULL          },           // 209 Rel
     // 32 Eq2Band
     {moduleTypeEq2Band,    paramTypedB,             {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                                  NULL          },           // 32 Lo Gain
     {moduleTypeEq2Band,    paramTypedB,             {{ 43,  -3}, { 7,  7}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                                  NULL          },           // 32 Hi Gain

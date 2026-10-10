@@ -3626,8 +3626,18 @@ oscillator - it has no amplitude shaping of its own. Two outputs, L and R: a ste
 (nordSample.c notes §9), or the same signal on both from a mono one - which is why it is on the list of
 nodes that write their own second leg, not the default that copies the first leg over it. An Amp input (2026-10-10, CT) scales both
 channels by whatever is patched into it, unscaled as LevMult does - an envelope's Env output into it shapes a
-stereo sample with no LevMult per channel; unpatched, the sample plays at full level. Any envelope in the
-patch also ends the self-gate below, so the envelope's Release, held by the sustain pedal, ends the note.
+stereo sample with no LevMult per channel; unpatched, the sample plays at full level. With Amp patched, the
+envelope's Release, held by the sustain pedal, ends the note. Vel (2026-10-10, CT): the
+note's level is (1 - Vel) + Vel x velocity/127 - at 0 velocity does nothing, at full it scales linearly
+(velocity 32 plays 12 dB below 127). Linear is a choice, not a measurement. The face went to three rows for it,
+leaving room above for the sample's name. The node's new field pushed tEngineNode past 256 words, so the morph
+masks grew to five words. Rel (2026-10-10, CT) - the damper: with nothing in Amp the Sampler ends its own
+notes, falling 60 dB in Rel's time from the key's release, exponentially as a damped string does; the dial
+is the envelopes' time law (0 = a few ms, 49 = 0.3 s, the default; 127 = 45 s). The sustain pedal holds the key
+down (§26.3), so it is the damper pedal with no morph needed. Such a Sampler counts as the voice's envelope:
+the engine's own anti-click ramp - which had cut every envelope-less note a few ms after the key, whatever
+the Sampler did - stays off, and the voice lives until the Sampler's release is over. With Amp patched, the
+envelope there does all of it, as before.
 
 THE LOOP (2026-10-10, third reading). The zone plays through to its end, then round a short loop of a whole
 number of cycles back to the loop start (nordSample.c notes §5) - exact, so no crossfade and no level
@@ -3639,6 +3649,6 @@ tuned so its root is exact (nordSample.c notes §7).
 
 A NOTE ENDS WITH ITS KEY WHEN NOTHING ELSE ENDS IT. With no envelope in the patch the engine lets voices drone
 (notes §20), which for a looping sample meant a note that never stopped and a repeated key that stacked one
-voice on another. With no envelope, the Sampler now fades out over 20 ms once its key is up
-(`gSamplerSelfGate`, `SAMPLER_RELEASE_SECONDS`); with one, the envelope decides and the Sampler plays on.
+voice on another. The Sampler now ends its own notes by its Rel dial whenever nothing is in its Amp input
+(`sampler_self_released()`, the damper above); with an envelope in Amp, the envelope decides.
 
