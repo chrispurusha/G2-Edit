@@ -984,6 +984,11 @@ static void parse_select_variation(uint32_t slot, uint8_t * buff, uint32_t * bit
 
     LOG_DEBUG("Got variation select: slot %u variation %u at %llu ms\n", (unsigned)slot, (unsigned)variation + 1u,
               (unsigned long long)get_time_ms());
+
+    // soundEngine notes §214 - while the engine plays, it switches the variations itself
+    if (sound_engine_active() == true) {
+        return;
+    }
     gPatchDescr[slot].activeVariation = variation;
     set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
                                    (tTopbarControlId)(topbarVariation1Id + variation));
@@ -4572,6 +4577,7 @@ static int send_write_data(tMessageContent * messageContent) {
 static void state_handler(void) {
     tMessageContent messageContent = {0};
     bool            foundOneChange = false;
+    bool            newContent     = false;
 
     //TODO - Don't like early returns. Use retVal
 
@@ -4728,6 +4734,10 @@ static void state_handler(void) {
             send_get_patch_data(i);
             send_start();
 
+            if (slot_content_hash((uint32_t)i) != before) {
+                newContent = true;
+            }
+
             // From the bank location we asked for; or from somewhere we cannot know (the G2's panel)
             // if what came back is not what we already had - a late notice of our own write is not.
             if (sPendingBankOrigin[i] != BANK_ORIGIN_NONE) {
@@ -4737,14 +4747,15 @@ static void state_handler(void) {
                 gBankOrigin[i] = BANK_ORIGIN_NONE;
                 g2_replaced_patch((uint32_t)i);
             }
-            sPendingBankOrigin[i]       = BANK_ORIGIN_NONE;
-            foundOneChange              = true;
-            sPerfStartSlots            |= 1u << i;
+            sPendingBankOrigin[i] = BANK_ORIGIN_NONE;
+            foundOneChange        = true;
+            sPerfStartSlots      |= 1u << i;
         }
     }
 
-    // soundEngine notes §216 - each pass that brings slots of it back starts it again, until all four are in
-    if ((foundOneChange == true) && ((uint64_t)get_time_ms() < sPerfStartUntilMs)) {
+    // soundEngine notes §216 - each pass that brings new slots of it back starts it again, until all four are in;
+    // a late notice of our own write brings nothing new
+    if ((newContent == true) && ((uint64_t)get_time_ms() < sPerfStartUntilMs)) {
         sound_engine_start_performance();
 
         if (sPerfStartSlots == ((1u << MAX_SLOTS) - 1u)) {

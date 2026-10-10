@@ -3610,16 +3610,24 @@ The truncated step is 300 ppm slow at 102 BPM (297.09 words a tick becomes 297),
 the shared position above advances by the same exact steps. Afterwards the engine stays within 1-4 ms of
 the G2 at every variation switch over 66 s.
 
-## 214. With the G2 connected, the G2 switches the variations (`cc_to_slot()`)
+## 214. The engine switches its own variations, G2 connected or not (`cc_to_slot()`)
 
 A CtrlSend sending controller 70 to another slot selects that slot's variation (§62.3) - BCHydro_DZLW's slot A
-steps B, C and D through theirs. With the G2 connected, the instrument runs the same CtrlSend and reports each
-change it makes; the database follows it, and the engine plays the database's variation. Applying the
-engine's own switch as well made two masters a little out of step: the slots stepped twice as often or more,
-and each extra switch cut their sequences short (CT, 2026-10-10: "slot A's control of the variation is
-happening twice or 4 times as fast"). So while connected the engine leaves controller 70 to the instrument;
-offline, and in the plug-in, it selects the variation itself as before. Every other controller still goes
-through.
+steps B, C and D through theirs. With the G2 connected the instrument runs the same CtrlSend and reports each
+change it makes. Applying both made two masters a little out of step: the slots stepped twice as often or
+more, and each extra switch cut their sequences short (CT, 2026-10-10: "slot A's control of the variation is
+happening twice or 4 times as fast").
+
+The first answer (2026-10-10) made the G2 the master: while connected the engine left controller 70 to the
+instrument and played the database's variation as the G2's reports set it. But the reports arrive over USB
+some milliseconds late and unevenly, timed by the G2's clock rather than the engine's, and every switch that
+restarts a sequence (§58.2) restarted it at the report's time - with §216 in place the performance played
+correctly offline and drifted only with the G2 connected (CT: "When connected, G2 is interfering with the
+sequencer triggering/resets"). So the engine is now the master whenever it plays: it applies its own
+CtrlSend's switch always, and while it is on `parse_select_variation()` (usbComms.c) ignores the G2's
+variation reports. A variation chosen in the editor is set locally as before; one chosen on the G2's own
+panel does not reach the engine while it plays. The top bar shows the engine's variation (topbarRender.c
+notes §5). Every other controller still goes through.
 
 ## 215. A CtrlSend's variation change is applied at once (`sound_engine_set_variation_wake()`)
 
@@ -3646,6 +3654,9 @@ the correct starting point").
 
 Now a performance load asks the engine to start the performance (the three file loaders, and a
 performance from a G2 bank or the G2's panel as its slots come back - usbComms.c, up to all four or 5 s).
+So does switching the engine on in the application (`sound_engine_start()`): a performance already on the
+G2 when the engine starts had no load to ask, and its slots came up wherever their first graphs and the
+master position left over from the last run put them (CT, 2026-10-10).
 At the next block every slot of the document is marked for a reset; each is cleared as a new graph is
 (§212), and every slot stays silent while the master position is held at zero. When every slot that
 renders has been cleared and no slot's graph has changed for PERF_START_SETTLE_S (0.2 s - long enough for

@@ -48,3 +48,12 @@ thing on screen that changes with no event behind it — a lamp goes out because
 because anything happened — so do_graphics_loop() compares this against what it last drew and
 asks for a frame when it differs. Per lamp rather than "either", so Tx going out while Rx stays
 lit is still a change.
+
+## 5. The variation buttons follow the slot's variation
+
+Variations 1-8 and Init are lit from `gPatchDescr[slot].activeVariation` at every draw, not from the colour
+`set_exclusive_button_highlight()` last stored. That colour was set only where something remembered to
+call it - a click, a slot switch, a report from the G2 - so a variation the sound engine selected itself
+(a CtrlSend in another slot, soundEngine notes §214) showed only after switching slots and back (CT,
+2026-10-10). The engine applies its switch in `sound_engine_update_from_patch()`, at the start of the
+same frame, so the button lights with it.

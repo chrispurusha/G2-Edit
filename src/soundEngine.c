@@ -2868,6 +2868,7 @@ bool sound_engine_start(void) {
         return false;
     }
     FOR_EACH_SLOT_ENGINE(set_active_one(true));
+    sound_engine_start_performance();   // notes §216 - whatever is loaded starts as a performance does
 
     return true;
 }
@@ -3134,19 +3135,16 @@ static void cc_to_slot(uint32_t slot, uint32_t controller, uint32_t value) {
         SE_LOCAL;
 
         if (controller == MIDI_CC_VARIATION) {
-            // notes §214 - with the G2 connected it runs the same CtrlSend and reports each change it makes,
-            // which the database follows; a second switch from here would step the slot twice as often
-            if (!device_ready()) {
-                // §62.3 - the instrument's mapping: value >> 4, eight variations across 0-127
-                uint32_t variation = value / 16u;
+            // notes §214 - the engine switches its own slots, G2 connected or not; the G2's reports are ignored
+            // §62.3 - the instrument's mapping: value >> 4, eight variations across 0-127
+            uint32_t variation = value / 16u;
 
-                atomic_store(&gVariationRequest, (int32_t)((variation < 8u) ? variation : 7u));
+            atomic_store(&gVariationRequest, (int32_t)((variation < 8u) ? variation : 7u));
 
-                void     (*wake)(void) = atomic_load(&sVariationWake);
+            void     (*wake)(void) = atomic_load(&sVariationWake);
 
-                if (wake != NULL) {
-                    wake();   // notes §215 - the rebuild that makes it the slot's variation, now rather than next tick
-                }
+            if (wake != NULL) {
+                wake();   // notes §215 - the rebuild that makes it the slot's variation, now rather than next tick
             }
         } else {
             uint32_t channel = gSynthSettings.midiChanSlot[slot % MAX_SLOTS];

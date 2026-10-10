@@ -181,6 +181,12 @@ void render_top_bar(void) {
         bool isVariation = (i >= (int)topbarVariation1Id) && (i <= (int)topbarVariationInitId);
         bool isLinked    = isVariation && variation_is_linked(slot, (uint32_t)i - (uint32_t)topbarVariation1Id);
 
+        // notes §5 - from the slot's own variation, whoever changed it (a click, the G2, the engine's CtrlSend)
+        if (isVariation && !gTopbarControls[i].isPressed) {
+            buttonBackgroundColour = (((uint32_t)i - (uint32_t)topbarVariation1Id) == gPatchDescr[slot].activeVariation)
+                                     ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
+        }
+
         if (isLinked && !gTopbarControls[i].isPressed) {
             bool isSelected = (((uint32_t)i - (uint32_t)topbarVariation1Id) == gPatchDescr[slot].activeVariation);
 
