@@ -202,6 +202,8 @@ typedef struct tG2Document {
     // performance, not one slot of somebody else's. See dataBase.c for the lock's discipline.
     tModule          gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES];
     tCable           gCable[MAX_SLOTS][locationMax][MAX_NUM_CABLES];
+    bool             gEngineOnlyIndex[MAX_SLOTS][locationMax][MAX_NUM_MODULES];   // dataBase.c notes §8
+    tSamplerFile     gSamplerFile[MAX_SAMPLER_FILES];                             // dataBase.c notes §9
     pthread_rwlock_t gDatabaseLock;
 
     // Formerly file-static in globalVars.c - see variation_is_linked() below.
@@ -352,6 +354,8 @@ tG2Document * g2_document_current(void);
 #define gDragPrevY                       (gDoc->gDragPrevY)
 #define gModule                          (gDoc->gModule)
 #define gCable                           (gDoc->gCable)
+#define gEngineOnlyIndex                 (gDoc->gEngineOnlyIndex)
+#define gSamplerFile                     (gDoc->gSamplerFile)
 #define gDatabaseLock                    (gDoc->gDatabaseLock)
 #define gVariationLinks                  (gDoc->gVariationLinks)
 

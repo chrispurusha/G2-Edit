@@ -28,6 +28,7 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
+#include "types.h"
 
 // notes §1
 bool platform_any_mouse_button_down(void);
@@ -59,6 +60,11 @@ void recent_files_clear(void);
 // notes §2
 void file_menu_open_patch(void);
 void file_menu_open_path(const char * path);
+// menuActions.c notes §15 - the Sampler's file: the menu names the module, the render loop opens the browser
+void sampler_choose_begin(tModuleKey key);
+void sampler_choose_open(void);
+// persistence.c - the sample browser remembers its own folder, apart from the patch browser's
+void file_browser_for_samples(bool samples);
 // THE KIND IS PASSED IN, NOT INFERRED. These used to read gGlobalSettings.perfMode, which made the
 // operation follow the G2's mode rather than the menu item the user picked - and meant that in
 // Performance mode a slot's own patch could not be saved to a file at all. See code-notes §14.

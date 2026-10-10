@@ -4,6 +4,12 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***CHOOSE SAMPLE AND .PCHX (2026-10-10)*** - menuActions.c notes §15, patchWrite.c notes §2. Right-click a Sampler >
+  Choose Sample... - the browser opens in Nord Sound Manager's folder, the module takes the file's name and plays it;
+  File > Save As with a Sampler writes NAME.pchx whatever extension is typed; reopening it restores the Sampler and its file
+- ***SAMPLER, FIRST VERSION (2026-10-10)*** - notes §213. LISTEN: Oscillators palette > Sampler into an EnvADSR and an Out, engine on -
+  the Melodica at the key played (short: no loops yet). With the G2 connected: adding, cabling and editing it must not
+  reach the G2 (no error, the G2's slot unchanged), and Store/PUSH must leave it out
 - ***LAMPS AND METERS THE ENGINE NOW DRIVES (2026-10-10)*** - notes §194. LOOK in the editor, G2 attached: 8Counter, Mux8-1/1-8
   and the counters now light their LEDs (they were dark); in engine mode the envelope lamps follow the gate, RandomA blinks
   at its rate, and the filter/EQ meters move

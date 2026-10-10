@@ -65,6 +65,7 @@ uint32_t palette_group_modules(tPaletteGroup group, tModuleType * out, uint32_t 
 const char * palette_group_name(tPaletteGroup group);
 
 tModuleGroup module_group(tModuleType moduleType);
+bool module_is_engine_only(tModuleType moduleType);
 const char * module_role_for(tModuleType moduleType, tRoleKind kind, uint32_t index);
 uint32_t module_index_for_role(tModuleType moduleType, tRoleKind kind, const char * role);
 bool module_group_has_roles(tModuleGroup group);

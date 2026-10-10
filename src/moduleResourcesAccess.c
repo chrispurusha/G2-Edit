@@ -545,6 +545,11 @@ bool module_group_has_roles(tModuleGroup group) {
     return false;
 }
 
+// A module the local engine plays and the G2 does not have: kept off the instrument (dataBase.c notes §8)
+bool module_is_engine_only(tModuleType moduleType) {
+    return moduleType == moduleTypeSampler;
+}
+
 void init_module_resource_cache(void) {
     tModuleType t = (tModuleType)0;
 

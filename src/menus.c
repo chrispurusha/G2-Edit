@@ -40,6 +40,7 @@ extern "C" {
 #include "midiInput.h"
 #include "graphics.h"
 #include "menus.h"
+#include "misc.h"
 #include "selection.h"
 #include "undo.h"
 #include "moduleReplace.h"
@@ -529,6 +530,12 @@ static void menu_action_delete_module(int index) {
         delete_selection();
         update_module_up_rates();
     }
+}
+
+// menuActions.c notes §15 - the browser opens from the render loop, not from inside this callback
+static void action_choose_sample(int index) {
+    (void)index;
+    sampler_choose_begin(gMenuContext.moduleKey);
 }
 
 static void action_rename_module(int index) {
@@ -2391,6 +2398,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         kItemParamsToMarked,
         kItemDelete,
         kItemExclude,
+        kItemSample,
         kItemTerminator
     };
 
@@ -2412,6 +2420,8 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         },
         {"Delete",       RGB_GREY_3, menu_action_delete_module,           0, NULL},
         {NULL,           RGB_GREY_3, action_toggle_exclude_from_mutation, 0, NULL},
+        // Labelled only on a Sampler: elsewhere its NULL label ends the menu here
+        {NULL,           RGB_GREY_3, action_choose_sample,                0, NULL},
         {NULL,           RGB_BLACK,  NULL,                                0, NULL}
     };
 
@@ -2464,6 +2474,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     snprintf(gExcludeMutationMenuLabel, sizeof(gExcludeMutationMenuLabel), "[%s] Exclude From Mutation",
              excluded ? "x" : " ");
     menuItems[kItemExclude].label             = gExcludeMutationMenuLabel;
+    menuItems[kItemSample].label              = ((module != NULL) && (module->type == moduleTypeSampler)) ? "Choose Sample..." : NULL;
 
     unsigned rows           = (module != NULL) ? (unsigned)gModuleProperties[module->type].height : 0u;
 

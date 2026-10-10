@@ -29,6 +29,7 @@ SOURCES=(
     "$HERE/src/soundEngine.c"
     "$HERE/src/paramCurves.c"
     "$HERE/src/waveModels.c"
+    "$HERE/src/nordSample.c"
     "$HERE/src/dataBase.c"
     "$HERE/src/globalVars.c"
     "$HERE/src/cableChain.c"

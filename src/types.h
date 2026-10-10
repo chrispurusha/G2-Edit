@@ -239,6 +239,8 @@ typedef enum {
     moduleTypeRndClkB,
     moduleTypeUnknown207,
     moduleTypeRndPattern,
+    // Engine-only modules, past the G2's last type: never sent to the instrument (dataBase.c notes §8)
+    moduleTypeSampler,
     moduleTypeMax
 } tModuleType;
 
@@ -544,6 +546,16 @@ typedef struct {
     uint32_t location;
     uint32_t index;
 } tModuleKey;
+
+// dataBase.c notes §9 - the sample file one engine-only Sampler plays
+#define MAX_SAMPLER_FILES    (32)
+#define SAMPLER_PATH_SIZE    (1024)
+
+typedef struct {
+    bool       used;
+    tModuleKey key;
+    char       path[SAMPLER_PATH_SIZE];
+} tSamplerFile;
 
 
 typedef struct {

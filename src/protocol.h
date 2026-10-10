@@ -28,6 +28,7 @@ void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name);
 void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
 void write_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * bitPos);
 void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
+void protocol_include_engine_only(bool include);
 void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos);
 void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
 void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos);

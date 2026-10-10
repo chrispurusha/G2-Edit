@@ -28,6 +28,7 @@ option(G2_WERROR "warnings are errors, as in the Xcode project" ON)
 set(G2_SOURCES
     SynthLib/src/alertDialog.c
     SynthLib/src/bankBrowser.cpp
+    SynthLib/src/breakpointGraph.c
     SynthLib/src/clickRegion.c
     SynthLib/src/contextMenu.c
     SynthLib/src/fileBrowser.cpp
@@ -61,6 +62,7 @@ set(G2_SOURCES
     src/dataBase.c
     src/deviceSync.c
     src/floatingPanels.c
+    src/frontPanel.c
     src/globalVars.c
     src/graphics.c
     src/helpPanel.c
@@ -78,6 +80,7 @@ set(G2_SOURCES
     src/mutator.c
     src/mutatorUI.c
     src/nameCache.c
+    src/nordSample.c
     src/noteStack.c
     src/palette.c
     src/paramCurves.c

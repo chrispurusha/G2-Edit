@@ -104,6 +104,7 @@ SOURCES=(
     "$HERE/src/paramCurves.c"
     # The measured wave laws, shared by the renderer and the sound engine — see waveModels.h.
     "$HERE/src/waveModels.c"
+    "$HERE/src/nordSample.c"
     "$HERE/src/dataBase.c"
     "$HERE/src/globalVars.c"
     "$HERE/src/cableChain.c"

@@ -575,6 +575,22 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         gPatchParamsEdit.slot = slot; // patch-params panel tracks its own slot copy — keep both in step
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "SAMPLEFILE") == 0) {
+        // SAMPLEFILE <VA|FX> <index> <path> - a Sampler's file, as Choose Sample... sets it (no browser)
+        char       loc[8] = {0};
+        unsigned   index  = 0;
+        int        used   = 0;
+        tModuleKey key    = {0};
+
+        if ((sscanf(arg, "%7s %u %n", loc, &index, &used) != 2) || (used == 0)) {
+            backdoor_write_result("ERROR: expected 'SAMPLEFILE <VA|FX> <index> <path>'\n");
+            return;
+        }
+        key.slot     = gSlot;
+        key.location = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        key.index    = index;
+        backdoor_write_result(sampler_file_set(key, arg + used) ? "OK\n" : "ERROR: no room\n");
+        sound_engine_update_from_patch();
     } else if (strcmp(cmd, "DEVSLOT") == 0) {
         // DEVSLOT <0-3|A-D> - select the slot on the DEVICE as well, as the topbar's slot button does
         uint32_t        slot = 0;

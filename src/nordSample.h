@@ -1,6 +1,5 @@
 /*
  * The G2 Editor application.
- *
  * Copyright (C) 2026 Chris Turner <chris_purusha@icloud.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,26 +15,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+// Notes: Docs/code-notes/nordSample.c.md - "// notes §k" refers there.
 
-#ifndef PATCH_WRITE_H
-#define PATCH_WRITE_H
+#ifndef __NORD_SAMPLE_H__
+#define __NORD_SAMPLE_H__
 
-#include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
+#define NORD_SAMPLE_MAX_ZONES    (64)
+
+typedef struct {
+    float *  data;          // -1..1, mono
+    uint32_t length;
+    double   rootNote;      // MIDI note the zone sounds at its own rate (notes §3)
+} tNordZone;
+
+typedef struct {
+    double    sampleRate;
+    uint32_t  zoneCount;
+    tNordZone zone[NORD_SAMPLE_MAX_ZONES];
+} tNordSample;
+
+bool nord_sample_load(const char * path, tNordSample * sample);
+void nord_sample_free(tNordSample * sample);
+const tNordSample * nord_sample_get(const char * path);
+
 #endif
-
-bool slot_has_engine_only_modules(uint32_t slot);
-const char * patch_save_path(uint32_t slot, const char * path, char * out, size_t outSize);
-void engine_only_header_apply(uint32_t slot, const uint8_t * header, size_t length);
-int write_database_to_file(const char * filepath, uint32_t slot);  // EXIT_SUCCESS / EXIT_FAILURE
-int write_perf_to_file(const char * filepath);                     // EXIT_SUCCESS / EXIT_FAILURE
-uint8_t * write_perf_to_memory(size_t * sizeOut);                  // the .prf2 image; the caller frees it
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif // PATCH_WRITE_H

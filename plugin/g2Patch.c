@@ -32,6 +32,7 @@
 #include "protocol.h"
 #include "utils.h"
 #include "soundEngine.h"
+#include "patchWrite.h"
 #include "g2Patch.h"
 
 // Parse a .pch2 image already in memory. Split out from the file loader so the built-in patch and a
@@ -74,6 +75,7 @@ bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot
     clear_slot_data(slot);
     // notes §2
     parse_patch(slot, (uint8_t *)(buff + byteOffset), (uint32_t)((fileSize - byteOffset) - 2));
+    engine_only_header_apply(slot, buff, (size_t)fileSize);   // patchWrite.c notes §2
     return true;
 }
 
@@ -225,6 +227,7 @@ tG2FileKind g2_plugin_open_file(const char * filepath, uint32_t slot) {
     if ((type == 0) && (slot < MAX_SLOTS)) {
         clear_slot_data(slot);
         parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+        engine_only_header_apply(slot, buff, (size_t)fileSize);   // patchWrite.c notes §2
         set_patch_name_from_filename(slot, filepath);
         remember(gSavedPatchPath[slot], filepath);
         kind = eG2FilePatch;

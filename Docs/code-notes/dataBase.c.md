@@ -104,3 +104,23 @@ The patch Volume lives on a hidden module in the Morph location, and the top bar
 only while that module is active. A new patch gets the level the instrument's own new patches carry;
 a loaded one that has none gets the full level (protocol notes §23). It never touches a Volume that
 is already there.
+
+## 8. Engine-only modules (`gEngineOnlyIndex`, `database_index_is_engine_only()`)
+
+A module the local engine plays and the G2 does not have (`module_is_engine_only()`, the Sampler first)
+must never reach the instrument: neither as a live edit nor inside a whole patch, where the G2 would meet
+a module type it does not know. Two guards, one each side:
+- protocol.c's writers leave the module out, and every cable, parameter, morph, name, knob and controller
+  naming it (`kept_off_device()`). The same writers produce .pch2 files, so a saved file does not carry it
+  either - deliberately, until the engine-only part of a patch has a file of its own.
+- usbComms.c drops any queued edit that names one (`names_engine_only_module()`).
+
+The edit for a DELETE is queued before the database forgets the module, but processed after, so the
+dispatcher cannot ask the database what type it was. Hence this per-index mark: set when a module is
+written, kept through its delete, replaced when another module takes the index, cleared with the slot.
+
+## 9. A Sampler's sample file (`gSamplerFile`, `sampler_file()`, `sampler_file_set()`)
+
+Up to 32 per document, keyed by slot, area and index, kept beside the database rather than in tModule, whose
+size is multiplied by every slot, area and index of every document. An entry goes when its module is deleted,
+when its slot is cleared, or when a module of another type is written to its index.

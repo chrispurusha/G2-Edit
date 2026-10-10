@@ -3610,3 +3610,18 @@ The truncated step is 300 ppm slow at 102 BPM (297.09 words a tick becomes 297),
 the shared position above advances by the same exact steps. Afterwards the engine stays within 1-4 ms of
 the G2 at every variation switch over 66 s.
 
+## 213. The Sampler (`eNodeSampler`, `sampler_step()`) - the first engine-only module
+
+A module the G2 does not have: type 209, past the instrument's last (`moduleTypeSampler`), kept off the
+instrument entirely (dataBase.c notes §8). It plays a Nord sample file (nordSample.c) at the voice's key:
+each note picks the zone whose pitch is nearest and restarts it, read with linear interpolation at
+2^((key - zone pitch)/12) x 44.1 kHz / the graph rate, scaled by Level. Pitch follows bend and glide
+through the voice's pitch; a note-on is the voice's trigger count moving.
+
+Each Sampler plays its own file, chosen from its module menu (Choose Sample..., menuActions.c notes §15)
+and saved with the patch in a .pchx (patchWrite.c notes §2); with no file, or one that cannot be read, it
+is inactive and silent. Files are loaded once and shared (nordSample.c notes §4). Still to come: the zones
+play once, without their loops, so a held note stops after a fraction of a second; and the zone's pitch is
+measured from its period rather than read from the file's key map. Put an envelope after it as with any
+oscillator - it has no amplitude shaping of its own.
+

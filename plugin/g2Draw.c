@@ -141,6 +141,10 @@ static void g2_on_file_saved(const char * path) {
         return;
     }
 
+    char extended[1024] = {0};
+
+    path = patch_save_path(gSlot, path, extended, sizeof(extended));   // patchWrite.c notes §2
+
     if (write_database_to_file(path, gSlot) != EXIT_SUCCESS) {
         show_alert("Save Patch", "The patch could not be written. Check the folder is writable.");
         return;
@@ -279,6 +283,10 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
                     // Where it opens and what it remembers are set up once at start-up by
                     // load_saved_settings() (persistence.c), exactly as in the application.
                     open_file_browser_read(g2_on_file_chosen);
+                    break;
+
+                case eRspShowOpenSample:
+                    sampler_choose_open();   // menuActions.c notes §15
                     break;
 
                 case eRspOpenPath:

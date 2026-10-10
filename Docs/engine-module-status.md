@@ -25,7 +25,7 @@ module that is not offered or not modelled.
 
 | Group | Confirmed on the G2 | Modelled | Approximate | Partial | No sound | Not implemented |
 |---|---|---|---|---|---|---|
-| **Oscillators** | Osc A, Osc B, Osc C, Osc D, Osc Shape B, Osc Dual, Noise Osc, Noise, Osc Percussion, Drum Synth, FM Operator, DX Router | Osc Phase Mod, Osc Shape A, Metallic Noise, Osc String, Driver, Resonator, Osc Master | - | - | - | - |
+| **Oscillators** | Osc A, Osc B, Osc C, Osc D, Osc Shape B, Osc Dual, Noise Osc, Noise, Osc Percussion, Drum Synth, FM Operator, DX Router | Osc Phase Mod, Osc Shape A, Metallic Noise, Osc String, Driver, Resonator, Osc Master | - | Sampler | - | - |
 | **Filters** | Multi Filter, Comb Filter, Eq 2-band, Eq 3-band, Eq Peak | LP Filter, HP Filter, Nord Filter, Classic Filter, Phase Filter, Static Filter, FltVoice, WahWah, Vocoder | - | - | - | - |
 | **Envelopes** | Envelope ADSR, Envelope AHD, Envelope H, Envelope Mod AHD, Envelope Mod ADSR | Envelope ADR, Envelop ADDSR, Envelope D, Envelope Multi | - | - | - | - |
 | **LFOs** | LFO A, LFO Shp A, Clock Generator | LFO B, LFO C | - | - | - | - |
@@ -41,7 +41,7 @@ module that is not offered or not modelled.
 | **Random** | - | Random A, Random B, Rnd Clock A, Rnd Clock B, Rnd Trig, Rnd Pattern | - | - | - | - |
 | **Note** | - | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide, Pitch Tracker, Zero Crossing Counter, Level Scaler | - | - | - | - |
 | **MIDI** | CtrlSend | CtrlRcv, NoteRcv | - | NoteSend | PCSend, NoteZone, Automate | - |
-| **Total 170** | **62** | **98** | **5** | **1** | **4** | **0** |
+| **Total 171** | **62** | **98** | **5** | **2** | **4** | **0** |
 
 ### Oscillators
 
@@ -57,6 +57,7 @@ module that is not offered or not modelled.
 | Osc Dual | Confirmed on the G2 | §12.4, §12.5 | levels, duty, phase (09-12); PW and Phase mod (10-03) | - |
 | Noise Osc | Confirmed on the G2 | §8.2-§8.5 | 09-12 capture agrees 110 Hz-1 kHz (the old model's fit) | level above 1 kHz not re-captured since the §8 model |
 | Noise | Confirmed on the G2 | §7.2a | 09-12 capture reproduced through the desk's shelf to a constant | - |
+| Sampler | Partial | notes §213 | engine only - the G2 has no such module | one fixed sample file, played without its loops; zones chosen by their measured pitch |
 | Metallic Noise | Modelled | §66 | - | no capture |
 | Osc Percussion | Confirmed on the G2 | §40 | 8 takes: levels 0.1 dB, decay 2 ms, pitch exact (09-25) | - |
 | Drum Synth | Confirmed on the G2 | §39 | Master Freq 0.2% (09-21); noise, click, oscillator energies within 0.8 dB (09-25) | level curve set by §39.3, not fitted to the 09-20 sweeps |

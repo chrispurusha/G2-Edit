@@ -303,6 +303,7 @@ void read_file_into_memory_and_process(const char * filepath) {
         if (type == 0) {
             clear_slot_data(slot);
             parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+            engine_only_header_apply(slot, buff, (size_t)fileSize);   // patchWrite.c notes §2
             set_patch_name_from_filename(slot, filepath);
         } else if (type == 1) {
             // Performance file — parse_perf clears all 4 slots and populates them; slot names come
@@ -445,8 +446,15 @@ void show_offline_conflict_dialog(uint32_t slotMask) {
                 on_offline_conflict_choice);
 }
 
-static void on_file_saved(const char * path) {
-    uint32_t slot = gSlot;
+static void on_file_saved(const char * chosen) {
+    uint32_t     slot           = gSlot;
+    char         extended[1024] = {0};
+    const char * path           = chosen;
+
+    // patchWrite.c notes §2 - a patch holding an engine-only module is written as .pchx
+    if ((chosen != NULL) && !file_menu_save_is_perf()) {
+        path = patch_save_path(slot, chosen, extended, sizeof(extended));
+    }
 
     if (path) {
         LOG_INFO("Saving file: %s", path);
@@ -739,6 +747,10 @@ static void check_action_flags(void) {
                 case eRspShowOpenRead:
                     // Deferred from a menu click so the browser opens from the render loop, not mid-callback.
                     open_file_browser_read(on_file_opened);
+                    break;
+
+                case eRspShowOpenSample:
+                    sampler_choose_open();   // menuActions.c notes §15
                     break;
 
                 case eRspOpenPath:

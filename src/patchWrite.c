@@ -28,6 +28,76 @@
 #include "dataBase.h"
 #include "globalVars.h"
 #include "patchWrite.h"
+#include "moduleResourcesAccess.h"
+
+#define PCHX_EXTENSION    ".pchx"
+#define PCH2_EXTENSION    ".pch2"
+
+static bool has_suffix(const char * text, const char * suffix) {
+    size_t length = strlen(text);
+    size_t tail   = strlen(suffix);
+
+    return (length >= tail) && (strcasecmp(text + length - tail, suffix) == 0);
+}
+
+// notes §2 - does this slot hold anything a .pch2 cannot carry?
+bool slot_has_engine_only_modules(uint32_t slot) {
+    for (uint32_t l = 0; l < (uint32_t)locationMorph; l++) {
+        for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+            tModule * module = get_module_slot(slot, l, i);
+
+            if ((module != NULL) && module->active && module_is_engine_only(module->type)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+// notes §2 - the name a patch is saved under: .pchx when it holds engine-only modules
+const char * patch_save_path(uint32_t slot, const char * path, char * out, size_t outSize) {
+    if (!slot_has_engine_only_modules(slot) || has_suffix(path, PCHX_EXTENSION)) {
+        return path;
+    }
+    size_t stem = strlen(path) - (has_suffix(path, PCH2_EXTENSION) ? strlen(PCH2_EXTENSION) : 0u);
+
+    snprintf(out, outSize, "%.*s%s", (int)stem, path, PCHX_EXTENSION);
+    return out;
+}
+
+// notes §2 - the header's Sample= lines, read back after the binary has been parsed into the slot
+void engine_only_header_apply(uint32_t slot, const uint8_t * header, size_t length) {
+    const uint8_t * zero = memchr(header, 0, length);   // the text header ends at the first zero
+    size_t          at   = 0;
+
+    length = (zero != NULL) ? (size_t)(zero - header) : length;
+
+    while (at < length) {
+        size_t   end                          = at;
+
+        while ((end < length) && (header[end] != '\r') && (header[end] != '\n') && (header[end] != '\0')) {
+            end++;
+        }
+        char     line[SAMPLER_PATH_SIZE + 32] = {0};
+        size_t   n                            = end - at;
+        char     area[4]                      = {0};
+        unsigned index                        = 0;
+        int      used                         = 0;
+
+        snprintf(line, sizeof(line), "%.*s", (int)((n < (sizeof(line) - 1u)) ? n : (sizeof(line) - 1u)), (const char *)header + at);
+
+        if ((sscanf(line, "Sample=%2[A-Z],%u,%n", area, &index, &used) == 2) && (used > 0) && (index < MAX_NUM_MODULES)) {
+            tModuleKey key = {0};
+
+            key.slot     = slot;
+            key.location = (strcmp(area, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+            key.index    = index;
+            sampler_file_set(key, line + used);
+        }
+        at = end + 1u;
+    }
+}
 
 int write_database_to_file(const char * filepath, uint32_t slot) {
     FILE *    file           = NULL;
@@ -68,8 +138,26 @@ int write_database_to_file(const char * filepath, uint32_t slot) {
     snprintf(charBuff, sizeof(charBuff) - 1, "Info=BUILD 320");
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
+
+    // notes §2 - a .pchx names its engine-only modules' files here, and keeps those modules below
+    bool extended = has_suffix(filepath, PCHX_EXTENSION);
+
+    if (extended) {
+        for (uint32_t i = 0; i < MAX_SAMPLER_FILES; i++) {
+            const tSamplerFile * sample = &gSamplerFile[i];
+
+            if (  sample->used && (sample->key.slot == slot) && (strchr(sample->path, '\r') == NULL)
+               && (strchr(sample->path, '\n') == NULL)) {
+                snprintf(charBuff, sizeof(charBuff) - 1, "Sample=%s,%u,%s",
+                         (sample->key.location == (uint32_t)locationFx) ? "FX" : "VA", (unsigned)sample->key.index, sample->path);
+                fwrite(charBuff, 1, strlen(charBuff), file);
+                fwrite(eol, 1, strlen(eol), file);
+            }
+        }
+    }
     charBuff[0] = '\0';
     fwrite(charBuff, 1, 1, file);
+    protocol_include_engine_only(extended);
 
     write_bit_stream(buff, &bitPos, 8, 23); // Version
     write_bit_stream(buff, &bitPos, 8, 0);  // Type (0 = patch, 1 = performance when we get round to implementing that)
@@ -93,6 +181,7 @@ int write_database_to_file(const char * filepath, uint32_t slot) {
     write_module_names(slot, locationVa, buff, &bitPos);
     write_module_names(slot, locationFx, buff, &bitPos);
     write_patch_notes(slot, buff, &bitPos);
+    protocol_include_engine_only(false);
 
     bitPos      = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
 

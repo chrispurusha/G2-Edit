@@ -264,6 +264,23 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
+// dataBase.c notes §8 - an engine-only module, and anything naming it, is left out of every patch written,
+// except a .pchx (patchWrite.c notes §2), which this thread asks for while it writes one
+static _Thread_local bool sIncludeEngineOnly;
+
+void protocol_include_engine_only(bool include) {
+    sIncludeEngineOnly = include;
+}
+
+static bool kept_off_device(uint32_t slot, uint32_t location, uint32_t index) {
+    if (sIncludeEngineOnly || (location >= (uint32_t)locationMorph) || (index >= MAX_NUM_MODULES)) {
+        return false;
+    }
+    tModule * module = get_module_slot(slot, location, index);
+
+    return (module != NULL) && module->active && module_is_engine_only(module->type);
+}
+
 void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
     uint32_t moduleCount       = 0;
     uint32_t sizeBitPos        = 0;
@@ -283,7 +300,7 @@ void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, location, i);
 
-        if (!module->active) {
+        if (!module->active || kept_off_device(slot, location, i)) {
             continue;
         }
         moduleCount++;
@@ -354,7 +371,8 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
         tCable * cable = get_cable_slot(slot, (uint32_t)location, i);
 
-        if (cable == NULL || !cable->active) {
+        if (  (cable == NULL) || !cable->active
+           || kept_off_device(slot, location, cable->key.moduleFromIndex) || kept_off_device(slot, location, cable->key.moduleToIndex)) {
             continue;
         }
         cableCount++;
@@ -487,7 +505,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     for (i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, location, i);
 
-        if (!module->active) {
+        if (!module->active || kept_off_device(slot, location, i)) {
             continue;
         }
         paramCount = module->actualParamCount;
@@ -616,7 +634,7 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32
             for (uint32_t idx = 0; idx < MAX_NUM_MODULES; idx++) {
                 tModule * module = get_module_slot(slot, l, idx);
 
-                if (!module->active) {
+                if (!module->active || kept_off_device(slot, l, idx)) {
                     continue;
                 }
                 paramCount = module->actualParamCount;
@@ -731,9 +749,12 @@ void write_knobs(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 16, MAX_NUM_KNOBS);
 
     for (i = 0; i < MAX_NUM_KNOBS; i++) {
-        write_bit_stream(buff, bitPos, 1, gKnobArray[slot].knob[i].assigned ? 1 : 0);
+        bool assigned = gKnobArray[slot].knob[i].assigned
+                        && !kept_off_device(slot, gKnobArray[slot].knob[i].location, gKnobArray[slot].knob[i].moduleIndex);
 
-        if (gKnobArray[slot].knob[i].assigned) {
+        write_bit_stream(buff, bitPos, 1, assigned ? 1 : 0);
+
+        if (assigned) {
             write_bit_stream(buff, bitPos, 2, gKnobArray[slot].knob[i].location);
             write_bit_stream(buff, bitPos, 8, gKnobArray[slot].knob[i].moduleIndex);
             write_bit_stream(buff, bitPos, 2, gKnobArray[slot].knob[i].isLed);
@@ -804,7 +825,13 @@ void write_controllers(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     controllerCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 7, 0);   // Populated later
 
+    uint32_t written               = 0;
+
     for (i = 0; i < gControllerCount[slot]; i++) {
+        if (kept_off_device(slot, gControllerArray[slot].controller[i].location, gControllerArray[slot].controller[i].moduleIndex)) {
+            continue;
+        }
+        written++;
         write_bit_stream(buff, bitPos, 7, gControllerArray[slot].controller[i].midiCC);
         write_bit_stream(buff, bitPos, 2, gControllerArray[slot].controller[i].location);
         write_bit_stream(buff, bitPos, 8, gControllerArray[slot].controller[i].moduleIndex);
@@ -813,7 +840,7 @@ void write_controllers(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
 
     *bitPos               = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
-    write_bit_stream(buff, &controllerCountBitPos, 7, gControllerCount[slot]);
+    write_bit_stream(buff, &controllerCountBitPos, 7, written);
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
@@ -982,7 +1009,7 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, location, i);
 
-        if (!module->active) {
+        if (!module->active || kept_off_device(slot, location, i)) {
             continue;
         }
         paramCount = module->actualParamCount;
@@ -1099,7 +1126,7 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, location, i);
 
-        if (!module->active) {
+        if (!module->active || kept_off_device(slot, location, i)) {
             continue;
         }
 

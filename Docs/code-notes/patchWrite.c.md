@@ -14,3 +14,17 @@ Save there consumed its own message and did nothing.
 
 The application's on_file_saved() still owns the POLICY around a save — online vs offline, the
 recent-files list, the remembered path. Only the bytes-to-disk half is here.
+
+## 2. .pchx - a patch with engine-only modules (`patch_save_path()`, `engine_only_header_apply()`)
+
+A .pch2 cannot carry a module the G2 does not have: the instrument and the original editor would meet a type
+they do not know. A patch that holds one is saved as .pchx instead - the same file in every byte, except:
+- the binary keeps the engine-only modules and everything that names them (the writers' guard is lifted for
+  the thread writing it, `protocol_include_engine_only()`, dataBase.c notes §8);
+- the text header gains a line per Sampler, `Sample=VA,<index>,<path>`, naming its sample file.
+Every reader skips the text header up to its first zero byte, so the binary parses as it always has, and the
+Sample= lines are applied after it (`engine_only_header_apply()`, called by each of the four readers: the
+application offline and online, and the plug-in's two). Saving chooses the extension: a patch with an
+engine-only module is written as .pchx whatever name was typed (`patch_save_path()`), one without as asked.
+A .pchx sent to the G2 still goes through the guarded writers, so the instrument gets the patch less its
+engine-only part. Performances (.prf2) do not carry engine-only modules yet.

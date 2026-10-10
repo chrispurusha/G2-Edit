@@ -50,6 +50,7 @@ extern "C" {
 #include "audioOutput.h"
 #include "midiInput.h"
 #include "waveModels.h"
+#include "nordSample.h"
 #include "soundEngine.h"
 
 // See soundEngine.h for what this does and does not attempt.
@@ -869,6 +870,7 @@ typedef enum {
     eNodeFade,           // Pan, X-Fade, Fade1-2, Fade2-1 - one position, two weights (fade_weights())
     eNodeMixStereo,      // MixStereo: six mono channels, each levelled and panned, to a stereo pair
     eNodeNoise,          // Noise: white noise through the Color dial's one-pole low-pass
+    eNodeSampler,        // notes §213 - engine only: a sample file played at the voice's key
     eNodeOscNoise,       // §8
     eNodeOscPerc,        // §40 - a struck, decaying resonator
     eNodeFltMulti,       // §10 - LP, BP and HP from one filter
@@ -974,54 +976,55 @@ typedef struct {
 } tEnvSegment;
 
 typedef struct {
-    tNodeKind kind;
-    uint32_t  moduleIndex;   // so per-node audio state can survive a knob turn (see topology_signature)
-    uint32_t  location;      // Voice or FX — the two areas number their modules independently
+    tNodeKind           kind;
+    const tNordSample * sample;      // notes §213 - the Sampler's file, shared through nordSample.c's cache
+    uint32_t            moduleIndex; // so per-node audio state can survive a knob turn (see topology_signature)
+    uint32_t            location;    // Voice or FX — the two areas number their modules independently
 
     // notes §21
-    int32_t   in[MAX_NODE_INPUTS];
-    uint32_t  srcOut[MAX_NODE_INPUTS];
-    uint32_t  srcLeg[MAX_NODE_INPUTS];     // which of the source's NODE_OUTPUTS legs that output is
-    uint32_t  inCount;
-    int8_t    syncSlot;                    // §6.6 - which input is the Sync jack, -1 for none
-    int8_t    shapeModSlot;                // §6.7 - which input is the Shape Mod jack, -1 for none
-    int8_t    fmSlot;                      // §6.8 - which input is the FM jack, -1 for none
-    bool      fmTrack;                     // §6.8 - FM Trk rather than FM Lin
-    bool      active;                      // the module's own power button
+    int32_t             in[MAX_NODE_INPUTS];
+    uint32_t            srcOut[MAX_NODE_INPUTS];
+    uint32_t            srcLeg[MAX_NODE_INPUTS];     // which of the source's NODE_OUTPUTS legs that output is
+    uint32_t            inCount;
+    int8_t              syncSlot;                    // §6.6 - which input is the Sync jack, -1 for none
+    int8_t              shapeModSlot;                // §6.7 - which input is the Shape Mod jack, -1 for none
+    int8_t              fmSlot;                      // §6.8 - which input is the FM jack, -1 for none
+    bool                fmTrack;                     // §6.8 - FM Trk rather than FM Lin
+    bool                active;                      // the module's own power button
     // notes §192 - a leg that closes a loop reads its source's value from the previous sample
-    uint32_t  backMask;                    // which legs
-    uint8_t   backModule[MAX_NODE_INPUTS]; // while building: the module the leg waits for
-    uint8_t   backOut[MAX_NODE_INPUTS];    // and which of its outputs
-    uint8_t   backSlot[MAX_NODE_INPUTS];   // once resolved: its slot in gBackValue
-    uint8_t   backPad[2];
+    uint32_t            backMask;                    // which legs
+    uint8_t             backModule[MAX_NODE_INPUTS]; // while building: the module the leg waits for
+    uint8_t             backOut[MAX_NODE_INPUTS];    // and which of its outputs
+    uint8_t             backSlot[MAX_NODE_INPUTS];   // once resolved: its slot in gBackValue
+    uint8_t             backPad[2];
 
-    double    level[MAX_NODE_LEVELS];  // mixer channel levels, then 1.0 for the Chain input(s);
-                                       // MixStereo: L and R gain of each channel, interleaved
-    uint32_t  levelCount;              // how many of level[] are in use, and so smoothed
-    bool      mixStereo;               // mixer: inputs are L/R pairs sharing a channel's level
+    double              level[MAX_NODE_LEVELS]; // mixer channel levels, then 1.0 for the Chain input(s);
+                                                // MixStereo: L and R gain of each channel, interleaved
+    uint32_t            levelCount;             // how many of level[] are in use, and so smoothed
+    bool                mixStereo;              // mixer: inputs are L/R pairs sharing a channel's level
 
-    tOscWave  wave;                    // oscillator
-    bool      oscKbt;
-    double    oscCornerLimit;          // §6.3
-    double    basePitch;
-    double    shape;
-    double    shapeModAmount; // §6.7 - the Shape M dial as a word fraction
-    double    fmAmount;       // §6.8 - the FM dial through its attenuator curve
-    double    rateHz;         // LFO speed
-    uint32_t  polarity;       // LFO output range, posStrMap order
-    bool      shpWave;        // LFO uses LfoShpA's waveform set rather than the plain one
-    bool      lfoMono;        // §42 - reads the shared phase in gLfoMonoPhase, not the voice's own
-    double    lfoRateMod;     // §50 - the second rate input's attenuation
-    double    lfoKbt;         // §50 - how much of the key's distance from E4 the rate follows
-    bool      lfoHasSync;     // §54 - a second output, Snc
-    bool      lfoHasReset;    // §28.4 - a Rst input
-    int8_t    lfoPhaseSlot;   // §28.4 - the Phase M input, -1 for none
-    int8_t    lfoShapeSlot;   // §28.4 - the Shape M input, -1 for none
-    double    lfoPhase;       // §28.4 - the read point's offset from the counter, in cycles
-    double    lfoPhaseMod;    // §28.4 - Phase M, cycles per input unit
-    double    lfoShapeMod;    // §28.4 - Shape M, shape per input unit
-    uint8_t   vowel[3];       // §56 - FltVoice's three vowels
-    uint8_t   vowelPad[5];
+    tOscWave            wave;                   // oscillator
+    bool                oscKbt;
+    double              oscCornerLimit;         // §6.3
+    double              basePitch;
+    double              shape;
+    double              shapeModAmount; // §6.7 - the Shape M dial as a word fraction
+    double              fmAmount;       // §6.8 - the FM dial through its attenuator curve
+    double              rateHz;         // LFO speed
+    uint32_t            polarity;       // LFO output range, posStrMap order
+    bool                shpWave;        // LFO uses LfoShpA's waveform set rather than the plain one
+    bool                lfoMono;        // §42 - reads the shared phase in gLfoMonoPhase, not the voice's own
+    double              lfoRateMod;     // §50 - the second rate input's attenuation
+    double              lfoKbt;         // §50 - how much of the key's distance from E4 the rate follows
+    bool                lfoHasSync;     // §54 - a second output, Snc
+    bool                lfoHasReset;    // §28.4 - a Rst input
+    int8_t              lfoPhaseSlot;   // §28.4 - the Phase M input, -1 for none
+    int8_t              lfoShapeSlot;   // §28.4 - the Shape M input, -1 for none
+    double              lfoPhase;       // §28.4 - the read point's offset from the counter, in cycles
+    double              lfoPhaseMod;    // §28.4 - Phase M, cycles per input unit
+    double              lfoShapeMod;    // §28.4 - Shape M, shape per input unit
+    uint8_t             vowel[3];       // §56 - FltVoice's three vowels
+    uint8_t             vowelPad[5];
 
     // The filter's Freq DIAL VALUE (0..127, fractional), not a frequency. Kept in dial units because
     // that is the domain modulation and keyboard tracking act in, and because the dial is itself
@@ -4237,6 +4240,11 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeNoise;
             return true;
         }
+        case moduleTypeSampler:
+        {
+            *kind = eNodeSampler;   // notes §213
+            return true;
+        }
         case moduleTypeOscNoise:
         {
             *kind = eNodeOscNoise;
@@ -5100,6 +5108,7 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             return 0;
         }
         case eNodeNoise:
+        case eNodeSampler:
         {
             *connectors = none;     // a source: no inputs at all
             return 0;
@@ -6265,6 +6274,13 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->active = (param_value(module, variation, 1) != 0.0);
             break;
         }
+        case eNodeSampler:
+        {
+            node->gain   = dial_fraction(param_value(module, variation, 0));
+            node->sample = nord_sample_get(sampler_file(module->key));   // notes §213 - NULL: no file, or unreadable
+            node->active = (param_value(module, variation, 1) != 0.0) && (node->sample != NULL);
+            break;
+        }
         case eNodeMixStereo:
         {
             // §5 - Lev1..6 are params 0..5, Pan1..6 are 6..11, LevMaster is 12.
@@ -7122,6 +7138,7 @@ static bool node_is_generator(tNodeKind kind) {
            || (kind == eNodeOscShp)
            || (kind == eNodePulse)
            || (kind == eNodeNoise)
+           || (kind == eNodeSampler)     // notes §213
            || (kind == eNodeOscNoise)
            || (kind == eNodeOscPerc)
            || (kind == eNodeOscPM)
@@ -13589,6 +13606,40 @@ static uint32_t gInPosVoiceBank[SOUND_ENGINE_MAX_ENGINES];
 static uint32_t gInPosFxBank[SOUND_ENGINE_MAX_ENGINES];
 #define gInPosFx            (gInPosFxBank[SE])
 
+// notes §213 - one voice's play position through the zone nearest its key, restarted by each note
+static double sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double voicePitch) {
+    SE_LOCAL;
+
+    const tNordSample * sample = spec->sample;
+    double *            state  = gLadder[voice][n];   // position, the trigger it started for, zone
+    double              note   = (voicePitch >= 0.0) ? voicePitch : 60.0;
+
+    if (state[1] != (double)gVoice[voice].trigger) {
+        uint32_t nearest = 0;
+
+        for (uint32_t z = 1; z < sample->zoneCount; z++) {
+            if (fabs(sample->zone[z].rootNote - note) < fabs(sample->zone[nearest].rootNote - note)) {
+                nearest = z;
+            }
+        }
+
+        state[0] = 0.0;
+        state[1] = (double)gVoice[voice].trigger;
+        state[2] = (double)nearest;
+    }
+    const tNordZone *   zone   = &sample->zone[(uint32_t)state[2]];
+    uint32_t            at     = (uint32_t)state[0];
+
+    if ((at + 1u) >= zone->length) {
+        return 0.0;
+    }
+    double              frac   = state[0] - (double)at;
+    double              out    = zone->data[at] + (frac * (zone->data[at + 1u] - zone->data[at]));
+
+    state[0] += exp2((note - zone->rootNote) / 12.0) * (sample->sampleRate / gSampleRate);
+    return out * spec->gain;
+}
+
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
                       double value[][NODE_OUTPUTS], double voicePitch) {
     SE_LOCAL;
@@ -14536,6 +14587,11 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             gNoiseLp[voice][n] = (spec->noisePole * gNoiseLp[voice][n])
                                  + ((1.0 - spec->noisePole) * spec->noiseGain * white);
             value[n][0]        = (spec->active == true) ? gNoiseLp[voice][n] : 0.0;
+            break;
+        }
+        case eNodeSampler:
+        {
+            value[n][0] = (spec->active == true) ? sampler_step(voice, n, spec, voicePitch) : 0.0;
             break;
         }
         case eNodeMixStereo:

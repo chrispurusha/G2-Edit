@@ -330,6 +330,7 @@ const tPaletteEntry gPaletteList[]                   = {
     {palGroupOsc,    moduleTypeOscDual,     "Osc Dual"             },
     {palGroupOsc,    moduleTypeOscNoise,    "Noise Osc"            },
     {palGroupOsc,    moduleTypeNoise,       "Noise"                },
+    {palGroupOsc,    moduleTypeSampler,     "Sampler"              },
     {palGroupOsc,    moduleTypeMetNoise,    "Metallic Noise"       },
     {palGroupOsc,    moduleTypeOscPerc,     "Osc Percussion"       },
     {palGroupOsc,    moduleTypeDrumSynth,   "Drum Synth"           },
@@ -1984,7 +1985,8 @@ const tModuleProperties  gModuleProperties[] = {
     {"RndTrig",      2, volumeTypeNone,      ledTypeNo,  moduleGroupRandom   },
     {"RndClkB",      3, volumeTypeNone,      ledTypeNo,  moduleGroupRandom   },
     {"Unknown",      0, volumeTypeNone,      ledTypeNo,  moduleGroupNone     },
-    {"RndPattern",   3, volumeTypeNone,      ledTypeYes, moduleGroupRandom   }, };
+    {"RndPattern",   3, volumeTypeNone,      ledTypeYes, moduleGroupRandom   },
+    {"Sampler",      2, volumeTypeNone,      ledTypeNo,  moduleGroupOsc      }, };
 
 // moduleType, paramType, position rectangle, anchor, label, range, defaultValue, string map, colour map
 const tParamLocation     paramLocationList[] = {
@@ -2137,6 +2139,8 @@ const tParamLocation     paramLocationList[] = {
     // 31 Noise
     {moduleTypeNoise,      paramTypeCommonDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Colour",       128,   0, NULL,                                  NULL          },           // 31 Colour  *** Or special dial
     {moduleTypeNoise,      paramTypeBypass,         {{ -3,   3}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          },           // 31 Bypass
+    {moduleTypeSampler,    paramTypeCommonDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Level",        128, 100, NULL,                                  NULL          },           // 209 Level
+    {moduleTypeSampler,    paramTypeBypass,         {{ -3,   3}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          },           // 209 Bypass
     // 32 Eq2Band
     {moduleTypeEq2Band,    paramTypedB,             {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                                  NULL          },           // 32 Lo Gain
     {moduleTypeEq2Band,    paramTypedB,             {{ 43,  -3}, { 7,  7}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                                  NULL          },           // 32 Hi Gain
@@ -3316,6 +3320,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDevice,      connectorDirOut, connectorTypeControl, {{ 87,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "GWh2",          labelLocUp   }, // 30 Global Wheel 2
     // 31 Noise
     {moduleTypeNoise,       connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   }, // 31 Out
+    {moduleTypeSampler,     connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   }, // 209 Out
     // 32 Eq2Band
     {moduleTypeEq2Band,     connectorDirIn,  connectorTypeAudio,   {{ -3,    6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocUp   }, // 32 In
     {moduleTypeEq2Band,     connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,            labelLocUp   }, // 32 Out

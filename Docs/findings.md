@@ -12663,3 +12663,23 @@ and EqPeak), LEDDUMP polled 30 times with `leds=`/`vols=` (the G2) beside the ne
 - The engine prunes modules that reach no Out, so their lamps stay dark - the test patch had to route every
   lamp module into the sound through two mixers before the engine showed any of them.
 - Lamps now follow the metered voice (notes §194), not voice 0.
+
+## 2026-10-10 (later) - the first engine-only module: a Sampler playing a Nord sample file
+
+Type 209 (`moduleTypeSampler`), past the G2's last type; Oscillators palette; Level, On/Off, one audio output
+(notes §213). It plays a Nord sample file (.nsmp, nordSample.c notes §1-§3): chunked file, each zone coded in
+blocks of fixed-polynomial-predicted residuals, 14-bit at 44.1 kHz. First version plays the Melodica from Nord
+Sound Manager's cache for every Sampler, without loops, zones by measured pitch. Offline: key 48 sounds C3
+(-24 cents, the lowest zone pitched down), key 60 C4 (-5 cents); keys 64-84 all play. Kept off the G2: a patch
+saved with a Sampler loads back without it or its cables (dataBase.c notes §8); live edits naming it are dropped
+before USB. Harness trap: a RENDERWAV straight after ENGINEOFFLINE off/on can be refused or render before the
+graph is rebuilt - one silent take for key 72 and a missing file for key 61 were that, not the module.
+
+## 2026-10-10 (later) - .pchx and Choose Sample...
+
+A patch holding an engine-only module saves as .pchx: the .pch2 bytes with those modules kept, plus a text
+header line `Sample=VA,<index>,<path>` per Sampler (patchWrite.c notes §2). Checked offline: a Sampler with
+no file is silent; given the Melodica (backdoor SAMPLEFILE, the browser's own path) it plays; saved as .pchx
+and reloaded into slot B - with slot A cleared - the Sampler, its cables and its file come back and it plays;
+a .pch2 save of the same slot still reloads without it. Choose Sample... (module menu, Sampler only) opens the
+browser in Nord Sound Manager's folder - its click path is not yet exercised (to-test).

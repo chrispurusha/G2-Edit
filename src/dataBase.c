@@ -73,6 +73,53 @@ tModule * get_module(tModuleKey key) {
     return NULL;
 }
 
+// notes §9 - a location or index of -1 matches every one
+static void sampler_files_forget(uint32_t slot, int32_t location, int32_t index) {
+    for (uint32_t i = 0; i < MAX_SAMPLER_FILES; i++) {
+        tSamplerFile * file = &gSamplerFile[i];
+
+        if (  file->used && (file->key.slot == slot)
+           && ((location < 0) || (file->key.location == (uint32_t)location))
+           && ((index < 0) || (file->key.index == (uint32_t)index))) {
+            file->used = false;
+        }
+    }
+}
+
+const char * sampler_file(tModuleKey key) {
+    for (uint32_t i = 0; i < MAX_SAMPLER_FILES; i++) {
+        const tSamplerFile * file = &gSamplerFile[i];
+
+        if (  file->used && (file->key.slot == key.slot) && (file->key.location == key.location)
+           && (file->key.index == key.index)) {
+            return file->path;
+        }
+    }
+
+    return NULL;
+}
+
+bool sampler_file_set(tModuleKey key, const char * path) {
+    sampler_files_forget(key.slot, (int32_t)key.location, (int32_t)key.index);
+
+    if ((path == NULL) || (path[0] == '\0')) {
+        return true;
+    }
+
+    for (uint32_t i = 0; i < MAX_SAMPLER_FILES; i++) {
+        tSamplerFile * file = &gSamplerFile[i];
+
+        if (!file->used) {
+            file->used = true;
+            file->key  = key;
+            snprintf(file->path, sizeof(file->path), "%s", path);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void write_module(tModuleKey key, tModule * module) {
     module->key    = key;
     module->active = true;
@@ -82,7 +129,12 @@ void write_module(tModuleKey key, tModule * module) {
     populate_module_connectors(module);
 
     if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
-        gModule[key.slot][key.location][key.index] = *module;
+        gModule[key.slot][key.location][key.index]          = *module;
+        gEngineOnlyIndex[key.slot][key.location][key.index] = module_is_engine_only(module->type);   // notes §8
+
+        if (!module_is_engine_only(module->type)) {
+            sampler_files_forget(key.slot, (int32_t)key.location, (int32_t)key.index);   // notes §9 - the index was reused
+        }
     } else {
         LOG_ERROR("Module key out of bounds slot=%u location=%u index=%u\n", key.slot, key.location, key.index);
     }
@@ -91,6 +143,7 @@ void write_module(tModuleKey key, tModule * module) {
 void delete_module(tModuleKey key) {
     if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
         memset(&gModule[key.slot][key.location][key.index], 0, sizeof(tModule));
+        sampler_files_forget(key.slot, (int32_t)key.location, (int32_t)key.index);
     }
 }
 
@@ -100,11 +153,20 @@ void database_delete_modules_by_slot(uint32_t slot) {
         for (uint32_t location = 0; location < (uint32_t)locationMax; location++) {
             for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
                 memset(&gModule[slot][location][index], 0, sizeof(tModule));
+                gEngineOnlyIndex[slot][location][index] = false;
             }
         }
 
+        sampler_files_forget(slot, -1, -1);
+
         gPatchGeneration[slot]++;
     }
+}
+
+// notes §8 - the mark outlives a delete, so the delete's own message is still recognised
+bool database_index_is_engine_only(uint32_t slot, uint32_t location, uint32_t index) {
+    return (slot < MAX_SLOTS) && (location < (uint32_t)locationMax) && (index < MAX_NUM_MODULES)
+           && gEngineOnlyIndex[slot][location][index];
 }
 
 uint32_t count_active_modules(uint32_t slot) {

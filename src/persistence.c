@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "misc.h"
 #include "defs.h"
@@ -140,14 +141,36 @@ void save_zoom_factor(double zoom) {
 #define G2_EDIT_PREFS_APP_NAME    "G2-Edit"
 #define PREF_BROWSER_DIRECTORY    "fileBrowserLastDirectory"
 
+// The sample browser keeps its own folder, so choosing a sample does not move where patches open. Until
+// one has been chosen it starts in Nord Sound Manager's sample folder, where Nord sample files collect.
+#define PREF_SAMPLE_DIRECTORY    "sampleBrowserLastDirectory"
+
+static bool sForSamples;
+
 void save_file_browser_directory(const char * path) {
     if (path == NULL) {
         return;
     }
-    prefs_set_string_in(G2_EDIT_PREFS_APP_NAME, PREF_BROWSER_DIRECTORY, path);
+    prefs_set_string_in(G2_EDIT_PREFS_APP_NAME, sForSamples ? PREF_SAMPLE_DIRECTORY : PREF_BROWSER_DIRECTORY, path);
+}
+
+void file_browser_for_samples(bool samples) {
+    sForSamples = samples;
 }
 
 static const char * shared_file_browser_directory(void) {
+    if (sForSamples) {
+        static char  nordFolder[1024];
+        const char * saved = prefs_get_string_from(G2_EDIT_PREFS_APP_NAME, PREF_SAMPLE_DIRECTORY, NULL);
+        const char * home  = getenv("HOME");
+
+        if (saved != NULL) {
+            return saved;
+        }
+        snprintf(nordFolder, sizeof(nordFolder), "%s/Library/Application Support/Nord Sound Manager/Cache/Data",
+                 (home != NULL) ? home : "");
+        return nordFolder;
+    }
     return prefs_get_string_from(G2_EDIT_PREFS_APP_NAME, PREF_BROWSER_DIRECTORY, NULL);
 }
 

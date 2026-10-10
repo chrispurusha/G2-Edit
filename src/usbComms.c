@@ -4039,6 +4039,7 @@ static int load_patch_from_payload(uint8_t * buff, int64_t byteOffset, int64_t p
     forget_bank_origin(slot);
     clear_slot_data_usb(slot);
     parse_patch(slot, buff + byteOffset, (uint32_t)payloadLen);
+    engine_only_header_apply(slot, buff, (size_t)byteOffset);   // patchWrite.c notes §2
     set_patch_name_from_filename(slot, filePath);
     free(buff);
 
@@ -4130,9 +4131,63 @@ static bool command_needs_stop_start(uint32_t cmd) {
 // send_write_data — runtime command dispatch
 // ---------------------------------------------------------------------------
 
+// dataBase.c notes §8 - does this edit name a module the G2 does not have? Then it is the engine's alone.
+static bool names_engine_only_module(const tMessageContent * msg) {
+    uint32_t           slot = msg->slot;
+    const tModuleKey * key  = NULL;
+
+    switch (msg->cmd) {
+        case eMsgCmdSetValue:          key = &msg->paramData.moduleKey;
+            break;
+        case eMsgCmdSetParamMorph:     key = &msg->paramMorphData.moduleKey;
+            break;
+        case eMsgCmdSetMode:           key = &msg->modeData.moduleKey;
+            break;
+        case eMsgCmdMoveModule:
+        case eMsgCmdDeleteModule:
+        case eMsgCmdSetModuleUpRate:   key = &msg->moduleData.moduleKey;
+            break;
+        case eMsgCmdSetModuleLabel:    key = &msg->moduleLabelData.moduleKey;
+            break;
+        case eMsgCmdSetModuleColour:   key = &msg->moduleColourData.moduleKey;
+            break;
+        case eMsgCmdSetMutationLock:   key = &msg->moduleMutationLockData.moduleKey;
+            break;
+        case eMsgCmdAssignKnob:        key = &msg->knobAssignData.moduleKey;
+            break;
+        case eMsgCmdAssignMidiCC:      key = &msg->midiCCAssignData.moduleKey;
+            break;
+        case eMsgCmdSetParamLabel:     key = &msg->paramLabelData.moduleKey;
+            break;
+        case eMsgCmdSetCustomData:     key = &msg->customDataMsg.moduleKey;
+            break;
+        case eMsgCmdWriteModule:
+        {
+            return module_is_engine_only((tModuleType)msg->moduleData.type)
+                   || database_index_is_engine_only(slot, msg->moduleData.moduleKey.location, msg->moduleData.moduleKey.index);
+        }
+        case eMsgCmdWriteCable:
+        case eMsgCmdSetCableColour:
+        case eMsgCmdDeleteCable:
+        {
+            return database_index_is_engine_only(slot, msg->cableData.location, msg->cableData.moduleFromIndex)
+                   || database_index_is_engine_only(slot, msg->cableData.location, msg->cableData.moduleToIndex);
+        }
+        default:
+        {
+            return false;
+        }
+    }
+    return database_index_is_engine_only(slot, key->location, key->index);
+}
+
 static int send_write_data(tMessageContent * messageContent) {
     int  retVal    = EXIT_FAILURE;
     bool needsStop = command_needs_stop_start(messageContent->cmd);
+
+    if (names_engine_only_module(messageContent)) {
+        return EXIT_SUCCESS;
+    }
 
     if (needsStop) {
         send_stop();

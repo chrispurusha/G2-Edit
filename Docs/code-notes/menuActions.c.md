@@ -101,3 +101,12 @@ G2 is therefore never dequeued at all: the local reset did not happen AND device
 busy overlay had nothing to end it, so the editor sat on "New Patch..." until it was force
 quit (CT, 2026-09-07). init_patch() is dataBase.c's and touches only the slot's own state, so
 the UI thread can do it directly, the same way the backdoor's NEWPATCH already does.
+
+## 15. Choose Sample... (`sampler_choose_begin()`, `sampler_choose_open()`, `sampler_chosen()`)
+
+The Sampler's module menu names the module (`sSampleTarget`) and posts eRspShowOpenSample; the render loop
+opens the browser, in the application and the plug-in alike, as every browser is opened - never from inside
+the menu's own callback. The browser remembers its own folder (persistence.c), starting in Nord Sound
+Manager's sample folder. The chosen file is the Sampler's (dataBase.c notes §9), the module takes the file's
+name, and the engine is rebuilt to load it. The module is looked up again when the file comes back: it may
+have been deleted, or its index reused, while the browser was open.

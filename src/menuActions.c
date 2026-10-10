@@ -22,6 +22,7 @@
 // that Objective-C++ file is what genuinely needs Cocoa (the native menu-bar bootstrap and
 // sleep/wake notifications) — none of this needs Objective-C, so it lives in plain C instead.
 
+#include <stdio.h>
 #include <string.h>
 
 #include "misc.h"
@@ -39,6 +40,7 @@
 #include "paramOverview.h"
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
+#include "soundEngine.h"
 
 // notes §1
 static uint32_t sPendingBackupBank        = 0;
@@ -626,4 +628,47 @@ void restore_menu_everything(void) {
                  "overwriting the G2's current contents to match. Any bank with no manifest file in that folder is left untouched "
                  "rather than erased. This cannot be undone.",
                  "Next...", on_restore_everything_confirmed);
+}
+
+// notes §15 - which Sampler the browser is choosing for, kept across the trip through the GUI queue
+static tModuleKey sSampleTarget;
+
+static void sampler_chosen(const char * path) {
+    file_browser_for_samples(false);
+
+    if (path == NULL) {
+        return;     // cancelled
+    }
+    tModule *    module = get_module(sSampleTarget);
+
+    if ((module == NULL) || (module->type != moduleTypeSampler)) {
+        return;     // deleted, or the index reused, while the browser was open
+    }
+
+    if (!sampler_file_set(sSampleTarget, path)) {
+        show_alert("Choose Sample", "Too many Samplers have files - the limit is 32.");
+        return;
+    }
+    // The module takes the file's name, as far as a module name goes
+    const char * leaf   = strrchr(path, '/');
+    const char * name   = (leaf != NULL) ? (leaf + 1) : path;
+    size_t       stem   = strcspn(name, ".");
+
+    snprintf(module->name, sizeof(module->name), "%.*s", (int)((stem < CLAVIA_NAME_SIZE) ? stem : CLAVIA_NAME_SIZE), name);
+    sound_engine_update_from_patch();
+    synthlib_request_redraw();
+}
+
+void sampler_choose_begin(tModuleKey key) {
+    tMessageContent msg = {0};
+
+    sSampleTarget = key;
+    msg.cmd       = eRspShowOpenSample;
+    msg_send(&gToGuiThread, &msg);
+    wake_glfw();
+}
+
+void sampler_choose_open(void) {
+    file_browser_for_samples(true);
+    open_file_browser_read(sampler_chosen);
 }
