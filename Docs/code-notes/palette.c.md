@@ -124,3 +124,10 @@ split_view_focus_at()'S. focus_at() returns whether the focus MOVED, so dropping
 pane that already had focus returned false - and this treated that as "outside a pane"
 and threw the drop away. Every drop into the already-focused half silently did nothing,
 which is most of them (CT, 2026-09-07: "Dropping a new module isn't working").
+
+## 15. The Special group (`palGroupSpecial`, `PALETTE_G2_GROUPS`)
+
+Modules the G2 does not have - the Sampler first - sit in a group of their own, "Special" (CT, 2026-10-10),
+not among the instrument's. The G2's sixteen keep their 2 x 8 grid as its own toolbar has it; groups past
+them take further columns to the right, two to a column, top row first, and the colour swatches start after
+the last of those columns.

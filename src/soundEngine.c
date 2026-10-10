@@ -182,36 +182,39 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
     }
 }
 
-#define FLT_PARAM_FREQ           (0)
-#define FLT_PARAM_ENV            (1)   // modulation depth for the Env input, 0..200%
-#define FLT_PARAM_KBT            (2)
-#define FLTSTATIC_PARAM_GC       (4)   // §10.4 - drive x damping
-#define FLTNORD_PARAM_FMLIN      (7)   // §23.5
-#define FLTNORD_PARAM_RESM       (9)   // §23.5
-#define FLT_PARAM_RES            (3)
-#define FLT_PARAM_SLOPE          (4)
-#define FLT_PARAM_ACTIVE         (5)
+#define FLT_PARAM_FREQ             (0)
+#define FLT_PARAM_ENV              (1) // modulation depth for the Env input, 0..200%
+#define FLT_PARAM_KBT              (2)
+#define FLTSTATIC_PARAM_GC         (4) // §10.4 - drive x damping
+#define FLTNORD_PARAM_FMLIN        (7) // §23.5
+#define FLTNORD_PARAM_RESM         (9) // §23.5
+#define FLT_PARAM_RES              (3)
+#define FLT_PARAM_SLOPE            (4)
+#define FLT_PARAM_ACTIVE           (5)
 
-#define ENV_PARAM_SHAPE          (0)
-#define ENV_PARAM_ATTACK         (1)
-#define ENV_PARAM_DECAY          (2)
-#define ENV_PARAM_SUSTAIN        (3)
-#define SAMPLER_PARAM_VEL        (2)   // notes §213
-#define SAMPLER_PARAM_REL        (3)
-#define ENV_PARAM_RELEASE        (4)
-#define ENV_PARAM_OUT_TYPE       (5)   // posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv
-#define ENV_INPUT_GATE           (1)   // node input: 0 is the audio, 1 the Gate jack, 2 AM
-#define ENV_INPUT_AM             (2)
-#define ENV_INPUT_MOD            (3)   // §17.10 - the time-mod jacks follow, one per modulated dial
+#define ENV_PARAM_SHAPE            (0)
+#define ENV_PARAM_ATTACK           (1)
+#define ENV_PARAM_DECAY            (2)
+#define ENV_PARAM_SUSTAIN          (3)
+#define SAMPLER_PARAM_VEL          (2) // notes §213
+#define SAMPLER_PARAM_REL          (3)
+#define SAMPLER_PARAM_PITCH_MOD    (4)
+#define SAMPLER_IN_PITCH           (1)
+#define SAMPLER_IN_PITCH_VAR       (2)
+#define ENV_PARAM_RELEASE          (4)
+#define ENV_PARAM_OUT_TYPE         (5) // posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv
+#define ENV_INPUT_GATE             (1) // node input: 0 is the audio, 1 the Gate jack, 2 AM
+#define ENV_INPUT_AM               (2)
+#define ENV_INPUT_MOD              (3) // §17.10 - the time-mod jacks follow, one per modulated dial
 
-#define LEVAMP_PARAM_GAIN        (0)
-#define LEVAMP_PARAM_TYPE        (1)   // 0 = lin, 1 = exp
+#define LEVAMP_PARAM_GAIN          (0)
+#define LEVAMP_PARAM_TYPE          (1) // 0 = lin, 1 = exp
 
 // notes §5
-#define OUT_PARAM_DESTINATION    (0)
-#define FXIN_PARAM_SOURCE        (0)   // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
-#define OUT_PARAM_ACTIVE         (1)   // 2toOut's Bypass, non-zero is on
-#define OUT_PARAM_PAD            (2)   // padStrMap: 0 dB or +6 dB
+#define OUT_PARAM_DESTINATION      (0)
+#define FXIN_PARAM_SOURCE          (0) // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
+#define OUT_PARAM_ACTIVE           (1) // 2toOut's Bypass, non-zero is on
+#define OUT_PARAM_PAD              (2) // padStrMap: 0 dB or +6 dB
 
 // Glide and Bend are per-PATCH settings rather than module parameters: they live on hidden modules
 // in the Morph location, which is where the G2 keeps the things the patch-settings page edits.
@@ -5116,10 +5119,12 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             *connectors = none;     // a source: no inputs at all
             return 0;
         }
-        case eNodeSampler:          // notes §213 - Amp
+        case eNodeSampler:          // notes §213 - Amp, then Pitch and PitchVar as an oscillator has them
         {
-            *connectors = oneIn;
-            return 1;
+            static const uint32_t samplerIn[] = {0, 1, 2};
+
+            *connectors = samplerIn;
+            return 3;
         }
         case eNodeMonoKey:          // §35 - the keyboard is its input
         case eNodeAudioIn:          // §37 - the jacks on the back, fed from outside the patch
@@ -6287,6 +6292,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->gain       = dial_fraction(param_value(module, variation, 0));
             node->samplerVel = dial_fraction(param_value(module, variation, SAMPLER_PARAM_VEL));
             node->samplerRel = adr_time_seconds(param_value(module, variation, SAMPLER_PARAM_REL));
+            node->modAmount  = type_ii_attenuator(param_value(module, variation, SAMPLER_PARAM_PITCH_MOD));
             node->sample     = nord_sample_get(sampler_file(module->key));   // notes §213 - NULL: no file, or unreadable
             node->active     = (param_value(module, variation, 1) != 0.0) && (node->sample != NULL);
             break;
@@ -13625,7 +13631,13 @@ static double sampler_read(const tNordZone * zone, double at, uint32_t channel) 
         return 0.0;
     }
     double   frac = at - (double)i;
-    uint32_t next = (i + 1u < zone->length) ? (i + 1u) : (zone->looped ? zone->loopStart : i);
+    uint32_t next = i + 1u;
+
+    if (zone->looped && (next >= zone->loopEnd)) {
+        next = zone->loopStart;   // nordSample.c notes §5, §11 - the sample after the loop's last is its first
+    } else if (next >= zone->length) {
+        next = i;
+    }
     uint32_t c    = (channel < zone->channels) ? channel : 0u;   // a mono zone plays on both outputs
     double   now  = zone->data[(i * zone->channels) + c];
 
@@ -13640,7 +13652,8 @@ static bool sampler_self_released(const tEngineNode * spec) {
     return (spec->inCount == 0u) || (spec->in[0] < 0);
 }
 
-static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double voicePitch, double * left, double * right) {
+static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double voicePitch, double pitchMod, double * left,
+                         double * right) {
     bool                selfReleased = sampler_self_released(spec);
 
     SE_LOCAL;
@@ -13699,15 +13712,15 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
     }
     const tNordZone * zone = &sample->zone[(uint32_t)state[2]];
 
-    if (zone->looped && (state[0] >= (double)zone->length)) {
-        state[0] -= (double)(zone->length - zone->loopStart);
+    if (zone->looped && (state[0] >= (double)zone->loopEnd)) {
+        state[0] -= (double)(zone->loopEnd - zone->loopStart);
     }
     double            vel  = (1.0 - spec->samplerVel) + (spec->samplerVel * ((double)gVoice[voice].velocity / 127.0));
     double            gain = spec->gain * vel * zone->gain * (selfReleased ? state[5] : 1.0);
 
     *left     = sampler_read(zone, state[0], 0u) * gain;
     *right    = sampler_read(zone, state[0], 1u) * gain;
-    state[0] += exp2((note - zone->rootNote + zone->detune) / 12.0) * (zone->sampleRate / gSampleRate);
+    state[0] += exp2((note + pitchMod - zone->rootNote + zone->detune) / 12.0) * (zone->sampleRate / gSampleRate);
 }
 
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
@@ -14666,10 +14679,17 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
 
             if (spec->active == true) {
                 // notes §213 - Amp scales both channels; unpatched, the sample plays at full level
-                bool   patched = (spec->inCount > 0u) && (spec->in[0] >= 0);
-                double amp     = patched ? signal_in(spec, value, 0) : 1.0;
+                bool   patched  = (spec->inCount > 0u) && (spec->in[0] >= 0);
+                double amp      = patched ? signal_in(spec, value, 0) : 1.0;
 
-                sampler_step(voice, n, spec, voicePitch, &value[n][0], &value[n][1]);
+                // notes §213 - as an oscillator's: Pitch as it comes, PitchVar through the Pitch dial
+
+                double pitchMod = (signal_in(spec, value, SAMPLER_IN_PITCH) + (signal_in(spec, value, SAMPLER_IN_PITCH_VAR) * spec->modAmount))
+
+                                  * PITCH_MOD_SEMITONES;
+
+
+                sampler_step(voice, n, spec, voicePitch, pitchMod, &value[n][0], &value[n][1]);
                 value[n][0] *= amp;
                 value[n][1] *= amp;
             }

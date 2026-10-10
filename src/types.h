@@ -730,6 +730,7 @@ typedef enum {
     palGroupMixer,
     palGroupLogic,
     palGroupMidi,
+    palGroupSpecial,     // palette.c notes §15 - modules only the engine has
     palGroupCount,
 } tPaletteGroup;
 

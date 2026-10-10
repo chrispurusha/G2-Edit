@@ -12760,3 +12760,20 @@ about 4-9 dB louder and on their own zones. CT heard "a blast of the sample" whe
 clears the Sampler's per-voice state, so a voice from an earlier note looked new and replayed through the
 0.3 s release - only a held key starts a note now. The module keeps its own name; the file's name is drawn
 under it, red when it could not be read, and Choose Sample refuses a file the decoder cannot read.
+
+## 2026-10-10 (later) - E-mu Emulator X banks in the Sampler
+
+CT supplied Celtic Harp.exb (a bank file and a SamplePool of nine .ebl samples). Both are IFF; the .ebl is plain
+16-bit little-endian, a stereo file's channels one after the other (as the public ebl-reading project reads
+it); the bank's presets are trees of chunks whose voices carry key/velocity windows and zones naming a sample
+number and root (nordSample.c notes §11). The odd sample rates (43569-44053 Hz) are the playback rates: they
+put the samples within 3.7 cents of pitch, against up to 17.6 cents off at 44.1 kHz. Loops can sit mid-sample,
+so zones gained a loop end. Rendered at keys 40/57/72/90: stereo, in tune, decaying, loops holding, no clicks.
+
+## 2026-10-10 (later) - Sampler dials not saving
+
+CT: Rel and the like did not save in a .pchx. The writer repeats the parameter count a module was READ with;
+a Sampler first saved when it had two parameters kept writing two, so the three added since (Vel, Rel, Pitch)
+never reached the file. An engine-only module is now read at its full count, the missing parameters at their
+defaults (protocol.c notes §24). Proved with a file made by a build with the old two-parameter table: it loads
+as 33 1 0 49 0, and Rel 100 / Vel 80 then survive a save and reload.

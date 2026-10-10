@@ -1225,3 +1225,6 @@ from a capture, so they are the ones most likely to be right.
 - ***SAMPLER VEL DIAL (2026-10-10)*** - notes §213. PLAY: Vel at 0 ignores velocity; turned up, soft notes play quieter. The face is now three rows - a patch saved with the old two-row Sampler may overlap the module below it
 - ***SAMPLER FILE ON THE FACE, BAD FILES REFUSED (2026-10-10)*** - moduleGraphics notes §93, menuActions notes §15. Choose Sample on a non-sample file: an alert, the old file kept; a .pchx whose file has moved: its name in red; loading a file makes no sound until a key is played
 - ***SAMPLER .nsmp4 LEVELS AND ZONES (2026-10-10)*** - nordSample notes §10. LISTEN: a Grand 2 piano is no longer quiet and keys play their own zones; a Piano 6 Mellotron sits about 2 dB under its Wave twin
+- ***SAMPLER: E-MU EMULATOR X BANKS (2026-10-10)*** - nordSample notes §11. Choose Sample on Celtic Harp.exb (inside its folder): stereo, in tune, notes ring and loop without clicks; the level may be low
+- ***SAMPLER PITCH: BEND, Pitch AND PitchVar INPUTS (2026-10-10)*** - notes §213. PLAY: the bend wheel bends it; Keyboard AftTouch into PitchVar with the Pitch dial up bends it by pressure
+- ***SAMPLER DIALS SAVE IN .pchx (2026-10-10)*** - protocol notes §24. Open a .pchx saved earlier today, set Rel/Vel/Pitch, save, reopen: they stay

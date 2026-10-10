@@ -26,6 +26,7 @@ caller polls for the command file's disappearance to know it's done.
   LOADFILE <path>   — read_file_into_memory_and_process() (works offline)
   SLOT <0-3|A-D>    — select the slot the canvas renders
   SAMPLEFILE <VA|FX> <index> <path> — a Sampler's sample file, as Choose Sample... sets it, without the browser
+  BEND <-1..1> — the local engine's pitch bend, as a MIDI bend sets it (1 = full up); 0 centres it
   DEVSLOT <0-3|A-D> — SLOT, and select it on the instrument too, as the topbar's slot button does. SLOT
                       alone leaves the G2 on its own slot, so DEVNOTE plays and LEDDUMP's vols= meter THAT one
   COMMS             — "online" or "offline". ASK THIS BEFORE ANY DEV COMMAND YOU INTEND TO TRUST:

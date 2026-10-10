@@ -270,3 +270,12 @@ plays it at (measured 2026-10-09: a pushed patch with no Volume came out 6.1 dB 
 127, which is the G2's own 127-to-100 step to the tenth; until then it was given 127). A patch from
 the G2 always carries one, so this changes nothing for it; a USB parse of a single section may fill
 the default in first, and the section that carries the real Volume overwrites it.
+
+## 24. `parse_param_list()` - an engine-only module saved with fewer parameters than it now has
+
+A module's parameter count on a G2 patch is fixed by the instrument, and the writer repeats whatever count the
+module was read with (`actualParamCount`). An engine-only module is ours, and gains parameters as it grows -
+the Sampler went from two to five on 2026-10-10. A file saved before that carries the old count, and the old
+count would then have been written back on every later save, so the newer dials never reached the file (CT:
+"params like release aren't saving with the patch .pchx"). Such a module is read at its full count instead:
+the file's values first, the rest at their defaults in every variation.

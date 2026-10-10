@@ -42,25 +42,28 @@
 #include "undo.h"
 #include "graphics.h"
 
-#define PALETTE_MAX_TILES      (32)        // the largest group is Osc at 19
-#define PALETTE_GROUP_COLS     (8)
-#define PALETTE_GROUP_ROWS     (2)
-#define PALETTE_GROUP_W        (56.0)
-#define PALETTE_GROUP_H        (16.0)
-#define PALETTE_GROUP_X        (6.0)
+#define PALETTE_MAX_TILES        (32)      // the largest group is Osc at 19
+#define PALETTE_GROUP_COLS       (8)
+#define PALETTE_GROUP_ROWS       (2)
+// notes §15 - the G2's sixteen, then the engine's own in columns of their own to the right
+#define PALETTE_G2_GROUPS        (PALETTE_GROUP_COLS * PALETTE_GROUP_ROWS)
+#define PALETTE_GROUP_COLUMNS    (PALETTE_GROUP_COLS + ((palGroupCount - PALETTE_G2_GROUPS + 1) / 2))
+#define PALETTE_GROUP_W          (56.0)
+#define PALETTE_GROUP_H          (16.0)
+#define PALETTE_GROUP_X          (6.0)
 // notes §2
-#define PALETTE_GROUP_Y        (5.0)
-#define PALETTE_TILE_W_MAX     (68.0)
-#define PALETTE_TILE_W_MIN     (52.0)
-#define PALETTE_ARROW_W        (14.0)
-#define PALETTE_TILE_H         (26.0)
-#define PALETTE_TILE_GAP       (4.0)
-#define PALETTE_TILE_Y         (43.0)
-#define PALETTE_TILE_X         (6.0)
-#define PALETTE_DOT            (3.0)
-#define PALETTE_DOT_GAP        (1.5)
-#define PALETTE_MAX_DOTS       (5)
-#define PALETTE_TILE_TEXT_H    (9.0)
+#define PALETTE_GROUP_Y          (5.0)
+#define PALETTE_TILE_W_MAX       (68.0)
+#define PALETTE_TILE_W_MIN       (52.0)
+#define PALETTE_ARROW_W          (14.0)
+#define PALETTE_TILE_H           (26.0)
+#define PALETTE_TILE_GAP         (4.0)
+#define PALETTE_TILE_Y           (43.0)
+#define PALETTE_TILE_X           (6.0)
+#define PALETTE_DOT              (3.0)
+#define PALETTE_DOT_GAP          (1.5)
+#define PALETTE_MAX_DOTS         (5)
+#define PALETTE_TILE_TEXT_H      (9.0)
 
 static bool          gOpen;
 static tPaletteGroup gGroup;
@@ -251,12 +254,12 @@ void palette_render(void) {
     set_rgb_colour((tRgb)RGB_GREY_5);
     render_rectangle_with_border(mainArea, (tRectangle){{0.0, top}, {width, PALETTE_BAND_HEIGHT}});
 
-    // Sixteen groups as a 2 x 8 grid, the way the instrument's own toolbar lays them out - a
+    // The G2's sixteen groups as a 2 x 8 grid, the way the instrument's own toolbar lays them out - a
     // compact block rather than a row, which leaves the whole width below for the tiles, and the
     // right of this row for the colour swatches.
     for (g = 0; g < palGroupCount; g++) {
-        uint32_t   col  = g % PALETTE_GROUP_COLS;
-        uint32_t   row  = g / PALETTE_GROUP_COLS;
+        uint32_t   col  = (g < PALETTE_G2_GROUPS) ? (g % PALETTE_GROUP_COLS) : (PALETTE_GROUP_COLS + ((g - PALETTE_G2_GROUPS) / 2u));
+        uint32_t   row  = (g < PALETTE_G2_GROUPS) ? (g / PALETTE_GROUP_COLS) : ((g - PALETTE_G2_GROUPS) % 2u);
         tRectangle rect = {
             {
                 PALETTE_GROUP_X + ((PALETTE_GROUP_W + 1.0) * (double)col),
@@ -283,7 +286,7 @@ void palette_render(void) {
     {
         uint32_t colours = array_size_module_colour_map();
         uint32_t c       = 0;
-        double   originX = PALETTE_GROUP_X + ((PALETTE_GROUP_W + 1.0) * PALETTE_GROUP_COLS) + 16.0;
+        double   originX = PALETTE_GROUP_X + ((PALETTE_GROUP_W + 1.0) * PALETTE_GROUP_COLUMNS) + 16.0;
 
         if (colours > PALETTE_MAX_SWATCHES) {
             colours = PALETTE_MAX_SWATCHES;

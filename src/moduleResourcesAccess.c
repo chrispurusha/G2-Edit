@@ -149,6 +149,22 @@ uint32_t array_size_str_map(const char ** strMap) {
 }
 
 // Called from both threads — caches are pre-warmed by init_module_resource_cache() before USB thread starts.
+// The value a new module's parameter starts at - its row's default in the parameter table
+uint32_t module_param_default(tModuleType moduleType, uint32_t paramIndex) {
+    uint32_t seen = 0;
+
+    for (uint32_t i = 0; i < array_size_param_location_list(); i++) {
+        if (paramLocationList[i].moduleType == moduleType) {
+            if (seen == paramIndex) {
+                return paramLocationList[i].defaultValue;
+            }
+            seen++;
+        }
+    }
+
+    return 0;
+}
+
 uint32_t module_param_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};

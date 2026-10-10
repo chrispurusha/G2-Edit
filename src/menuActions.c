@@ -648,7 +648,7 @@ static void sampler_chosen(const char * path) {
 
     // notes §15 - read it now, so a file the Sampler cannot play is refused here rather than left silent
     if (nord_sample_get(path) == NULL) {
-        show_alert("Choose Sample", "That file could not be read as a Nord sample file (.nsmp or .nsmp4). The Sampler keeps the file it had.");
+        show_alert("Choose Sample", "That file could not be read as a sample file - a Nord .nsmp or .nsmp4, or an E-mu Emulator X bank (.exb, with its SamplePool folder beside it). The Sampler keeps the file it had.");
         return;
     }
 

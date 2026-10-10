@@ -597,6 +597,16 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             backdoor_write_result((nord_sample_get(arg + used) != NULL) ? "OK\n" : "OK - but the file could not be read\n");
         }
         sound_engine_update_from_patch();
+    } else if (strcmp(cmd, "BEND") == 0) {
+        // BEND <-1..1> - the local engine's pitch bend, as a MIDI bend would set it; 0 centres it
+        double bend = 0.0;
+
+        if (sscanf(arg, "%lf", &bend) != 1) {
+            backdoor_write_result("ERROR: expected 'BEND <-1..1>'\n");
+            return;
+        }
+        sound_engine_pitch_bend(bend);
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "DEVSLOT") == 0) {
         // DEVSLOT <0-3|A-D> - select the slot on the DEVICE as well, as the topbar's slot button does
         uint32_t        slot = 0;

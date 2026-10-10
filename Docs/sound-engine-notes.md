@@ -3639,7 +3639,13 @@ the engine's own anti-click ramp - which had cut every envelope-less note a few 
 the Sampler did - stays off, and the voice lives until the Sampler's release is over. With Amp patched, the
 envelope there does all of it, as before. A note starts only while its key is down: a rebuild - choosing a file, any patch edit - clears the
 Sampler's state, and a voice whose key was already up then looked like a new note and replayed its sample
-through the release (CT: "a blast of the sample" on loading a file).
+through the release (CT: "a blast of the sample" on loading a file). E-mu Emulator X banks play too (nordSample.c notes
+§11): a zone loops between its own loop points, which for these need not end with the sample. Pitch
+(2026-10-10, CT): the voice's pitch carries bend and glide as every oscillator's does (full bend up: +2.00
+semitones, the same as OscB's); and two inputs as an oscillator has them - Pitch as it comes, PitchVar through
+the Pitch dial - add 64 semitones per unit (PITCH_MOD_SEMITONES): a Constant at +12 semitones moves Sampler and
+OscB alike, +12.00. Aftertouch is the Keyboard module's AftTouch into PitchVar, as on any oscillator. Pitch
+modulation moves the playback rate only; a note keeps the zone its key chose.
 
 THE LOOP (2026-10-10, third reading). The zone plays through to its end, then round a short loop of a whole
 number of cycles back to the loop start (nordSample.c notes §5) - exact, so no crossfade and no level

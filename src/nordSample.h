@@ -23,7 +23,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define NORD_SAMPLE_MAX_ZONES    (64)
+#define NORD_SAMPLE_MAX_ZONES    (128)
 
 typedef struct {
     float *  data;          // -1..1, `channels` interleaved
@@ -31,8 +31,9 @@ typedef struct {
     uint32_t length;        // frames
     double   rootNote;      // MIDI note the zone sounds at its own rate (notes §3)
     double   sampleRate;    // the zone's own (notes §3)
-    bool     looped;        // notes §5 - loopStart to the zone's end repeats, a whole number of cycles
+    bool     looped;        // notes §5 - loopStart to loopEnd repeats (a Nord zone's loop ends with the zone)
     uint32_t loopStart;
+    uint32_t loopEnd;       // frames, exclusive
     uint32_t id;            // notes §6 - how the key map names the zone
     int32_t  keyLow;        // notes §6 - the keys it plays, from the key map
     int32_t  keyHigh;
@@ -46,6 +47,8 @@ typedef struct {
     bool      mapped;       // notes §6 - zones chosen by the key map, not by the nearest root
     uint32_t  zoneCount;
     tNordZone zone[NORD_SAMPLE_MAX_ZONES];
+    float *   owned[NORD_SAMPLE_MAX_ZONES];   // notes §11 - the sample buffers, which zones may share
+    uint32_t  ownedCount;
 } tNordSample;
 
 bool nord_sample_load(const char * path, tNordSample * sample);

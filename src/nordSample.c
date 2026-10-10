@@ -227,6 +227,7 @@ static bool decode_zone(const uint8_t * data, uint32_t length, uint32_t at, tNor
     zone->data       = out;
     zone->length     = written / channels;
     zone->looped     = sawStart && (zone->loopStart + 1u < zone->length);
+    zone->loopEnd    = zone->length;
 
     uint32_t rate = headed ? (((uint32_t)data[ZONE_RATE] << 8) | data[ZONE_RATE + 1]) : 0u;
 
@@ -412,27 +413,60 @@ static void apply_key_map_later(const uint8_t * map, uint32_t length, tNordSampl
     sample->mapped = true;
 }
 
-bool nord_sample_load(const char * path, tNordSample * sample) {
-    FILE *          file      = fopen(path, "rb");
+static uint8_t * read_whole_file(const char * path, long * size) {
+    FILE *    file = fopen(path, "rb");
 
-    memset(sample, 0, sizeof(*sample));
+    *size = 0;
 
     if (file == NULL) {
-        return false;
+        return NULL;
     }
     fseek(file, 0, SEEK_END);
-    long            size      = ftell(file);
-    uint8_t *       d         = (size > 0) ? malloc((size_t)size) : NULL;
+    long      n    = ftell(file);
+    uint8_t * d    = (n > 0) ? malloc((size_t)n) : NULL;
 
     fseek(file, 0, SEEK_SET);
 
-    if ((d == NULL) || (fread(d, 1, (size_t)size, file) != (size_t)size)) {
+    if ((d == NULL) || (fread(d, 1, (size_t)n, file) != (size_t)n)) {
         fclose(file);
         free(d);
-        return false;
+        return NULL;
     }
     fclose(file);
+    *size = n;
+    return d;
+}
 
+static void own(tNordSample * sample, float * data) {
+    if (sample->ownedCount < NORD_SAMPLE_MAX_ZONES) {
+        sample->owned[sample->ownedCount++] = data;
+    } else {
+        free(data);   // cannot happen: a sample is owned once, and there are no more samples than zones
+    }
+}
+
+static bool emu_bank_load(const char * path, const uint8_t * d, uint32_t size, tNordSample * sample);
+
+bool nord_sample_load(const char * path, tNordSample * sample) {
+    long            size      = 0;
+    uint8_t *       d         = read_whole_file(path, &size);
+
+    memset(sample, 0, sizeof(*sample));
+
+    if (d == NULL) {
+        return false;
+    }
+
+    if ((size >= 12) && (memcmp(d, "FORM", 4) == 0) && (memcmp(d + 8, "E5B0", 4) == 0)) {
+        bool loaded = emu_bank_load(path, d, (uint32_t)size, sample);   // notes §11
+
+        free(d);
+
+        if (!loaded) {
+            nord_sample_free(sample);
+        }
+        return loaded;
+    }
     const tFormat * f         = ((size > 4) && (d[4] == 1u)) ? &kFormatLater : &kFormatOriginal; // notes §8
 
     if ((size < (long)f->chunksStart) || (memcmp(d, "CBIN", 4) != 0) || (memcmp(d + 8, "nsmp", 4) != 0)) {
@@ -459,6 +493,8 @@ bool nord_sample_load(const char * path, tNordSample * sample) {
             tNordZone * zone = &sample->zone[sample->zoneCount];
 
             if (decode_zone(d + p + f->chunkHeader, length, p + f->chunkHeader, zone, f)) {
+                own(sample, zone->data);
+
                 if (zone->rootNote < 0.0) {
                     zone->rootNote = zone_root_note(zone, zone->sampleRate);   // notes §3 - no header to read it from
                 }
@@ -477,9 +513,241 @@ bool nord_sample_load(const char * path, tNordSample * sample) {
     return sample->zoneCount > 0;
 }
 
+// notes §11 - E-mu Emulator X: a bank (.exb) of presets, each a list of voices whose zones name samples kept
+// one to a file (.ebl) in the SamplePool folder beside it. IFF chunks: a big-endian tag and length, with
+// LISTs and voices holding chunks of their own.
+#define EMU_MAX_SAMPLES    (1000)
+#define EBL_HEADER_BASE    (2)         // the sample header's offsets count from here in the E5S1 chunk
+#define EBL_START_L        (0x48)      // then start R, end L, end R, loop start L and R, loop end L and R
+#define EBL_RATE           (0x68)
+#define EBL_OPTIONS        (0x6e)
+#define EBL_OPTION_LOOP    (0x0001)
+#define ZHDR_SAMPLE        (4)
+#define ZHDR_ROOT          (10)
+#define ETW_LOW            (4)
+#define ETW_HIGH           (7)
+
+static uint32_t read_u32_le(const uint8_t * p) {
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+// The first chunk with this tag between `from` and `to`, at the top level; its body and length
+static bool iff_find(const uint8_t * d, uint32_t from, uint32_t to, const char * tag, uint32_t * body, uint32_t * length) {
+    for (uint32_t p = from; (p + 8u) <= to;) {
+        uint32_t n = read_u32(d + p + 4);
+
+        if ((n > (to - p - 8u))) {
+            return false;
+        }
+
+        if (memcmp(d + p, tag, 4) == 0) {
+            *body   = p + 8u;
+            *length = n;
+            return true;
+        }
+        p += 8u + n + (n & 1u);
+    }
+
+    return false;
+}
+
+// One .ebl: 16-bit little-endian frames, a stereo file's left channel whole and then its right
+static bool ebl_load(const char * path, tNordZone * zone) {
+    long            size   = 0;
+    uint8_t *       d      = read_whole_file(path, &size);
+    uint32_t        body   = 0;
+    uint32_t        length = 0;
+
+    if (d == NULL) {
+        return false;
+    }
+
+    if (  (size < 12) || (memcmp(d, "FORM", 4) != 0) || !iff_find(d, 12, (uint32_t)size, "E5S1", &body, &length)
+       || (length < (EBL_HEADER_BASE + EBL_OPTIONS + 2u))) {
+        free(d);
+        return false;
+    }
+    const uint8_t * h      = d + body + EBL_HEADER_BASE;
+    uint32_t        limit  = length - EBL_HEADER_BASE;
+    uint32_t        f[8];
+
+    for (uint32_t i = 0; i < 8u; i++) {
+        f[i] = read_u32_le(h + EBL_START_L + (4u * i));   // start L, start R, end L, end R, loop start L, R, loop end L, R
+    }
+
+    uint32_t        startL = f[0], startR = f[1], endL = f[2], endR = f[3];
+    uint32_t        rate   = read_u32_le(h + EBL_RATE);
+    uint32_t        frames = ((endL >= startL) && (endL < limit)) ? (((endL - startL) / 2u) + 1u) : 0u;
+    bool            stereo = (frames > 0u) && (startR > endL) && (endR < limit) && ((endR - startR) == (endL - startL));
+    uint32_t        ch     = stereo ? 2u : 1u;
+    float *         out    = (frames > 0u) ? malloc(sizeof(float) * frames * ch) : NULL;
+
+    if ((out == NULL) || (rate < 1000u) || (rate > 192000u)) {
+        free(out);
+        free(d);
+        return false;
+    }
+
+    for (uint32_t i = 0; i < frames; i++) {
+        for (uint32_t c = 0; c < ch; c++) {
+            const uint8_t * q = h + ((c == 0u) ? startL : startR) + (2u * i);
+
+            out[(i * ch) + c] = (float)(int16_t)((uint16_t)q[0] | ((uint16_t)q[1] << 8)) / 32768.0f;
+        }
+    }
+
+    // notes §11 - the stored loop end is the frame before the loop's last
+    uint32_t        loopS  = (f[4] >= startL) ? ((f[4] - startL) / 2u) : 0u;
+    uint32_t        loopE  = (f[6] >= startL) ? (((f[6] - startL) / 2u) + 2u) : 0u;
+
+    memset(zone, 0, sizeof(*zone));
+    zone->data       = out;
+    zone->channels   = ch;
+    zone->length     = frames;
+    zone->sampleRate = (double)rate;   // notes §11 - the rate the file plays at, its fine tuning included
+    zone->loopEnd    = (loopE <= frames) ? loopE : frames;
+    zone->loopStart  = loopS;
+    zone->looped     = ((((uint32_t)h[EBL_OPTIONS] | ((uint32_t)h[EBL_OPTIONS + 1] << 8)) & EBL_OPTION_LOOP) != 0u)
+                       && ((loopS + 1u) < zone->loopEnd);
+    zone->gain       = 1.0;
+    zone->velHigh    = 127;
+    free(d);
+    return true;
+}
+
+typedef struct {
+    const char *  path;                        // the bank's, for finding its SamplePool
+    tNordSample * sample;
+    int16_t       loaded[EMU_MAX_SAMPLES + 1]; // sample number -> a zone holding its data, or -1 / -2 (failed)
+    int32_t       voiceKey[2];
+    int32_t       voiceVel[2];
+    uint32_t      windows;            // ETW chunks seen since the voice or zone began
+    bool          inZones;
+    int32_t       zone;               // the zone the windows after a Zhdr narrow, or -1
+} tEmuWalk;
+
+// notes §11 - <bank folder>/SamplePool/<bank name>SL<nnn>.ebl
+static bool emu_sample_path(const char * bank, uint32_t number, char * out, size_t size) {
+    const char * slash = strrchr(bank, '/');
+    const char * leaf  = (slash != NULL) ? (slash + 1) : bank;
+    const char * dot   = strrchr(leaf, '.');
+    int          dir   = (int)(leaf - bank);
+    int          stem  = (dot != NULL) ? (int)(dot - leaf) : (int)strlen(leaf);
+
+    return snprintf(out, size, "%.*sSamplePool/%.*sSL%03u.ebl", dir, bank, stem, leaf, number) < (int)size;
+}
+
+static void emu_zone(tEmuWalk * w, const uint8_t * z, uint32_t length) {
+    tNordSample * sample = w->sample;
+    uint32_t      number = (length > (ZHDR_ROOT)) ? (((uint32_t)z[ZHDR_SAMPLE] << 8) | z[ZHDR_SAMPLE + 1]) : 0u;
+
+    w->zone = -1;
+
+    if ((number == 0u) || (number > EMU_MAX_SAMPLES) || (sample->zoneCount >= NORD_SAMPLE_MAX_ZONES)) {
+        return;
+    }
+
+    if (w->loaded[number] == -1) {
+        char file[1100];
+
+        w->loaded[number] = -2;
+
+        if (emu_sample_path(w->path, number, file, sizeof(file)) && ebl_load(file, &sample->zone[sample->zoneCount])) {
+            own(sample, sample->zone[sample->zoneCount].data);
+            w->loaded[number] = (int16_t)sample->zoneCount;
+            sample->zoneCount++;
+        }
+    } else if (w->loaded[number] >= 0) {
+        sample->zone[sample->zoneCount] = sample->zone[w->loaded[number]];   // the same data, another zone
+        sample->zoneCount++;
+    }
+
+    if (w->loaded[number] < 0) {
+        return;
+    }
+    tNordZone * zone = &sample->zone[sample->zoneCount - 1u];
+
+    zone->id       = number;
+    zone->rootNote = z[ZHDR_ROOT];
+    zone->keyLow   = w->voiceKey[0];
+    zone->keyHigh  = w->voiceKey[1];
+    zone->velLow   = w->voiceVel[0];
+    zone->velHigh  = w->voiceVel[1];
+    w->zone        = (int32_t)(sample->zoneCount - 1u);
+    w->windows     = 0;
+}
+
+static void emu_walk(tEmuWalk * w, const uint8_t * d, uint32_t from, uint32_t to) {
+    for (uint32_t p = from; (p + 8u) <= to;) {
+        uint32_t        n    = read_u32(d + p + 4);
+        const uint8_t * body = d + p + 8;
+
+        if (n > (to - p - 8u)) {
+            return;
+        }
+
+        if ((memcmp(d + p, "LIST", 4) == 0) && (n >= 4u)) {
+            bool zones = (memcmp(body, "E5ZL", 4) == 0);
+
+            w->inZones = w->inZones || zones;
+            emu_walk(w, d, p + 12u, p + 8u + n);
+            w->inZones = w->inZones && !zones;
+        } else if (memcmp(d + p, "E5V1", 4) == 0) {
+            w->voiceKey[0] = 0;
+            w->voiceKey[1] = 127;
+            w->voiceVel[0] = 0;
+            w->voiceVel[1] = 127;
+            w->windows     = 0;
+            w->zone        = -1;
+            emu_walk(w, d, p + 8u, p + 8u + n);
+        } else if (memcmp(d + p, "Zhdr", 4) == 0) {
+            emu_zone(w, body, n);
+        } else if ((memcmp(d + p, "ETW ", 4) == 0) && (n > ETW_HIGH)) {
+            // a voice's first two windows are its keys and velocities; a zone's narrow them
+            int32_t lo = body[ETW_LOW];
+            int32_t hi = body[ETW_HIGH];
+
+            if (!w->inZones && (w->windows < 2u)) {
+                int32_t * range = (w->windows == 0u) ? w->voiceKey : w->voiceVel;
+
+                range[0] = lo;
+                range[1] = hi;
+            } else if (w->inZones && (w->zone >= 0) && (w->windows < 2u)) {
+                tNordZone * zone = &w->sample->zone[w->zone];
+                int32_t *   low  = (w->windows == 0u) ? &zone->keyLow : &zone->velLow;
+                int32_t *   high = (w->windows == 0u) ? &zone->keyHigh : &zone->velHigh;
+
+                *low  = (lo > *low) ? lo : *low;
+                *high = (hi < *high) ? hi : *high;
+            }
+            w->windows++;
+        }
+        p += 8u + n + (n & 1u);
+    }
+}
+
+// notes §11 - the bank's first preset
+static bool emu_bank_load(const char * path, const uint8_t * d, uint32_t size, tNordSample * sample) {
+    tEmuWalk walk;
+    uint32_t body   = 0;
+    uint32_t length = 0;
+
+    if (!iff_find(d, 12, size, "E5P1", &body, &length) || (length < 2u)) {
+        return false;
+    }
+    memset(&walk, 0, sizeof(walk));
+    memset(walk.loaded, 0xFF, sizeof(walk.loaded));   // -1: not tried
+    walk.path      = path;
+    walk.sample    = sample;
+    walk.zone      = -1;
+    emu_walk(&walk, d, body + 2u, body + length);
+    sample->mapped = (sample->zoneCount > 0u);
+    return sample->zoneCount > 0u;
+}
+
 void nord_sample_free(tNordSample * sample) {
-    for (uint32_t z = 0; z < sample->zoneCount; z++) {
-        free(sample->zone[z].data);
+    for (uint32_t i = 0; i < sample->ownedCount; i++) {
+        free(sample->owned[i]);
     }
 
     memset(sample, 0, sizeof(*sample));

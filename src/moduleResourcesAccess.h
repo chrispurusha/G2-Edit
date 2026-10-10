@@ -87,6 +87,7 @@ const char * drum_synth_preset_name(uint32_t preset);
 uint8_t drum_synth_preset_value(uint32_t preset, uint32_t paramIndex);
 int32_t drum_synth_preset_matching(const tParam * params);
 uint32_t module_param_count(tModuleType moduleType);
+uint32_t module_param_default(tModuleType moduleType, uint32_t paramIndex);
 
 // The subset of those the DEVICE actually sends — paramTypeCustomData rows excluded, they are local
 // storage with their own wire message. For the patch-parse count check only; see the definition.

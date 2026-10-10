@@ -119,3 +119,25 @@ Not used: a second header float at 0x3e - 20.0 in every Mellotron zone, and in a
 13.7 in the bottom zone to 2.5 at the top, as a piano's sustain does. Perhaps a decay applied after the sample
 has run out; nothing here tests it.
 
+## 11. E-mu Emulator X banks (`emu_bank_load()`, `ebl_load()`)
+
+A bank is a `.exb` file with a `SamplePool` folder beside it holding one `.ebl` per sample, named after the
+bank: `<bank>SL001.ebl`, `SL002`... Both are IFF (`FORM`, big-endian tags and lengths). Public references: the
+`ebl-reading` project (MIT) for the `.ebl` sample, and mpc2emu's E4B notes for the E4 layouts these grew from.
+
+The bank holds presets (`E5P1`), each a tree of chunks: a header, then a `LIST E5VL` of voices (`E5V1`). In
+a voice, before its zone list, the first two `ETW` windows are its KEY and VELOCITY ranges (byte 4 the low,
+byte 7 the high). Its `LIST E5ZL` holds zones: a `Zhdr` - the sample number (u16 at 4, 1-based, the `SLnnn`
+of its file) and the ROOT key (byte 10) - and windows of its own that narrow the voice's. The Sampler plays
+the bank's first preset; the rest are not offered yet. A voice's envelopes, filter, LFOs and cords are not
+read. One sample can serve many zones: it is read once, and `tNordSample.owned` frees each buffer once.
+
+A sample (`E5S1`): offsets in its header count from 2 bytes into the chunk - eight little-endian u32 at 0x48:
+start L, start R, end L, end R, loop start L and R, loop end L and R, all byte offsets of 16-bit frames, the
+ends inclusive; the left channel whole, then the right; then the rate (u32 at 0x68) and options (u16 at 0x6e,
+bit 0 the loop). The rate is not a round number - 43569 to 44053 Hz in the Celtic Harp - and it is the one to
+play at: at their own rates the samples sit within 3.7 cents of equal-tempered pitch, at 44.1 kHz up to 17.6
+cents sharp, so the tuning is in the rate. As on the E4, the stored loop end is the frame before the loop's
+last. A loop here can sit anywhere in the sample (one 200-frame loop at 3.4 s of a 5 s recording), so a zone
+carries its own loop end (`loopEnd`); a Nord zone's is its length.
+

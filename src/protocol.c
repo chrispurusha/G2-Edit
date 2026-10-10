@@ -475,6 +475,20 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                 module->param[j][k].value = paramValue;
             }
         }
+
+        // notes §24 - a file from before an engine-only module gained a parameter: the new ones start at
+        // their defaults, and the module carries its full count from here, so the next save writes them
+        if (module_is_engine_only(module->type) && (paramCount < module_param_count(module->type))) {
+            uint32_t full = module_param_count(module->type);
+
+            for (j = 0; j < NUM_VARIATIONS; j++) {
+                for (k = paramCount; (k < full) && (k < MAX_NUM_PARAMETERS); k++) {
+                    module->param[j][k].value = module_param_default(module->type, k);
+                }
+            }
+
+            module->actualParamCount = full;
+        }
     }
 }
 
