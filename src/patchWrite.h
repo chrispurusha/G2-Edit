@@ -29,10 +29,12 @@ extern "C" {
 
 bool slot_has_engine_only_modules(uint32_t slot);
 const char * patch_save_path(uint32_t slot, const char * path, char * out, size_t outSize);
+const char * perf_save_path(const char * path, char * out, size_t outSize);
+void perf_engine_only_header_apply(const uint8_t * header, size_t length);
 void engine_only_header_apply(uint32_t slot, const uint8_t * header, size_t length);
 int write_database_to_file(const char * filepath, uint32_t slot);  // EXIT_SUCCESS / EXIT_FAILURE
 int write_perf_to_file(const char * filepath);                     // EXIT_SUCCESS / EXIT_FAILURE
-uint8_t * write_perf_to_memory(size_t * sizeOut);                  // the .prf2 image; the caller frees it
+uint8_t * write_perf_to_memory(size_t * sizeOut, bool engineOnly); // the .prf2 image; the caller frees it. notes §3
 
 #ifdef __cplusplus
 }

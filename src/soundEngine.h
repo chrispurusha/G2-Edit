@@ -140,7 +140,15 @@ const char * sound_engine_debug_text(void);
 // Audio thread, real-time context: no locks, no allocation, no logging below this line.
 // Fills frameCount frames of interleaved float, channelCount channels wide.
 void sound_engine_set_sample_rate(double sampleRate);
+// notes §217 - the output pairs the engine renders: the G2's Out 1/2 and 3/4, then its own Out 5/6 .. 15/16
+#define SOUND_ENGINE_OUT_PAIRS       (8)
+#define SOUND_ENGINE_OUT_CHANNELS    (2 * SOUND_ENGINE_OUT_PAIRS)
+
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount);
+
+// notes §218 - NaN repairs made by the current engine so far, and the module of the last
+uint32_t sound_engine_nan_repairs(int32_t * module);
+void sound_engine_test_inject_nan(void);
 
 // §37 - the G2's In 1-4 for the NEXT sound_engine_render() on this thread: one buffer per channel at
 // the device rate, frameCount long. Channels past channelCount, and a NULL in, are silence.

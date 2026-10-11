@@ -33,6 +33,7 @@
 #include "utils.h"
 #include "soundEngine.h"
 #include "patchWrite.h"
+#include "slotSets.h"
 #include "g2Patch.h"
 
 // Parse a .pch2 image already in memory. Split out from the file loader so the built-in patch and a
@@ -72,7 +73,9 @@ bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot
     if (type != 0) {                // 0 is a patch; a performance (1) has four slots and no meaning here
         return false;
     }
+    database_write_lock();   // g2Plugin.c notes §16 - parse_patch() takes it itself
     clear_slot_data(slot);
+    database_write_unlock();
     // notes §2
     parse_patch(slot, (uint8_t *)(buff + byteOffset), (uint32_t)((fileSize - byteOffset) - 2));
     engine_only_header_apply(slot, buff, (size_t)fileSize);   // patchWrite.c notes §2
@@ -166,45 +169,12 @@ static void remember(char * dest, const char * path) {
     }
 }
 
-// Where a .pch2/.prf2 image's patch data starts, after the text header and the version and type
-// bytes, with its type; false if the header or the CRC is wrong. The body ends 2 bytes before `size`.
-static bool image_body(const uint8_t * buff, int64_t size, int64_t * body, uint8_t * type) {
-    int64_t at = 0;
-
-    if ((buff == NULL) || (size < 8)) {
-        return false;
-    }
-
-    for (int64_t i = 0; i < size; i++) {
-        if (buff[i] == 0x00) {
-            at = i + 1;
-            break;
-        }
-    }
-
-    if (  (at == 0) || ((at + 2) >= size)
-       || ((uint32_t)((buff[size - 2] << 8) | buff[size - 1]) != calc_crc16(buff + at, (uint32_t)((size - at) - 2)))) {
-        return false;
-    }
-    *type = buff[at + 1];
-    *body = at + 2;
-    return true;
-}
-
 // A .prf2 image into all four slots and the performance settings. The performance's name is not in it.
 bool g2_plugin_parse_perf_image(const uint8_t * buff, int64_t size) {
-    int64_t body = 0;
-    uint8_t type = 0;
-
-    if ((image_body(buff, size, &body, &type) == false) || (type != 1)) {
+    if (perf_image_parse(buff, size) == false) {   // slotSets.c notes §2
         return false;
     }
-
-    for (uint32_t i = 0; i < MAX_SLOTS; i++) {
-        clear_slot_data(i);
-    }
     gGlobalSettings.perfMode = 1;
-    parse_perf((uint8_t *)(buff + body), (int)((size - body) - 2));
     sound_engine_start_performance();   // soundEngine notes §216
     return true;
 }
@@ -220,15 +190,19 @@ tG2FileKind g2_plugin_open_file(const char * filepath, uint32_t slot) {
         return eG2FileFailed;
     }
 
-    if (image_body(buff, fileSize, &byteOffset, &type) == false) {
+    if (file_image_body(buff, fileSize, &byteOffset, &type) == false) {
         free(buff);
         return eG2FileFailed;
     }
 
     if ((type == 0) && (slot < MAX_SLOTS)) {
+        database_write_lock();   // g2Plugin.c notes §16 - parse_patch() takes it itself
         clear_slot_data(slot);
+        database_write_unlock();
         parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+        database_write_lock();
         engine_only_header_apply(slot, buff, (size_t)fileSize);   // patchWrite.c notes §2
+        database_write_unlock();
         set_patch_name_from_filename(slot, filepath);
         remember(gSavedPatchPath[slot], filepath);
         kind = eG2FilePatch;
@@ -236,9 +210,12 @@ tG2FileKind g2_plugin_open_file(const char * filepath, uint32_t slot) {
         // notes §3
         char * dot = NULL;
 
+        database_write_lock();   // g2Plugin.c notes §16
+
         for (uint32_t i = 0; i < MAX_SLOTS; i++) {
             clear_slot_data(i);
         }
+        database_write_unlock();
         {
             const char * slash = strrchr(filepath, '/');
 

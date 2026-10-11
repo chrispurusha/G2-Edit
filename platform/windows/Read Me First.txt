@@ -69,6 +69,32 @@ Experimental > Enable Sound Engine plays the patch on screen through Windows'
 audio; choose the output in Experimental > Audio Device. If it breaks up:
 Experimental > Engine Rate > Half (economy), or a larger Buffer Size.
 
+THE SAMPLER (ENGINE ONLY, EXPERIMENTAL)
+
+The Sampler is a module the G2 itself does not have: it plays sample files, and
+only the sound engine and the G2 Alike plug-in can play it. Add one from the module
+palette's "Special" group, then right-click it > Choose Sample... The file's name
+shows on the module, in red if it cannot be read.
+
+  Files it plays
+    .nsmp, .nsmp4   Nord sample files (Nord Sample Library), mono or stereo,
+                    with their own key maps and loops
+    .exb            E-mu Emulator X banks - keep the bank's sample files in its
+                    folder beside it. The first preset plays.
+  Not yet           Nord piano files (.npno), WAV and other formats
+
+Its controls: Pitch (with KB to turn keyboard tracking off), Start, Delay,
+Atk/Dcy/Sus/Rel, Vel, Level, and Speed and Grain - Speed stretches time without
+changing the pitch: 96 is normal speed, 64 stops, below that it plays in reverse.
+Spray scatters the grains for a smeared, cloudy sound, at any speed.
+Start, Delay, Speed, Grain and Spray each have a modulation input.
+
+A patch with a Sampler saves as .pchx, and a performance as .prfx. The G2 never
+receives a Sampler: while a patch holds one, the top bar shows "Not G2" in red.
+
+The plug-in also has eight stereo outputs: Out 1/2 and 3/4 as on the G2, and Out
+5/6 to 15/16, chosen in a 2-Out's "Out to", for separate tracks in the host.
+
 LICENCES
 
 G2 Editor is free software under the GNU General Public License version 3:

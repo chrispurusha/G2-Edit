@@ -127,6 +127,11 @@
 #define SUB_COMMAND_SELECT_SLOT              (0x09)
 #define SUB_RESPONSE_SELECT_SLOT             (0x09)
 #define SUB_COMMAND_KEYBOARD_FOCUS           (0x0f) // which slots the keyboard plays
+
+// sound-engine-notes §217 - a 2-Out's "Out to" past the G2's six: Out 5/6 .. Out 15/16, the engine's own
+#define OUT_TO_PARAM                         (0)
+#define OUT_TO_ENGINE_FIRST                  (6)
+#define OUT_TO_ENGINE_PAIRS                  (6)
 #define SUB_COMMAND_RETRIEVE                 (0x0a)
 #define SUB_COMMAND_STORE                    (0x0b)
 #define SUB_COMMAND_CLEAR                    (0x0c)

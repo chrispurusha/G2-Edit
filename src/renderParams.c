@@ -805,6 +805,14 @@ tRectangle render_paramType1SamplerSpeed(tModule * module, tRectangle rectangle,
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// sound-engine-notes §213f
+tRectangle render_paramType1SamplerSpray(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    double ms = sampler_spray_seconds(paramValue) * 1000.0;
+
+    snprintf(buff, buffSize, (ms < 10.0) ? "%.1fms" : "%.0fms", ms);
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
 // sound-engine-notes §213d
 tRectangle render_paramType1SamplerGrain(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double ms = sampler_grain_seconds(paramValue) * 1000.0;

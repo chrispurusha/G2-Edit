@@ -324,7 +324,8 @@ void read_file_into_memory_and_process(const char * filepath) {
             }
             gGlobalSettings.perfMode = 1;
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
-            sound_engine_start_performance();   // soundEngine notes §216
+            perf_engine_only_header_apply(buff, (size_t)fileSize); // patchWrite.c notes §3
+            sound_engine_start_performance();                      // soundEngine notes §216
         }
     } else {
         LOG_WARNING("CRC check failed\n");
@@ -453,9 +454,11 @@ static void on_file_saved(const char * chosen) {
     char         extended[1024] = {0};
     const char * path           = chosen;
 
-    // patchWrite.c notes §2 - a patch holding an engine-only module is written as .pchx
+    // patchWrite.c notes §2, §3 - a patch or performance holding what only the engine has is written as .pchx/.prfx
     if ((chosen != NULL) && !file_menu_save_is_perf()) {
         path = patch_save_path(slot, chosen, extended, sizeof(extended));
+    } else if (chosen != NULL) {
+        path = perf_save_path(chosen, extended, sizeof(extended));
     }
 
     if (path) {

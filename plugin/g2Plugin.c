@@ -37,6 +37,8 @@
 
 #include "globalVars.h"             // the document, and the names that are macros onto it
 #include "dataBase.h"               // init_patch(), slot_has_modules()
+#include "synthlibLog.h"
+#include "slotSets.h"
 #include "soundEngine.h"
 #include "noteStack.h"
 #include "prefs.h"
@@ -156,7 +158,7 @@ typedef struct {
     // sound_engine_render() writes INTERLEAVED frames and both plug-in formats hand over one buffer
     // per channel, so it renders here and is de-interleaved out. Bounded by G2_MAX_BLOCK and looped,
     // so an unusually large host buffer cannot overrun it.
-    float            scratch[G2_MAX_BLOCK * 4];
+    float            scratch[G2_MAX_BLOCK * SOUND_ENGINE_OUT_CHANNELS];
 
     // The state record, built when a host asks its size and handed over by the call that follows -
     // so the two agree, and the performance is written once per save, not twice.
@@ -176,6 +178,16 @@ static tG2Plugin * enter(void * inst) {
 
 // notes §4
 
+// notes §16 - `touch /tmp/g2alike-log`, then read /tmp/g2alike.log
+const char gSynthLibLogName[] = "g2alike";
+
+// notes §16 - a rebuild reads the patch the editor and the host write, so it holds the database's read lock
+static void update_from_patch_locked(void) {
+    database_read_lock();
+    sound_engine_update_from_patch();
+    database_read_unlock();
+}
+
 // notes §14 - how often the worker looks at morphSnapshotDirty. A morph reaches the sound within
 // this, which is already better than the standalone editor's frame rate.
 #define G2_REBUILD_POLL_US    (4000)
@@ -191,12 +203,24 @@ static void * rebuild_worker(void * arg) {
     pthread_setname_np("G2 Alike rebuild");
 #endif
 
+    uint32_t repairsSeen = 0;
+
     while (atomic_load(&g2->rebuildStop) == false) {
         // soundEngine notes §205 - a new Engine Rate leaves positions and words built at the old one
-        bool rateChanged = sound_engine_take_rate_changed();
+        bool    rateChanged = sound_engine_take_rate_changed();
+        int32_t module      = -1;
+        uint32_t repairs    = sound_engine_nan_repairs(&module);
 
         if ((atomic_exchange(&g2->morphSnapshotDirty, false) == true) || (rateChanged == true) || sound_engine_variation_pending()) {
-            sound_engine_update_from_patch();
+            update_from_patch_locked();
+        }
+
+        // notes §16 - sound-engine-notes §218: a module went to NaN and the engine cleared its state
+        if (repairs != repairsSeen) {
+            synthlib_log_line("NaN repaired (%u so far): %s module %d", repairs,
+                              (module < 0) ? "output stage" : (((module >> 8) == (int32_t)locationFx) ? "FX" : "VA"),
+                              (module < 0) ? -1 : (module & 0xff));
+            repairsSeen = repairs;
         }
         usleep(G2_REBUILD_POLL_US);
     }
@@ -333,7 +357,7 @@ static void g2_set_active(void * inst, bool active) {
         g2->active = true;
 
         // notes §7
-        sound_engine_update_from_patch();
+        update_from_patch_locked();
         rebuild_worker_start(g2);
     } else {
         rebuild_worker_stop(g2);
@@ -349,7 +373,7 @@ static void g2_reset(void * inst) {
     note_stack_all_off();
 }
 
-// Renders `frames` into out[0..1] (Out 1/2) and, where the host gave them, out[2..3] (Out 3/4),
+// Renders `frames` into out[0..1] (Out 1/2) and, where the host gave them, the other pairs (Out 3/4 .. 15/16),
 // starting at `from`, in chunks the scratch buffer can hold. The side-chain, where the host fills it,
 // is the patch's In 1/2.
 static void render_span(tG2Plugin * g2, const float * const * in, uint32_t numIn,
@@ -368,12 +392,12 @@ static void render_span(tG2Plugin * g2, const float * const * in, uint32_t numIn
             jack[c] = (in[c] != NULL) ? (in[c] + from + done) : NULL;
         }
         sound_engine_set_input(jack, SOUND_ENGINE_INPUT_CHANNELS);
-        sound_engine_render(g2->scratch, chunk, 4);
+        sound_engine_render(g2->scratch, chunk, SOUND_ENGINE_OUT_CHANNELS);
 
-        for (uint32_t c = 0; (c < 4u) && (c < numOut); c++) {
+        for (uint32_t c = 0; (c < SOUND_ENGINE_OUT_CHANNELS) && (c < numOut); c++) {
             if (out[c] != NULL) {
                 for (uint32_t i = 0; i < chunk; i++) {
-                    out[c][from + done + i] = g2->scratch[(i * 4) + c];
+                    out[c][from + done + i] = g2->scratch[(i * SOUND_ENGINE_OUT_CHANNELS) + c];
                 }
             }
         }
@@ -580,8 +604,15 @@ static void build_state_record(tG2Plugin * g2) {
     used += (size_t)snprintf(text + used, sizeof(text) - used, "perfname=%s\n", gGlobalSettings.perfName);
 
     database_read_lock();
-    image = write_perf_to_memory(&imageLen);
+    image = write_perf_to_memory(&imageLen, true);   // patchWrite.c notes §3
     database_read_unlock();
+
+    // notes §17 - the other mode's slots, after this one's image; their length and name go first, data= last
+    size_t otherLen = ((image != NULL) && (gOtherSlotSet != NULL)) ? gOtherSlotSetLen : 0u;
+
+    if (otherLen > 0u) {
+        used += (size_t)snprintf(text + used, sizeof(text) - used, "othername=%s\nother=%zu\n", gOtherPerfName, otherLen);
+    }
 
     if (image != NULL) {
         used += (size_t)snprintf(text + used, sizeof(text) - used, "%s%zu\n", G2_STATE_DATA_KEY, imageLen);
@@ -592,7 +623,7 @@ static void build_state_record(tG2Plugin * g2) {
     }
     free(g2->stateRecord);
     g2->stateRecordLen = 0;
-    g2->stateRecord    = (uint8_t *)malloc(used + imageLen);
+    g2->stateRecord    = (uint8_t *)malloc(used + imageLen + otherLen);
 
     if (g2->stateRecord != NULL) {
         memcpy(g2->stateRecord, text, used);
@@ -600,7 +631,11 @@ static void build_state_record(tG2Plugin * g2) {
         if (image != NULL) {
             memcpy(g2->stateRecord + used, image, imageLen);
         }
-        g2->stateRecordLen = used + imageLen;
+
+        if (otherLen > 0u) {
+            memcpy(g2->stateRecord + used + imageLen, gOtherSlotSet, otherLen);
+        }
+        g2->stateRecordLen = used + imageLen + otherLen;
     }
     free(image);
 }
@@ -645,6 +680,10 @@ typedef struct {
 
     bool    havePerfName;
     char    perfName[CLAVIA_NAME_SIZE + 1];
+
+    // notes §17 - the other mode's slots: the length of their image, which follows this one's, and their name
+    size_t  otherLen;
+    char    otherName[CLAVIA_NAME_SIZE + 1];
 } tG2State;
 
 static void parse_state_line(tG2State * state, char * line) {
@@ -670,6 +709,10 @@ static void parse_state_line(tG2State * state, char * line) {
         state->economy = atoi(value);
     } else if (strcmp(key, "panel") == 0) {
         state->panel = atoi(value);
+    } else if (strcmp(key, "other") == 0) {
+        state->otherLen = (size_t)strtoul(value, NULL, 10);
+    } else if (strcmp(key, "othername") == 0) {
+        snprintf(state->otherName, sizeof(state->otherName), "%s", value);
     } else if (strcmp(key, "perfname") == 0) {
         state->havePerfName = true;
         snprintf(state->perfName, sizeof(state->perfName), "%s", value);
@@ -757,14 +800,24 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     // cannot point at a file whose contents were never loaded.
     gSavedPerfPath[0] = '\0';
 
+    database_write_lock();   // notes §16
+
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         gSavedPatchPath[slot][0] = '\0';
         clear_slot_data(slot);
         init_patch(slot);
     }
+    database_write_unlock();
 
     // notes §11 - and then the patches the project saved, if it did
     bool restored = (image != NULL) && g2_plugin_parse_perf_image(image, (int64_t)imageLen);
+
+    // notes §17 - the other mode's slots, if the record carries them whole; otherwise that mode starts empty
+    const uint8_t * other    = (image != NULL) ? (image + imageLen) : NULL;
+    bool            hasOther = (other != NULL) && (state->otherLen > 0u)
+                               && ((size_t)(other - (const uint8_t *)data) + state->otherLen <= len);
+
+    slot_set_other_take(hasOther ? other : NULL, hasOther ? state->otherLen : 0u, state->otherName);
 
     free(text);
 
@@ -808,7 +861,7 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     free(state);
 
     if (g2->active == true) {
-        sound_engine_update_from_patch();
+        update_from_patch_locked();
     }
     g2_view_request_redraw();
 }
@@ -864,10 +917,16 @@ static const tSynthLibBus gInputs[1] = {
     { "In 1/2", 2, true, false }
 };
 
-// notes §8 - the G2's Out 1/2 and Out 3/4 as two buses, for the DAW to route separately
-static const tSynthLibBus gOutputs[2] = {
-    { "Out 1/2", 2, false, true },
-    { "Out 3/4", 2, true,  true }
+// notes §8 - the G2's Out 1/2 and Out 3/4, then the engine's own, each a bus for the DAW to route separately
+static const tSynthLibBus gOutputs[SOUND_ENGINE_OUT_PAIRS] = {
+    { "Out 1/2",   2, false, true },
+    { "Out 3/4",   2, true,  true },
+    { "Out 5/6",   2, true,  true },
+    { "Out 7/8",   2, true,  true },
+    { "Out 9/10",  2, true,  true },
+    { "Out 11/12", 2, true,  true },
+    { "Out 13/14", 2, true,  true },
+    { "Out 15/16", 2, true,  true }
 };
 
 static const tSynthLibPluginDesc gDescriptor = {
@@ -882,7 +941,7 @@ static const tSynthLibPluginDesc gDescriptor = {
     .inputs            = gInputs,
     .numInputs         = 1,
     .outputs           = gOutputs,
-    .numOutputs        = 2,
+    .numOutputs        = SOUND_ENGINE_OUT_PAIRS,
     .wantsMidiIn       = true,
     .wantsTransport    = false,
 

@@ -369,6 +369,13 @@ Its Settings menu has two options worth knowing:
                         the CPU, for big patches or slower Macs, a little less
                         exact. Saved with your project.
 
+It has eight stereo outputs for your host to route to separate tracks: Out 1/2 and
+Out 3/4 are the G2's own, and Out 5/6 to Out 15/16 are extra ones only the sound
+engine has - choose them in a 2-Out module's "Out to", for instance to give each
+drum voice its own track. A patch using them saves as .pchx (or .prfx), shows
+"Not G2", and plays those voices on Out 1/2 on a G2 or wherever there are no
+channels for them.
+
 The editor does not need it and it does not need the editor. Skip this section
 entirely if you only want the editor.
 
@@ -478,6 +485,39 @@ load and a "late" count. If "late" keeps climbing while you play, the Mac cannot
 keep up with that patch:
 try Half, a larger buffer, or Render Ahead. Only the G2's ACTIVE slots play, as on
 the instrument itself.
+
+THE SAMPLER (ENGINE ONLY, EXPERIMENTAL)
+
+The Sampler is a module the G2 itself does not have: it plays sample files, and
+only the sound engine above and the G2 Alike plug-in can play it. Add one from the
+module palette's "Special" group, then right-click it > Choose Sample... The file
+browser starts in Nord Sound Manager's sample folder,
+
+    ~/Library/Application Support/Nord Sound Manager/Cache/Data
+
+and remembers wherever you go after that. The file's name shows on the module, in
+red if it cannot be read.
+
+  Files it plays
+    .nsmp, .nsmp4   Nord sample files (Nord Sample Library), mono or stereo,
+                    with their own key maps and loops
+    .exb            E-mu Emulator X banks - keep the bank's sample files in its
+                    folder beside it. The first preset plays.
+  Not yet           Nord piano files (.npno), WAV and other formats
+
+Its controls: Pitch (with KB to turn keyboard tracking off), Start (where in the
+sample a note begins), Delay (silence before it starts), Atk/Dcy/Sus/Rel, Vel,
+Level, and Speed and Grain - Speed stretches time without changing the pitch: 96
+plays at normal speed, lower is slower, 64 stops, and below that it plays in
+reverse. Grain sets how the stretch sounds, short grains buzzy, long ones smooth.
+Spray scatters the grains for a smeared, cloudy sound, at any speed.
+Start, Delay, Speed, Grain and Spray each have a modulation input.
+
+A patch with a Sampler saves as .pchx, and a performance as .prfx, which keep the
+Sampler and the file it plays. The file is remembered by where it is, so moving
+or renaming it later leaves the Sampler silent until you choose it again. The G2
+never receives a Sampler: while a patch holds one, the top bar shows "Not G2" in
+red, and the G2 plays the rest of the patch without it.
 
 $PLUGIN_SECTION
 

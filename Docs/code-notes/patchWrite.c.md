@@ -30,3 +30,20 @@ application offline and online, and the plug-in's two). Saving chooses the exten
 engine-only module is written as .pchx whatever name was typed (`patch_save_path()`), one without as asked.
 A .pchx sent to the G2 still goes through the guarded writers, so the instrument gets the patch less its
 engine-only part. Performances (.prf2) do not carry engine-only modules yet.
+
+A slot also saves as .pchx when a 2-Out sends to Out 5/6 or above, the engine's own outputs
+(moduleResourcesAccess.c notes §7): the .pch2 writer gives those as Out 1/2, so a plain .pch2 stays one the G2
+can load, and only a .pchx carries the real destination back.
+
+## 3. `write_perf_to_memory()` - a .prf2, a .prfx, or the plug-in's project state
+
+The same performance image serves three readers. A .prf2 is one the G2 can load, so it leaves out what only
+the engine has - engine-only modules, and a 2-Out sent to Out 5/6 and above, given as Out 1/2
+(moduleResourcesAccess.c notes §7). A .prfx (CT, 2026-10-11) is the performance counterpart of a .pchx: it
+keeps them, and names each Sampler's file in the text header as `Sample=<slot A-D>,<VA|FX>,<module>,<path>` -
+the .pchx line with the slot a performance needs, which a .pchx reader passes over. `perf_save_path()` picks
+.prfx when any slot needs it, as `patch_save_path()` does for a patch, and `perf_engine_only_header_apply()`
+reads the lines back after the slots are parsed - on every load path: the application offline (graphics.c)
+and online (usbComms.c), and the plug-in (g2Patch.c). The plug-in's project state is the .prfx image
+(g2Plugin.c notes §15): leaving those things out had folded a drum kit's separate outputs back onto Out 1/2
+on every reopened project.

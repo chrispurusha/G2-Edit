@@ -95,7 +95,7 @@ const char *        posNegInvStrMap[]                       = {"Pos", "PosInv", 
 const char *        posNegInvBipStrMap[]                    = {"Pos", "PosInv", "Neg", "NegInv", "Bip", NULL};
 const char *        bipPosNegStrMap[]                       = {"Bip", "Pos", "Neg", NULL};
 const char *        resonAlgStrMap[]                        = {"String1", "String2", "Tube1", "Tube2", "Tube3", NULL};
-const char *        outToStrMap[]                           = {"Out 1/2", "Out 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
+const char *        outToStrMap[]                           = {"Out 1/2", "Out 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", "Out 5/6", "Out 7/8", "Out 9/10", "Out 11/12", "Out 13/14", "Out 15/16", NULL};
 const char *        outTo4OutStrMap[]                       = {"Out", "Fx", "Bus", NULL};
 const char *        inFxStrMap[]                            = {"FX 1/2", "FX 3/4", NULL};
 const char *        shapeTypeStrMap[]                       = {"Sine", "Tri", "Saw", "Sqr", "DualSaw", NULL};
@@ -1988,7 +1988,7 @@ const tModuleProperties  gModuleProperties[] = {
     {"RndClkB",      3, volumeTypeNone,      ledTypeNo,  moduleGroupRandom   },
     {"Unknown",      0, volumeTypeNone,      ledTypeNo,  moduleGroupNone     },
     {"RndPattern",   3, volumeTypeNone,      ledTypeYes, moduleGroupRandom   },
-    {"Sampler",      6, volumeTypeNone,      ledTypeNo,  moduleGroupOsc      }, };
+    {"Sampler",      8, volumeTypeNone,      ledTypeNo,  moduleGroupOsc      }, };
 
 // moduleType, paramType, position rectangle, anchor, label, range, defaultValue, string map, colour map
 const tParamLocation     paramLocationList[] = {
@@ -2000,7 +2000,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleType4toOut,     paramTypeBypass,         {{ -3,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },
     {moduleType4toOut,     paramTypeMenu,           {{  3,   0}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
     // 4 2-Out
-    {moduleType2toOut,     paramTypeMenu,           {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Out to",         6,   0, outToStrMap,                           NULL          },                       // 4 2-Out
+    {moduleType2toOut,     paramTypeMenu,           {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Out to",        12,   0, outToStrMap,                           NULL          },                       // 4 2-Out
     {moduleType2toOut,     paramTypeBypass,         {{ -3,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },
     {moduleType2toOut,     paramTypeMenu,           {{  3,   0}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
     //  5 Invert -- No params
@@ -2151,13 +2151,15 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSampler,    paramTypeADRTime,        {{ 76, -33}, { 7,  7}}, anchorBottomLeft,  "Delay",        128,   0, NULL,                                  NULL          },           // 209 Delay
     {moduleTypeSampler,    paramTypeCommonDial,     {{ 60, -33}, { 7,  7}}, anchorBottomLeft,  "DlyM",         128,   0, NULL,                                  NULL          },           // 209 Delay Mod
     {moduleTypeSampler,    paramTypeADRTime,        {{ 28, -18}, { 7,  7}}, anchorBottomLeft,  "Atk",          128,   0, NULL,                                  NULL          },           // 209 Attack
-    {moduleTypeSampler,    paramTypeSamplerSpeed,   {{ 28, -48}, { 7,  7}}, anchorBottomLeft,  "Speed",        128,  96, NULL,                                  NULL          },           // 209 Speed
-    {moduleTypeSampler,    paramTypeCommonDial,     {{ 12, -48}, { 7,  7}}, anchorBottomLeft,  "SpdM",         128,   0, NULL,                                  NULL          },           // 209 Speed Mod
+    {moduleTypeSampler,    paramTypeSamplerSpeed,   {{ 28, -63}, { 7,  7}}, anchorBottomLeft,  "Speed",        128,  96, NULL,                                  NULL          },           // 209 Speed
+    {moduleTypeSampler,    paramTypeCommonDial,     {{ 12, -63}, { 7,  7}}, anchorBottomLeft,  "SpdM",         128,   0, NULL,                                  NULL          },           // 209 Speed Mod
     {moduleTypeSampler,    paramTypeADRTime,        {{ 44, -18}, { 7,  7}}, anchorBottomLeft,  "Dcy",          128,  54, NULL,                                  NULL          },           // 209 Decay
     {moduleTypeSampler,    paramTypeUniPol,         {{ 60, -18}, { 7,  7}}, anchorBottomLeft,  "Sus",          128, 127, NULL,                                  NULL          },           // 209 Sustain
     {moduleTypeSampler,    paramTypeToggle,         {{ 12, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap},           // 209 Kbt
-    {moduleTypeSampler,    paramTypeSamplerGrain,   {{ 76, -48}, { 7,  7}}, anchorBottomLeft,  "Grain",        128,  69, NULL,                                  NULL          },           // 209 Grain
-    {moduleTypeSampler,    paramTypeCommonDial,     {{ 60, -48}, { 7,  7}}, anchorBottomLeft,  "GrnM",         128,   0, NULL,                                  NULL          },           // 209 Grain Mod
+    {moduleTypeSampler,    paramTypeSamplerGrain,   {{ 76, -63}, { 7,  7}}, anchorBottomLeft,  "Grain",        128,  69, NULL,                                  NULL          },           // 209 Grain
+    {moduleTypeSampler,    paramTypeCommonDial,     {{ 60, -63}, { 7,  7}}, anchorBottomLeft,  "GrnM",         128,   0, NULL,                                  NULL          },           // 209 Grain Mod
+    {moduleTypeSampler,    paramTypeSamplerSpray,   {{ 28, -48}, { 7,  7}}, anchorBottomLeft,  "Spray",        128,   0, NULL,                                  NULL          },           // 209 Spray
+    {moduleTypeSampler,    paramTypeCommonDial,     {{ 12, -48}, { 7,  7}}, anchorBottomLeft,  "SpryM",        128,   0, NULL,                                  NULL          },           // 209 Spray Mod
     // 32 Eq2Band
     {moduleTypeEq2Band,    paramTypedB,             {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                                  NULL          },           // 32 Lo Gain
     {moduleTypeEq2Band,    paramTypedB,             {{ 43,  -3}, { 7,  7}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                                  NULL          },           // 32 Hi Gain
@@ -3342,8 +3344,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSampler,     connectorDirIn,  connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",            labelLocRight}, // 209 PitchVar
     {moduleTypeSampler,     connectorDirIn,  connectorTypeControl, {{  3,  -33}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",            labelLocRight}, // 209 StartMod
     {moduleTypeSampler,     connectorDirIn,  connectorTypeControl, {{ 53,  -33}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight}, // 209 DelayMod
-    {moduleTypeSampler,     connectorDirIn,  connectorTypeControl, {{  3,  -48}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",            labelLocRight}, // 209 SpeedMod
-    {moduleTypeSampler,     connectorDirIn,  connectorTypeControl, {{ 53,  -48}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight}, // 209 GrainMod
+    {moduleTypeSampler,     connectorDirIn,  connectorTypeControl, {{  3,  -63}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",            labelLocRight}, // 209 SpeedMod
+    {moduleTypeSampler,     connectorDirIn,  connectorTypeControl, {{ 53,  -63}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "-",             labelLocRight}, // 209 GrainMod
+    {moduleTypeSampler,     connectorDirIn,  connectorTypeControl, {{  3,  -48}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "--",            labelLocRight}, // 209 SprayMod
     {moduleTypeSampler,     connectorDirOut, connectorTypeAudio,   {{-10,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",             labelLocUp   }, // 209 OutL
     {moduleTypeSampler,     connectorDirOut, connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "R",             labelLocUp   }, // 209 OutR
     // 32 Eq2Band

@@ -3702,6 +3702,29 @@ starts is decided once, from Speed and its jack as the note begins; a note that 
 carries on from where it is, as before. Reverse from the loop end retraces the sample to its start
 rather than circling the loop, which it only does once the loop has been reached going forward (§213b).
 
+## 213f. The Sampler's grains start in phase, and Spray scatters them (2026-10-11, CT)
+
+CT asked for smoother transitions between grains. Two grains overlapping out of phase partly cancel through
+each crossfade, which with a pitched sample is a flutter at the grain rate. Now a grain that starts again
+(`sampler_grain_start()`) is placed a whole number of the recording's cycles from where the other grain is
+reading - the in-phase position nearest the playhead - so the two overlap in phase. The cycle is the zone's
+own (`sampler_cycle()`: its rate over the frequency its root plays at); the loops of the Nord files tried are a
+whole number of these cycles to within 0.5%. Closed form, nothing searched; for a recording with no single
+cycle (an ensemble, a drum) it only moves the start by under one cycle. At x1 with no Spray a grain still
+starts at the playhead, so the plain read of §213b comes back.
+
+Measured offline (key 60, the level's ripple in 5 ms steps once its 100 ms average is taken out, against the
+build before): Harmonica at x0.5 0.44 -> 0.37 dB, worst dip 1.17 -> 0.92; at x0.375 0.83 -> 0.69. The Melodica
+was already smooth (0.38 dB at every speed, as at x1) and the Mellotron violins have no single cycle - both
+unchanged. No render's largest sample-to-sample step grew.
+
+SPRAY (params 17, 18; jack In 8). Each new grain's start is moved by a random amount within +-Spray, then put in
+phase as above: the grains smear across that span of the recording, the overlaps stay coherent. Spray is
+(value/127)^2 seconds either side, 0 to 1 s; its readout is in ms. With Spray up the grains run at x1 too, so a
+sound can be smeared without being slowed. Kept in the node's `fmAmount` and `fltFmAmount` (an oscillator's
+and a filter's, unused on a Sampler; level[] is full); the scatter's seed is per voice and note. The face went
+to eight rows: Speed and Grain at the top, Spray under them.
+
 ## 214. The engine switches its own variations, G2 connected or not (`cc_to_slot()`)
 
 A CtrlSend sending controller 70 to another slot selects that slot's variation (§62.3) - BCHydro_DZLW's slot A
@@ -3811,4 +3834,65 @@ A NOTE ENDS WITH ITS KEY WHEN NOTHING ELSE ENDS IT. With no envelope in the patc
 (notes §20), which for a looping sample meant a note that never stopped and a repeated key that stacked one
 voice on another. The Sampler now ends its own notes by its Rel dial whenever nothing is in its Amp input
 (`sampler_self_released()`, the damper above); with an envelope in Amp, the envelope decides.
+
+## 217. Outputs past the G2's four - Out 5/6 to Out 15/16 (`out_pair()`, `stage_fx()`) (2026-10-11, CT)
+
+CT: drum and percussion voices need channels of their own in a DAW. The G2 has two output pairs, so a 2-Out's
+Out to gains six destinations only the engine has, after the G2's own six (Out 1/2, Out 3/4, FX 1/2, FX 3/4,
+Bus 1/2, Bus 3/4): Out 5/6, 7/8, 9/10, 11/12, 13/14 and 15/16, values 6-11. `out_pair()` turns the value into
+the pair a node's `outDest` names - 0 and 1 for the G2's, 2-7 for these; FX and Bus are not outputs. The
+4-Out has no such choice: it is the G2's four sockets.
+
+The output stage (AC coupling §198, the converter roll-off §199, Volume, the knee, the clamp, the decimator)
+runs per channel for the G2's two pairs as before, and for the engine's own only up to the last one a patch
+uses (`gOutPairsLive`), so a patch with none costs what it did. A pair coming back into use has its history
+cleared first, or its decimator would replay what it held when it was last used.
+
+`sound_engine_render()` writes as many channels as its caller asks for: the plug-in asks for sixteen and
+gives each pair a bus (g2Plugin.c notes §8). A caller with fewer - the application's device, a stereo render -
+hears an engine pair it has no channels for on Out 1/2, which is where the G2 plays it too: anything sent to
+the G2, or saved as a .pch2, carries Out 1/2 in place of these values (moduleResourcesAccess.c notes §7), and
+a .pchx keeps them (patchWrite.c notes §2). Out 3/4 on a stereo caller is still left out, as the G2's own
+1/2 sockets leave it.
+
+## 218. A NaN is repaired, not kept (`gNanSeen`, `sound_engine_nan_repairs()`) (2026-10-11)
+
+CT: the plug-in once went silent after a patch change and stayed silent until the DAW was restarted. One way
+to get exactly that: a value that is not a number. §196 turns a module's NaN OUTPUT into a finite one, but a
+NaN inside a module's state - a filter's, a delay line's - stays, and the module then puts out a constant,
+which the output coupling (§198) turns into silence. The output stage's own filters (§198, §199) feed back
+their last output, and its final clamp let a NaN through, so one NaN there lasted until the engine itself was
+reset - in a plug-in, until it was unloaded. A new patch reset neither.
+
+Now: every node's output is checked as it is clamped, and a non-finite one marks the engine (`gNanSeen`) and
+records which module (location << 8 | index). At the next block the graph's state is cleared as for a new
+graph (§212, under its own key), the voices are reset, and so is the output stage; the slot is silent until
+that is done - a click, where before it was silence for good. In the output stage a non-finite sample is
+replaced by silence on the spot and that channel's filters cleared. The converter filter (§199) is no longer
+designed at a rate of 0. Repairs are counted per engine; the plug-in logs each one with the module
+(g2Plugin.c notes §16), which is how the next one will be traced to its cause.
+
+Checked offline with `sound_engine_test_inject_nan()` (backdoor ENGINENAN) on OscB > FltClassic > 2-Out: the
+filter's state took the NaN, the next block was repaired - 13 dB down for its first 100 ms - and the level was
+back to the sample's -36.1 dBFS from 0.5 s on; one repair, naming the OscB.
+
+## 219. A note the FX pass sends reaches the voices at a fixed sample (`note_to_slot()`, `split_produce_one()`) (2026-10-11)
+
+18 Unreal Dreams rendered differently every run with the voice thread on (§202), from its first millisecond,
+while serial and inline renders repeated exactly. Its NoteSends sit after the mix, so the FX pass - on the
+audio thread - queued their notes while the voices, on the worker, could be anywhere from one record to a whole
+ring (SPLIT_RING) ahead; the voice sample that took a note depended on how the two threads happened to run.
+
+Now such a note carries the voice sample it is due at (`due` in the queue): a ring past the record the FX pass
+is on. The worker can never be that far ahead, so the note is still to come; and it cannot produce that sample
+until the FX pass has finished the record - `consumed` is now published after `stage_fx()`, not before (the
+record is copied out first, so nothing is lost) - so the note is already queued. A note still due holds back
+the queue behind it, which keeps the order. Keyboard and MIDI notes carry no due sample and are taken as they
+come, as before; so are the notes a Voice-area NoteSend sends, which the worker queues and takes itself.
+
+The cost: a note sent from after the mix reaches the voices SPLIT_RING samples later than in a serial render
+(1.3 ms at 96 kHz). Threaded and inline renders are bit-identical again (three threaded runs and an inline one of
+18 at 120 BPM, 10 s); serial differs by that delay. Render time unchanged (4.66 s against 4.63 s for those
+10 s) once the NaN test hook (§218) was made to read its flag before exchanging it - an atomic exchange on every
+node of every voice had cost 8%.
 

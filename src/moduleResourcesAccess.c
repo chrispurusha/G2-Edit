@@ -582,6 +582,16 @@ bool module_is_engine_only(tModuleType moduleType) {
     return moduleType == moduleTypeSampler;
 }
 
+// notes §7 - a setting only the engine has: a 2-Out sent to Out 5/6 and up
+bool param_value_is_engine_only(tModuleType moduleType, uint32_t param, uint32_t value) {
+    return (moduleType == moduleType2toOut) && (param == OUT_TO_PARAM) && (value >= OUT_TO_ENGINE_FIRST);
+}
+
+// notes §7 - what the G2 (and a .pch2) is given in its place: Out 1/2
+uint32_t param_value_for_g2(tModuleType moduleType, uint32_t param, uint32_t value) {
+    return param_value_is_engine_only(moduleType, param, value) ? 0u : value;
+}
+
 void init_module_resource_cache(void) {
     tModuleType t = (tModuleType)0;
 

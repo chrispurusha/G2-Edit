@@ -96,6 +96,7 @@ set(G2_SOURCES
     src/renderParams.c
     src/selection.c
     src/settingsPanels.c
+    src/slotSets.c
     src/soundEngine.c
     src/splitView.c
     src/synthSettingsResources.c

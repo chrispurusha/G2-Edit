@@ -67,6 +67,7 @@ extern "C" {
 #include "graphics.h"
 #include "splitView.h"
 #include "patchWrite.h"
+#include "slotSets.h"
 #include "moduleGraphics.h"
 #include "virtualKeyboard.h"
 #include "backdoor.h"
@@ -628,14 +629,21 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         msg_send(&gToUsbThread, &msg);
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
-    } else if (strcmp(cmd, "DEVPERF") == 0) {
-        // DEVPERF on|off - performance or patch mode on the DEVICE, as the topbar's mode button
-        tMessageContent msg = {0};
-        bool            on  = (arg != NULL) && (strcmp(arg, "on") == 0);
+    } else if (strcmp(cmd, "ENGINENAN") == 0) {
+        // ENGINENAN - the next node the engine evaluates puts out a NaN; answers with the repairs so far
+        // (sound-engine-notes §218), so a test can inject, render, and see the count move
+        int32_t module = -1;
+        char    text[96];
 
-        msg.cmd                  = on ? eMsgCmdWriteModePerf : eMsgCmdWriteModePatch;
-        gGlobalSettings.perfMode = on ? 1 : 0;
-        msg_send(&gToUsbThread, &msg);
+        if ((arg == NULL) || (strcmp(arg, "count") != 0)) {
+            sound_engine_test_inject_nan();
+        }
+        snprintf(text, sizeof(text), "OK repairs=%u module=%d\n", sound_engine_nan_repairs(&module), module);
+        backdoor_write_result(text);
+    } else if (strcmp(cmd, "DEVPERF") == 0) {
+        // DEVPERF on|off - performance or patch mode, as the topbar's mode button: on the G2 when connected,
+        // otherwise each mode's own set of slots here (slotSets.c notes §1)
+        perf_mode_set((arg != NULL) && (strcmp(arg, "on") == 0));
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "NEWPATCH") == 0) {
@@ -1595,6 +1603,26 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         strncpy(msg.patchFileData.filePath, arg, sizeof(msg.patchFileData.filePath) - 1);
         msg_send(&gToUsbThread, &msg);
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "SAVEPERFIMAGE") == 0) {
+        // SAVEPERFIMAGE <path> - the performance image a plug-in project keeps, engine-only settings included
+        // (patchWrite.c notes §3), for building a plug-in state to test with
+        size_t    size    = 0;
+        uint8_t * image   = NULL;
+        FILE *    file    = ((arg != NULL) && (arg[0] != '\0')) ? fopen(arg, "wb") : NULL;
+
+        if (file == NULL) {
+            backdoor_write_result("ERROR: expected 'SAVEPERFIMAGE <path>' naming a writable file\n");
+            return;
+        }
+        database_read_lock();
+        image = write_perf_to_memory(&size, true);
+        database_read_unlock();
+
+        bool      written = (image != NULL) && (fwrite(image, 1, size, file) == size);
+
+        fclose(file);
+        free(image);
+        backdoor_write_result(written ? "OK\n" : "ERROR: write failed\n");
     } else if (strcmp(cmd, "SAVEPERF") == 0) {
         // SAVEPERF <path> - all four slots as a .prf2, as File > Save Performance writes it
         tMessageContent msg = {0};

@@ -107,6 +107,7 @@ SOURCES=(
     "$HERE/src/nordSample.c"
     "$HERE/src/dataBase.c"
     "$HERE/src/globalVars.c"
+    "$HERE/src/slotSets.c"
     "$HERE/src/cableChain.c"
     "$HERE/src/moduleResourcesAccess.c"
     "$HERE/src/protocol.c"
@@ -188,6 +189,8 @@ SOURCES=(
     # The state blob and the parameter formatting, shared by BOTH wrappers so a project saved from
     # the Audio Unit and one saved from the VST3 hold the identical bytes.
     "$HERE/SynthLib/plugin/synthlibPluginState.c"
+    # The file-gated diagnostic log: `touch /tmp/g2alike-log`, read /tmp/g2alike.log (g2Plugin.c notes §16)
+    "$HERE/SynthLib/plugin/synthlibLog.c"
     # The application's renderer, unchanged. It includes GLFW's header for the GL declarations but
     # makes no GLFW CALL, so it needs the include path below and not the library — which is the
     # whole reason the editor's drawing can appear in a plug-in at all.

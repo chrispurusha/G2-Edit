@@ -381,6 +381,7 @@ typedef enum {
     paramTypeCustomData,   // value lives in param[] like other params; sent via custom data protocol (0x42)
     paramTypeSamplerSpeed, // sound-engine-notes §213b - x1 at 96, stopped at 64, reverse below
     paramTypeSamplerGrain, // sound-engine-notes §213d - 5 ms to 500 ms
+    paramTypeSamplerSpray, // sound-engine-notes §213f - 0 to 1 s either side
 } tParamType;
 
 typedef enum {

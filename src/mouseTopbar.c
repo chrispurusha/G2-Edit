@@ -53,6 +53,7 @@ extern "C" {
 #include "palette.h"
 #include "undo.h"
 #include "canvasDrag.h"
+#include "slotSets.h"
 
 static void handle_button(tTopbarControlId controlId) {
     uint32_t slot = gSlot;
@@ -263,16 +264,7 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
 
     if (found == false) {
         if (within_rectangle(coord, gTopbarControls[topbarPerfModeId].rectangle)) {
-            memset(&messageContent, 0, sizeof(messageContent));
-
-            if (gGlobalSettings.perfMode == 0) {
-                messageContent.cmd       = eMsgCmdWriteModePerf;
-                gGlobalSettings.perfMode = 1;
-            } else {
-                messageContent.cmd       = eMsgCmdWriteModePatch;
-                gGlobalSettings.perfMode = 0;
-            }
-            msg_send(&gToUsbThread, &messageContent);
+            perf_mode_set(gGlobalSettings.perfMode == 0);   // slotSets.c notes §1
             found = true;
         }
     }

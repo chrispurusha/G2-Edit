@@ -106,7 +106,9 @@ static void g2_on_file_chosen(const char * path) {
     if (kind == eG2FileFailed) {
         return;
     }
+    database_read_lock();   // g2Plugin.c notes §16
     sound_engine_update_from_patch();
+    database_read_unlock();
 
     // The same event as in the application: the file just opened is what File > Open Recent lists.
     recent_files_add(path);
@@ -128,7 +130,11 @@ static void g2_on_file_saved(const char * path) {
     // IN PERFORMANCE MODE, THE PERFORMANCE: all four slots and the performance settings, as the
     // application's offline save does (graphics.c). write_perf_to_file() was linked in and never
     // reached, because the plug-in held one slot and had no performance to write.
+    char extended[1024] = {0};
+
     if (gGlobalSettings.perfMode == 1) {
+        path = perf_save_path(path, extended, sizeof(extended));   // patchWrite.c notes §3
+
         if (write_perf_to_file(path) != EXIT_SUCCESS) {
             show_alert("Save Performance", "The performance could not be written. Check the folder is writable.");
             return;
@@ -140,8 +146,6 @@ static void g2_on_file_saved(const char * path) {
         recent_files_add(path);
         return;
     }
-
-    char extended[1024] = {0};
 
     path = patch_save_path(gSlot, path, extended, sizeof(extended));   // patchWrite.c notes §2
 
@@ -342,7 +346,9 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
         }
     }
 
+    database_read_lock();   // g2Plugin.c notes §16
     sound_engine_update_from_patch();
+    database_read_unlock();
 
     // The click regions must be cleared each frame because the renderer registers one for every
     // module, dial and connector as it draws — letting them accumulate would grow without limit for

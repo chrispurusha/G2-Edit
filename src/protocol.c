@@ -552,7 +552,10 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
                 write_bit_stream(buff, bitPos, 8, v);
 
                 for (j = 0; j < paramCount; j++) {
-                    write_bit_stream(buff, bitPos, 7, module->param[v][j].value);
+                    uint32_t value = module->param[v][j].value;
+
+                    // moduleResourcesAccess.c notes §7 - an engine-only output reaches the G2 as Out 1/2
+                    write_bit_stream(buff, bitPos, 7, sIncludeEngineOnly ? value : param_value_for_g2(module->type, j, value));
                 }
             }
         }

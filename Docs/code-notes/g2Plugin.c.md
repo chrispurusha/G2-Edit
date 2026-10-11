@@ -100,6 +100,11 @@ route a patch's Out 3/4 (ChorusSaw's chorus, a drum voice) to its own track. The
 channels; the second bus is written only where the host gave it buffers. The VST3 has both; the Audio
 Unit offers Out 1/2 alone until SynthLib's AU wrapper renders more than one output element.
 
+EIGHT SINCE 2026-10-11 (CT: drum and percussion voices need their own DAW channels): Out 5/6 to Out 15/16
+are destinations a 2-Out has only in the engine (sound-engine-notes §217), and each is a bus of its own,
+on by default like Out 3/4. The engine renders sixteen channels here and runs its output stage only up to
+the last pair a patch uses, so the unused buses cost a copy of silence.
+
 A SIDE-CHAIN AS IN 1/2 (2026-10-08). "In 1/2" is an aux input bus, off by default - GenBridge's shape,
 because an instrument with a MAIN input makes a host look for a source and refuse it when there is
 none. Live fills it from another track's side-chain chooser (GenBridge findings 2026-09-09: an audio
@@ -236,3 +241,33 @@ standalone editor's own route to it (a full canvas repaint, so one frame).
 STARTED AND STOPPED WITH THE AUDIO, and joined rather than detached: the worker holds this instance's
 document and engine, and g2_destroy() frees both. terminate() and destroy() stop it too, in case a
 host never called setActive(false).
+
+## 15. The Samplers in a project (`build_state_record()`)
+
+A project keeps the whole instance as a performance image, and asks for the one with what only the engine
+has (patchWrite.c notes §3): engine-only modules, a 2-Out on Out 5/6 and above, and each Sampler's file as a
+`Sample=` line in the image's own header - so a project's image and a .prfx file are the same bytes, read
+back by the same `perf_engine_only_header_apply()`. CT: "We could use the new pchx".
+
+## 16. The database lock, and the log (2026-10-11)
+
+THE ENGINE'S BUILD READS THE PATCH DATABASE and must hold its read lock while it does (soundEngine.c says
+so where it builds). The application builds inside its frame, which holds it. The plug-in did not, anywhere:
+the rebuild worker (notes §14) built from its own thread while the editor's File > Open, or the host's
+set_state() on its thread, cleared and refilled the same slots. Now every build here goes through
+`update_from_patch_locked()` (or takes the lock around the call in g2Draw.c), and the writers take the write
+lock around what they clear and fill - but not around parse_patch(), which takes it itself (the lock is not
+recursive), while parse_perf() does not and so is called inside it.
+
+THE LOG is SynthLib's file-gated one: `touch /tmp/g2alike-log` (Windows: %TEMP%\g2alike-log), and lines go to
+/tmp/g2alike.log, on and off within a second with no reload. It records every NaN repair the engine makes
+(sound-engine-notes §218) with the module that caused it - the trace to ask for when an instance goes silent.
+
+## 17. Both modes' slots in a project (2026-10-11)
+
+The G2 keeps a set of four slots for Patch mode and another for performance mode and swaps them when the mode
+changes (slotSets.c notes §1), and so does an instance now. A project keeps the set in use as before (`data=`)
+and the other set's image straight after it, its length in an `other=` line and its performance's name in
+`othername=`, both before data=. A build from before this reads data= and stops at its length, so it still
+opens such a project - with the other set left out. A record without them leaves the other mode empty.
+

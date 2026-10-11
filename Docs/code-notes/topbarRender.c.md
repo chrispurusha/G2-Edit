@@ -57,3 +57,12 @@ call it - a click, a slot switch, a report from the G2 - so a variation the soun
 (a CtrlSend in another slot, soundEngine notes §214) showed only after switching slots and back (CT,
 2026-10-10). The engine applies its switch in `sound_engine_update_from_patch()`, at the start of the
 same frame, so the button lights with it.
+
+## 6. The "Not G2" warning
+
+CT (2026-10-11): once a patch holds anything the G2 cannot play - an engine-only module such as the Sampler,
+or a 2-Out sent to Out 5/6 and above (moduleResourcesAccess.c notes §7) - the top bar says so in red, just
+right of where the performance's name goes, and the warning goes when they do. It is the test that decides
+.pchx/.prfx (patchWrite.c notes §2, §3), over all four slots, made every frame: what the G2 is sent leaves
+those things out, so the G2 is not playing the whole patch.
+

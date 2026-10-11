@@ -41,6 +41,7 @@
 #include "topbarRender.h"
 #include "frontPanel.h"
 #include "palette.h"
+#include "patchWrite.h"
 
 #define RESOURCE_FULL_PERCENT    (100.0)   // a resource at this share of the DSP is full
 
@@ -325,6 +326,23 @@ void render_top_bar(void) {
             gTopbarControls[topbarPerfNameId].rectangle = draw_button(mainArea,
                                                                       (tRectangle){topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                       perfNameDisplay, perfNameCol);
+        }
+    }
+    // notes §6 - while any slot holds what the G2 cannot play, say so beside the performance's name
+    {
+        bool engineOnly = false;
+
+        for (uint32_t s = 0; (s < MAX_SLOTS) && (engineOnly == false); s++) {
+            engineOnly = slot_has_engine_only_modules(s);
+        }
+
+        if (engineOnly) {
+            const tTopbarControlDef * def = topbar_control_def(topbarPerfNameId);
+            double                    x   = def->coord.x + get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 6.0;
+
+            set_rgb_colour((tRgb)RGB_RED_7);
+            render_text(mainArea, (tRectangle){{x, def->coord.y + 1.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Not G2");
+            set_rgb_colour((tRgb)RGB_BLACK);
         }
     }
     {

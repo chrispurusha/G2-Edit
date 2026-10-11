@@ -695,6 +695,13 @@ double sampler_speed(double paramValue) {
     return (fmin(fmax(paramValue, 0.0), 127.0) - 64.0) / 32.0;
 }
 
+// sound-engine-notes §213f
+double sampler_spray_seconds(double paramValue) {
+    double v = fmin(fmax(paramValue, 0.0), 127.0) / 127.0;
+
+    return v * v;
+}
+
 // sound-engine-notes §213d
 double sampler_grain_seconds(double paramValue) {
     return 0.005 * pow(100.0, fmin(fmax(paramValue, 0.0), 127.0) / 127.0);

@@ -232,6 +232,9 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define SAMPLER_PARAM_GRAIN         (15) // notes §213d - kept in shape, its amount in shapeModAmount
 #define SAMPLER_PARAM_GRAIN_MOD     (16)
 #define SAMPLER_IN_GRAIN            (6)
+#define SAMPLER_PARAM_SPRAY         (17)   // notes §213f - kept in fmAmount, its amount in fltFmAmount
+#define SAMPLER_PARAM_SPRAY_MOD     (18)
+#define SAMPLER_IN_SPRAY            (7)
 #define ENV_PARAM_RELEASE           (4)
 #define ENV_PARAM_OUT_TYPE          (5)  // posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv
 #define ENV_INPUT_GATE              (1)  // node input: 0 is the audio, 1 the Gate jack, 2 AM
@@ -246,6 +249,15 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define FXIN_PARAM_SOURCE           (0) // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
 #define OUT_PARAM_ACTIVE            (1) // 2toOut's Bypass, non-zero is on
 #define OUT_PARAM_PAD               (2) // padStrMap: 0 dB or +6 dB
+
+// notes §217 - the output pair a 2-Out's Out to names: the G2's two, then the engine's own; FX and Bus are not outputs
+static inline uint32_t out_pair(uint32_t destination) {
+    if (destination <= 1u) {
+        return destination;
+    }
+    return ((destination >= OUT_TO_ENGINE_FIRST) && (destination < (OUT_TO_ENGINE_FIRST + OUT_TO_ENGINE_PAIRS))) ? (2u + destination - OUT_TO_ENGINE_FIRST) : 0u;
+}
+_Static_assert((2 + OUT_TO_ENGINE_PAIRS) == SOUND_ENGINE_OUT_PAIRS, "every engine output has a pair to render into");
 
 // Glide and Bend are per-PATCH settings rather than module parameters: they live on hidden modules
 // in the Morph location, which is where the G2 keeps the things the patch-settings page edits.
@@ -1108,7 +1120,7 @@ typedef struct {
     double          rndStepModWord;  // §70.9 - and Step M's
     bool            rndShiftReg;     // §70.9 - RndClkB's Character Rnd2: the shift-register generator
     double          rndEdge;         // §47 - the Edge word
-    uint32_t        outDest;         // Out module: 0 = outputs 1/2, 1 = outputs 3/4
+    uint32_t        outDest;         // Out module: the output pair - 0 is outputs 1/2, 1 is 3/4, then the engine's own (notes §217)
 
     double          depth;           // chorus detune depth, and the delay's feedback
     double          amount;          // chorus wet amount, delay/reverb dry-wet
@@ -1476,6 +1488,9 @@ static _Atomic bool         gSustainPedalBank[SOUND_ENGINE_MAX_ENGINES];
 static bool                 gSustainSeenBank[SOUND_ENGINE_MAX_ENGINES];            // audio thread only
 #define gSustainSeen       (gSustainSeenBank[SE])
 
+#define SPLIT_LAG          (32u)    // graph samples the FX pass trails the voices (notes §202)
+#define SPLIT_RING         (128u)   // records, comfortably more than the lag - and the most the voices may lead (§219)
+
 // notes §25
 #define NOTE_QUEUE_SIZE    (1024)   // notes §72 - holds a 128-key sweep of note-offs several times over
 
@@ -1484,14 +1499,22 @@ typedef struct {
     uint8_t          velocity;   // note-on velocity, or the release velocity with a note-off
     bool             on;
     _Atomic uint32_t sequence;   // claim index + 1 once written; 0 means never used
+    uint32_t         pad;
+    uint64_t         due;        // notes §219 - the voice sample it is taken at, 0 for as soon as it is there
 } tNoteEvent;
 
 static tNoteEvent           gNoteQueueBank[SOUND_ENGINE_MAX_ENGINES][NOTE_QUEUE_SIZE];
-#define gNoteQueue    (gNoteQueueBank[SE])
+// notes §219 - with the voices split off: the record the voices are producing, and one past the record the FX
+// pass is consuming (0 when it is not in a split pass)
+static uint64_t             gSplitVoiceAtBank[SOUND_ENGINE_MAX_ENGINES];
+static uint64_t             gSplitFxAtBank[SOUND_ENGINE_MAX_ENGINES];
+#define gSplitVoiceAt    (gSplitVoiceAtBank[SE])
+#define gSplitFxAt       (gSplitFxAtBank[SE])
+#define gNoteQueue       (gNoteQueueBank[SE])
 static _Atomic uint32_t     gNoteWriteBank[SOUND_ENGINE_MAX_ENGINES];
-#define gNoteWrite    (gNoteWriteBank[SE])
+#define gNoteWrite       (gNoteWriteBank[SE])
 static uint32_t             gNoteReadBank[SOUND_ENGINE_MAX_ENGINES];        // audio thread only
-#define gNoteRead     (gNoteReadBank[SE])
+#define gNoteRead        (gNoteReadBank[SE])
 
 
 static _Atomic bool         gActiveBank[SOUND_ENGINE_MAX_ENGINES];
@@ -1765,25 +1788,35 @@ static bool                   gPerfResetBank[SOUND_ENGINE_MAX_ENGINES];
 
 static double                 gOutDecimateBank[SOUND_ENGINE_MAX_ENGINES][OUT_DECIMATE_TAPS];
 #define gOutDecimate         (gOutDecimateBank[SE])
-static double                 gOutHistoryBank[SOUND_ENGINE_MAX_ENGINES][4][OUT_DECIMATE_TAPS];      // [pair*2 + channel]; one shared cursor, see the render loop
+static double                 gOutHistoryBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_OUT_CHANNELS][OUT_DECIMATE_TAPS]; // [pair*2 + channel]; one shared cursor, see the render loop
 #define gOutHistory          (gOutHistoryBank[SE])
 static uint32_t               gOutHistoryPosBank[SOUND_ENGINE_MAX_ENGINES];
-static double                 gOutCouplingBank[SOUND_ENGINE_MAX_ENGINES][4][2];                    // notes §198 - last input, last output
+static double                 gOutCouplingBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_OUT_CHANNELS][2];                   // notes §198 - last input, last output
 #define gOutCoupling         (gOutCouplingBank[SE])
-static double                 gDacStateBank[SOUND_ENGINE_MAX_ENGINES][4];                          // notes §199 - the past input
-static double                 gDacStateOutBank[SOUND_ENGINE_MAX_ENGINES][4][2];                    // and two past outputs
-#define gDacState            (gDacStateBank[SE])
-#define gDacStateOut         (gDacStateOutBank[SE])
+static double                 gDacStateBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_OUT_CHANNELS];                         // notes §199 - the past input
+static double                 gDacStateOutBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_OUT_CHANNELS][2];                   // and two past outputs
+static uint32_t               gOutPairsLiveBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 2}; // notes §217
+#define gOutPairsLive    (gOutPairsLiveBank[SE])
+// notes §218 - a value that is not a number seen this block, which module made it, and how many repairs so far
+static _Atomic bool           gNanSeenBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic int32_t        gNanModuleBank[SOUND_ENGINE_MAX_ENGINES];
+static _Atomic uint32_t       gNanRepairsBank[SOUND_ENGINE_MAX_ENGINES];
+#define gNanSeen          (gNanSeenBank[SE])
+#define gNanModule        (gNanModuleBank[SE])
+#define gNanRepairs       (gNanRepairsBank[SE])
+static _Atomic bool           gNanInject;   // notes §218 - a test: the next node evaluated puts out a NaN
+#define gDacState         (gDacStateBank[SE])
+#define gDacStateOut      (gDacStateOutBank[SE])
 static double                 gDacCoefBank[SOUND_ENGINE_MAX_ENGINES][4];                           // b0, b1, a1, a2
 static double                 gDacCoefRateBank[SOUND_ENGINE_MAX_ENGINES];
-#define gDacCoef             (gDacCoefBank[SE])
-#define gDacCoefRate         (gDacCoefRateBank[SE])
+#define gDacCoef          (gDacCoefBank[SE])
+#define gDacCoefRate      (gDacCoefRateBank[SE])
 static _Atomic bool           gDacEmulationBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = false};
-#define gDacEmulation        (gDacEmulationBank[SE])
-#define gOutHistoryPos       (gOutHistoryPosBank[SE])
+#define gDacEmulation     (gDacEmulationBank[SE])
+#define gOutHistoryPos    (gOutHistoryPosBank[SE])
 
 static double                 gOscDecimateBank[SOUND_ENGINE_MAX_ENGINES][OSC_DECIMATE_TAPS];
-#define gOscDecimate         (gOscDecimateBank[SE])
+#define gOscDecimate      (gOscDecimateBank[SE])
 
 // notes §35
 static float                  gOscHistoryBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
@@ -2807,6 +2840,7 @@ static void engine_prime(void) {
 // For a plug-in host: prime the engine and mark it live, but leave the audio device alone. The
 // caller drives sound_engine_render() from its own process callback.
 static void note_queue_one(int32_t note, uint8_t velocity, bool on);
+static void note_queue_due(int32_t note, uint8_t velocity, bool on, uint64_t due);
 
 static void set_active_one(bool on) {
     SE_LOCAL;
@@ -3191,14 +3225,23 @@ static void cc_to_slot(uint32_t slot, uint32_t controller, uint32_t value) {
 // §62.2 - a NoteSend's note into one slot's queue: its own for This, or the slot it names. Not the
 // keyboard's routing, which in a performance would play every slot with Keyboard on.
 static void note_to_slot(uint32_t slot, int32_t note, uint8_t velocity, bool on) {
-    int32_t was = sEngineSlot;
+    SE_LOCAL;
+
+    int32_t  was = sEngineSlot;
+    // notes §219 - sent by the FX pass to its own slot's voices while they may run ahead on the worker: due a
+    // ring past this record, beyond anywhere the voices can be yet, so their lead cannot move it
+    uint64_t due = ((gSplitFxAt > 0u) && ((slot % MAX_SLOTS) == engine_current_slot())) ? (gSplitFxAt + SPLIT_RING - 1u) : 0u;
 
     sEngineSlot = (int32_t)(slot % MAX_SLOTS);
-    note_queue_one(note, velocity, on);
+    note_queue_due(note, velocity, on, due);
     sEngineSlot = was;
 }
 
 static void note_queue_one(int32_t note, uint8_t velocity, bool on) {
+    note_queue_due(note, velocity, on, 0u);
+}
+
+static void note_queue_due(int32_t note, uint8_t velocity, bool on, uint64_t due) {
     SE_LOCAL;
 
     uint32_t claim = atomic_fetch_add(&gNoteWrite, 1);
@@ -3207,6 +3250,7 @@ static void note_queue_one(int32_t note, uint8_t velocity, bool on) {
     gNoteQueue[slot].note     = note;
     gNoteQueue[slot].velocity = velocity;
     gNoteQueue[slot].on       = on;
+    gNoteQueue[slot].due      = due;
 
     // Published last: the consumer treats a slot as filled only once this matches.
     atomic_store(&gNoteQueue[slot].sequence, claim + 1);
@@ -3820,6 +3864,11 @@ static bool take_next_note_event(const tSoundEngineParams * params) {
 
     if (atomic_load(&gNoteQueue[slot].sequence) != (gNoteRead + 1)) {
         return false;   // claimed but not yet written; it will be there next time round
+    }
+
+    // notes §219 - not before its voice sample; the queue keeps its order, so nothing behind it goes first
+    if ((gNoteQueue[slot].due != 0u) && (gSplitVoiceAt < gNoteQueue[slot].due)) {
+        return false;
     }
     int32_t  note  = gNoteQueue[slot].note;
     bool     on    = (gNoteQueue[slot].on == true) && (note >= 0);
@@ -5174,10 +5223,10 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
         }
         case eNodeSampler:          // notes §213 - Amp, then Pitch and PitchVar as an oscillator has them, then Start and Delay
         {
-            static const uint32_t samplerIn[] = {0, 1, 2, 3, 4, 5, 6};
+            static const uint32_t samplerIn[] = {0, 1, 2, 3, 4, 5, 6, 7};
 
             *connectors = samplerIn;
-            return 7;
+            return 8;
         }
         case eNodeMonoKey:          // §35 - the keyboard is its input
         case eNodeAudioIn:          // §37 - the jacks on the back, fed from outside the patch
@@ -5416,7 +5465,7 @@ static uint32_t voice_area_outputs_for_fx(uint32_t slot, uint32_t wantedBus, tMo
 
         if (module->type == moduleType2toOut) {
             // FX 1/2 is destination 2 and FX 3/4 is 3, so the bus index is the destination less 2.
-            if ((destination >= 2) && ((destination - 2) == wantedBus) && (count < max)) {
+            if ((destination >= 2) && (destination < OUT_TO_ENGINE_FIRST) && ((destination - 2) == wantedBus) && (count < max)) {
                 found[count++] = module;
             }
         } else if (module->type == moduleType4toOut) {
@@ -6358,6 +6407,8 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->oscKbt                         = (param_value(module, variation, SAMPLER_PARAM_KBT) != 0.0);
             node->shape                          = param_value(module, variation, SAMPLER_PARAM_GRAIN);
             node->shapeModAmount                 = param_value(module, variation, SAMPLER_PARAM_GRAIN_MOD);
+            node->fmAmount                       = param_value(module, variation, SAMPLER_PARAM_SPRAY);
+            node->fltFmAmount                    = param_value(module, variation, SAMPLER_PARAM_SPRAY_MOD);
             {
                 uint32_t samplersBefore = 0;   // notes §213b - this Sampler's grain bank
 
@@ -7207,8 +7258,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // notes §94
             node->gain    = (param_value(module, variation, OUT_PARAM_PAD) != 0.0) ? 2.0 : 1.0;
             // notes §95
-            node->outDest = (  (module->type == moduleType2toOut)
-                            && (param_value(module, variation, OUT_PARAM_DESTINATION) >= 1.0)) ? 1U : 0U;
+            node->outDest = (module->type == moduleType2toOut) ? out_pair((uint32_t)param_value(module, variation, OUT_PARAM_DESTINATION)) : 0U;
             break;
         }
         default:
@@ -7300,7 +7350,7 @@ static bool out_module_is_audible(tModule * module) {
     if (module->type == moduleType4toOut) {
         return destination == 0;              // "Out"; "Fx" and "Bus" are internal
     }
-    return destination <= 1;                  // "Out 1/2" or "Out 3/4"
+    return (destination <= 1) || (destination >= OUT_TO_ENGINE_FIRST);   // "Out 1/2", "Out 3/4", or one of the engine's own (§217)
 }
 
 static tModule * find_output_module(void) {
@@ -13733,6 +13783,7 @@ typedef struct {
     double delay;
     double speed;
     double grain;
+    double spray;
 } tSamplerMod;
 
 // notes §213b - two Hann grains half a grain apart, each reading from the playhead plus its own offset
@@ -13741,12 +13792,33 @@ typedef struct {
 #define SAMPLER_STOP_FADE         (1.0 / 32.0) // one dial step either side of Stop fades the output
 
 typedef struct {
-    double speed;       // smoothed
-    double phase;       // grain A's, 0..1; grain B is half a grain on
-    double offset[2];
+    double   speed;     // smoothed
+    double   phase;     // grain A's, 0..1; grain B is half a grain on
+    double   offset[2];
+    uint32_t seed;      // notes §213f - Spray's scatter
+    uint32_t pad;
 } tSamplerGrain;
 static tSamplerGrain gSamplerGrainBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][SAMPLER_GRAIN_BANKS];
 #define gSamplerGrain    (gSamplerGrainBank[SE])
+
+// notes §213f - one cycle of the zone's recording, in its own samples: its rate over the frequency its root plays at
+static double sampler_cycle(const tNordZone * zone) {
+    return zone->sampleRate * exp2(zone->detune / 12.0) / (440.0 * exp2((zone->rootNote - 69.0) / 12.0));
+}
+
+// notes §213f - where a restarting grain reads from: Spray's scatter, then a whole number of cycles from where the
+// other grain is reading, so the two overlap in phase
+static double sampler_grain_start(tSamplerGrain * grain, uint32_t g, const tNordZone * zone, double scatter) {
+    double cycle = sampler_cycle(zone);
+    double other = grain->offset[1u - g];
+    double want  = 0.0;
+
+    if (scatter > 0.0) {
+        grain->seed = (grain->seed * 1664525u) + 1013904223u;
+        want        = scatter * ((((double)(grain->seed >> 8) / 8388608.0) * 2.0) - 1.0);
+    }
+    return (cycle >= 2.0) ? (other + (cycle * round((want - other) / cycle))) : want;
+}
 
 // notes §213b - a position kept inside the zone: round the loop once it has been reached, or -1 past either end
 static double sampler_wrap(const tNordZone * zone, double at, bool inLoop) {
@@ -13828,6 +13900,7 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
             grain->phase     = 0.0;
             grain->offset[0] = 0.0;
             grain->offset[1] = 0.0;
+            grain->seed      = (voice * 2654435761u) ^ (uint32_t)gVoice[voice].trigger;
         }
         // notes §213 - a rebuild clears this state, and a voice whose key is already up would replay its
         // last note: only a key that is down starts one
@@ -13904,8 +13977,11 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
     state[0]  = at;
 
     bool              aligned = (grain == NULL) || ((grain->offset[0] == 0.0) && (grain->offset[1] == 0.0));
+    // notes §213f - Spray, in the zone's samples either side of the playhead
+    double            spray   = (grain == NULL) ? 0.0
+                                : sampler_spray_seconds(sampler_mod_dial(spec->fmAmount, spec->fltFmAmount, mod->spray)) * rate * gSampleRate;
 
-    if ((fabs(speed) == 1.0) && aligned) {
+    if ((fabs(speed) == 1.0) && aligned && (spray <= 0.0)) {
         // notes §213b - x1 either way: both grains would read the playhead, so read it once
         *left  = sampler_read(zone, at, 0u) * gain;
         *right = sampler_read(zone, at, 1u) * gain;
@@ -13932,13 +14008,17 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
         // notes §213d - both grains share the phase, so a moving Grain keeps the windows summing to one
         grain->phase     += 1.0 / (sampler_grain_seconds(sampler_mod_dial(spec->shape, spec->shapeModAmount, mod->grain)) * gSampleRate);
 
+        // notes §213f - a grain starts again where its window is zero: in phase with the other, scattered by
+        // Spray - or at the playhead itself at x1 with no Spray, so the plain read comes back
+        bool   plain     = (fabs(speed) == 1.0) && (spray <= 0.0);
+
         if (grain->phase >= 1.0) {
             grain->phase    -= 1.0;
-            grain->offset[0] = 0.0;   // grain A starts again at the playhead, where its window is zero
+            grain->offset[0] = plain ? 0.0 : sampler_grain_start(grain, 0u, zone, spray);
         }
 
         if ((before < 0.5) && (grain->phase >= 0.5)) {
-            grain->offset[1] = 0.0;
+            grain->offset[1] = plain ? 0.0 : sampler_grain_start(grain, 1u, zone, spray);
         }
     }
     state[0] += speed * rate;
@@ -14913,7 +14993,8 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 tSamplerMod mod      = {
                     .pitch = pitchMod,       .start = signal_in(spec, value, SAMPLER_IN_START), .delay = signal_in(spec, value, SAMPLER_IN_DELAY),
                     .speed = signal_in(spec, value, SAMPLER_IN_SPEED),
-                    .grain = signal_in(spec, value, SAMPLER_IN_GRAIN)
+                    .grain = signal_in(spec, value, SAMPLER_IN_GRAIN),
+                    .spray = signal_in(spec, value, SAMPLER_IN_SPRAY)
                 };
 
                 sampler_step(voice, n, spec, voicePitch, &mod, &value[n][0], &value[n][1]);
@@ -15155,6 +15236,18 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         {
             value[n][1] = value[n][0];
             break;
+        }
+    }
+
+    // notes §218 - a module whose state has gone to NaN or infinity: repaired at the next block
+    if (  (atomic_load_explicit(&gNanInject, memory_order_relaxed) == true)
+       && (atomic_exchange(&gNanInject, false) == true)) {
+        value[n][0] = NAN;
+    }
+
+    if ((isfinite(value[n][0]) == false) || (isfinite(value[n][1]) == false)) {
+        if (atomic_exchange(&gNanSeen, true) == false) {
+            atomic_store(&gNanModule, (int32_t)((spec->location << 8) | (spec->moduleIndex & 0xffu)));
         }
     }
     // notes §196
@@ -15560,9 +15653,9 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
 static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS]) {
     SE_LOCAL;
 
-    uint32_t n            = 0;
-    double   sample[2][2] = {{0.0, 0.0}, {0.0, 0.0}}; // [output pair][channel]
-    bool     ctlTick      = ctl_tick(&gCtlPhaseFx);   // notes §203
+    uint32_t n                                 = 0;
+    double   sample[SOUND_ENGINE_OUT_PAIRS][2] = {{0.0}};                // [output pair][channel]
+    bool     ctlTick                           = ctl_tick(&gCtlPhaseFx); // notes §203
 
     // notes §183
     for (n = 0; n < p->nodeCount; n++) {
@@ -15582,12 +15675,32 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
         }
     }
 
+    // notes §217 - the pairs to run the output stage for: the G2's two, and the engine's own up to the last in use
+    uint32_t pairs = 2u;
+
+    for (int32_t t = -1; (p->tap >= 0) && (t < (int32_t)p->extraTapCount); t++) {
+        uint32_t d = p->node[(t < 0) ? p->tap : p->extraTap[t]].outDest;
+
+        pairs = (d + 1u > pairs) ? (d + 1u) : pairs;
+    }
+
+    if (pairs > gOutPairsLive) {
+        // a pair coming back must not replay what it last held
+        for (uint32_t q = 2u * gOutPairsLive; q < (2u * pairs); q++) {
+            memset(gOutHistory[q], 0, sizeof(gOutHistory[q]));
+            memset(gOutCoupling[q], 0, sizeof(gOutCoupling[q]));
+            memset(gDacStateOut[q], 0, sizeof(gDacStateOut[q]));
+            gDacState[q] = 0.0;
+        }
+    }
+    gOutPairsLive = pairs;
+
     if (p->tap >= 0) {
         // Tapping a module means listening to its main output; for an envelope used as an amp
         // that is its shaped audio rather than the envelope signal. See tap_pair().
         {
             double   first[2] = {0.0, 0.0};
-            uint32_t d        = p->node[p->tap].outDest & 1U;
+            uint32_t d        = p->node[p->tap].outDest;
 
             tap_pair(p, p->tap, value, first);
             sample[d][0] += first[0];
@@ -15597,7 +15710,7 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
         // notes §184
         for (uint32_t t = 0; t < p->extraTapCount; t++) {
             double   extra[2] = {0.0, 0.0};
-            uint32_t d        = p->node[p->extraTap[t]].outDest & 1U;
+            uint32_t d        = p->node[p->extraTap[t]].outDest;
 
             tap_pair(p, p->extraTap[t], value, extra);
             sample[d][0] += extra[0];
@@ -15606,8 +15719,13 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     }
     // notes §185
     {
-        uint32_t rawMilli = (uint32_t)(fmax(fmax(fabs(sample[0][0]), fabs(sample[0][1])),
-                                            fmax(fabs(sample[1][0]), fabs(sample[1][1]))) * 1000.0);
+        double   raw      = 0.0;
+
+        for (uint32_t q = 0; q < (2u * pairs); q++) {
+            raw = fmax(raw, fabs(sample[q >> 1][q & 1]));
+        }
+
+        uint32_t rawMilli = (uint32_t)(raw * 1000.0);
 
         if (rawMilli > atomic_load(&gRawPeakMilli)) {
             atomic_store(&gRawPeakMilli, rawMilli);
@@ -15621,7 +15739,7 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     // The gain, the knee and the clamp are all PER CHANNEL. The knee especially: shaping the
     // two channels together off a common peak would make one duck when the other got loud,
     // which is a stereo image moving under a limiter rather than an output stage.
-    for (uint32_t q = 0; q < 4; q++) {
+    for (uint32_t q = 0; q < (2u * pairs); q++) {
         double * sp = &sample[q >> 1][q & 1];
 
         // notes §198 - the outputs are AC-coupled
@@ -15635,7 +15753,7 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
 
         // notes §199 - and roll off at the top, as its converter and output stage do
         if (atomic_load(&gDacEmulation) == true) {
-            if (gDacCoefRate != gSampleRate) {
+            if ((gDacCoefRate != gSampleRate) && (gSampleRate > 0.0)) {
                 dac_filter_design(gSampleRate);
             }
             double y = (gDacCoef[0] * *sp) + (gDacCoef[1] * gDacState[q])
@@ -15646,9 +15764,9 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
             gDacStateOut[q][0] = y;
             *sp                = y;
         }
-        *sp                           *= VOICE_GAIN * gSlotGainNow;
+        *sp *= VOICE_GAIN * gSlotGainNow;
         // notes §186
-        *sp                           *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
+        *sp *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
 
         // notes §187
         if (*sp > OUTPUT_KNEE) {
@@ -15661,6 +15779,18 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
             *sp = 1.0;
         } else if (*sp < -1.0) {
             *sp = -1.0;
+        }
+
+        // notes §218 - nothing that is not a number leaves, nor stays in this channel's filters
+        if (isfinite(*sp) == false) {
+            *sp          = 0.0;
+            memset(gOutCoupling[q], 0, sizeof(gOutCoupling[q]));
+            memset(gDacStateOut[q], 0, sizeof(gDacStateOut[q]));
+            gDacState[q] = 0.0;
+
+            if (atomic_exchange(&gNanSeen, true) == false) {
+                atomic_store(&gNanModule, -1);
+            }
         }
         // Every internal sample goes through the decimator; only the last of each group produces
         // an output. Feeding all of them is the point — dropping the others without filtering is
@@ -15774,8 +15904,6 @@ void sound_engine_set_audio_workgroup(void * workgroup) {
 // notes §202 - the voices on their own thread, the FX pass one SPLIT_LAG behind on the audio thread. The
 // two meet only at what the FX pass and the output taps read of the voice sum: those values go across
 // in a ring of per-sample records, and nothing else is shared that both passes write.
-#define SPLIT_LAG          (32u)    // graph samples the FX pass trails the voices
-#define SPLIT_RING         (128u)   // records, comfortably more than the lag
 #define SPLIT_MAX_PAIRS    (32u)    // voice-sum values one record carries
 
 typedef struct {
@@ -15907,12 +16035,16 @@ static bool split_plan(const tSoundEngineParams * p, tSplit * sp) {
 }
 
 static void split_produce_one(tSplit * sp, const tSoundEngineParams * p, const tStageCtx * ctx) {
+    SE_LOCAL;
+
     double         value[MAX_ENGINE_NODES][NODE_OUTPUTS];
     uint64_t       at  = atomic_load_explicit(&sp->produced, memory_order_relaxed);
 
+    // notes §219 - never further ahead than the ring, which is what a note the FX pass sends is due beyond
     while ((at - atomic_load_explicit(&sp->consumed, memory_order_acquire)) >= SPLIT_RING) {
         split_pause();
     }
+    gSplitVoiceAt = at;
     stage_voices(p, ctx, value, eSmoothVoice);
 
     tSplitRecord * rec = &sp->ring[at % SPLIT_RING];
@@ -15925,6 +16057,8 @@ static void split_produce_one(tSplit * sp, const tSoundEngineParams * p, const t
 }
 
 static void split_consume_one(tSplit * sp, const tSoundEngineParams * p, double rampSamples) {
+    SE_LOCAL;
+
     double               value[MAX_ENGINE_NODES][NODE_OUTPUTS];
     uint64_t             at  = atomic_load_explicit(&sp->consumed, memory_order_relaxed);
 
@@ -15937,9 +16071,13 @@ static void split_consume_one(tSplit * sp, const tSoundEngineParams * p, double 
         value[sp->pairNode[k]][sp->pairLeg[k]] = rec->v[k];
     }
 
-    atomic_store_explicit(&sp->consumed, at + 1u, memory_order_release);
     stage_smooth(p, rampSamples, eSmoothFx);
+    gSplitFxAt = at + 1u;   // notes §219 - 0 means not split
     stage_fx(p, value);
+    gSplitFxAt = 0u;
+    // notes §219 - only now: the record was copied out above, and what this pass sent the voices must be
+    // queued before they may produce the sample it is due at
+    atomic_store_explicit(&sp->consumed, at + 1u, memory_order_release);
 }
 
 // A fresh ring holds SPLIT_LAG silent records, which is the lag.
@@ -15997,7 +16135,8 @@ static void * split_worker(void * arg) {
     return NULL;
 }
 
-#define ECONOMY_RESET_KEY    (UINT64_MAX)   // what an Economy reset is asked under in place of a topology
+#define ECONOMY_RESET_KEY    (UINT64_MAX)      // what an Economy reset is asked under in place of a topology
+#define NAN_RESET_KEY        (UINT64_MAX - 1u) // notes §218 - and a repair after a NaN
 
 // notes §212 - true once the new graph's state is clear: at once where there is no worker, otherwise
 // when the worker has run the reset, the slot staying silent until then
@@ -16176,6 +16315,20 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
         }
         reset_voices();   // a voice left sounding over reset state never finishes
         gEconomyReset = false;
+    }
+
+    // notes §218 - a NaN seen last block: the graph's state cleared as for a new one, the output stage's too
+    if (atomic_load(&gNanSeen) == true) {
+        if (reset_node_state_off_callback(NAN_RESET_KEY) == false) {
+            return;
+        }
+        reset_voices();
+        memset(gOutCoupling, 0, sizeof(gOutCoupling));
+        memset(gDacState, 0, sizeof(gDacState));
+        memset(gDacStateOut, 0, sizeof(gDacStateOut));
+        memset(gOutHistory, 0, sizeof(gOutHistory));
+        atomic_fetch_add(&gNanRepairs, 1u);
+        atomic_store(&gNanSeen, false);
     }
     params = read_params();
     refresh_voice_morphs(params.build);
@@ -16380,13 +16533,14 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
         }
 
         {
-            uint32_t channel      = 0;
-            uint32_t tap          = 0;
-            double   milli        = 0.0;
-            double   outSample[4] = {0.0, 0.0, 0.0, 0.0};
+            uint32_t channel                              = 0;
+            uint32_t tap                                  = 0;
+            uint32_t live                                 = 2u * gOutPairsLive;   // notes §217
+            double   milli                                = 0.0;
+            double   outSample[SOUND_ENGINE_OUT_CHANNELS] = {0.0};
 
             // Walked rather than recomputed, as in the oscillator decimator above and for the same
-            // reason — the same taps in the same order, without a division per tap. All four
+            // reason — the same taps in the same order, without a division per tap. All the live
             // channels share the walk and the coefficient lookup; only the history line differs.
             if (gOversample == 1u) {
                 // §29a - the graph already runs at the output rate, so every internal sample IS an
@@ -16394,20 +16548,19 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
                 // output sample, skipped.
                 uint32_t last = (gOutHistoryPos + (OUT_DECIMATE_TAPS - 1u)) % OUT_DECIMATE_TAPS;
 
-                outSample[0] = gOutHistory[0][last];
-                outSample[1] = gOutHistory[1][last];
-                outSample[2] = gOutHistory[2][last];
-                outSample[3] = gOutHistory[3][last];
+                for (uint32_t q = 0; q < live; q++) {
+                    outSample[q] = gOutHistory[q][last];
+                }
             } else {
                 uint32_t oldest = gOutHistoryPos;
 
                 for (tap = 0; tap < OUT_DECIMATE_TAPS; tap++) {
                     double coeff = gOutDecimate[OUT_DECIMATE_TAPS - 1 - tap];
 
-                    outSample[0] += gOutHistory[0][oldest] * coeff;
-                    outSample[1] += gOutHistory[1][oldest] * coeff;
-                    outSample[2] += gOutHistory[2][oldest] * coeff;
-                    outSample[3] += gOutHistory[3][oldest] * coeff;
+                    for (uint32_t q = 0; q < live; q++) {
+                        outSample[q] += gOutHistory[q][oldest] * coeff;
+                    }
+
                     oldest++;
 
                     if (oldest >= OUT_DECIMATE_TAPS) {
@@ -16415,17 +16568,28 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
                     }
                 }
             }
-            milli = fmax(fmax(fabs(outSample[0]), fabs(outSample[1])),
-                         fmax(fabs(outSample[2]), fabs(outSample[3]))) * 1000.0;
+
+            for (uint32_t q = 0; q < live; q++) {
+                milli = fmax(milli, fabs(outSample[q]) * 1000.0);
+            }
 
             if ((uint32_t)milli > atomic_load(&gPeakMilli)) {
                 atomic_store(&gPeakMilli, (uint32_t)milli);
             }
 
+            // notes §217 - one of the engine's own pairs the caller has no channels for plays on Out 1/2,
+            // as the G2 is sent it
+            for (uint32_t q = 4u; q < live; q += 2u) {
+                if ((q + 1u) >= channelCount) {
+                    outSample[0] += outSample[q];
+                    outSample[1] += outSample[q + 1u];
+                }
+            }
+
             // notes §188
             for (channel = 0; channel < channelCount; channel++) {
                 double v = (channelCount >= 4)
-                           ? outSample[channel & 3U]
+                           ? ((channel < live) ? outSample[channel] : 0.0)
                            : outSample[channel & 1U];   // a stereo caller hears Out 1/2 alone, as the G2's 1/2 sockets
 
                 out[(frame * channelCount) + channel] = (float)v;
@@ -16796,5 +16960,21 @@ void sound_engine_detach(void) {
 // The document's index among the engines' owners - one per G2, whichever slot is selected
 uint32_t sound_engine_index(void) {
     return ENGINE_DOC;
+}
+
+// notes §218 - a test: the next node any engine evaluates puts out a NaN, for checking the repair
+void sound_engine_test_inject_nan(void) {
+    atomic_store(&gNanInject, true);
+}
+
+// notes §218 - how many NaN repairs the current engine has made, and the module of the last (location << 8 |
+// index, or -1 for the output stage)
+uint32_t sound_engine_nan_repairs(int32_t * module) {
+    SE_LOCAL;
+
+    if (module != NULL) {
+        *module = atomic_load(&gNanModule);
+    }
+    return atomic_load(&gNanRepairs);
 }
 

@@ -63,3 +63,13 @@ mutator.c). Applied to newly created modules. (Previously also reapplied on ever
 for old-format patches - removed 2026-07-15 once live writes via SUB_COMMAND_SET_MUTATION_LOCK
 were confirmed working on hardware, since that reapply was clobbering live-toggled bits on
 every resync. Old patches now simply trust whatever's on the wire, same as new ones.)
+
+## 7. `param_value_is_engine_only()`, `param_value_for_g2()`
+
+A 2-Out's Out to has six values on the G2 - Out 1/2, Out 3/4, FX 1/2, FX 3/4, Bus 1/2, Bus 3/4 - and six
+more that only the engine has: Out 5/6 to Out 15/16 (sound-engine-notes §217), so a plug-in can give each
+drum voice its own DAW channel. Whatever goes to the G2 - a parameter change, a patch, a .pch2 - carries Out
+1/2 in their place, which is also where the application's engine plays them when its device has no channels
+for them. One rule for all three, here, so they cannot disagree. A .pchx keeps the real value
+(patchWrite.c notes §2).
+

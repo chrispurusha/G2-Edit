@@ -12867,3 +12867,18 @@ and the pad's own level moves 1-2 dB from run to run (three detuned oscillators 
 the same configuration differed by 2.1 dB). Not a defect. Compressor promoted to Confirmed in
 engine-module-status.md; its attack/release timing and SideChain are still uncompared.
 
+## 2026-10-11 (later) - Patch mode and performance mode are two sets of slots on the G2
+
+Driven with DEVPERF (the topbar's mode switch), measured on Outs 1/2, slot B holding a free-running OscB (it
+sounds with no key) and slot A 04 Chris' Pad (silent with no key):
+- Patch mode, B selected: -27.9 dBFS. Patch mode, A selected: -27.9 - B STILL PLAYS. In Patch mode every active
+  slot sounds; selecting one moves the edit and keyboard focus, not what is heard. (A note in the 10-11 slot-
+  focus session that Patch mode silenced B was wrong: B had just been cleared.)
+- To performance mode: the G2 loaded its stored performance into all four slots (the editor re-read them: 6 /
+  123 / 62 / 95 entries) - the Patch-mode slots were not carried over.
+- Back to Patch mode: the Patch-mode slots came back exactly as they were (A = 04, B the rig, C and D empty) and
+  B played again at -27.9.
+So the G2 keeps a set of four slots per mode and the mode switch swaps them; leaving a performance stops its
+sequencers only because its patches are swapped out. Online the editor re-reads the slots after the switch and the
+engine follows. Offline and in the plug-in there is one set, so the switch changes only the keyboard routing.
+

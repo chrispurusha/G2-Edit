@@ -2959,15 +2959,19 @@ static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t pa
 }
 
 static int send_set_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t param, uint32_t value, uint32_t variation) {
-    int      retVal                  = EXIT_FAILURE;
-    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+    int       retVal                  = EXIT_FAILURE;
+    uint8_t   buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t  bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
     usb_cmd_slot(buff, &bitPos, slot, COMMAND_WRITE_NO_RESP, SUB_COMMAND_SET_PARAM);
     write_bit_stream(buff, &bitPos, 8, moduleKey.location);
     write_bit_stream(buff, &bitPos, 8, moduleKey.index);
     write_bit_stream(buff, &bitPos, 8, param);
-    write_bit_stream(buff, &bitPos, 8, value);
+
+    // moduleResourcesAccess.c notes §7 - an engine-only output reaches the G2 as Out 1/2
+    tModule * module                  = get_module(moduleKey);
+
+    write_bit_stream(buff, &bitPos, 8, (module != NULL) ? param_value_for_g2(module->type, param, value) : value);
     write_bit_stream(buff, &bitPos, 8, variation);
     retVal = send_message(buff, BIT_TO_BYTE(bitPos));
 
@@ -4047,8 +4051,9 @@ static int load_perf_from_payload(uint8_t * buff, int64_t byteOffset, int64_t pa
     forget_bank_origin(BANK_ORIGIN_PERF);
     gGlobalSettings.perfMode        = 1;
     parse_perf(buff + byteOffset, (int)payloadLen);
+    perf_engine_only_header_apply(buff, (size_t)byteOffset); // patchWrite.c notes §3
     free(buff);
-    sound_engine_start_performance();   // soundEngine notes §216
+    sound_engine_start_performance();                        // soundEngine notes §216
 
     int retVal = push_perf_to_device();
 

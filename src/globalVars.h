@@ -204,6 +204,10 @@ typedef struct tG2Document {
     tCable           gCable[MAX_SLOTS][locationMax][MAX_NUM_CABLES];
     bool             gEngineOnlyIndex[MAX_SLOTS][locationMax][MAX_NUM_MODULES];   // dataBase.c notes §8
     tSamplerFile     gSamplerFile[MAX_SAMPLER_FILES];                             // dataBase.c notes §9
+    // slotSets.c notes §1 - the other mode's four slots, as a performance image, and its performance's name
+    uint8_t *        gOtherSlotSet;
+    size_t           gOtherSlotSetLen;
+    char             gOtherPerfName[CLAVIA_NAME_SIZE + 1];
     pthread_rwlock_t gDatabaseLock;
 
     // Formerly file-static in globalVars.c - see variation_is_linked() below.
@@ -356,6 +360,9 @@ tG2Document * g2_document_current(void);
 #define gCable                           (gDoc->gCable)
 #define gEngineOnlyIndex                 (gDoc->gEngineOnlyIndex)
 #define gSamplerFile                     (gDoc->gSamplerFile)
+#define gOtherSlotSet                    (gDoc->gOtherSlotSet)
+#define gOtherSlotSetLen                 (gDoc->gOtherSlotSetLen)
+#define gOtherPerfName                   (gDoc->gOtherPerfName)
 #define gDatabaseLock                    (gDoc->gDatabaseLock)
 #define gVariationLinks                  (gDoc->gVariationLinks)
 

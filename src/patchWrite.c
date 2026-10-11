@@ -33,6 +33,8 @@
 
 #define PCHX_EXTENSION    ".pchx"
 #define PCH2_EXTENSION    ".pch2"
+#define PRFX_EXTENSION    ".prfx"
+#define PRF2_EXTENSION    ".prf2"
 
 static bool has_suffix(const char * text, const char * suffix) {
     size_t length = strlen(text);
@@ -50,6 +52,15 @@ bool slot_has_engine_only_modules(uint32_t slot) {
             if ((module != NULL) && module->active && module_is_engine_only(module->type)) {
                 return true;
             }
+
+            // moduleResourcesAccess.c notes §7 - or a setting only the engine has, in any variation
+            for (uint32_t v = 0; (module != NULL) && module->active && (v < NUM_VARIATIONS); v++) {
+                for (uint32_t p = 0; p < module->actualParamCount; p++) {
+                    if (param_value_is_engine_only(module->type, p, module->param[v][p].value)) {
+                        return true;
+                    }
+                }
+            }
         }
     }
 
@@ -65,6 +76,59 @@ const char * patch_save_path(uint32_t slot, const char * path, char * out, size_
 
     snprintf(out, outSize, "%.*s%s", (int)stem, path, PCHX_EXTENSION);
     return out;
+}
+
+// notes §3 - the name a performance is saved under: .prfx when any slot holds what only the engine has
+const char * perf_save_path(const char * path, char * out, size_t outSize) {
+    bool   engineOnly = false;
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        engineOnly = engineOnly || slot_has_engine_only_modules(slot);
+    }
+
+    if (!engineOnly || has_suffix(path, PRFX_EXTENSION)) {
+        return path;
+    }
+    size_t stem       = strlen(path) - (has_suffix(path, PRF2_EXTENSION) ? strlen(PRF2_EXTENSION) : 0u);
+
+    snprintf(out, outSize, "%.*s%s", (int)stem, path, PRFX_EXTENSION);
+    return out;
+}
+
+// notes §3 - a performance header's Sample= lines (slot, area, module, path), read back after the slots are parsed
+void perf_engine_only_header_apply(const uint8_t * header, size_t length) {
+    const uint8_t * zero = memchr(header, 0, length);
+    size_t          at   = 0;
+
+    length = (zero != NULL) ? (size_t)(zero - header) : length;
+
+    while (at < length) {
+        size_t   end                          = at;
+
+        while ((end < length) && (header[end] != '\r') && (header[end] != '\n')) {
+            end++;
+        }
+        char     line[SAMPLER_PATH_SIZE + 32] = {0};
+        size_t   n                            = end - at;
+        char     slot[2]                      = {0};
+        char     area[4]                      = {0};
+        unsigned index                        = 0;
+        int      used                         = 0;
+
+        snprintf(line, sizeof(line), "%.*s", (int)((n < (sizeof(line) - 1u)) ? n : (sizeof(line) - 1u)), (const char *)header + at);
+
+        if (  (sscanf(line, "Sample=%1[A-D],%2[A-Z],%u,%n", slot, area, &index, &used) == 3) && (used > 0)
+           && (index < MAX_NUM_MODULES)) {
+            tModuleKey key = {0};
+
+            key.slot     = (uint32_t)(slot[0] - 'A');
+            key.location = (strcmp(area, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+            key.index    = index;
+            sampler_file_set(key, line + used);
+            (void)nord_sample_get(line + used);
+        }
+        at = end + 1u;
+    }
 }
 
 // notes §2 - the header's Sample= lines, read back after the binary has been parsed into the slot
@@ -206,12 +270,15 @@ int write_database_to_file(const char * filepath, uint32_t slot) {
 }
 
 // The whole .prf2 image - text header, binary, CRC - in a buffer the caller frees. NULL on failure.
-uint8_t * write_perf_to_memory(size_t * sizeOut) {
-    static const char header[] = "Version=Nord Modular G2 File Format 1\r\n"
+// notes §3
+uint8_t * write_perf_to_memory(size_t * sizeOut, bool engineOnly) {
+    static const char base[]   = "Version=Nord Modular G2 File Format 1\r\n"
                                  "Type=Performance\r\n"
                                  "Version=23\r\n"
                                  "Info=BUILD 320\r\n";
-    size_t            headLen  = sizeof(header);    // with the terminating NUL, which the format keeps
+    size_t            headSize = sizeof(base) + (engineOnly ? (MAX_SAMPLER_FILES * (SAMPLER_PATH_SIZE + 32u)) : 0u);
+    char *            header   = (char *)malloc(headSize);
+    size_t            headLen  = 0;
     uint32_t          bitPos   = 0;
     uint32_t          calcCrc  = 0;
     // calloc, not malloc and memset: the work buffer is large, and zeroed pages cost nothing until used
@@ -221,14 +288,31 @@ uint8_t * write_perf_to_memory(size_t * sizeOut) {
         *sizeOut = 0;
     }
 
-    if (buff == NULL) {
+    if ((buff == NULL) || (header == NULL)) {
         LOG_ERROR("Memory allocation failed\n");
+        free(buff);
+        free(header);
         return NULL;
     }
-    write_bit_stream(buff, &bitPos, 8, 23); // version
-    write_bit_stream(buff, &bitPos, 8, 1);  // type = performance
+    headLen = (size_t)snprintf(header, headSize, "%s", base);
+
+    // notes §3 - and with what only the engine has, each Sampler's file as a .pchx names it, with its slot
+    for (uint32_t i = 0; engineOnly && (i < MAX_SAMPLER_FILES); i++) {
+        const tSamplerFile * sample = &gSamplerFile[i];
+
+        if (  sample->used && (sample->key.slot < MAX_SLOTS) && (strchr(sample->path, '\r') == NULL)
+           && (strchr(sample->path, '\n') == NULL) && (headLen < headSize)) {
+            headLen += (size_t)snprintf(header + headLen, headSize - headLen, "Sample=%c,%s,%u,%s\r\n", (char)('A' + sample->key.slot),
+                                        (sample->key.location == (uint32_t)locationFx) ? "FX" : "VA", (unsigned)sample->key.index, sample->path);
+        }
+    }
+
+    headLen = ((headLen < headSize) ? headLen : (headSize - 1u)) + 1u; // with the terminating NUL, which the format keeps
+    write_bit_stream(buff, &bitPos, 8, 23);                            // version
+    write_bit_stream(buff, &bitPos, 8, 1);                             // type = performance
 
     write_perf_header(buff, &bitPos);
+    protocol_include_engine_only(engineOnly);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         uint32_t savedU1 = gPatchDescr[slot].unknown1;
@@ -258,6 +342,7 @@ uint8_t * write_perf_to_memory(size_t * sizeOut) {
         write_slot_separator(buff, &bitPos); // 0x6f — same as PATCH_NOTES type, not written in perf
     }
 
+    protocol_include_engine_only(false);
     write_global_knobs(buff, &bitPos);
 
     bitPos  = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos));
@@ -280,12 +365,13 @@ uint8_t * write_perf_to_memory(size_t * sizeOut) {
         }
     }
     free(buff);
+    free(header);
     return image;
 }
 
 int write_perf_to_file(const char * filepath) {
     size_t    size    = 0;
-    uint8_t * image   = write_perf_to_memory(&size);
+    uint8_t * image   = write_perf_to_memory(&size, has_suffix(filepath, PRFX_EXTENSION));   // notes §3
     FILE *    file    = NULL;
 
     if (image == NULL) {

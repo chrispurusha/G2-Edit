@@ -103,6 +103,7 @@ void g2_document_destroy(tG2Document * doc) {
     }
     gDoc = doc;
     pthread_rwlock_destroy(&gDatabaseLock);
+    free(gOtherSlotSet);   // slotSets.c notes §1
     gDoc = (saved == doc) ? &gDefaultDocument : saved;
     free(doc);
 }
