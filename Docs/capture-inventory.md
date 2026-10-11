@@ -4,6 +4,9 @@ What the sound engine implements, what has been captured off the hardware, and w
 2026-09-07 because the answer was not written down anywhere and had to be reconstructed from three
 capture directories and `findings.md`.
 
+**Planning a session? Read `validation-sessions.md` first** - the rig, its calibration, the step-by-step backdoor
+sequence, the methods and their tools, the traps, and the queue of modules to validate next.
+
 **Where captures live.** None are in the repository — they are far too large.
 
 | location | what is in it |

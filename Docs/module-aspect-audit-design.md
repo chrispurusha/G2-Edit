@@ -105,3 +105,13 @@ with no evidence row, so a new jack or dial cannot slip through unrecorded.
 
 Expect some modules to lose standing: a Confirmed module whose mod inputs and Off state were never compared
 becomes Confirmed for its core law and Modelled or Unknown for the rest.
+- **Step 2, the five groups that matter most (2026-10-11):** oscillators, filters, envelopes, LFOs and mixers -
+  307 rows, 379 aspects with evidence of 773 (99 Confirmed on the G2, 268 Modelled, 2 Approximate, 10 Partial,
+  394 Unknown). THE RULE: an aspect is Confirmed only if the WHOLE of it was compared on the G2; where part was
+  (OscB's Shape dial but not its FM dial), it reads Modelled, with the part compared named in the evidence and the
+  rest open. So modules lose standing as expected - Mod AHD's and Mod ADSR's core laws read Modelled (only Hold,
+  and the Decay mod jack, were compared), Eq 2-band's too (its high shelf changed after its capture). Classic
+  Filter went the other way: its module verdict said "not re-compared since the 09-14 law", but 09-28's 04 Chris'
+  Pad and resonance tests were later, and it is now Confirmed. The summary counts aspects by state; no module's
+  Modes / On-Off is Confirmed but Pan's - bypass and mode behaviour has barely been compared. Next: the remaining
+  groups (Level, Switch, Logic, Seq, Delay, FX, Shaper, Random, In/Out, MIDI), then step 3.

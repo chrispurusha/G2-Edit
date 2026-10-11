@@ -26,7 +26,7 @@ module that is not offered or not modelled.
 | Group | Confirmed on the G2 | Modelled | Approximate | Partial | No sound | Not implemented |
 |---|---|---|---|---|---|---|
 | **Oscillators** | Osc A, Osc B, Osc C, Osc D, Osc Shape B, Osc Dual, Noise Osc, Noise, Osc Percussion, Drum Synth, FM Operator, DX Router | Osc Phase Mod, Osc Shape A, Metallic Noise, Osc String, Driver, Resonator, Osc Master | - | - | - | - |
-| **Filters** | Multi Filter, Comb Filter, Eq 2-band, Eq 3-band, Eq Peak | LP Filter, HP Filter, Nord Filter, Classic Filter, Phase Filter, Static Filter, FltVoice, WahWah, Vocoder | - | - | - | - |
+| **Filters** | Nord Filter, Classic Filter, Multi Filter, Comb Filter, Eq 2-band, Eq 3-band, Eq Peak | LP Filter, HP Filter, Phase Filter, Static Filter, FltVoice, WahWah, Vocoder | - | - | - | - |
 | **Envelopes** | Envelope ADSR, Envelope AHD, Envelope H, Envelope Mod AHD, Envelope Mod ADSR | Envelope ADR, Envelop ADDSR, Envelope D, Envelope Multi | - | - | - | - |
 | **LFOs** | LFO A, LFO Shp A, Clock Generator | LFO B, LFO C | - | - | - | - |
 | **Mixers** | Mixer 1-1 A, Mixer 1-1 S, Mixer 2-1 A, Mixer 4-1 A, Mixer 4-1 B, Mixer 4-1 C, Mixer 4-1 S, Mixer 2-1 B, Mixer 8-1 A, Mixer 8-1 B, MixFader, MixStereo, Fade 1-2, Fade 2-1, X-Fade, Pan | - | - | - | - | - |
@@ -41,7 +41,7 @@ module that is not offered or not modelled.
 | **Random** | - | Random A, Random B, Rnd Clock A, Rnd Clock B, Rnd Trig, Rnd Pattern | - | - | - | - |
 | **Note** | - | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide, Pitch Tracker, Zero Crossing Counter, Level Scaler | - | - | - | - |
 | **MIDI** | CtrlSend | CtrlRcv, NoteRcv | - | NoteSend | PCSend, NoteZone, Automate | - |
-| **Total 170** | **63** | **97** | **5** | **1** | **4** | **0** |
+| **Total 170** | **65** | **95** | **5** | **1** | **4** | **0** |
 
 ### Oscillators
 
@@ -73,8 +73,8 @@ module that is not offered or not modelled.
 |---|---|---|---|---|
 | LP Filter | Modelled | §22 | FM input at 2 semitones a unit only (notes §160) | no response captured |
 | HP Filter | Modelled | §22 | - | no response captured |
-| Nord Filter | Modelled | §23 | - | no response captured |
-| Classic Filter | Modelled | §21 | 18 captures settled the loop, taken before the current law (09) | not re-compared since the 09-14 law |
+| Nord Filter | Confirmed on the G2 | §23 | noise through LP/BP/HP/BR, 12 and 24 dB, Freq 50 and 85, Res 0 and 100: within 1.44 dB, mean 0.06-0.35 (10-11) | Pitch, FM and Res mod not compared |
+| Classic Filter | Confirmed on the G2 | §21 | 04 Chris' Pad within 0.5 dB 100 Hz-12 kHz; a high-Res test patch's peak within 0.04 semitone (09-28) | Env and the dB/Oct tap not compared since the 09-14 law |
 | Multi Filter | Confirmed on the G2 | §10 | 54 noise responses within 0.5-0.6 dB (09-12); FreqM within 1% (10-08) | GComp off not captured |
 | Phase Filter | Modelled | §67 | - | - |
 | Comb Filter | Confirmed on the G2 | §13.4 | noise through all three Types (09-12); Pitch attenuator (10-08) | - |

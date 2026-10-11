@@ -5,7 +5,8 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
-- Module aspect audit: one state per aspect (core law, timing, dials, mod inputs, level, modes/On-Off) in engine-module-status.md - Docs/module-aspect-audit-design.md; step 1 built (`do-modulestatus --aspects`, 773 aspects); step 2, evidence from the reference, next
+- Validate against the G2, in the order validation-sessions.md section 5 gives (LFO C, Glide, LevMult, S&H, ModAmt, LP/HP Filter, Envelope ADR, ...), and the one-session Bypass/On-Off sweep over every module type
+- Module aspect audit: one state per aspect in engine-module-status.md - Docs/module-aspect-audit-design.md; step 1 built, step 2 done for oscillators, filters, envelopes, LFOs, mixers (379 of 773 aspects, 2026-10-11); next the remaining groups, then step 3. The generator skips the Special group (the Sampler) and warns about its kEvidence row - include it
 - VST3 plug-in went silent after a patch change until the DAW restarted (CT) - two causes fixed 2026-10-11 (a NaN surviving in the output stage or a module's state, now repaired: sound-engine-notes §218; the plug-in building the engine without the database lock: g2Plugin notes §16). If it happens again: `touch /tmp/g2alike-log` and read /tmp/g2alike.log
 - Audio input in the application: an input device in Settings > Audio feeding sound_engine_set_input() (the engine and the plug-in's side-chain have it since 2026-10-08, reference §37)
 - Effects version of the plugin, for audio processing: a second descriptor (aufx, its own VST3 UIDs, MIDI in kept) whose main input is In 1/2 - GenBridge's two-variant pattern
@@ -31,6 +32,8 @@ General (priority order)
 - Separate zoom for VA and FX. Possibly scaling/zooming for top-bar too.
 - Module wave/filter graphs, what is left of the original's 43: LevScaler, Mux8-1X, RndTrig, SeqA and SeqNote (two). PulseOsc and LfoD carry one in the original but are NOT module types we have - they are among the unfilled slots below, so they cannot be drawn until the modules exist
 - CPU: three quarters of it is `eval_node`'s per-node switch, run once per node per voice per oversampled sample (profile in findings 2026-09-19). The cheap wins are taken; skipping a node whose inputs are constant needs the sub-block restructure above to be worth the test that decides it
+- CPU, Sampler (notes §213b-f): per voice per sample it calls exp2 (read rate), pow (Grain's and Spray's laws), cos twice (the grain windows) and pow (Decay) - cache the laws on their input, run Decay as a multiplier, the windows from a recursive oscillator
+- CPU, UI: the topbar's "Not G2" test walks every module, variation and parameter each frame - cache it per patch generation
 - Drop the engine's fixed per-patch pools (every MAX_*_LINES in soundEngine.c: StChorus 2, FreqShift 2, Seq 8, ClkGen/MetNoise/FltPhase/DlyClock 4, delay lines, FX buffers, OscString, Vocoder - past the limit a module plays silent or bypassed): a laptop has the room, so play every instance; mind the plug-in's per-instance banks
 - Estimate whether a patch fits the G2's DSP/memory budget and WARN when it is over - never limit the emulation to match; resource model decoded, per-module record and voice placer open (g2-budget-estimate-design.md)
 - Render poly voices across cores (engine-multicore-design.md) - the long-term answer to patches whose voices never finish: 18 Unreal Dreams at 32 voices needs 120% of one core, and the engine manages ~9 (CT 2026-09-28); check first that VST3/AUv2 hosts let a plug-in join the audio workgroup

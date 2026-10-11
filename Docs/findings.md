@@ -12882,3 +12882,45 @@ So the G2 keeps a set of four slots per mode and the mode switch swaps them; lea
 sequencers only because its patches are swapped out. Online the editor re-reads the slots after the switch and the
 engine follows. Offline and in the plug-in there is one set, so the switch changes only the keyboard routing.
 
+## 2026-10-11 (later) - DrumSynth's Kick presets against the G2: noise is not too prominent
+
+CT wondered whether DrumSynth's noise sits a little high. Validated on the G2 (slot B: Keyboard Gate >
+DrumSynth > 2-Out, Fireface 5/6; each Kick preset's 15 values set on both sides; seven to eight hits a preset
+on the G2 by DEVNOTE, eight single-hit renders of the engine; 400 ms from each onset). Band energy relative to
+the kick's body (20-150 Hz), engine minus G2, dB:
+
+| | 150-600 Hz | 0.6-2 kHz | 2-8 kHz | 8-16 kHz | level |
+|---|---|---|---|---|---|
+| Kick 1 | +0.0 | +0.2 | -0.0 | -0.2 | -0.2 |
+| Kick 2 | -0.0 | -0.4 | +0.1 | +0.1 | -0.2 |
+| Kick 3 | -0.1 | +0.3 | -0.2 | -0.5 | -0.2 |
+| Kick 4 | +0.0 | -0.4 | -0.5 | -0.4 | -0.3 |
+| Kick 5 | +0.1 | -0.1 | -0.1 | -0.4 | -0.3 |
+
+Every band within 0.5 dB; the noise bands (2-16 kHz) equal or slightly LOWER in the engine; the absolute level
+within 0.3 dB after the rig's -0.5 dB (a bare OscB, same session). The G2 output filter (sound-engine-notes
+§199) was off. So the noise is not too prominent - if it is still heard, compare with the same hit velocity
+(an unpatched Vel is a fixed 64 units on both) and the same output path.
+
+On the way: edits sent straight after NEWPATCH seemed lost on the G2 (an OscB and its cables in the editor, the
+instrument silent). NOT A RACE: the backdoor's NEWPATCH set `msg.slot`, but the USB thread reads
+`patchFileData.slot`, so it reset and pushed SLOT A on the G2 whatever slot was selected, while the editor reset
+the selected slot locally - the two then differed. File > New sets the right field, so no user path was affected.
+Fixed. It is also why slot A was found empty during the 10-11 slot-focus test (put down then to a slot cleared
+from the panel).
+
+## 2026-10-11 (later) - The Nord Filter (FltNord) matches the G2
+
+Never compared before, and in 14 of the 19 stage patches. Rig in slot B: Noise (white) > FltNord > 2-Out L, the
+same noise dry to 2-Out R, Fireface 5/6; the filter's response is L/R per third-octave band, 63 Hz-16 kHz, on
+the G2 and in the engine alike, so the rig's gain cancels. Kbt, Pitch, FM and Res M at 0. 36 settings: LP, BP,
+HP, BR x 12 and 24 dB x Freq 50 and 85 x Res 0 and 100, GC on, and GC off at four. Bands more than 40 dB under
+the response's peak are left out.
+- Freq 85: every setting within 0.79 dB in every band, mean 0.06-0.28 dB.
+- Freq 50: within 1.44 dB, mean 0.06-0.35 dB. The largest (1.0-1.4 dB) are at 318 Hz on the resonant 24 dB
+  settings, on the peak's flank, where a third-octave band is coarsest. GC on and off agree alike.
+- TRAP: a first pass at 4096-point FFTs showed 2-4 dB near 100-300 Hz at Freq 50. That was the analysis: at 96
+  kHz (the G2) a bin is 23 Hz and at 48 kHz (the engine) 12 Hz, so the low third-octave bands held one or two bins
+  laid out differently on each side. At 16384 points it went. Low cutoffs need a long FFT.
+Not compared: the Pitch, FM and Res mod jacks and dials, Kbt, Bypass.
+

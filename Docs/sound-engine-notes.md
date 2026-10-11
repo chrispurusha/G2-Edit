@@ -3265,6 +3265,9 @@ whose voices carry DC (14 CS80project72: a MinMax half-rectifying a filter, then
 otherwise sends that DC to the device. On a hot patch that DC also pushes the signal into the knee, which
 the G2 does not have: its only clip is the Out's own ±8 (§196), which comes before the coupling.
 
+
+The pole is worked out when the rate changes, not every sample of every channel (2026-10-11; output bit-identical).
+
 ## 199. The G2's output roll-off (`DAC_FILTER_HZ`, `DAC_FILTER_Q`)
 
 The G2's analogue outputs droop at the top. Measured 2026-09-26 with pure OscA sines on Out 3/4 into the
@@ -3722,7 +3725,9 @@ SPRAY (params 17, 18; jack In 8). Each new grain's start is moved by a random am
 phase as above: the grains smear across that span of the recording, the overlaps stay coherent. Spray is
 (value/127)^2 seconds either side, 0 to 1 s; its readout is in ms. With Spray up the grains run at x1 too, so a
 sound can be smeared without being slowed. Kept in the node's `fmAmount` and `fltFmAmount` (an oscillator's
-and a filter's, unused on a Sampler; level[] is full); the scatter's seed is per voice and note. The face went
+and a filter's, unused on a Sampler; level[] is full); the scatter's seed is per voice and note. Positions are brought into the loop with one fmod (`sampler_wrap()`), not by stepping a loop at a time: a
+sprayed grain at a high key can sit thousands of loops away, which stepped once per read per grain per voice
+(review 2026-10-11); a position that is not finite counts as played off the end. The face went
 to eight rows: Speed and Grain at the top, Spray under them.
 
 ## 214. The engine switches its own variations, G2 connected or not (`cc_to_slot()`)
@@ -3889,6 +3894,10 @@ until the FX pass has finished the record - `consumed` is now published after `s
 record is copied out first, so nothing is lost) - so the note is already queued. A note still due holds back
 the queue behind it, which keeps the order. Keyboard and MIDI notes carry no due sample and are taken as they
 come, as before; so are the notes a Voice-area NoteSend sends, which the worker queues and takes itself.
+
+A due sample holds a note back only while the voices are being produced split, and only when it lies within a
+ring of them (review 2026-10-11): a split that stops - a new patch that cannot be split - or a ring primed again
+for a new graph would otherwise have left one stamped note holding every note behind it for good.
 
 The cost: a note sent from after the mix reaches the voices SPLIT_RING samples later than in a serial render
 (1.3 ms at 96 kHz). Threaded and inline renders are bit-identical again (three threaded runs and an inline one of

@@ -654,8 +654,9 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         if (device_ready()) {
             tMessageContent msg = {0};
 
-            msg.cmd  = eMsgCmdNewPatch;
-            msg.slot = gSlot;
+            msg.cmd                = eMsgCmdNewPatch;
+            msg.slot               = gSlot;
+            msg.patchFileData.slot = gSlot;   // what the USB thread reads, as File > New sets it - not msg.slot
             msg_send(&gToUsbThread, &msg);
         }
         synthlib_request_redraw();

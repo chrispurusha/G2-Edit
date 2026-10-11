@@ -1508,13 +1508,15 @@ static tNoteEvent           gNoteQueueBank[SOUND_ENGINE_MAX_ENGINES][NOTE_QUEUE_
 // pass is consuming (0 when it is not in a split pass)
 static uint64_t             gSplitVoiceAtBank[SOUND_ENGINE_MAX_ENGINES];
 static uint64_t             gSplitFxAtBank[SOUND_ENGINE_MAX_ENGINES];
-#define gSplitVoiceAt    (gSplitVoiceAtBank[SE])
-#define gSplitFxAt       (gSplitFxAtBank[SE])
-#define gNoteQueue       (gNoteQueueBank[SE])
+#define gSplitVoiceAt      (gSplitVoiceAtBank[SE])
+static bool                 gSplitProducingBank[SOUND_ENGINE_MAX_ENGINES];
+#define gSplitProducing    (gSplitProducingBank[SE])
+#define gSplitFxAt         (gSplitFxAtBank[SE])
+#define gNoteQueue         (gNoteQueueBank[SE])
 static _Atomic uint32_t     gNoteWriteBank[SOUND_ENGINE_MAX_ENGINES];
-#define gNoteWrite       (gNoteWriteBank[SE])
+#define gNoteWrite         (gNoteWriteBank[SE])
 static uint32_t             gNoteReadBank[SOUND_ENGINE_MAX_ENGINES];        // audio thread only
-#define gNoteRead        (gNoteReadBank[SE])
+#define gNoteRead          (gNoteReadBank[SE])
 
 
 static _Atomic bool         gActiveBank[SOUND_ENGINE_MAX_ENGINES];
@@ -1791,8 +1793,12 @@ static double                 gOutDecimateBank[SOUND_ENGINE_MAX_ENGINES][OUT_DEC
 static double                 gOutHistoryBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_OUT_CHANNELS][OUT_DECIMATE_TAPS]; // [pair*2 + channel]; one shared cursor, see the render loop
 #define gOutHistory          (gOutHistoryBank[SE])
 static uint32_t               gOutHistoryPosBank[SOUND_ENGINE_MAX_ENGINES];
-static double                 gOutCouplingBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_OUT_CHANNELS][2];                   // notes §198 - last input, last output
+static double                 gOutCouplingBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_OUT_CHANNELS][2]; // notes §198 - last input, last output
 #define gOutCoupling         (gOutCouplingBank[SE])
+static double                 gOutCouplingRateBank[SOUND_ENGINE_MAX_ENGINES];                           // notes §198 - the rate the pole below is for
+static double                 gOutCouplingPoleBank[SOUND_ENGINE_MAX_ENGINES];
+#define gOutCouplingRate     (gOutCouplingRateBank[SE])
+#define gOutCouplingPole     (gOutCouplingPoleBank[SE])
 static double                 gDacStateBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_OUT_CHANNELS];                         // notes §199 - the past input
 static double                 gDacStateOutBank[SOUND_ENGINE_MAX_ENGINES][SOUND_ENGINE_OUT_CHANNELS][2];                   // and two past outputs
 static uint32_t               gOutPairsLiveBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 2}; // notes §217
@@ -3865,9 +3871,12 @@ static bool take_next_note_event(const tSoundEngineParams * params) {
     if (atomic_load(&gNoteQueue[slot].sequence) != (gNoteRead + 1)) {
         return false;   // claimed but not yet written; it will be there next time round
     }
+    // notes §219 - not before its voice sample; the queue keeps its order, so nothing behind it goes first. Only
+    // while the voices are produced split, and only a due sample within a ring of them: a split that has stopped,
+    // or a ring started again, must not hold the queue for ever
+    uint64_t due   = gNoteQueue[slot].due;
 
-    // notes §219 - not before its voice sample; the queue keeps its order, so nothing behind it goes first
-    if ((gNoteQueue[slot].due != 0u) && (gSplitVoiceAt < gNoteQueue[slot].due)) {
+    if ((due != 0u) && (gSplitProducing == true) && (gSplitVoiceAt < due) && ((due - gSplitVoiceAt) <= SPLIT_RING)) {
         return false;
     }
     int32_t  note  = gNoteQueue[slot].note;
@@ -13824,14 +13833,15 @@ static double sampler_grain_start(tSamplerGrain * grain, uint32_t g, const tNord
 static double sampler_wrap(const tNordZone * zone, double at, bool inLoop) {
     double loopLength = (double)(zone->loopEnd - zone->loopStart);
 
-    if (zone->looped && (loopLength > 0.0)) {
-        while (at >= (double)zone->loopEnd) {
-            at -= loopLength;
-        }
+    if (isfinite(at) == false) {
+        return -1.0;
+    }
 
-        while (inLoop && (at < (double)zone->loopStart)) {
-            at += loopLength;
-        }
+    // one fmod, not a loop: a sprayed grain can sit thousands of loops away (notes §213f)
+    if (zone->looped && (loopLength > 0.0) && ((at >= (double)zone->loopEnd) || (inLoop && (at < (double)zone->loopStart)))) {
+        double into = fmod(at - (double)zone->loopStart, loopLength);
+
+        at = (double)zone->loopStart + ((into < 0.0) ? (into + loopLength) : into);
     }
     return ((at < 0.0) || (at >= (double)zone->length)) ? -1.0 : at;
 }
@@ -15739,12 +15749,19 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     // The gain, the knee and the clamp are all PER CHANNEL. The knee especially: shaping the
     // two channels together off a common peak would make one duck when the other got loud,
     // which is a stereo image moving under a limiter rather than an output stage.
+    // notes §198 - the coupling pole, worked out again only when the rate moves
+    if (gOutCouplingRate != gSampleRate) {
+        gOutCouplingRate = gSampleRate;
+        gOutCouplingPole = exp(-1.0 / (OUTPUT_COUPLING_TAU * gSampleRate));
+    }
+    double coupling = gOutCouplingPole;
+
     for (uint32_t q = 0; q < (2u * pairs); q++) {
         double * sp = &sample[q >> 1][q & 1];
 
         // notes §198 - the outputs are AC-coupled
         {
-            double y = *sp - gOutCoupling[q][0] + (exp(-1.0 / (OUTPUT_COUPLING_TAU * gSampleRate)) * gOutCoupling[q][1]);
+            double y = *sp - gOutCoupling[q][0] + (coupling * gOutCoupling[q][1]);
 
             gOutCoupling[q][0] = *sp;
             gOutCoupling[q][1] = y;
@@ -16044,8 +16061,10 @@ static void split_produce_one(tSplit * sp, const tSoundEngineParams * p, const t
     while ((at - atomic_load_explicit(&sp->consumed, memory_order_acquire)) >= SPLIT_RING) {
         split_pause();
     }
-    gSplitVoiceAt = at;
+    gSplitVoiceAt   = at;
+    gSplitProducing = true;
     stage_voices(p, ctx, value, eSmoothVoice);
+    gSplitProducing = false;
 
     tSplitRecord * rec = &sp->ring[at % SPLIT_RING];
 

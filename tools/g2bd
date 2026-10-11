@@ -1,0 +1,21 @@
+#!/bin/zsh
+# Sends backdoor commands to a running editor (G2_EDIT_BACKDOOR=1) and prints each result.
+#
+#   ./g2bd 'DEVSLOT B' NEWPATCH 'ADDMODULE OscB 0 0' DUMP
+#
+# One argument per command, run in order; each waits for the editor to take it and answer.
+# See ../Docs/validation-sessions.md for the commands a validation session uses.
+cmd=/tmp/g2edit_cmd.txt
+res=/tmp/g2edit_result.txt
+nap() { perl -e 'select(undef, undef, undef, 0.1)' }
+
+for c in "$@"; do
+    rm -f $res
+    print -r -- "$c" > $cmd
+    for i in {1..600}; do
+        [[ -e $res && ! -e $cmd ]] && break
+        nap
+    done
+    print -r -- "> $c"
+    cat $res 2>/dev/null
+done
