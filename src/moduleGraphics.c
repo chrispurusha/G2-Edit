@@ -168,7 +168,7 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             }
 
             send_param_value(slot, module->key, ctx->paramIndex, variation, 1);
-            param->value = 0;  // Momentary: there is no pressed state to draw
+            set_param_value(module, variation, ctx->paramIndex, 0);  // Momentary: there is no pressed state to draw
         }
     } else if (phase == eClickRelease) {
         if ((paramType == paramTypeMenu) || (paramType == paramTypeCustomData)) {
@@ -182,7 +182,7 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             if ((button < 0) || ((uint32_t)button == oldParamVal)) {
                 return;
             }
-            param->value = (uint32_t)button;
+            set_param_value(module, variation, ctx->paramIndex, (uint32_t)button);
             send_param_value(slot, module->key, ctx->paramIndex, variation, param->value);
             undo_push_param_change(module->key, ctx->paramIndex, variation, oldParamVal, param->value);
             send_param_value_to_links(slot, module->key, ctx->paramIndex, variation, param->value);
@@ -190,14 +190,14 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             uint32_t range       = paramLocationList[param->paramRef].range;
             uint32_t oldParamVal = param->value;
 
-            param->value = (param->value + 1) % range;
+            set_param_value(module, variation, ctx->paramIndex, (param->value + 1) % range);
             send_param_value(slot, module->key, ctx->paramIndex, variation, param->value);
             undo_push_param_change(module->key, ctx->paramIndex, variation, oldParamVal, param->value);
             send_param_value_to_links(slot, module->key, ctx->paramIndex, variation, param->value);
         } else if (paramType == paramTypePush) {
             // The button coming back up. The trigger itself went out on press — see the comment there.
             send_param_value(slot, module->key, ctx->paramIndex, variation, 0);
-            param->value = 0;
+            set_param_value(module, variation, ctx->paramIndex, 0);
         }
     }
 }
@@ -377,7 +377,7 @@ static void morph_param_click_handler(tCoord coord, eClickPhase phase, void * us
         if (i >= NUM_MORPHS) {
             uint32_t oldParamVal = param->value;
 
-            param->value = (param->value + 1) % 2;
+            set_param_value(module, variation, i, (param->value + 1) % 2);
             send_param_value(gSlot, module->key, i, variation, param->value);
             undo_push_param_change(module->key, i, variation, oldParamVal, param->value);
             send_param_value_to_links(gSlot, module->key, i, variation, param->value);

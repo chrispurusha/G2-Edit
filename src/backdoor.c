@@ -1117,7 +1117,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         uint32_t  variation  = gPatchDescr[gSlot].activeVariation;
 
-        module->param[variation][param].value = (uint8_t)value;
+        set_param_value(module, variation, param, (uint8_t)value);
         send_param_value(gSlot, module->key, param, variation, value);
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
@@ -1307,6 +1307,22 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
         backdoor_dump_state(dump, sizeof(dump));
         backdoor_write_result(dump);
+    } else if (strcmp(cmd, "PERFDUMP") == 0) {
+        // PERFDUMP - the performance settings that decide which slots the keyboard plays
+        char text[1024];
+        int  used = snprintf(text, sizeof(text), "OK\nperfMode=%u selected=%u keyboardRange=%u\n",
+                             (unsigned)gGlobalSettings.perfMode, (unsigned)gSlot, (unsigned)gPerfSettings.keyboardRange);
+
+        for (uint32_t s = 0; (s < MAX_SLOTS) && (used > 0) && ((size_t)used < sizeof(text)); s++) {
+            used += snprintf(&text[used], sizeof(text) - (size_t)used,
+                             "slot=%c enabled=%u keyboard=%u hold=%u range=%u-%u midiChan=%u name=\"%s\"\n",
+                             'A' + (int)s, (unsigned)gGlobalSettings.slot[s].enabled,
+                             (unsigned)gPerfSettings.slot[s].keyboardEnabled, (unsigned)gPerfSettings.slot[s].holdEnabled,
+                             (unsigned)gPerfSettings.slot[s].rangeLower, (unsigned)gPerfSettings.slot[s].rangeUpper,
+                             (unsigned)gSynthSettings.midiChanSlot[s], gGlobalSettings.slot[s].patchName);
+        }
+
+        backdoor_write_result(text);
     } else if (strcmp(cmd, "LEDDUMP") == 0) {
         backdoor_led_dump();
     } else if (strcmp(cmd, "PARAMDUMP") == 0) {

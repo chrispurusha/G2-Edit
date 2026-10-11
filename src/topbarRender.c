@@ -333,7 +333,7 @@ void render_top_bar(void) {
         bool engineOnly = false;
 
         for (uint32_t s = 0; (s < MAX_SLOTS) && (engineOnly == false); s++) {
-            engineOnly = slot_has_engine_only_modules(s);
+            engineOnly = slot_shows_not_g2(s);
         }
 
         if (engineOnly) {

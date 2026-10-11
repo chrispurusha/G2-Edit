@@ -12924,3 +12924,67 @@ the response's peak are left out.
   laid out differently on each side. At 16384 points it went. Low cutoffs need a long FFT.
 Not compared: the Pitch, FM and Res mod jacks and dials, Kbt, Bypass.
 
+## 2026-10-11 - most performances from files were silent: Keyboard switches and ranges never read
+
+CT: most of the performances in the iCloud G2 Backups make no sound in the plug-in. Rendered offline in the app
+(backdoor LOADFILE + RENDERWAV, a held chord): 5 of the first 10 silent, so not the plug-in's MIDI path. New
+backdoor PERFDUMP showed every slot of every performance with Keyboard off and range 0-0 - including the ones
+that sounded, which only did because they play themselves. `parse_perf()` (the file reader) read each slot's name
+and enabled flag and skipped the other nine bytes; `parse_performance_settings()` (USB) reads them but is only
+called for the G2's message. And `write_perf_header()` wrote Keyboard on for A and any slot with modules, a full
+range and Key Range off - which is why BCHydro_DZLW, re-saved by the editor, played. The 29 files decode cleanly
+(protocol.c notes §26). Fixed both ends; 25 of 29 now play (Empty perf is meant to be silent). A Jupiter (SC)
+save and reload keeps its split.
+
+Also found: BeatBox quit the app with status 0 on load - a SIGSEGV in `add_node()` (a 4-In from Bus writing
+`node->select` before the node existed), turned into a clean exit by the app's signal handler. Fixed; the
+handler is a todo.
+
+Engine speed the same day (sound-engine-notes §221): 18 Unreal Dreams' 20 s chord render 21.7 s -> 13.2 s,
+bit-identical, by summing only the voice outputs the FX pass reads and taking thread-local lookups out of the
+per-node path.
+
+## 2026-10-11 - CT's G2 backups checked against Nord's Factory Bank v1.24 revA: one damaged file, ours
+
+The backup (iCloud Patches/G2/G2 Backups: 395 .pch2, 29 .prf2) against the factory set (373 + 28), and every
+file through a structure check: the CRC-16 (CCITT, over the binary after the text header, in the last two
+bytes) and the section chain from the version bytes to the CRC (each section's 16-bit length must land on the
+next). All 401 factory files pass, which validates the check. Of the backup's 424, ONE fails: BCHydro_DZLW.prf2
+- CRC good, performance section length 0 - the copy G2-Edit wrote before protocol notes §26. Its factory
+original is intact.
+- Performances: 27 of the 28 shared names are byte-identical to the factory files; the 28th is BCHydro_DZLW.
+- Patches: 331 of 346 shared names identical. The 15 that differ are all format version 23 in the backup
+  against 19/22 in the factory set (re-saved since): the same modules, positions and names, 0-5 parameter
+  values changed, and BackTo72 and Analogue Realms visibly edited (credit labels and the FX area removed; a
+  compressor added). Every version-23 file has the module record's six `unknown1` bits at 0, where older
+  versions hold assorted values there - a difference between format versions, not damage. G2-Edit keeps the
+  bits as read.
+- ClkDiv saved with no mode: 60 of the factory set's 88 ClkDivs have none (older versions), and 7 backup files
+  have them exactly as shipped. Harmless in a file; the 10-10 fault was sending one on to the G2 without its
+  mode, which the reader now supplies (protocol notes §25).
+- CORRECTION, same day: the backup's BCHydro_DZLW.prf2 (10-10 19:43) is CT's latest store - and every .prf2
+  G2-Edit ever saved has the length-0 section (all the 10-08/10-09 test copies too), so the editor's
+  performance save was wrong from the start rather than this one file being damaged. Worse, the message the
+  editor sends when it pushes a performance to the G2 used a third layout of its own (protocol notes §26), so a
+  performance pushed and then stored on the G2 may hold zeroed key ranges and Keyboard off. Fixed; unchecked on
+  the hardware.
+- READ BACK FROM THE G2 (same evening, G2 on, read-only): the G2 had BCHydro_DZLW loaded; the editor's
+  performance settings for it (A on the keyboard, B-D off, full ranges, Key Range off, channels 3/off/off/off)
+  saved to a scratch .prf2 that passes the CRC and section checks, with a correct section length (86). Against
+  the factory file the performance section differs only in the four MIDI channel bytes (the G2's own). The one
+  structural difference: the factory file has a Morph-location parameter-names section per slot (the eight morph
+  group names), which the editor's writer omits (todo).
+- Morph group names (same evening): every patch the G2 writes carries them (a Morph-location param-names
+  section, names on the morph module's parameters 8-15); the editor's saves and pushes dropped them. Fixed in
+  both (protocol notes §27, usbComms notes §59); files verified offline on 47 patches, the push unchecked.
+- ROUND TRIP THROUGH THE G2 (same evening): 3VcoPolysynth, VintageOrgan3, DreamPluck DLX, Hobbs END DX and the
+  performances Jupiter (SC) and DevineMix, each saved by the editor offline, then loaded with the G2 connected
+  (pushed), the editor restarted (everything re-read from the G2) and saved again. Nothing lost; the G2
+  normalises, so no file comes back byte-identical: cables and controller assignments come back as the same
+  sets in its own order; module records lose the six `unknown1` bits and sometimes the exclude-from-mutation
+  bit (these are older-format factory patches); a single patch's description gains the slot's key range
+  (0-127); a performance's slot MIDI channels become the G2's own, and DevineMix's selected slot (D in the file)
+  came back as A. Every other section is byte-identical - parameters, morphs, knobs, module and parameter names
+  including the renamed morph groups. The pushed performances arrive with their Keyboard, Hold, zones and Key
+  Range (Jupiter: A 0-64, C 65-127, Key Range on) - the performance push fix and the morph-names push, checked.
+

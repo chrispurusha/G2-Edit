@@ -126,3 +126,18 @@ size is multiplied by every slot, area and index of every document. An entry goe
 when its slot is cleared, or when a module of another type is written to its index. With the file it keeps
 the bank PRESET it plays (`sampler_preset()`, `sampler_preset_set()`, 2026-10-11): 0 for a Nord file or a
 bank's first; setting a file starts it at 0, so a preset is always set after its file.
+
+## 10. The module layout counter (`gModuleLayoutGen`)
+
+Moves on every `write_module()`, `delete_module()` and slot clear, and when `set_param_value()` changes a 2-Out's
+To - everything that decides whether a slot is playable on the G2. Anything that depends only on which modules
+a slot holds can rebuild when it changes rather than every frame. Unlike `gPatchGeneration` it moves on a single
+module added or removed. First user: the topbar's "Not G2" mark (patchWrite.c notes §4).
+
+## 11. One place a parameter's value is written (`set_param_value()`)
+
+Every write of `module->param[v][p].value` outside the sound engine goes through `set_param_value()`, so
+something that has to follow a value - the Not G2 mark today - is told in one place rather than at each of the
+~30 places a value changes (dials, menus, the G2's reports, patch loads, undo, variation copies, the Patch
+Adjuster, the Mutator, the front panel, the backdoor). Writing the field directly bypasses that; don't. A whole
+module replaced by `write_module()` is covered by the layout counter instead. Unchanged values return early.

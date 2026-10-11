@@ -840,6 +840,7 @@ typedef enum {
 
 // notes §18
 #define MAX_ENGINE_NODES            (128)
+#define VOICE_SUM_MAX               (64) // notes §221
 #define MAX_DX_OPERATORS            (24) // §14 - six per DXRouter, so four routers
 
 // §14 - Operator and DXRouter, in the instrument's own words.
@@ -1294,6 +1295,13 @@ typedef struct {
     int32_t       tap;                           // the node whose output reaches the speakers, -1 for silence
     int32_t       extraTap[MAX_ENGINE_TAPS - 1]; // further Out modules, summed with `tap`
     uint32_t      extraTapCount;
+    // notes §221 - the voice outputs anything after the voices reads, the only ones summed across them
+    uint32_t      voiceSumCount;
+    bool          voiceSumPlanned;               // false (unplanned, or past VOICE_SUM_MAX): sum every output
+    uint8_t       voiceSumNode[VOICE_SUM_MAX];
+    uint8_t       voiceSumLeg[VOICE_SUM_MAX];
+    uint32_t      voiceOutCount;                 // the voices' own Out modules, for the silence test
+    uint8_t       voiceOutNode[MAX_ENGINE_NODES];
     // Patch-wide settings, from the hidden modules in the Morph location rather than from any module
     // on the canvas. Vibrato is how a patch gets aftertouch vibrato with no LFO in it anywhere.
     uint32_t      vibratoSource; // 0 off, 1 aftertouch, 2 wheel
@@ -1340,6 +1348,7 @@ static inline uint32_t engine_current_slot(void) {
 #define ENGINE_DOC    (0u)
 #endif
 #define SE            (tEngineIdx)
+#define SE_ARG        const uint32_t tEngineIdx    // notes §221 - handed down where a lookup per call costs too much
 #define SE_LOCAL      const uint32_t tEngineIdx                                      = (ENGINE_DOC * MAX_SLOTS) + engine_current_slot()
 
 // The reverb type each engine last laid its delay lines out for - see the reverb's reset.
@@ -5984,6 +5993,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
     tNodeKind     kind                            = eNodeOsc;
     tEngineNode * node                            = NULL;
+    uint32_t      in4BusFirst                     = 0;   // §69.12 - how many of a 4-In from Bus's inputs are Bus 1/2
     int32_t       self                            = 0;
     // notes §77
     int32_t       resolvedIn[MAX_NODE_INPUTS];
@@ -6083,8 +6093,8 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             uint32_t  total    = firstBus + voice_area_outputs_for_fx(module->key.slot, IN4_BUS_FIRST + 1u, &feeder[firstBus],
                                                                       MAX_NODE_INPUTS / 4);
 
-            inCount      = 0;
-            node->select = firstBus;
+            inCount     = 0;
+            in4BusFirst = firstBus;    // set on the node once it exists, below
 
             for (uint32_t f = 0; f < total; f++) {
                 int32_t source = add_node(params, feeder[f], variation, depth + 1);
@@ -6139,6 +6149,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     node->moduleIndex = module->key.index;
     node->location    = module->key.location;
     node->inCount     = inCount;
+    node->select      = (kind == eNodeIn4Bus) ? in4BusFirst : 0u;
     node->ctlRate     = node_runs_at_control_rate(module, kind);
     node->steps96     = node_steps_at_96k(module, kind);
     {
@@ -7386,6 +7397,59 @@ static tModule * find_output_module(void) {
 }
 
 // notes §98
+// notes §221 - one (node, leg) to sum, once
+static void voice_sum_add(tSoundEngineParams * params, uint32_t node, uint32_t leg) {
+    for (uint32_t k = 0; k < params->voiceSumCount; k++) {
+        if ((params->voiceSumNode[k] == node) && (params->voiceSumLeg[k] == leg)) {
+            return;
+        }
+    }
+
+    if (params->voiceSumCount >= VOICE_SUM_MAX) {
+        params->voiceSumPlanned = false;
+        return;
+    }
+    params->voiceSumNode[params->voiceSumCount] = (uint8_t)node;
+    params->voiceSumLeg[params->voiceSumCount]  = (uint8_t)leg;
+    params->voiceSumCount++;
+}
+
+// notes §221 - what the pass after the voices reads of them: post-mix inputs fed by a voice node, and the taps
+static void plan_voice_sum(tSoundEngineParams * params) {
+    params->voiceSumCount   = 0;
+    params->voiceSumPlanned = true;
+    params->voiceOutCount   = 0;
+
+    for (uint32_t n = 0; n < params->nodeCount; n++) {
+        const tEngineNode * spec = &params->node[n];
+
+        if ((spec->postMix == false) && (spec->kind == eNodeOut)) {
+            params->voiceOutNode[params->voiceOutCount++] = (uint8_t)n;
+        }
+
+        if (spec->postMix == false) {
+            continue;
+        }
+
+        for (uint32_t c = 0; c < spec->inCount; c++) {
+            int32_t src = spec->in[c];
+
+            if ((src >= 0) && ((uint32_t)src < params->nodeCount) && (params->node[src].postMix == false)) {
+                voice_sum_add(params, (uint32_t)src, spec->srcLeg[c]);
+            }
+        }
+    }
+
+    for (int32_t t = -1; t < (int32_t)params->extraTapCount; t++) {
+        int32_t tap = (t < 0) ? params->tap : params->extraTap[t];
+
+        if ((tap >= 0) && (params->node[tap].postMix == false)) {
+            voice_sum_add(params, (uint32_t)tap, 0u);   // tap_pair() reads legs 0 and 1
+            voice_sum_add(params, (uint32_t)tap, 1u);
+        }
+    }
+}
+
 static void mark_post_mix_nodes(tSoundEngineParams * params) {
     for (uint32_t n = 0; n < params->nodeCount; n++) {
         tEngineNode * node = &params->node[n];
@@ -7840,6 +7904,7 @@ static void build_snapshot(tSoundEngineParams * out) {
         }
     }
     mark_post_mix_nodes(&snapshot);
+    plan_voice_sum(&snapshot);
 
     // notes §197 - the choruses again, numbered within their own area's pool
     {
@@ -8260,9 +8325,7 @@ static void refresh_voice_morphs(uint64_t build) {
 }
 
 // §26.2 - the node a voice plays on one axis: its row where that morph moves the node, else the base
-static const tEngineNode * voice_morph_node(tMorphAxis axis, const tEngineNode * base, uint32_t n, uint32_t voice) {
-    SE_LOCAL;
-
+static const tEngineNode * voice_morph_node(SE_ARG, tMorphAxis axis, const tEngineNode * base, uint32_t n, uint32_t voice) {
     const tMorphTable * table = &gVoiceMorphsAudio.axis[axis];
 
     if ((gVoiceMorphsUsable == false) || (table->column[n] < 0)) {
@@ -8274,9 +8337,7 @@ static const tEngineNode * voice_morph_node(tMorphAxis axis, const tEngineNode *
 }
 
 // §26.2 - the six Operators a voice plays on one axis, or NULL where that morph does not move them
-static const tDxOperator * voice_morph_ops(tMorphAxis axis, const tEngineNode * base, uint32_t n, uint32_t voice) {
-    SE_LOCAL;
-
+static const tDxOperator * voice_morph_ops(SE_ARG, tMorphAxis axis, const tEngineNode * base, uint32_t n, uint32_t voice) {
     const tMorphTable * table = &gVoiceMorphsAudio.axis[axis];
 
     if ((gVoiceMorphsUsable == false) || (table->dxSlot[n] < 0)) {
@@ -8358,10 +8419,8 @@ static void merge_last_nodes(const tSoundEngineParams * params) {
 
 // §26.2.2 - the node a voice plays where BOTH axes move it. Where only one does, or neither, the
 // per-axis node stands and nothing was merged.
-static const tEngineNode * voice_spec_node(const tEngineNode * base, uint32_t n, uint32_t voice,
+static const tEngineNode * voice_spec_node(SE_ARG, const tEngineNode * base, uint32_t n, uint32_t voice,
                                            const tEngineNode * byVel, const tEngineNode * byKey) {
-    SE_LOCAL;
-
     if (gVoiceMorphsUsable == true) {
         int8_t slot = gVoiceMorphsAudio.mergedSlot[n];
 
@@ -11242,8 +11301,6 @@ static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * s
 
 // The signal arriving at one of a node's inputs: whichever output of whichever node feeds it.
 static double signal_in(const tEngineNode * spec, double value[][NODE_OUTPUTS], uint32_t input) {
-    SE_LOCAL;
-
     int32_t source = spec->in[input];
 
     if ((input >= spec->inCount) || (source < 0)) {
@@ -11251,7 +11308,9 @@ static double signal_in(const tEngineNode * spec, double value[][NODE_OUTPUTS], 
     }
 
     if ((spec->backMask & (1u << input)) != 0u) {
-        return gBackValue[sEvalVoice][spec->backSlot[input]];   // notes §192 - last sample's
+        SE_LOCAL;                                             // notes §221 - here only: two thread-local reads on every input cost 10%
+
+        return gBackValue[sEvalVoice][spec->backSlot[input]]; // notes §192 - last sample's
     }
     return value[source][spec->srcLeg[input]];
 }
@@ -14050,16 +14109,14 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
     state[0] += speed * rate;
 }
 
-static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
+static void eval_node(SE_ARG, uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
                       double value[][NODE_OUTPUTS], double voicePitch) {
-    SE_LOCAL;
-
     const tEngineNode * base   = &paramsIn->node[n];
-    const tEngineNode * byVel  = voice_morph_node(eAxisVelocity, base, n, voice);
-    const tEngineNode * byKey  = voice_morph_node(eAxisKey, base, n, voice);
+    const tEngineNode * byVel  = voice_morph_node(tEngineIdx, eAxisVelocity, base, n, voice);
+    const tEngineNode * byKey  = voice_morph_node(tEngineIdx, eAxisKey, base, n, voice);
     // §26.2.2 - a node both morphs move plays a merge of the two, each word from the axis that moves
     // it; the smoothed values below still take both offsets, which is where a word both move lands
-    const tEngineNode * spec   = voice_spec_node(base, n, voice, byVel, byKey);
+    const tEngineNode * spec   = voice_spec_node(tEngineIdx, base, n, voice, byVel, byKey);
     // The smoothed dial values follow the knob; a voice's velocity and key move them by ONE offset,
     // taken from the node this voice actually plays. §26.2.3 - that used to be two offsets, one per
     // axis, added in the value's own terms: right for a dial-unit field and wrong for a gain on a
@@ -14070,9 +14127,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
     double              res    = gSmoothedRes[n] + (spec->resonance - base->resonance);
     double              gain   = gSmoothedGain[n] + (spec->gain - base->gain);
 
-    sEvalVoice = voice;
-
-    double              a      = signal_in(spec, value, 0);
+    double              a      = signal_in(spec, value, 0);   // sEvalVoice: set by the stage, notes §221
 
     for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
         value[n][leg] = 0.0;
@@ -14144,7 +14199,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
             const tDxOperator * ops = voice_merged_ops(base, n, voice);
 
             if (ops == NULL) {
-                ops = voice_morph_ops((byKey != base) ? eAxisKey : eAxisVelocity, base, n, voice);
+                ops = voice_morph_ops(tEngineIdx, (byKey != base) ? eAxisKey : eAxisVelocity, base, n, voice);
             }
 
             if (ops == NULL) {
@@ -15306,20 +15361,18 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
 }
 
 // notes §205 - a node flagged steps96 runs twice at 96 kHz on the same inputs, its two outputs averaged
-static void eval_node_full(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
+static void eval_node_full(SE_ARG, uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
                            double value[][NODE_OUTPUTS], double voicePitch) {
-    SE_LOCAL;
-
     if (paramsIn->node[n].steps96 == false) {
-        eval_node(voice, n, paramsIn, value, voicePitch);
+        eval_node(tEngineIdx, voice, n, paramsIn, value, voicePitch);
         return;
     }
     double first[NODE_OUTPUTS];
 
     sCtlRate = 2.0 * gSampleRateBank[SE];
-    eval_node(voice, n, paramsIn, value, voicePitch);
+    eval_node(tEngineIdx, voice, n, paramsIn, value, voicePitch);
     memcpy(first, value[n], sizeof(first));
-    eval_node(voice, n, paramsIn, value, voicePitch);
+    eval_node(tEngineIdx, voice, n, paramsIn, value, voicePitch);
     sCtlRate = 0.0;
 
     for (uint32_t k = 0; k < NODE_OUTPUTS; k++) {
@@ -15474,9 +15527,9 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
     SE_LOCAL;
 
     uint32_t n          = 0;
-    double   voiceSum[MAX_ENGINE_NODES][NODE_OUTPUTS];
-    double   meterValue[MAX_ENGINE_NODES][2];        // the metered voice's own output - notes §191
-    bool     ctlTick    = ctl_tick(&gCtlPhaseVoice); // notes §203
+    double   voiceSum[MAX_ENGINE_NODES][NODE_OUTPUTS]; // notes §221 - [k][0] per planned pair, unless unplanned
+    double   meterValue[MAX_ENGINE_NODES][2];          // the metered voice's own output - notes §191
+    bool     ctlTick    = ctl_tick(&gCtlPhaseVoice);   // notes §203
 
     // One event per sample. A chord's worth of note-ons arriving together therefore lands over
     // consecutive samples rather than all but the last being thrown away, and every note takes
@@ -15504,7 +15557,13 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
 
     stage_smooth(p, ctx->rampSamples, smooth);
 
-    memset(voiceSum, 0, (size_t)p->nodeCount * sizeof(voiceSum[0]));
+    if (p->voiceSumPlanned == false) {
+        memset(voiceSum, 0, (size_t)p->nodeCount * sizeof(voiceSum[0]));
+    } else {
+        for (uint32_t k = 0; k < p->voiceSumCount; k++) {
+            voiceSum[k][0] = 0.0;
+        }
+    }
     memset(meterValue, 0, (size_t)p->nodeCount * sizeof(meterValue[0]));
 
     // notes §191 - the newest voice whose key is still down, else the newest of all
@@ -15599,16 +15658,18 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
         }
         double level = ((ctx->chainHasEnvelope == true) ? 1.0 : voice->envelope) * voice->fade;
 
+        sEvalVoice = v;   // notes §221 - once a voice, not once a node
+
         for (n = 0; n < p->nodeCount; n++) {
             if (p->node[n].postMix == true) {
                 continue;
             }
 
             if (p->node[n].ctlRate == false) {
-                eval_node_full(v, n, p, value, voicePitch);
+                eval_node_full(tEngineIdx, v, n, p, value, voicePitch);
             } else if (ctlTick == true) {
                 sCtlRate = CTL_RATE_HZ;
-                eval_node(v, n, p, value, voicePitch);
+                eval_node(tEngineIdx, v, n, p, value, voicePitch);
                 sCtlRate = 0.0;
                 memcpy(gCtlHold[v][n], value[n], sizeof(value[n]));
             } else {
@@ -15621,24 +15682,36 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
         // value[] during its own pass, before the next voice overwrites it.
         double leaving = 0.0;
 
-        for (n = 0; n < p->nodeCount; n++) {
-            if (p->node[n].postMix == true) {
-                continue;
+        if (p->voiceSumPlanned == false) {
+            for (n = 0; n < p->nodeCount; n++) {
+                if (p->node[n].postMix == false) {
+                    for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
+                        voiceSum[n][leg] += value[n][leg] * level;
+                    }
+                }
             }
-
-            for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
-                voiceSum[n][leg] += value[n][leg] * level;
+        } else {
+            for (uint32_t k = 0; k < p->voiceSumCount; k++) {
+                voiceSum[k][0] += value[p->voiceSumNode[k]][p->voiceSumLeg[k]] * level;
             }
+        }
 
-            if (v == meterVoice) {
-                meterValue[n][0] = value[n][0] * level;
-                meterValue[n][1] = value[n][1] * level;
+        if (v == meterVoice) {
+            for (n = 0; n < p->nodeCount; n++) {
+                if (p->node[n].postMix == false) {
+                    meterValue[n][0] = value[n][0] * level;
+                    meterValue[n][1] = value[n][1] * level;
+                }
             }
+        }
 
-            // What this voice is putting out, measured at its Out modules — the point where
-            // it leaves the voice for the mix or for the FX Area.
-            if (p->node[n].kind == eNodeOut) {
-                double magnitude = fabs(value[n][0] * level);
+        // What this voice is putting out, measured at its Out modules — the point where
+        // it leaves the voice for the mix or for the FX Area.
+        for (n = 0; n < ((p->voiceSumPlanned == true) ? p->voiceOutCount : p->nodeCount); n++) {
+            uint32_t at = (p->voiceSumPlanned == true) ? p->voiceOutNode[n] : n;
+
+            if ((p->node[at].kind == eNodeOut) && (p->node[at].postMix == false)) {
+                double magnitude = fabs(value[at][0] * level);
 
                 if (magnitude > leaving) {
                     leaving = magnitude;
@@ -15665,12 +15738,22 @@ static void stage_voices(const tSoundEngineParams * p, const tStageCtx * ctx, do
     }
 
     // What everything after the mix sees of the voices is their SUM; their meters see one voice (notes §191).
+    if (p->voiceSumPlanned == false) {
+        for (n = 0; n < p->nodeCount; n++) {
+            if (p->node[n].postMix == false) {
+                for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
+                    value[n][leg] = voiceSum[n][leg];
+                }
+            }
+        }
+    } else {
+        for (uint32_t k = 0; k < p->voiceSumCount; k++) {
+            value[p->voiceSumNode[k]][p->voiceSumLeg[k]] = voiceSum[k][0];
+        }
+    }
+
     for (n = 0; n < p->nodeCount; n++) {
         if (p->node[n].postMix == false) {
-            for (uint32_t leg = 0; leg < NODE_OUTPUTS; leg++) {
-                value[n][leg] = voiceSum[n][leg];
-            }
-
             meter_node(&p->node[n], n, meterValue[n][0], meterValue[n][1]);
         }
     }
@@ -15685,6 +15768,8 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     double   sample[SOUND_ENGINE_OUT_PAIRS][2] = {{0.0}};                // [output pair][channel]
     bool     ctlTick                           = ctl_tick(&gCtlPhaseFx); // notes §203
 
+    sEvalVoice = 0;                                                      // notes §221
+
     // notes §183
     for (n = 0; n < p->nodeCount; n++) {
         if (p->node[n].postMix == false) {
@@ -15692,10 +15777,10 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
         }
 
         if (p->node[n].ctlRate == false) {
-            eval_node_full(0, n, p, value, KEYBOARD_PITCH_ZERO);    // §16.2a - no key after the mix: E4, 0 units
+            eval_node_full(tEngineIdx, 0, n, p, value, KEYBOARD_PITCH_ZERO);    // §16.2a - no key after the mix: E4, 0 units
         } else if (ctlTick == true) {
             sCtlRate = CTL_RATE_HZ;
-            eval_node(0, n, p, value, KEYBOARD_PITCH_ZERO);
+            eval_node(tEngineIdx, 0, n, p, value, KEYBOARD_PITCH_ZERO);
             sCtlRate = 0.0;
             memcpy(gCtlHold[0][n], value[n], sizeof(value[n]));
         } else {
@@ -15973,9 +16058,16 @@ typedef struct {
 } tSplit;
 
 static tSplit           gSplitBank[SOUND_ENGINE_MAX_ENGINES];
-#define gSplit    (gSplitBank[SE])
+#define gSplit        (gSplitBank[SE])
 
-static _Atomic uint32_t gSplitMode = eSplitThreaded;
+static _Atomic uint32_t gSplitModeBank[SOUND_ENGINE_MAX_ENGINES];
+#define gSplitMode    (gSplitModeBank[SE])
+// Stored one up, so the bank's zeroed start reads as the default, threaded
+#define SPLIT_MODE_STORED(mode)    ((mode) + 1u)
+
+static uint32_t split_mode_of(uint32_t stored) {
+    return (stored == 0u) ? (uint32_t)eSplitThreaded : (stored - 1u);
+}
 
 static void split_pause(void) {
 #if defined (__aarch64__)
@@ -16220,7 +16312,7 @@ static void split_worker_ensure(void) {
         const char * forced = getenv("G2_ENGINE_SPLIT");     // 0 serial, 1 inline, 2 threaded
 
         if ((forced != NULL) && (forced[0] >= '0') && (forced[0] <= '2')) {
-            sound_engine_set_split_mode((uint32_t)(forced[0] - '0'));
+            atomic_store(&gSplitMode, SPLIT_MODE_STORED((uint32_t)(forced[0] - '0')));
         }
     }
     sp->go = split_sem_create();
@@ -16231,8 +16323,21 @@ static void split_worker_ensure(void) {
     }
 }
 
+static void set_split_mode_one(uint32_t mode) {
+    SE_LOCAL;
+
+    atomic_store(&gSplitMode, SPLIT_MODE_STORED((mode <= eSplitThreaded) ? mode : eSplitThreaded));
+}
+
+// notes §202 - per engine, so each plug-in instance keeps its own; every slot of the current document
 void sound_engine_set_split_mode(uint32_t mode) {
-    atomic_store(&gSplitMode, (mode <= eSplitThreaded) ? mode : eSplitThreaded);
+    FOR_EACH_SLOT_ENGINE(set_split_mode_one(mode));
+}
+
+bool sound_engine_split_threaded(void) {
+    SE_LOCAL;
+
+    return split_mode_of(atomic_load(&gSplitMode)) == eSplitThreaded;
 }
 
 // What the caller handed sound_engine_set_input(), and how far into it the block being rendered starts
@@ -16515,7 +16620,7 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
     input_prepare(&params, frameCount);
 
     // notes §202 - split this block if the graph allows; a new graph or mode starts a fresh ring
-    uint32_t  splitMode    = atomic_load(&gSplitMode);
+    uint32_t  splitMode    = split_mode_of(atomic_load(&gSplitMode));
     tSplit *  sp           = &gSplit;
     bool      split        = false;
 

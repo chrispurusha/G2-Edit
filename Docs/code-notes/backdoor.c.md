@@ -32,6 +32,7 @@ caller polls for the command file's disappearance to know it's done.
   COMMS             — "online" or "offline". ASK THIS BEFORE ANY DEV COMMAND YOU INTEND TO TRUST:
                       every one of them reports OK when the instrument is not listening
   DUMP              — current slot + every module: type, name, location, col/row
+  PERFDUMP          — performance mode, Key Range, and per slot: enabled, Keyboard, Hold, range, MIDI channel, patch name
   LEDDUMP           — live LED and volume-meter values per module, as the renderer reads them.
                       Poll it to measure a blink RATE, which no screenshot can show
   PARAMDUMP         — the same modules with their variation-0 PARAMETER and MODE values, plus the

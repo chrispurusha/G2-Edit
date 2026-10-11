@@ -1360,7 +1360,7 @@ static void apply_param(tUndoParamPayload * p, bool isUndo) {
             LOG_ERROR("apply_param: param index %u or variation %u out of range\n", p->index, p->variation);
             return;
         }
-        mod->param[p->variation][p->index].value = (uint8_t)value;
+        set_param_value(mod, p->variation, p->index, (uint8_t)value);
         send_param_value(p->key.slot, p->key, p->index, p->variation, value);
     }
     synthlib_request_redraw();
@@ -1394,7 +1394,7 @@ static void apply_param_block(tUndoParamBlockPayload * p, bool isUndo) {
 
     for (uint32_t i = 0; i < p->count; i++) {
         if (mod->param[p->variation][i].value != values[i]) {
-            mod->param[p->variation][i].value = values[i];
+            set_param_value(mod, p->variation, i, values[i]);
             send_param_value(p->key.slot, p->key, i, p->variation, values[i]);
         }
     }

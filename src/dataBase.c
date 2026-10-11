@@ -160,6 +160,7 @@ void write_module(tModuleKey key, tModule * module) {
     if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
         gModule[key.slot][key.location][key.index]          = *module;
         gEngineOnlyIndex[key.slot][key.location][key.index] = module_is_engine_only(module->type);   // notes §8
+        gModuleLayoutGen[key.slot]++;                                                                // notes §10
 
         if (!module_is_engine_only(module->type)) {
             sampler_files_forget(key.slot, (int32_t)key.location, (int32_t)key.index);   // notes §9 - the index was reused
@@ -173,6 +174,7 @@ void delete_module(tModuleKey key) {
     if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
         memset(&gModule[key.slot][key.location][key.index], 0, sizeof(tModule));
         sampler_files_forget(key.slot, (int32_t)key.location, (int32_t)key.index);
+        gModuleLayoutGen[key.slot]++;   // notes §10
     }
 }
 
@@ -189,6 +191,24 @@ void database_delete_modules_by_slot(uint32_t slot) {
         sampler_files_forget(slot, -1, -1);
 
         gPatchGeneration[slot]++;
+        gModuleLayoutGen[slot]++;   // notes §10
+    }
+}
+
+// notes §11 - every write of a parameter's value comes through here
+void set_param_value(tModule * module, uint32_t variation, uint32_t param, uint32_t value) {
+    if ((module == NULL) || (variation >= NUM_VARIATIONS_USB) || (param >= MAX_NUM_PARAMETERS)) {
+        return;
+    }
+    uint8_t now = (uint8_t)value;
+
+    if (module->param[variation][param].value == now) {
+        return;
+    }
+    module->param[variation][param].value = now;
+
+    if ((module->type == moduleType2toOut) && (param == OUT_TO_PARAM) && (module->key.slot < MAX_SLOTS)) {
+        gModuleLayoutGen[module->key.slot]++;   // notes §10 - the Not G2 mark depends on it
     }
 }
 
@@ -438,8 +458,8 @@ void ensure_patch_volume(uint32_t slot, uint32_t level) {
     };
 
     for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
-        volumeModule->param[variation][VOLUME_LEVEL].value = level;
-        volumeModule->param[variation][VOLUME_MUTE].value  = 1;
+        set_param_value(volumeModule, variation, VOLUME_LEVEL, level);
+        set_param_value(volumeModule, variation, VOLUME_MUTE, 1);
     }
 }
 
@@ -477,7 +497,7 @@ void init_patch(uint32_t slot) {
 
         for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
             for (uint32_t param = 0; param < setting->actualParamCount; param++) {
-                setting->param[variation][param].value = kNewPatchSetting[index][param];
+                set_param_value(setting, variation, param, kNewPatchSetting[index][param]);
             }
         }
     }

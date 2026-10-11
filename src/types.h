@@ -561,6 +561,12 @@ typedef struct {
     uint32_t   preset;      // dataBase.c notes §9 - a bank's, by the Sampler's Preset menu
 } tSamplerFile;
 
+// patchWrite.c notes §4 - a slot's "Not G2" answer and the layout counter it was worked out for
+typedef struct {
+    uint32_t builtFor;   // gModuleLayoutGen + 1 when built; 0 never
+    bool     answer;
+} tNotG2Cache;
+
 
 typedef struct {
     bool        active;
@@ -1105,15 +1111,19 @@ typedef struct {
     uint8_t category; // 0-15, see patchTypeStrMap in globalVars.c
 } tNameTableEntry;
 
-typedef struct {  // Note - should reflect settings in the G2
-    _Atomic uint8_t globalMode;
-    _Atomic uint8_t rangeAndFlags;
+typedef struct {                       // Note - should reflect settings in the G2
     _Atomic uint8_t keyboardRange;
+    _Atomic uint8_t category;          // protocol.c notes §26 - kept, so a save does not lose it
+    _Atomic uint8_t performancePages;
+    _Atomic uint8_t clockKeyboardTrig; // a key restarts the master clock
     struct {
         _Atomic uint8_t keyboardEnabled;
         _Atomic uint8_t holdEnabled;
         _Atomic uint8_t rangeLower;
         _Atomic uint8_t rangeUpper;
+        _Atomic uint8_t bank;            // protocol.c notes §26 - where the slot's patch came from
+        _Atomic uint8_t patch;
+        _Atomic uint8_t midiChannel;     // as the G2 that saved it had it - a synth setting, kept as read
     } slot[MAX_SLOTS];
 } tPerfSettings;
 
@@ -1123,7 +1133,6 @@ typedef struct {  // Note - should reflect settings in the G2
     _Atomic uint8_t perfVersion;
     _Atomic uint8_t masterClock;
     _Atomic uint8_t masterClockRunning;
-    _Atomic uint8_t masterVolume;
     _Atomic uint8_t selectedSlot;
     struct {
         char            patchName[CLAVIA_NAME_SIZE + 1];

@@ -204,6 +204,8 @@ typedef struct tG2Document {
     tCable           gCable[MAX_SLOTS][locationMax][MAX_NUM_CABLES];
     bool             gEngineOnlyIndex[MAX_SLOTS][locationMax][MAX_NUM_MODULES];   // dataBase.c notes §8
     tSamplerFile     gSamplerFile[MAX_SAMPLER_FILES];                             // dataBase.c notes §9
+    _Atomic uint32_t gModuleLayoutGen[MAX_SLOTS];                                 // dataBase.c notes §10
+    tNotG2Cache      gNotG2Cache[MAX_SLOTS];                                      // patchWrite.c notes §4
     // slotSets.c notes §1 - the other mode's four slots, as a performance image, and its performance's name
     uint8_t *        gOtherSlotSet;
     size_t           gOtherSlotSetLen;
@@ -360,6 +362,8 @@ tG2Document * g2_document_current(void);
 #define gCable                           (gDoc->gCable)
 #define gEngineOnlyIndex                 (gDoc->gEngineOnlyIndex)
 #define gSamplerFile                     (gDoc->gSamplerFile)
+#define gModuleLayoutGen                 (gDoc->gModuleLayoutGen)
+#define gNotG2Cache                      (gDoc->gNotG2Cache)
 #define gOtherSlotSet                    (gDoc->gOtherSlotSet)
 #define gOtherSlotSetLen                 (gDoc->gOtherSlotSetLen)
 #define gOtherPerfName                   (gDoc->gOtherPerfName)

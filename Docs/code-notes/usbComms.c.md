@@ -586,9 +586,10 @@ Consumes the SUB_RESPONSE_PATCH_VERSION_CHANGE reply internally.
 
 ## 59. in `push_slot_to_device()`
 
-No param-names section for the Morph/patch-settings location — a patch file only ever carries VA+FX param-names sections, and patch-settings pseudo-modules
-never have param labels. write_param_names() unconditionally emits a section header even when
-empty, so calling it for Morph would add a spurious 3rd 0x5b section (see write_patch_to_file()).
+The parameter-names sections go Morph first, then VA, then FX - the order and content of every patch the G2 itself
+writes. The Morph one holds the eight morph groups' names (protocol.c notes §27). Until 2026-10-11 it was left out
+on the belief that a patch only ever carries VA and FX names, which every file the G2 writes contradicts; a
+patch pushed from the editor then reached the G2 with its renamed morph groups lost.
 
 ## 60. `send_play_note()`
 

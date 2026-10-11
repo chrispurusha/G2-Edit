@@ -301,6 +301,7 @@ static void * g2_create(const tSynthLibPluginDesc * desc) {
     note_stack_all_off();
     sound_engine_set_dac_emulation(prefs_get_int(PREF_KEY_DAC_EMULATION, 0) != 0);    // as the dial mode: the prefs file
     sound_engine_set_economy(prefs_get_int(PREF_KEY_ECONOMY, 0) != 0);   // soundEngine notes §205 - likewise
+    sound_engine_set_split_mode((prefs_get_int(PREF_KEY_VOICETHREAD, 1) != 0) ? eSplitThreaded : eSplitSerial);   // §202
 
     // All four slots start as the application's new empty patch, so selecting B, C or D in the editor
     // shows an empty patch rather than zeroed storage. Nothing replaces slot A any more: no patch is
@@ -599,6 +600,7 @@ static void build_state_record(tG2Plugin * g2) {
     used += (size_t)snprintf(text + used, sizeof(text) - used, "dialmode=%d\ndac=%d\n",
                              (int)synthlib_dial_mode(), (sound_engine_dac_emulation() == true) ? 1 : 0);
     used += (size_t)snprintf(text + used, sizeof(text) - used, "economy=%d\n", (sound_engine_economy() == true) ? 1 : 0);
+    used += (size_t)snprintf(text + used, sizeof(text) - used, "threads=%d\n", (sound_engine_split_threaded() == true) ? 1 : 0);
     used += (size_t)snprintf(text + used, sizeof(text) - used, "panel=%d\n", front_panel_active() ? 1 : 0);
     // notes §10 - the performance's name, which its image does not carry
     used += (size_t)snprintf(text + used, sizeof(text) - used, "perfname=%s\n", gGlobalSettings.perfName);
@@ -672,6 +674,7 @@ typedef struct {
     int32_t dialMode;
     int32_t dac;
     int32_t economy;     // soundEngine notes §205 - -1, absent, keeps the prefs file's setting
+    int32_t threads;     // soundEngine notes §202 - likewise
     int32_t panel;       // front panel mode; -1, absent, leaves the instance in editor mode
 
     // Per slot: each slot holds its own patch and so its own divider. -1 is "the record did not say".
@@ -707,6 +710,8 @@ static void parse_state_line(tG2State * state, char * line) {
         state->dac = atoi(value);
     } else if (strcmp(key, "economy") == 0) {
         state->economy = atoi(value);
+    } else if (strcmp(key, "threads") == 0) {
+        state->threads = atoi(value);
     } else if (strcmp(key, "panel") == 0) {
         state->panel = atoi(value);
     } else if (strcmp(key, "other") == 0) {
@@ -760,6 +765,7 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     state->dialMode = -1;
     state->dac      = -1;
     state->economy  = -1;
+    state->threads  = -1;
     state->panel    = -1;
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
@@ -853,6 +859,10 @@ static void g2_set_state(void * inst, const void * data, size_t len) {
     }
     if (state->economy >= 0) {
         sound_engine_set_economy(state->economy != 0);       // applied at the engine's next block
+    }
+
+    if (state->threads >= 0) {
+        sound_engine_set_split_mode((state->threads != 0) ? eSplitThreaded : eSplitSerial);
     }
 
     if (state->panel >= 0) {

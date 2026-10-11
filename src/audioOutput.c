@@ -50,19 +50,18 @@ extern "C" {
 
 // notes §1
 
-#define OUTPUT_CHANNELS         (2)
-#define MAX_AUDIO_DEVICES       (32)
-#define DEVICE_NAME_SIZE        (96)
-#define DEVICE_UID_SIZE         AUDIO_DEVICE_UID_MAX // audioOutput.h — one definition, since callers copy UIDs too
+#define OUTPUT_CHANNELS      (2)
+#define MAX_AUDIO_DEVICES    (32)
+#define DEVICE_NAME_SIZE     (96)
+#define DEVICE_UID_SIZE      AUDIO_DEVICE_UID_MAX    // audioOutput.h — one definition, since callers copy UIDs too
 
-#define PREF_KEY_DEVICE         "audioOutputDeviceUID"
-#define PREF_KEY_LEFT           "audioOutputLeftChannel"
-#define PREF_KEY_RIGHT          "audioOutputRightChannel"
-#define PREF_KEY_CHANNEL        "audioOutputFirstChannel" // superseded; read once to migrate
-#define PREF_KEY_BUFFER         "audioOutputBufferFrames"
-#define PREF_KEY_AHEAD          "audioRenderAheadMs"
-#define PREF_KEY_VOICETHREAD    "engineVoiceThread"
-#define PREF_KEY_LEVEL          "audioOutputLevelDb"
+#define PREF_KEY_DEVICE      "audioOutputDeviceUID"
+#define PREF_KEY_LEFT        "audioOutputLeftChannel"
+#define PREF_KEY_RIGHT       "audioOutputRightChannel"
+#define PREF_KEY_CHANNEL     "audioOutputFirstChannel"    // superseded; read once to migrate
+#define PREF_KEY_BUFFER      "audioOutputBufferFrames"
+#define PREF_KEY_AHEAD       "audioRenderAheadMs"
+#define PREF_KEY_LEVEL       "audioOutputLevelDb"
 
 typedef struct {
     AudioObjectID id;

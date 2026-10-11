@@ -288,3 +288,44 @@ DivMode. Loaded as it was, the module went to the instrument with no mode, and t
 everything they clock - ran wrongly on the G2 (CT: sequences cut short, a pad wobbling as if under an LFO),
 while the same performance loaded from the G2's own flash played correctly. The missing modes are now filled
 from the mode table's defaults, so the module is whole both for the engine and for what is sent to the G2.
+
+## 26. The performance settings section (`parse_perf()`, `parse_performance_settings()`, `write_perf_header()`)
+
+The section is 0x11, a 16-bit LENGTH (the bytes after it, to the end of the fourth slot), the performance's
+category, a byte holding the selected slot x 4 with the performance-pages setting in its low two bits, Key
+Range (1 on), master clock BPM, the clock keyboard trigger (a key restarts the master clock), clock running, 0,
+0; then per slot its name and ten bytes - enabled, Keyboard, Hold, bank, patch (where the slot's patch was loaded
+from), range low, range high, the slot's MIDI channel (a synth setting copied in by the G2 that saved it, 16 = off - kept as read), 0, 0. A .prf2
+holds it as is; the G2's performance-settings message over USB is the performance name followed by the same
+section.
+
+Until 2026-10-11 the editor got most of this wrong. The reader kept only each slot's name and enabled, so a
+.prf2 loaded from disk (the application's File menu and the plug-in's) had every slot's Keyboard off: the
+keyboard and a host's MIDI played no slot, and only a performance that plays itself made a sound. The length
+word was read as "0, master volume" and written back as whatever had been read - 0 for a new performance, so
+BCHydro_DZLW re-saved by the editor carried a length of 0. Category, performance pages and the clock keyboard
+trigger were dropped, and the writer put Keyboard on for slot A and any slot with modules, "has modules" for
+enabled, bank and patch, a full range, Key Range off, and 2 / 16 for the MIDI channels. CHECKED on 29
+performances from CT's G2 backups: 28 carry a length equal to their real length (BCHydro_DZLW, the editor's,
+does not), every one decodes to sensible switches and ranges (e.g. Jupiter (SC): A 0-64 and C 65-127, Key Range
+on), and loading then saving each of the 28 reproduces its section byte for byte (BCHydro_DZLW gets its length, 86). A new document starts as the G2's own
+empty performance: slot A enabled and on the keyboard, every range 0-127 (globalVars.c `document_defaults()`).
+
+The editor SENDS the same section to the G2 when it pushes a performance (`send_perf_header()` in usbComms.c,
+message type 0x11 followed by the section from its length on). It used to build its own, in a third layout:
+"global mode", "range and flags", Key Range, 0, 0, performance mode, 0, 0, and per slot no bank and patch - so
+the G2 took the slots' range bytes as bank and patch and read every range as 0-0, and (with the reader dropping
+Keyboard) every slot's Keyboard off; clock and run were set again by the messages after it. Since 2026-10-11 it
+sends `write_perf_header()`'s bytes. A performance stored on the G2 from the editor before then may hold those
+settings.
+
+
+## 27. The morph groups' names (`write_morph_group_names()`)
+
+Every patch the G2 writes has three parameter-names sections, Morph first: the morph module (patch-settings index
+1) with one 7-character name on each of its parameters 8-15 - "Group 1" to "Group 8" until renamed, e.g. "Odd"
+and "Even" in VintageOrgan3, "Detune", "rate", "repeats", "Echo" in DreamPluck DLX. The reader always stored them
+(they are ordinary parameter names); the writer left the section out, so every save from the editor lost them.
+It now writes all eight - a stored name, else the default - as the G2 does, in files and in the patch pushed to
+the G2. CHECKED: loading and saving 47 patches (44 the G2 wrote, 3 factory ones with renamed groups) reproduces
+the section exactly in 29 and in all but the last byte's unused padding bits, which the G2 leaves set, in 18.

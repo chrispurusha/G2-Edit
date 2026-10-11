@@ -3338,8 +3338,9 @@ A graph is played serially instead when splitting it would change what it does:
 - more than SPLIT_MAX_PAIRS values to cross, or nothing after the mix at all.
 
 In the application, Settings > Audio > Multi-threading switches it On (the default) or Off - the one switch
-for every thread the engine adds, this and those to come - saved as the preference `engineVoiceThread`; the
-plug-in always splits. `sound_engine_set_split_mode()` (or `G2_ENGINE_SPLIT=0/1/2` in the environment at
+for every thread the engine adds, this and those to come - saved as the preference `engineVoiceThread`. The
+plug-in has the same switch in its Settings menu (2026-10-11), per instance - the mode is banked per engine -
+saved with the host project as `threads=`, the preference giving new instances their default. `sound_engine_set_split_mode()` (or `G2_ENGINE_SPLIT=0/1/2` in the environment at
 start, which wins) picks serial,
 inline - the same pipeline on one thread - or threaded, the default. CHECKED 2026-10-04: threaded is
 bit-identical to inline on seven patches, which is the test that the threads share nothing they both
@@ -3915,3 +3916,22 @@ writes that word through the meter path (`sound_engine_module_meter()`, leg 0), 
 (§191), as `publish_module_led()` does for lamps (§194). The 16-step stage's step is its Y1 (reference §58): one
 past Length while parked, so a parked sequencer shows no step, as on the G2. SeqCtr's is the pair index Ctrl picks
 halved; the rest pair (32 and up) shows none.
+
+## 221. The voice pass's own overhead (`plan_voice_sum()`, `SE_ARG`) (2026-10-11)
+
+Profiled offline (backdoor RENDERWAV under `sample`, Release app, 18 Unreal Dreams, a four-note chord, 20 s, all
+32 voices sounding): the voice thread is the bottleneck - the FX pass waits on it - and two overheads in it cost
+more than the modules:
+- THE VOICE SUM added all nine outputs of every voice node, every voice, every sample (about 15%). The pass after
+  the voices reads only what a post-mix input is cabled to and the taps' two legs (`tap_pair()`), so
+  `plan_voice_sum()` lists those (node, leg) pairs when the graph is built - the same rule `split_plan()` uses -
+  and only they are summed and handed on. Every other voice output is read only inside its own voice. The voices'
+  Out modules, which the silence test watches, are listed too. A graph not planned, or with more than
+  `VOICE_SUM_MAX` pairs, sums everything as before.
+- THREAD-LOCAL LOOKUPS: `SE_LOCAL` is two (the document and the slot), and on macOS each goes through
+  `_tlv_get_addr`. `signal_in()` (every input), `eval_node()`, `eval_node_full()` and `voice_morph_node()` (twice
+  a node) each did it per call - about 12%. `signal_in()` now takes it only on its loop-leg branch, the others take
+  the engine index from their caller (`SE_ARG`), and `sEvalVoice` is set once a voice rather than once a node.
+Result: 21.7 s to 13.2 s for the 20 s render, output bit-identical. Planned against the sum-everything fallback,
+BigPad, MiniEmulator, DrumSynthTest and RevLeadTest render bit-identically, 12-20% faster. What remains is the
+per-node dispatch itself (`eval_node`'s switch, about 20%) - the short-block restructure (todo).

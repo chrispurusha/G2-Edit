@@ -436,6 +436,15 @@ static void action_toggle_plugin_economy(int index) {
     prefs_set_int(PREF_KEY_ECONOMY, on ? 1 : 0);    // the default for new instances; a project keeps its own
 }
 
+// soundEngine notes §202 - the engine's extra threads, for this instance; applied at its next block
+static void action_toggle_plugin_threads(int index) {
+    bool on = (sound_engine_split_threaded() == false);
+
+    (void)index;
+    sound_engine_set_split_mode(on ? eSplitThreaded : eSplitSerial);
+    prefs_set_int(PREF_KEY_VOICETHREAD, on ? 1 : 0);    // the default for new instances; a project keeps its own
+}
+
 static void action_toggle_plugin_dac(int index) {
     bool on = (sound_engine_dac_emulation() == false);
 
@@ -459,20 +468,25 @@ void open_settings_menu(tCoord anchor) {
 #ifdef SYNTHLIB_PLUGIN_BUILD
         {"G2 Output Filter",     (tRgb)RGB_GREY_3, action_toggle_plugin_dac,     0, NULL, 0, 0.0},
         {"Half Rate (economy)",  (tRgb)RGB_GREY_3, action_toggle_plugin_economy, 0, NULL, 0, 0.0},
+        {"Multi-threading",      (tRgb)RGB_GREY_3, action_toggle_plugin_threads, 0, NULL, 0, 0.0},
 #endif
         {NULL,                   (tRgb)RGB_BLACK,  NULL,                         0, NULL, 0, 0.0},
     };
 
 #ifdef SYNTHLIB_PLUGIN_BUILD
-    tMenuItem *      dac     = &items[(sizeof(items) / sizeof(items[0])) - 3];
-    tMenuItem *      economy = &items[(sizeof(items) / sizeof(items[0])) - 2];
+    tMenuItem *      dac     = &items[(sizeof(items) / sizeof(items[0])) - 4];
+    tMenuItem *      economy = &items[(sizeof(items) / sizeof(items[0])) - 3];
+    tMenuItem *      threads = &items[(sizeof(items) / sizeof(items[0])) - 2];
     bool             dacOn   = sound_engine_dac_emulation();
     bool             ecoOn   = sound_engine_economy();
+    bool             thrOn   = sound_engine_split_threaded();
 
     dac->label      = dacOn ? "* G2 Output Filter" : "  G2 Output Filter";
     dac->colour     = dacOn ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
     economy->label  = ecoOn ? "* Half Rate (economy)" : "  Half Rate (economy)";
     economy->colour = ecoOn ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
+    threads->label  = thrOn ? "* Multi-threading" : "  Multi-threading";
+    threads->colour = thrOn ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3;
 #endif
     open_context_menu(anchor, items, 0, 0.0);
 }

@@ -272,7 +272,7 @@ static void adjuster_apply(void) {
                 if (value == module->param[variation][paramIndex].value) {
                     continue;
                 }
-                module->param[variation][paramIndex].value = (uint8_t)value;
+                set_param_value(module, variation, paramIndex, (uint8_t)value);
 
                 tModuleKey             key        = {slot, loc, idx};
                 send_param_value(slot, key, paramIndex, variation, value);

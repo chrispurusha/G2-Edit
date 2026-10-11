@@ -218,7 +218,7 @@
 // notes §6
 #define SUB_COMMAND_SET_MUTATION_LOCK        (0x90)
 
-#define SUB_RESPONSE_PERF_HEADER             (0x11) // TODO - Don't think we've ever seen one of these. Might be worth removing
+#define SUB_RESPONSE_PERF_HEADER             (0x11) // the performance settings section, sent to the G2 - protocol.c notes §26
 #define SUB_RESPONSE_CLEAR_BANK              (0x12)
 #define SUB_RESPONSE_LIST_NAMES              (0x13)
 #define SUB_COMMAND_LIST_NAMES               (0x14)
@@ -272,7 +272,8 @@
 #define OCTAVE_SHIFT              (0x00) // stored 0..4, 2 = no shift
 // The G2 output-filter toggle, in the app's prefs file and the plug-in's alike
 #define PREF_KEY_DAC_EMULATION    "engineDacEmulation"
-#define PREF_KEY_ECONOMY          "engineEconomy"   // soundEngine notes §205
+#define PREF_KEY_ECONOMY          "engineEconomy"     // soundEngine notes §205
+#define PREF_KEY_VOICETHREAD      "engineVoiceThread" // soundEngine notes §202
 #define OCTAVE_SHIFT_ZERO         (2)
 #define SUSTAIN_PEDAL             (0x01)
 

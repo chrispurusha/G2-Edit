@@ -50,3 +50,13 @@ reads the lines back after the slots are parsed - on every load path: the applic
 and online (usbComms.c), and the plug-in (g2Patch.c). The plug-in's project state is the .prfx image
 (g2Plugin.c notes §15): leaving those things out had folded a drum kit's separate outputs back onto Out 1/2
 on every reopened project.
+
+## 4. The topbar's "Not G2" mark (`slot_shows_not_g2()`, `tNotG2Cache`)
+
+The topbar asks every frame whether any slot holds what the G2 cannot play. `slot_has_engine_only_modules()`
+answers by walking every module, every variation and every parameter of the slot - four slots, each frame. Only
+two things can make the answer true: an engine-only module (the Sampler), or a 2-Out sent to Out 5/6 or higher
+(moduleResourcesAccess.c notes §7). Both move the slot's layout counter (dataBase.c notes §10) - a module added
+or removed, or a 2-Out's To written through `set_param_value()` (dataBase.c notes §11) - so the walk runs only
+when that counter has moved, and the answer is kept until then. The cache is a field of the document, so each
+plug-in instance keeps its own.

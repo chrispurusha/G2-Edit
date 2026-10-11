@@ -164,6 +164,7 @@ typedef enum {
 } tSplitMode;
 
 void sound_engine_set_split_mode(uint32_t mode);
+bool sound_engine_split_threaded(void);
 
 // sound-engine-notes §208 - the output device's os_workgroup_t, which the voice threads join; NULL withdraws it
 void sound_engine_set_audio_workgroup(void * workgroup);

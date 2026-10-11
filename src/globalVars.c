@@ -65,9 +65,14 @@ static void document_defaults(void) {
     pthread_rwlock_init(&gDatabaseLock, NULL);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        gLastDeviceMidiCC[slot]           = -1;
-        gLastDeviceMidiChan[slot]         = -1;
-        gSynthSettings.midiChanSlot[slot] = (uint8_t)slot;   // A-D on channels 1-4 until a G2 says otherwise
+        gLastDeviceMidiCC[slot]                  = -1;
+        gLastDeviceMidiChan[slot]                = -1;
+        gSynthSettings.midiChanSlot[slot]        = (uint8_t)slot; // A-D on channels 1-4 until a G2 says otherwise
+        gPerfSettings.slot[slot].rangeLower      = 0;             // the G2's own empty performance: the whole
+        gPerfSettings.slot[slot].rangeUpper      = 127;           // keyboard, played by slot A alone
+        gPerfSettings.slot[slot].keyboardEnabled = (slot == 0u) ? 1u : 0u;
+        gGlobalSettings.slot[slot].enabled       = (slot == 0u) ? 1u : 0u;
+        gPerfSettings.slot[slot].midiChannel     = (uint8_t)slot;
     }
 }
 

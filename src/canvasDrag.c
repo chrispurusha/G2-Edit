@@ -421,7 +421,7 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
 
                     if (!altHeld) {
                         if (module->param[variation][gParamDragging.param].value != value) {
-                            module->param[variation][gParamDragging.param].value = value;
+                            set_param_value(module, variation, gParamDragging.param, value);
                             send_param_value(slot, gParamDragging.moduleKey, gParamDragging.param, variation, value);
                         }
                     } else {
@@ -449,7 +449,7 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
                                                                      gParamDragging.graphItem);
 
                         if (module->param[variation][gParamDragging.param2].value != value2) {
-                            module->param[variation][gParamDragging.param2].value = value2;
+                            set_param_value(module, variation, gParamDragging.param2, value2);
                             send_param_value(slot, gParamDragging.moduleKey, gParamDragging.param2, variation, value2);
                         }
                     }
@@ -1145,7 +1145,7 @@ static bool nudge_one_param(tModule * module, uint32_t i, uint32_t variation, in
     }
 
     if ((uint32_t)newValue != param->value) {
-        param->value = (uint32_t)newValue;
+        set_param_value(module, variation, i, (uint32_t)newValue);
         send_param_value(module->key.slot, module->key, i, variation, (uint32_t)newValue);
         send_param_value_to_links(module->key.slot, module->key, i, variation, (uint32_t)newValue);
     }

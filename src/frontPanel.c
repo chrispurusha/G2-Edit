@@ -235,7 +235,7 @@ static void setting_set(const tSetting * setting, uint32_t slot, uint32_t value)
             if (module == NULL) {
                 return;
             }
-            module->param[variation][setting->param].value = (uint8_t)value;
+            set_param_value(module, variation, setting->param, (uint8_t)value);
 
             send_param_value(slot, module->key, setting->param, variation, value);
             break;
@@ -387,7 +387,7 @@ static void drag_set(uint32_t value) {
     if (module == NULL) {
         return;
     }
-    module->param[sDrag.variation][sDrag.target.paramIndex].value = (uint8_t)value;
+    set_param_value(module, sDrag.variation, sDrag.target.paramIndex, (uint8_t)value);
     send_param_value(sDrag.target.key.slot, sDrag.target.key, sDrag.target.paramIndex, sDrag.variation, value);
     send_param_value_to_links(sDrag.target.key.slot, sDrag.target.key, sDrag.target.paramIndex, sDrag.variation, value);
 }

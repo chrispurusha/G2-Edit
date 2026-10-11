@@ -197,7 +197,7 @@ void mutator_apply_genome(const tMutatorSchemaEntry * schema, uint32_t count, ui
 
     for (i = 0; i < count; i++) {
         tModuleKey key        = schema[i].moduleKey;
-        key.slot                                   = slot;
+        key.slot = slot;
         tModule *  module     = get_module_slot(key.slot, key.location, key.index);
 
         if (module == NULL) {
@@ -210,7 +210,7 @@ void mutator_apply_genome(const tMutatorSchemaEntry * schema, uint32_t count, ui
         if (oldValue == newValue) {
             continue;
         }
-        module->param[variation][paramIndex].value = (uint8_t)newValue;
+        set_param_value(module, variation, paramIndex, (uint8_t)newValue);
         send_param_value(slot, key, paramIndex, variation, newValue);
 
         if (pushUndo) {

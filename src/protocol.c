@@ -472,7 +472,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             }
 
             for (k = 0; k < paramCount; k++) {
-                paramValue                = read_bit_stream(buff, subOffset, 7);
+                paramValue = read_bit_stream(buff, subOffset, 7);
 
                 if (variation == 0) {
                     LOG_MODULE_DATA("   Param number %02d param value %02d\n", k, paramValue);
@@ -483,7 +483,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                         LOG_MODULE_DATA("   Difference on init value in 8 = %02d 9 = %02d\n", module->param[8][k].value, paramValue);
                     }
                 }
-                module->param[j][k].value = paramValue;
+                set_param_value(module, j, k, paramValue);
             }
         }
 
@@ -494,7 +494,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
             for (j = 0; j < NUM_VARIATIONS; j++) {
                 for (k = paramCount; (k < full) && (k < MAX_NUM_PARAMETERS); k++) {
-                    module->param[j][k].value = module_param_default(module->type, k);
+                    set_param_value(module, j, k, module_param_default(module->type, k));
                 }
             }
 
@@ -1008,6 +1008,46 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
+// notes §27 - one name entry: isString, length, parameter index, then the labels
+static uint32_t write_param_name_entry(uint8_t * buff, uint32_t * bitPos, uint32_t paramIndex, const char * label) {
+    uint32_t paramLength = 1u + PROTOCOL_PARAM_NAME_SIZE;
+
+    write_bit_stream(buff, bitPos, 8, 1);  // isString
+    write_bit_stream(buff, bitPos, 8, paramLength);
+    write_bit_stream(buff, bitPos, 8, paramIndex);
+
+    for (uint32_t k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
+        write_bit_stream(buff, bitPos, 8, (uint8_t)label[k]);
+    }
+
+    return 3u + PROTOCOL_PARAM_NAME_SIZE;
+}
+
+// notes §27 - the morph groups' names, all eight, as the G2 writes them: a stored name, else "Group n"
+static void write_morph_group_names(const tModule * module, uint8_t * buff, uint32_t * bitPos, uint32_t * nameCount) {
+    uint32_t moduleLengthBitPos = 0;
+    uint32_t moduleLength       = 0;
+
+    (*nameCount)++;
+    write_bit_stream(buff, bitPos, 8, module->key.index);
+    moduleLengthBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 8, 0);  // Populated later
+
+    for (uint32_t group = 0; group < NUM_MORPHS; group++) {
+        uint32_t param                               = NUM_MORPHS + group; // the names sit on parameters 8-15
+        char     label[PROTOCOL_PARAM_NAME_SIZE + 1] = {0};
+
+        if (module->paramNumLabels[param] > 0u) {
+            memcpy(label, module->paramName[param][0], PROTOCOL_PARAM_NAME_SIZE);
+        } else {
+            snprintf(label, sizeof(label), "Group %u", (unsigned)(group + 1u));
+        }
+        moduleLength += write_param_name_entry(buff, bitPos, param, label);
+    }
+
+    write_bit_stream(buff, &moduleLengthBitPos, 8, moduleLength);
+}
+
 void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
     uint32_t nameCount          = 0;
     uint32_t sizeBitPos         = 0;
@@ -1038,6 +1078,11 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
         tModule * module = get_module_slot(slot, location, i);
 
         if (!module->active || kept_off_device(slot, location, i)) {
+            continue;
+        }
+
+        if ((location == locationMorph) && (i == (uint32_t)patchModuleMorph)) {
+            write_morph_group_names(module, buff, bitPos, &nameCount);
             continue;
         }
         paramCount = module->actualParamCount;
@@ -1343,8 +1388,8 @@ int parse_synth_settings(uint8_t * buff, int length) {
 }
 
 int parse_performance_settings(uint8_t * buff, int length) {
-    uint32_t bitPos            = 0;
-    int      i                 = 0;
+    uint32_t bitPos      = 0;
+    int      i           = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
@@ -1353,25 +1398,23 @@ int parse_performance_settings(uint8_t * buff, int length) {
     read_clavia_string(buff, &bitPos, gGlobalSettings.perfName, sizeof(gGlobalSettings.perfName));
     LOG_DEBUG("Performance Name     = '%s'\n", gGlobalSettings.perfName);
 
-    uint32_t keyboardRangeEnab = 0;
-    uint32_t rangeEnable       = 0;
-    uint32_t keyboardSplit     = 0;
+    uint32_t rangeEnable = 0;
 
-    read_bit_stream(buff, &bitPos, 8);                                           // Regular val of 17?
-    read_bit_stream(buff, &bitPos, 8);
-    keyboardRangeEnab                  = read_bit_stream(buff, &bitPos, 8);      // Regular val of 82 for standard mode and 87 for performance mode? Seen 0x74 for standard an 0x80 for perf too. Seems to be keyboard range enabled!
-    LOG_DEBUG("Keyboard Range Enab  = %u\n", keyboardRangeEnab);
-    read_bit_stream(buff, &bitPos, 8);
-    read_bit_stream(buff, &bitPos, 4);
+    // notes §26 - from here the same section a .prf2 holds: 0x11, its length, category, ...
+    read_bit_stream(buff, &bitPos, 8);                                           // 0x11
+    read_bit_stream(buff, &bitPos, 16);                                          // length
+    gPerfSettings.category             = (uint8_t)read_bit_stream(buff, &bitPos, 8);
+    read_bit_stream(buff, &bitPos, 4);                                           // slot focus, high bits
     gGlobalSettings.selectedSlot       = read_bit_stream(buff, &bitPos, 2);
     LOG_DEBUG("SelectedSlot         = %u\n", gGlobalSettings.selectedSlot);
-    read_bit_stream(buff, &bitPos, 2);
+    gPerfSettings.performancePages     = (uint8_t)read_bit_stream(buff, &bitPos, 2);
     rangeEnable                        = read_bit_stream(buff, &bitPos, 8);
     LOG_DEBUG("RangeEnable          = %u\n", rangeEnable);
-    gGlobalSettings.masterClock        = read_bit_stream(buff, &bitPos, 8);  // This is used whether we're in performance mode or not. It's shared with non-perf mode
+    gPerfSettings.keyboardRange        = (uint8_t)(rangeEnable != 0u);      // notes §26 - the file's byte after the slot
+    gGlobalSettings.masterClock        = read_bit_stream(buff, &bitPos, 8); // This is used whether we're in performance mode or not. It's shared with non-perf mode
     LOG_DEBUG("MasterClock          = %u\n", gGlobalSettings.masterClock);
-    keyboardSplit                      = read_bit_stream(buff, &bitPos, 8);
-    LOG_DEBUG("KeyboardSplit        = %u\n", keyboardSplit);
+    gPerfSettings.clockKeyboardTrig    = (uint8_t)read_bit_stream(buff, &bitPos, 8);
+    LOG_DEBUG("ClockKeyboardTrig    = %u\n", gPerfSettings.clockKeyboardTrig);
     gGlobalSettings.masterClockRunning = read_bit_stream(buff, &bitPos, 8);
     LOG_DEBUG("MasterClockRun       = %u\n", gGlobalSettings.masterClockRunning);
     read_bit_stream(buff, &bitPos, 8);
@@ -1382,8 +1425,8 @@ int parse_performance_settings(uint8_t * buff, int length) {
         gGlobalSettings.slot[i].enabled       = read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, &bitPos, 8);
-        read_bit_stream(buff, &bitPos, 8); // Bank index
-        read_bit_stream(buff, &bitPos, 8); // Patch index
+        gPerfSettings.slot[i].bank            = (uint8_t)read_bit_stream(buff, &bitPos, 8);
+        gPerfSettings.slot[i].patch           = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         LOG_DEBUG("Slot %d:\n", i);
@@ -1396,9 +1439,8 @@ int parse_performance_settings(uint8_t * buff, int length) {
         LOG_DEBUG("  RangeLower        = %u\n", gPerfSettings.slot[i].rangeLower);
         LOG_DEBUG("  RangeUpper        = %u\n", gPerfSettings.slot[i].rangeUpper);
 
-        read_bit_stream(buff, &bitPos, 8);
-        read_bit_stream(buff, &bitPos, 8);
-        read_bit_stream(buff, &bitPos, 8);
+        gPerfSettings.slot[i].midiChannel     = (uint8_t)read_bit_stream(buff, &bitPos, 8);
+        read_bit_stream(buff, &bitPos, 16);   // 0, 0
     }
 
     return EXIT_SUCCESS;
@@ -1613,7 +1655,6 @@ int parse_perf(uint8_t * buff, int length) {
     uint32_t subOffset   = 0;
     uint32_t slot        = 0;
     uint8_t  enabled     = 0;
-    int      j           = 0;
 
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
@@ -1624,32 +1665,38 @@ int parse_perf(uint8_t * buff, int length) {
         LOG_ERROR("parse_perf: expected perf header 0x11, got 0x%02x\n", headerType);
         return EXIT_FAILURE;
     }
-    read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
-    gGlobalSettings.masterVolume       = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
-    read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
+    read_bit_stream(buff, &bitOffset, 16);                                   // notes §26 - the section's length
+    gPerfSettings.category             = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     selSlotByte                        = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     selSlot                            = (uint32_t)(selSlotByte / 4);
+    gPerfSettings.performancePages     = (uint8_t)(selSlotByte & 0x03u);
 
     if (selSlot < MAX_SLOTS) {
         gSlot = selSlot;
     }
-    read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
+    gPerfSettings.keyboardRange        = (uint8_t)read_bit_stream(buff, &bitOffset, 8); // notes §26 - Key Range
     gGlobalSettings.masterClock        = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
-    read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
+    gPerfSettings.clockKeyboardTrig    = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     gGlobalSettings.masterClockRunning = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
-    read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
-    read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
+    read_bit_stream(buff, &bitOffset, 8);                                               // 0x00
+    read_bit_stream(buff, &bitOffset, 8);                                               // 0x00
 
     for (slot = 0; slot < MAX_SLOTS; slot++) {
         read_clavia_string(buff, &bitOffset, gGlobalSettings.slot[slot].patchName, sizeof(gGlobalSettings.slot[slot].patchName));
 
         LOG_DEBUG("Slot %u name '%s'\n", slot, gGlobalSettings.slot[slot].patchName);
-        enabled                            = (uint8_t)read_bit_stream(buff, &bitOffset, 8); // IsSlotEnabled
-        gGlobalSettings.slot[slot].enabled = enabled;
+        enabled                                  = (uint8_t)read_bit_stream(buff, &bitOffset, 8); // IsSlotEnabled
+        gGlobalSettings.slot[slot].enabled       = enabled;
+        // notes §26 - the same record the G2 sends over USB (parse_performance_settings())
+        gPerfSettings.slot[slot].keyboardEnabled = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+        gPerfSettings.slot[slot].holdEnabled     = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+        gPerfSettings.slot[slot].bank            = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+        gPerfSettings.slot[slot].patch           = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+        gPerfSettings.slot[slot].rangeLower      = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+        gPerfSettings.slot[slot].rangeUpper      = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
 
-        for (j = 1; j < 10; j++) {
-            read_bit_stream(buff, &bitOffset, 8);                            // remaining suffix bytes
-        }
+        gPerfSettings.slot[slot].midiChannel     = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+        read_bit_stream(buff, &bitOffset, 16);                               // 0, 0
     }
 
     for (slot = 0; slot < MAX_SLOTS; slot++) {
@@ -1805,7 +1852,7 @@ void send_param_value_to_links(uint32_t slot, tModuleKey moduleKey, uint32_t par
         if (oldValue == value) {
             continue;
         }
-        module->param[linked][paramIdx].value = (uint8_t)value;
+        set_param_value(module, linked, paramIdx, (uint8_t)value);
         send_param_value(slot, moduleKey, paramIdx, linked, value);
         undo_push_param_change(moduleKey, paramIdx, linked, oldValue, value);
     }
@@ -2015,14 +2062,15 @@ void write_slot_separator(uint8_t * buff, uint32_t * bitPos) {
 void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     //char slotName[CLAVIA_NAME_SIZE + 1] = {0};
 
-    write_bit_stream(buff, bitPos, 8, 0x11);                 // constant observed in all perf files
-    write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, gGlobalSettings.masterVolume);
-    write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, (uint8_t)(gSlot * 4)); // selected slot encoding
-    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x11);                 // notes §26
+    uint32_t lengthPos = *bitPos;
+
+    write_bit_stream(buff, bitPos, 16, 0);                   // the section's length, filled in at the end
+    write_bit_stream(buff, bitPos, 8, gPerfSettings.category);
+    write_bit_stream(buff, bitPos, 8, (uint8_t)((gSlot * 4) | (gPerfSettings.performancePages & 0x03u)));
+    write_bit_stream(buff, bitPos, 8, gPerfSettings.keyboardRange ? 0x01 : 0x00);
     write_bit_stream(buff, bitPos, 8, gGlobalSettings.masterClock);
-    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, gPerfSettings.clockKeyboardTrig);
     write_bit_stream(buff, bitPos, 8, gGlobalSettings.masterClockRunning);
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, 0x00);
@@ -2033,19 +2081,20 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
         } else {
             write_clavia_string(buff, bitPos, gGlobalSettings.slot[slot].patchName);
         }
-        bool has_content = slot_has_modules(slot);
-
-        write_bit_stream(buff, bitPos, 8, has_content ? 0x01 : 0x00);
-        write_bit_stream(buff, bitPos, 8, (slot == 0 || has_content) ? 0x01 : 0x00);
+        // notes §26 - enabled, Keyboard, Hold, bank, patch, range low and high, the slot's MIDI channel, two zeros
+        write_bit_stream(buff, bitPos, 8, gGlobalSettings.slot[slot].enabled ? 0x01 : 0x00);
+        write_bit_stream(buff, bitPos, 8, gPerfSettings.slot[slot].keyboardEnabled ? 0x01 : 0x00);
+        write_bit_stream(buff, bitPos, 8, gPerfSettings.slot[slot].holdEnabled ? 0x01 : 0x00);
+        write_bit_stream(buff, bitPos, 8, gPerfSettings.slot[slot].bank);
+        write_bit_stream(buff, bitPos, 8, gPerfSettings.slot[slot].patch);
+        write_bit_stream(buff, bitPos, 8, gPerfSettings.slot[slot].rangeLower);
+        write_bit_stream(buff, bitPos, 8, gPerfSettings.slot[slot].rangeUpper);
+        write_bit_stream(buff, bitPos, 8, gPerfSettings.slot[slot].midiChannel);
         write_bit_stream(buff, bitPos, 8, 0x00);
-        write_bit_stream(buff, bitPos, 8, has_content ? 0x01 : 0x00);
-        write_bit_stream(buff, bitPos, 8, has_content ? 0x01 : 0x00);
         write_bit_stream(buff, bitPos, 8, 0x00);
-        write_bit_stream(buff, bitPos, 8, 0x7f);                              // slot volume (default 127)
-        write_bit_stream(buff, bitPos, 8, slot == 0 ? 0x02 : 0x10);
-        write_bit_stream(buff, bitPos, 8, 0x00);
-        write_bit_stream(buff, bitPos, 8, 0x00);  // TODO - this all needs fixing, based on the parsing in usbscomms..c
     }
+
+    write_bit_stream(buff, &lengthPos, 16, BIT_TO_BYTE(*bitPos - lengthPos) - 2);
 }
 
 // notes §21

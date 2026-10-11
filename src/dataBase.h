@@ -40,6 +40,7 @@ void database_write_unlock(void);
 
 tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index);
 void write_module(tModuleKey key, tModule * module);
+void set_param_value(tModule * module, uint32_t variation, uint32_t param, uint32_t value);
 void delete_module(tModuleKey key);
 bool database_index_is_engine_only(uint32_t slot, uint32_t location, uint32_t index);
 const char * sampler_file(tModuleKey key);

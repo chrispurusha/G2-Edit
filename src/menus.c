@@ -132,7 +132,7 @@ static void action_patch_setting_u8(int index) {
     uint32_t   oldValue = module ? module->param[var][gPatchSettingParam].value : newValue;
 
     if (module != NULL) {
-        module->param[var][gPatchSettingParam].value = (uint8_t)newValue;
+        set_param_value(module, var, gPatchSettingParam, (uint8_t)newValue);
     }
     send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, newValue);
     undo_push_param_change(key, gPatchSettingParam, var, oldValue, newValue);
@@ -147,7 +147,7 @@ static void action_patch_setting_i8(int index) {
     uint32_t   oldValue = module ? module->param[var][gPatchSettingParam].value : newValue;
 
     if (module != NULL) {
-        module->param[var][gPatchSettingParam].value = (uint8_t)newValue;
+        set_param_value(module, var, gPatchSettingParam, (uint8_t)newValue);
     }
     send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, newValue);
     undo_push_param_change(key, gPatchSettingParam, var, oldValue, newValue);
@@ -217,7 +217,7 @@ static void action_copy_variation(int index) {
             numParams = module_param_count(module->type);
 
             for (paramIndex = 0; paramIndex < numParams; paramIndex++) {
-                module->param[targetVariation][paramIndex].value = module->param[sourceVariation][paramIndex].value;
+                set_param_value(module, targetVariation, paramIndex, module->param[sourceVariation][paramIndex].value);
 
                 for (morphIndex = 0; morphIndex < NUM_MORPHS; morphIndex++) {
                     module->param[targetVariation][paramIndex].morphRange[morphIndex] = module->param[sourceVariation][paramIndex].morphRange[morphIndex];
@@ -420,7 +420,7 @@ static void menu_action_paste_params(int index) {
             if (oldValue == newValue) {
                 continue;
             }
-            module->param[v][p].value = (uint8_t)newValue;
+            set_param_value(module, v, p, (uint8_t)newValue);
             send_param_value(slot, key, p, v, newValue);
             undo_push_param_change(key, p, v, oldValue, newValue);
         }
@@ -655,7 +655,7 @@ static void init_params_on_module(tModule * module, uint32_t location, uint32_t 
 
     for (paramListIndex = 0; paramListIndex < array_size_param_location_list(); paramListIndex++) {
         if (paramLocationList[paramListIndex].moduleType == module->type) {
-            module->param[variation][paramIndex].value = paramLocationList[paramListIndex].defaultValue;
+            set_param_value(module, variation, paramIndex, paramLocationList[paramListIndex].defaultValue);
             send_param_value(slot, module->key, paramIndex, variation, module->param[variation][paramIndex].value);
             paramIndex++;
 
@@ -1463,7 +1463,7 @@ static void action_set_toggle_value(int index) {
         uint32_t paramIdx = gMenuContext.paramIndex;
         uint32_t oldValue = module->param[variation][paramIdx].value;
         uint32_t newValue = (uint32_t)gContextMenu.items[index].param;
-        module->param[variation][paramIdx].value = (uint8_t)newValue;
+        set_param_value(module, variation, paramIdx, (uint8_t)newValue);
 
         uint32_t paramRef = module->param[variation][paramIdx].paramRef;
 
@@ -1532,9 +1532,9 @@ static void action_set_drum_preset(int index) {
 
     if (module != NULL) {
         for (uint32_t p = 0; p < DRUM_SYNTH_PRESET_PARAMS; p++) {
-            before[p]                         = module->param[variation][p].value;
-            after[p]                          = drum_synth_preset_value(preset, p);
-            module->param[variation][p].value = after[p];
+            before[p] = module->param[variation][p].value;
+            after[p]  = drum_synth_preset_value(preset, p);
+            set_param_value(module, variation, p, after[p]);
 
             if (after[p] != before[p]) {
                 send_param_value(slot, module->key, p, variation, after[p]);
@@ -2151,7 +2151,7 @@ void toggle_patch_on_off(uint32_t moduleIndex, uint32_t paramIndex) {
     uint32_t   newValue = oldValue ? 0 : 1;
 
     if (module != NULL) {
-        module->param[var][paramIndex].value = (uint8_t)newValue;
+        set_param_value(module, var, paramIndex, (uint8_t)newValue);
     }
     send_patch_setting_param(slot, moduleIndex, paramIndex, newValue);
     undo_push_param_change(key, paramIndex, var, oldValue, newValue);

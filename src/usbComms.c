@@ -668,7 +668,7 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
 
     if (module != NULL) {
         if (variation < NUM_VARIATIONS_USB && param < MAX_NUM_PARAMETERS) {
-            module->param[variation][param].value = value;
+            set_param_value(module, variation, param, value);
         } else {
             LOG_ERROR("parse_param_change: out-of-range variation=%u param=%u from G2\n", variation, param);
         }
@@ -3280,7 +3280,7 @@ static void build_slot_patch(uint32_t slot, uint8_t * buff, uint32_t * bitPosOut
     write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS_USB);
     write_knobs(slot, buff, &bitPos);
     write_controllers(slot, buff, &bitPos);
-    // notes §59
+    write_param_names(slot, locationMorph, buff, &bitPos);   // notes §59
     write_param_names(slot, locationVa, buff, &bitPos);
     write_param_names(slot, locationFx, buff, &bitPos);
     write_module_names(slot, locationVa, buff, &bitPos);
@@ -3645,45 +3645,14 @@ static int send_perf_header(void) {
     uint32_t bitPos                  = 0;
     uint32_t i                       = 0;
 
-    // Build payload starting at byte 2, reserving bytes 0-1 for the size word
-    bitPos = BYTE_TO_BIT(2);
+    // protocol.c notes §26 - the same section a .prf2 holds; its 0x11 is the message type below
+    write_perf_header(payload, &bitPos);
 
-    // 8 global bytes
-    write_bit_stream(payload, &bitPos, 8, gPerfSettings.globalMode);
-    write_bit_stream(payload, &bitPos, 8, gPerfSettings.rangeAndFlags);
-    write_bit_stream(payload, &bitPos, 8, gPerfSettings.keyboardRange);
-    write_bit_stream(payload, &bitPos, 8, 0);
-    write_bit_stream(payload, &bitPos, 8, 0);
-    write_bit_stream(payload, &bitPos, 8, gGlobalSettings.perfMode);
-    write_bit_stream(payload, &bitPos, 8, 0);
-    write_bit_stream(payload, &bitPos, 8, 0);
-
-    // Per-slot data — slot names are fixed CLAVIA_NAME_SIZE bytes (null-padded)
-    for (i = 0; i < MAX_SLOTS; i++) {
-        write_clavia_string(payload, &bitPos, gGlobalSettings.slot[i].patchName);
-
-        write_bit_stream(payload, &bitPos, 8, gGlobalSettings.slot[i].enabled);
-        write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].keyboardEnabled);
-        write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].holdEnabled);
-        write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].rangeLower);
-        write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].rangeUpper);
-        write_bit_stream(payload, &bitPos, 8, 0);
-        write_bit_stream(payload, &bitPos, 8, 0);
-        write_bit_stream(payload, &bitPos, 8, 0);
-        write_bit_stream(payload, &bitPos, 8, 0);
-        write_bit_stream(payload, &bitPos, 8, 0);
-    }
-
-    // Back-fill the size word (big-endian; counts bytes after the word)
-    uint32_t totalBytes   = BIT_TO_BYTE(bitPos);
-    uint32_t contentBytes = totalBytes - 2;
-
-    payload[0] = (uint8_t)((contentBytes >> 8) & 0xff);
-    payload[1] = (uint8_t)(contentBytes & 0xff);
+    uint32_t totalBytes              = BIT_TO_BYTE(bitPos);
 
     usb_cmd_sys(buff, &buffBitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_RESPONSE_PERF_HEADER);
 
-    for (i = 0; i < totalBytes && BIT_TO_BYTE(buffBitPos) < SEND_MESSAGE_SIZE; i++) {
+    for (i = 1; i < totalBytes && BIT_TO_BYTE(buffBitPos) < SEND_MESSAGE_SIZE; i++) {
         write_bit_stream(buff, &buffBitPos, 8, payload[i]);
     }
 

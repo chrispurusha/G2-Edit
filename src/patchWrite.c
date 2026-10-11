@@ -67,6 +67,21 @@ bool slot_has_engine_only_modules(uint32_t slot) {
     return false;
 }
 
+// notes §4 - the same answer, worked out again only when a module or a 2-Out's To has changed
+bool slot_shows_not_g2(uint32_t slot) {
+    if (slot >= MAX_SLOTS) {
+        return false;
+    }
+    tNotG2Cache * cache = &gNotG2Cache[slot];
+    uint32_t      gen   = gModuleLayoutGen[slot] + 1u;    // + 1: a zeroed cache has never been built
+
+    if (cache->builtFor != gen) {
+        cache->builtFor = gen;
+        cache->answer   = slot_has_engine_only_modules(slot);
+    }
+    return cache->answer;
+}
+
 // notes §2 - the name a patch is saved under: .pchx when it holds engine-only modules
 const char * patch_save_path(uint32_t slot, const char * path, char * out, size_t outSize) {
     if (!slot_has_engine_only_modules(slot) || has_suffix(path, PCHX_EXTENSION)) {
@@ -267,8 +282,7 @@ int write_database_to_file(const char * filepath, uint32_t slot) {
     write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS);
     write_knobs(slot, buff, &bitPos);
     write_controllers(slot, buff, &bitPos);
-    // No Morph param-names section — matches the reference structure; see the matching comment in
-    // push_slot_to_device() (usbComms.c).
+    write_param_names(slot, locationMorph, buff, &bitPos);   // protocol.c notes §27 - the morph groups' names
     write_param_names(slot, locationVa, buff, &bitPos);
     write_param_names(slot, locationFx, buff, &bitPos);
     write_module_names(slot, locationVa, buff, &bitPos);
@@ -366,8 +380,7 @@ uint8_t * write_perf_to_memory(size_t * sizeOut, bool engineOnly) {
         write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS);
         write_knobs(slot, buff, &bitPos);
         write_controllers(slot, buff, &bitPos);
-        // No Morph param-names section — matches the reference structure and write_patch_to_file();
-        // see the matching comment in push_slot_to_device() (usbComms.c).
+        write_param_names(slot, locationMorph, buff, &bitPos);   // protocol.c notes §27
         write_param_names(slot, locationVa, buff, &bitPos);
         write_param_names(slot, locationFx, buff, &bitPos);
         write_module_names(slot, locationVa, buff, &bitPos);
