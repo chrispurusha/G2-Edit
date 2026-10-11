@@ -3610,6 +3610,98 @@ The truncated step is 300 ppm slow at 102 BPM (297.09 words a tick becomes 297),
 the shared position above advances by the same exact steps. Afterwards the engine stays within 1-4 ms of
 the G2 at every variation switch over 66 s.
 
+## 213a. The Sampler's Start, Delay and Attack (2026-10-11, CT)
+
+The first step towards modulated time-stretching: where a note starts, when, and how it fades in. Each is set
+when the note begins and is never re-read while it plays - scrubbing a playing note is the speed/direction
+control still to come.
+
+- **Start** (param 5) - where in the zone the note begins, from its first sample at 0 to its last at 127
+  (its loop end, for a looped zone), in a straight line. Its jack moves the dial through its amount dial
+  (param 6) as an envelope's time mod does (§17.10): a signal of 1.0 at amount 64 moves it 64 steps,
+  clamped to 0..127. A random source or an LFO into it plays each note from a different place.
+- **Delay** (param 7) - silence from the key before the sample starts, on the envelopes' time law
+  (`adr_time_seconds()`: 50 = 0.32 s, 80 = 3.2 s); 0 is no delay at all, though the readout says 0.5ms.
+  Modulated the same way (param 8). A key let go before the delay is over plays nothing, Amp patched or not.
+  The envelope in Amp, if any, runs from the key, not from the end of the delay.
+- **Attack** (param 9) - a straight rise from silence over its time, from the first sample played (after
+  the delay), so a note starting mid-sample does not click. Same time law; 0 is about half a millisecond.
+
+All three are dial values in level[] beside Vel and Rel (indices 2-6), so the node stays the size it was.
+The delay left and the samples played are state[4] and state[6]. The face is six rows, one band per job
+(CT: spread out, every dial labelled): Speed (§213b) and Grain (§213d) at the top; Start and Delay with their jacks and amount
+dials (StrtM, DlyM); Atk, Dcy, Sus and Rel - the note's shape; KB (§213c) over the Pitch dial; Pitch, Amp, Vel, Level and the outputs at the bottom. A patch saved before this loads
+with all three at 0, which plays as it did (protocol.c notes §24). Checked offline with RENDERWAV
+(Mellotron violins, key 60): Delay 50 starts 322 ms late; Start 64 opens straight into the body of the
+sound; a Constant into the Start jack moves the start point.
+
+## 213b. The Sampler's Speed - time-stretch with the pitch held - and Decay/Sustain (2026-10-11, CT)
+
+CT's aim is modulated, "Shpongle-type" stretching: speed and direction change, pitch does not. **Speed**
+(param 10, `sampler_speed()`) is (value - 64) / 32: 96 - the default, and what a patch from before it loads
+as - is x1; 64 stops; 32 is reverse at x1; 0 is reverse x2 and 127 forward x1.97. The readout says
+`x1.00`, `Stop` or `Rev x1.00`. Its jack moves it through SpdM (param 11) as §213a's do, but continuously, and
+the result is smoothed over about 20 ms, so a dial jump or a stepped source glides rather than clicks.
+
+THE STRETCH. A playhead moves through the zone at speed x the key's read rate. Two grains, Grain long (§213d)
+with Hann windows half a grain apart (the windows sum to one), each read from the playhead plus an offset
+of their own, at the key's rate, in the playhead's direction - so pitch is the key's and Pitch's whatever
+the speed. Each offset drifts by rate x (direction - speed) per sample and returns to zero when its
+grain restarts, which is where its window is zero.
+
+AT x1 THERE IS NO STRETCH. With speed exactly +1 or -1 the offsets stop drifting, and once each grain has
+restarted they are zero, so both grains read the playhead itself and the windows sum to one: the output
+is exactly the plain read. The engine then reads once and skips the grains - the plain sample, not an
+approximation, so sweeping into 96 and out again changes nothing audible at the switch. At exactly Stop it
+returns silence and does no work; within one dial step of Stop the output fades with |speed|, which hides
+the grains turning round as a sweep crosses zero.
+
+ENDS. A one-shot zone, or reverse back past the start, ends the note in silence. A looped zone loops as
+before going forward; once the loop has been reached (state[7]) reverse goes round the loop too, and
+before that it retraces the sample towards its start.
+
+Up to 8 Samplers per slot can change speed (`SAMPLER_GRAIN_BANKS`, a bank of its own rather than more
+per-node state, which would cost every node in every engine); a ninth plays at x1. The bank number is the
+Sampler's order among the slot's nodes, kept in level[11].
+
+DECAY AND SUSTAIN (params 12, 13). After Attack the level falls 60 dB in Decay's time (the envelopes'
+law) towards Sustain - a level 0..1, shown as 0-64 units like EnvADSR's. The default Sustain is full,
+so Decay does nothing until Sustain is turned down. Attack, Decay and Sustain act whether or not Amp is
+patched; Release stays the damper, used only when it is not (§213).
+
+Checked offline (RENDERWAV, Mellotron violins, key 60): the pitch at 1 s is 260.9 Hz at x1, 262.3 at x0.5,
+259.5 at x1.5 and in reverse; the sample's own swell takes twice as long at x0.5; Stop is silent; no render's
+largest sample-to-sample step exceeds the plain x1 render's.
+
+## 213c. The Sampler's KB button (2026-10-11, CT)
+
+Keyboard tracking, as the oscillators' KB (param 14, on by default and in older patches). Off, every key
+plays as middle C does (`SAMPLER_FIXED_KEY`, 60): the same zone at the same pitch, so the key, bend and glide
+no longer move it; velocity still chooses layers, and the Pitch and PitchVar inputs still transpose it. The
+first version let the key still choose the zone and played that zone at its own root - which on a
+multisampled file such as Bright Piano 2 still climbed the keyboard in steps, a zone every few keys (CT: "KB
+button isn't disabling the note pitch"). Kept in the node's `oscKbt`, which only oscillators otherwise use.
+
+## 213d. The Sampler's Grain (2026-10-11, CT)
+
+How long each of §213b's grains is: 5 ms x 100^(value/127), so 5 ms to 500 ms, about 69 for the 60 ms the
+stretch had fixed before (and the default, 61 ms). Short grains buzz and shimmer, long ones smear. Its jack
+moves it through GrnM (param 16) continuously, as Speed's does; both grains share one phase, so a Grain that
+moves mid-grain changes how fast the phase runs and the windows still sum to one. It does nothing at x1
+(no grains run) or at Stop. Kept in the node's `shape` and its amount in `shapeModAmount`, which only
+oscillators otherwise use - level[] is full.
+
+## 213e. A note that starts in reverse (2026-10-11, CT)
+
+A note started with Speed already below Stop used to begin at Start, which defaults to the sample's first
+sample, and ran off that end at once: silence (CT, Bright Piano 2: reverse worked on a note already playing
+forward, but did nothing on a new one). Such a note now counts Start back from the END - the zone's end, or
+its loop end for a looped zone - so Start 0 plays the whole sample backwards from its last moment and
+turning Start up begins nearer the front: for a piano, nearer the strike it swells towards. Which way a note
+starts is decided once, from Speed and its jack as the note begins; a note that turns round while playing
+carries on from where it is, as before. Reverse from the loop end retraces the sample to its start
+rather than circling the loop, which it only does once the loop has been reached going forward (§213b).
+
 ## 214. The engine switches its own variations, G2 connected or not (`cc_to_slot()`)
 
 A CtrlSend sending controller 70 to another slot selects that slot's variation (§62.3) - BCHydro_DZLW's slot A

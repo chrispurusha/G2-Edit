@@ -711,6 +711,10 @@ tRectangle render_param_common(tRectangle rectangle, tModule * module, uint32_t 
 
                 case paramTypeScratchRatio:        render_param_function = &render_paramType1ScratchRatio;
                     break;
+                case paramTypeSamplerSpeed:        render_param_function = &render_paramType1SamplerSpeed;
+                    break;
+                case paramTypeSamplerGrain:        render_param_function = &render_paramType1SamplerGrain;
+                    break;
 
                 case paramTypeSampleRate:          render_param_function = &render_paramType1SampleRate;
                     break;

@@ -690,6 +690,16 @@ double pshift_semitones(double paramValue) {
 #define SCRATCH_STEPS_PER_MULTIPLE    (16.0)
 #define SCRATCH_MAX_MULTIPLE          (4.0)
 
+// sound-engine-notes §213b
+double sampler_speed(double paramValue) {
+    return (fmin(fmax(paramValue, 0.0), 127.0) - 64.0) / 32.0;
+}
+
+// sound-engine-notes §213d
+double sampler_grain_seconds(double paramValue) {
+    return 0.005 * pow(100.0, fmin(fmax(paramValue, 0.0), 127.0) / 127.0);
+}
+
 double scratch_ratio(double paramValue) {
     if (paramValue >= 127.0) {
         return SCRATCH_MAX_MULTIPLE;

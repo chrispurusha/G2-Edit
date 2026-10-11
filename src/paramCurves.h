@@ -136,6 +136,8 @@ double vibrato_rate_hz(double paramValue);                                // the
 
 // These four were read off the hardware at raw 0, 64 and 127 rather than inferred.
 double pshift_semitones(double paramValue);                // PShift Semi:  -16.0 .. +15.75, quarter semitones
+double sampler_speed(double paramValue);                   // sound-engine-notes §213b: (value - 64) / 32, x1 at 96
+double sampler_grain_seconds(double paramValue);           // sound-engine-notes §213d: 5 ms x 100^(value/127)
 double scratch_ratio(double paramValue);                   // Scratch Ratio: -4.00 .. +4.00, 0 is a standstill
 double digitizer_rate_hz(double paramValue);               // Digitizer Rate: 32.70 Hz .. 50.2 kHz, a pitch scale
 double pitchtrack_threshold_db(double paramValue);         // PitchTrack Threshold: -inf .. 0 dB

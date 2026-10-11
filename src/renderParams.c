@@ -791,6 +791,28 @@ tRectangle render_paramType1OffNum(tModule * module, tRectangle rectangle, char 
 // Scratch's Ratio: playback speed as a signed multiple through a standstill at the centre. The synth
 // writes the sign ahead of the 'x' and drops the decimals at zero entirely - "- x4.00", "x0",
 // "x4.00" - so this is not simply a signed number with a prefix.
+// sound-engine-notes §213b
+tRectangle render_paramType1SamplerSpeed(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    double speed = sampler_speed(paramValue);
+
+    if (speed == 0.0) {
+        snprintf(buff, buffSize, "Stop");
+    } else if (speed < 0.0) {
+        snprintf(buff, buffSize, "Rev x%.2f", -speed);
+    } else {
+        snprintf(buff, buffSize, "x%.2f", speed);
+    }
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+// sound-engine-notes §213d
+tRectangle render_paramType1SamplerGrain(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    double ms = sampler_grain_seconds(paramValue) * 1000.0;
+
+    snprintf(buff, buffSize, (ms < 10.0) ? "%.1fms" : "%.0fms", ms);
+    return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
 tRectangle render_paramType1ScratchRatio(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double ratio = scratch_ratio(paramValue);
 

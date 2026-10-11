@@ -182,42 +182,70 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
     }
 }
 
-#define FLT_PARAM_FREQ             (0)
-#define FLT_PARAM_ENV              (1) // modulation depth for the Env input, 0..200%
-#define FLT_PARAM_KBT              (2)
-#define FLTSTATIC_PARAM_GC         (4) // §10.4 - drive x damping
-#define FLTNORD_PARAM_FMLIN        (7) // §23.5
-#define FLTNORD_PARAM_RESM         (9) // §23.5
-#define FLT_PARAM_RES              (3)
-#define FLT_PARAM_SLOPE            (4)
-#define FLT_PARAM_ACTIVE           (5)
+#define FLT_PARAM_FREQ              (0)
+#define FLT_PARAM_ENV               (1) // modulation depth for the Env input, 0..200%
+#define FLT_PARAM_KBT               (2)
+#define FLTSTATIC_PARAM_GC          (4) // §10.4 - drive x damping
+#define FLTNORD_PARAM_FMLIN         (7) // §23.5
+#define FLTNORD_PARAM_RESM          (9) // §23.5
+#define FLT_PARAM_RES               (3)
+#define FLT_PARAM_SLOPE             (4)
+#define FLT_PARAM_ACTIVE            (5)
 
-#define ENV_PARAM_SHAPE            (0)
-#define ENV_PARAM_ATTACK           (1)
-#define ENV_PARAM_DECAY            (2)
-#define ENV_PARAM_SUSTAIN          (3)
-#define SAMPLER_PARAM_VEL          (2) // notes §213
-#define SAMPLER_PARAM_REL          (3)
+#define ENV_PARAM_SHAPE             (0)
+#define ENV_PARAM_ATTACK            (1)
+#define ENV_PARAM_DECAY             (2)
+#define ENV_PARAM_SUSTAIN           (3)
+#define SAMPLER_PARAM_VEL           (2) // notes §213
+#define SAMPLER_PARAM_REL           (3)
 // notes §213 - a Sampler keeps Vel and Rel in level[], which only mixers use, so the node needs no new words
-#define SAMPLER_LEVEL_VEL          (0)   // how far velocity scales its level, 0..1
-#define SAMPLER_LEVEL_REL          (1)   // seconds for a released note to fall 60 dB
-#define SAMPLER_PARAM_PITCH_MOD    (4)
-#define SAMPLER_IN_PITCH           (1)
-#define SAMPLER_IN_PITCH_VAR       (2)
-#define ENV_PARAM_RELEASE          (4)
-#define ENV_PARAM_OUT_TYPE         (5) // posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv
-#define ENV_INPUT_GATE             (1) // node input: 0 is the audio, 1 the Gate jack, 2 AM
-#define ENV_INPUT_AM               (2)
-#define ENV_INPUT_MOD              (3) // §17.10 - the time-mod jacks follow, one per modulated dial
+#define SAMPLER_LEVEL_VEL           (0)  // how far velocity scales its level, 0..1
+#define SAMPLER_LEVEL_REL           (1)  // seconds for a released note to fall 60 dB
+#define SAMPLER_PARAM_PITCH_MOD     (4)
+#define SAMPLER_IN_PITCH            (1)
+#define SAMPLER_IN_PITCH_VAR        (2)
+// notes §213a - Start, Delay and Attack, kept in level[] beside Vel and Rel
+#define SAMPLER_PARAM_START         (5)
+#define SAMPLER_PARAM_START_MOD     (6)
+#define SAMPLER_PARAM_DELAY         (7)
+#define SAMPLER_PARAM_DELAY_MOD     (8)
+#define SAMPLER_PARAM_ATTACK        (9)
+#define SAMPLER_LEVEL_START         (2)
+#define SAMPLER_LEVEL_START_MOD     (3)
+#define SAMPLER_LEVEL_DELAY         (4)
+#define SAMPLER_LEVEL_DELAY_MOD     (5)
+#define SAMPLER_LEVEL_ATTACK        (6)  // seconds
+#define SAMPLER_IN_START            (3)
+#define SAMPLER_IN_DELAY            (4)
+// notes §213b - Speed, Decay and Sustain
+#define SAMPLER_PARAM_SPEED         (10)
+#define SAMPLER_PARAM_SPEED_MOD     (11)
+#define SAMPLER_PARAM_DECAY         (12)
+#define SAMPLER_PARAM_SUSTAIN       (13)
+#define SAMPLER_LEVEL_SPEED         (7)
+#define SAMPLER_LEVEL_SPEED_MOD     (8)
+#define SAMPLER_LEVEL_DECAY         (9)  // seconds to fall 60 dB towards Sustain
+#define SAMPLER_LEVEL_SUSTAIN       (10) // 0..1
+#define SAMPLER_LEVEL_GRAIN_BANK    (11) // which of gSamplerGrain this Sampler uses
+#define SAMPLER_IN_SPEED            (5)
+#define SAMPLER_PARAM_KBT           (14) // notes §213c
+#define SAMPLER_PARAM_GRAIN         (15) // notes §213d - kept in shape, its amount in shapeModAmount
+#define SAMPLER_PARAM_GRAIN_MOD     (16)
+#define SAMPLER_IN_GRAIN            (6)
+#define ENV_PARAM_RELEASE           (4)
+#define ENV_PARAM_OUT_TYPE          (5)  // posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv
+#define ENV_INPUT_GATE              (1)  // node input: 0 is the audio, 1 the Gate jack, 2 AM
+#define ENV_INPUT_AM                (2)
+#define ENV_INPUT_MOD               (3)  // §17.10 - the time-mod jacks follow, one per modulated dial
 
-#define LEVAMP_PARAM_GAIN          (0)
-#define LEVAMP_PARAM_TYPE          (1) // 0 = lin, 1 = exp
+#define LEVAMP_PARAM_GAIN           (0)
+#define LEVAMP_PARAM_TYPE           (1) // 0 = lin, 1 = exp
 
 // notes §5
-#define OUT_PARAM_DESTINATION      (0)
-#define FXIN_PARAM_SOURCE          (0) // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
-#define OUT_PARAM_ACTIVE           (1) // 2toOut's Bypass, non-zero is on
-#define OUT_PARAM_PAD              (2) // padStrMap: 0 dB or +6 dB
+#define OUT_PARAM_DESTINATION       (0)
+#define FXIN_PARAM_SOURCE           (0) // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
+#define OUT_PARAM_ACTIVE            (1) // 2toOut's Bypass, non-zero is on
+#define OUT_PARAM_PAD               (2) // padStrMap: 0 dB or +6 dB
 
 // Glide and Bend are per-PATCH settings rather than module parameters: they live on hidden modules
 // in the Morph location, which is where the G2 keeps the things the patch-settings page edits.
@@ -5144,12 +5172,12 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             *connectors = none;     // a source: no inputs at all
             return 0;
         }
-        case eNodeSampler:          // notes §213 - Amp, then Pitch and PitchVar as an oscillator has them
+        case eNodeSampler:          // notes §213 - Amp, then Pitch and PitchVar as an oscillator has them, then Start and Delay
         {
-            static const uint32_t samplerIn[] = {0, 1, 2};
+            static const uint32_t samplerIn[] = {0, 1, 2, 3, 4, 5, 6};
 
             *connectors = samplerIn;
-            return 3;
+            return 7;
         }
         case eNodeMonoKey:          // §35 - the keyboard is its input
         case eNodeAudioIn:          // §37 - the jacks on the back, fed from outside the patch
@@ -6314,12 +6342,33 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeSampler:
         {
-            node->gain                     = dial_fraction(param_value(module, variation, 0));
-            node->level[SAMPLER_LEVEL_VEL] = dial_fraction(param_value(module, variation, SAMPLER_PARAM_VEL));
-            node->level[SAMPLER_LEVEL_REL] = adr_time_seconds(param_value(module, variation, SAMPLER_PARAM_REL));
-            node->modAmount                = type_ii_attenuator(param_value(module, variation, SAMPLER_PARAM_PITCH_MOD));
-            node->sample                   = nord_sample_get(sampler_file(module->key)); // notes §213 - NULL: no file, or unreadable
-            node->active                   = (param_value(module, variation, 1) != 0.0) && (node->sample != NULL);
+            node->gain                           = dial_fraction(param_value(module, variation, 0));
+            node->level[SAMPLER_LEVEL_VEL]       = dial_fraction(param_value(module, variation, SAMPLER_PARAM_VEL));
+            node->level[SAMPLER_LEVEL_REL]       = adr_time_seconds(param_value(module, variation, SAMPLER_PARAM_REL));
+            node->modAmount                      = type_ii_attenuator(param_value(module, variation, SAMPLER_PARAM_PITCH_MOD));
+            node->level[SAMPLER_LEVEL_START]     = param_value(module, variation, SAMPLER_PARAM_START);
+            node->level[SAMPLER_LEVEL_START_MOD] = param_value(module, variation, SAMPLER_PARAM_START_MOD);
+            node->level[SAMPLER_LEVEL_DELAY]     = param_value(module, variation, SAMPLER_PARAM_DELAY);
+            node->level[SAMPLER_LEVEL_DELAY_MOD] = param_value(module, variation, SAMPLER_PARAM_DELAY_MOD);
+            node->level[SAMPLER_LEVEL_ATTACK]    = adr_time_seconds(param_value(module, variation, SAMPLER_PARAM_ATTACK));
+            node->level[SAMPLER_LEVEL_SPEED]     = param_value(module, variation, SAMPLER_PARAM_SPEED);
+            node->level[SAMPLER_LEVEL_SPEED_MOD] = param_value(module, variation, SAMPLER_PARAM_SPEED_MOD);
+            node->level[SAMPLER_LEVEL_DECAY]     = adr_time_seconds(param_value(module, variation, SAMPLER_PARAM_DECAY));
+            node->level[SAMPLER_LEVEL_SUSTAIN]   = param_value(module, variation, SAMPLER_PARAM_SUSTAIN) / 127.0;
+            node->oscKbt                         = (param_value(module, variation, SAMPLER_PARAM_KBT) != 0.0);
+            node->shape                          = param_value(module, variation, SAMPLER_PARAM_GRAIN);
+            node->shapeModAmount                 = param_value(module, variation, SAMPLER_PARAM_GRAIN_MOD);
+            {
+                uint32_t samplersBefore = 0;   // notes §213b - this Sampler's grain bank
+
+                for (int32_t k = 0; k < self; k++) {
+                    samplersBefore += (params->node[k].kind == eNodeSampler) ? 1u : 0u;
+                }
+
+                node->level[SAMPLER_LEVEL_GRAIN_BANK] = (double)samplersBefore;
+            }
+            node->sample                         = nord_sample_get(sampler_file(module->key)); // notes §213 - NULL: no file, or unreadable
+            node->active                         = (param_value(module, variation, 1) != 0.0) && (node->sample != NULL);
             break;
         }
         case eNodeMixStereo:
@@ -13670,6 +13719,7 @@ static double sampler_read(const tNordZone * zone, double at, uint32_t channel) 
 }
 
 #define SAMPLER_SILENT             (0.001) // notes §213 - -60 dB: the released note is over
+#define SAMPLER_FIXED_KEY          (60.0)  // notes §213c
 #define SAMPLER_MIN_REL_SECONDS    (0.002)
 
 // notes §213 - nothing in its Amp input: the Sampler ends its own notes, by its Release
@@ -13677,21 +13727,64 @@ static bool sampler_self_released(const tEngineNode * spec) {
     return (spec->inCount == 0u) || (spec->in[0] < 0);
 }
 
-static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double voicePitch, double pitchMod, double * left,
+typedef struct {
+    double pitch;   // semitones
+    double start;   // the Start, Delay and Speed jacks, as they come
+    double delay;
+    double speed;
+    double grain;
+} tSamplerMod;
+
+// notes §213b - two Hann grains half a grain apart, each reading from the playhead plus its own offset
+#define SAMPLER_GRAIN_BANKS       (8)          // Samplers per slot that can change speed
+#define SAMPLER_SPEED_SMOOTH_S    (0.02)
+#define SAMPLER_STOP_FADE         (1.0 / 32.0) // one dial step either side of Stop fades the output
+
+typedef struct {
+    double speed;       // smoothed
+    double phase;       // grain A's, 0..1; grain B is half a grain on
+    double offset[2];
+} tSamplerGrain;
+static tSamplerGrain gSamplerGrainBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][SAMPLER_GRAIN_BANKS];
+#define gSamplerGrain    (gSamplerGrainBank[SE])
+
+// notes §213b - a position kept inside the zone: round the loop once it has been reached, or -1 past either end
+static double sampler_wrap(const tNordZone * zone, double at, bool inLoop) {
+    double loopLength = (double)(zone->loopEnd - zone->loopStart);
+
+    if (zone->looped && (loopLength > 0.0)) {
+        while (at >= (double)zone->loopEnd) {
+            at -= loopLength;
+        }
+
+        while (inLoop && (at < (double)zone->loopStart)) {
+            at += loopLength;
+        }
+    }
+    return ((at < 0.0) || (at >= (double)zone->length)) ? -1.0 : at;
+}
+
+// notes §213a - a dial moved by its jack through its amount dial, as an envelope's time mod (§17.10)
+static double sampler_mod_dial(double dial, double amount, double jack) {
+    return fmin(fmax(dial + (jack * PITCH_MOD_SEMITONES * amount / 64.0), 0.0), 127.0);
+}
+
+static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, double voicePitch, const tSamplerMod * mod, double * left,
                          double * right) {
     bool                selfReleased = sampler_self_released(spec);
 
     SE_LOCAL;
 
     const tNordSample * sample       = spec->sample;
-    double *            state        = gLadder[voice][n]; // position, the trigger it started for, zone, silent, -, release
-    double              note         = (voicePitch >= 0.0) ? voicePitch : 60.0;
+    double *            state        = gLadder[voice][n]; // position, the trigger it started for, zone, silent, delay left, release, played, looping
+    // notes §213c - KB off: every key plays as middle C does
+    double              note         = ((voicePitch >= 0.0) && spec->oscKbt) ? voicePitch : SAMPLER_FIXED_KEY;
 
     if (state[1] != (double)gVoice[voice].trigger) {
-        uint32_t nearest  = 0;
-        bool     matched  = false;
-        int32_t  key      = (int32_t)lround(note);
-        int32_t  velocity = gVoice[voice].velocity;
+        uint32_t          nearest   = 0;
+        bool              matched   = false;
+        int32_t           key       = (int32_t)lround(note);
+        int32_t           velocity  = gVoice[voice].velocity;
 
         // nordSample.c notes §6, §10 - the key map's zone for the key and velocity
         for (uint32_t z = 0; sample->mapped && (z < sample->zoneCount) && (matched == false); z++) {
@@ -13710,10 +13803,32 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
             }
         }
 
-        state[0] = 0.0;
+        // notes §213a - Start and Delay are read once, as the note begins
+        const tNordZone * chosen    = &sample->zone[nearest];
+        double            end       = (double)(chosen->looped ? chosen->loopEnd : chosen->length) - 1.0;
+        double            start     = sampler_mod_dial(spec->level[SAMPLER_LEVEL_START], spec->level[SAMPLER_LEVEL_START_MOD], mod->start);
+        double            delay     = sampler_mod_dial(spec->level[SAMPLER_LEVEL_DELAY], spec->level[SAMPLER_LEVEL_DELAY_MOD], mod->delay);
+
+        bool              backwards = (spec->level[SAMPLER_LEVEL_GRAIN_BANK] < (double)SAMPLER_GRAIN_BANKS)
+                                      && (sampler_speed(sampler_mod_dial(spec->level[SAMPLER_LEVEL_SPEED], spec->level[SAMPLER_LEVEL_SPEED_MOD], mod->speed)) < 0.0);
+
+        // notes §213e - a note that starts in reverse counts Start back from the end
+        state[0] = fmax(end, 0.0) * (backwards ? (127.0 - start) : start) / 127.0;
         state[1] = (double)gVoice[voice].trigger;
         state[2] = (double)nearest;
+        state[4] = (delay > 0.0) ? floor(adr_time_seconds(delay) * gSampleRate) : 0.0;
         state[5] = 1.0;
+        state[6] = 0.0;
+        state[7] = 0.0;
+
+        if (spec->level[SAMPLER_LEVEL_GRAIN_BANK] < (double)SAMPLER_GRAIN_BANKS) {
+            tSamplerGrain * grain = &gSamplerGrain[voice][(uint32_t)spec->level[SAMPLER_LEVEL_GRAIN_BANK]];
+
+            grain->speed     = sampler_speed(sampler_mod_dial(spec->level[SAMPLER_LEVEL_SPEED], spec->level[SAMPLER_LEVEL_SPEED_MOD], mod->speed));
+            grain->phase     = 0.0;
+            grain->offset[0] = 0.0;
+            grain->offset[1] = 0.0;
+        }
         // notes §213 - a rebuild clears this state, and a voice whose key is already up would replay its
         // last note: only a key that is down starts one
         state[3] = (gVoice[voice].gate == true) ? 0.0 : 1.0;
@@ -13726,6 +13841,16 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
         return;
     }
 
+    // notes §213a - the pre-delay; a key let go before it ends plays nothing
+    if (state[4] > 0.0) {
+        if (gVoice[voice].gate == false) {
+            state[3] = 1.0;
+            state[5] = 0.0;
+        }
+        state[4] -= 1.0;
+        return;
+    }
+
     // notes §213 - the damper: from the key's release the note falls 60 dB in Release's time
     if (selfReleased && (gVoice[voice].gate == false)) {
         state[5] *= pow(SAMPLER_SILENT, 1.0 / (fmax(spec->level[SAMPLER_LEVEL_REL], SAMPLER_MIN_REL_SECONDS) * gSampleRate));
@@ -13735,17 +13860,88 @@ static void sampler_step(uint32_t voice, uint32_t n, const tEngineNode * spec, d
             return;
         }
     }
-    const tNordZone * zone = &sample->zone[(uint32_t)state[2]];
+    const tNordZone * zone    = &sample->zone[(uint32_t)state[2]];
+    double            rate    = exp2((note + mod->pitch - zone->rootNote + zone->detune) / 12.0) * (zone->sampleRate / gSampleRate);
+    double            speed   = 1.0;
+    tSamplerGrain *   grain   = NULL;
 
-    if (zone->looped && (state[0] >= (double)zone->loopEnd)) {
-        state[0] -= (double)(zone->loopEnd - zone->loopStart);
+    // notes §213b - Speed, smoothed; exactly Stop plays nothing and does nothing
+    if (spec->level[SAMPLER_LEVEL_GRAIN_BANK] < (double)SAMPLER_GRAIN_BANKS) {
+        double target = sampler_speed(sampler_mod_dial(spec->level[SAMPLER_LEVEL_SPEED], spec->level[SAMPLER_LEVEL_SPEED_MOD], mod->speed));
+
+        grain        = &gSamplerGrain[voice][(uint32_t)spec->level[SAMPLER_LEVEL_GRAIN_BANK]];
+        grain->speed = (fabs(target - grain->speed) < 1e-6) ? target
+                       : grain->speed + ((target - grain->speed) / (SAMPLER_SPEED_SMOOTH_S * gSampleRate));
+        speed        = grain->speed;
+
+        if (speed == 0.0) {
+            return;
+        }
     }
-    double            vel  = (1.0 - spec->level[SAMPLER_LEVEL_VEL]) + (spec->level[SAMPLER_LEVEL_VEL] * ((double)gVoice[voice].velocity / 127.0));
-    double            gain = spec->gain * vel * zone->gain * (selfReleased ? state[5] : 1.0);
+    double            vel     = (1.0 - spec->level[SAMPLER_LEVEL_VEL]) + (spec->level[SAMPLER_LEVEL_VEL] * ((double)gVoice[voice].velocity / 127.0));
+    double            gain    = spec->gain * vel * zone->gain * (selfReleased ? state[5] : 1.0) * fmin(fabs(speed) / SAMPLER_STOP_FADE, 1.0);
 
-    *left     = sampler_read(zone, state[0], 0u) * gain;
-    *right    = sampler_read(zone, state[0], 1u) * gain;
-    state[0] += exp2((note + pitchMod - zone->rootNote + zone->detune) / 12.0) * (zone->sampleRate / gSampleRate);
+    // notes §213a, §213b - Attack: a straight rise from the first sample played; then Decay falls 60 dB towards Sustain
+    double            attack  = spec->level[SAMPLER_LEVEL_ATTACK] * gSampleRate;
+    double            sustain = spec->level[SAMPLER_LEVEL_SUSTAIN];
+
+    state[6] += 1.0;
+
+    if (state[6] < attack) {
+        gain *= state[6] / attack;
+    } else if (sustain < 1.0) {
+        double fall = (state[6] - attack) / (spec->level[SAMPLER_LEVEL_DECAY] * gSampleRate);
+
+        gain *= sustain + ((1.0 - sustain) * ((fall < 3.0) ? pow(SAMPLER_SILENT, fall) : 0.0));
+    }
+    bool              inLoop  = (state[7] != 0.0);
+    double            at      = sampler_wrap(zone, state[0], inLoop);
+
+    if (at < 0.0) {
+        return;   // played off either end
+    }
+    state[7]  = (inLoop || (at < state[0])) ? 1.0 : 0.0;
+    state[0]  = at;
+
+    bool              aligned = (grain == NULL) || ((grain->offset[0] == 0.0) && (grain->offset[1] == 0.0));
+
+    if ((fabs(speed) == 1.0) && aligned) {
+        // notes §213b - x1 either way: both grains would read the playhead, so read it once
+        *left  = sampler_read(zone, at, 0u) * gain;
+        *right = sampler_read(zone, at, 1u) * gain;
+    } else if (grain != NULL) {
+        for (uint32_t g = 0; g < 2u; g++) {
+            double phase = fmod(grain->phase + (0.5 * (double)g), 1.0);
+            double from  = sampler_wrap(zone, at + grain->offset[g], state[7] != 0.0);
+
+            if (from >= 0.0) {
+                double window = 0.5 - (0.5 * cos(2.0 * M_PI * phase));
+
+                *left  += sampler_read(zone, from, 0u) * window * gain;
+                *right += sampler_read(zone, from, 1u) * window * gain;
+            }
+        }
+    }
+
+    if (grain != NULL) {
+        double direction = (speed < 0.0) ? -1.0 : 1.0;
+        double before    = grain->phase;
+
+        grain->offset[0] += rate * (direction - speed);
+        grain->offset[1] += rate * (direction - speed);
+        // notes §213d - both grains share the phase, so a moving Grain keeps the windows summing to one
+        grain->phase     += 1.0 / (sampler_grain_seconds(sampler_mod_dial(spec->shape, spec->shapeModAmount, mod->grain)) * gSampleRate);
+
+        if (grain->phase >= 1.0) {
+            grain->phase    -= 1.0;
+            grain->offset[0] = 0.0;   // grain A starts again at the playhead, where its window is zero
+        }
+
+        if ((before < 0.5) && (grain->phase >= 0.5)) {
+            grain->offset[1] = 0.0;
+        }
+    }
+    state[0] += speed * rate;
 }
 
 static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
@@ -14704,17 +14900,23 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
 
             if (spec->active == true) {
                 // notes §213 - Amp scales both channels; unpatched, the sample plays at full level
-                bool   patched  = (spec->inCount > 0u) && (spec->in[0] >= 0);
-                double amp      = patched ? signal_in(spec, value, 0) : 1.0;
+                bool        patched  = (spec->inCount > 0u) && (spec->in[0] >= 0);
+                double      amp      = patched ? signal_in(spec, value, 0) : 1.0;
 
                 // notes §213 - as an oscillator's: Pitch as it comes, PitchVar through the Pitch dial
 
-                double pitchMod = (signal_in(spec, value, SAMPLER_IN_PITCH) + (signal_in(spec, value, SAMPLER_IN_PITCH_VAR) * spec->modAmount))
+                double      pitchMod = (signal_in(spec, value, SAMPLER_IN_PITCH) + (signal_in(spec, value, SAMPLER_IN_PITCH_VAR) * spec->modAmount))
 
-                                  * PITCH_MOD_SEMITONES;
+                                       * PITCH_MOD_SEMITONES;
 
 
-                sampler_step(voice, n, spec, voicePitch, pitchMod, &value[n][0], &value[n][1]);
+                tSamplerMod mod      = {
+                    .pitch = pitchMod,       .start = signal_in(spec, value, SAMPLER_IN_START), .delay = signal_in(spec, value, SAMPLER_IN_DELAY),
+                    .speed = signal_in(spec, value, SAMPLER_IN_SPEED),
+                    .grain = signal_in(spec, value, SAMPLER_IN_GRAIN)
+                };
+
+                sampler_step(voice, n, spec, voicePitch, &mod, &value[n][0], &value[n][1]);
                 value[n][0] *= amp;
                 value[n][1] *= amp;
             }
