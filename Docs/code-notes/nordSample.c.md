@@ -39,6 +39,9 @@ here.
 Every file a Sampler names is loaded on the first patch build that needs it and kept, keyed by its path, so
 a rebuild - which happens at every knob turn - never waits on the disk again and two Samplers on one file
 share it. A file that fails to load is remembered as failed. 32 files at most; the cache is never emptied.
+A bank is one entry however many of its presets are played: its presets are listed when it is first read,
+each preset's map is made the first time it is asked for, and the samples are read once into the bank's pool
+and shared by every preset that names them (notes §11), so choosing presets in turn never fills the cache.
 
 ## 5. The loop (`tNordZone.looped`, `loopStart`)
 
@@ -129,7 +132,11 @@ The bank holds presets (`E5P1`), each a tree of chunks: a header, then a `LIST E
 a voice, before its zone list, the first two `ETW` windows are its KEY and VELOCITY ranges (byte 4 the low,
 byte 7 the high). Its `LIST E5ZL` holds zones: a `Zhdr` - the sample number (u16 at 4, 1-based, the `SLnnn`
 of its file) and the ROOT key (byte 10) - and windows of its own that narrow the voice's. The Sampler plays
-the bank's first preset; the rest are not offered yet. A voice's envelopes, filter, LFOs and cords are not
+the preset the Sampler's Preset menu chose (dataBase.c notes §9), counted over the
+presets that hold zones only - a bank also carries empty ones ("Rev A", "E-mu Systems") that play nothing. A
+preset past the last plays the last. Its name is the UTF-16 string 12 bytes into its `Phdr`, kept as ASCII
+(non-ASCII becomes "?"), trailing spaces cut. Of 5,000 banks surveyed (2026-10-11), 80% hold more than one
+real preset, a few several hundred; the first 256 are offered (`NORD_SAMPLE_MAX_PRESETS`). A voice's envelopes, filter, LFOs and cords are not
 read. One sample can serve many zones: it is read once, and `tNordSample.owned` frees each buffer once.
 
 A sample (`E5S1`): offsets in its header count from 2 bytes into the chunk - eight little-endian u32 at 0x48:

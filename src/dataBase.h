@@ -44,6 +44,8 @@ void delete_module(tModuleKey key);
 bool database_index_is_engine_only(uint32_t slot, uint32_t location, uint32_t index);
 const char * sampler_file(tModuleKey key);
 bool sampler_file_set(tModuleKey key, const char * path);
+uint32_t sampler_preset(tModuleKey key);
+void sampler_preset_set(tModuleKey key, uint32_t preset);
 void dump_modules(void);
 void database_clear_modules(void);
 void database_delete_modules_by_slot(uint32_t slot);

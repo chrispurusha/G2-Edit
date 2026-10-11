@@ -46,6 +46,9 @@ extern "C" {
 #include "moduleReplace.h"
 #include "palette.h"
 #include "cableChain.h"
+#include "nordSample.h"
+
+#define SAMPLER_PRESET_MENU_ROWS    (32)
 
 // ── Synth settings action targets ──────────────────────────────────────────
 
@@ -536,6 +539,10 @@ static void menu_action_delete_module(int index) {
 static void action_choose_sample(int index) {
     (void)index;
     sampler_choose_begin(gMenuContext.moduleKey);
+}
+
+static void action_choose_sampler_preset(int index) {
+    sampler_preset_choose(gMenuContext.moduleKey, (uint32_t)index);
 }
 
 static void action_rename_module(int index) {
@@ -2399,6 +2406,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         kItemDelete,
         kItemExclude,
         kItemSample,
+        kItemSamplePreset,
         kItemTerminator
     };
 
@@ -2422,6 +2430,8 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         {NULL,           RGB_GREY_3, action_toggle_exclude_from_mutation, 0, NULL},
         // Labelled only on a Sampler: elsewhere its NULL label ends the menu here
         {NULL,           RGB_GREY_3, action_choose_sample,                0, NULL},
+        // Labelled only on a Sampler playing a bank of more than one preset
+        {NULL,           RGB_GREY_3, NULL,                                0, NULL},
         {NULL,           RGB_BLACK,  NULL,                                0, NULL}
     };
 
@@ -2429,7 +2439,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     bool             excluded = (module != NULL) && module->excludeFromMutation;
 
     // notes §35
-    gReplaceCandidateCount                    = (module != NULL)
+    gReplaceCandidateCount                             = (module != NULL)
                              ? module_replace_candidates(module->type, gReplaceCandidates,
                                                          MAX_REPLACE_CANDIDATES) : 0;
 
@@ -2440,26 +2450,26 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         };
     }
 
-    gReplaceMenuItems[gReplaceCandidateCount] = (tMenuItem){
+    gReplaceMenuItems[gReplaceCandidateCount]          = (tMenuItem){
         NULL, RGB_BLACK, NULL, 0, NULL, 0, 0.0
     };
 
-    menuItems[kItemReplace].colour            = (gReplaceCandidateCount > 0) ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
-    menuItems[kItemReplace].subMenu           = (gReplaceCandidateCount > 0) ? gReplaceMenuItems : NULL;
+    menuItems[kItemReplace].colour                     = (gReplaceCandidateCount > 0) ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
+    menuItems[kItemReplace].subMenu                    = (gReplaceCandidateCount > 0) ? gReplaceMenuItems : NULL;
 
     // Paste Params only means anything with a module of the SAME TYPE on the clipboard — a Decay
     // from an EnvADSR has no counterpart on an OscB. Greyed rather than hidden, so the entry stays
     // in the same place and its absence is explained by looking at it.
-    bool     canPasteParams = gClipboard.active && (gClipboard.moduleCount > 0)
-                              && (module != NULL) && (gClipboard.modules[0].type == module->type);
+    bool             canPasteParams = gClipboard.active && (gClipboard.moduleCount > 0)
+                                      && (module != NULL) && (gClipboard.modules[0].type == module->type);
 
-    menuItems[kItemPasteParams].colour        = canPasteParams ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
-    menuItems[kItemPasteParams].action        = canPasteParams ? menu_action_paste_params : NULL;
+    menuItems[kItemPasteParams].colour                 = canPasteParams ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
+    menuItems[kItemPasteParams].action                 = canPasteParams ? menu_action_paste_params : NULL;
 
     // Nothing to copy INTO unless a variation other than the one on screen is marked. Greyed rather
     // than hidden for the same reason as Paste Params above: the entry keeps its place, and its
     // being unavailable is explained by the empty variation strip in the topbar.
-    bool     haveMarked     = false;
+    bool             haveMarked     = false;
 
     for (uint32_t v = 0; v < VARIATION_INIT; v++) {
         if ((v != gPatchDescr[gSlot].activeVariation) && variation_is_linked((uint32_t)gSlot, v)) {
@@ -2468,22 +2478,46 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         }
     }
 
-    menuItems[kItemParamsToMarked].colour     = haveMarked ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
-    menuItems[kItemParamsToMarked].action     = haveMarked ? menu_action_copy_params_to_marked : NULL;
+    menuItems[kItemParamsToMarked].colour              = haveMarked ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
+    menuItems[kItemParamsToMarked].action              = haveMarked ? menu_action_copy_params_to_marked : NULL;
 
     snprintf(gExcludeMutationMenuLabel, sizeof(gExcludeMutationMenuLabel), "[%s] Exclude From Mutation",
              excluded ? "x" : " ");
-    menuItems[kItemExclude].label             = gExcludeMutationMenuLabel;
-    menuItems[kItemSample].label              = ((module != NULL) && (module->type == moduleTypeSampler)) ? "Choose Sample..." : NULL;
+    menuItems[kItemExclude].label                      = gExcludeMutationMenuLabel;
+    menuItems[kItemSample].label                       = ((module != NULL) && (module->type == moduleTypeSampler)) ? "Choose Sample..." : NULL;
 
-    unsigned rows           = (module != NULL) ? (unsigned)gModuleProperties[module->type].height : 0u;
+    // notes §34a - a bank's presets by name, in columns of SAMPLER_PRESET_MENU_ROWS
+    static tMenuItem presetItems[NORD_SAMPLE_MAX_PRESETS + 1];
+    static char      presetLabels[NORD_SAMPLE_MAX_PRESETS][NORD_SAMPLE_PRESET_NAME_SIZE + 4];
+    const char *     samplePath     = ((module != NULL) && (module->type == moduleTypeSampler)) ? sampler_file(moduleKey) : NULL;
+    uint32_t         presetCount    = nord_sample_preset_count(samplePath);
+    uint32_t         chosen         = sampler_preset(moduleKey);
+
+    for (uint32_t i = 0; (presetCount > 1u) && (i < presetCount); i++) {
+        char name[NORD_SAMPLE_PRESET_NAME_SIZE] = {0};
+
+        (void)nord_sample_preset_name(samplePath, i, name, sizeof(name));
+        snprintf(presetLabels[i], sizeof(presetLabels[i]), "%s %s", (i == ((chosen < presetCount) ? chosen : (presetCount - 1u))) ? ">" : " ", name);
+        presetItems[i] = (tMenuItem){
+            presetLabels[i], RGB_GREY_3, action_choose_sampler_preset, i, NULL, 0, 0.0
+        };
+    }
+
+    presetItems[(presetCount > 1u) ? presetCount : 0u] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL, 0, 0.0
+    };
+    menuItems[kItemSamplePreset].label                 = (presetCount > 1u) ? "Preset" : NULL;
+    menuItems[kItemSamplePreset].subMenu               = (presetCount > 1u) ? presetItems : NULL;
+    menuItems[kItemSamplePreset].subMenuColumns        = (presetCount + SAMPLER_PRESET_MENU_ROWS - 1u) / SAMPLER_PRESET_MENU_ROWS;
+
+    unsigned         rows           = (module != NULL) ? (unsigned)gModuleProperties[module->type].height : 0u;
 
     snprintf(gModuleInfoMenuLabel, sizeof(gModuleInfoMenuLabel), "%s  -  index %u, %u row%s",
              (module != NULL) ? gModuleProperties[module->type].name : "?",
              (unsigned)moduleKey.index, rows, (rows == 1) ? "" : "s");
-    menuItems[kItemInfo].label                = gModuleInfoMenuLabel;
+    menuItems[kItemInfo].label                         = gModuleInfoMenuLabel;
 
-    gMenuContext.moduleKey                    = moduleKey;
+    gMenuContext.moduleKey                             = moduleKey;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 

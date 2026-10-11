@@ -595,9 +595,30 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         if (!sampler_file_set(key, arg + used)) {
             backdoor_write_result("ERROR: no room\n");
         } else {
-            backdoor_write_result((nord_sample_get(arg + used) != NULL) ? "OK\n" : "OK - but the file could not be read\n");
+            backdoor_write_result((nord_sample_get(arg + used, 0) != NULL) ? "OK\n" : "OK - but the file could not be read\n");
         }
         sound_engine_update_from_patch();
+    } else if (strcmp(cmd, "SAMPLEPRESET") == 0) {
+        // SAMPLEPRESET <VA|FX> <index> <n> - a Sampler's bank preset, as its Preset menu sets it; replies with the name
+        char       loc[8]                             = {0};
+        unsigned   index                              = 0;
+        unsigned   preset                             = 0;
+        tModuleKey key                                = {0};
+        char       name[NORD_SAMPLE_PRESET_NAME_SIZE] = {0};
+        char       reply[NORD_SAMPLE_PRESET_NAME_SIZE + 64];
+
+        if (sscanf(arg, "%7s %u %u", loc, &index, &preset) != 3) {
+            backdoor_write_result("ERROR: expected 'SAMPLEPRESET <VA|FX> <index> <n>'\n");
+            return;
+        }
+        key.slot     = gSlot;
+        key.location = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        key.index    = index;
+        sampler_preset_choose(key, preset);
+        (void)nord_sample_preset_name(sampler_file(key), preset, name, sizeof(name));
+        snprintf(reply, sizeof(reply), "OK presets=%u name=\"%s\" status=%d\n", (unsigned)nord_sample_preset_count(sampler_file(key)), name,
+                 (int)nord_sample_status(sampler_file(key), preset));
+        backdoor_write_result(reply);
     } else if (strcmp(cmd, "BEND") == 0) {
         // BEND <-1..1> - the local engine's pitch bend, as a MIDI bend would set it; 0 centres it
         double bend = 0.0;
@@ -1768,20 +1789,32 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "RENDERWAV") == 0) {
-        // RENDERWAV <path> <ms> [<note> <velocity> [<holdMs>]] - render the local engine offline into a 48 kHz
-        // stereo 16-bit WAV, holding the note for the whole time if one is given (or for holdMs, then
-        // releasing it and rendering on - a release tail), nothing played if not. For
-        // measuring the engine with the same analysis as a hardware capture. Refused while a device renders.
-        char         path[1024] = {0};
-        int32_t      ms         = 0;
-        int32_t      note       = -1;
-        int32_t      velocity   = 100;
-        int32_t      holdMs     = -1;
+        // RENDERWAV <path> <ms> [<note>[,<note>...] <velocity> [<holdMs>]] - render the local engine offline into a
+        // 48 kHz stereo 16-bit WAV, holding the note - or the chord, notes separated by commas - for the whole
+        // time if one is given (or for holdMs, then releasing it and rendering on - a release tail), nothing
+        // played if not. For measuring the engine with the same analysis as a hardware capture. Refused while a
+        // device renders.
+        char     path[1024]   = {0};
+        char     noteList[64] = {0};
+        int32_t  ms           = 0;
+        int32_t  notes[16];
+        uint32_t noteCount    = 0;
+        int32_t  velocity     = 100;
+        int32_t  holdMs       = -1;
 
-        if (sscanf(arg, "%1023s %d %d %d %d", path, &ms, &note, &velocity, &holdMs) < 2) {
-            backdoor_write_result("ERROR: expected 'RENDERWAV <path> <ms> [<note> <velocity> [<holdMs>]]'\n");
+        if (sscanf(arg, "%1023s %d %63s %d %d", path, &ms, noteList, &velocity, &holdMs) < 2) {
+            backdoor_write_result("ERROR: expected 'RENDERWAV <path> <ms> [<note>[,<note>...] <velocity> [<holdMs>]]'\n");
             return;
         }
+
+        for (char * tok = strtok(noteList, ","); (tok != NULL) && (noteCount < 16u); tok = strtok(NULL, ",")) {
+            int32_t n = atoi(tok);
+
+            if ((n >= 0) && (n <= 127)) {
+                notes[noteCount++] = n;
+            }
+        }
+
         (void)sound_engine_load_percent();
         usleep(200000);
 
@@ -1814,17 +1847,21 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         hdr[43] = (uint8_t)(bytes >> 24);
         fwrite(hdr, 1, sizeof(hdr), f);
 
-        if (note >= 0) {
-            sound_engine_note(note, (uint8_t)((velocity < 1) ? 1 : ((velocity > 127) ? 127 : velocity)), true);
+        for (uint32_t k = 0; k < noteCount; k++) {
+            sound_engine_note(notes[k], (uint8_t)((velocity < 1) ? 1 : ((velocity > 127) ? 127 : velocity)), true);
         }
+
         uint32_t     holdFrames = (holdMs >= 0) ? (uint32_t)(((uint64_t)holdMs * 48000u) / 1000u) : UINT32_MAX;
-        bool         held       = (note >= 0);
+        bool         held       = (noteCount > 0u);
 
         for (uint32_t done = 0; done < frames; done += WAV_BLOCK) {
             uint32_t n = ((frames - done) < WAV_BLOCK) ? (frames - done) : WAV_BLOCK;
 
             if (held && (done >= holdFrames)) {
-                sound_engine_note(note, 0, false);
+                for (uint32_t k = 0; k < noteCount; k++) {
+                    sound_engine_note(notes[k], 0, false);
+                }
+
                 held = false;
             }
             sound_engine_render(block, WAV_BLOCK, 2);
@@ -1837,9 +1874,10 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
             }
         }
 
-        if (held) {
-            sound_engine_note(note, 0, false);
+        for (uint32_t k = 0; held && (k < noteCount); k++) {
+            sound_engine_note(notes[k], 0, false);
         }
+
         fclose(f);
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "SNDSTATUS") == 0) {

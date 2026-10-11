@@ -21,9 +21,12 @@
 #define __NORD_SAMPLE_H__
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
-#define NORD_SAMPLE_MAX_ZONES    (128)
+#define NORD_SAMPLE_MAX_ZONES           (128)
+#define NORD_SAMPLE_MAX_PRESETS         (256)  // notes §11 - an E-mu bank's, the empty ones not counted
+#define NORD_SAMPLE_PRESET_NAME_SIZE    (32)
 
 typedef struct {
     float *  data;          // -1..1, `channels` interleaved
@@ -51,9 +54,8 @@ typedef struct {
     uint32_t  ownedCount;
 } tNordSample;
 
-bool nord_sample_load(const char * path, tNordSample * sample);
 void nord_sample_free(tNordSample * sample);
-const tNordSample * nord_sample_get(const char * path);
+const tNordSample * nord_sample_get(const char * path, uint32_t preset);   // preset: a bank's, past the last plays the last
 
 typedef enum {
     eNordSampleNotLoaded,   // not asked for yet: the engine loads a file when it builds the patch
@@ -61,6 +63,8 @@ typedef enum {
     eNordSampleFailed,      // missing, unreadable, or not a Nord sample file this decoder knows
 } tNordSampleStatus;
 
-tNordSampleStatus nord_sample_status(const char * path);   // never loads
+tNordSampleStatus nord_sample_status(const char * path, uint32_t preset);                  // never loads
+uint32_t nord_sample_preset_count(const char * path);                                      // 1 for a Nord file, 0 if unreadable; reads the file
+bool nord_sample_preset_name(const char * path, uint32_t preset, char * out, size_t size); // a bank's only; never loads
 
 #endif

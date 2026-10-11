@@ -1284,8 +1284,21 @@ against the old labels would have followed the mod attenuator and looked broken 
 ## 93. The Sampler's file (`render_sampler_file()`)
 
 Under the module's name, which stays the module's own and is renamed like any other (CT, 2026-10-10), the
-Sampler shows the file it plays: the file's name without its extension, cut at 44 characters; "No sample" in
+Sampler shows the file it plays: the file's name without its extension, cut at 44 characters - for a bank,
+the preset's name first, "RIFLE SHANE - GUNSHOTS", the whole cut at 44; "No sample" in
 grey with none; the name in red with "- not loaded" when the engine could not read it - a file moved or
 deleted since the patch was saved, or one in a format the decoder does not know. The state comes from the
 sample cache without loading anything (`nord_sample_status()`): drawing must never wait on the disk.
 
+
+## 93a. The Sampler's < > preset buttons (`render_sampler_step_buttons()`, CT 2026-10-11)
+
+On a Sampler playing a bank of more than one preset, two buttons under the preset's name step to the previous
+and next preset, wrapping at the ends - for auditioning a bank, where the Preset menu (menus.c notes §34a) is
+for going straight to one. They act on release, and are drawn in the pressed grey while held, the topbar's
+convention (`isPressed`, RGB_GREY_7). They are rows of `buttonLocationList` in moduleResources.h - face buttons
+that are not parameters, placed like every other face element by rectangle and anchor, in percent of the
+module's width (`adjust_rectangle()`), so they move with the module and scale with the zoom. A first version
+placed the second button from the rectangle `draw_button()` returns, which is in screen units: it stayed put
+when the module moved and did not scale. They read only the cache: a bank with a name on the face is already
+read. Their click context is a canvas widget of kind None, so a right-click on them opens the module's menu.

@@ -109,6 +109,10 @@ uint32_t array_size_display_location_list(void) {
     return ARRAY_SIZE(displayLocationList);
 }
 
+uint32_t array_size_button_location_list(void) {
+    return ARRAY_SIZE(buttonLocationList);
+}
+
 uint32_t drum_synth_preset_count(void) {
     return ARRAY_SIZE(drumSynthPresetValues);
 }

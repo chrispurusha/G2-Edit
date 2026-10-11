@@ -558,6 +558,7 @@ typedef struct {
     bool       used;
     tModuleKey key;
     char       path[SAMPLER_PATH_SIZE];
+    uint32_t   preset;      // dataBase.c notes §9 - a bank's, by the Sampler's Preset menu
 } tSamplerFile;
 
 
@@ -895,6 +896,20 @@ typedef struct {
     const tAnchor     anchor;
     const char *      text;
 } tLabelLocation;
+
+// moduleGraphics.c notes §93a - a button on a face that is not a parameter: it acts, and stores nothing
+typedef enum {
+    buttonTypeSamplerPresetPrev,
+    buttonTypeSamplerPresetNext,
+} tButtonType;
+
+typedef struct {
+    const tModuleType moduleType;
+    const tButtonType buttonType;
+    const tRectangle  rectangle;
+    const tAnchor     anchor;
+    const char *      text;
+} tButtonLocation;
 
 // Placement for the per-module custom preview graphs (render_oscshpb_waveform_graph(),
 // render_envelope_graph(), render_filter_response_graph(), moduleGraphics.c) - each graph's

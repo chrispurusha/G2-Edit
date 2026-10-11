@@ -62,6 +62,7 @@ void file_menu_open_patch(void);
 void file_menu_open_path(const char * path);
 // menuActions.c notes §15 - the Sampler's file: the menu names the module, the render loop opens the browser
 void sampler_choose_begin(tModuleKey key);
+void sampler_preset_choose(tModuleKey key, uint32_t preset);
 void sampler_choose_open(void);
 // persistence.c - the sample browser remembers its own folder, apart from the patch browser's
 void file_browser_for_samples(bool samples);

@@ -445,9 +445,8 @@ static void own(tNordSample * sample, float * data) {
     }
 }
 
-static bool emu_bank_load(const char * path, const uint8_t * d, uint32_t size, tNordSample * sample);
-
-bool nord_sample_load(const char * path, tNordSample * sample) {
+// A Nord .nsmp / .nsmp4; banks are read by the cache instead (notes §11)
+static bool nord_sample_load(const char * path, tNordSample * sample) {
     long            size      = 0;
     uint8_t *       d         = read_whole_file(path, &size);
 
@@ -455,17 +454,6 @@ bool nord_sample_load(const char * path, tNordSample * sample) {
 
     if (d == NULL) {
         return false;
-    }
-
-    if ((size >= 12) && (memcmp(d, "FORM", 4) == 0) && (memcmp(d + 8, "E5B0", 4) == 0)) {
-        bool loaded = emu_bank_load(path, d, (uint32_t)size, sample);   // notes §11
-
-        free(d);
-
-        if (!loaded) {
-            nord_sample_free(sample);
-        }
-        return loaded;
     }
     const tFormat * f         = ((size > 4) && (d[4] == 1u)) ? &kFormatLater : &kFormatOriginal; // notes §8
 
@@ -526,6 +514,7 @@ bool nord_sample_load(const char * path, tNordSample * sample) {
 #define ZHDR_ROOT          (10)
 #define ETW_LOW            (4)
 #define ETW_HIGH           (7)
+#define PHDR_NAME          (12)        // UTF-16, from the Phdr tag
 
 static uint32_t read_u32_le(const uint8_t * p) {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
@@ -615,10 +604,23 @@ static bool ebl_load(const char * path, tNordZone * zone) {
     return true;
 }
 
+// notes §11 - a bank once read: its presets found and named, and its samples read on first use and shared by
+// every preset that names them, so choosing another preset never reads a file twice
+typedef struct {
+    uint8_t *   data;
+    uint32_t    size;
+    uint32_t    presetCount;
+    uint32_t    presetBody[NORD_SAMPLE_MAX_PRESETS];
+    uint32_t    presetLength[NORD_SAMPLE_MAX_PRESETS];
+    char        presetName[NORD_SAMPLE_MAX_PRESETS][NORD_SAMPLE_PRESET_NAME_SIZE];
+    tNordZone * pool[EMU_MAX_SAMPLES + 1];   // sample number -> its data, NULL until read (or unreadable)
+    bool        poolTried[EMU_MAX_SAMPLES + 1];
+} tEmuBank;
+
 typedef struct {
     const char *  path;                        // the bank's, for finding its SamplePool
+    tEmuBank *    bank;
     tNordSample * sample;
-    int16_t       loaded[EMU_MAX_SAMPLES + 1]; // sample number -> a zone holding its data, or -1 / -2 (failed)
     int32_t       voiceKey[2];
     int32_t       voiceVel[2];
     uint32_t      windows;            // ETW chunks seen since the voice or zone began
@@ -639,6 +641,7 @@ static bool emu_sample_path(const char * bank, uint32_t number, char * out, size
 
 static void emu_zone(tEmuWalk * w, const uint8_t * z, uint32_t length) {
     tNordSample * sample = w->sample;
+    tEmuBank *    bank   = w->bank;
     uint32_t      number = (length > (ZHDR_ROOT)) ? (((uint32_t)z[ZHDR_SAMPLE] << 8) | z[ZHDR_SAMPLE + 1]) : 0u;
 
     w->zone = -1;
@@ -647,26 +650,25 @@ static void emu_zone(tEmuWalk * w, const uint8_t * z, uint32_t length) {
         return;
     }
 
-    if (w->loaded[number] == -1) {
-        char file[1100];
+    if (!bank->poolTried[number]) {
+        char        file[1100];
+        tNordZone * read = calloc(1, sizeof(tNordZone));
 
-        w->loaded[number] = -2;
+        bank->poolTried[number] = true;
 
-        if (emu_sample_path(w->path, number, file, sizeof(file)) && ebl_load(file, &sample->zone[sample->zoneCount])) {
-            own(sample, sample->zone[sample->zoneCount].data);
-            w->loaded[number] = (int16_t)sample->zoneCount;
-            sample->zoneCount++;
+        if ((read != NULL) && emu_sample_path(w->path, number, file, sizeof(file)) && ebl_load(file, read)) {
+            bank->pool[number] = read;
+        } else {
+            free(read);
         }
-    } else if (w->loaded[number] >= 0) {
-        sample->zone[sample->zoneCount] = sample->zone[w->loaded[number]];   // the same data, another zone
-        sample->zoneCount++;
     }
 
-    if (w->loaded[number] < 0) {
+    if (bank->pool[number] == NULL) {
         return;
     }
-    tNordZone * zone = &sample->zone[sample->zoneCount - 1u];
+    tNordZone * zone = &sample->zone[sample->zoneCount++];
 
+    *zone          = *bank->pool[number];   // the pool's data, this zone's map
     zone->id       = number;
     zone->rootNote = z[ZHDR_ROOT];
     zone->keyLow   = w->voiceKey[0];
@@ -726,23 +728,82 @@ static void emu_walk(tEmuWalk * w, const uint8_t * d, uint32_t from, uint32_t to
     }
 }
 
-// notes §11 - the bank's first preset
-static bool emu_bank_load(const char * path, const uint8_t * d, uint32_t size, tNordSample * sample) {
-    tEmuWalk walk;
-    uint32_t body   = 0;
-    uint32_t length = 0;
-
-    if (!iff_find(d, 12, size, "E5P1", &body, &length) || (length < 2u)) {
-        return false;
+static bool bytes_contain(const uint8_t * d, uint32_t length, const char * tag) {
+    for (uint32_t i = 0; (i + 4u) <= length; i++) {
+        if (memcmp(d + i, tag, 4) == 0) {
+            return true;
+        }
     }
+
+    return false;
+}
+
+// notes §11 - a preset's name: UTF-16 in its Phdr, kept as ASCII for the glyph atlas
+static void emu_preset_name(const uint8_t * body, uint32_t length, uint32_t number, char * out, size_t size) {
+    uint32_t at = 0;
+    size_t   n  = 0;
+
+    while (((at + 4u) <= length) && (memcmp(body + at, "Phdr", 4) != 0)) {
+        at++;
+    }
+
+    for (uint32_t p = at + PHDR_NAME; ((at + 4u) <= length) && ((p + 1u) < length) && ((n + 1u) < size); p += 2u) {
+        uint32_t c = (uint32_t)body[p] | ((uint32_t)body[p + 1] << 8);
+
+        if (c == 0u) {
+            break;
+        }
+        out[n++] = ((c >= 32u) && (c < 127u)) ? (char)c : '?';
+    }
+
+    while ((n > 0u) && (out[n - 1u] == ' ')) {
+        n--;
+    }
+    out[n] = '\0';
+
+    if (n == 0u) {
+        snprintf(out, size, "Preset %u", (unsigned)(number + 1u));
+    }
+}
+
+// notes §11 - the presets that hold zones; the empty ones a bank carries are passed over
+static bool emu_bank_open(uint8_t * d, uint32_t size, tEmuBank * bank) {
+    memset(bank, 0, sizeof(*bank));
+
+    for (uint32_t p = 12; ((p + 8u) <= size) && (bank->presetCount < NORD_SAMPLE_MAX_PRESETS);) {
+        uint32_t n = read_u32(d + p + 4);
+
+        if (n > (size - p - 8u)) {
+            break;
+        }
+
+        if ((memcmp(d + p, "E5P1", 4) == 0) && (n >= 2u) && bytes_contain(d + p + 8u, n, "Zhdr")) {
+            uint32_t i = bank->presetCount++;
+
+            bank->presetBody[i]   = p + 8u;
+            bank->presetLength[i] = n;
+            emu_preset_name(d + p + 8u, n, i, bank->presetName[i], sizeof(bank->presetName[i]));
+        }
+        p += 8u + n + (n & 1u);
+    }
+
+    bank->data = d;
+    bank->size = size;
+    return bank->presetCount > 0u;
+}
+
+static void emu_preset_load(const char * path, tEmuBank * bank, uint32_t preset, tNordSample * sample) {
+    tEmuWalk walk;
+    uint32_t body = bank->presetBody[preset];
+
+    memset(sample, 0, sizeof(*sample));
     memset(&walk, 0, sizeof(walk));
-    memset(walk.loaded, 0xFF, sizeof(walk.loaded));   // -1: not tried
     walk.path      = path;
+    walk.bank      = bank;
     walk.sample    = sample;
     walk.zone      = -1;
-    emu_walk(&walk, d, body + 2u, body + length);
+    emu_walk(&walk, bank->data, body + 2u, body + bank->presetLength[preset]);
     sample->mapped = (sample->zoneCount > 0u);
-    return sample->zoneCount > 0u;
 }
 
 void nord_sample_free(tNordSample * sample) {
@@ -756,17 +817,75 @@ void nord_sample_free(tNordSample * sample) {
 // notes §4 - every file loaded once and kept: a patch rebuild must never wait on the disk twice
 #define NSMP_CACHE_SIZE    (32)
 
+typedef enum {
+    ePresetNotTried,
+    ePresetLoaded,
+    ePresetFailed,
+} tPresetState;
+
 typedef struct {
-    char        path[1024];
-    bool        loaded;
-    tNordSample sample;
+    char          path[1024];
+    bool          loaded;       // a Nord file decoded, or a bank's presets found
+    tNordSample   sample;       // a Nord file's one map
+    tEmuBank *    bank;         // notes §11 - a bank's, with its presets' maps made on first use
+    tNordSample * preset[NORD_SAMPLE_MAX_PRESETS];
+    uint8_t       presetState[NORD_SAMPLE_MAX_PRESETS];
 } tCacheEntry;
 
 static tCacheEntry     sCache[NSMP_CACHE_SIZE];
 static uint32_t        sCacheCount;
 static pthread_mutex_t sCacheLock = PTHREAD_MUTEX_INITIALIZER;
 
-const tNordSample * nord_sample_get(const char * path) {
+static bool cache_entry_load(tCacheEntry * entry) {
+    long      size     = 0;
+    uint8_t * d        = NULL;
+    uint8_t   head[12] = {0};
+    FILE *    file     = fopen(entry->path, "rb");
+    bool      bank     = (file != NULL) && (fread(head, 1, sizeof(head), file) == sizeof(head))
+                         && (memcmp(head, "FORM", 4) == 0) && (memcmp(head + 8, "E5B0", 4) == 0);
+
+    if (file != NULL) {
+        fclose(file);
+    }
+
+    if (!bank) {
+        return nord_sample_load(entry->path, &entry->sample);
+    }
+    d           = read_whole_file(entry->path, &size);
+    entry->bank = calloc(1, sizeof(tEmuBank));
+
+    if ((d != NULL) && (entry->bank != NULL) && emu_bank_open(d, (uint32_t)size, entry->bank)) {
+        return true;    // the bank keeps `d`: its presets are read from it on first use
+    }
+    free(d);
+    free(entry->bank);
+    entry->bank = NULL;
+    return false;
+}
+
+// Under the lock: the entry for this file, read now if it never was; NULL when the cache is full
+static tCacheEntry * cache_entry(const char * path, bool load) {
+    for (uint32_t i = 0; i < sCacheCount; i++) {
+        if (strcmp(sCache[i].path, path) == 0) {
+            return &sCache[i];
+        }
+    }
+
+    if (!load || (sCacheCount >= NSMP_CACHE_SIZE)) {
+        return NULL;
+    }
+    tCacheEntry * entry = &sCache[sCacheCount++];
+
+    snprintf(entry->path, sizeof(entry->path), "%s", path);
+    entry->loaded = cache_entry_load(entry);   // a failure is remembered too
+    return entry;
+}
+
+static uint32_t clamp_preset(const tCacheEntry * entry, uint32_t preset) {
+    return (preset < entry->bank->presetCount) ? preset : (entry->bank->presetCount - 1u);
+}
+
+const tNordSample * nord_sample_get(const char * path, uint32_t preset) {
     const tNordSample * found = NULL;
 
     if ((path == NULL) || (path[0] == '\0')) {
@@ -774,26 +893,35 @@ const tNordSample * nord_sample_get(const char * path) {
     }
     pthread_mutex_lock(&sCacheLock);
 
-    for (uint32_t i = 0; i < sCacheCount; i++) {
-        if (strcmp(sCache[i].path, path) == 0) {
-            found = sCache[i].loaded ? &sCache[i].sample : NULL;
-            pthread_mutex_unlock(&sCacheLock);
-            return found;
+    tCacheEntry *       entry = cache_entry(path, true);
+
+    if ((entry != NULL) && entry->loaded && (entry->bank == NULL)) {
+        found = &entry->sample;
+    } else if ((entry != NULL) && entry->loaded) {
+        uint32_t p = clamp_preset(entry, preset);
+
+        if (entry->presetState[p] == ePresetNotTried) {
+            entry->preset[p] = calloc(1, sizeof(tNordSample));
+
+            if (entry->preset[p] != NULL) {
+                emu_preset_load(path, entry->bank, p, entry->preset[p]);
+            }
+
+            if ((entry->preset[p] != NULL) && (entry->preset[p]->zoneCount > 0u)) {
+                entry->presetState[p] = ePresetLoaded;
+            } else {
+                free(entry->preset[p]);
+                entry->preset[p]      = NULL;
+                entry->presetState[p] = ePresetFailed;
+            }
         }
-    }
-
-    if (sCacheCount < NSMP_CACHE_SIZE) {
-        tCacheEntry * entry = &sCache[sCacheCount++];
-
-        snprintf(entry->path, sizeof(entry->path), "%s", path);
-        entry->loaded = nord_sample_load(path, &entry->sample);   // a failure is remembered too
-        found         = entry->loaded ? &entry->sample : NULL;
+        found = entry->preset[p];
     }
     pthread_mutex_unlock(&sCacheLock);
     return found;
 }
 
-tNordSampleStatus nord_sample_status(const char * path) {
+tNordSampleStatus nord_sample_status(const char * path, uint32_t preset) {
     tNordSampleStatus status = eNordSampleNotLoaded;
 
     if ((path == NULL) || (path[0] == '\0')) {
@@ -801,13 +929,52 @@ tNordSampleStatus nord_sample_status(const char * path) {
     }
     pthread_mutex_lock(&sCacheLock);
 
-    for (uint32_t i = 0; i < sCacheCount; i++) {
-        if (strcmp(sCache[i].path, path) == 0) {
-            status = sCache[i].loaded ? eNordSampleLoaded : eNordSampleFailed;
-            break;
-        }
-    }
+    tCacheEntry *     entry  = cache_entry(path, false);
 
+    if ((entry != NULL) && !entry->loaded) {
+        status = eNordSampleFailed;
+    } else if ((entry != NULL) && (entry->bank == NULL)) {
+        status = eNordSampleLoaded;
+    } else if (entry != NULL) {
+        uint8_t state = entry->presetState[clamp_preset(entry, preset)];
+
+        status = (state == ePresetLoaded) ? eNordSampleLoaded : (state == ePresetFailed) ? eNordSampleFailed : eNordSampleNotLoaded;
+    }
     pthread_mutex_unlock(&sCacheLock);
     return status;
+}
+
+uint32_t nord_sample_preset_count(const char * path) {
+    uint32_t      count = 0;
+
+    if ((path == NULL) || (path[0] == '\0')) {
+        return 0;
+    }
+    pthread_mutex_lock(&sCacheLock);
+
+    tCacheEntry * entry = cache_entry(path, true);
+
+    if ((entry != NULL) && entry->loaded) {
+        count = (entry->bank != NULL) ? entry->bank->presetCount : 1u;
+    }
+    pthread_mutex_unlock(&sCacheLock);
+    return count;
+}
+
+bool nord_sample_preset_name(const char * path, uint32_t preset, char * out, size_t size) {
+    bool          named = false;
+
+    if ((path == NULL) || (path[0] == '\0') || (size == 0u)) {
+        return false;
+    }
+    pthread_mutex_lock(&sCacheLock);
+
+    tCacheEntry * entry = cache_entry(path, false);
+
+    if ((entry != NULL) && entry->loaded && (entry->bank != NULL)) {
+        snprintf(out, size, "%s", entry->bank->presetName[clamp_preset(entry, preset)]);
+        named = true;
+    }
+    pthread_mutex_unlock(&sCacheLock);
+    return named;
 }

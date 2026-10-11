@@ -6427,7 +6427,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
                 node->level[SAMPLER_LEVEL_GRAIN_BANK] = (double)samplersBefore;
             }
-            node->sample                         = nord_sample_get(sampler_file(module->key)); // notes §213 - NULL: no file, or unreadable
+            node->sample                         = nord_sample_get(sampler_file(module->key), sampler_preset(module->key)); // notes §213 - NULL: no file, or unreadable
             node->active                         = (param_value(module, variation, 1) != 0.0) && (node->sample != NULL);
             break;
         }

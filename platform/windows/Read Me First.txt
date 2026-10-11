@@ -80,7 +80,8 @@ shows on the module, in red if it cannot be read.
     .nsmp, .nsmp4   Nord sample files (Nord Sample Library), mono or stereo,
                     with their own key maps and loops
     .exb            E-mu Emulator X banks - keep the bank's sample files in its
-                    folder beside it. The first preset plays.
+                    folder beside it. Right-click > Preset chooses which of
+                    the bank's presets plays.
   Not yet           Nord piano files (.npno), WAV and other formats
 
 Its controls: Pitch (with KB to turn keyboard tracking off), Start, Delay,

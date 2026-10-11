@@ -123,4 +123,6 @@ written, kept through its delete, replaced when another module takes the index, 
 
 Up to 32 per document, keyed by slot, area and index, kept beside the database rather than in tModule, whose
 size is multiplied by every slot, area and index of every document. An entry goes when its module is deleted,
-when its slot is cleared, or when a module of another type is written to its index.
+when its slot is cleared, or when a module of another type is written to its index. With the file it keeps
+the bank PRESET it plays (`sampler_preset()`, `sampler_preset_set()`, 2026-10-11): 0 for a Nord file or a
+bank's first; setting a file starts it at 0, so a preset is always set after its file.

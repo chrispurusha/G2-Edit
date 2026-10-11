@@ -113,6 +113,7 @@ void perf_engine_only_header_apply(const uint8_t * header, size_t length) {
         char     slot[2]                      = {0};
         char     area[4]                      = {0};
         unsigned index                        = 0;
+        unsigned preset                       = 0;
         int      used                         = 0;
 
         snprintf(line, sizeof(line), "%.*s", (int)((n < (sizeof(line) - 1u)) ? n : (sizeof(line) - 1u)), (const char *)header + at);
@@ -125,7 +126,16 @@ void perf_engine_only_header_apply(const uint8_t * header, size_t length) {
             key.location = (strcmp(area, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
             key.index    = index;
             sampler_file_set(key, line + used);
-            (void)nord_sample_get(line + used);
+            (void)nord_sample_get(line + used, 0);
+        } else if (  (sscanf(line, "SamplePreset=%1[A-D],%2[A-Z],%u,%u", slot, area, &index, &preset) == 4)
+                  && (index < MAX_NUM_MODULES)) {
+            tModuleKey key = {0};
+
+            key.slot     = (uint32_t)(slot[0] - 'A');
+            key.location = (strcmp(area, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+            key.index    = index;
+            sampler_preset_set(key, preset);   // notes §2 - after its Sample= line, which starts it at 0
+            (void)nord_sample_get(sampler_file(key), preset);
         }
         at = end + 1u;
     }
@@ -148,6 +158,7 @@ void engine_only_header_apply(uint32_t slot, const uint8_t * header, size_t leng
         size_t   n                            = end - at;
         char     area[4]                      = {0};
         unsigned index                        = 0;
+        unsigned preset                       = 0;
         int      used                         = 0;
 
         snprintf(line, sizeof(line), "%.*s", (int)((n < (sizeof(line) - 1u)) ? n : (sizeof(line) - 1u)), (const char *)header + at);
@@ -159,7 +170,15 @@ void engine_only_header_apply(uint32_t slot, const uint8_t * header, size_t leng
             key.location = (strcmp(area, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
             key.index    = index;
             sampler_file_set(key, line + used);
-            (void)nord_sample_get(line + used);   // notes §2 - read now: the face can say if it failed
+            (void)nord_sample_get(line + used, 0);   // notes §2 - read now: the face can say if it failed
+        } else if ((sscanf(line, "SamplePreset=%2[A-Z],%u,%u", area, &index, &preset) == 3) && (index < MAX_NUM_MODULES)) {
+            tModuleKey key = {0};
+
+            key.slot     = slot;
+            key.location = (strcmp(area, "FX") == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+            key.index    = index;
+            sampler_preset_set(key, preset);   // notes §2 - after its Sample= line, which starts it at 0
+            (void)nord_sample_get(sampler_file(key), preset);
         }
         at = end + 1u;
     }
@@ -218,6 +237,14 @@ int write_database_to_file(const char * filepath, uint32_t slot) {
                          (sample->key.location == (uint32_t)locationFx) ? "FX" : "VA", (unsigned)sample->key.index, sample->path);
                 fwrite(charBuff, 1, strlen(charBuff), file);
                 fwrite(eol, 1, strlen(eol), file);
+
+                if (sample->preset != 0u) {   // notes §2 - a bank's preset, after its Sample= line
+                    snprintf(charBuff, sizeof(charBuff) - 1, "SamplePreset=%s,%u,%u",
+                             (sample->key.location == (uint32_t)locationFx) ? "FX" : "VA", (unsigned)sample->key.index,
+                             (unsigned)sample->preset);
+                    fwrite(charBuff, 1, strlen(charBuff), file);
+                    fwrite(eol, 1, strlen(eol), file);
+                }
             }
         }
     }
@@ -276,7 +303,7 @@ uint8_t * write_perf_to_memory(size_t * sizeOut, bool engineOnly) {
                                  "Type=Performance\r\n"
                                  "Version=23\r\n"
                                  "Info=BUILD 320\r\n";
-    size_t            headSize = sizeof(base) + (engineOnly ? (MAX_SAMPLER_FILES * (SAMPLER_PATH_SIZE + 32u)) : 0u);
+    size_t            headSize = sizeof(base) + (engineOnly ? (MAX_SAMPLER_FILES * (SAMPLER_PATH_SIZE + 64u)) : 0u);   // a Sample= and a SamplePreset= line each
     char *            header   = (char *)malloc(headSize);
     size_t            headLen  = 0;
     uint32_t          bitPos   = 0;
@@ -304,6 +331,12 @@ uint8_t * write_perf_to_memory(size_t * sizeOut, bool engineOnly) {
            && (strchr(sample->path, '\n') == NULL) && (headLen < headSize)) {
             headLen += (size_t)snprintf(header + headLen, headSize - headLen, "Sample=%c,%s,%u,%s\r\n", (char)('A' + sample->key.slot),
                                         (sample->key.location == (uint32_t)locationFx) ? "FX" : "VA", (unsigned)sample->key.index, sample->path);
+
+            if ((sample->preset != 0u) && (headLen < headSize)) {   // notes §3 - a bank's preset, after its Sample= line
+                headLen += (size_t)snprintf(header + headLen, headSize - headLen, "SamplePreset=%c,%s,%u,%u\r\n",
+                                            (char)('A' + sample->key.slot), (sample->key.location == (uint32_t)locationFx) ? "FX" : "VA",
+                                            (unsigned)sample->key.index, (unsigned)sample->preset);
+            }
         }
     }
 

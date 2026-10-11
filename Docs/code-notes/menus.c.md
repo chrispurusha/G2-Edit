@@ -367,6 +367,16 @@ inserting Paste Params into this array silently moved "Delete" under the index t
 label was being written to, which deleted the Delete entry from the menu. Named indices make
 the next insertion harmless.
 
+
+## 34a. The Sampler's Preset menu
+
+Below Choose Sample..., and only on a Sampler whose file is a bank of more than one preset: the presets by
+name (nordSample.c notes §11), the one playing marked ">", in columns of 32 so a large bank stays on the
+screen. Choosing one goes through `sampler_preset_choose()` (menuActions.c notes §15). A menu rather than a
+dial because presets have names (CT, 2026-10-11), and it keeps the choice out of the module's parameters,
+which the G2's patch format fixes. Both Sampler entries sit last: a NULL label ends the menu, so on any
+other module they end it there.
+
 ## 35. in `open_module_context_menu()`
 
 "Replace with" lists the rest of this module's group. Greyed rather than hidden when there is

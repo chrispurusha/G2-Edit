@@ -99,6 +99,34 @@ const char * sampler_file(tModuleKey key) {
     return NULL;
 }
 
+static tSamplerFile * sampler_file_entry(tModuleKey key) {
+    for (uint32_t i = 0; i < MAX_SAMPLER_FILES; i++) {
+        tSamplerFile * file = &gSamplerFile[i];
+
+        if (  file->used && (file->key.slot == key.slot) && (file->key.location == key.location)
+           && (file->key.index == key.index)) {
+            return file;
+        }
+    }
+
+    return NULL;
+}
+
+uint32_t sampler_preset(tModuleKey key) {
+    const tSamplerFile * file = sampler_file_entry(key);
+
+    return (file != NULL) ? file->preset : 0u;
+}
+
+// notes §9 - set after the file: choosing a file starts it on the bank's first preset
+void sampler_preset_set(tModuleKey key, uint32_t preset) {
+    tSamplerFile * file = sampler_file_entry(key);
+
+    if (file != NULL) {
+        file->preset = preset;
+    }
+}
+
 bool sampler_file_set(tModuleKey key, const char * path) {
     sampler_files_forget(key.slot, (int32_t)key.location, (int32_t)key.index);
 
@@ -110,8 +138,9 @@ bool sampler_file_set(tModuleKey key, const char * path) {
         tSamplerFile * file = &gSamplerFile[i];
 
         if (!file->used) {
-            file->used = true;
-            file->key  = key;
+            file->used   = true;
+            file->key    = key;
+            file->preset = 0;
             snprintf(file->path, sizeof(file->path), "%s", path);
             return true;
         }

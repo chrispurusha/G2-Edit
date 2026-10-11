@@ -23,7 +23,9 @@ they do not know. A patch that holds one is saved as .pchx instead - the same fi
   the thread writing it, `protocol_include_engine_only()`, dataBase.c notes §8);
 - the text header gains a line per Sampler, `Sample=VA,<index>,<path>`, naming its sample file. Loading reads each
   file at once, so a Sampler whose file has gone or cannot be read shows it in red on its face
-  (moduleGraphics.c notes §93) rather than only falling silent.
+  (moduleGraphics.c notes §93) rather than only falling silent. A Sampler playing a bank preset other than
+  the first adds `SamplePreset=VA,<index>,<n>` straight after its Sample= line (2026-10-11): read after the
+  Sample= line, which starts the Sampler at preset 0, it sets the preset; a reader from before passes over it.
 Every reader skips the text header up to its first zero byte, so the binary parses as it always has, and the
 Sample= lines are applied after it (`engine_only_header_apply()`, called by each of the four readers: the
 application offline and online, and the plug-in's two). Saving chooses the extension: a patch with an
@@ -41,7 +43,8 @@ The same performance image serves three readers. A .prf2 is one the G2 can load,
 the engine has - engine-only modules, and a 2-Out sent to Out 5/6 and above, given as Out 1/2
 (moduleResourcesAccess.c notes §7). A .prfx (CT, 2026-10-11) is the performance counterpart of a .pchx: it
 keeps them, and names each Sampler's file in the text header as `Sample=<slot A-D>,<VA|FX>,<module>,<path>` -
-the .pchx line with the slot a performance needs, which a .pchx reader passes over. `perf_save_path()` picks
+the .pchx line with the slot a performance needs, which a .pchx reader passes over - and its preset, as
+`SamplePreset=<slot>,<VA|FX>,<module>,<n>` after it, as in notes §2. `perf_save_path()` picks
 .prfx when any slot needs it, as `patch_save_path()` does for a patch, and `perf_engine_only_header_apply()`
 reads the lines back after the slots are parsed - on every load path: the application offline (graphics.c)
 and online (usbComms.c), and the plug-in (g2Patch.c). The plug-in's project state is the .prfx image

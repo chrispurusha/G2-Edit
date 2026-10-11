@@ -104,6 +104,10 @@ the UI thread can do it directly, the same way the backdoor's NEWPATCH already d
 
 ## 15. Choose Sample... (`sampler_choose_begin()`, `sampler_choose_open()`, `sampler_chosen()`)
 
+A bank's preset is chosen from the Preset menu (menus.c notes §34a) by `sampler_preset_choose()`: it is set,
+read at once so the face can show a preset that failed, and the engine rebuilt to play it. A new file starts
+at the bank's first preset.
+
 The Sampler's module menu names the module (`sSampleTarget`) and posts eRspShowOpenSample; the render loop
 opens the browser, in the application and the plug-in alike, as every browser is opened - never from inside
 the menu's own callback. The browser remembers its own folder (persistence.c), starting in Nord Sound

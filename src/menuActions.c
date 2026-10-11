@@ -647,7 +647,7 @@ static void sampler_chosen(const char * path) {
     }
 
     // notes §15 - read it now, so a file the Sampler cannot play is refused here rather than left silent
-    if (nord_sample_get(path) == NULL) {
+    if (nord_sample_get(path, 0) == NULL) {
         show_alert("Choose Sample", "That file could not be read as a sample file - a Nord .nsmp or .nsmp4, or an E-mu Emulator X bank (.exb, with its SamplePool folder beside it). The Sampler keeps the file it had.");
         return;
     }
@@ -656,6 +656,19 @@ static void sampler_chosen(const char * path) {
         show_alert("Choose Sample", "Too many Samplers have files - the limit is 32.");
         return;
     }
+    sound_engine_update_from_patch();
+    synthlib_request_redraw();
+}
+
+// notes §15 - a bank's preset, from the Sampler's Preset menu; read now, so the face shows a failure at once
+void sampler_preset_choose(tModuleKey key, uint32_t preset) {
+    tModule * module = get_module(key);
+
+    if ((module == NULL) || (module->type != moduleTypeSampler)) {
+        return;
+    }
+    sampler_preset_set(key, preset);
+    (void)nord_sample_get(sampler_file(key), preset);
     sound_engine_update_from_patch();
     synthlib_request_redraw();
 }

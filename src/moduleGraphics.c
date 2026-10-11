@@ -35,6 +35,7 @@ extern "C" {
 #include "moduleGraphics.h"
 #include "soundEngine.h"    // sound_engine_module_meter() - see volume_source()
 #include "nordSample.h"
+#include "misc.h"
 #include "splitView.h"
 #include "globalVars.h"
 #include "renderParams.h"
@@ -3203,6 +3204,71 @@ void render_module_common(tRectangle rectangle, tModule * module) {
 // notes §93 - the Sampler's file, under its name: the file's own name, or why there is no sound
 #define SAMPLER_FILE_MAX_CHARS    (44)
 
+typedef struct {
+    tCanvasWidget widget;   // kind None: a right-click falls through to the module's menu
+    int32_t       step;
+} tSamplerStepCtx;
+
+static tSamplerStepCtx         sSamplerStepCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][2];
+static const tSamplerStepCtx * sSamplerStepPressed;   // drawn in the pressed grey while held, as the topbar's are
+
+// notes §93a - the previous or next preset of the bank, wrapping at the ends
+static void sampler_step_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    const tSamplerStepCtx * ctx   = (const tSamplerStepCtx *)userData;
+    tModuleKey              key   = ctx->widget.key;
+    const char *            path  = sampler_file(key);
+    uint32_t                count = 0;
+    char                    name[NORD_SAMPLE_PRESET_NAME_SIZE];
+
+    (void)coord;
+    sSamplerStepPressed = (phase == eClickPress) ? ctx : NULL;
+    synthlib_request_redraw();
+
+    if ((phase != eClickRelease) || !nord_sample_preset_name(path, 0, name, sizeof(name))) {
+        return;   // a bank already read: stepping never reads the file list from the disk
+    }
+    count               = nord_sample_preset_count(path);
+
+    if (count > 1u) {
+        uint32_t current = sampler_preset(key);
+
+        current = (current < count) ? current : (count - 1u);
+        sampler_preset_choose(key, (uint32_t)(((int32_t)current + ctx->step + (int32_t)count) % (int32_t)count));
+    }
+}
+
+// notes §93a - a bank with a name is already read, so neither call goes to the disk
+static bool sampler_steps_shown(tModuleKey key) {
+    const char * path = sampler_file(key);
+    char         name[NORD_SAMPLE_PRESET_NAME_SIZE];
+
+    return nord_sample_preset_name(path, 0, name, sizeof(name)) && (nord_sample_preset_count(path) > 1u);
+}
+
+// notes §93a - the face's buttons from buttonLocationList, each shown only when it has something to do
+static void render_module_buttons(tArea area, tRectangle moduleRectangle, tModule * module) {
+    tModuleKey key = module->key;
+
+    for (uint32_t i = 0; i < array_size_button_location_list(); i++) {
+        const tButtonLocation * location = &buttonLocationList[i];
+
+        if ((location->moduleType != module->type) || !sampler_steps_shown(key)) {
+            continue;   // the only buttons so far step a Sampler through a bank
+        }
+        uint32_t                b        = (location->buttonType == buttonTypeSamplerPresetPrev) ? 0u : 1u;
+        tSamplerStepCtx *       ctx      = &sSamplerStepCtx[key.slot][key.location][key.index][b];
+        tRgb                    fill     = (sSamplerStepPressed == ctx) ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
+        tRectangle              rect     = adjust_rectangle(moduleRectangle, location->rectangle, location->anchor, module);
+
+        *ctx = (tSamplerStepCtx){
+            {
+                eCanvasWidgetNone, key
+            }, (b == 0u) ? -1 : 1
+        };
+        register_click_region(draw_button(area, rect, location->text, fill), eClickLayerCanvas, sampler_step_click_handler, ctx);
+    }
+}
+
 static void render_sampler_file(tArea area, tRectangle moduleRectangle, const tModule * module) {
     const char * path                              = sampler_file(module->key);
     char         text[SAMPLER_FILE_MAX_CHARS + 16] = {0};
@@ -3214,18 +3280,27 @@ static void render_sampler_file(tArea area, tRectangle moduleRectangle, const tM
             0.3, 0.3, 0.3, 1.0
         };
     } else {
-        const char * leaf = strrchr(path, '/');
-        const char * name = (leaf != NULL) ? (leaf + 1) : path;
-        const char * dot  = strrchr(name, '.');
-        int          stem = (dot != NULL) ? (int)(dot - name) : (int)strlen(name);
+        const char * leaf   = strrchr(path, '/');
+        const char * name   = (leaf != NULL) ? (leaf + 1) : path;
+        const char * dot    = strrchr(name, '.');
+        int          stem   = (dot != NULL) ? (int)(dot - name) : (int)strlen(name);
+        uint32_t     preset = sampler_preset(module->key);
+        char         presetName[NORD_SAMPLE_PRESET_NAME_SIZE];
 
-        if (stem > SAMPLER_FILE_MAX_CHARS) {
+        // notes §93 - a bank names its preset first, the file after it
+        if (nord_sample_preset_name(path, preset, presetName, sizeof(presetName))) {
+            snprintf(text, sizeof(text), "%s - %.*s", presetName, stem, name);
+
+            if (strlen(text) > SAMPLER_FILE_MAX_CHARS) {
+                snprintf(text + SAMPLER_FILE_MAX_CHARS - 3, sizeof(text) - SAMPLER_FILE_MAX_CHARS + 3, "...");
+            }
+        } else if (stem > SAMPLER_FILE_MAX_CHARS) {
             snprintf(text, sizeof(text), "%.*s...", SAMPLER_FILE_MAX_CHARS - 3, name);
         } else {
             snprintf(text, sizeof(text), "%.*s", stem, name);
         }
 
-        if (nord_sample_status(path) == eNordSampleFailed) {
+        if (nord_sample_status(path, preset) == eNordSampleFailed) {
             snprintf(text + strlen(text), sizeof(text) - strlen(text), " - not loaded");
             colour = (tRgba){
                 0.8, 0.0, 0.0, 1.0
@@ -3336,6 +3411,7 @@ void render_module(tModule * module) {
     if (module->type == moduleTypeSampler) {
         render_sampler_file(moduleArea, moduleRectangle, module);   // notes §93
     }
+    render_module_buttons(moduleArea, moduleRectangle, module);   // notes §93a
 
     if (sShowNameBand) {
         // Where the widest name a module can carry would go - Docs/module-layout-rules.md, rule 16.

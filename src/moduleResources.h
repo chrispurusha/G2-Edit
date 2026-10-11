@@ -4286,6 +4286,12 @@ const tLabelLocation     labelLocationList[]     = {
     {moduleTypeDrumSynth, {{15, -32}, {BLANK_SIZE, 7}}, anchorBottomLeft, "Noise Filter"},
     {moduleTypeDrumSynth, {{15, -13}, {BLANK_SIZE, 7}}, anchorBottomLeft, "Bend"        }, };
 
+// Face buttons that are not parameters (moduleGraphics.c notes §93a). The Sampler's step through a bank's
+// presets, under the preset's name: 18 px wide with the button's padding, 4 px apart.
+const tButtonLocation    buttonLocationList[]    = {
+    {moduleTypeSampler, buttonTypeSamplerPresetPrev, {{ 1.5, 10.5}, {4.0, 3.4}}, anchorTopLeft, "<"},
+    {moduleTypeSampler, buttonTypeSamplerPresetNext, {{7.75, 10.5}, {4.0, 3.4}}, anchorTopLeft, ">"}, };
+
 const tLedLocation       ledLocationList[]       = {
     {moduleTypeInvert,     ledTypeYes,      {{ 3, 7}, {3, 3}}, anchorTopLeft},
     {moduleTypeInvert,     ledTypeYes,      {{53, 7}, {3, 3}}, anchorTopLeft},

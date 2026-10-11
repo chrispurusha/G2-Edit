@@ -43,6 +43,7 @@ extern const tVolumeLocation    volumeLocationList[];
 extern const tVolumeMeterConfig volumeMeterConfigList[];
 extern const tLedLocation       ledLocationList[];
 extern const tLabelLocation     labelLocationList[];
+extern const tButtonLocation    buttonLocationList[];
 extern const tGraphLocation     graphLocationList[];
 //extern const double             dbLvlMap[];
 //extern const double             ADRTimeMap[];
@@ -80,6 +81,7 @@ uint32_t array_size_mode_location_list(void);
 uint32_t array_size_volume_location_list(void);
 uint32_t array_size_led_location_list(void);
 uint32_t array_size_display_location_list(void);
+uint32_t array_size_button_location_list(void);
 uint32_t array_size_str_map(const char ** strMap);
 
 // The DrumSynth's factory presets. A preset is only values for params 0-14, so which one a module
