@@ -628,6 +628,16 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         msg_send(&gToUsbThread, &msg);
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "DEVPERF") == 0) {
+        // DEVPERF on|off - performance or patch mode on the DEVICE, as the topbar's mode button
+        tMessageContent msg = {0};
+        bool            on  = (arg != NULL) && (strcmp(arg, "on") == 0);
+
+        msg.cmd                  = on ? eMsgCmdWriteModePerf : eMsgCmdWriteModePatch;
+        gGlobalSettings.perfMode = on ? 1 : 0;
+        msg_send(&gToUsbThread, &msg);
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "NEWPATCH") == 0) {
         // notes §8 - as File > New: an empty slot with its patch settings (the Volume among them)
         init_patch(gSlot);

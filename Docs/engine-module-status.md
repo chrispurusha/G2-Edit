@@ -33,7 +33,7 @@ module that is not offered or not modelled.
 | **Level** | Constant, LevAmp | ConstSwM, ConstSwT, CompLev, CompSig, LevAdd, LevConv, LevMod, LevMult, MinMax, ModAmt, NoiseGate, EnvFollow, Red2Blue, Blue2Red | - | - | - | - |
 | **Shapers** | OverDrive | Saturate, Clip, ShpExp, WaveWrap, ShpStatic, Rect | - | - | - | - |
 | **Delays** | Delay A, Delay B | Delay Single A, Delay Single B, Delay Stereo, Delay Clock, DlyShiftReg | Delay Dual, Delay Quad, Delay Eight | - | - | - |
-| **Effects** | Chorus, Reverb | Compressor, Digitizer, FreqShift, Flanger, Phaser, PShift, Scratch | - | - | - | - |
+| **Effects** | Compressor, Chorus, Reverb | Digitizer, FreqShift, Flanger, Phaser, PShift, Scratch | - | - | - | - |
 | **In/Out** | 2 Outputs, 4 Outputs, 2 Inputs, FX Input, Keyboard, Monophonic Keyboard, Status | 4 Inputs, Note Detector | Device | - | Name Bar | - |
 | **Switches** | - | SwOnOffM, SwOnOffT, Sw2-1, Sw2-1M, Sw4-1, Sw8-1, Sw1-2, Sw1-2M, Sw1-4, Sw1-8, ValSw2-1, ValSw1-2, Mux8-1, Mux1-8, Mux8-1X, S&H, T&H, WindSw | - | - | - | - |
 | **Logic** | Pulse, ClkDiv | Invert, Delay, Gate, 8Counter, BinCounter, ADConv, DAConv | FlipFlop | - | - | - |
@@ -41,7 +41,7 @@ module that is not offered or not modelled.
 | **Random** | - | Random A, Random B, Rnd Clock A, Rnd Clock B, Rnd Trig, Rnd Pattern | - | - | - | - |
 | **Note** | - | Note Quantiser, Key Quantiser, Partial Quantiser, Note Scaler, Glide, Pitch Tracker, Zero Crossing Counter, Level Scaler | - | - | - | - |
 | **MIDI** | CtrlSend | CtrlRcv, NoteRcv | - | NoteSend | PCSend, NoteZone, Automate | - |
-| **Total 170** | **62** | **98** | **5** | **1** | **4** | **0** |
+| **Total 170** | **63** | **97** | **5** | **1** | **4** | **0** |
 
 ### Oscillators
 
@@ -183,7 +183,7 @@ module that is not offered or not modelled.
 
 | Module | State | Reference | On the G2 | Open |
 |---|---|---|---|---|
-| Compressor | Modelled | §25 | earlier fits (not kept) predate the current law | not re-captured since 09-14 |
+| Compressor | Confirmed on the G2 | §25 | a steady sine at 8 levels, -47 to -19 dB, 04 Chris' Pad's settings: gain equal to the G2's within 0.01 dB (10-11) | attack/release timing and SideChain not compared on the G2 |
 | Digitizer | Modelled | §69.8 | - | - |
 | FreqShift | Modelled | §57 | - | - |
 | Flanger | Modelled | §70.2 | - | - |
@@ -303,7 +303,6 @@ individual checks; `capture-inventory.md` the rigs and what is already on disk.
 | One slow full-scale ramp through each mode | Saturate, Clip, ShpExp, WaveWrap, ShpStatic, Rect | memoryless, so one ramp is the whole transfer function; all six are Approximate |
 | Noise through each filter, as FltMulti was (§10.3) | LP, HP, Nord, Classic, Static Filter | the filters most stage patches use; no response ever captured |
 | A gate train through each envelope | Envelope ADR, ADDSR, D, Multi; Mod ADSR's Attack and Sustain mod | their stage structure has never been heard against a G2 |
-| A level ramp through it | Compressor | not captured since its current model (§25) |
 | Rate at a few dials, and BPM/Clk against the master clock | LFO B, LFO C, and BPM/Clk on LFO A and LFO Shp A | LFO C is in many patches and never captured |
 | A Constant into each jack | FM Operator's AMod and Pitch (§14.6) | added 2026-10-09; nothing on file exercises them |
 | Model fully, then capture | LevMult, Delay Dual/Quad/Eight, FlipFlop, Device, Eq 3-band's mid width | Approximate or Partial |

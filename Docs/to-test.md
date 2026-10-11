@@ -4,6 +4,7 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***SLOT BUTTONS MOVE THE KEYBOARD IN PATCH MODE (2026-10-11)*** - findings 2026-10-11. CLICK the topbar slot buttons in Patch mode: the G2's keys and the virtual keyboard play the slot clicked (DEVSLOT confirmed on hardware); in a performance, the keys still follow the Keyboard switches
 - ***SAMPLER: NO BEATING, IN TUNE, NOTES END (2026-10-10)*** - notes §213, nordSample notes §5, §7. LISTEN: a held note
   sustains with no beat at any key, in tune; with no envelope in the patch, a released note stops and a repeat does not stack
 - ***SAMPLER LOOPS (2026-10-10)*** - nordSample.c notes §3, §5. LISTEN: hold a Melodica note for several seconds at

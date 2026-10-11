@@ -1802,6 +1802,21 @@ static int send_select_slot(uint32_t slot) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
+// Which slot the keyboard plays: 4 zero bits, then one bit per slot, as the G2's own slot selection dump
+static int send_keyboard_focus(uint32_t slot) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_KEYBOARD_FOCUS);
+    write_bit_stream(buff, &bitPos, 4, 0);
+
+    for (uint32_t i = 0; i < MAX_SLOTS; i++) {
+        write_bit_stream(buff, &bitPos, 1, (i == slot) ? 1u : 0u);
+    }
+
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
 static int send_get_synth_settings(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
@@ -4254,6 +4269,12 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSelectSlot:
             retVal = send_select_slot(messageContent->slotData.slot);
+
+            // In patch mode a slot button moves the keyboard too, as the G2's own do; a performance's
+            // Keyboard switches decide that there
+            if ((retVal == EXIT_SUCCESS) && (gGlobalSettings.perfMode == 0)) {
+                retVal = send_keyboard_focus(messageContent->slotData.slot);
+            }
             break;
 
         case eMsgCmdSetModuleLabel:

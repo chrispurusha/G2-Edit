@@ -126,6 +126,7 @@
 #define SUB_RESPONSE_SLOT_SELECTION          (0x07)
 #define SUB_COMMAND_SELECT_SLOT              (0x09)
 #define SUB_RESPONSE_SELECT_SLOT             (0x09)
+#define SUB_COMMAND_KEYBOARD_FOCUS           (0x0f) // which slots the keyboard plays
 #define SUB_COMMAND_RETRIEVE                 (0x0a)
 #define SUB_COMMAND_STORE                    (0x0b)
 #define SUB_COMMAND_CLEAR                    (0x0c)

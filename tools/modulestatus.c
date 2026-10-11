@@ -182,7 +182,7 @@ static const tEvidence kEvidence[] = {
     {"Delay Eight",           eApproximate, "§70.1, §52.1",              "-", "as Delay Dual"},
     {"DlyShiftReg",           eModelled,    "§69.6",                     "-", "-"},
     // Effects
-    {"Compressor",            eModelled,    "§25",                       "earlier fits (not kept) predate the current law", "not re-captured since 09-14"},
+    {"Compressor",            eConfirmed,   "§25",                       "a steady sine at 8 levels, -47 to -19 dB, 04 Chris' Pad's settings: gain equal to the G2's within 0.01 dB (10-11)", "attack/release timing and SideChain not compared on the G2"},
     {"Digitizer",             eModelled,    "§69.8",                     "-", "-"},
     {"FreqShift",             eModelled,    "§57",                       "-", "-"},
     {"Flanger",               eModelled,    "§70.2",                     "-", "-"},

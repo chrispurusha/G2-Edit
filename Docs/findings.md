@@ -12807,3 +12807,63 @@ CT: the sequencers of BCHydro_DZLW (perf 1:2) get out of step in the engine.
   variation from its state, so the engine's switches show (topbarRender notes §5). CT: working, connected
   and not, including a performance already on the G2 when the engine is switched on.
 - OPEN: whether a link from an edit restarts the other slots' sequences on the G2 (todo.md).
+
+## 2026-10-11 - a slot button moved the edit focus but not the keyboard
+
+`DEVSLOT B` (and the editor's own slot buttons, which send the same message) left the G2 playing slot A. The
+select-slot message (0x09) is EDIT focus only; the keyboard follows a second state, keyboard focus, which the
+G2's own slot buttons move together with it (manual, "Changing edit focus but not keyboard focus"). It is
+sub-command 0x0f: 4 zero bits, then one bit per slot - the
+layout of the G2's own slot-selection dump (0x07). The editor now sends it after every slot select in PATCH
+mode; in a performance the Keyboard switches decide what the keys play, so it is left alone there.
+
+Measured (OscB saw > EnvADSR > 2-Out in A, B empty, Patch mode, Fireface 5/6, 261.6 Hz component): before,
+A selected -40.2 dB and B selected -40.2 dB (A still sounding); after, A -40.2, B -161 (silence), A again
+-40.2. The G2 acks 0x0f with OK. The 10-10 test that first saw this was in PERFORMANCE mode, where the
+virtual key plays every slot with Keyboard on whatever is selected - that part was correct behaviour.
+Notes from the TM-1 on MIDI channels 1 and 2 reached no slot: the G2 is set to receive on channel 3, slot A only - the other slots have no MIDI channel (CT).
+
+## 2026-10-11 - 04 Chris' Pad is not hot in the engine; the Compressor lifts less; the rig offset moved
+
+Patch from bank 1/12 into slot A, Patch mode, each chord note alone by DEVNOTE (velocity 127), held 4 s, 14 s
+per take so every tail dies (each take opened at -93 dB); engine rendered with RENDERWAV. Levels are the held
+window 0.5-3.5 s after the onset, L+R, Fireface 5/6.
+- PER NOTE, against note 60 (held): G2 48 +5.1, 55 +1.1, 64 -0.3; engine +5.7, +2.3, +1.0 - within 1.3 dB. The
+  10-10 "G2 48 -5.2" was the contaminated column. Tails (4.5-8 s) differ more: 48 +4.2/+8.1, 55 +1.7/-0.4,
+  64 -2.2/+1.0 (G2/engine) - the delays and reverb, not followed further.
+- THE RIG OFFSET IS NOT 5.5 dB TODAY: a bare OscB into a 2-Out (new patch, slot B, one voice) reads -0.5 dB in
+  the engine against the G2, and every tap through 04 shows the same -0.5. So something in the analogue path
+  moved about 6 dB since 10-09 (the G2's master volume or the Fireface input gain - not checked). CALIBRATE
+  EACH SESSION with that patch before reading an absolute level.
+- With that, 04 at note 60: engine 1.5 dB under the G2 with the Compressor on, 0.8 dB over with it off. The
+  Compressor (Thr 27, Ratio 20, Att 104, Rel 0, RefLvl 30) lifts the held pad 2.7 dB on the G2 and 0.5 dB in
+  the engine - the 10-10 meters (engine compressing 1-7, G2 0) say the same. That is the open question.
+- Taps on the G2 (one oscillator, the mixer, the filter, each into the Amp Env): engine minus G2 -0.5, -0.4,
+  -1.6 dB - the voice matches. A tap BEFORE the envelope is meaningless in a poly patch: every one of the 13
+  voices runs its oscillators keyed or not, and the G2 sums them all (about +11 dB).
+
+## 2026-10-11 (later) - the Compressor matches the G2; 04's difference is its knee
+
+The Compressor alone at 04 Chris' Pad's settings (Thr 27, Ratio 20, Att 104, Rel 0, RefLvl 30): OscB sine >
+LevAmp > Compressor (both inputs) > 2-Out, one voice, slot B; LevAmp 16..127, each level with the Compressor on
+and bypassed, the steady part (1.5-2.8 s) on the G2 (Fireface 5/6) and in the engine. Gain (on minus bypassed):
+
+| LevAmp | G2 input (bypassed) | G2 gain | engine gain |
+|---|---|---|---|
+| 16 | -46.7 | +2.31 | +2.31 |
+| 32 | -40.8 | +2.31 | +2.31 |
+| 48 | -36.0 | +2.31 | +2.31 |
+| 64 | -31.1 | +0.23 | +0.23 |
+| 80 | -28.1 | -1.69 | -1.69 |
+| 96 | -25.1 | -4.29 | -4.29 |
+| 112 | -22.0 | -6.28 | -6.28 |
+| 127 | -19.1 | -8.80 | -8.81 |
+
+Equal to 0.01 dB at every level; the engine's input sits 0.5 dB under the G2's throughout - today's rig
+offset. Below its knee it LIFTS by a fixed +2.31 dB at these settings (the leveller's make-up, now seen on
+the G2 at -47 dB, so the make-up does apply below threshold), and the knee lies between -36 and -31 dB at the
+capture. 04's pad sits on that knee, so a dB or so of input difference becomes the 2 dB of lift seen earlier -
+and the pad's own level moves 1-2 dB from run to run (three detuned oscillators and their LFOs: two takes of
+the same configuration differed by 2.1 dB). Not a defect. Compressor promoted to Confirmed in
+engine-module-status.md; its attack/release timing and SideChain are still uncompared.
+
