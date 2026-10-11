@@ -13543,6 +13543,22 @@ static void publish_module_led(uint32_t voice, const tEngineNode * spec, bool li
     publish_module_lamps(voice, spec, (lit == true) ? 1u : 0u);
 }
 
+// notes §220 - a sequencer's step light, in the meter word the G2's volume stream fills
+static void publish_seq_step(uint32_t voice, const tEngineNode * spec, int32_t step) {
+    SE_LOCAL;
+
+    if ((spec->postMix == false) && (voice != gMeterVoice)) {
+        return;
+    }
+    uint32_t shown  = ((step < 0) || (step > (int32_t)METER_VALUE_MASK)) ? METER_VALUE_MASK : (uint32_t)step;
+    uint32_t packed = METER_WRITTEN | shown;
+
+    if (atomic_exchange_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
+                                 packed, memory_order_relaxed) != packed) {
+        atomic_store_explicit(&gMetersDirty, true, memory_order_relaxed);
+    }
+}
+
 static double drum_clamp(double x) {
     return fmin(1.0, fmax(-1.0, x));
 }
@@ -14518,6 +14534,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
         case eNodeSeqCtr:
         {
             seq_ctr_step(voice, n, spec, a, signal_in(spec, value, 1), signal_in(spec, value, 2), value[n]);
+            publish_seq_step(voice, spec, (int32_t)gLadder[voice][n][0] / 2);   // §70.10 - 32 and up rests
             break;
         }
         case eNodeMux8to1X:
@@ -14789,6 +14806,7 @@ static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * par
                 value[n][0] = out[0] / DSP_WORD_PER_ENGINE;
                 value[n][1] = out[1] / DSP_WORD_PER_ENGINE;
                 value[n][2] = out[2] / DSP_WORD_PER_ENGINE;
+                publish_seq_step(voice, spec, st->y[1]);   // §58 - Y1 is the step
             }
             break;
         }

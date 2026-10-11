@@ -3905,3 +3905,13 @@ The cost: a note sent from after the mix reaches the voices SPLIT_RING samples l
 10 s) once the NaN test hook (§218) was made to read its flag before exchanging it - an atomic exchange on every
 node of every voice had cost 8%.
 
+
+## 220. A sequencer's step light comes from the engine (`publish_seq_step()`) (2026-10-11, CT)
+
+The step lights on SeqEvent, SeqVal, SeqNote, SeqLev and SeqCtr are drawn from the module's volume word (the step
+number, 0-15; anything else lights nothing), and only the G2's USB volume stream ever wrote it - so in the plug-in,
+and in the application with no G2 behind it, the lights stood still while the sequences played. The engine now
+writes that word through the meter path (`sound_engine_module_meter()`, leg 0), from the voice the meters follow
+(§191), as `publish_module_led()` does for lamps (§194). The 16-step stage's step is its Y1 (reference §58): one
+past Length while parked, so a parked sequencer shows no step, as on the G2. SeqCtr's is the pair index Ctrl picks
+halved; the rest pair (32 and up) shows none.
