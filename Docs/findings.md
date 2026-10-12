@@ -13004,3 +13004,36 @@ original is intact.
   with no Out, never ran (§224); and its NoteSends never reached slot B's NoteRcvs on This (§225). It now plays by
   itself, onsets a quarter note apart at its 144 BPM. BigPad still renders byte-identically to the pre-session code.
 
+
+## 2026-10-12 (later) - Plug-in editor costs audio on the Intel MacBook Pro: where the time may go (not yet measured)
+
+CT: BCHydro_DZLW broke up in Ableton Live 12 on the Intel Mac (i9-9980HK)
+with the G2 Alike editor open; fine once it was closed. Read from the code, not yet measured - measure first
+(G2_PLUGIN_FRAME_STATS=1, BCHydro_DZLW playing in Live, editor open), then change.
+- GPU choice: not to be changed (CT, 2026-10-12) - the editor stays on the default Metal device.
+- ENGINE REBUILD ON METER FRAMES: the meter timer (g2View.m notes §15) redraws the whole canvas at 20 Hz while the
+  engine runs, and g2_draw_frame() (g2Draw.c ~350) calls sound_engine_update_from_patch() each time under the
+  database read lock - four slots x three snapshot builds. Morphs, variations and rate changes already have the
+  plug-in's rebuild_worker (g2Plugin.c notes §14), so a meter-only frame need not rebuild: rebuild on an input /
+  menu / file-load serial change, plus once a second as a safety net. Overlaps the todo CPU item (per-slot edit
+  counter), which is the full fix.
+- METER GATE: the plug-in consumes sound_engine_meters_dirty() but redraws regardless (g2View.m notes §17); the
+  application obeys it (graphics.c notes §43). Obeying it saves frames on a quiet patch, little on a busy one.
+- RENDER CACHING (bigger): the Metal backend already draws into its own target texture and blits it to the
+  drawable. A meter-only frame could keep that texture and redraw only the meter/LED rectangles - a few dozen
+  submits instead of ~468 a frame (2026-09-11 count). Needs the meter/LED drawing separable from the full frame
+  and each meter to paint its whole rectangle opaquely.
+- METER BALLISTICS (CT, 2026-10-12 - the meters flicker at times): smooth on the display side - instant attack,
+  slower release, a short peak hold, and a longer linger on a high or clipping value so it is not missed. One
+  place takes both sources: volume_source() in moduleGraphics.c (notes §29) returns the engine's meter or the
+  G2's module->volume.value, so the G2's own indications get it too. When the canvas only redraws on a dirty
+  flag, a falling meter still needs frames until it has settled - but the fall can be stepped on a timer (drop a
+  segment every N ms) rather than eased per frame, so it asks for a redraw only when a segment goes out. That is
+  the slow fall itself, and it costs a handful of frames per release, not 20 a second.
+  Interpolation: both meter styles are quantised (render_volume_meter(): a bit per LED, or a 0-11 level bar), so
+  stepping a segment at a time already interpolates between sparse readings (the G2's especially) at the only
+  resolution shown. Anything finer means a continuous bar redrawn every frame of the release - the cost being
+  avoided. The level bar's value also carries hold bits the G2 sends (bits 4-5, commented out there) - read
+  them before inventing our own hold for the G2's meters. LEDs: hold a lit LED for a minimum
+  time so a brief flash is seen. May also cut redraws if the dirty flag follows the displayed (held/smoothed)
+  segments rather than every block's raw change.
