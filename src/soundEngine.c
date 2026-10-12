@@ -7329,11 +7329,16 @@ static bool node_is_generator(tNodeKind kind) {
            || (kind == eNodeLfo);        // notes §96 - MicroWaves is LFOs at audio rate
 }
 
+// notes §222 - a 2-In or 4-In from Bus brings in what the other slots put there, as a jack brings in the outside
+static bool node_makes_signal(const tEngineNode * node) {
+    return (node_is_generator(node->kind) == true) || (node->busIn != 0u);
+}
+
 static bool chain_has_source(const tSoundEngineParams * params) {
     uint32_t i = 0;
 
     for (i = 0; i < params->nodeCount; i++) {
-        if (node_is_generator(params->node[i].kind) == true) {
+        if (node_makes_signal(&params->node[i]) == true) {
             return true;
         }
     }
@@ -7347,7 +7352,7 @@ static bool chain_is_bypassed(const tSoundEngineParams * params) {
     uint32_t i = 0;
 
     for (i = 0; i < params->nodeCount; i++) {
-        if ((node_is_generator(params->node[i].kind) == true) && (params->node[i].active == true)) {
+        if ((node_makes_signal(&params->node[i]) == true) && (params->node[i].active == true)) {
             return false;
         }
     }

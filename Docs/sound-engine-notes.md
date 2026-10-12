@@ -3953,6 +3953,9 @@ slot (a 2-In from Bus heard only its own slot's 2-Outs), so Laika was silent.
   block (IN_BLOCK_FRAMES) at a time, so a bus is whole when it is read. No latency is added.
 - OPEN: whether the instrument hands the bus over with a delay (its 2-In reads the bus from somewhere other than
   where the 2-Out writes it); a 4-Out sent to Bus is not done; slots on different graph rates are not handled.
+- A bus input counts as a source (`node_makes_signal()`), as the jacks do: slot C's chain starts at a 2-In from Bus
+  with nothing of its own feeding it, and was judged silent and not played (CT 2026-10-12: Laika silent loaded from
+  the G2 or the file - an earlier offline batch played it after other performances, not looked into). Now -15 dBFS on
+  a chord, read from the G2 or from the factory file, connected or not.
 - Also: a 4-In from Bus had its Bus 1/2 count wiped by the parameter pass (`select` set back to 0) - it keeps it now.
-Checked offline: Laika plays (-19 dBFS on a chord, from silence); BigPad renders byte-identically to the code before
-this change.
+BigPad renders byte-identically to the code before this change.
