@@ -1187,6 +1187,7 @@ typedef struct {
     uint32_t        levConvOut;     // §31 - the range written, posStrMap {Pos, PosInv, ... BipInv}
     uint32_t        select;         // §33 - which input a Sw2-1/Sw8-1 passes; §35 MonoKey's priority; §37 the first jack
     uint32_t        audioInLegs;    // §37 - 2 for a 2-In, 4 for a 4-In
+    bool            outFour;        // notes §223 - a 4-Out: inputs 3 and 4 go to the pair after outDest
     uint8_t         busIn;          // notes §222 - 2-In/4-In from Bus: bit 0 Bus 1/2, bit 1 Bus 3/4, from the other slots
     uint32_t        gateType[2];    // §38.2 - one per gate
     uint32_t        divider;        // §38.4 - 1 to 128
@@ -5172,9 +5173,17 @@ static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool st
             return count;
         }
         case eNodeLevMult:
+        case eNodeOut:
+        {
+            if (moduleType == moduleType4toOut) {
+                *connectors = mixIn;   // notes §223 - all four
+                return 4;
+            }
+            *connectors = twoIn;
+            return 2;
+        }
         case eNodeModAmt:    // §29 - In, then the Mod input the Depth dial scales
         case eNodePulse:
-        case eNodeOut:
         {
             *connectors = twoIn;
             return 2;
@@ -7297,6 +7306,12 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->gain    = (param_value(module, variation, OUT_PARAM_PAD) != 0.0) ? 2.0 : 1.0;
             // notes §95
             node->outDest = (module->type == moduleType2toOut) ? out_pair((uint32_t)param_value(module, variation, OUT_PARAM_DESTINATION)) : 0U;
+
+            // notes §223 - a 4-Out's Out is Out 1/2 and 3/4, its Bus is Bus 1/2 and 3/4 (outTo4OutStrMap: Out, Fx, Bus)
+            if (module->type == moduleType4toOut) {
+                node->outFour = true;
+                node->outDest = (param_value(module, variation, OUT_PARAM_DESTINATION) == 2.0) ? BUS_PAIR_FIRST : 0u;
+            }
             break;
         }
         default:
@@ -7391,7 +7406,7 @@ static bool out_module_is_audible(tModule * module) {
     destination = module->param[gPatchDescr[module->key.slot].activeVariation][OUT_PARAM_DESTINATION].value;
 
     if (module->type == moduleType4toOut) {
-        return destination == 0;              // "Out"; "Fx" and "Bus" are internal
+        return (destination == 0) || (destination == 2);   // "Out", or "Bus" for the other slots (notes §223); "Fx" is internal
     }
     // "Out 1/2", "Out 3/4", one of the engine's own (§217), or a Bus the other slots hear (notes §222)
     return (destination <= 1) || (destination >= OUT_TO_ENGINE_FIRST)
@@ -7471,6 +7486,11 @@ static void plan_voice_sum(tSoundEngineParams * params) {
         if ((tap >= 0) && (params->node[tap].postMix == false)) {
             voice_sum_add(params, (uint32_t)tap, 0u);   // tap_pair() reads legs 0 and 1
             voice_sum_add(params, (uint32_t)tap, 1u);
+
+            if (params->node[tap].outFour == true) {
+                voice_sum_add(params, (uint32_t)tap, 2u);   // notes §223
+                voice_sum_add(params, (uint32_t)tap, 3u);
+            }
         }
     }
 }
@@ -15316,6 +15336,11 @@ static void eval_node(SE_ARG, uint32_t voice, uint32_t n, const tSoundEnginePara
             if (spec->active == true) {
                 value[n][0] = a * gain;
                 value[n][1] = signal_in(spec, value, 1) * gain;
+
+                if (spec->outFour == true) {
+                    value[n][2] = signal_in(spec, value, 2) * gain;   // notes §223
+                    value[n][3] = signal_in(spec, value, 3) * gain;
+                }
             }
             break;
         }
@@ -15854,12 +15879,14 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     }
 
     // notes §217 - the pairs to run the output stage for: the G2's two, and the engine's own up to the last in use
-    uint32_t pairs             = 2u;
+    uint32_t pairs = 2u;
 
     for (int32_t t = -1; (p->tap >= 0) && (t < (int32_t)p->extraTapCount); t++) {
-        uint32_t d = p->node[(t < 0) ? p->tap : p->extraTap[t]].outDest;
+        uint32_t d    = p->node[(t < 0) ? p->tap : p->extraTap[t]].outDest;
 
-        pairs = ((d < BUS_PAIR_FIRST) && ((d + 1u) > pairs)) ? (d + 1u) : pairs;   // notes §222 - a Bus is not played
+        uint32_t last = d + (p->node[(t < 0) ? p->tap : p->extraTap[t]].outFour ? 1u : 0u); // notes §223
+
+        pairs = ((last < BUS_PAIR_FIRST) && ((last + 1u) > pairs)) ? (last + 1u) : pairs;   // notes §222 - a Bus is not played
     }
 
     if (pairs > gOutPairsLive) {
@@ -15873,7 +15900,7 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     }
     gOutPairsLive = pairs;
 
-    double   bus[BUS_PAIRS][2] = {{0.0}};   // notes §222 - raw, before the output stage
+    double bus[BUS_PAIRS][2] = {{0.0}};     // notes §222 - raw, before the output stage
 
     // Tapping a module means listening to its main output; for an envelope used as an amp that is its shaped
     // audio rather than the envelope signal. See tap_pair(). notes §184 - every Out module after the first too.
@@ -15884,12 +15911,19 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
 
         tap_pair(p, node, value, pair);
 
-        if (d >= BUS_PAIR_FIRST) {
-            bus[d - BUS_PAIR_FIRST][0] += pair[0];
-            bus[d - BUS_PAIR_FIRST][1] += pair[1];
-        } else {
-            sample[d][0] += pair[0];
-            sample[d][1] += pair[1];
+        // notes §223 - a 4-Out's inputs 3 and 4 go to the pair after
+        for (uint32_t half = 0; half < (p->node[node].outFour ? 2u : 1u); half++) {
+            uint32_t q = d + half;
+            double   l = (half == 0u) ? pair[0] : value[node][2];
+            double   r = (half == 0u) ? pair[1] : value[node][3];
+
+            if (q >= BUS_PAIR_FIRST) {
+                bus[q - BUS_PAIR_FIRST][0] += l;
+                bus[q - BUS_PAIR_FIRST][1] += r;
+            } else {
+                sample[q][0] += l;
+                sample[q][1] += r;
+            }
         }
     }
 
@@ -16225,6 +16259,11 @@ static bool split_plan(const tSoundEngineParams * p, tSplit * sp) {
         if (  (tap >= 0) && (p->node[tap].postMix == false)
            && ((split_add_pair(sp, tap, 0u) == false) || (split_add_pair(sp, tap, 1u) == false))) {
             return false;
+        }
+
+        if (  (tap >= 0) && (p->node[tap].postMix == false) && (p->node[tap].outFour == true)
+           && ((split_add_pair(sp, tap, 2u) == false) || (split_add_pair(sp, tap, 3u) == false))) {
+            return false;   // notes §223
         }
     }
 

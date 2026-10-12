@@ -354,3 +354,12 @@ CHECKED: BCHydro_DZLW's factory file, loaded and saved, now matches the G2's sto
 morph, cable and controller (the selected variation and the MIDI channels are the G2's state, not content).
 NOT DONE: the format also reorders FreqShift's parameters, inputs and outputs, and removes one module type
 (Unknown77) - todo.
+
+## 29. Where one slot of a performance ends (`parse_perf()`)
+
+A .prf2 holds four slots one after another, each opening with its patch description and closing with its patch
+notes. The reader used to move to the next slot on an EMPTY notes section, which is what the editor's own writer
+put there - but the G2 writes each slot's real notes, so a slot with notes kept the reader on it: BeatBox (factory,
+slot B has notes) loaded C's modules into B, D's into C, and left D (its effects) empty (CT 2026-10-12: the factory
+file failed where the same performance from the G2 worked). It now moves on at each slot's description, and the
+writer saves each slot's notes (it wrote them empty, so a performance saved by the editor lost them).

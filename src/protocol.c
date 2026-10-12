@@ -1645,6 +1645,7 @@ done:
 }
 
 int parse_perf(uint8_t * buff, int length) {
+    bool     slotOpen    = false;
     uint32_t bitOffset   = 0;
     uint32_t currentSlot = 0;
     uint8_t  headerType  = 0;
@@ -1738,10 +1739,17 @@ int parse_perf(uint8_t * buff, int length) {
         }
         subOffset = bitOffset;
 
-        if ((type == SUB_RESPONSE_PATCH_NOTES) && (count == 0)) {
-            currentSlot++;
-            bitOffset += SIGNED_BYTE_TO_BIT(count);
-            continue;
+        // notes §29 - every slot opens with its description; the next one starts the next slot
+        if (type == SUB_RESPONSE_PATCH_DESCRIPTION) {
+            if (slotOpen == true) {
+                currentSlot++;
+            }
+            slotOpen = true;
+
+            if (currentSlot >= MAX_SLOTS) {
+                LOG_ERROR("parse_perf: more than %u slots, stopping\n", (unsigned)MAX_SLOTS);
+                return EXIT_FAILURE;
+            }
         }
 
         switch (type) {

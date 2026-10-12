@@ -385,7 +385,7 @@ uint8_t * write_perf_to_memory(size_t * sizeOut, bool engineOnly) {
         write_param_names(slot, locationFx, buff, &bitPos);
         write_module_names(slot, locationVa, buff, &bitPos);
         write_module_names(slot, locationFx, buff, &bitPos);
-        write_slot_separator(buff, &bitPos); // 0x6f — same as PATCH_NOTES type, not written in perf
+        write_patch_notes(slot, buff, &bitPos);   // protocol.c notes §29 - the slot's notes, as the G2 writes them
     }
 
     protocol_include_engine_only(false);
