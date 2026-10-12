@@ -329,3 +329,28 @@ and "Even" in VintageOrgan3, "Detune", "rate", "repeats", "Echo" in DreamPluck D
 It now writes all eight - a stored name, else the default - as the G2 does, in files and in the patch pushed to
 the G2. CHECKED: loading and saving 47 patches (44 the G2 wrote, 3 factory ones with renamed groups) reproduces
 the section exactly in 29 and in all but the last byte's unused padding bits, which the G2 leaves set, in 18.
+
+## 28. Patches saved before format 22 (`protocol_upgrade_patch()`)
+
+The G2 converts a patch saved in an older format when it loads it, and a few parameters changed their laws or
+places at format 22. The editor read such files (format 19 and earlier - the factory BCHydro_DZLW, Laika, DualBob,
+KlangKit, Lounge, MorphingDrumDemo, RedDevil, RedMonday; Evolutions and jingle bellscape are 18) as they stood, so
+they played wrong in the engine, and the push sent the G2 the unconverted values (CT 2026-10-12: BCHydro_DZLW's
+sequenced voices sliding in pitch, in the engine and on the G2, where the G2's own stored copy was right).
+Every file loader now calls this with the file's version byte after parsing; data from the G2 and the editor's own
+saves are current and pass through. For format < 22:
+- Glide Time, when Shape is 1: the old law's position to the new law's, `kGlideTimeFrom19` (12 -> 0, 48 -> 26,
+  64 -> 38, 85 -> 54: BCHydro_DZLW's factory file against the G2's stored copy).
+- LfoA and LfoC Rate on the two random waves (Wave / wave mode 4 or 5), by Range: Sub 2x+1, Lo and Hi x+12, BPM
+  piecewise, Clk x+8 below 48 else x+12, each saturating at 127.
+- FltHP Freq: x-5 below 101, x-3 to 110, unchanged above.
+- The morph groups at [4] and [5] trade places: the morph module's dials (params 4, 5), sources (12, 13), every
+  parameter's morph amounts, and knobs and controllers aimed at those morph dials; the last group's source (15)
+  back to 0.
+- Morph amounts dropped on parameters that lost them (CtrlRcv, CtrlSend, NoteRcv, NoteSend, NoteZone and a few
+  others); MIDI controllers dropped on CtrlRcv's and CtrlSend's.
+- A module saved with fewer parameters than its type has (Mix4-1S without Curve) takes the rest at their defaults.
+CHECKED: BCHydro_DZLW's factory file, loaded and saved, now matches the G2's stored copy in every parameter, mode,
+morph, cable and controller (the selected variation and the MIDI channels are the G2's state, not content).
+NOT DONE: the format also reorders FreqShift's parameters, inputs and outputs, and removes one module type
+(Unknown77) - todo.

@@ -67,7 +67,7 @@ bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot
     if (readCrc != calcCrc) {
         return false;
     }
-    byteOffset++;                   // version, not needed here
+    uint8_t version = buff[byteOffset++];   // protocol.c notes §28
     type = buff[byteOffset++];
 
     if (type != 0) {                // 0 is a patch; a performance (1) has four slots and no meaning here
@@ -78,6 +78,7 @@ bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot
     database_write_unlock();
     // notes §2
     parse_patch(slot, (uint8_t *)(buff + byteOffset), (uint32_t)((fileSize - byteOffset) - 2));
+    protocol_upgrade_patch(slot, version);
     engine_only_header_apply(slot, buff, (size_t)fileSize);   // patchWrite.c notes §2
     return true;
 }
@@ -201,6 +202,7 @@ tG2FileKind g2_plugin_open_file(const char * filepath, uint32_t slot) {
         database_write_unlock();
         parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
         database_write_lock();
+        protocol_upgrade_patch(slot, buff[byteOffset - 2]);        // protocol.c notes §28
         engine_only_header_apply(slot, buff, (size_t)fileSize);   // patchWrite.c notes §2
         database_write_unlock();
         set_patch_name_from_filename(slot, filepath);

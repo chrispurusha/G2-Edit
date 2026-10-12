@@ -66,6 +66,11 @@ bool perf_image_parse(const uint8_t * buff, int64_t size) {
     }
     database_write_lock();                             // parse_perf() does not take it
     parse_perf((uint8_t *)(buff + body), (int)((size - body) - 2));
+
+    for (uint32_t s = 0; s < MAX_SLOTS; s++) {
+        protocol_upgrade_patch(s, buff[body - 2]);     // protocol.c notes §28 - a .prf2 opened from disk
+    }
+
     perf_engine_only_header_apply(buff, (size_t)body); // patchWrite.c notes §3
     database_write_unlock();
     return true;

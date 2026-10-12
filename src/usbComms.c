@@ -4020,6 +4020,11 @@ static int load_perf_from_payload(uint8_t * buff, int64_t byteOffset, int64_t pa
     forget_bank_origin(BANK_ORIGIN_PERF);
     gGlobalSettings.perfMode        = 1;
     parse_perf(buff + byteOffset, (int)payloadLen);
+
+    for (uint32_t s = 0; s < MAX_SLOTS; s++) {
+        protocol_upgrade_patch(s, buff[byteOffset - 2]);     // protocol.c notes §28 - before the push
+    }
+
     perf_engine_only_header_apply(buff, (size_t)byteOffset); // patchWrite.c notes §3
     free(buff);
     sound_engine_start_performance();                        // soundEngine notes §216
@@ -4041,6 +4046,7 @@ static int load_patch_from_payload(uint8_t * buff, int64_t byteOffset, int64_t p
     forget_bank_origin(slot);
     clear_slot_data_usb(slot);
     parse_patch(slot, buff + byteOffset, (uint32_t)payloadLen);
+    protocol_upgrade_patch(slot, buff[byteOffset - 2]);         // protocol.c notes §28 - before the push
     engine_only_header_apply(slot, buff, (size_t)byteOffset);   // patchWrite.c notes §2
     set_patch_name_from_filename(slot, filePath);
     free(buff);

@@ -55,6 +55,7 @@ void store_note2(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t coun
 void store_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t count);
 int parse_synth_settings(uint8_t * buff, int length);
 int parse_performance_settings(uint8_t * buff, int length);
+void protocol_upgrade_patch(uint32_t slot, uint32_t fileVersion);
 int parse_midi_cc(uint8_t * buff, int length, uint32_t slot);
 
 // Marks the reply to send_get_midi_cc() so its contents are not mistaken for a controller arriving.

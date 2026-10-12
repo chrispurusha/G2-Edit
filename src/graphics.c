@@ -304,6 +304,7 @@ void read_file_into_memory_and_process(const char * filepath) {
         if (type == 0) {
             clear_slot_data(slot);
             parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+            protocol_upgrade_patch(slot, version);                    // protocol.c notes §28
             engine_only_header_apply(slot, buff, (size_t)fileSize);   // patchWrite.c notes §2
             set_patch_name_from_filename(slot, filepath);
         } else if (type == 1) {
@@ -324,6 +325,11 @@ void read_file_into_memory_and_process(const char * filepath) {
             }
             gGlobalSettings.perfMode = 1;
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
+
+            for (uint32_t s = 0; s < MAX_SLOTS; s++) {
+                protocol_upgrade_patch(s, version);                // protocol.c notes §28
+            }
+
             perf_engine_only_header_apply(buff, (size_t)fileSize); // patchWrite.c notes §3
             sound_engine_start_performance();                      // soundEngine notes §216
         }

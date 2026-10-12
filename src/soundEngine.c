@@ -246,14 +246,24 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 
 // notes §5
 #define OUT_PARAM_DESTINATION       (0)
-#define FXIN_PARAM_SOURCE           (0) // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
-#define OUT_PARAM_ACTIVE            (1) // 2toOut's Bypass, non-zero is on
-#define OUT_PARAM_PAD               (2) // padStrMap: 0 dB or +6 dB
+#define FXIN_PARAM_SOURCE           (0)                                // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
+#define OUT_PARAM_ACTIVE            (1)                                // 2toOut's Bypass, non-zero is on
+#define OUT_PARAM_PAD               (2)                                // padStrMap: 0 dB or +6 dB
 
-// notes §217 - the output pair a 2-Out's Out to names: the G2's two, then the engine's own; FX and Bus are not outputs
+#define OUT_TO_BUS_FIRST            (4u)                               // outToStrMap: "Bus 1/2", then "Bus 3/4"
+#define BUS_PAIRS                   (2u)                               // notes §222
+#define BUS_PAIR_FIRST              ((uint32_t)SOUND_ENGINE_OUT_PAIRS) // the pairs past the device's, never played
+#define BUS_CHANNELS                (2u * BUS_PAIRS)
+
+// notes §217 - the output pair a 2-Out's Out to names: the G2's two, then the engine's own; notes §222 - a Bus is one
+// of two pairs past those, shared with the other slots; FX is not an output
 static inline uint32_t out_pair(uint32_t destination) {
     if (destination <= 1u) {
         return destination;
+    }
+
+    if ((destination >= OUT_TO_BUS_FIRST) && (destination < (OUT_TO_BUS_FIRST + BUS_PAIRS))) {
+        return BUS_PAIR_FIRST + (destination - OUT_TO_BUS_FIRST);
     }
     return ((destination >= OUT_TO_ENGINE_FIRST) && (destination < (OUT_TO_ENGINE_FIRST + OUT_TO_ENGINE_PAIRS))) ? (2u + destination - OUT_TO_ENGINE_FIRST) : 0u;
 }
@@ -1177,6 +1187,7 @@ typedef struct {
     uint32_t        levConvOut;     // §31 - the range written, posStrMap {Pos, PosInv, ... BipInv}
     uint32_t        select;         // §33 - which input a Sw2-1/Sw8-1 passes; §35 MonoKey's priority; §37 the first jack
     uint32_t        audioInLegs;    // §37 - 2 for a 2-In, 4 for a 4-In
+    uint8_t         busIn;          // notes §222 - 2-In/4-In from Bus: bit 0 Bus 1/2, bit 1 Bus 3/4, from the other slots
     uint32_t        gateType[2];    // §38.2 - one per gate
     uint32_t        divider;        // §38.4 - 1 to 128
     bool            logicToggled;   // §38.4 - Toggled rather than Gated; §38.3 RS rather than D
@@ -1532,6 +1543,8 @@ static _Atomic bool         gActiveBank[SOUND_ENGINE_MAX_ENGINES];
 #define gActive        (gActiveBank[SE])
 static _Atomic bool         gHasChainBank[SOUND_ENGINE_MAX_ENGINES];   // notes §204 - a patch with an output to render
 #define gHasChain      (gHasChainBank[SE])
+static _Atomic bool         gReadsBusBank[SOUND_ENGINE_MAX_ENGINES];   // notes §222 - a 2-In or 4-In from Bus: render after the rest
+#define gReadsBus      (gReadsBusBank[SE])
 static _Atomic bool         gVoice0FreeBank[SOUND_ENGINE_MAX_ENGINES]; // voice 0 running with no key (drone), for the count
 #define gVoice0Free    (gVoice0FreeBank[SE])
 
@@ -7048,13 +7061,18 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->active = (param_value(module, variation, FXIN_PARAM_ACTIVE) != 0.0);
             node->gain   = padGain[(pad < 4) ? pad : 1];
 
-            // §37 - a 2-In's In 3/4 starts at the third jack; a 4-In takes all four
+            // §37 - a 2-In's In 3/4 starts at the third jack; a 4-In takes all four. A 4-In from Bus keeps the
+            // select its inputs were counted into (§69.12)
             if (module->type == moduleType4toIn) {
-                node->select      = 0u;
+                node->select      = (node->kind == eNodeIn4Bus) ? node->select : 0u;
                 node->audioInLegs = 4u;
+                node->busIn       = (node->kind == eNodeIn4Bus) ? 3u : 0u;
             } else {
-                node->select      = (param_value(module, variation, FXIN_PARAM_SOURCE) == 1.0) ? 2u : 0u;
+                double source = param_value(module, variation, FXIN_PARAM_SOURCE);
+
+                node->select      = (source == 1.0) ? 2u : 0u;
                 node->audioInLegs = 2u;
+                node->busIn       = ((module->type == moduleType2toIn) && (source >= 2.0)) ? ((source >= 3.0) ? 2u : 1u) : 0u;
             }
             break;
         }
@@ -7370,7 +7388,9 @@ static bool out_module_is_audible(tModule * module) {
     if (module->type == moduleType4toOut) {
         return destination == 0;              // "Out"; "Fx" and "Bus" are internal
     }
-    return (destination <= 1) || (destination >= OUT_TO_ENGINE_FIRST);   // "Out 1/2", "Out 3/4", or one of the engine's own (§217)
+    // "Out 1/2", "Out 3/4", one of the engine's own (§217), or a Bus the other slots hear (notes §222)
+    return (destination <= 1) || (destination >= OUT_TO_ENGINE_FIRST)
+           || ((destination >= OUT_TO_BUS_FIRST) && (destination < (OUT_TO_BUS_FIRST + BUS_PAIRS)));
 }
 
 static tModule * find_output_module(void) {
@@ -8241,6 +8261,15 @@ static void update_from_patch_one(void) {
     atomic_fetch_add(&gParamsSeq, 1);    // even again, snapshot is whole
     pthread_mutex_unlock(&gParamsWriteMutex);
     atomic_store(&gHasChain, (snapshot.tap >= 0) && (snapshot.nodeCount > 0u));
+    {
+        bool readsBus = false;   // notes §222
+
+        for (uint32_t k = 0; k < snapshot.nodeCount; k++) {
+            readsBus = readsBus || (snapshot.node[k].busIn != 0u);
+        }
+
+        atomic_store(&gReadsBus, readsBus);
+    }
 
     // notes §204 - a slot's voice thread exists only once it has something to play, and starts here,
     // never on the audio thread
@@ -13830,6 +13859,24 @@ static uint32_t gInPosVoiceBank[SOUND_ENGINE_MAX_ENGINES];
 static uint32_t gInPosFxBank[SOUND_ENGINE_MAX_ENGINES];
 #define gInPosFx            (gInPosFxBank[SE])
 
+// notes §222 - what each slot put on Bus 1/2 and Bus 3/4 this block, at the graph rate, for the other slots
+static float    gBusOutBank[SOUND_ENGINE_MAX_ENGINES][BUS_CHANNELS][IN_BLOCK_SAMPLES];
+static uint32_t gBusOutLenBank[SOUND_ENGINE_MAX_ENGINES];      // samples written this block; 0 when it wrote none
+
+// notes §222 - the other slots of this G2 on one bus channel, at this graph sample
+static double bus_from_other_slots(SE_ARG, uint32_t channel, uint32_t at) {
+    uint32_t first = (tEngineIdx / MAX_SLOTS) * MAX_SLOTS;
+    double   sum   = 0.0;
+
+    for (uint32_t e = first; e < (first + MAX_SLOTS); e++) {
+        if ((e != tEngineIdx) && (at < gBusOutLenBank[e])) {
+            sum += (double)gBusOutBank[e][channel][at];
+        }
+    }
+
+    return sum;
+}
+
 // notes §213 - one voice's play position through its zone, restarted by each note; past the zone's end it
 // goes on round the loop, the sample after the last being the loop's first
 static double sampler_read(const tNordZone * zone, double at, uint32_t channel) {
@@ -15217,6 +15264,14 @@ static void eval_node(SE_ARG, uint32_t voice, uint32_t n, const tSoundEnginePara
                 right += signal_in(spec, value, c + 1u);
             }
 
+            // notes §222 - a 2-In from Bus also hears what the other slots put on it
+            if (spec->busIn != 0u) {
+                uint32_t at = (spec->postMix == true) ? gInPosFx : gInPosVoice;
+                uint32_t ch = ((spec->busIn & 2u) != 0u) ? 2u : 0u;
+
+                left  += bus_from_other_slots(tEngineIdx, ch, at);
+                right += bus_from_other_slots(tEngineIdx, ch + 1u, at);
+            }
             value[n][0] = (spec->active == true) ? (left * gain) : 0.0;
             value[n][1] = (spec->active == true) ? (right * gain) : 0.0;
             break;
@@ -15231,6 +15286,11 @@ static void eval_node(SE_ARG, uint32_t voice, uint32_t n, const tSoundEnginePara
 
                 sum[leg]      += signal_in(spec, value, c);
                 sum[leg + 1u] += signal_in(spec, value, c + 1u);
+            }
+
+            // notes §222 - and both buses from the other slots
+            for (uint32_t k = 0; (spec->busIn != 0u) && (k < 4u); k++) {
+                sum[k] += bus_from_other_slots(tEngineIdx, k, (spec->postMix == true) ? gInPosFx : gInPosVoice);
             }
 
             for (uint32_t k = 0; k < 4u; k++) {
@@ -15789,12 +15849,12 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     }
 
     // notes §217 - the pairs to run the output stage for: the G2's two, and the engine's own up to the last in use
-    uint32_t pairs = 2u;
+    uint32_t pairs             = 2u;
 
     for (int32_t t = -1; (p->tap >= 0) && (t < (int32_t)p->extraTapCount); t++) {
         uint32_t d = p->node[(t < 0) ? p->tap : p->extraTap[t]].outDest;
 
-        pairs = (d + 1u > pairs) ? (d + 1u) : pairs;
+        pairs = ((d < BUS_PAIR_FIRST) && ((d + 1u) > pairs)) ? (d + 1u) : pairs;   // notes §222 - a Bus is not played
     }
 
     if (pairs > gOutPairsLive) {
@@ -15808,27 +15868,32 @@ static void stage_fx(const tSoundEngineParams * p, double value[][NODE_OUTPUTS])
     }
     gOutPairsLive = pairs;
 
-    if (p->tap >= 0) {
-        // Tapping a module means listening to its main output; for an envelope used as an amp
-        // that is its shaped audio rather than the envelope signal. See tap_pair().
-        {
-            double   first[2] = {0.0, 0.0};
-            uint32_t d        = p->node[p->tap].outDest;
+    double   bus[BUS_PAIRS][2] = {{0.0}};   // notes §222 - raw, before the output stage
 
-            tap_pair(p, p->tap, value, first);
-            sample[d][0] += first[0];
-            sample[d][1] += first[1];
+    // Tapping a module means listening to its main output; for an envelope used as an amp that is its shaped
+    // audio rather than the envelope signal. See tap_pair(). notes §184 - every Out module after the first too.
+    for (int32_t t = -1; (p->tap >= 0) && (t < (int32_t)p->extraTapCount); t++) {
+        int32_t  node    = (t < 0) ? p->tap : p->extraTap[t];
+        double   pair[2] = {0.0, 0.0};
+        uint32_t d       = p->node[node].outDest;
+
+        tap_pair(p, node, value, pair);
+
+        if (d >= BUS_PAIR_FIRST) {
+            bus[d - BUS_PAIR_FIRST][0] += pair[0];
+            bus[d - BUS_PAIR_FIRST][1] += pair[1];
+        } else {
+            sample[d][0] += pair[0];
+            sample[d][1] += pair[1];
+        }
+    }
+
+    if (gInPosFx < IN_BLOCK_SAMPLES) {
+        for (uint32_t c = 0; c < BUS_CHANNELS; c++) {
+            gBusOutBank[tEngineIdx][c][gInPosFx] = (float)bus[c >> 1][c & 1u];
         }
 
-        // notes §184
-        for (uint32_t t = 0; t < p->extraTapCount; t++) {
-            double   extra[2] = {0.0, 0.0};
-            uint32_t d        = p->node[p->extraTap[t]].outDest;
-
-            tap_pair(p, p->extraTap[t], value, extra);
-            sample[d][0] += extra[0];
-            sample[d][1] += extra[1];
-        }
+        gBusOutLenBank[tEngineIdx] = gInPosFx + 1u;
     }
     // notes §185
     {
@@ -16784,9 +16849,9 @@ static bool slot_renders(void) {
 // notes §204 - every slot holding a patch, summed. One alone renders straight into the caller's buffer.
 static void render_slots(float * out, uint32_t frameCount, uint32_t channelCount) {
     static _Thread_local float mix[RENDER_MIX_FLOATS];
-    uint32_t                   mask        = 0;
-    uint32_t                   count       = 0;
-    int32_t                    was         = sEngineSlot;
+    uint32_t                   mask  = 0;
+    uint32_t                   count = 0;
+    int32_t                    was   = sEngineSlot;
 
     if ((out == NULL) || (channelCount == 0)) {
         return;
@@ -16796,6 +16861,11 @@ static void render_slots(float * out, uint32_t frameCount, uint32_t channelCount
         count++;
     });
 
+    // notes §222 - no slot has written a bus yet this block
+    for (uint32_t e = ENGINE_DOC * MAX_SLOTS; e < ((ENGINE_DOC + 1u) * MAX_SLOTS); e++) {
+        gBusOutLenBank[e] = 0u;
+    }
+
     if (count <= 1u) {
         sEngineSlot = (count == 1u) ? __builtin_ctz(mask) : (int32_t)engine_current_slot();
         engine_render_slot(out, frameCount, channelCount);
@@ -16804,22 +16874,36 @@ static void render_slots(float * out, uint32_t frameCount, uint32_t channelCount
     }
     memset(out, 0, (size_t)frameCount * channelCount * sizeof(float));
 
-    uint32_t                   chunkFrames = RENDER_MIX_FLOATS / channelCount;
+    // notes §222 - one input block at most, so a slot's bus is whole when the slots after it read it
+    uint32_t chunkFrames = RENDER_MIX_FLOATS / channelCount;
+
+    chunkFrames = (chunkFrames > IN_BLOCK_FRAMES) ? IN_BLOCK_FRAMES : chunkFrames;
 
     for (uint32_t done = 0; done < frameCount; done += chunkFrames) {
         uint32_t frames = ((frameCount - done) < chunkFrames) ? (frameCount - done) : chunkFrames;
         float *  dest   = out + ((size_t)done * channelCount);
 
-        for (int32_t slot = 0; slot < MAX_SLOTS; slot++) {
-            if (((mask >> slot) & 1u) == 0u) {
-                continue;
-            }
-            sEngineSlot = slot;
-            sInputFrom  = done;
-            engine_render_slot(mix, frames, channelCount);
+        for (uint32_t e = ENGINE_DOC * MAX_SLOTS; e < ((ENGINE_DOC + 1u) * MAX_SLOTS); e++) {
+            gBusOutLenBank[e] = 0u;
+        }
 
-            for (uint32_t k = 0; k < (frames * channelCount); k++) {
-                dest[k] += mix[k];
+        // notes §222 - the slots that read a bus after the rest, so they hear this block's
+        for (uint32_t pass = 0; pass < 2u; pass++) {
+            for (int32_t slot = 0; slot < MAX_SLOTS; slot++) {
+                if (((mask >> slot) & 1u) == 0u) {
+                    continue;
+                }
+
+                if (atomic_load(&gReadsBusBank[(ENGINE_DOC * MAX_SLOTS) + (uint32_t)slot]) != (pass == 1u)) {
+                    continue;
+                }
+                sEngineSlot = slot;
+                sInputFrom  = done;
+                engine_render_slot(mix, frames, channelCount);
+
+                for (uint32_t k = 0; k < (frames * channelCount); k++) {
+                    dest[k] += mix[k];
+                }
             }
         }
     }

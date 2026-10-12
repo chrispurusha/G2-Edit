@@ -3935,3 +3935,24 @@ more than the modules:
 Result: 21.7 s to 13.2 s for the 20 s render, output bit-identical. Planned against the sum-everything fallback,
 BigPad, MiniEmulator, DrumSynthTest and RevLeadTest render bit-identically, 12-20% faster. What remains is the
 per-node dispatch itself (`eval_node`'s switch, about 20%) - the short-block restructure (todo).
+
+## 222. Bus 1/2 and Bus 3/4 between slots (`BUS_PAIR_FIRST`, `gBusOutBank`, `bus_from_other_slots()`) (2026-10-12)
+
+FX 1/2 and FX 3/4 are a slot's own sends; Bus 1/2 and Bus 3/4 are one pair of buses SHARED by all four slots. Laika
+(factory performance) depends on it: slots A and B send their 2-Outs to Bus 1/2 and play nothing themselves, and
+slot C's FX area reads Bus 1/2 through a 2-In into a delay and reverb, out on Out 1/2. The engine had the bus per
+slot (a 2-In from Bus heard only its own slot's 2-Outs), so Laika was silent.
+
+- A 2-Out sent to a Bus is now an Out like the others (`out_module_is_audible()`), on one of two pairs past the
+  device's (`out_pair()`), which are never played: `stage_fx()` writes their raw sum - before the output stage, in
+  the units a cable carries - to its engine's `gBusOutBank` at this graph sample.
+- A 2-In from Bus (`busIn` 1 or 2) and a 4-In from Bus (`busIn` 3) add what the OTHER slots of the same G2 wrote at
+  the same graph sample; their own slot's 2-Outs still reach them directly, as before (notes §79, §69.12), so
+  nothing is counted twice.
+- `render_slots()` renders the slots that read a bus after the rest (`gReadsBus`) and never more than one input
+  block (IN_BLOCK_FRAMES) at a time, so a bus is whole when it is read. No latency is added.
+- OPEN: whether the instrument hands the bus over with a delay (its 2-In reads the bus from somewhere other than
+  where the 2-Out writes it); a 4-Out sent to Bus is not done; slots on different graph rates are not handled.
+- Also: a 4-In from Bus had its Bus 1/2 count wiped by the parameter pass (`select` set back to 0) - it keeps it now.
+Checked offline: Laika plays (-19 dBFS on a chord, from silence); BigPad renders byte-identically to the code before
+this change.

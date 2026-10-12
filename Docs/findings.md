@@ -12988,3 +12988,14 @@ original is intact.
   including the renamed morph groups. The pushed performances arrive with their Keyboard, Hold, zones and Key
   Range (Jupiter: A 0-64, C 65-127, Key Range on) - the performance push fix and the morph-names push, checked.
 
+## 2026-10-12 - Laika: Bus 1/2 is shared between slots; old-format patches converted on load
+
+- Laika silent in the engine: A and B send to Bus 1/2, C's FX 2-In reads it. Bus 1/2 and 3/4 are shared by all
+  slots (FX 1/2 and 3/4 are per slot); the engine kept them per slot. Fixed (sound-engine-notes §222); Laika plays.
+- CT: factory BCHydro_DZLW (format 19) loaded from file makes its sequenced voices slide - in the engine and on the
+  G2 after the push - where the G2's own stored copy is right. The G2 converts an old patch on load; we did not.
+  The decisive difference was Glide Time (64 -> 38 etc.); the other format-22 changes are in protocol notes §28.
+  After the conversion the factory file matches the G2's copy in every value.
+- A +6 dB jump in every render this morning was the output-level preference (CT confirmed: raised to 0 dB): the code committed before
+  this session, built and run with today's preferences, renders BigPad byte-identically to the current code.
+

@@ -2195,3 +2195,215 @@ bool read_bank_upload_file(const char * filepath, uint8_t * outContent, uint32_t
 }
 #endif
 
+
+// notes §28 - a patch saved before format 22, brought up to date as the G2 brings it when it loads it
+
+#define FORMAT_CURRENT_PARAMS    (22u)   // the first format with today's parameter laws
+
+// notes §28 - Glide Time under Shape 1, the old law's position to the new law's
+static const uint8_t kGlideTimeFrom19[128] = {
+    0,   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  2,  3,  3,  4,  5,  6,  6,  7,  8,  9,
+    10, 10, 11, 12, 12, 13, 14, 15, 16, 16, 17, 18, 19, 19, 20, 21, 22, 22, 23, 24, 25, 25, 26, 27, 28, 28,
+    29, 30, 30, 31, 32, 33, 33, 34, 35, 36, 37, 37, 38, 39, 40, 40, 41, 42, 43, 43, 44, 45, 45, 46, 47, 48,
+    48, 49, 50, 51, 51, 52, 53, 54, 54, 55, 56, 57, 57, 58, 59, 60, 61, 61, 62, 63, 64, 65, 65, 66, 67, 68,
+    68, 69, 70, 71, 71, 72, 73, 73, 74, 75, 76, 76, 77, 78, 79, 80, 81, 81, 82, 83, 84, 85, 85, 87
+};
+
+// notes §28 - a random-wave LFO's Rate, by its Range: 0 Sub, 1 Lo, 2 Hi, 3 BPM, 4 Clk
+static uint32_t lfo_rate_from_19(uint32_t range, uint32_t x) {
+    switch (range) {
+        case 0:
+            return (x > 63u) ? 127u : ((2u * x) + 1u);
+
+        case 1:
+        case 2:
+            return (x > 115u) ? 127u : (x + 12u);
+
+        case 3:
+
+            if (x < 11u) {
+                return (2u * x) + 12u;
+            }
+
+            if (x < 27u) {
+                return (4u * x) - 8u;
+            }
+
+            if (x < 33u) {
+                return (2u * x) + 44u;
+            }
+            return (x > 51u) ? 127u : (x + 76u);
+
+        case 4:
+
+            if (x < 48u) {
+                return x + 8u;
+            }
+            return (x > 115u) ? 127u : (x + 12u);
+
+        default:
+            return x;
+    }
+}
+
+// notes §28 - FltHP's Freq
+static uint32_t flthp_freq_from_19(uint32_t x) {
+    if (x > 110u) {
+        return x;
+    }
+    uint32_t down = (x < 101u) ? 5u : 3u;
+
+    return (x > down) ? (x - down) : 0u;
+}
+
+// notes §28 - the parameters whose morphs (and, first three, MIDI controllers) the newer format dropped
+typedef struct {
+    tModuleType type;
+    uint8_t     param;
+} tDroppedParam;
+
+static const tDroppedParam kDroppedCtrl[]  = {
+    {moduleTypeCtrlRcv, 0}, {moduleTypeCtrlSend, 0}, {moduleTypeCtrlSend, 1}
+};
+
+static const tDroppedParam kDroppedMorph[] = {
+    {moduleTypeCtrlRcv,   0}, {moduleTypeCtrlRcv,   1}, {moduleTypeCtrlSend,  0}, {moduleTypeCtrlSend,    2},
+    {moduleTypeNoteRcv,   0}, {moduleTypeNoteRcv,   1}, {moduleTypeNoteSend,  2}, {moduleTypeNoteZone,    0},
+    {moduleTypeNoteZone,  1}, {moduleTypeNoteZone,  2}, {moduleTypeNoteZone,  3}, {moduleTypeNoteZone,    4},
+    {moduleTypeNoteZone,  5}, {(tModuleType)0x8e,   1}, {(tModuleType)0x9c,   0}, {(tModuleType)0x92,  0x22},
+    {(tModuleType)0x32,   2}, {(tModuleType)0xbc,   2}, {(tModuleType)0x2b,   1}, {(tModuleType)0x54,     4},
+    {(tModuleType)0x9d,   1}, {(tModuleType)0x98,   1}, {(tModuleType)0x98,   2}, {(tModuleType)0x98,     3},
+    {(tModuleType)0x98,   4}, {(tModuleType)0x98,   5}, {(tModuleType)0x98,   6}, {(tModuleType)0x98,     7},
+    {(tModuleType)0x98,   8}, {(tModuleType)0x98,   9}, {(tModuleType)0x98,  10}, {(tModuleType)0x98,    11},
+    {(tModuleType)0x98,  12}, {(tModuleType)0x98,  13}
+};
+
+static bool param_listed(const tDroppedParam * list, uint32_t count, tModuleType type, uint32_t param) {
+    for (uint32_t i = 0; i < count; i++) {
+        if ((list[i].type == type) && (list[i].param == param)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// notes §28 - the morph groups at [4] and [5] traded places: the morph module's dials (4, 5) and sources (12, 13)
+static uint32_t morph_param_from_19(uint32_t param) {
+    switch (param) {
+        case 4:  return 5;
+
+        case 5:  return 4;
+
+        case 12: return 13;
+
+        case 13: return 12;
+
+        default: return param;
+    }
+}
+
+static void upgrade_module_from_19(uint32_t slot, tModule * module) {
+    // notes §28 - a module that gained parameters (Mix4-1S its Curve) takes the new ones at their defaults
+    uint32_t full = module_param_count(module->type);
+
+    if ((module->actualParamCount < full) && (full <= MAX_NUM_PARAMETERS)) {
+        for (uint32_t v = 0; v < NUM_VARIATIONS_USB; v++) {
+            for (uint32_t k = module->actualParamCount; k < full; k++) {
+                set_param_value(module, v, k, module_param_default(module->type, k));
+            }
+        }
+
+        module->actualParamCount = full;
+    }
+
+    for (uint32_t v = 0; v < NUM_VARIATIONS_USB; v++) {
+        tParam * p = module->param[v];
+
+        if ((module->type == moduleTypeGlide) && (p[2].value == 1u)) {
+            set_param_value(module, v, 0, kGlideTimeFrom19[p[0].value & 0x7fu]);
+        } else if ((module->type == moduleTypeLfoA) && ((p[4].value == 4u) || (p[4].value == 5u))) {
+            set_param_value(module, v, 0, lfo_rate_from_19(p[7].value, p[0].value));
+        } else if (  (module->type == moduleTypeLfoC)
+                  && ((module->mode[0].value == 4u) || (module->mode[0].value == 5u))) {
+            set_param_value(module, v, 0, lfo_rate_from_19(p[3].value, p[0].value));
+        } else if (module->type == moduleTypeFltHP) {
+            set_param_value(module, v, 0, flthp_freq_from_19(p[0].value));
+        }
+
+        for (uint32_t k = 0; k < MAX_NUM_PARAMETERS; k++) {
+            uint8_t * range = p[k].morphRange;
+
+            if (param_listed(kDroppedMorph, sizeof(kDroppedMorph) / sizeof(kDroppedMorph[0]), module->type, k)) {
+                memset(range, 0, NUM_MORPHS);
+                continue;
+            }
+            uint8_t   fifth = range[4];   // the two groups at [4] and [5], as on the morph module
+
+            range[4] = range[5];
+            range[5] = fifth;
+        }
+    }
+
+    (void)slot;
+}
+
+void protocol_upgrade_patch(uint32_t slot, uint32_t fileVersion) {
+    if ((slot >= MAX_SLOTS) || (fileVersion >= FORMAT_CURRENT_PARAMS)) {
+        return;
+    }
+
+    for (uint32_t l = 0; l < (uint32_t)locationMorph; l++) {
+        for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+            tModule * module = get_module_slot(slot, l, i);
+
+            if ((module != NULL) && module->active) {
+                upgrade_module_from_19(slot, module);
+            }
+        }
+    }
+
+    // the morph module: the groups at [4] and [5] swapped, the last group's source back to its first setting
+    tModule * morph = get_module_slot(slot, (uint32_t)locationMorph, (uint32_t)patchModuleMorph);
+
+    if ((morph != NULL) && morph->active) {
+        for (uint32_t v = 0; v < NUM_VARIATIONS_USB; v++) {
+            uint8_t four   = morph->param[v][4].value;
+            uint8_t source = morph->param[v][12].value;
+
+            set_param_value(morph, v, 4, morph->param[v][5].value);
+            set_param_value(morph, v, 5, four);
+            set_param_value(morph, v, 12, morph->param[v][13].value);
+            set_param_value(morph, v, 13, source);
+            set_param_value(morph, v, 15, 0);
+        }
+    }
+
+    for (uint32_t k = 0; k < MAX_NUM_KNOBS; k++) {
+        tKnob * knob = &gKnobArray[slot].knob[k];
+
+        if (  knob->assigned && (knob->location == (uint32_t)locationMorph)
+           && (knob->moduleIndex == (uint32_t)patchModuleMorph) && (knob->isLed == 0u)) {
+            knob->paramIndex = morph_param_from_19(knob->paramIndex);
+        }
+    }
+
+    uint32_t kept = 0;
+
+    for (uint32_t c = 0; c < gControllerCount[slot]; c++) {
+        tController * ctrl   = &gControllerArray[slot].controller[c];
+        tModule *     target = get_module_slot(slot, ctrl->location, ctrl->moduleIndex);
+
+        if (  (target != NULL) && (ctrl->location < (uint32_t)locationMorph)
+           && param_listed(kDroppedCtrl, sizeof(kDroppedCtrl) / sizeof(kDroppedCtrl[0]), target->type, ctrl->paramIndex)) {
+            continue;
+        }
+
+        if ((ctrl->location == (uint32_t)locationMorph) && (ctrl->moduleIndex == (uint32_t)patchModuleMorph)) {
+            ctrl->paramIndex = morph_param_from_19(ctrl->paramIndex);
+        }
+        gControllerArray[slot].controller[kept++] = *ctrl;
+    }
+
+    gControllerCount[slot] = kept;
+}
