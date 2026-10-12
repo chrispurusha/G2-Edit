@@ -3253,6 +3253,22 @@ static void cc_to_slot(uint32_t slot, uint32_t controller, uint32_t value) {
 
 // §62.2 - a NoteSend's note into one slot's queue: its own for This, or the slot it names. Not the
 // keyboard's routing, which in a performance would play every slot with Keyboard on.
+// notes §225 - a note a NoteSend delivers, on the receiving slot's "This" row, as a NoteRcv on This hears it
+static void note_this_row(int32_t note, uint8_t velocity, bool on) {
+    SE_LOCAL;
+
+    if ((note < 0) || (note >= (int32_t)MIDI_KEY_COUNT)) {
+        return;
+    }
+
+    if (on == true) {
+        atomic_store(&gMidiNoteVel[MIDI_ROW_THIS][note], (uint8_t)((velocity == 0u) ? 1u : velocity));
+    } else {
+        atomic_store(&gMidiNoteVel[MIDI_ROW_THIS][note], 0u);
+        atomic_store(&gMidiNoteRel[MIDI_ROW_THIS][note], velocity);
+    }
+}
+
 static void note_to_slot(uint32_t slot, int32_t note, uint8_t velocity, bool on) {
     SE_LOCAL;
 
@@ -3263,6 +3279,7 @@ static void note_to_slot(uint32_t slot, int32_t note, uint8_t velocity, bool on)
 
     sEngineSlot = (int32_t)(slot % MAX_SLOTS);
     note_queue_due(note, velocity, on, due);
+    note_this_row(note, velocity, on);   // notes §225 - and as on the slot's own channel, for its NoteRcvs
     sEngineSlot = was;
 }
 
@@ -7793,7 +7810,16 @@ static void build_snapshot(tSoundEngineParams * out) {
         tapModule = find_output_module();
 
         if (tapModule == NULL) {
-            gStatus = eStatusNoOutput;
+            // notes §224 - a slot with no Out that plays or controls the others still runs: its senders and
+            // everything feeding them (BeatBox's slot A is its sequencer and nothing else)
+            add_note_senders(&snapshot, gPatchDescr[engine_slot()].activeVariation);
+
+            if (snapshot.nodeCount > 0u) {
+                gStatus       = eStatusPlaying;
+                gPlayingCount = snapshot.nodeCount;
+            } else {
+                gStatus = eStatusNoOutput;
+            }
         } else {
             tNodeKind kind = eNodeOsc;
 
@@ -8285,7 +8311,15 @@ static void update_from_patch_one(void) {
     memcpy(&gParams, &snapshot, sizeof(snapshot));
     atomic_fetch_add(&gParamsSeq, 1);    // even again, snapshot is whole
     pthread_mutex_unlock(&gParamsWriteMutex);
-    atomic_store(&gHasChain, (snapshot.tap >= 0) && (snapshot.nodeCount > 0u));
+    {
+        bool sends = false;   // notes §224
+
+        for (uint32_t k = 0; k < snapshot.nodeCount; k++) {
+            sends = sends || (snapshot.node[k].kind == eNodeNoteSend) || (snapshot.node[k].kind == eNodeCtrlSend);
+        }
+
+        atomic_store(&gHasChain, ((snapshot.tap >= 0) || (sends == true)) && (snapshot.nodeCount > 0u));
+    }
     {
         bool readsBus = false;   // notes §222
 
@@ -16642,8 +16676,8 @@ static void engine_render_slot(float * out, uint32_t frameCount, uint32_t channe
     }
     // notes §172
 
-    if (params.tap < 0) {
-        return;
+    if ((params.tap < 0) && (atomic_load(&gHasChain) == false)) {
+        return;   // notes §224 - a slot of senders alone has no tap and still runs
     }
 
     // A snapshot that has never been published carries a voice count of zero, and zero voices render

@@ -2312,10 +2312,11 @@ static uint32_t morph_param_from_19(uint32_t param) {
 }
 
 static void upgrade_module_from_19(uint32_t slot, tModule * module) {
-    // notes §28 - a module that gained parameters (Mix4-1S its Curve) takes the new ones at their defaults
+    // notes §28 - Mix4-1S gained its Curve at format 22 and takes it at its default. Only Mix4-1S: other types
+    // keep the count they were saved with, as the G2 does (SeqNote and others hold fewer than our table lists)
     uint32_t full = module_param_count(module->type);
 
-    if ((module->actualParamCount < full) && (full <= MAX_NUM_PARAMETERS)) {
+    if ((module->type == moduleTypeMix4to1S) && (module->actualParamCount < full) && (full <= MAX_NUM_PARAMETERS)) {
         for (uint32_t v = 0; v < NUM_VARIATIONS_USB; v++) {
             for (uint32_t k = module->actualParamCount; k < full; k++) {
                 set_param_value(module, v, k, module_param_default(module->type, k));

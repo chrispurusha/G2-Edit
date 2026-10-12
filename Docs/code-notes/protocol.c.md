@@ -349,7 +349,9 @@ saves are current and pass through. For format < 22:
   back to 0.
 - Morph amounts dropped on parameters that lost them (CtrlRcv, CtrlSend, NoteRcv, NoteSend, NoteZone and a few
   others); MIDI controllers dropped on CtrlRcv's and CtrlSend's.
-- A module saved with fewer parameters than its type has (Mix4-1S without Curve) takes the rest at their defaults.
+- Mix4-1S, saved without its Curve, takes it at its default. Only Mix4-1S: the first version extended every short
+  module to our table's count, which for type 121 is 39 where the G2 keeps 37 (80 of its own files), and the G2 then
+  refused the pushed slot (CT 2026-10-12: RedMonday_DZ "failed to load" from the file, yet played).
 CHECKED: BCHydro_DZLW's factory file, loaded and saved, now matches the G2's stored copy in every parameter, mode,
 morph, cable and controller (the selected variation and the MIDI channels are the G2's state, not content).
 NOT DONE: the format also reorders FreqShift's parameters, inputs and outputs, and removes one module type

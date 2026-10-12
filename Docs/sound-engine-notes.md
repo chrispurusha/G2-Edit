@@ -3959,3 +3959,29 @@ slot (a 2-In from Bus heard only its own slot's 2-Outs), so Laika was silent.
   a chord, read from the G2 or from the factory file, connected or not.
 - Also: a 4-In from Bus had its Bus 1/2 count wiped by the parameter pass (`select` set back to 0) - it keeps it now.
 BigPad renders byte-identically to the code before this change.
+
+## 223. A 4-Out: four inputs, and Bus (`outFour`) (2026-10-12)
+
+A 4-Out was built as a 2-Out: two inputs read, inputs 3 and 4 dropped, and only "Out" counted as an output. It
+now takes all four. Its Out (outTo4OutStrMap: Out, Fx, Bus) is Out 1/2 and Out 3/4 - the second pair is new; a stereo
+caller still hears 1/2 alone, as the G2's own sockets do - and its Bus is Bus 1/2 and Bus 3/4 for the other slots
+(§222). The voice-sum plan and the thread split carry its legs 3 and 4 too. Its Fx is unchanged (the slot's own
+FX area, notes §79). A 4-Out sent to Bus feeding a 4-In from Bus in the SAME slot is not wired (the bus reaches the
+other slots only) - todo. First user: BeatBox (factory), whose slots B and C send to slot D's effects by 4-Out.
+
+## 224. A slot with no Out that plays the others (2026-10-12)
+
+BeatBox's slot A is a clock, five SeqEvents and five NoteSends playing slots B and C - no Out. The graph was built
+back from an Out, so it had none, the slot reported "patch something into an Out" and never ran; the drums never
+heard a note. Now, with no Out, the builder still adds the NoteSends and CtrlSends and what drives them
+(`add_note_senders()`), the slot counts as having something to render (`gHasChain`), and `engine_render_slot()`
+runs a graph with no tap when it has senders.
+
+## 225. A NoteSend's notes reach the receiving slot's NoteRcv on "This" (`note_this_row()`) (2026-10-12)
+
+A NoteSend aimed at another slot reaches it as a note on that slot's own channel. The engine put it on the slot's
+keys only (the voices play it), but a NoteRcv set to Channel "This" reads the notes that arrived on the slot's own
+channel (§70.13), so it never fired. BeatBox's slot B is four NoteRcvs on This for notes 64-67, played by slot A's
+NoteSends: silent. The delivery now also marks the note on the receiving slot's This row. The row is read when the
+NoteRcv is evaluated, so the gate starts on the receiving slot's next block rather than on the sample - fine at a
+sequencer's rate; not sample-exact.

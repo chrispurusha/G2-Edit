@@ -12998,4 +12998,9 @@ original is intact.
   After the conversion the factory file matches the G2's copy in every value.
 - A +6 dB jump in every render this morning was the output-level preference (CT confirmed: raised to 0 dB): the code committed before
   this session, built and run with today's preferences, renders BigPad byte-identically to the current code.
+- BeatBox (factory, format 22), four separate faults, each now fixed: the .prf2 reader moved to the next slot only on
+  an empty notes section, so slot B's notes kept it on B and slot D (the effects) came in empty (protocol notes §29;
+  the writer also dropped slot notes); a 4-Out read two inputs and could not send to Bus (§223); slot A, a sequencer
+  with no Out, never ran (§224); and its NoteSends never reached slot B's NoteRcvs on This (§225). It now plays by
+  itself, onsets a quarter note apart at its 144 BPM. BigPad still renders byte-identically to the pre-session code.
 

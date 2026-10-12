@@ -1247,3 +1247,6 @@ from a capture, so they are the ones most likely to be right.
 - 4-In set to from Bus no longer crashes the engine build (2026-10-11): BeatBox loaded and played
 - Old-format conversion (2026-10-12, protocol notes §28): open the factory BCHydro_DZLW.prf2 (format 19) in the editor with the G2 connected - the sequenced voices should no longer slide in pitch, in the engine or on the G2 after the push; also in the plug-in
 - Laika (2026-10-12, sound-engine-notes §222): plays in the engine through slot C's delay and reverb from A and B on Bus 1/2 - compare by ear with the G2
+- BeatBox (2026-10-12): loads from the factory file with all four slots in place (protocol notes §29) and plays by itself in the engine - A's sequencer playing B and C's drums by NoteSend to NoteRcv on This, B and C sending to D's effects by 4-Out to Bus (sound-engine-notes §223-225); compare by ear with the G2 (CT thinks the G2 itself may not sound - check)
+- A 4-Out set to Out now also plays its inputs 3 and 4 on Out 3/4 (sound-engine-notes §223) - check a patch with one in G2 Alike's Out 3/4 bus
+- RedMonday_DZ (format 19) opened from the file with the G2 connected loads without the failure (2026-10-12: the conversion no longer pads SeqNote to 39 parameters, protocol notes §28)
