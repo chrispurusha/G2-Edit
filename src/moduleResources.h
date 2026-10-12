@@ -2141,7 +2141,7 @@ const tParamLocation     paramLocationList[] = {
     // 31 Noise
     {moduleTypeNoise,      paramTypeCommonDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Colour",       128,   0, NULL,                                  NULL          },           // 31 Colour  *** Or special dial
     {moduleTypeNoise,      paramTypeBypass,         {{ -3,   3}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          },           // 31 Bypass
-    {moduleTypeSampler,    paramTypeCommonDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Level",        128, 100, NULL,                                  NULL          },           // 209 Level
+    {moduleTypeSampler,    paramTypeCommonDial,     {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Level",        128,  64, NULL,                                  NULL          },           // 209 Level
     {moduleTypeSampler,    paramTypeBypass,         {{ -3,   3}, { 5,  5}}, anchorTopRight,    "Bypass",         2,   1, NULL,                                  NULL          },           // 209 Bypass
     {moduleTypeSampler,    paramTypeCommonDial,     {{ 54,  -3}, { 7,  7}}, anchorBottomLeft,  "Vel",          128,   0, NULL,                                  NULL          },           // 209 Vel
     {moduleTypeSampler,    paramTypeADRTime,        {{ 76, -18}, { 7,  7}}, anchorBottomLeft,  "Rel",          128,  49, NULL,                                  NULL          },           // 209 Rel

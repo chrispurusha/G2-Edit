@@ -3985,3 +3985,9 @@ channel (§70.13), so it never fired. BeatBox's slot B is four NoteRcvs on This 
 NoteSends: silent. The delivery now also marks the note on the receiving slot's This row. The row is read when the
 NoteRcv is evaluated, so the gate starts on the receiving slot's next block rather than on the sample - fine at a
 sequencer's rate; not sample-exact.
+
+## 226. The Sampler's Level: 64 is unity (2026-10-12, CT)
+
+Level was value/128 like a G2 level dial, so it could only turn a sample down (the default, 100, was -2 dB). It is
+now value/64: 0 silent, 64 the sample as it is, 127 about +6 dB; a new Sampler starts at 64. A Sampler saved before
+this with Level at 100 now plays about 4 dB louder.

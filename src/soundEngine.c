@@ -196,7 +196,8 @@ static bool filter_param_map(tModuleType type, tFilterParams * map) {
 #define ENV_PARAM_ATTACK            (1)
 #define ENV_PARAM_DECAY             (2)
 #define ENV_PARAM_SUSTAIN           (3)
-#define SAMPLER_PARAM_VEL           (2) // notes §213
+#define SAMPLER_LEVEL_UNITY         (64.0) // notes §226 - the Level dial's position that leaves the sample as it is
+#define SAMPLER_PARAM_VEL           (2)    // notes §213
 #define SAMPLER_PARAM_REL           (3)
 // notes §213 - a Sampler keeps Vel and Rel in level[], which only mixers use, so the node needs no new words
 #define SAMPLER_LEVEL_VEL           (0)  // how far velocity scales its level, 0..1
@@ -6450,7 +6451,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeSampler:
         {
-            node->gain                           = dial_fraction(param_value(module, variation, 0));
+            node->gain                           = param_value(module, variation, 0) / SAMPLER_LEVEL_UNITY;   // notes §226
             node->level[SAMPLER_LEVEL_VEL]       = dial_fraction(param_value(module, variation, SAMPLER_PARAM_VEL));
             node->level[SAMPLER_LEVEL_REL]       = adr_time_seconds(param_value(module, variation, SAMPLER_PARAM_REL));
             node->modAmount                      = type_ii_attenuator(param_value(module, variation, SAMPLER_PARAM_PITCH_MOD));

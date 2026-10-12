@@ -5,6 +5,7 @@ Measurements, reasoning and completed-work narrative go in findings.md, NOT here
 Built-but-unchecked work goes in to-test.md.
 
 General (priority order)
+- CPU: sound_engine_update_from_patch() runs on every drawn frame (app and plug-in) and rebuilds every slot's graph three times (the snapshot and one probe per morph axis) only to memcmp it against the last - skip the rebuild when nothing the engine reads has changed (a per-slot edit counter: set_param_value() (dataBase notes §11), module/cable writes, modes, morph ranges, variation, perf and synth settings); about 1% of a core in G2 Alike in Live (2026-10-12), more with four heavy slots
 - Validate against the G2, in the order validation-sessions.md section 5 gives (LFO C, Glide, LevMult, S&H, ModAmt, LP/HP Filter, Envelope ADR, ...), and the one-session Bypass/On-Off sweep over every module type
 - Module aspect audit: one state per aspect in engine-module-status.md - Docs/module-aspect-audit-design.md; step 1 built, step 2 done for oscillators, filters, envelopes, LFOs, mixers (379 of 773 aspects, 2026-10-11); next the remaining groups, then step 3. The generator skips the Special group (the Sampler) and warns about its kEvidence row - include it
 - VST3 plug-in went silent after a patch change until the DAW restarted (CT) - two causes fixed 2026-10-11 (a NaN surviving in the output stage or a module's state, now repaired: sound-engine-notes §218; the plug-in building the engine without the database lock: g2Plugin notes §16). If it happens again: `touch /tmp/g2alike-log` and read /tmp/g2alike.log
