@@ -13023,6 +13023,14 @@ with the G2 Alike editor open; fine once it was closed. Read from the code, not 
   drawable. A meter-only frame could keep that texture and redraw only the meter/LED rectangles - a few dozen
   submits instead of ~468 a frame (2026-09-11 count). Needs the meter/LED drawing separable from the full frame
   and each meter to paint its whole rectangle opaquely.
+- SLUGGISH EDITOR (CT, 2026-10-12): earlier the same day the plug-in editor became very sluggish. Not yet
+  looked at. Check whether a frame gets slower the longer the editor is open (G2_PLUGIN_FRAME_STATS draw time
+  climbing, vmmap footprint growing) - the shape of the 2026-09-11 Metal buffer leak - or is slow from the start
+  (per-frame work: the engine rebuild, a full redraw per meter tick).
+  CT's recollection (not certain): it came on around switching Settings > Half Rate (economy) on or off, and was
+  seen only in the VST3. Path to read: action_toggle_plugin_economy() (appMenuBar.c) -> sound_engine_set_economy()
+  -> set_economy_one(), then the rate change picked up by g2Plugin.c's rebuild_worker (sound_engine_take_rate_changed(),
+  soundEngine notes §205). Try toggling it repeatedly in the VST3 and the AU with frame stats on, and compare.
 - METER BALLISTICS (CT, 2026-10-12 - the meters flicker at times): smooth on the display side - instant attack,
   slower release, a short peak hold, and a longer linger on a high or clipping value so it is not missed. One
   place takes both sources: volume_source() in moduleGraphics.c (notes §29) returns the engine's meter or the
