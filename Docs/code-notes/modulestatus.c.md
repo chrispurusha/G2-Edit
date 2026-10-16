@@ -23,3 +23,16 @@ are); a jack with no label is named by its number and colour.
 
 The evidence is editorial, one `kAspectEvidence` row per (module, aspect); an aspect without one reads
 Unknown. The run fails if a row names a module that is not modelled or an aspect the module does not have.
+
+## 2. The Fixed point column (`kPrecision`, 2026-10-16)
+
+What arithmetic each module's model runs in, against the instrument's 24-bit words - the question of
+whether a module's integer behaviour (truncation, rounding, internal saturation) is modelled. Asked after a
+proposal for a global float/fixed-point switch was set aside (CT, 2026-10-16): the G2's fixed-point
+behaviour matters module by module, so it is recorded module by module.
+
+The classification was made by reading each model's step function: which values it holds in `int32_t` /
+`int64_t` words, which it carries in doubles on the instrument's scaling and saturates (`dly_sat()`,
+`seq_sat()`, `phaser_sat()` and the like), and which are plain doubles. It is editorial for the same reason
+`kEvidence` is - the engine cannot say how faithful its own arithmetic is - and the run fails on a module
+with no row, or a row for a module the tables do not list. Revise a row when a model moves to words.

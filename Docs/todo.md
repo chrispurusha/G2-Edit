@@ -138,6 +138,10 @@ SOUND ENGINE
 - Edit in one slot of a playing performance: on the G2 every link restarts the master clock's count (engine notes §216); hear whether the OTHER slots' sequences restart too (add a cable in slot B of BCHydro_DZLW), then match it in the engine
 - 03 Chris' Lead coverage left: OscShpB waves (above), reference-model check of Mix4-1C/Mix4-1S
 - CPU: run nodes over short blocks (16-32 samples) where no loop or per-sample event forbids it, to amortise the dispatch and let it vectorise - the same restructure per-voice threading needs
+- Fixed point (engine-module-status.md, Fixed point column): loops that ring down in doubles - add the instrument's 24-bit rounding to Comb Filter, Osc String, Resonator, and the Phaser's and OverDrive's feedback, so tails end as on the G2
+- Fixed point: the main filters (Nord, Classic, LP, HP, Multi, Static) in the instrument's words, for low-level behaviour - self-oscillation onset and decay, the noise floor near silence
+- Fixed point: Delay Single A/B, Dual, Quad, Eight read their line by interpolation in doubles - find how the G2 reads it (Delay A/B are already in words, the pattern to follow)
+- Fixed point: oscillator phase in the instrument's phase word (exact pitch steps and wrap) - matters for Osc Phase Mod, FM and Sync; only if a capture shows a difference
 
 MEASUREMENT PROGRAMME
 - Finish the EnvADSR oracle (kept outside the repo): it compiles and runs but outputs zero until the state-block layout and the time tables contents are worked out

@@ -23,6 +23,27 @@ evidence from its `kEvidence` table. **Regenerate rather than edit**: change a m
 `kEvidence` when its evidence changes. The run fails if a modelled module has no row, or a row names a
 module that is not offered or not modelled.
 
+The **Fixed point** column says what arithmetic each model runs in, against the instrument's 24-bit
+words. The G2's DSP is fixed point throughout, so where a model is in doubles its rounding is finer than
+the instrument's: a tail that reaches exact zero on the G2 decays on into denormals here, a loop that
+truncates its way to silence keeps ringing, and a value compared against a threshold can land a step
+either side. Every model saturates at full scale where its value leaves the module (sound-engine-notes
+§196), so the column is about what happens inside.
+
+| Fixed point | meaning |
+|---|---|
+| **Integer words** | the signal path in the instrument's own words: its truncation, rounding and saturation |
+| **Integer control** | counters, phases, steps or coefficients in its words; the audio path in doubles |
+| **Saturating doubles** | doubles on the instrument's scaling, saturated where it saturates inside the module, but never rounded to 24 bits |
+| **Doubles** | doubles throughout. Whether rounding to 24 bits would be audible is unchecked |
+| **Not affected** | logic, switching, copies and MIDI: thresholds and whole numbers that rounding does not move |
+
+Doubles is not a defect by itself: for a mixer or a gain the difference is below the instrument's own
+noise floor. It is where to look first when a module disagrees with a G2 at low levels, in a feedback
+loop, or at a threshold. The classification comes from reading each model and is editorial, in
+`kPrecision` beside `kEvidence`; the run fails if a module has no row.
+
+built /Users/chris/Documents/GitHub/G2-Edit/tools/modulestatus
 | Group | Confirmed on the G2 | Modelled | Approximate | Partial | No sound | Not implemented |
 |---|---|---|---|---|---|---|
 | **Oscillators** | Osc A, Osc B, Osc C, Osc D, Osc Shape B, Osc Dual, Noise Osc, Noise, Osc Percussion, Drum Synth, FM Operator, DX Router | Osc Phase Mod, Osc Shape A, Metallic Noise, Osc String, Driver, Resonator, Osc Master | - | - | - | - |
@@ -45,253 +66,263 @@ module that is not offered or not modelled.
 
 ### Oscillators
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Osc A | Confirmed on the G2 | §6.3 | captures (G2Captures/osca); OscC/OscD level against it 09-12 | - |
-| Osc B | Confirmed on the G2 | §6.3, §6.6-§6.8 | 5 waves x 8 pitches, harmonics within 0.1 dB (09-17); DualSaw below zero 0.1 dB (10-08) | FM and Sync not compared on the G2; Shape 127's one-sample click not modelled |
-| Osc C | Confirmed on the G2 | §6.3 | Saw, Sqr50/25/10, Tri at 440-3520 Hz (09-17) | FM not compared on the G2 |
-| Osc D | Confirmed on the G2 | §6.3, §6.1a | level and harmonics against OscA (09-12) | Pitch Type read since 09-28, not heard on the G2 |
-| Osc Phase Mod | Modelled | §53 | - | - |
-| Osc Shape A | Modelled | §27, §6.7 | through OscShpB's captures only | no OscShpA capture of its own |
-| Osc Shape B | Confirmed on the G2 | §27, §6.7 | every wave, Shape Mod -1..+1, harmonics within 0.16 dB (10-02); Sine3/4 within 0.001 (09-17) | Pulse at exactly +-1: click -33 dB against the G2's -41 |
-| Osc Dual | Confirmed on the G2 | §12.4, §12.5 | levels, duty, phase (09-12); PW and Phase mod (10-03) | - |
-| Noise Osc | Confirmed on the G2 | §8.2-§8.5 | 09-12 capture agrees 110 Hz-1 kHz (the old model's fit) | level above 1 kHz not re-captured since the §8 model |
-| Noise | Confirmed on the G2 | §7.2a | 09-12 capture reproduced through the desk's shelf to a constant | - |
-| Metallic Noise | Modelled | §66 | - | no capture |
-| Osc Percussion | Confirmed on the G2 | §40 | 8 takes: levels 0.1 dB, decay 2 ms, pitch exact (09-25) | - |
-| Drum Synth | Confirmed on the G2 | §39 | Master Freq 0.2% (09-21); noise, click, oscillator energies within 0.8 dB (09-25) | level curve set by §39.3, not fitted to the 09-20 sweeps |
-| Osc String | Modelled | §70.4 | - | - |
-| FM Operator | Confirmed on the G2 | §14.2-§14.6 | envelope, level, FM depth, feedback, level and rate scaling, velocity (10-03) | AMod and Pitch inputs (§14.6) not yet compared (to-test); Gate/Note/Vel jacks read from the voice |
-| DX Router | Confirmed on the G2 | §14.1, §14.5 | Main level 8.8 dB against 8.45 (10-03) | Out1-Out6 not used outside the node |
-| Driver | Modelled | §70.5 | - | - |
-| Resonator | Modelled | §70.4a | - | - |
-| Osc Master | Modelled | §51 | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Osc A | Confirmed on the G2 | §6.3 | captures (G2Captures/osca); OscC/OscD level against it 09-12 | - | Doubles: phase accumulator in doubles |
+| Osc B | Confirmed on the G2 | §6.3, §6.6-§6.8 | 5 waves x 8 pitches, harmonics within 0.1 dB (09-17); DualSaw below zero 0.1 dB (10-08) | FM and Sync not compared on the G2; Shape 127's one-sample click not modelled | Doubles: phase accumulator in doubles |
+| Osc C | Confirmed on the G2 | §6.3 | Saw, Sqr50/25/10, Tri at 440-3520 Hz (09-17) | FM not compared on the G2 | Doubles: phase accumulator in doubles |
+| Osc D | Confirmed on the G2 | §6.3, §6.1a | level and harmonics against OscA (09-12) | Pitch Type read since 09-28, not heard on the G2 | Doubles: phase accumulator in doubles |
+| Osc Phase Mod | Modelled | §53 | - | - | Doubles: phase and Phase M in doubles; the sine is the module's polynomial |
+| Osc Shape A | Modelled | §27, §6.7 | through OscShpB's captures only | no OscShpA capture of its own | Doubles: phase accumulator in doubles |
+| Osc Shape B | Confirmed on the G2 | §27, §6.7 | every wave, Shape Mod -1..+1, harmonics within 0.16 dB (10-02); Sine3/4 within 0.001 (09-17) | Pulse at exactly +-1: click -33 dB against the G2's -41 | Doubles: phase accumulator in doubles |
+| Osc Dual | Confirmed on the G2 | §12.4, §12.5 | levels, duty, phase (09-12); PW and Phase mod (10-03) | - | Doubles: phase accumulator in doubles |
+| Noise Osc | Confirmed on the G2 | §8.2-§8.5 | 09-12 capture agrees 110 Hz-1 kHz (the old model's fit) | level above 1 kHz not re-captured since the §8 model | Saturating doubles: 24-bit LFSR; the band-passes saturate at the word's +-1 |
+| Noise | Confirmed on the G2 | §7.2a | 09-12 capture reproduced through the desk's shelf to a constant | - | Doubles: xorshift draw, not the instrument's generator |
+| Metallic Noise | Modelled | §66 | - | no capture | Integer words: squares, Freq word and one-poles |
+| Osc Percussion | Confirmed on the G2 | §40 | 8 takes: levels 0.1 dB, decay 2 ms, pitch exact (09-25) | - | Saturating doubles: DSP words carried in doubles, saturated |
+| Drum Synth | Confirmed on the G2 | §39 | Master Freq 0.2% (09-21); noise, click, oscillator energies within 0.8 dB (09-25) | level curve set by §39.3, not fitted to the 09-20 sweeps | Saturating doubles: the decoded words carried in doubles |
+| Osc String | Modelled | §70.4 | - | - | Doubles |
+| FM Operator | Confirmed on the G2 | §14.2-§14.6 | envelope, level, FM depth, feedback, level and rate scaling, velocity (10-03) | AMod and Pitch inputs (§14.6) not yet compared (to-test); Gate/Note/Vel jacks read from the voice | Integer control: envelope, level and rate offsets in words; the operator in doubles |
+| DX Router | Confirmed on the G2 | §14.1, §14.5 | Main level 8.8 dB against 8.45 (10-03) | Out1-Out6 not used outside the node | Integer control: envelope, level and rate offsets in words; the operators in doubles |
+| Driver | Modelled | §70.5 | - | - | Doubles |
+| Resonator | Modelled | §70.4a | - | - | Doubles |
+| Osc Master | Modelled | §51 | - | - | Doubles |
 
 ### Filters
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| LP Filter | Modelled | §22 | FM input at 2 semitones a unit only (notes §160) | no response captured |
-| HP Filter | Modelled | §22 | - | no response captured |
-| Nord Filter | Confirmed on the G2 | §23 | noise through LP/BP/HP/BR, 12 and 24 dB, Freq 50 and 85, Res 0 and 100: within 1.44 dB, mean 0.06-0.35 (10-11) | Pitch, FM and Res mod not compared |
-| Classic Filter | Confirmed on the G2 | §21 | 04 Chris' Pad within 0.5 dB 100 Hz-12 kHz; a high-Res test patch's peak within 0.04 semitone (09-28) | Env and the dB/Oct tap not compared since the 09-14 law |
-| Multi Filter | Confirmed on the G2 | §10 | 54 noise responses within 0.5-0.6 dB (09-12); FreqM within 1% (10-08) | GComp off not captured |
-| Phase Filter | Modelled | §67 | - | - |
-| Comb Filter | Confirmed on the G2 | §13.4 | noise through all three Types (09-12); Pitch attenuator (10-08) | - |
-| Static Filter | Modelled | §10.4 | peak heights only (2026-08) | HP tap term not modelled; a noise capture per type |
-| FltVoice | Modelled | §56 | - | - |
-| WahWah | Modelled | §69.9 | - | - |
-| Vocoder | Modelled | §70.8 | - | - |
-| Eq 2-band | Confirmed on the G2 | §11.2 | 43 noise settings across the EQs, 0.53 dB mean (09-12) | high shelf changed 10-09 (0.3-0.7 dB near 3 kHz), not re-captured |
-| Eq 3-band | Confirmed on the G2 | §11 | 0.66 dB mean, 1.42 worst (09-12) | the 1.42 dB setting (mid -13.5 dB at 8 kHz) not explained by the model |
-| Eq Peak | Confirmed on the G2 | §11.3, §11.5 | 0.57 dB mean (09-12) | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| LP Filter | Modelled | §22 | FM input at 2 semitones a unit only (notes §160) | no response captured | Doubles |
+| HP Filter | Modelled | §22 | - | no response captured | Doubles |
+| Nord Filter | Confirmed on the G2 | §23 | noise through LP/BP/HP/BR, 12 and 24 dB, Freq 50 and 85, Res 0 and 100: within 1.44 dB, mean 0.06-0.35 (10-11) | Pitch, FM and Res mod not compared | Doubles |
+| Classic Filter | Confirmed on the G2 | §21 | 04 Chris' Pad within 0.5 dB 100 Hz-12 kHz; a high-Res test patch's peak within 0.04 semitone (09-28) | Env and the dB/Oct tap not compared since the 09-14 law | Doubles |
+| Multi Filter | Confirmed on the G2 | §10 | 54 noise responses within 0.5-0.6 dB (09-12); FreqM within 1% (10-08) | GComp off not captured | Doubles |
+| Phase Filter | Modelled | §67 | - | - | Integer words: the six allpass stages in the accumulator |
+| Comb Filter | Confirmed on the G2 | §13.4 | noise through all three Types (09-12); Pitch attenuator (10-08) | - | Saturating doubles: every word saturated |
+| Static Filter | Modelled | §10.4 | peak heights only (2026-08) | HP tap term not modelled; a noise capture per type | Doubles |
+| FltVoice | Modelled | §56 | - | - | Integer control: vowel table and resonance word; the resonators in doubles |
+| WahWah | Modelled | §69.9 | - | - | Integer words: sweep and filter words |
+| Vocoder | Modelled | §70.8 | - | - | Saturating doubles: the converters' and bands' words, saturated |
+| Eq 2-band | Confirmed on the G2 | §11.2 | 43 noise settings across the EQs, 0.53 dB mean (09-12) | high shelf changed 10-09 (0.3-0.7 dB near 3 kHz), not re-captured | Doubles |
+| Eq 3-band | Confirmed on the G2 | §11 | 0.66 dB mean, 1.42 worst (09-12) | the 1.42 dB setting (mid -13.5 dB at 8 kHz) not explained by the model | Doubles |
+| Eq Peak | Confirmed on the G2 | §11.3, §11.5 | 0.57 dB mean (09-12) | - | Doubles |
 
 ### Envelopes
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Envelope ADSR | Confirmed on the G2 | §17.1-§17.8 | time law and curves agree with the 08-24 and 09-07 captures (not kept) | - |
-| Envelope AHD | Confirmed on the G2 | §17.11a | Hold 16-80, within 1% (10-08) | - |
-| Envelope ADR | Modelled | §17.9 | - | stages never heard against the G2 |
-| Envelop ADDSR | Modelled | §17.9 | - | stages never heard against the G2; release fixed 10-09 (§17.9a) |
-| Envelope H | Confirmed on the G2 | §17.9a | Hold 12-64 within 0.1 ms (10-08) | - |
-| Envelope D | Modelled | §17.9 | no KB: an untriggered EnvD silent, as in 14 CS80project72 (09-27) | decay never compared |
-| Envelope Multi | Modelled | §17.11 | - | - |
-| Envelope Mod AHD | Confirmed on the G2 | §17.9a, §17.10 | Hold within 0.3% (10-08) | time-mod jacks not checked |
-| Envelope Mod ADSR | Confirmed on the G2 | §17.10 | Decay mod at -32..+32 units (09-20) | Attack and Sustain mod not checked; +32 units 4.1 s against 3.6 |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Envelope ADSR | Confirmed on the G2 | §17.1-§17.8 | time law and curves agree with the 08-24 and 09-07 captures (not kept) | - | Integer words: level and segments in words; the VCA multiply in doubles |
+| Envelope AHD | Confirmed on the G2 | §17.11a | Hold 16-80, within 1% (10-08) | - | Integer words: level and segments in words; the VCA multiply in doubles |
+| Envelope ADR | Modelled | §17.9 | - | stages never heard against the G2 | Integer words: level and segments in words; the VCA multiply in doubles |
+| Envelop ADDSR | Modelled | §17.9 | - | stages never heard against the G2; release fixed 10-09 (§17.9a) | Integer words: level and segments in words; the VCA multiply in doubles |
+| Envelope H | Confirmed on the G2 | §17.9a | Hold 12-64 within 0.1 ms (10-08) | - | Integer words: level and segments in words; the VCA multiply in doubles |
+| Envelope D | Modelled | §17.9 | no KB: an untriggered EnvD silent, as in 14 CS80project72 (09-27) | decay never compared | Integer words: level and segments in words; the VCA multiply in doubles |
+| Envelope Multi | Modelled | §17.11 | - | - | Integer words: its tick in words |
+| Envelope Mod AHD | Confirmed on the G2 | §17.9a, §17.10 | Hold within 0.3% (10-08) | time-mod jacks not checked | Integer words: level and segments in words; the VCA multiply in doubles |
+| Envelope Mod ADSR | Confirmed on the G2 | §17.10 | Decay mod at -32..+32 units (09-20) | Attack and Sustain mod not checked; +32 units 4.1 s against 3.6 | Integer words: level and segments in words; the VCA multiply in doubles |
 
 ### LFOs
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| LFO A | Confirmed on the G2 | §28 | Hi rate measured | BPM and Clk not checked on the G2 |
-| LFO B | Modelled | §28, §28.4, §54 | - | - |
-| LFO C | Modelled | §28 | - | never captured |
-| LFO Shp A | Confirmed on the G2 | §28.6 | Rate Sub, Lo, Hi within 0.013% (09-07) | BPM and Clk not checked; waves not captured |
-| Clock Generator | Confirmed on the G2 | §59 | Master clock within 7-17 ppm; engine within 1-4 ms over 66 s (10-09) | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| LFO A | Confirmed on the G2 | §28 | Hi rate measured | BPM and Clk not checked on the G2 | Doubles: phase in doubles |
+| LFO B | Modelled | §28, §28.4, §54 | - | - | Doubles: phase in doubles |
+| LFO C | Modelled | §28 | - | never captured | Doubles: phase in doubles |
+| LFO Shp A | Confirmed on the G2 | §28.6 | Rate Sub, Lo, Hi within 0.013% (09-07) | BPM and Clk not checked; waves not captured | Doubles: phase in doubles |
+| Clock Generator | Confirmed on the G2 | §59 | Master clock within 7-17 ppm; engine within 1-4 ms over 66 s (10-09) | - | Integer words: phase and tempo words |
 
 ### Mixers
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Mixer 1-1 A | Confirmed on the G2 | §3 | 106 configurations of the eleven mixers within 0.07 dB (09-12) | - |
-| Mixer 1-1 S | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
-| Mixer 2-1 A | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
-| Mixer 4-1 A | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
-| Mixer 4-1 B | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
-| Mixer 4-1 C | Confirmed on the G2 | §3 | 218 steps 0.01 dB; Pad 0/-6/-12 (09-07, 09-12) | - |
-| Mixer 4-1 S | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
-| Mixer 2-1 B | Confirmed on the G2 | §3 | as Mixer 1-1 A; Inv cancels | - |
-| Mixer 8-1 A | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
-| Mixer 8-1 B | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
-| MixFader | Confirmed on the G2 | §3 | as Mixer 1-1 A | - |
-| MixStereo | Confirmed on the G2 | §5 | 19 settings each, Log and Lin (09-12) | - |
-| Fade 1-2 | Confirmed on the G2 | §4.2 | 19 settings, every point within 0.001 (09-12) | mod-input depth not captured, still 4 x the input |
-| Fade 2-1 | Confirmed on the G2 | §4.2 | as Fade 1-2 | mod-input depth not captured, still 4 x the input |
-| X-Fade | Confirmed on the G2 | §4.2, §4.3 | as Fade 1-2 | mod-input depth (Pan's law since 10-10) not captured |
-| Pan | Confirmed on the G2 | §4.2, §4.3 | as Fade 1-2; mod depth, an LFO at 31: +-6.3 dB (10-10) | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Mixer 1-1 A | Confirmed on the G2 | §3 | 106 configurations of the eleven mixers within 0.07 dB (09-12) | - | Doubles |
+| Mixer 1-1 S | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
+| Mixer 2-1 A | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
+| Mixer 4-1 A | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
+| Mixer 4-1 B | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
+| Mixer 4-1 C | Confirmed on the G2 | §3 | 218 steps 0.01 dB; Pad 0/-6/-12 (09-07, 09-12) | - | Doubles |
+| Mixer 4-1 S | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
+| Mixer 2-1 B | Confirmed on the G2 | §3 | as Mixer 1-1 A; Inv cancels | - | Doubles |
+| Mixer 8-1 A | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
+| Mixer 8-1 B | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
+| MixFader | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
+| MixStereo | Confirmed on the G2 | §5 | 19 settings each, Log and Lin (09-12) | - | Doubles |
+| Fade 1-2 | Confirmed on the G2 | §4.2 | 19 settings, every point within 0.001 (09-12) | mod-input depth not captured, still 4 x the input | Doubles |
+| Fade 2-1 | Confirmed on the G2 | §4.2 | as Fade 1-2 | mod-input depth not captured, still 4 x the input | Doubles |
+| X-Fade | Confirmed on the G2 | §4.2, §4.3 | as Fade 1-2 | mod-input depth (Pan's law since 10-10) not captured | Doubles |
+| Pan | Confirmed on the G2 | §4.2, §4.3 | as Fade 1-2; mod depth, an LFO at 31: +-6.3 dB (10-10) | - | Doubles |
 
 ### Level
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Constant | Confirmed on the G2 | §16.1 | the known input of most G2 checks since 09-13 (OscShpB, OscDual, DrumSynth, FltMulti) | - |
-| ConstSwM | Modelled | §68.1 | - | - |
-| ConstSwT | Modelled | §44 | - | - |
-| CompLev | Modelled | §48 | - | - |
-| CompSig | Modelled | §69.2 | - | - |
-| LevAdd | Modelled | §32 | - | - |
-| LevAmp | Confirmed on the G2 | paramCurves notes §29 | 33 dial positions (08-30); 127 as 0x7FFFFF settled BCHydro_DZLW (10-09) | - |
-| LevConv | Modelled | §31 | - | - |
-| LevMod | Modelled | §69.3 | - | - |
-| LevMult | Modelled | §74 | - | - |
-| MinMax | Modelled | §43 | - | - |
-| ModAmt | Modelled | §29 | parameter display only (param-validation) | - |
-| NoiseGate | Modelled | §70.6 | - | - |
-| EnvFollow | Modelled | §69.4 | - | times at 24 kHz when not up-rated not modelled (notes §203) |
-| Red2Blue | Modelled | §68.8, notes §203 | - | - |
-| Blue2Red | Modelled | §68.8 | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Constant | Confirmed on the G2 | §16.1 | the known input of most G2 checks since 09-13 (OscShpB, OscDual, DrumSynth, FltMulti) | - | Doubles |
+| ConstSwM | Modelled | §68.1 | - | - | Doubles |
+| ConstSwT | Modelled | §44 | - | - | Doubles |
+| CompLev | Modelled | §48 | - | - | Integer words: compared as words |
+| CompSig | Modelled | §69.2 | - | - | Integer words: compared as words |
+| LevAdd | Modelled | §32 | - | - | Doubles |
+| LevAmp | Confirmed on the G2 | paramCurves notes §29 | 33 dial positions (08-30); 127 as 0x7FFFFF settled BCHydro_DZLW (10-09) | - | Doubles |
+| LevConv | Modelled | §31 | - | - | Doubles |
+| LevMod | Modelled | §69.3 | - | - | Integer words |
+| LevMult | Modelled | §74 | - | - | Doubles |
+| MinMax | Modelled | §43 | - | - | Doubles |
+| ModAmt | Modelled | §29 | parameter display only (param-validation) | - | Doubles |
+| NoiseGate | Modelled | §70.6 | - | - | Integer words: follower and gate in words |
+| EnvFollow | Modelled | §69.4 | - | times at 24 kHz when not up-rated not modelled (notes §203) | Integer words: peak word and follower |
+| Red2Blue | Modelled | §68.8, notes §203 | - | - | Not affected: a copy, held at 24 kHz |
+| Blue2Red | Modelled | §68.8 | - | - | Not affected: a copy |
 
 ### Shapers
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Saturate | Modelled | paramCurves notes §33 | - | one ramp per mode would capture it |
-| Clip | Modelled | paramCurves notes §36 | - | one ramp per mode would capture it |
-| OverDrive | Confirmed on the G2 | §71 | energy above 6 kHz in 14 CS80project72: -41.5 against -41.6 dB (10-04) | - |
-| ShpExp | Modelled | paramCurves notes §32 | - | one ramp per mode would capture it |
-| WaveWrap | Modelled | §73, paramCurves notes §34 | - | one ramp per mode would capture it |
-| ShpStatic | Modelled | paramCurves notes §31 | - | one ramp per mode would capture it |
-| Rect | Modelled | paramCurves notes §30 | - | one ramp per mode would capture it |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Saturate | Modelled | paramCurves notes §33 | - | one ramp per mode would capture it | Doubles |
+| Clip | Modelled | paramCurves notes §36 | - | one ramp per mode would capture it | Doubles |
+| OverDrive | Confirmed on the G2 | §71 | energy above 6 kHz in 14 CS80project72: -41.5 against -41.6 dB (10-04) | - | Saturating doubles: drive, feedback and blend saturated as words |
+| ShpExp | Modelled | paramCurves notes §32 | - | one ramp per mode would capture it | Doubles |
+| WaveWrap | Modelled | §73, paramCurves notes §34 | - | one ramp per mode would capture it | Doubles |
+| ShpStatic | Modelled | paramCurves notes §31 | - | one ramp per mode would capture it | Doubles |
+| Rect | Modelled | paramCurves notes §30 | - | one ramp per mode would capture it | Doubles |
 
 ### Delays
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Delay Single A | Modelled | §52 | through DelayA only | - |
-| Delay Single B | Modelled | §52.1 | - | - |
-| Delay Dual | Approximate | §70.1, §52.1 | - | only the taps are fully modelled (§52.1) |
-| Delay Quad | Approximate | §70.1, §52.1 | - | as Delay Dual |
-| Delay A | Confirmed on the G2 | §24 | FB, LP, dry/wet, Time and Clk (09; audio not kept) | - |
-| Delay B | Confirmed on the G2 | §24 | as Delay A; HP at four settings | - |
-| Delay Stereo | Modelled | §65 | - | X-FB never compared |
-| Delay Clock | Modelled | §69.7 | - | - |
-| Delay Eight | Approximate | §70.1, §52.1 | - | as Delay Dual |
-| DlyShiftReg | Modelled | §69.6 | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Delay Single A | Modelled | §52 | through DelayA only | - | Doubles: a 4-point read |
+| Delay Single B | Modelled | §52.1 | - | - | Doubles: a 4-point read |
+| Delay Dual | Approximate | §70.1, §52.1 | - | only the taps are fully modelled (§52.1) | Doubles: a 4-point read |
+| Delay Quad | Approximate | §70.1, §52.1 | - | as Delay Dual | Doubles: a 4-point read |
+| Delay A | Confirmed on the G2 | §24 | FB, LP, dry/wet, Time and Clk (09; audio not kept) | - | Integer words: the tap, LP, HP and feedback on half-scale words |
+| Delay B | Confirmed on the G2 | §24 | as Delay A; HP at four settings | - | Integer words: the tap, LP, HP and feedback on half-scale words |
+| Delay Stereo | Modelled | §65 | - | X-FB never compared | Integer words: Delay B's tap on both lines |
+| Delay Clock | Modelled | §69.7 | - | - | Not affected: a copy on each clock |
+| Delay Eight | Approximate | §70.1, §52.1 | - | as Delay Dual | Doubles: a 4-point read |
+| DlyShiftReg | Modelled | §69.6 | - | - | Not affected: copies |
 
 ### Effects
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Compressor | Confirmed on the G2 | §25 | a steady sine at 8 levels, -47 to -19 dB, 04 Chris' Pad's settings: gain equal to the G2's within 0.01 dB (10-11) | attack/release timing and SideChain not compared on the G2 |
-| Digitizer | Modelled | §69.8 | - | - |
-| FreqShift | Modelled | §57 | - | - |
-| Flanger | Modelled | §70.2 | - | - |
-| Chorus | Confirmed on the G2 | §19 | tap spans, rate, mix (09-07); unity at Amount 0 (09-14) | - |
-| Phaser | Modelled | §55 | - | - |
-| PShift | Modelled | §70.3 | - | - |
-| Reverb | Confirmed on the G2 | §20 | 19 captures: onsets, stereo, Time law (09) | captured decays 6-12% long (their fits) |
-| Scratch | Modelled | §70.3 | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Compressor | Confirmed on the G2 | §25 | a steady sine at 8 levels, -47 to -19 dB, 04 Chris' Pad's settings: gain equal to the G2's within 0.01 dB (10-11) | attack/release timing and SideChain not compared on the G2 | Integer words: detector, gain table and make-up |
+| Digitizer | Modelled | §69.8 | - | - | Integer words: rate word and phase |
+| FreqShift | Modelled | §57 | - | - | Saturating doubles: allpass chains saturated at the word's +-1 |
+| Flanger | Modelled | §70.2 | - | - | Integer control: sweep phase word; the ring read in doubles |
+| Chorus | Confirmed on the G2 | §19 | tap spans, rate, mix (09-07); unity at Amount 0 (09-14) | - | Integer control: LFO phase word; the taps in doubles |
+| Phaser | Modelled | §55 | - | - | Saturating doubles: the module's fractions, saturated |
+| PShift | Modelled | §70.3 | - | - | Integer control: phase word; the taps in doubles |
+| Reverb | Confirmed on the G2 | §20 | 19 captures: onsets, stereo, Time law (09) | captured decays 6-12% long (their fits) | Integer words: every stored value rounded down to the 24-bit grid and clamped |
+| Scratch | Modelled | §70.3 | - | - | Integer control: ratio and phase words; the taps in doubles |
 
 ### In/Out
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| 2 Outputs | Confirmed on the G2 | §63, notes §167, §198 | Pad +6 dB (09-07); an unpatched socket is silent (10-10); the path every G2 check goes through | - |
-| 4 Outputs | Confirmed on the G2 | - | Pad +6 dB (09-07) | - |
-| 2 Inputs | Confirmed on the G2 | §37 | full scale and Pad off the G2's own meter (10-08) | the application has no input device |
-| 4 Inputs | Modelled | §37, §69.12 | through 2-In only | - |
-| FX Input | Confirmed on the G2 | capture-inventory | Pad +6/0/-6/-12 dB (09-07) | - |
-| Keyboard | Confirmed on the G2 | §26 | velocity through the Operators within 0.03 dB (10-03) | - |
-| Monophonic Keyboard | Confirmed on the G2 | §35 | held-note return on 01 Mini Emulator (CT, 09-19) | Poly use is a guess |
-| Device | Approximate | §70.13 | - | - |
-| Status | Confirmed on the G2 | §70.13 | Patch Active is low, off the G2 (10-04) | - |
-| Note Detector | Modelled | §69.11 | - | - |
-| Name Bar | No sound | - | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| 2 Outputs | Confirmed on the G2 | §63, notes §167, §198 | Pad +6 dB (09-07); an unpatched socket is silent (10-10); the path every G2 check goes through | - | Doubles: saturated at twice full scale |
+| 4 Outputs | Confirmed on the G2 | - | Pad +6 dB (09-07) | - | Doubles: saturated at twice full scale |
+| 2 Inputs | Confirmed on the G2 | §37 | full scale and Pad off the G2's own meter (10-08) | the application has no input device | Doubles |
+| 4 Inputs | Modelled | §37, §69.12 | through 2-In only | - | Doubles |
+| FX Input | Confirmed on the G2 | capture-inventory | Pad +6/0/-6/-12 dB (09-07) | - | Doubles |
+| Keyboard | Confirmed on the G2 | §26 | velocity through the Operators within 0.03 dB (10-03) | - | Not affected |
+| Monophonic Keyboard | Confirmed on the G2 | §35 | held-note return on 01 Mini Emulator (CT, 09-19) | Poly use is a guess | Not affected |
+| Device | Approximate | §70.13 | - | - | Not affected |
+| Status | Confirmed on the G2 | §70.13 | Patch Active is low, off the G2 (10-04) | - | Not affected |
+| Note Detector | Modelled | §69.11 | - | - | Not affected |
+| Name Bar | No sound | - | - | - | Not affected |
 
 ### Switches
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| SwOnOffM | Modelled | §68.1 | - | - |
-| SwOnOffT | Modelled | §30 | - | - |
-| Sw2-1 | Modelled | §33 | - | - |
-| Sw2-1M | Modelled | §68.1 | - | - |
-| Sw4-1 | Modelled | §68.1 | - | - |
-| Sw8-1 | Modelled | §33 | - | - |
-| Sw1-2 | Modelled | §68.1 | - | - |
-| Sw1-2M | Modelled | §68.1 | - | - |
-| Sw1-4 | Modelled | §68.1 | - | - |
-| Sw1-8 | Modelled | §45 | - | - |
-| ValSw2-1 | Modelled | §34 | - | - |
-| ValSw1-2 | Modelled | §68.2 | - | - |
-| Mux8-1 | Modelled | §68.3 | - | - |
-| Mux1-8 | Modelled | §68.3 | - | - |
-| Mux8-1X | Modelled | §70.11 | - | - |
-| S&H | Modelled | §38.5 | - | - |
-| T&H | Modelled | §68.4 | - | - |
-| WindSw | Modelled | §68.5 | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| SwOnOffM | Modelled | §68.1 | - | - | Not affected |
+| SwOnOffT | Modelled | §30 | - | - | Not affected |
+| Sw2-1 | Modelled | §33 | - | - | Not affected |
+| Sw2-1M | Modelled | §68.1 | - | - | Not affected |
+| Sw4-1 | Modelled | §68.1 | - | - | Not affected |
+| Sw8-1 | Modelled | §33 | - | - | Not affected |
+| Sw1-2 | Modelled | §68.1 | - | - | Not affected |
+| Sw1-2M | Modelled | §68.1 | - | - | Not affected |
+| Sw1-4 | Modelled | §68.1 | - | - | Not affected |
+| Sw1-8 | Modelled | §45 | - | - | Not affected |
+| ValSw2-1 | Modelled | §34 | - | - | Not affected |
+| ValSw1-2 | Modelled | §68.2 | - | - | Not affected |
+| Mux8-1 | Modelled | §68.3 | - | - | Integer control: Ctrl's word >> 17 picks the input |
+| Mux1-8 | Modelled | §68.3 | - | - | Integer control: Ctrl's word >> 17 picks the output |
+| Mux8-1X | Modelled | §70.11 | - | - | Doubles |
+| S&H | Modelled | §38.5 | - | - | Not affected: a copy |
+| T&H | Modelled | §68.4 | - | - | Not affected: a copy |
+| WindSw | Modelled | §68.5 | - | - | Not affected |
 
 ### Logic
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Invert | Modelled | §38.1 | - | - |
-| Pulse | Confirmed on the G2 | §18 | 17 widths within two samples (09) | Plus/Minus edge (10-09) in to-test |
-| Delay | Modelled | §46 | - | - |
-| Gate | Modelled | §38.2 | - | - |
-| FlipFlop | Approximate | §38.3 | - | - |
-| ClkDiv | Confirmed on the G2 | §38.4 | 14 pattern seq steps once a bar, as on the G2 (10-07) | - |
-| 8Counter | Modelled | §68.6 | - | - |
-| BinCounter | Modelled | §68.6 | - | - |
-| ADConv | Modelled | §68.7 | - | - |
-| DAConv | Modelled | §68.7 | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Invert | Modelled | §38.1 | - | - | Not affected |
+| Pulse | Confirmed on the G2 | §18 | 17 widths within two samples (09) | Plus/Minus edge (10-09) in to-test | Not affected |
+| Delay | Modelled | §46 | - | - | Not affected |
+| Gate | Modelled | §38.2 | - | - | Not affected |
+| FlipFlop | Approximate | §38.3 | - | - | Not affected |
+| ClkDiv | Confirmed on the G2 | §38.4 | 14 pattern seq steps once a bar, as on the G2 (10-07) | - | Not affected |
+| 8Counter | Modelled | §68.6 | - | - | Not affected |
+| BinCounter | Modelled | §68.6 | - | - | Not affected |
+| ADConv | Modelled | §68.7 | - | - | Integer words: the input's word, bit by bit |
+| DAConv | Modelled | §68.7 | - | - | Integer words: the bits as a word |
 
 ### Sequencers
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Sequencer Event | Confirmed on the G2 | §58 | step timing at 192 kHz (09-26); 1:2 BCHydro_DZLW within 0.2 dB (10-09) | - |
-| Sequencer Values | Confirmed on the G2 | §58 | as Sequencer Event | - |
-| Sequencer Level | Confirmed on the G2 | §58, §69.1 | Length/Cycle restart in BCHydro_DZLW (10-09) | - |
-| Sequencer Note | Confirmed on the G2 | §58, §58.1 | 18 Unreal Dreams' pitches (09-28) | the record stage never compared |
-| Sequencer Controlled | Modelled | §70.10 | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Sequencer Event | Confirmed on the G2 | §58 | step timing at 192 kHz (09-26); 1:2 BCHydro_DZLW within 0.2 dB (10-09) | - | Integer words: the module's own arithmetic |
+| Sequencer Values | Confirmed on the G2 | §58 | as Sequencer Event | - | Integer words: the module's own arithmetic |
+| Sequencer Level | Confirmed on the G2 | §58, §69.1 | Length/Cycle restart in BCHydro_DZLW (10-09) | - | Integer words: the module's own arithmetic |
+| Sequencer Note | Confirmed on the G2 | §58, §58.1 | 18 Unreal Dreams' pitches (09-28) | the record stage never compared | Integer words: the module's own arithmetic |
+| Sequencer Controlled | Modelled | §70.10 | - | - | Integer words: Ctrl's word picks the step |
 
 ### Random
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Random A | Modelled | §47 | - | Pitch input not read |
-| Random B | Modelled | §69.10 | - | - |
-| Rnd Clock A | Modelled | §64 | - | - |
-| Rnd Clock B | Modelled | §70.9 | - | - |
-| Rnd Trig | Modelled | §64 | - | - |
-| Rnd Pattern | Modelled | §70.9 | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Random A | Modelled | §47 | - | Pitch input not read | Integer control: step words; the one-pole in doubles |
+| Random B | Modelled | §69.10 | - | - | Integer control: step words; the one-pole in doubles |
+| Rnd Clock A | Modelled | §64 | - | - | Integer control: seed and step words |
+| Rnd Clock B | Modelled | §70.9 | - | - | Integer control: seed, step and Step M words |
+| Rnd Trig | Modelled | §64 | - | - | Integer control: the draw against the threshold |
+| Rnd Pattern | Modelled | §70.9 | - | - | Integer words: generator and counter |
 
 ### Note
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| Note Quantiser | Modelled | §49 | - | - |
-| Key Quantiser | Modelled | §41 | - | - |
-| Partial Quantiser | Modelled | §69.5 | - | - |
-| Note Scaler | Modelled | §60 | - | - |
-| Glide | Modelled | §36 | - | - |
-| Pitch Tracker | Modelled | §70.7 | - | - |
-| Zero Crossing Counter | Modelled | §70.7a | - | - |
-| Level Scaler | Modelled | §70.12 | - | - |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| Note Quantiser | Modelled | §49 | - | - | Integer words: the module's own arithmetic |
+| Key Quantiser | Modelled | §41 | - | - | Integer words: the reference model's integer arithmetic |
+| Partial Quantiser | Modelled | §69.5 | - | - | Integer words |
+| Note Scaler | Modelled | §60 | - | - | Saturating doubles: saturated as a word |
+| Glide | Modelled | §36 | - | - | Doubles |
+| Pitch Tracker | Modelled | §70.7 | - | - | Doubles |
+| Zero Crossing Counter | Modelled | §70.7a | - | - | Doubles |
+| Level Scaler | Modelled | §70.12 | - | - | Saturating doubles: gain and output saturated |
 
 ### MIDI
 
-| Module | State | Reference | On the G2 | Open |
-|---|---|---|---|---|
-| CtrlSend | Confirmed on the G2 | §62.3 | 1:2 BCHydro_DZLW's variation switching, within 1-4 ms (10-09) | MIDI channels 1-16 dropped |
-| PCSend | No sound | - | - | nothing leaves by MIDI |
-| NoteSend | Partial | §62 | 18 Unreal Dreams' pitches and band balance (09-28) | MIDI channels 1-16 dropped |
-| CtrlRcv | Modelled | §70.13 | - | in the plug-in only notes arrive |
-| NoteRcv | Modelled | §70.13 | - | - |
-| NoteZone | No sound | - | - | nothing leaves by MIDI |
-| Automate | No sound | - | - | nothing leaves by MIDI |
+| Module | State | Reference | On the G2 | Open | Fixed point |
+|---|---|---|---|---|---|
+| CtrlSend | Confirmed on the G2 | §62.3 | 1:2 BCHydro_DZLW's variation switching, within 1-4 ms (10-09) | MIDI channels 1-16 dropped | Saturating doubles: the signal saturated as a word, then the controller value |
+| PCSend | No sound | - | - | nothing leaves by MIDI | Not affected |
+| NoteSend | Partial | §62 | 18 Unreal Dreams' pitches and band balance (09-28) | MIDI channels 1-16 dropped | Not affected |
+| CtrlRcv | Modelled | §70.13 | - | in the plug-in only notes arrive | Not affected |
+| NoteRcv | Modelled | §70.13 | - | - | Not affected |
+| NoteZone | No sound | - | - | nothing leaves by MIDI | Not affected |
+| Automate | No sound | - | - | nothing leaves by MIDI | Not affected |
+
+### Fixed point
+
+| Arithmetic | Modules |
+|---|---|
+| Integer words | 35 |
+| Integer control | 14 |
+| Saturating doubles | 11 |
+| Doubles | 71 |
+| Not affected | 39 |
 
 ## The G2 check queue
 

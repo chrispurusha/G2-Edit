@@ -265,6 +265,215 @@ static const tEvidence kEvidence[] = {
     {"NoteSend",              ePartial,     "§62",                       "18 Unreal Dreams' pitches and band balance (09-28)", "MIDI channels 1-16 dropped"},
 };
 
+// notes §2 - the arithmetic each module's model runs in, against the instrument's 24-bit words
+typedef enum {
+    ePrecWords = 0,    // the signal path in the instrument's words: its truncation, rounding and saturation
+    ePrecControl,      // counters, phases, steps or coefficients in its words; the audio path in doubles
+    ePrecSaturating,   // doubles on the instrument's scaling, saturated where it saturates; never rounded to 24 bits
+    ePrecDoubles,      // doubles throughout, saturated only where the value leaves the module
+    ePrecNone,         // logic, switching, copies, MIDI: thresholds and whole numbers, which no rounding moves
+    PREC_COUNT
+} tPrecision;
+
+static const char * kPrecisionName[PREC_COUNT] = {"Integer words", "Integer control", "Saturating doubles", "Doubles", "Not affected"};
+
+typedef struct {
+    const char * name;
+    tPrecision   precision;
+    const char * note;    // what is in words, or "-"
+} tPrecisionRow;
+
+static const tPrecisionRow kPrecision[] = {
+    // Oscillators
+    {"Osc A",                 ePrecDoubles,    "phase accumulator in doubles"},
+    {"Osc B",                 ePrecDoubles,    "phase accumulator in doubles"},
+    {"Osc C",                 ePrecDoubles,    "phase accumulator in doubles"},
+    {"Osc D",                 ePrecDoubles,    "phase accumulator in doubles"},
+    {"Osc Phase Mod",         ePrecDoubles,    "phase and Phase M in doubles; the sine is the module's polynomial"},
+    {"Osc Shape A",           ePrecDoubles,    "phase accumulator in doubles"},
+    {"Osc Shape B",           ePrecDoubles,    "phase accumulator in doubles"},
+    {"Osc Dual",              ePrecDoubles,    "phase accumulator in doubles"},
+    {"Noise Osc",             ePrecSaturating, "24-bit LFSR; the band-passes saturate at the word's +-1"},
+    {"Noise",                 ePrecDoubles,    "xorshift draw, not the instrument's generator"},
+    {"Metallic Noise",        ePrecWords,      "squares, Freq word and one-poles"},
+    {"Osc Percussion",        ePrecSaturating, "DSP words carried in doubles, saturated"},
+    {"Drum Synth",            ePrecSaturating, "the decoded words carried in doubles"},
+    {"Osc String",            ePrecDoubles,    "-"},
+    {"FM Operator",           ePrecControl,    "envelope, level and rate offsets in words; the operator in doubles"},
+    {"DX Router",             ePrecControl,    "envelope, level and rate offsets in words; the operators in doubles"},
+    {"Driver",                ePrecDoubles,    "-"},
+    {"Resonator",             ePrecDoubles,    "-"},
+    {"Osc Master",            ePrecDoubles,    "-"},
+    // Filters
+    {"LP Filter",             ePrecDoubles,    "-"},
+    {"HP Filter",             ePrecDoubles,    "-"},
+    {"Nord Filter",           ePrecDoubles,    "-"},
+    {"Classic Filter",        ePrecDoubles,    "-"},
+    {"Multi Filter",          ePrecDoubles,    "-"},
+    {"Phase Filter",          ePrecWords,      "the six allpass stages in the accumulator"},
+    {"Comb Filter",           ePrecSaturating, "every word saturated"},
+    {"Static Filter",         ePrecDoubles,    "-"},
+    {"FltVoice",              ePrecControl,    "vowel table and resonance word; the resonators in doubles"},
+    {"WahWah",                ePrecWords,      "sweep and filter words"},
+    {"Vocoder",               ePrecSaturating, "the converters' and bands' words, saturated"},
+    {"Eq 2-band",             ePrecDoubles,    "-"},
+    {"Eq 3-band",             ePrecDoubles,    "-"},
+    {"Eq Peak",               ePrecDoubles,    "-"},
+    // Envelopes
+    {"Envelope ADSR",         ePrecWords,      "level and segments in words; the VCA multiply in doubles"},
+    {"Envelope AHD",          ePrecWords,      "level and segments in words; the VCA multiply in doubles"},
+    {"Envelope ADR",          ePrecWords,      "level and segments in words; the VCA multiply in doubles"},
+    {"Envelop ADDSR",         ePrecWords,      "level and segments in words; the VCA multiply in doubles"},
+    {"Envelope H",            ePrecWords,      "level and segments in words; the VCA multiply in doubles"},
+    {"Envelope D",            ePrecWords,      "level and segments in words; the VCA multiply in doubles"},
+    {"Envelope Multi",        ePrecWords,      "its tick in words"},
+    {"Envelope Mod AHD",      ePrecWords,      "level and segments in words; the VCA multiply in doubles"},
+    {"Envelope Mod ADSR",     ePrecWords,      "level and segments in words; the VCA multiply in doubles"},
+    // LFOs
+    {"LFO A",                 ePrecDoubles,    "phase in doubles"},
+    {"LFO B",                 ePrecDoubles,    "phase in doubles"},
+    {"LFO C",                 ePrecDoubles,    "phase in doubles"},
+    {"LFO Shp A",             ePrecDoubles,    "phase in doubles"},
+    {"Clock Generator",       ePrecWords,      "phase and tempo words"},
+    // Mixers
+    {"Mixer 1-1 A",           ePrecDoubles,    "-"},
+    {"Mixer 1-1 S",           ePrecDoubles,    "-"},
+    {"Mixer 2-1 A",           ePrecDoubles,    "-"},
+    {"Mixer 4-1 A",           ePrecDoubles,    "-"},
+    {"Mixer 4-1 B",           ePrecDoubles,    "-"},
+    {"Mixer 4-1 C",           ePrecDoubles,    "-"},
+    {"Mixer 4-1 S",           ePrecDoubles,    "-"},
+    {"Mixer 2-1 B",           ePrecDoubles,    "-"},
+    {"Mixer 8-1 A",           ePrecDoubles,    "-"},
+    {"Mixer 8-1 B",           ePrecDoubles,    "-"},
+    {"MixFader",              ePrecDoubles,    "-"},
+    {"MixStereo",             ePrecDoubles,    "-"},
+    {"Fade 1-2",              ePrecDoubles,    "-"},
+    {"Fade 2-1",              ePrecDoubles,    "-"},
+    {"X-Fade",                ePrecDoubles,    "-"},
+    {"Pan",                   ePrecDoubles,    "-"},
+    // Level
+    {"Constant",              ePrecDoubles,    "-"},
+    {"ConstSwM",              ePrecDoubles,    "-"},
+    {"ConstSwT",              ePrecDoubles,    "-"},
+    {"CompLev",               ePrecWords,      "compared as words"},
+    {"CompSig",               ePrecWords,      "compared as words"},
+    {"LevAdd",                ePrecDoubles,    "-"},
+    {"LevAmp",                ePrecDoubles,    "-"},
+    {"LevConv",               ePrecDoubles,    "-"},
+    {"LevMod",                ePrecWords,      "-"},
+    {"LevMult",               ePrecDoubles,    "-"},
+    {"MinMax",                ePrecDoubles,    "-"},
+    {"ModAmt",                ePrecDoubles,    "-"},
+    {"NoiseGate",             ePrecWords,      "follower and gate in words"},
+    {"EnvFollow",             ePrecWords,      "peak word and follower"},
+    {"Red2Blue",              ePrecNone,       "a copy, held at 24 kHz"},
+    {"Blue2Red",              ePrecNone,       "a copy"},
+    // Shapers
+    {"Saturate",              ePrecDoubles,    "-"},
+    {"Clip",                  ePrecDoubles,    "-"},
+    {"OverDrive",             ePrecSaturating, "drive, feedback and blend saturated as words"},
+    {"ShpExp",                ePrecDoubles,    "-"},
+    {"WaveWrap",              ePrecDoubles,    "-"},
+    {"ShpStatic",             ePrecDoubles,    "-"},
+    {"Rect",                  ePrecDoubles,    "-"},
+    // Delays
+    {"Delay Single A",        ePrecDoubles,    "a 4-point read"},
+    {"Delay Single B",        ePrecDoubles,    "a 4-point read"},
+    {"Delay Dual",            ePrecDoubles,    "a 4-point read"},
+    {"Delay Quad",            ePrecDoubles,    "a 4-point read"},
+    {"Delay A",               ePrecWords,      "the tap, LP, HP and feedback on half-scale words"},
+    {"Delay B",               ePrecWords,      "the tap, LP, HP and feedback on half-scale words"},
+    {"Delay Stereo",          ePrecWords,      "Delay B's tap on both lines"},
+    {"Delay Clock",           ePrecNone,       "a copy on each clock"},
+    {"Delay Eight",           ePrecDoubles,    "a 4-point read"},
+    {"DlyShiftReg",           ePrecNone,       "copies"},
+    // Effects
+    {"Compressor",            ePrecWords,      "detector, gain table and make-up"},
+    {"Digitizer",             ePrecWords,      "rate word and phase"},
+    {"FreqShift",             ePrecSaturating, "allpass chains saturated at the word's +-1"},
+    {"Flanger",               ePrecControl,    "sweep phase word; the ring read in doubles"},
+    {"Chorus",                ePrecControl,    "LFO phase word; the taps in doubles"},
+    {"Phaser",                ePrecSaturating, "the module's fractions, saturated"},
+    {"PShift",                ePrecControl,    "phase word; the taps in doubles"},
+    {"Reverb",                ePrecWords,      "every stored value rounded down to the 24-bit grid and clamped"},
+    {"Scratch",               ePrecControl,    "ratio and phase words; the taps in doubles"},
+    // In/Out
+    {"2 Outputs",             ePrecDoubles,    "saturated at twice full scale"},
+    {"4 Outputs",             ePrecDoubles,    "saturated at twice full scale"},
+    {"2 Inputs",              ePrecDoubles,    "-"},
+    {"4 Inputs",              ePrecDoubles,    "-"},
+    {"FX Input",              ePrecDoubles,    "-"},
+    {"Keyboard",              ePrecNone,       "-"},
+    {"Monophonic Keyboard",   ePrecNone,       "-"},
+    {"Device",                ePrecNone,       "-"},
+    {"Status",                ePrecNone,       "-"},
+    {"Note Detector",         ePrecNone,       "-"},
+    {"Name Bar",              ePrecNone,       "-"},
+    // Switches
+    {"SwOnOffM",              ePrecNone,       "-"},
+    {"SwOnOffT",              ePrecNone,       "-"},
+    {"Sw2-1",                 ePrecNone,       "-"},
+    {"Sw2-1M",                ePrecNone,       "-"},
+    {"Sw4-1",                 ePrecNone,       "-"},
+    {"Sw8-1",                 ePrecNone,       "-"},
+    {"Sw1-2",                 ePrecNone,       "-"},
+    {"Sw1-2M",                ePrecNone,       "-"},
+    {"Sw1-4",                 ePrecNone,       "-"},
+    {"Sw1-8",                 ePrecNone,       "-"},
+    {"ValSw2-1",              ePrecNone,       "-"},
+    {"ValSw1-2",              ePrecNone,       "-"},
+    {"Mux8-1",                ePrecControl,    "Ctrl's word >> 17 picks the input"},
+    {"Mux1-8",                ePrecControl,    "Ctrl's word >> 17 picks the output"},
+    {"Mux8-1X",               ePrecDoubles,    "-"},
+    {"S&H",                   ePrecNone,       "a copy"},
+    {"T&H",                   ePrecNone,       "a copy"},
+    {"WindSw",                ePrecNone,       "-"},
+    // Logic
+    {"Invert",                ePrecNone,       "-"},
+    {"Pulse",                 ePrecNone,       "-"},
+    {"Delay",                 ePrecNone,       "-"},
+    {"Gate",                  ePrecNone,       "-"},
+    {"FlipFlop",              ePrecNone,       "-"},
+    {"ClkDiv",                ePrecNone,       "-"},
+    {"8Counter",              ePrecNone,       "-"},
+    {"BinCounter",            ePrecNone,       "-"},
+    {"ADConv",                ePrecWords,      "the input's word, bit by bit"},
+    {"DAConv",                ePrecWords,      "the bits as a word"},
+    // Sequencers
+    {"Sequencer Event",       ePrecWords,      "the module's own arithmetic"},
+    {"Sequencer Values",      ePrecWords,      "the module's own arithmetic"},
+    {"Sequencer Level",       ePrecWords,      "the module's own arithmetic"},
+    {"Sequencer Note",        ePrecWords,      "the module's own arithmetic"},
+    {"Sequencer Controlled",  ePrecWords,      "Ctrl's word picks the step"},
+    // Random
+    {"Random A",              ePrecControl,    "step words; the one-pole in doubles"},
+    {"Random B",              ePrecControl,    "step words; the one-pole in doubles"},
+    {"Rnd Clock A",           ePrecControl,    "seed and step words"},
+    {"Rnd Clock B",           ePrecControl,    "seed, step and Step M words"},
+    {"Rnd Trig",              ePrecControl,    "the draw against the threshold"},
+    {"Rnd Pattern",           ePrecWords,      "generator and counter"},
+    // Note
+    {"Note Quantiser",        ePrecWords,      "the module's own arithmetic"},
+    {"Key Quantiser",         ePrecWords,      "the reference model's integer arithmetic"},
+    {"Partial Quantiser",     ePrecWords,      "-"},
+    {"Note Scaler",           ePrecSaturating, "saturated as a word"},
+    {"Glide",                 ePrecDoubles,    "-"},
+    {"Pitch Tracker",         ePrecDoubles,    "-"},
+    {"Zero Crossing Counter", ePrecDoubles,    "-"},
+    {"Level Scaler",          ePrecSaturating, "gain and output saturated"},
+    // MIDI
+    {"CtrlSend",              ePrecSaturating, "the signal saturated as a word, then the controller value"},
+    {"PCSend",                ePrecNone,       "-"},
+    {"CtrlRcv",               ePrecNone,       "-"},
+    {"NoteRcv",               ePrecNone,       "-"},
+    {"NoteZone",              ePrecNone,       "-"},
+    {"Automate",              ePrecNone,       "-"},
+    {"NoteSend",              ePrecNone,       "-"},
+};
+
+#define PRECISION_COUNT (sizeof(kPrecision) / sizeof(kPrecision[0]))
+
 #define EVIDENCE_COUNT (sizeof(kEvidence) / sizeof(kEvidence[0]))
 #define GROUP_COUNT    (sizeof(kGroups) / sizeof(kGroups[0]))
 #define LINE_BYTES     (4096)
@@ -291,6 +500,15 @@ static int evidence_index(const char * name) {
         }
     }
     return index;
+}
+
+static int precision_index(const char * name) {
+    for (uint32_t r = 0; r < PRECISION_COUNT; r++) {
+        if (strcmp(kPrecision[r].name, name) == 0) {
+            return (int)r;
+        }
+    }
+    return -1;
 }
 
 static void append_name(char * line, uint32_t * n, const char * name) {
@@ -1055,6 +1273,8 @@ static int print_aspects(const char * paramNames) {
 int main(int argc, char ** argv) {
     uint32_t total[STATE_COUNT + 1]       = {0};    // the last is Not implemented
     bool     evidenceSeen[EVIDENCE_COUNT] = {false};
+    bool     precisionSeen[PRECISION_COUNT] = {false};
+    uint32_t precisionTotal[PREC_COUNT]     = {0};
     int      result                       = 0;
 
     init_module_resource_cache();
@@ -1122,8 +1342,8 @@ int main(int argc, char ** argv) {
         uint32_t    count = palette_group_modules(kGroups[g].group, types, 256);
 
         printf("\n### %s\n\n", kGroups[g].name);
-        printf("| Module | State | Reference | On the G2 | Open |\n");
-        printf("|---|---|---|---|---|\n");
+        printf("| Module | State | Reference | On the G2 | Open | Fixed point |\n");
+        printf("|---|---|---|---|---|---|\n");
 
         for (uint32_t i = 0; i < count; i++) {
             int e = evidence_index(module_name(types[i]));
@@ -1131,8 +1351,37 @@ int main(int argc, char ** argv) {
             if ((e >= 0) && (evidenceSeen[e] == true)) {
                 const tEvidence * row = &kEvidence[e];
 
-                printf("| %s | %s | %s | %s | %s |\n", row->name, kStateName[row->state], row->refs, row->g2, row->open);
+                int               p   = precision_index(row->name);
+
+                if (p < 0) {
+                    fprintf(stderr, "'%s' has no row in kPrecision\n", row->name);
+                    result = 1;
+                    continue;
+                }
+                precisionSeen[p] = true;
+                precisionTotal[kPrecision[p].precision]++;
+
+                if (strcmp(kPrecision[p].note, "-") == 0) {
+                    printf("| %s | %s | %s | %s | %s | %s |\n", row->name, kStateName[row->state], row->refs, row->g2, row->open,
+                           kPrecisionName[kPrecision[p].precision]);
+                } else {
+                    printf("| %s | %s | %s | %s | %s | %s: %s |\n", row->name, kStateName[row->state], row->refs, row->g2, row->open,
+                           kPrecisionName[kPrecision[p].precision], kPrecision[p].note);
+                }
             }
+        }
+    }
+
+    printf("\n### Fixed point\n\n| Arithmetic | Modules |\n|---|---|\n");
+
+    for (uint32_t k = 0; k < PREC_COUNT; k++) {
+        printf("| %s | %u |\n", kPrecisionName[k], (unsigned)precisionTotal[k]);
+    }
+
+    for (uint32_t r = 0; r < PRECISION_COUNT; r++) {
+        if (precisionSeen[r] == false) {
+            fprintf(stderr, "kPrecision names '%s', which has no status row\n", kPrecision[r].name);
+            result = 1;
         }
     }
 
