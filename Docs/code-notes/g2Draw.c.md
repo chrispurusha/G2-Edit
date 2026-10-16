@@ -158,3 +158,27 @@ visible in the plug-in: Help > About did nothing at all, and so would any error 
 to report. The coordinator draws SynthLib's own five in layer order, so a popup added there
 arrives here without this file changing. The menu bar is the exception above: its render slot
 is NULL because the BAR is the application's, drawn from gPluginMenuBar.
+
+## 17. The engine rebuild in `g2_draw_frame()` (`gEditorInputSerial`, `G2_REBUILD_SAFETY_MS`)
+
+THE FRAME REBUILDS THE ENGINE ONLY WHEN THE EDITOR HAS HAD INPUT. It used to call
+`sound_engine_update_from_patch()` on every frame, and the meter timer (g2View.m notes §15) draws twenty a
+second while the engine runs - each one rebuilding all four slots' graphs three times (the snapshot and one
+probe per morph axis) under the database read lock, only for the memcmp to find nothing changed. Measured
+2026-10-16 on BCHydro_DZLW (four slots, M-series Mac, -O1 and -O2 alike): 2.3 ms a rebuild, 4.5% of a core
+at 20 Hz before any drawing - and more on the Intel Mac where the editor was heard to cost audio
+(findings.md 2026-10-12, "Plug-in editor costs audio").
+
+In the plug-in the patch changes only from:
+- the editor's input - every `g2_input_*()` entry that can act bumps `gEditorInputSerial`, the frame
+  rebuilds when it has moved. Hover and pointer-left do not count: they change nothing the engine reads;
+- a file load (`g2_on_file_chosen()`) and the host's `setState()`, which rebuild for themselves;
+- morphs, aftertouch, a variation and an Engine Rate change, which the rebuild worker takes
+  (g2Plugin.c notes §14).
+
+There is no USB thread here to change it behind the editor's back, which is why this is safe in the
+plug-in and NOT done the same way in the application (todo: the per-slot edit counter). The serial and the
+last one rebuilt for are document fields, so each instance follows its own editor.
+
+A rebuild once a second regardless (`G2_REBUILD_SAFETY_MS`) is the safety net for a path this list has
+missed: such a change would then reach the sound within a second rather than never.

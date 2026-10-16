@@ -205,6 +205,9 @@ typedef struct tG2Document {
     bool             gEngineOnlyIndex[MAX_SLOTS][locationMax][MAX_NUM_MODULES];   // dataBase.c notes §8
     tSamplerFile     gSamplerFile[MAX_SAMPLER_FILES];                             // dataBase.c notes §9
     _Atomic uint32_t gModuleLayoutGen[MAX_SLOTS];                                 // dataBase.c notes §10
+    uint32_t         gEditorInputSerial;                                          // plugin/g2Draw.c notes §17 - the editor's input events
+    uint32_t         gEditorInputSeen;                                            // and the last one the engine was rebuilt for
+    double           gEditorRebuiltMs;
     tNotG2Cache      gNotG2Cache[MAX_SLOTS];                                      // patchWrite.c notes §4
     // slotSets.c notes §1 - the other mode's four slots, as a performance image, and its performance's name
     uint8_t *        gOtherSlotSet;
@@ -363,6 +366,9 @@ tG2Document * g2_document_current(void);
 #define gEngineOnlyIndex                 (gDoc->gEngineOnlyIndex)
 #define gSamplerFile                     (gDoc->gSamplerFile)
 #define gModuleLayoutGen                 (gDoc->gModuleLayoutGen)
+#define gEditorInputSerial               (gDoc->gEditorInputSerial)
+#define gEditorInputSeen                 (gDoc->gEditorInputSeen)
+#define gEditorRebuiltMs                 (gDoc->gEditorRebuiltMs)
 #define gNotG2Cache                      (gDoc->gNotG2Cache)
 #define gOtherSlotSet                    (gDoc->gOtherSlotSet)
 #define gOtherSlotSetLen                 (gDoc->gOtherSlotSetLen)

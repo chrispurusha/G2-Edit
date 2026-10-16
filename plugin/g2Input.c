@@ -107,6 +107,8 @@ static bool dispatch_drag(void) {
 
 // notes §7
 bool g2_input_drag_by(double dxPixels, double dyPixels) {
+    gEditorInputSerial++;    // g2Draw.c notes §17
+
     double scale = (gGlobalGuiScale > 0.0) ? gGlobalGuiScale : 1.0;
 
     gMouse.x += dxPixels / scale;
@@ -115,6 +117,8 @@ bool g2_input_drag_by(double dxPixels, double dyPixels) {
 }
 
 bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
+    gEditorInputSerial++;    // g2Draw.c notes §17
+
     bool handled = false;
 
     g2_input_set_mouse(x, y);
@@ -279,6 +283,8 @@ void g2_input_pointer_left(void) {
 // Right button. The application opens its canvas menus on release, and the hit-test order matters —
 // see canvas_right_click().
 bool g2_input_right_click(double x, double y) {
+    gEditorInputSerial++;    // g2Draw.c notes §17
+
     g2_input_set_mouse(x, y);
 
     // An open menu takes the click, as it does for the left button.
@@ -300,6 +306,8 @@ bool g2_input_right_click(double x, double y) {
 // Wheel or trackpad. Scrolls whichever pane the pointer is over rather than the focused one, which
 // is what makes a two-pane view feel right — you scroll what you are looking at.
 void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
+    gEditorInputSerial++;    // g2Draw.c notes §17
+
     int32_t pane = 0;
 
     g2_input_set_mouse(x, y);
@@ -335,6 +343,8 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
 
 // notes §19
 bool g2_input_drag_tick(void) {
+    gEditorInputSerial++;    // g2Draw.c notes §17
+
     bool busy = false;
 
     // notes §20
@@ -381,6 +391,8 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
 
 // notes §24
 bool g2_input_key(int character, bool cmdHeld) {
+    gEditorInputSerial++;    // g2Draw.c notes §17
+
     if (cmdHeld == true) {
         // Cmd +/- is the canvas zoom, the same pair and the same step the application uses.
         if ((character == '=') || (character == '+')) {
@@ -470,6 +482,8 @@ static bool text_edit_take(int glfwKey, unsigned int codepoint, bool isRepeat) {
 }
 
 bool g2_input_popup_key(unsigned short macKeyCode, const char * characters, bool isRepeat) {
+    gEditorInputSerial++;    // g2Draw.c notes §17
+
     int  key  = glfw_key_for_mac(macKeyCode);
     bool used = false;
 
@@ -497,6 +511,8 @@ bool g2_input_popup_key(unsigned short macKeyCode, const char * characters, bool
 #if defined (_WIN32)
 // The Windows editor's keys (g2ViewWin.c), already GLFW key codes or a typed character: the same route as above
 bool g2_input_popup_key_glfw(int glfwKey, unsigned int codepoint, bool isRepeat) {
+    gEditorInputSerial++;    // g2Draw.c notes §17
+
     bool used = false;
 
     if (glfwKey != GLFW_KEY_UNKNOWN) {

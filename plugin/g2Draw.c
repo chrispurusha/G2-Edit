@@ -34,6 +34,7 @@
 // notes §2
 #include "defs.h"
 #include "synthlibDefs.h"
+#include "utils.h"           // get_time_ms()
 #include "synthlibTypes.h"
 #include "geometry.h"
 #include "utilsGraphics.h"
@@ -71,6 +72,9 @@
 #include "g2AppStubs.h"
 #include "g2Patch.h"
 #include "g2Draw.h"
+
+// notes §17 - a frame rebuilds the engine at least this often, input or not
+#define G2_REBUILD_SAFETY_MS    (1000.0)
 
 // The application's canvas grey (graphics.c render_frame()), so the strip reads as a piece of the
 // editor rather than as a debug surface that happens to be switched on.
@@ -346,9 +350,14 @@ void g2_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
         }
     }
 
-    database_read_lock();   // g2Plugin.c notes §16
-    sound_engine_update_from_patch();
-    database_read_unlock();
+    // notes §17 - only for a frame with input behind it; a meter frame has nothing new to build
+    if ((gEditorInputSerial != gEditorInputSeen) || ((get_time_ms() - gEditorRebuiltMs) >= G2_REBUILD_SAFETY_MS)) {
+        gEditorInputSeen = gEditorInputSerial;
+        gEditorRebuiltMs = get_time_ms();
+        database_read_lock();   // g2Plugin.c notes §16
+        sound_engine_update_from_patch();
+        database_read_unlock();
+    }
 
     // The click regions must be cleared each frame because the renderer registers one for every
     // module, dial and connector as it draws — letting them accumulate would grow without limit for
