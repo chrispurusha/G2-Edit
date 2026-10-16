@@ -34,6 +34,7 @@ extern "C" {
 #include "waveModels.h"
 #include "moduleGraphics.h"
 #include "soundEngine.h"    // sound_engine_module_meter() - see volume_source()
+#include "meterDisplay.h"
 #include "nordSample.h"
 #include "misc.h"
 #include "splitView.h"
@@ -424,51 +425,31 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
         case volumeMeterStyleLevelBar:
         {
-            uint32_t level             = value & 0x0f;
-            //bool     yellowHold        = ((value >> 4) & 0x03) != 0;
-            //bool     hold        = ((value >> 5) & 0x01) != 0;
-            bool     clip              = ((value >> 6) & 0x01) != 0;
+            // notes §33 - twelve rows lit or dim: seven green, four yellow, and red three rows tall
+            static const tRgb kYellowDim = {0.3, 0.3, 0.0};
+            static const tRgb kRedDim    = {0.3, 0.0, 0.0};
+            uint32_t          level      = value & 0x0f;
+            bool              held       = ((value >> 4) & 0x03) != 0;
+            bool              clip       = ((value >> 6) & 0x01) != 0;
+            double            row        = rectangle.size.h / (double)(config->segments + 2);   // red is three rows
+            double            y          = rectangle.coord.y;
 
-            double   fullHeight        = rectangle.size.h;
-            double   stepHeight        = fullHeight / (double)config->segments;
-            int      valueThresholds[] = {7, 11, 12}; // exclusive upper bounds: green/yellow/red
-            tRgb     colours[]         = {RGB_GREEN_7, (tRgb)RGB_YELLOW_7, RGB_RED_7};
+            set_rgb_colour((clip || (level > 11)) ? (tRgb)RGB_RED_7 : kRedDim);
+            render_rectangle(moduleArea, (tRectangle){{rectangle.coord.x, y}, {rectangle.size.w, row * 3.0}});
+            y += row * 3.0;
 
-            set_rgb_colour((tRgb)RGB_BLACK);
-            render_rectangle(moduleArea, rectangle);
-
-            double   previousHeight    = 0;
-
-            for (int i = 0; i < 3; i++) {
-                int    segmentTopVal     = valueThresholds[i];
-                int    segmentBottomVal  = (i == 0) ? 0 : valueThresholds[i - 1];
-                int    segmentRange      = segmentTopVal - segmentBottomVal;
-                double segmentDrawHeight = 0;
-
-                if ((int)level >= segmentBottomVal) {
-                    int drawSteps = ((int)level < segmentTopVal) ? (int)level - segmentBottomVal : segmentRange;
-                    segmentDrawHeight = (drawSteps * fullHeight) / (double)config->segments;
-
-                    set_rgb_colour(colours[i]);
-                    render_rectangle(
-                        moduleArea,
-                        (tRectangle){{rectangle.coord.x,
-                                      rectangle.coord.y + fullHeight - previousHeight - segmentDrawHeight},
-                                     {rectangle.size.w,
-                                      segmentDrawHeight}
-                        });
-                    previousHeight   += segmentDrawHeight;
-                }
+            for (uint32_t k = 4; k >= 1; k--) {   // levels 11 down to 8; a hold lights the top two
+                set_rgb_colour(((level >= (k + 7)) || (held && (k >= 3))) ? (tRgb)RGB_YELLOW_7 : kYellowDim);
+                render_rectangle(moduleArea, (tRectangle){{rectangle.coord.x, y}, {rectangle.size.w, row}});
+                y += row;
             }
 
-            // Clip: bright red stripe at the very top of the meter (red zone) when clipping.
-            if (clip) {
-                set_rgb_colour((tRgb)RGB_RED_7);
-                render_rectangle(moduleArea,
-                                 (tRectangle){{rectangle.coord.x, rectangle.coord.y},
-                                              {rectangle.size.w, stepHeight}
-                                 });
+            for (uint32_t k = 7; k >= 1; k--) {   // levels 7 down to 1
+                set_rgb_colour((level >= k) ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_GREEN_3);
+                render_rectangle(moduleArea, (tRectangle){{rectangle.coord.x, y}, {rectangle.size.w, row}});
+                y += row;
             }
+
             break;
         }
 
@@ -904,22 +885,27 @@ static uint32_t volume_source(tModule * module, uint32_t i) {
     return module->volume.value[i];
 }
 
+// A level meter's leg as drawn: its source, smoothed (meterDisplay.c)
+static uint32_t level_shown(tModule * module, uint32_t i, uint32_t value) {
+    return meter_display_level(module->key, i, value);
+}
+
 void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volumeRef, uint32_t volumeIndex) {
     module->volume.volumeRef = volumeRef;
 
     switch (volumeLocationList[volumeRef].volumeType) {
         case volumeTypeMono:
         {
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 0));
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, level_shown(module, 0, volume_source(module, 0)));
         }
         break;
         case volumeTypeStereo:
         {
             double space = find_volume_meter_config(volumeTypeStereo)->space;
 
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 0)); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, level_shown(module, 0, volume_source(module, 0))); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
             rectangle.coord.x += (rectangle.size.w + space);
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 1));
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, level_shown(module, 1, volume_source(module, 1)));
         }
         break;
         case volumeTypeSequencer:
@@ -931,13 +917,13 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
         {
             double space = find_volume_meter_config(volumeTypeQuad)->space;
 
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 0)); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, level_shown(module, 0, volume_source(module, 0))); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
             rectangle.coord.x += (rectangle.size.w + space);
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, volume_source(module, 1));
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, level_shown(module, 1, volume_source(module, 1)));
             rectangle.coord.x += (rectangle.size.w + space);
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[2]);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, level_shown(module, 2, module->volume.value[2]));
             rectangle.coord.x += (rectangle.size.w + space);
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[3]);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, level_shown(module, 3, module->volume.value[3]));
         }
         break;
         case volumeTypeCompress:
@@ -1084,6 +1070,8 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
                                         ledIndex, &fromEngine) == true) {
                 ledVal = fromEngine;
             }
+            ledVal = meter_display_lamp(module->key, ledIndex, ledVal);   // notes §30a
+
             bool     green  = ledVal & 1;
             bool     red    = (ledVal >> 1) & 1;
 

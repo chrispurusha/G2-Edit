@@ -205,6 +205,8 @@ typedef struct tG2Document {
     bool             gEngineOnlyIndex[MAX_SLOTS][locationMax][MAX_NUM_MODULES];   // dataBase.c notes §8
     tSamplerFile     gSamplerFile[MAX_SAMPLER_FILES];                             // dataBase.c notes §9
     _Atomic uint32_t gModuleLayoutGen[MAX_SLOTS];                                 // dataBase.c notes §10
+    tMeterDisplay    gMeterDisplay[MAX_SLOTS][locationMax][MAX_NUM_MODULES];      // meterDisplay.c
+    bool             gMeterDisplaySettling;
     uint32_t         gEditorInputSerial;                                          // plugin/g2Draw.c notes §17 - the editor's input events
     uint32_t         gEditorInputSeen;                                            // and the last one the engine was rebuilt for
     double           gEditorRebuiltMs;
@@ -366,6 +368,8 @@ tG2Document * g2_document_current(void);
 #define gEngineOnlyIndex                 (gDoc->gEngineOnlyIndex)
 #define gSamplerFile                     (gDoc->gSamplerFile)
 #define gModuleLayoutGen                 (gDoc->gModuleLayoutGen)
+#define gMeterDisplay                    (gDoc->gMeterDisplay)
+#define gMeterDisplaySettling            (gDoc->gMeterDisplaySettling)
 #define gEditorInputSerial               (gDoc->gEditorInputSerial)
 #define gEditorInputSeen                 (gDoc->gEditorInputSeen)
 #define gEditorRebuiltMs                 (gDoc->gEditorRebuiltMs)

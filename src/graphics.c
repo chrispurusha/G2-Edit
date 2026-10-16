@@ -44,6 +44,7 @@ extern "C" {
 #include "protocol.h"
 #include "usbComms.h"
 #include "graphics.h"
+#include "meterDisplay.h"    // meter_display_take_settling() - a meter still falling
 #include "palette.h"
 #include "topbarRender.h"
 #include "splitView.h"
@@ -1131,7 +1132,7 @@ void do_graphics_loop(void) {
         }
 
         // notes §43
-        if (sound_engine_meters_dirty() || sound_engine_variation_pending()) {
+        if (sound_engine_meters_dirty() || sound_engine_variation_pending() || meter_display_take_settling()) {
             synthlib_request_redraw();
         }
         reDraw = synthlib_consume_redraw();

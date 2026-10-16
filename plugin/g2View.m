@@ -34,6 +34,7 @@
 #include "g2Input.h"
 #include "inputState.h"
 #include "soundEngine.h"    // sound_engine_meters_dirty() - see -startMeterTimer
+#include "meterDisplay.h"
 
 @interface G2View : NSView
 @property (strong) NSTimer * dragTimer;
@@ -330,7 +331,8 @@ static void frame_stats_record(double start, double drawn, double presented) {
         // notes §17
         (void)sound_engine_meters_dirty();
 
-        if (sound_engine_active() == true) {
+        // the canvas's own smoothing (meterDisplay.c) may still be stepping a meter down
+        if ((meter_display_take_settling() == true) || (sound_engine_active() == true)) {
             [strongSelf setNeedsDisplay:YES];
         }
     }];

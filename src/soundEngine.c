@@ -1575,17 +1575,28 @@ static _Atomic uint32_t     gModuleMeterBank[SOUND_ENGINE_MAX_ENGINES][locationM
 static _Atomic uint32_t     gModuleLedBank[SOUND_ENGINE_MAX_ENGINES][locationMax][MAX_NUM_MODULES];
 #define gModuleLed    (gModuleLedBank[SE])
 
-// The follower behind the level meters. Per NODE, not per voice: the face has one meter however many
-// voices are sounding, fed from one voice (notes §191). About 200 ms of release at 96 kHz.
-#define METER_DECAY                (0.00005)
-#define METER_FLOOR                (0.0078125) // 2^-7, below which the meter law reads 0 (§1.1)
-#define METER_CLIP_HOLD_SECONDS    (1.0)       // §1.1 - the clip bit stays up this long after the last clip
+// §1.1 - the level meters: a peak latch each sample, read and cleared once a poll into a follower that
+// falls by 1/16 a poll. Per NODE, not per voice: one meter per face, fed from one voice (notes §191).
+#define METER_POLL_SECONDS    (0.040)                                    // §1.1 - the poll, and how often a value is published
+#define METER_HOLD_SECONDS    (1.0)                                      // §1.1 - how long the clip and top-of-scale marks stay up
+#define METER_FLOOR           (0.0078125)                                // 2^-7, below which the meter law reads 0 (§1.1)
+#define METER_FULL            (DSP_FULL_SCALE * (8388607.0 / 8388608.0)) // the word's saturation
+#define METER_HELD_CLIP       (1u)                                       // §1.1 - the hold flags
+#define METER_HELD_TOP        (2u)
 static double               gMeterEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
-#define gMeterEnv                  (gMeterEnvBank[SE])
-static uint32_t             gMeterClipHoldBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
-#define gMeterClipHold             (gMeterClipHoldBank[SE])
+#define gMeterEnv             (gMeterEnvBank[SE])
+static double               gMeterLatchBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
+#define gMeterLatch           (gMeterLatchBank[SE])
+static uint32_t             gMeterPollLeftBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES];
+#define gMeterPollLeft        (gMeterPollLeftBank[SE])
+static uint32_t             gMeterHeldBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];      // METER_HELD_*
+#define gMeterHeld            (gMeterHeldBank[SE])
+static uint32_t             gMeterClipPollsBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2]; // polls left
+#define gMeterClipPolls       (gMeterClipPollsBank[SE])
+static uint32_t             gMeterTopPollsBank[SOUND_ENGINE_MAX_ENGINES][MAX_ENGINE_NODES][2];
+#define gMeterTopPolls        (gMeterTopPollsBank[SE])
 static uint32_t             gMeterVoiceBank[SOUND_ENGINE_MAX_ENGINES];      // the voice the face shows - notes §191
-#define gMeterVoice                (gMeterVoiceBank[SE])
+#define gMeterVoice           (gMeterVoiceBank[SE])
 
 static _Atomic int32_t      gOutputGainMilliBank[SOUND_ENGINE_MAX_ENGINES] = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = 1000};
 static double               gSlotGainNowBank[SOUND_ENGINE_MAX_ENGINES]     = {[(0) ... SOUND_ENGINE_MAX_ENGINES - 1] = -1.0}; // §63
@@ -2797,7 +2808,11 @@ static void reset_node_state(void) {
     memset((void *)gModuleMeter, 0, sizeof(gModuleMeter));   // no stale meters after a stop or reload
     memset((void *)gModuleLed, 0, sizeof(gModuleLed));
     memset(gMeterEnv, 0, sizeof(gMeterEnv));
-    memset(gMeterClipHold, 0, sizeof(gMeterClipHold));
+    memset(gMeterLatch, 0, sizeof(gMeterLatch));
+    memset(gMeterPollLeft, 0, sizeof(gMeterPollLeft));
+    memset(gMeterHeld, 0, sizeof(gMeterHeld));
+    memset(gMeterClipPolls, 0, sizeof(gMeterClipPolls));
+    memset(gMeterTopPolls, 0, sizeof(gMeterTopPolls));
 }
 
 // notes §64
@@ -12098,50 +12113,63 @@ static void meter_node(const tEngineNode * spec, uint32_t n, double left, double
     // BOTH LEGS, because a stereo module draws two meters and feeding only the left would
     // leave the right showing whatever the instrument last sent - which is worse than
     // showing nothing, because it looks live and is not.
-    const double legs[2] = {left, right};
-    uint32_t     packed  = METER_WRITTEN;
+    const double legs[2]   = {left, right};
 
     for (uint32_t leg = 0u; leg < 2u; leg++) {
-        double peak  = fabs(legs[leg]);
-        int    level = 0;
+        gMeterLatch[n][leg] = fmax(gMeterLatch[n][leg], fabs(legs[leg]));
+    }
 
-        if (peak > gMeterEnv[n][leg]) {
-            gMeterEnv[n][leg] = peak;
+    if (gMeterPollLeft[n] > 0u) {
+        gMeterPollLeft[n]--;
+        return;
+    }
+    gMeterPollLeft[n] = (uint32_t)lround(METER_POLL_SECONDS * gSampleRate);
+
+    uint32_t     packed    = METER_WRITTEN;
+    uint32_t     holdPolls = (uint32_t)lround(METER_HOLD_SECONDS / METER_POLL_SECONDS);
+
+    for (uint32_t leg = 0u; leg < 2u; leg++) {
+        double   env   = fmax(gMeterEnv[n][leg] * (15.0 / 16.0), gMeterLatch[n][leg]);
+        uint32_t level = 0u;
+
+        gMeterLatch[n][leg] = 0.0;
+        gMeterEnv[n][leg]   = (env < METER_FLOOR) ? 0.0 : env;   // notes §191 - no denormals
+
+        // §1.1 - an octave a step to 7, then 9 and 11; 12 is the word saturated
+        if (env >= METER_FULL) {
+            level = 12u;
+        } else if (env > 2.0) {
+            level = 11u;
+        } else if (env > 1.0) {
+            level = 9u;
         } else {
-            gMeterEnv[n][leg] += METER_DECAY * (peak - gMeterEnv[n][leg]);
-        }
-
-        if (gMeterEnv[n][leg] < METER_FLOOR) {
-            gMeterEnv[n][leg] = 0.0;
-        }
-
-        if (gMeterEnv[n][leg] > 0.0) {
-            int exponent = 0;
-
-            // peak = f x 2^exponent with f in [0.5, 1), so 0.5..1 gives exponent 0.
-            (void)frexp(gMeterEnv[n][leg], &exponent);
-
-            if (exponent <= 0) {
-                level = 7 + exponent;
-            } else if (exponent == 1) {
-                level = 9;
-            } else if (exponent == 2) {
-                level = 11;
-            } else {
-                level                  = 12;
-                gMeterClipHold[n][leg] = (uint32_t)(METER_CLIP_HOLD_SECONDS * gSampleRate);
+            for (double edge = METER_FLOOR; (env > edge) && (level < 7u); edge *= 2.0) {
+                level++;
             }
         }
 
-        if (gMeterClipHold[n][leg] > 0u) {
-            gMeterClipHold[n][leg]--;
-            level |= 0x40;              // the instrument's clip bit
+        if (level == 12u) {
+            gMeterHeld[n][leg]     |= METER_HELD_CLIP;
+            gMeterClipPolls[n][leg] = holdPolls;
+        } else if ((level == 11u) && (gMeterHeld[n][leg] != METER_HELD_CLIP)) {
+            gMeterHeld[n][leg]    |= METER_HELD_TOP;
+            gMeterTopPolls[n][leg] = holdPolls;
         }
 
-        if (level < 0) {
-            level = 0;
+        if (gMeterClipPolls[n][leg] > 0u) {
+            gMeterClipPolls[n][leg]--;
+        } else {
+            gMeterHeld[n][leg] &= ~METER_HELD_CLIP;
         }
-        packed |= ((uint32_t)level << (leg * METER_LEG_SHIFT));
+
+        if (gMeterTopPolls[n][leg] > 0u) {
+            gMeterTopPolls[n][leg]--;
+        } else {
+            gMeterHeld[n][leg] &= ~METER_HELD_TOP;
+        }
+        level  |= ((gMeterHeld[n][leg] & METER_HELD_CLIP) != 0u) ? 0x40u : 0u;   // the instrument's clip bit
+        level  |= ((gMeterHeld[n][leg] & METER_HELD_TOP) != 0u) ? 0x20u : 0u;    // and its top-of-scale hold
+        packed |= (level << (leg * METER_LEG_SHIFT));
     }
 
     if (atomic_exchange_explicit(&gModuleMeter[spec->location][spec->moduleIndex],
@@ -17132,7 +17160,11 @@ static void engine_reset_state(void) {
     memset(&gModuleMeter, 0, sizeof(gModuleMeter));
     memset(&gModuleLed, 0, sizeof(gModuleLed));
     memset(&gMeterEnv, 0, sizeof(gMeterEnv));
-    memset(&gMeterClipHold, 0, sizeof(gMeterClipHold));
+    memset(&gMeterLatch, 0, sizeof(gMeterLatch));
+    memset(&gMeterPollLeft, 0, sizeof(gMeterPollLeft));
+    memset(&gMeterHeld, 0, sizeof(gMeterHeld));
+    memset(&gMeterClipPolls, 0, sizeof(gMeterClipPolls));
+    memset(&gMeterTopPolls, 0, sizeof(gMeterTopPolls));
     memset(&gOutputGainMilli, 0, sizeof(gOutputGainMilli));
     memset(&gBendMilli, 0, sizeof(gBendMilli));
     memset(&gPeakMilli, 0, sizeof(gPeakMilli));

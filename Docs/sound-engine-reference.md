@@ -20,13 +20,20 @@ canvas draws the low nibble and the clip bit only, so the bit changes nothing on
 one-second hold after any 11, as 0x40 is a one-second hold after any 12: either bit can therefore sit
 on a lower reading. 12 is reached only by a saturated word.
 
-**1.2 Engine.** A 200 ms peak follower per metered module, then the law above via `frexp`. Engine and
-G2 agree on 67 of 80 steps of a saw sweep; the rest are one value high at boundaries, where the
-engine's band-limited saw peaks a fraction of a dB higher. A Voice Area module is metered from ONE
-voice after its fade - the newest note still held, else the newest voice - and an FX Area one from its
-own output (notes §191). The clip bit is held for a second after the last 12.
+**1.2 Engine (2026-10-16).** Each metered module keeps a peak latch, raised every sample and read and
+cleared once a poll (`METER_POLL_SECONDS`, 40 ms). A follower falls by 1/16 at each poll and is raised
+to the latch, so a reading drops one value in about half a second (0.56 dB a poll); the law above is
+then applied to it, and the value is published only on the poll. 12 sets a one-second clip hold
+(0x40); 11 sets a one-second hold of 0x20, unless the clip hold alone is up. The poll period is
+UNMEASURED - it sets how fast a reading falls, and timing the G2's meter values after a tone stops
+would settle it (to-test). A Voice Area module is metered from ONE voice after its fade - the newest
+note still held, else the newest voice - and an FX Area one from its own output (notes §191).
 
-**1.3 Rendering.** Low nibble = level; 1-7 green, 8-11 yellow, red above 11 or with bit 0x40.
+**1.3 Rendering (2026-10-16).** Twelve rows: seven green (levels 1-7), four yellow (8-11) and a red one
+three rows tall, each drawn lit or dim. Red is lit at 12 or with 0x40; the top two yellow rows are lit
+whenever 0x20 or 0x10 is set, which is how the hold shows after the level has fallen. On top of that the
+canvas smooths what it draws (meterDisplay.c): a rise shows at once, a fall steps down a row at a time,
+and a lamp stays lit long enough to be seen.
 
 ## 2. Dials
 

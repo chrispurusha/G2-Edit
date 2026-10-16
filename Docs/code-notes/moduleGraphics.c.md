@@ -1302,3 +1302,22 @@ module's width (`adjust_rectangle()`), so they move with the module and scale wi
 placed the second button from the rectangle `draw_button()` returns, which is in screen units: it stayed put
 when the module moved and did not scale. They read only the cache: a bank with a name on the face is already
 read. Their click context is a canvas widget of kind None, so a right-click on them opens the module's menu.
+
+## 30a. in `render_led_common()`
+
+The lamp is drawn through `meter_display_lamp()` (meterDisplay.c notes §3), which holds a brief flash
+long enough to be seen. Whatever the source, the engine or the G2.
+
+## 33. The level bar, in `render_volume_meter()` (2026-10-16)
+
+TWELVE ROWS, EACH LIT OR DIM, laid out as the original editor shows its meters: from the top, a red
+row three rows tall, four yellow rows (levels 11 down to 8) and seven green (7 down to 1). Unlit rows
+are drawn dim rather than black, so the scale is visible with nothing playing.
+
+- Red is lit at level 12 or while the clip bit (0x40) is up.
+- The top two yellow rows are lit whenever 0x20 or 0x10 is set. That is the top-of-scale hold: after
+  a reading of 11 the G2 sets 0x20 for a second (sound-engine-reference §1.1), so the meter keeps
+  showing that it reached the top after the level itself has fallen. These bits used to be masked off
+  and the hold never showed.
+
+The value arrives already smoothed for display (`level_shown()`, meterDisplay.c notes §2).

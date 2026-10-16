@@ -495,6 +495,15 @@ typedef struct {
     bool      active;
 } tCable;
 
+// meterDisplay.c - what one module's meters and lamps are showing, against what was last sent
+#define METER_DISPLAY_LEGS    (4)
+typedef struct {
+    uint8_t shown[METER_DISPLAY_LEGS];
+    double  stepMs[METER_DISPLAY_LEGS];
+    uint8_t lampShown[MAX_LEDS_PER_MODULE];
+    double  lampMs[MAX_LEDS_PER_MODULE];
+} tMeterDisplay;
+
 typedef enum {
     connectorTypeAudio,
     connectorTypeControl,

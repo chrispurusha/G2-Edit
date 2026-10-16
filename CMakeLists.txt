@@ -69,6 +69,7 @@ set(G2_SOURCES
     src/main.c
     src/menuActions.c
     src/menus.c
+    src/meterDisplay.c
     src/midiCcList.c
     src/midiInput.c
     src/moduleGraphics.c
