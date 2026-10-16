@@ -43,6 +43,8 @@ argues for the split.
 
 ## 4. `notes_own_keyboard()`
 
+MOVED to `textEdit.c` on 2026-10-16 - see `textEdit.c.md` §1. Kept here so older references resolve.
+
 WHO OWNS THE KEYBOARD, asked once, instead of six independent editors each helping themselves.
 
 char_event() is a row of sequential ifs with no else between them, so every ACTIVE editor used to
@@ -396,6 +398,8 @@ patch name play a note as well as being inserted. Stating the condition also mea
 edit field cannot quietly reintroduce it by being handled somewhere new.
 
 ## 32. in `key_callback()`
+
+MOVED to `textEdit.c` on 2026-10-16 - see `textEdit.c.md` §2. Kept here so older references resolve.
 
 A Channel Select group is named as a SET: the parameter carries one name
 per button and the wire format sends them together, so renaming one button

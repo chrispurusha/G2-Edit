@@ -143,6 +143,8 @@ SOURCES=(
     "$HERE/src/settingsPanels.c"
     "$HERE/src/floatingPanels.c"
     "$HERE/src/mousePanels.c"
+    # The name fields and patch notes being typed into, split out of mouseHandle.c 2026-10-16
+    "$HERE/src/textEdit.c"
     "$HERE/src/synthSettingsResources.c"
     "$HERE/src/perfSettingsResources.c"
     # The panels the Settings and Tools menus open. Each was checked for real GLFW CALLS first:

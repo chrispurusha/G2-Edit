@@ -100,6 +100,7 @@ set(G2_SOURCES
     src/soundEngine.c
     src/splitView.c
     src/synthSettingsResources.c
+    src/textEdit.c
     src/topbarRender.c
     src/topbarResourcesAccess.c
     src/undo.c

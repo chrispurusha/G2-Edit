@@ -300,3 +300,12 @@ key and character to the popup coordinator, and the plug-in never did, so File >
 filename box that ignored the keyboard. The popups speak GLFW's key codes, so the handful they
 use are translated from macOS's virtual key codes (Carbon's kVK_* values, written out so this
 file needs no Carbon header).
+
+## 26. `text_edit_take()`
+
+The name fields (Rename on a module, a parameter label, the patch, synth and performance names) and
+the patch notes, through the same `textEdit.c` the application types into. Before 2026-10-16 the
+plug-in had no route to them at all: Rename opened the field and every key went on to the host, so
+under Ableton the letters played notes from its computer MIDI keyboard (CT). It runs after SynthLib's
+popups, as `key_callback()` and `char_event()` order it in the application, and a key it takes is
+spent - `g2View.m` and `g2ViewWin.c` return without passing it to the host.

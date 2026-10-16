@@ -117,6 +117,35 @@ void undo_push_module_exclude(tModuleKey key, uint8_t oldValue, uint8_t newValue
     (void)newValue;
 }
 
+// The name fields' commits, reached through textEdit.c
+void undo_push_module_name(tModuleKey key, const char * oldName, const char * newName) {
+    (void)key;
+    (void)oldName;
+    (void)newName;
+}
+
+void undo_push_param_name(tModuleKey key, uint32_t paramIndex, uint32_t labelIndex, const char * oldName, bool oldSet,
+                          const char * newName, bool newSet) {
+    (void)key;
+    (void)paramIndex;
+    (void)labelIndex;
+    (void)oldName;
+    (void)oldSet;
+    (void)newName;
+    (void)newSet;
+}
+
+void undo_push_patch_name(uint32_t slot, const char * oldName, const char * newName) {
+    (void)slot;
+    (void)oldName;
+    (void)newName;
+}
+
+void undo_push_perf_name(const char * oldName, const char * newName) {
+    (void)oldName;
+    (void)newName;
+}
+
 void undo_push_patch_descr(uint32_t slot, uint8_t which, uint8_t oldValue, uint8_t newValue) {
     (void)slot;
     (void)which;

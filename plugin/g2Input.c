@@ -50,6 +50,7 @@
 
 #include "g2View.h"      // cursor_is_captured() — the hidden-pointer safety net
 #include "g2Input.h"
+#include "textEdit.h"     // the name fields and patch notes - notes §26
 
 // notes §3
 static tCoord gMouse = {-1.0, -1.0};
@@ -457,6 +458,17 @@ static unsigned int first_codepoint(const char * utf8) {
     return 0u;
 }
 
+// notes §26 - a name field or the patch notes, once SynthLib's popups have declined the key
+static bool text_edit_take(int glfwKey, unsigned int codepoint, bool isRepeat) {
+    if (glfwKey != GLFW_KEY_UNKNOWN) {
+        int mods = (shift_modifier_held() ? GLFW_MOD_SHIFT : 0) | (ctrl_modifier_held() ? GLFW_MOD_CONTROL : 0)
+                   | (cmd_modifier_held() ? GLFW_MOD_SUPER : 0) | (alt_modifier_held() ? GLFW_MOD_ALT : 0);
+
+        return text_edit_key(glfwKey, mods, isRepeat ? GLFW_REPEAT : GLFW_PRESS);
+    }
+    return (codepoint >= 0x20u) && (codepoint != 0x7Fu) && text_edit_char(codepoint);
+}
+
 bool g2_input_popup_key(unsigned short macKeyCode, const char * characters, bool isRepeat) {
     int  key  = glfw_key_for_mac(macKeyCode);
     bool used = false;
@@ -470,6 +482,10 @@ bool g2_input_popup_key(unsigned short macKeyCode, const char * characters, bool
         if ((codepoint >= 0x20u) && (codepoint != 0x7Fu)) {
             used = synthlib_popups_dispatch_char(codepoint);
         }
+    }
+
+    if (used == false) {
+        used = text_edit_take(key, (key == GLFW_KEY_UNKNOWN) ? first_codepoint(characters) : 0u, isRepeat);
     }
 
     if (used) {
@@ -487,6 +503,10 @@ bool g2_input_popup_key_glfw(int glfwKey, unsigned int codepoint, bool isRepeat)
         used = synthlib_popups_dispatch_key(glfwKey, 0, isRepeat ? GLFW_REPEAT : GLFW_PRESS);
     } else if ((codepoint >= 0x20u) && (codepoint != 0x7Fu)) {
         used = synthlib_popups_dispatch_char(codepoint);
+    }
+
+    if (used == false) {
+        used = text_edit_take(glfwKey, codepoint, isRepeat);
     }
 
     if (used) {
