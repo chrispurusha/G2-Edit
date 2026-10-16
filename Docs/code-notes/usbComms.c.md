@@ -803,3 +803,11 @@ Writes are unchanged.
 The last session's leftovers - the G2 can hold a half-finished exchange, which the Mac's device reset clears
 (§75) - arrive within moments of the open, before the first message is sent: both pipes are read for the first
 WIN_READ_SETTLE_MS (400 ms) and all of it is discarded. The one cancel is at close, waited for up to WIN_READ_STOP_MS.
+
+## 78. `post_sending_to_device()`, in the file loaders
+
+The two stages of loading a file to the G2: the parse, after which the database holds the patch and the
+canvas is told to draw it (`call_full_patch_change_notify()`, now BEFORE the push as well as after), and
+the push, which writes it to the instrument and is the slow part. Between them the busy overlay is given
+its second label (graphics.c notes §45) - "Sending to the G2..." - so the wait is explained rather than
+looking like a load that has not finished.

@@ -30,8 +30,8 @@ would settle it (to-test). A Voice Area module is metered from ONE voice after i
 note still held, else the newest voice - and an FX Area one from its own output (notes §191).
 
 **1.3 Rendering (2026-10-16).** Twelve rows: seven green (levels 1-7), four yellow (8-11) and a red one
-three rows tall, each drawn lit or dim. Red is lit at 12 or with 0x40; the top two yellow rows are lit
-whenever 0x20 or 0x10 is set, which is how the hold shows after the level has fallen. On top of that the
+three rows tall, each drawn lit or dim. Red is lit at 12 or with 0x40 (the clip hold). The top-of-scale
+hold, 0x20, is carried but not drawn: the meter falls through the yellows as anywhere else. On top of that the
 canvas smooths what it draws (meterDisplay.c): a rise shows at once, a fall steps down a row at a time,
 and a lamp stays lit long enough to be seen.
 

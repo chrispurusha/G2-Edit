@@ -196,7 +196,7 @@ void g2_draw_init(void) {
     // values come from synthlibDefs.h so the plug-in and the application cannot drift apart.
     gPluginTheme = (tSynthLibTheme){
         // notes §6
-        .topBarHeight   = MENU_BAR_HEIGHT + G2_PLUGIN_TOPBAR_HEIGHT,
+        .topBarHeight   = MENU_BAR_HEIGHT + G2_PLUGIN_TOPBAR_HEIGHT + palette_band_height(),
         .orange1        = (tRgb)RGB_ORANGE_1,
         .orange2        = (tRgb)RGB_ORANGE_2,
         .greenOn        = (tRgb)RGB_GREEN_ON,

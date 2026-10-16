@@ -429,7 +429,6 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             static const tRgb kYellowDim = {0.3, 0.3, 0.0};
             static const tRgb kRedDim    = {0.3, 0.0, 0.0};
             uint32_t          level      = value & 0x0f;
-            bool              held       = ((value >> 4) & 0x03) != 0;
             bool              clip       = ((value >> 6) & 0x01) != 0;
             double            row        = rectangle.size.h / (double)(config->segments + 2);   // red is three rows
             double            y          = rectangle.coord.y;
@@ -438,8 +437,8 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             render_rectangle(moduleArea, (tRectangle){{rectangle.coord.x, y}, {rectangle.size.w, row * 3.0}});
             y += row * 3.0;
 
-            for (uint32_t k = 4; k >= 1; k--) {   // levels 11 down to 8; a hold lights the top two
-                set_rgb_colour(((level >= (k + 7)) || (held && (k >= 3))) ? (tRgb)RGB_YELLOW_7 : kYellowDim);
+            for (uint32_t k = 4; k >= 1; k--) {   // levels 11 down to 8; the top-of-scale hold is not drawn - notes §33
+                set_rgb_colour((level >= (k + 7)) ? (tRgb)RGB_YELLOW_7 : kYellowDim);
                 render_rectangle(moduleArea, (tRectangle){{rectangle.coord.x, y}, {rectangle.size.w, row}});
                 y += row;
             }

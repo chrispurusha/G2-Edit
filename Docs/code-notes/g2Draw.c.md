@@ -55,6 +55,10 @@ NOT the application's value: its bar carries slot, performance and clock control
 plug-in has no use for, so the reserved band here is smaller. Reserving it now means adding
 the topbar's controls later does not shift the whole patch down.
 
+WITH THE MODULE BAR'S BAND if it is open (2026-10-16). The palette's open state outlives the editor
+- it is not the view's - so an editor closed with the Module Bar showing reopened with it drawn
+over the top rows of the patch, until toggling it re-applied the height (CT).
+
 ## 7. in `g2_draw_init()`
 
 A brand-new empty patch FIRST. gPatchDescr is otherwise all zeroes, and the pane divider's

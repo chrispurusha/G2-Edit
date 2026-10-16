@@ -3986,6 +3986,8 @@ static int read_g2_file_payload(const char * filePath, uint8_t ** outBuf, int64_
     return EXIT_SUCCESS;
 }
 
+static void post_sending_to_device(void);
+
 static int load_perf_from_payload(uint8_t * buff, int64_t byteOffset, int64_t payloadLen, const char * filePath) {
     // Switch the device to perf mode first if needed. Unlike eMsgCmdWriteModePerf we deliberately
     // do NOT follow it with send_get_performance_settings() here: that would read the OLD perf's
@@ -4028,6 +4030,8 @@ static int load_perf_from_payload(uint8_t * buff, int64_t byteOffset, int64_t pa
     perf_engine_only_header_apply(buff, (size_t)byteOffset); // patchWrite.c notes §3
     free(buff);
     sound_engine_start_performance();                        // soundEngine notes §216
+    call_full_patch_change_notify();
+    post_sending_to_device();
 
     int retVal = push_perf_to_device();
 
@@ -4050,6 +4054,8 @@ static int load_patch_from_payload(uint8_t * buff, int64_t byteOffset, int64_t p
     engine_only_header_apply(slot, buff, (size_t)byteOffset);   // patchWrite.c notes §2
     set_patch_name_from_filename(slot, filePath);
     free(buff);
+    call_full_patch_change_notify();
+    post_sending_to_device();
 
     int retVal = push_slot_to_device(slot);
 
@@ -4090,6 +4096,11 @@ static void post_file_result_response(uint32_t responseType, int32_t result, con
     }
     msg_send(&gToGuiThread, &rsp);
     call_wake_glfw();
+}
+
+// notes §78 - the file is parsed and on screen; what is left is writing it to the G2
+static void post_sending_to_device(void) {
+    post_file_result_response(eRspDeviceOpStage, EXIT_SUCCESS, "Sending to the G2...");
 }
 
 // Post a bare (payload-less) response — just a signal of the given eResponseType. Used by the peek

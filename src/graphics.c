@@ -664,6 +664,15 @@ static void check_action_flags(void) {
                     }
                     break;
 
+                case eRspDeviceOpStage:
+
+                    // notes §45 - the op is still in flight; only what the overlay says changes
+                    if (gDeviceOpInProgress > 0) {
+                        COPY_STRING(gDeviceOpLabel, resp.fileResultData.path);
+                        synthlib_request_redraw();
+                    }
+                    break;
+
                 case eRspOfflineConflict:
                     show_offline_conflict_dialog(resp.offlineEditData.slotMask);
                     break;

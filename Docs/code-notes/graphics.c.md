@@ -293,3 +293,14 @@ a timeout costs one redraw every 100ms; the topbar used to ask for one every FRA
 while a lamp was lit, which with the G2's continuous interrupt stream meant 60 fps
 for the whole session. Lighting a lamp needs no help from here — the USB thread wakes
 the loop when data arrives.
+
+## 45. `eRspDeviceOpStage`, in `check_action_flags()`
+
+A LONG DEVICE OP SAYS WHAT IT IS DOING NOW (2026-10-16). Loading a file with the G2 connected parses it
+on the USB thread - after which the patch is already on the canvas - and then writes the whole slot, or
+all four for a performance, to the instrument. The overlay said "Loading..." through both, so it sat over
+a patch that had visibly loaded, for as long as the write took (CT). The USB thread now posts the next
+label when the parse is done ("Sending to the G2...", usbComms.c notes §78), and the overlay shows it.
+
+Only the LABEL changes: the op is the same one, still counted in gDeviceOpInProgress, and still ended by
+eRspFileLoad. A stage that arrives after the op has ended is ignored, so it cannot leave a label behind.

@@ -51,7 +51,8 @@ typedef enum {
     eRspShowOpenWrite,     // open the "save file" browser (drain builds the default name)
     eRspSaveToCurrentPath, // save straight back to the remembered path, no browser
     eRspShowOpenSample,    // open the sample-file browser for the Sampler chosen (menuActions.c notes §15)
-    eRspOfflineConflict    // offlineEditData: edits were made while the G2 was away — ask the user
+    eRspOfflineConflict,   // offlineEditData: edits were made while the G2 was away — ask the user
+    eRspDeviceOpStage      // fileResultData.path: the busy overlay's new label, as a long device op moves on
 } eResponseType;
 
 typedef enum {

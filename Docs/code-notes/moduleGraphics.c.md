@@ -1315,9 +1315,10 @@ row three rows tall, four yellow rows (levels 11 down to 8) and seven green (7 d
 are drawn dim rather than black, so the scale is visible with nothing playing.
 
 - Red is lit at level 12 or while the clip bit (0x40) is up.
-- The top two yellow rows are lit whenever 0x20 or 0x10 is set. That is the top-of-scale hold: after
-  a reading of 11 the G2 sets 0x20 for a second (sound-engine-reference §1.1), so the meter keeps
-  showing that it reached the top after the level itself has fallen. These bits used to be masked off
-  and the hold never showed.
+- The top-of-scale hold (0x20, or 0x10) is NOT DRAWN (CT, 2026-10-16). After a reading of 11 the G2 sets
+  0x20 for a second (sound-engine-reference §1.1); the original editor lights the top two yellow rows for
+  it. The law has no 10 - a reading falls from 11 straight to 9, which lights the two rows below them - so
+  that showed as a solid amber block for a second where the meter should have been falling, and a one-row
+  mark in its place still interrupted the fall. The meter now falls like any other; only clipping holds.
 
 The value arrives already smoothed for display (`level_shown()`, meterDisplay.c notes §2).
