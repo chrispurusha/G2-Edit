@@ -29,6 +29,8 @@ caller polls for the command file's disappearance to know it's done.
   BEND <-1..1> — the local engine's pitch bend, as a MIDI bend sets it (1 = full up); 0 centres it
   DEVSLOT <0-3|A-D> — SLOT, and select it on the instrument too, as the topbar's slot button does. SLOT
                       alone leaves the G2 on its own slot, so DEVNOTE plays and LEDDUMP's vols= meter THAT one
+  DEVVARIATION <1-8> — the selected slot's variation, on the instrument too, as the topbar's variation button
+                      does - for capturing a patch's other variations (2026-10-16)
   COMMS             — "online" or "offline". ASK THIS BEFORE ANY DEV COMMAND YOU INTEND TO TRUST:
                       every one of them reports OK when the instrument is not listening
   DUMP              — current slot + every module: type, name, location, col/row

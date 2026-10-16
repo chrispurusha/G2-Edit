@@ -1707,6 +1707,7 @@ typedef struct {
     uint32_t released;        // samples since its envelopes finished with the key up, 0 until then (notes §20)
     double   fade;            // 1.0 normally; driven to 0 to retire a voice that will not stop on its own
     uint32_t trigger;         // counts note-ons that restart the envelopes - see voice_note_on()
+    uint32_t restTrigger;     // §14.2a - the trigger of a note that found this voice idle
     uint8_t  velocity;        // the note-on velocity, 1-127 - the Keyboard module's Lin and Exp (§26)
     uint8_t  release;         // the release velocity, 0 until the key comes up - its Release
     uint8_t  row[eAxisCount]; // §26.2 - which row of each per-voice morph table this note plays
@@ -2205,6 +2206,18 @@ static uint32_t rv_steps(void) {
 }
 
 // §20.2, §20.3, §20.5 - positions, coefficients and mix, as the instrument's host sets them.
+
+// §20.5 - u x u x u, as the instrument forms a mix word: two 16-bit-half multiplies, each shifted down
+static int32_t rv_mix_cube(int32_t u) {
+    int64_t hi = u >> 16;
+    int64_t lo = u & 0xffff;
+    int64_t sq = ((int64_t)(int32_t)(uint32_t)((hi * lo * 2) + ((lo * lo) >> 16)) >> 7) + (hi * hi * 0x200);
+    int64_t sh = sq >> 16;
+    int64_t sl = sq & 0xffff;
+
+    return (int32_t)((((int64_t)(int32_t)(uint32_t)((hi * sl) + ((lo * sl) >> 16) + (lo * sh))) >> 7) + (hi * sh * 0x200));
+}
+
 static void reverb_build(tEngineNode * node, uint32_t type, double timeDial, double brightDial, double mixDial) {
     SE_LOCAL;
 
@@ -2249,14 +2262,13 @@ static void reverb_build(tEngineNode * node, uint32_t type, double timeDial, dou
         y[i] = trunc(y[i] * RV_COEF) / RV_COEF;    // §20.6 - truncated to the coefficient grid
     }
 
-    // §20.5 - the instrument's mix words: 127 is its full scale, each law squared and held below 1
-    double   top     = RV_COEF - 1.0;
-    double   x       = (mixDial >= 127.0) ? top : floor(mixDial * 65536.0);
-    double   wet     = (x < (RV_COEF / 2.0)) ? ((2.0 * x) / RV_COEF) : 1.0;
-    double   dry     = (x > (RV_COEF / 2.0)) ? ((2.0 * (top - x)) / RV_COEF) : 1.0;
+    // §20.5 - the instrument's mix words: 127 is its full scale, each ramp CUBED in 16-bit halves
+    int32_t  x       = (mixDial >= 127.0) ? 0x7fffff : ((int32_t)mixDial << 16);
+    int32_t  wet     = (x < 0x400000) ? (x << 1) : 0x7fffff;
+    int32_t  dry     = (x > 0x400000) ? ((0x7fffff - x) << 1) : 0x7fffff;
 
-    node->rvDry = fmin(top, trunc(dry * dry * RV_COEF)) / RV_COEF;
-    node->rvWet = fmin(top, trunc(wet * wet * RV_COEF)) / RV_COEF;
+    node->rvDry = (double)rv_mix_cube(dry) / RV_COEF;
+    node->rvWet = (double)rv_mix_cube(wet) / RV_COEF;
 }
 
 static double     gEnvLevelBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
@@ -3499,6 +3511,11 @@ static void voice_start_note(uint32_t chosen, int32_t note, uint8_t velocity,
     // notes §71
     if ((voice->gate == false) || (atomic_load(&gEngineLegato) == false)) {
         voice->trigger++;
+    }
+
+    // §14.2a - an idle voice is not rendered, so its Operators have not settled as the instrument's would
+    if (voice->sounding == false) {
+        voice->restTrigger = voice->trigger;
     }
 
     if (voice->glidePitch < 0.0) {
@@ -5615,17 +5632,13 @@ static double eq_step(uint32_t voice, uint32_t node, const tEngineNode * spec, d
 // a `basePitch` in the Semi scale where 64 is unity, so the keyboard tracking below and everything
 // downstream stay as they are - a ratio is just an offset in semitones. The laws are the ones the
 // dial itself prints (renderParams.c), shared rather than restated so the two cannot drift.
-//
-// Freq and the sub-audio end of Partial are ABSOLUTE, so they ignore the key: Kbt is forced off for
-// those rather than left to the button, which is what "a fixed frequency" means.
-static double osc_base_pitch(int pitchType, double tune, bool * absolute, bool * silent) {
-    *absolute = false;
-    *silent   = false;
+// Freq and Partial's sub-audio end name the pitch at E4: Kbt tracks from there, as for the other modes.
+static double osc_base_pitch(int pitchType, double tune, bool * silent) {
+    *silent = false;
 
     switch (pitchType) {
-        case 1:      // Freq - 8.1758 Hz to 12.55 kHz
+        case 1:      // Freq - 8.1758 Hz to 12.55 kHz at E4
         {
-            *absolute = true;
             return MIDI_NOTE_A440 + (12.0 * log2(osc_freq_hz(tune) / 440.0));
         }
 
@@ -5646,7 +5659,6 @@ static double osc_base_pitch(int pitchType, double tune, bool * absolute, bool *
                 const double maxHz = 5.153;
                 double       hz    = exp(((tune - 1.0) / 31.0) * log(maxHz / minHz)) * minHz;
 
-                *absolute = true;
                 return MIDI_NOTE_A440 + (12.0 * log2(hz / 440.0));
             }
             {
@@ -5668,18 +5680,13 @@ static void set_osc_pitch(tEngineNode * node, tModule * module, uint32_t variati
     double cent      = param_value(module, variation, (uint32_t)p->cent);
     // -1 is a module with no Pitch Type menu at all, which is Semi and nothing else.
     int    pitchType = (p->pitchType >= 0) ? (int)param_value(module, variation, (uint32_t)p->pitchType) : 0;
-    bool   absolute  = false;
     bool   silent    = false;
 
     if (pitchType > 3) {
         LOG_DEBUG("Sound engine: Osc PitchType %d not supported, reading Tune as Semi\n", pitchType);
     }
     node->oscKbt    = (param_value(module, variation, (uint32_t)p->kbt) != 0.0);
-    node->basePitch = osc_base_pitch(pitchType, tune, &absolute, &silent) + (osc_fine_cents(cent) / 100.0);
-
-    if (absolute == true) {
-        node->oscKbt = false;
-    }
+    node->basePitch = osc_base_pitch(pitchType, tune, &silent) + (osc_fine_cents(cent) / 100.0);
     node->modAmount = (p->pitchMod >= 0)
                       ? type_ii_attenuator(param_value(module, variation, (uint32_t)p->pitchMod))
                       : 0.0;
@@ -6277,18 +6284,16 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                 node->wave = (tOscWave)module->mode[SHPB_MODE_WAVEFORM].value;
             }
             // §6.1a - Tune through the Pitch Type menu, as every other oscillator reads it
-            bool absolute  = false;
             bool silent    = false;
             int  pitchType = (int)param_value(module, variation, isShpA ? SHPA_PARAM_PITCH_TYPE : SHPB_PARAM_PITCH_TYPE);
 
             node->oscKbt         = (param_value(module, variation,
                                                 isShpA ? SHPA_PARAM_KBT : SHPB_PARAM_KBT) != 0.0);
             node->basePitch      = osc_base_pitch(pitchType, param_value(module, variation, isShpA ? SHPA_PARAM_TUNE : SHPB_PARAM_TUNE),
-                                                  &absolute, &silent)
+                                                  &silent)
                                    + (osc_fine_cents(param_value(module, variation,
                                                                  isShpA ? SHPA_PARAM_CENT
                                                             : SHPB_PARAM_CENT)) / 100.0);
-            node->oscKbt         = node->oscKbt && (absolute == false);
             // notes §82
             node->shape          = param_value(module, variation,
                                                isShpA ? SHPA_PARAM_SHAPE : SHPB_PARAM_SHAPE) / 127.0;
@@ -11156,6 +11161,13 @@ static double dx_step(uint32_t voice, uint32_t node, const tEngineNode * spec, c
         }
 
         if (tick == true) {
+            // §14.2a - a note on an idle voice starts from where the envelope rests, as on the instrument
+            if ((strike == true) && (gVoice[voice].restTrigger == gVoice[voice].trigger)) {
+                int64_t rest = ((int64_t)op->level[3] * DX_ACC_WORD) + dx_level_offset(op, noteWord, velIndex);
+
+                gDxLevel[voice][slot]    = (int32_t)(((rest < 0) ? 0 : rest) >> 24);
+                gDxEnvStage[voice][slot] = eDxIdle;
+            }
             // §14.2 - the level steps first; then a gate edge or a gate down moves the segment
             dx_envelope_tick(voice, slot, op, dx_level_offset(op, noteWord, velIndex), dx_rate_offset(op, noteWord));
 

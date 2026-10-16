@@ -247,9 +247,12 @@ ones the dial itself prints (renderParams.c), shared rather than restated:
 | 2 Factor | 0.0248x to 38.072x of the note | `64 + 12 log2(factor)` |
 | 3 Partial | 0 silent; 1-32 sub-audio hertz; 33-63 the ratio 1:(65-tune); 64-127 the ratio (tune-63):1 | `64 + 12 log2(ratio)` |
 
-**Freq and Partial's sub-audio end are ABSOLUTE, so they ignore the key**: Kbt is forced off for
-those rather than left to the button, which is what a fixed frequency means. Partial at 0 silences
-the oscillator.
+**Freq and Partial's sub-audio end name the pitch AT E4, and Kbt tracks from there** (2026-10-16), as for
+Semi, Factor and Partial's ratios - the manual gives their ranges "if KBT is not active". Until then they were
+treated as absolute, Kbt forced off. CONFIRMED ON THE G2: AdditiveG2 (variation 2), whose sync master is in Freq
+mode at 64 (329.6 Hz) with Kbt on, plays C3 at 130.8 Hz on the G2; the engine played 329.6 Hz whatever the key,
+and its octave balance was 21-28 dB out at 62-250 Hz. Now within 1.4 dB in every octave band. Partial at 0
+silences the oscillator.
 
 02 Big Pad's oscillators have Tune 63 in Partial, which is 1:2 - an octave below the note. They were
 playing at 63.07 on the Semi scale, a semitone below unity; they now play at 52.07.
@@ -665,6 +668,15 @@ The engine's level moves bit for bit with the instrument's: 400 random settings 
 velocity, note and gate length, 11.9 million ticks, no difference; the amplitude within one word.
 CONFIRMED ON THE G2: attack, decay to L2 and L3 and the release land within one 50 ms window of the
 G2's, and the drop from peak to sustain matches to the decibel.
+
+**14.2a An idle voice (2026-10-16).** On the G2 every voice runs all the time, so an Operator envelope whose
+key went up long ago has settled at L4, and the next note's attack starts from there. The engine renders a voice
+only while it sounds (and voice 0 at rest), so a voice that had finished - or had never played - started its
+next note from wherever it stopped, usually 0. With Operator levels resting high (L4 99), every note after the
+first landed on such a voice and sounded different (CT: an extra, higher tone on Backtalk DX after the first
+note). A note that finds its voice idle now first puts each Operator at its rest level - L4 plus the note's
+offset - and strikes from there. CONFIRMED ON THE G2: three notes in a row are the same within 0.7 dB per octave
+band on the G2, and the engine's now are too; the G2's note matches the engine's rested one within 1-2 dB.
 
 **Levels above 99.** The G2 accepts 100-127 for L1-L4 and Level, and `kDxLevelWords` carries the
 instrument's own words for them, read by their low 24 bits. Measured: Level 100 plays exactly as 99;
@@ -1220,9 +1232,13 @@ fractional bits. Each of those roundings is one step of the coefficient grid, an
 - The two halves' taps move together, in phase.
 
 **20.5 Mix.** x = DryWet × 65536, with 127 giving 2^23 − 1.
-- wet = min(1, 2x)² and dry = min(1, 2(1 − x))², with x as a fraction of 2^23. Each is truncated to
-  23 bits and held below 1.
-- Both are full at 64; at 0 there is dry alone, and at 127 wet alone. The fitted law cubed both ramps.
+- wet = min(1, 2x)³ and dry = min(1, 2(1 − x))³, with x as a fraction of 2^23 - CUBED (2026-10-16; it was
+  squared until then). Each word is u x u x u formed in 16-bit halves (`rv_mix_cube()`), held below 1.
+- Both are full at 64; at 0 there is dry alone, and at 127 wet alone.
+- CONFIRMED ON THE G2 (2026-10-16, Bassic FM4, the reverb tail after release against Dry/Wet 127): 96 -0.4 dB,
+  64 -0.9, 48 -7.1, 24 -26.6 - the cube gives 0, 0, -7.5, -25.6; the square gave 0, 0, -2.5, -17.0. At the
+  low settings most factory patches use, the squared law made the engine 9-11 dB too wet (CT: "more reverb"
+  on Bassic FM4, BassVaria NL3, BriteTine); with the cube their tails sit within 2 dB of the G2's.
 - Each output is dry × that channel's own input + wet × that channel's tap sum. The network hears the
   average of the inputs, but the dry path does not.
 - Bypassed, each input passes to its own output.

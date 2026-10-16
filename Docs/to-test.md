@@ -4,6 +4,7 @@ Built, not yet checked against real hardware or a real user session.
 Confirmed -> delete the line. Check failed -> move it to todo.md.
 Full detail for each is in findings.md, searchable by the wording below.
 
+- ***REVERB DRY/WET CUBED; IDLE DX VOICES AT REST (2026-10-16)*** - reference §20.5, §14.2a; patch-ab-log.md. By ear against the G2: Bassic FM4, BassVaria NL3 and BriteTine have the G2's amount of reverb; Backtalk DX's notes after the first sound like the first; AdditiveG2's tones all there (Freq mode tracks the key, §6.1a)
 - ***PLUG-IN: MODULE BAR ON REOPEN (2026-10-16)*** - g2Draw.c notes §6. In a DAW: open G2 Alike's editor, show the Module Bar, close the editor, reopen it - the patch starts below the bar, not under it
 - ***METER FALLS FROM THE TOP WITHOUT A HOLD (2026-10-16)*** - moduleGraphics.c notes §33. A hot signal that reaches 11, then drops: the meter falls through the yellows a row at a time, nothing left lit above it; only a clip keeps the red lit for a second
 - ***"SENDING TO THE G2..." WHILE A FILE GOES OVER (2026-10-16)*** - graphics.c notes §45, usbComms.c notes §78. App with the G2 connected: open a patch and a performance - the overlay reads "Loading...", switches to "Sending to the G2..." as soon as the patch is on the canvas, and goes when the write is done

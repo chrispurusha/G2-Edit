@@ -44,6 +44,8 @@ loop, or at a threshold. The classification comes from reading each model and is
 `kPrecision` beside `kEvidence`; the run fails if a module has no row.
 
 built /Users/chris/Documents/GitHub/G2-Edit/tools/modulestatus
+built /Users/chris/Documents/GitHub/G2-Edit/tools/modulestatus
+built /Users/chris/Documents/GitHub/G2-Edit/tools/modulestatus
 | Group | Confirmed on the G2 | Modelled | Approximate | Partial | No sound | Not implemented |
 |---|---|---|---|---|---|---|
 | **Oscillators** | Osc A, Osc B, Osc C, Osc D, Osc Shape B, Osc Dual, Noise Osc, Noise, Osc Percussion, Drum Synth, FM Operator, DX Router | Osc Phase Mod, Osc Shape A, Metallic Noise, Osc String, Driver, Resonator, Osc Master | - | - | - | - |
@@ -68,22 +70,22 @@ built /Users/chris/Documents/GitHub/G2-Edit/tools/modulestatus
 
 | Module | State | Reference | On the G2 | Open | Fixed point |
 |---|---|---|---|---|---|
-| Osc A | Confirmed on the G2 | §6.3 | captures (G2Captures/osca); OscC/OscD level against it 09-12 | - | Doubles: phase accumulator in doubles |
-| Osc B | Confirmed on the G2 | §6.3, §6.6-§6.8 | 5 waves x 8 pitches, harmonics within 0.1 dB (09-17); DualSaw below zero 0.1 dB (10-08) | FM and Sync not compared on the G2; Shape 127's one-sample click not modelled | Doubles: phase accumulator in doubles |
-| Osc C | Confirmed on the G2 | §6.3 | Saw, Sqr50/25/10, Tri at 440-3520 Hz (09-17) | FM not compared on the G2 | Doubles: phase accumulator in doubles |
-| Osc D | Confirmed on the G2 | §6.3, §6.1a | level and harmonics against OscA (09-12) | Pitch Type read since 09-28, not heard on the G2 | Doubles: phase accumulator in doubles |
-| Osc Phase Mod | Modelled | §53 | - | - | Doubles: phase and Phase M in doubles; the sine is the module's polynomial |
-| Osc Shape A | Modelled | §27, §6.7 | through OscShpB's captures only | no OscShpA capture of its own | Doubles: phase accumulator in doubles |
-| Osc Shape B | Confirmed on the G2 | §27, §6.7 | every wave, Shape Mod -1..+1, harmonics within 0.16 dB (10-02); Sine3/4 within 0.001 (09-17) | Pulse at exactly +-1: click -33 dB against the G2's -41 | Doubles: phase accumulator in doubles |
-| Osc Dual | Confirmed on the G2 | §12.4, §12.5 | levels, duty, phase (09-12); PW and Phase mod (10-03) | - | Doubles: phase accumulator in doubles |
-| Noise Osc | Confirmed on the G2 | §8.2-§8.5 | 09-12 capture agrees 110 Hz-1 kHz (the old model's fit) | level above 1 kHz not re-captured since the §8 model | Saturating doubles: 24-bit LFSR; the band-passes saturate at the word's +-1 |
+| Osc A | Confirmed on the G2 | §6.3 | captures (G2Captures/osca); OscC/OscD level against it 09-12 | Freq mode and Partial below 33 now track Kbt (§6.1a) - heard on Osc C only | Doubles: phase accumulator in doubles |
+| Osc B | Confirmed on the G2 | §6.3, §6.6-§6.8 | 5 waves x 8 pitches, harmonics within 0.1 dB (09-17); DualSaw below zero 0.1 dB (10-08) | FM and Sync not compared on the G2; Shape 127's one-sample click not modelled; Freq mode and Partial below 33 now track Kbt (§6.1a) - heard on Osc C only | Doubles: phase accumulator in doubles |
+| Osc C | Confirmed on the G2 | §6.3, §6.1a | Saw, Sqr50/25/10, Tri at 440-3520 Hz (09-17); Freq mode tracks the key: AdditiveG2 within 1.4 dB per octave (10-16) | FM not compared on the G2 | Doubles: phase accumulator in doubles |
+| Osc D | Confirmed on the G2 | §6.3, §6.1a | level and harmonics against OscA (09-12) | Pitch Type: Freq tracking heard on Osc C (10-16), not on Osc D | Doubles: phase accumulator in doubles |
+| Osc Phase Mod | Modelled | §53 | in Bassic and Basslines FM4: held balance within 2 dB per octave (10-16) | Freq mode and Partial below 33 now track Kbt (§6.1a) - heard on Osc C only | Doubles: phase and Phase M in doubles; the sine is the module's polynomial |
+| Osc Shape A | Modelled | §27, §6.7 | through OscShpB's captures only | no OscShpA capture of its own; Freq mode and Partial below 33 now track Kbt (§6.1a) - heard on Osc C only | Doubles: phase accumulator in doubles |
+| Osc Shape B | Confirmed on the G2 | §27, §6.7 | every wave, Shape Mod -1..+1, harmonics within 0.16 dB (10-02); Sine3/4 within 0.001 (09-17) | Pulse at exactly +-1: click -33 dB against the G2's -41; Freq mode and Partial below 33 now track Kbt (§6.1a) - heard on Osc C only | Doubles: phase accumulator in doubles |
+| Osc Dual | Confirmed on the G2 | §12.4, §12.5 | levels, duty, phase (09-12); PW and Phase mod (10-03) | Freq mode and Partial below 33 now track Kbt (§6.1a) - heard on Osc C only | Doubles: phase accumulator in doubles |
+| Noise Osc | Confirmed on the G2 | §8.2-§8.5 | 09-12 capture agrees 110 Hz-1 kHz (the old model's fit) | level above 1 kHz not re-captured since the §8 model; Freq mode and Partial below 33 now track Kbt (§6.1a) - heard on Osc C only | Saturating doubles: 24-bit LFSR; the band-passes saturate at the word's +-1 |
 | Noise | Confirmed on the G2 | §7.2a | 09-12 capture reproduced through the desk's shelf to a constant | - | Doubles: xorshift draw, not the instrument's generator |
 | Metallic Noise | Modelled | §66 | - | no capture | Integer words: squares, Freq word and one-poles |
 | Osc Percussion | Confirmed on the G2 | §40 | 8 takes: levels 0.1 dB, decay 2 ms, pitch exact (09-25) | - | Saturating doubles: DSP words carried in doubles, saturated |
 | Drum Synth | Confirmed on the G2 | §39 | Master Freq 0.2% (09-21); noise, click, oscillator energies within 0.8 dB (09-25) | level curve set by §39.3, not fitted to the 09-20 sweeps | Saturating doubles: the decoded words carried in doubles |
 | Osc String | Modelled | §70.4 | - | - | Doubles |
-| FM Operator | Confirmed on the G2 | §14.2-§14.6 | envelope, level, FM depth, feedback, level and rate scaling, velocity (10-03) | AMod and Pitch inputs (§14.6) not yet compared (to-test); Gate/Note/Vel jacks read from the voice | Integer control: envelope, level and rate offsets in words; the operator in doubles |
-| DX Router | Confirmed on the G2 | §14.1, §14.5 | Main level 8.8 dB against 8.45 (10-03) | Out1-Out6 not used outside the node | Integer control: envelope, level and rate offsets in words; the operators in doubles |
+| FM Operator | Confirmed on the G2 | §14.2-§14.6 | envelope, level, FM depth, feedback, level and rate scaling, velocity (10-03); an idle voice starts from L4: Backtalk DX repeated notes as the G2 within 0.7 dB (10-16) | AMod and Pitch inputs (§14.6) not yet compared (to-test); Gate/Note/Vel jacks read from the voice | Integer control: envelope, level and rate offsets in words; the operator in doubles |
+| DX Router | Confirmed on the G2 | §14.1, §14.5 | Main level 8.8 dB against 8.45 (10-03); Backtalk DX held tone within 1-2 dB per octave (10-16) | Out1-Out6 not used outside the node | Integer control: envelope, level and rate offsets in words; the operators in doubles |
 | Driver | Modelled | §70.5 | - | - | Doubles |
 | Resonator | Modelled | §70.4a | - | - | Doubles |
 | Osc Master | Modelled | §51 | - | - | Doubles |
@@ -111,7 +113,7 @@ built /Users/chris/Documents/GitHub/G2-Edit/tools/modulestatus
 
 | Module | State | Reference | On the G2 | Open | Fixed point |
 |---|---|---|---|---|---|
-| Envelope ADSR | Confirmed on the G2 | §17.1-§17.8 | time law and curves agree with the 08-24 and 09-07 captures (not kept) | - | Integer words: level and segments in words; the VCA multiply in doubles |
+| Envelope ADSR | Confirmed on the G2 | §17.1-§17.8 | time law and curves agree with the 08-24 and 09-07 captures (not kept); release at LogExp R14 and LinExp R20 within one 50 ms window (10-16) | - | Integer words: level and segments in words; the VCA multiply in doubles |
 | Envelope AHD | Confirmed on the G2 | §17.11a | Hold 16-80, within 1% (10-08) | - | Integer words: level and segments in words; the VCA multiply in doubles |
 | Envelope ADR | Modelled | §17.9 | - | stages never heard against the G2 | Integer words: level and segments in words; the VCA multiply in doubles |
 | Envelop ADDSR | Modelled | §17.9 | - | stages never heard against the G2; release fixed 10-09 (§17.9a) | Integer words: level and segments in words; the VCA multiply in doubles |
@@ -136,7 +138,7 @@ built /Users/chris/Documents/GitHub/G2-Edit/tools/modulestatus
 | Module | State | Reference | On the G2 | Open | Fixed point |
 |---|---|---|---|---|---|
 | Mixer 1-1 A | Confirmed on the G2 | §3 | 106 configurations of the eleven mixers within 0.07 dB (09-12) | - | Doubles |
-| Mixer 1-1 S | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
+| Mixer 1-1 S | Confirmed on the G2 | §3 | as Mixer 1-1 A; On off mutes to -93 dBFS at Lev 40/78/127, Lin and Exp (10-16) | - | Doubles |
 | Mixer 2-1 A | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
 | Mixer 4-1 A | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
 | Mixer 4-1 B | Confirmed on the G2 | §3 | as Mixer 1-1 A | - | Doubles |
@@ -208,17 +210,17 @@ built /Users/chris/Documents/GitHub/G2-Edit/tools/modulestatus
 | Digitizer | Modelled | §69.8 | - | - | Integer words: rate word and phase |
 | FreqShift | Modelled | §57 | - | - | Saturating doubles: allpass chains saturated at the word's +-1 |
 | Flanger | Modelled | §70.2 | - | - | Integer control: sweep phase word; the ring read in doubles |
-| Chorus | Confirmed on the G2 | §19 | tap spans, rate, mix (09-07); unity at Amount 0 (09-14) | - | Integer control: LFO phase word; the taps in doubles |
+| Chorus | Confirmed on the G2 | §19 | tap spans, rate, mix (09-07); unity at Amount 0 (09-14); no tail once its input stops, as the G2 (10-16) | - | Integer control: LFO phase word; the taps in doubles |
 | Phaser | Modelled | §55 | - | - | Saturating doubles: the module's fractions, saturated |
 | PShift | Modelled | §70.3 | - | - | Integer control: phase word; the taps in doubles |
-| Reverb | Confirmed on the G2 | §20 | 19 captures: onsets, stereo, Time law (09) | captured decays 6-12% long (their fits) | Integer words: every stored value rounded down to the 24-bit grid and clamped |
+| Reverb | Confirmed on the G2 | §20 | 19 captures: onsets, stereo, Time law (09); Dry/Wet 96/64/48/24 within 1 dB of the cubed law (10-16) | captured decays 6-12% long (their fits) | Integer words: every stored value rounded down to the 24-bit grid and clamped |
 | Scratch | Modelled | §70.3 | - | - | Integer control: ratio and phase words; the taps in doubles |
 
 ### In/Out
 
 | Module | State | Reference | On the G2 | Open | Fixed point |
 |---|---|---|---|---|---|
-| 2 Outputs | Confirmed on the G2 | §63, notes §167, §198 | Pad +6 dB (09-07); an unpatched socket is silent (10-10); the path every G2 check goes through | - | Doubles: saturated at twice full scale |
+| 2 Outputs | Confirmed on the G2 | §63, notes §167, §198 | Pad +6 dB (09-07); an unpatched socket is silent (10-10); the path every G2 check goes through; Out to Bus 1/2 silent on its own, as the G2 (10-16) | - | Doubles: saturated at twice full scale |
 | 4 Outputs | Confirmed on the G2 | - | Pad +6 dB (09-07) | - | Doubles: saturated at twice full scale |
 | 2 Inputs | Confirmed on the G2 | §37 | full scale and Pad off the G2's own meter (10-08) | the application has no input device | Doubles |
 | 4 Inputs | Modelled | §37, §69.12 | through 2-In only | - | Doubles |

@@ -650,6 +650,25 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         msg_send(&gToUsbThread, &msg);
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "DEVVARIATION") == 0) {
+        // DEVVARIATION <1-8> - select the selected slot's variation on the DEVICE as well, as the topbar's
+        // variation button does (a patch's other variations, for a capture)
+        uint32_t        variation = 0;
+
+        if ((sscanf(arg, "%u", &variation) != 1) || (variation < 1) || (variation > 8)) {
+            backdoor_write_result("ERROR: expected 'DEVVARIATION <1-8>'\n");
+            return;
+        }
+        gPatchDescr[gSlot].activeVariation = (uint8_t)(variation - 1);
+
+        tMessageContent msg       = {0};
+
+        msg.cmd                            = eMsgCmdSelectVariation;
+        msg.slot                           = (uint32_t)gSlot;
+        msg.variationData.variation        = variation - 1;
+        msg_send(&gToUsbThread, &msg);
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "ENGINENAN") == 0) {
         // ENGINENAN - the next node the engine evaluates puts out a NaN; answers with the repairs so far
         // (sound-engine-notes §218), so a test can inject, render, and see the count move

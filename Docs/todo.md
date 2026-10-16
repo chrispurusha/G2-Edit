@@ -137,6 +137,7 @@ SOUND ENGINE
 - 03 Chris' Lead coverage left: OscShpB waves (above), reference-model check of Mix4-1C/Mix4-1S
 - Memory: a G2 Alike instance costs ~210 MB resident with no patch - skip the engine clear at attach for an engine never used before (its pages are already zero) and release a used one's big buffers rather than memset them (sound-engine-notes §204a)
 - CPU: run nodes over short blocks (16-32 samples) where no loop or per-sample event forbids it, to amortise the dispatch and let it vectorise - the same restructure per-voice threading needs
+- A/B open items (patch-ab-log.md 2026-10-16): after release the G2 rings on at -30 to -60 dB for most of a second on Basslines FM4 and basic sequence (var 3) where the engine stops dead - not the envelope, chorus, delay or reverb (test patches); BigSweepPad1 (var 2) tail 1-5 dB higher on the engine
 - Fixed point (engine-module-status.md, Fixed point column): loops that ring down in doubles - add the instrument's 24-bit rounding to Comb Filter, Osc String, Resonator, and the Phaser's and OverDrive's feedback, so tails end as on the G2
 - Fixed point: the main filters (Nord, Classic, LP, HP, Multi, Static) in the instrument's words, for low-level behaviour - self-oscillation onset and decay, the noise floor near silence
 - Fixed point: Delay Single A/B, Dual, Quad, Eight read their line by interpolation in doubles - find how the G2 reads it (Delay A/B are already in words, the pattern to follow)

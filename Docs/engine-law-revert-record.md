@@ -242,3 +242,11 @@ constant: restore the block, `reverb_step()`, the IR renderer and the node field
 |---|---|---|---|---|
 | 154 | A performance's start (notes §216) | each slot started when its own graph arrived; the master position ran on through a load and an engine start | every slot cleared and silent, the master clock held at the top until all are in and settled 0.2 s, then all start on one block; also on switching the engine on | `0191d5a` `src/soundEngine.c` `engine_render_slot()`, `master_clock_advance()`, `sound_engine_start()` |
 | 155 | Variation switching with the G2 connected (notes §214) | the G2's reports set the slot's variation; the engine's CtrlSend left controller 70 alone while connected | the engine switches its own slots always; the G2's variation reports are ignored while the engine plays | `0191d5a` `src/soundEngine.c` `cc_to_slot()`, `src/usbComms.c` `parse_select_variation()` |
+
+## 2026-10-16
+
+| # | What | Old | New | Old code at |
+|---|---|---|---|---|
+| 156 | Reverb Dry/Wet mix words (§20.5) | each ramp SQUARED: `rvDry = trunc(dry * dry * RV_COEF) / RV_COEF`, likewise wet | each ramp CUBED in 16-bit halves (`rv_mix_cube()`) - measured on the G2 | `c158300` `src/soundEngine.c` `reverb_build()` |
+| 157 | An Operator envelope on a voice that was idle when its note came (§14.2a) | strikes from where the voice last stopped (0 if never played) | first set to its rest level, L4 plus the note's offset, then strikes | `c158300` `src/soundEngine.c` `dx_step()`, `voice_start_note()` |
+| 158 | Oscillator Pitch Type Freq, and Partial's sub-audio end (§6.1a) | absolute: Kbt forced off (`osc_base_pitch()`'s `absolute`) | the pitch at E4, Kbt from the button - measured on the G2 | `c158300` `src/soundEngine.c` `osc_base_pitch()`, `set_osc_pitch()`, the OscShp build |
