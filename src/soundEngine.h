@@ -30,9 +30,9 @@ extern "C" {
 
 // How many engines a process can hold. One in the application; in the plug-in each instance takes
 // one, and a performance will one day take four. Unused banks are zero-fill and cost no memory.
-// One engine per slot, four per G2 (sound-engine-notes §204): the application has one G2, a plug-in up to 16
+// One engine per slot, four per G2 (sound-engine-notes §204): the application has one G2, a plug-in up to 32
 #ifdef SYNTHLIB_PLUGIN_BUILD
-#define SOUND_ENGINE_MAX_ENGINES    (64)
+#define SOUND_ENGINE_MAX_ENGINES    (128)
 #else
 #define SOUND_ENGINE_MAX_ENGINES    (4)
 #endif

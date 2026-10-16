@@ -3382,7 +3382,7 @@ Threaded and inline split stay bit-identical. Cost, 256-frame blocks at 96 kHz: 
 ## 204. Four slots, one engine each (`engine_current_slot()`, `sound_engine_render()`, `keyboard_slot_mask()`)
 
 Every slot of a G2 plays at once, as on the instrument. A document owns four engines, one per slot, and an
-engine's index is the document's x 4 plus the slot: the application has 4 engines, a plug-in 64 (16 G2s).
+engine's index is the document's x 4 plus the slot: the application has 4 engines, a plug-in 128 (32 G2s, since 2026-10-16 - §204a).
 Which engine a call reaches is `sEngineSlot`, a thread-local the render, a routed note and the slot's voice
 thread set; left at -1, a call reaches the SELECTED slot's engine - so the editor's meters, LEDs, morph
 readouts and debug text follow the slot on screen with no change to their callers.
@@ -3417,6 +3417,35 @@ CHECKED 2026-10-04: one slot bit-identical to the engine before, five patches, s
 A plus Big Pad in B equal to each alone, summed (-150 dB); a split at 55 sends 48 to A and 55, 60 to B
 (-145 dB); in patch mode only the selected slot sounds, bit-identical to it alone. Slots render one after
 another on the audio thread, each with its own voice thread: A+B threaded is 34.4% against 23.5% + 10.9%.
+
+## 204a. 32 G2s in a plug-in, and the sample buffers on the heap (`engine_buffers_allocate()`, 2026-10-16)
+
+A plug-in held 16 G2 Alike instances (64 engines); CT asked for at least 32, so `SOUND_ENGINE_MAX_ENGINES` is
+128 in a plug-in build. The banks are statics, zero-filled and untouched until an engine is claimed, but at
+64 engines they were already 1.58 GB of image, and doubling them put a bank 2.6 GB from the code: the x86_64
+half of the universal build stopped linking (its static data is reached RIP-relative, +-2 GB).
+
+So the five sample buffers - the FX buffers, the delay lines, the strings, the combs and the chorus lines,
+1.25 GB of the 1.58 - are allocated at load instead, one calloc each for every engine, by a constructor
+beside them (as the voice-morph tables already were, §204). calloc'd pages cost nothing until written,
+exactly as the zero-fill did. Each is now a pointer to one engine's array, so `gDelayLine` and every other
+use - `[SE]`, `sizeof`, `memset` - reads as before. What is left static is about 330 MB at 64 engines,
+660 MB at 128.
+
+Checked: four test patches render bit-identical to the build before, in the application's configuration and
+the plug-in's; `vst3host --instances 32 --no-view` loads 32, and the 33rd is refused - the host is told the
+load failed (synthlibPluginVst3.cpp, `SynthLibProcessor::createInstance()`), where before a refused
+instance went on as a processor with nothing behind it and crashed the host. The Audio Unit already
+refused cleanly.
+
+A G2 Alike instance costs about 210 MB resident with no patch loaded (1 instance 336 MB, 16 3.6 GB, 32
+7.1 GB, all without editors): its engines' state is cleared when it attaches, which writes the pages.
+THE CLEAR COULD BE SKIPPED (not done). An engine's banks are already zero the first time it is claimed - the
+calloc'd buffers and the zero-filled statics alike - so `engine_reset_state()` at attach writes zeros over
+zeros and commits every page doing it. Clearing only an engine that has been claimed before (a flag set at
+detach), and clearing a used one with madvise(MADV_FREE)-style release of the big buffers rather than
+memset, would leave a fresh instance costing only the pages its patch actually touches. Check the reset's
+other work (seeds, start phases, ready flags) is not zero-dependent before skipping it.
 
 ## 205. Economy: the graph at 48 kHz (`sound_engine_set_economy()`, `node_steps_at_96k()`, `rv_steps()`)
 

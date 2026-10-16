@@ -1918,7 +1918,7 @@ typedef struct {
 } tMetNoiseState;
 static tMetNoiseState         gMetNoiseBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_METNOISE_LINES];
 // §70 - the basic modules' buffers: post-mix FX (one each), per-voice loops, per-voice filter states
-static float                  gFxBufBank[SOUND_ENGINE_MAX_ENGINES][FXBUF_INSTANCES][FXBUF_SAMPLES];
+static float(*gFxBufBank)[FXBUF_INSTANCES][FXBUF_SAMPLES];   // notes §204a - on the heap
 #define gFxBuf         (gFxBufBank[SE])
 static uint32_t               gFxBufWriteBank[SOUND_ENGINE_MAX_ENGINES][FXBUF_INSTANCES];
 #define gFxBufWrite    (gFxBufWriteBank[SE])
@@ -1948,7 +1948,7 @@ typedef struct {
 } tPitchTracker;
 static tPitchTracker          gPitchTrackerBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_PITCH_TRACKER_LINES];
 #define gPitchTracker    (gPitchTrackerBank[SE])
-static float                  gStringBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_STRING_LINES][STRING_SAMPLES];
+static float(*gStringBank)[MAX_VOICES][MAX_STRING_LINES][STRING_SAMPLES];   // notes §204a - on the heap
 #define gString          (gStringBank[SE])
 static uint32_t               gStringWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_STRING_LINES];
 #define gStringWrite     (gStringWriteBank[SE])
@@ -2012,7 +2012,7 @@ static double                 gLadderBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][
 #define MAX_DELAY_LINES        (4)
 // notes §36
 #define DELAY_LINE_SAMPLES     (134400 * ENGINE_OVERSAMPLE)
-static float                  gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
+static float(*gDelayLineBank)[MAX_DELAY_LINES][DELAY_LINE_SAMPLES];   // notes §204a - on the heap
 #define MAX_COMB_LINES         (2)                                                     // FltCombs per patch that sound; any more pass their input dry
 #define MAX_CHORUS_FX_LINES    (8)                                                     // StChorus in the FX area: one buffer each
 #define MAX_CHORUS_LINES       (2)                                                     // StChorus in the Voice area: one per voice; any more pass dry
@@ -2020,7 +2020,7 @@ static float                  gDelayLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY
 #define COMB_LINE_SAMPLES      (16384)                                                 // a power of two; §13.2's longest delay at a 96 kHz engine is 11,737
 #define COMB_FRACTION_STEPS    (512.0)                                                 // §13.4 - the read's coefficient table
 #define COMB_FB_MOD_GAIN       (2.0)                                                   // §13.4 - FB Mod x input is taken x 8 in words
-static float                  gCombLineBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES][COMB_LINE_SAMPLES];
+static float(*gCombLineBank)[MAX_VOICES][MAX_COMB_LINES][COMB_LINE_SAMPLES];   // notes §204a - on the heap
 #define gCombLine              (gCombLineBank[SE])
 static uint32_t               gCombWriteBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_COMB_LINES];
 #define gCombWrite             (gCombWriteBank[SE])
@@ -2044,68 +2044,82 @@ static double                 gDelayModBank[SOUND_ENGINE_MAX_ENGINES][MAX_DELAY_
 
 #define CHORUS_SAMPLES     (2048 * ENGINE_OVERSAMPLE)
 #define CHORUS_CHANNELS    (2)
-static float                  gChorusLineBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES][CHORUS_CHANNELS][CHORUS_SAMPLES];
+static float(*gChorusLineBank)[CHORUS_INSTANCES][CHORUS_CHANNELS][CHORUS_SAMPLES];   // notes §204a - on the heap
 #define gChorusLine        (gChorusLineBank[SE])
-static uint32_t               gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES][CHORUS_CHANNELS];
-#define gChorusWrite       (gChorusWriteBank[SE])
-static int32_t                gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
-#define gChorusPhase       (gChorusPhaseBank[SE])         // §19.2 - a signed 24-bit LFO phase
-static int32_t                gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
+
+// notes §204a - the five sample buffers, an engine's worth each, before main() or the plug-in's first call
+__attribute__((constructor)) static void engine_buffers_allocate(void) {
+    gFxBufBank      = calloc(SOUND_ENGINE_MAX_ENGINES, sizeof(*gFxBufBank));
+    gStringBank     = calloc(SOUND_ENGINE_MAX_ENGINES, sizeof(*gStringBank));
+    gDelayLineBank  = calloc(SOUND_ENGINE_MAX_ENGINES, sizeof(*gDelayLineBank));
+    gCombLineBank   = calloc(SOUND_ENGINE_MAX_ENGINES, sizeof(*gCombLineBank));
+    gChorusLineBank = calloc(SOUND_ENGINE_MAX_ENGINES, sizeof(*gChorusLineBank));
+
+    if (  (gFxBufBank == NULL) || (gStringBank == NULL) || (gDelayLineBank == NULL) || (gCombLineBank == NULL)
+       || (gChorusLineBank == NULL)) {
+        abort();
+    }
+}
+static uint32_t         gChorusWriteBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES][CHORUS_CHANNELS];
+#define gChorusWrite    (gChorusWriteBank[SE])
+static int32_t          gChorusPhaseBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
+#define gChorusPhase    (gChorusPhaseBank[SE])            // §19.2 - a signed 24-bit LFO phase
+static int32_t          gChorusTrimBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
 
 // §70.13 - what MIDI has brought in, for CtrlRcv, NoteRcv and Device: rows 0-15 the channels, MIDI_ROW_THIS
 // the channel this slot listens on. Written by the MIDI thread, read by the audio thread.
 #define MIDI_ROWS        (17u)
 #define MIDI_ROW_THIS    (16u)
 #define MIDI_ROW_KEYB    (17u)   // a module's Channel "Keyb": the keys that play the voices, as NoteDet
-static _Atomic uint8_t        gMidiCcValueBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
+static _Atomic uint8_t  gMidiCcValueBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
 #define gMidiCcValue     (gMidiCcValueBank[SE])
-static _Atomic uint32_t       gMidiCcCountBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
+static _Atomic uint32_t gMidiCcCountBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
 #define gMidiCcCount     (gMidiCcCountBank[SE])
-static _Atomic uint8_t        gMidiNoteVelBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];      // 0 while up
+static _Atomic uint8_t  gMidiNoteVelBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];            // 0 while up
 #define gMidiNoteVel     (gMidiNoteVelBank[SE])
-static _Atomic uint8_t        gMidiNoteRelBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
+static _Atomic uint8_t  gMidiNoteRelBank[SOUND_ENGINE_MAX_ENGINES][MIDI_ROWS][MIDI_KEY_COUNT];
 #define gMidiNoteRel     (gMidiNoteRelBank[SE])
 #define gChorusTrim      (gChorusTrimBank[SE])            // §19.2 - this instance's rate trim
-static double                 gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
+static double           gChorusTickBank[SOUND_ENGINE_MAX_ENGINES][CHORUS_INSTANCES];
 #define gChorusTick      (gChorusTickBank[SE])
 static void chorus_reset(uint32_t line);
 
 // Pulse: the countdown still to run, and the previous input, so a rising edge can be seen. Per voice,
 // because the gate is fired by that voice's own envelope.
-static uint32_t               gPulseCountBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t         gPulseCountBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gPulseCount    (gPulseCountBank[SE])
 // §36 - one Glide module's slewed output, per voice. `primed` is what makes the FIRST value it
 // ever sees arrive whole instead of being glided up from zero.
-static double                 gGlideOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double           gGlideOutBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gGlideOut       (gGlideOutBank[SE])
-static bool                   gGlidePrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static bool             gGlidePrimedBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gGlidePrimed    (gGlidePrimedBank[SE])
-static double                 gGlideTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double           gGlideTickBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gGlideTick      (gGlideTickBank[SE])
 
 // §38 - what a logic module remembers between samples: the edge detectors' last input, the latched
 // output, and the divider's count. `logicPrev` holds Clk in bit 0 and the D/S input in bit 1.
-static uint8_t                gLogicPrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint8_t          gLogicPrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gLogicPrev     (gLogicPrevBank[SE])
-static bool                   gLogicStateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static bool             gLogicStateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gLogicState    (gLogicStateBank[SE])
-static uint32_t               gLogicCountBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t         gLogicCountBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gLogicCount    (gLogicCountBank[SE])
 
 // §39 - one DrumSynth's per-voice state: two phases, four envelopes, the tick accumulator and the
 // click. Its noise filter uses gLadder, as every other filter here does.
-static double                 gDrumStateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][DRUM_STATE_SLOTS];
+static double           gDrumStateBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES][DRUM_STATE_SLOTS];
 #define gDrumState    (gDrumStateBank[SE])
 
-static double                 gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double           gPulsePrevBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gPulsePrev    (gPulsePrevBank[SE])
 
 // Compressor gain-reduction state, one per node.
-static double                 gCompEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
+static double           gCompEnvBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];
 #define gCompEnv             (gCompEnvBank[SE])
-static double                 gCompGrBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];       // §25.2 - the smoothed gain reduction
+static double           gCompGrBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];             // §25.2 - the smoothed gain reduction
 #define gCompGr              (gCompGrBank[SE])
-static double                 gCompLimBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];      // §25.2 - the Level limiter
+static double           gCompLimBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES][MAX_ENGINE_NODES];            // §25.2 - the Level limiter
 #define gCompLim             (gCompLimBank[SE])
 
 // §20 - the reverb: the instrument's own network, run on one ring of delay memory.
@@ -2125,7 +2139,7 @@ static double                 gCompLimBank[SOUND_ENGINE_MAX_ENGINES][MAX_VOICES]
 #define RV_COEF              (8388608.0)             // its coefficients' grid
 #define RV_TOP               (4.0 - (1.0 / RV_WORD)) // the largest word: four times full scale
 
-static const float            kRvRoomSize[REVERB_TYPE_COUNT] = {0.78f, 0.98f, 1.19f, 1.31f};
+static const float      kRvRoomSize[REVERB_TYPE_COUNT] = {0.78f, 0.98f, 1.19f, 1.31f};
 
 // §20.2 - the named positions of the network: a tap constant, and a fixed step from its tap.
 typedef enum {

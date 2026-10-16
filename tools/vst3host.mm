@@ -235,6 +235,51 @@ struct Instance {
 
 static HostApp gHostApp;
 
+// --play: an instance kept processing while its editor is open, as a host does - one 512-frame block a
+// timer tick, a note held from the first. What the editor's live readouts (meters, lamps) need to move.
+struct Player {
+    IAudioProcessor * proc   = nullptr;
+    float             l[512] = {};
+    float             r[512] = {};
+    float *           chans[2];
+    AudioBusBuffers   out    = {};
+    ProcessData       data   = {};
+    bool              first  = true;
+};
+
+static Player * player_start(IComponent * component) {
+    Player * p = new Player();
+
+    if ((component->queryInterface(IAudioProcessor::iid, (void **)&p->proc) != kResultTrue) || (p->proc == nullptr)) {
+        delete p;
+        return nullptr;
+    }
+    ProcessSetup setup = {kRealtime, kSample32, 512, 48000.0};
+
+    component->activateBus(kAudio, kOutput, 0, true);
+    p->chans[0]               = p->l;
+    p->chans[1]               = p->r;
+    p->out.numChannels        = 2;
+    p->out.channelBuffers32   = (Sample32 **)p->chans;
+    p->proc->setupProcessing(setup);
+    component->setActive(true);
+    p->proc->setProcessing(true);
+    p->data.processMode        = kRealtime;
+    p->data.symbolicSampleSize = kSample32;
+    p->data.numSamples         = 512;
+    p->data.numOutputs         = 1;
+    p->data.outputs            = &p->out;
+    return p;
+}
+
+static void player_block(Player * p) {
+    static OneNote note(48, 0);
+
+    p->data.inputEvents = (p->first == true) ? &note : nullptr;
+    p->first            = false;
+    p->proc->process(p->data);
+}
+
 static void usage(void) {
     fprintf(stderr,
             "usage: vst3host <plugin.vst3> [--seconds N] [--shot out.png] [--size WxH]\n"
@@ -244,7 +289,9 @@ static void usage(void) {
             "  --shot PATH    screenshot each window just before quitting; with more than one\n"
             "                 instance, instance i goes to PATH with -i before the extension\n"
             "  --size WxH     ask each view for this size in points before attaching\n"
-            "  --instances N  load N instances into this one process, each with its own window\n"
+            "  --instances N  load N instances into this one process, each with its own window (at most 64)\n"
+            "  --no-view      no editors: load the instances only - for the instance limit\n"
+            "  --play         keep every instance processing with a note held while its editor is open\n"
             "  --patch PATH   hand the next instance this state (a raw patch path, for G2 Alike)\n"
             "  --bus-test     render two seconds of a held note on every output bus and print each one's level\n"
             "  --offset-test N render a note placed at sample N of a block and report where the sound\n"
@@ -434,6 +481,8 @@ int main(int argc, const char ** argv) {
     bool                       busTest    = false;
     int                        reopen     = 0;
     bool                       dumpState  = false;
+    bool                       noView     = false;
+    bool                       play       = false;
     std::vector<std::string>   patches;
     const char *               savePath   = nullptr;
 
@@ -450,7 +499,11 @@ int main(int argc, const char ** argv) {
             sscanf(argv[++i], "%dx%d", &wantW, &wantH);
         } else if ((strcmp(argv[i], "--instances") == 0) && ((i + 1) < argc)) {
             count = atoi(argv[++i]);
-            count = (count < 1) ? 1 : ((count > 8) ? 8 : count);
+            count = (count < 1) ? 1 : ((count > 64) ? 64 : count);
+        } else if (strcmp(argv[i], "--play") == 0) {
+            play = true;
+        } else if (strcmp(argv[i], "--no-view") == 0) {
+            noView = true;
         } else if ((strcmp(argv[i], "--patch") == 0) && ((i + 1) < argc)) {
             patches.push_back(argv[++i]);
         } else if ((strcmp(argv[i], "--state-file") == 0) && ((i + 1) < argc)) {
@@ -649,6 +702,10 @@ int main(int argc, const char ** argv) {
                 printf("instance %d: a note at sample %d is heard from frame %d\n",
                        n + 1, offsetTest, offset_probe(in.component, (int32)offsetTest));
             }
+            // Many instances without an editor each: the instance limit, not the drawing, is under test
+            if (noView == true) {
+                continue;
+            }
             in.view = in.controller->createView(ViewType::kEditor);
 
             if ((in.view == nullptr) || (in.view->isPlatformTypeSupported(kPlatformTypeNSView) != kResultTrue)) {
@@ -690,6 +747,25 @@ int main(int argc, const char ** argv) {
             [in.window makeKeyAndOrderFront:nil];
         }
         [NSApp activateIgnoringOtherApps:YES];
+
+        if (play == true) {
+            std::vector<Player *> players;
+
+            for (Instance & in : instances) {
+                Player * p = player_start(in.component);
+
+                if (p != nullptr) {
+                    players.push_back(p);
+                }
+            }
+            [NSTimer scheduledTimerWithTimeInterval:(512.0 / 48000.0) repeats:YES block:^(NSTimer * t) {
+                (void)t;
+
+                for (Player * p : players) {
+                    player_block(p);
+                }
+            }];
+        }
 
         // notes §4
         if (reopen > 0) {
@@ -768,8 +844,10 @@ int main(int argc, const char ** argv) {
         [NSApp run];
 
         for (Instance & in : instances) {
-            in.view->removed();
-            in.view->release();
+            if (in.view != nullptr) {
+                in.view->removed();
+                in.view->release();
+            }
 
             if ((in.compPoint != nullptr) && (in.ctrlPoint != nullptr)) {
                 in.compPoint->disconnect(in.ctrlPoint);
