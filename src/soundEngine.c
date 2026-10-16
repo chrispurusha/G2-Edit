@@ -8029,6 +8029,11 @@ static bool build_module_node(const tEngineNode * base, uint32_t variation, tEng
     memcpy(out->in, base->in, sizeof(out->in));
     memcpy(out->srcOut, base->srcOut, sizeof(out->srcOut));
     memcpy(out->srcLeg, base->srcLeg, sizeof(out->srcLeg));
+    // notes §192 - the loop legs are wiring too: the part build closes the loop at a different leg
+    out->backMask    = base->backMask;
+    memcpy(out->backModule, base->backModule, sizeof(out->backModule));
+    memcpy(out->backOut, base->backOut, sizeof(out->backOut));
+    memcpy(out->backSlot, base->backSlot, sizeof(out->backSlot));
     return true;
 }
 

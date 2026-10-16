@@ -37,6 +37,7 @@ SOURCES=(
     "$HERE/src/patchParamsResources.c"
     "$HERE/src/noteStack.c"
     "$HERE/src/protocol.c"
+    "$HERE/src/slotSets.c"
     # write_database_to_file() - --write saves the patch a sweep would have played
     "$HERE/src/patchWrite.c"
     "$HERE/plugin/g2HostIo.c"
