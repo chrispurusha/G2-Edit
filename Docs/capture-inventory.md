@@ -7,13 +7,15 @@ capture directories and `findings.md`.
 **Planning a session? Read `validation-sessions.md` first** - the rig, its calibration, the step-by-step backdoor
 sequence, the methods and their tools, the traps, and the queue of modules to validate next.
 
-**Where captures live.** None are in the repository — they are far too large.
+**Where captures live.** On the external SSD, under `/Volumes/ext-ssd/Captures/<project>/` (moved off the
+main drive 2026-10-17); none are in the repository, they are far too large. New captures go there directly. The
+SSD must be mounted to read them.
 
 | location | what is in it |
 |---|---|
-| `~/Documents/G2-Measurements/reverb/` | the reverb programme, 19 captures, about 21 GB |
-| `~/Documents/G2 Captures/` | the early chorus and delay captures |
-| `~/Documents/GitHub/G2Captures/` | oscillator and filter sets, plus the A/B listening files |
+| `/Volumes/ext-ssd/Captures/G2-Measurements/reverb/` | the reverb programme, 19 captures, about 21 GB |
+| `/Volumes/ext-ssd/Captures/G2 Captures/` | the early chorus and delay captures |
+| `/Volumes/ext-ssd/Captures/G2Captures/` | oscillator and filter sets, plus the A/B listening files |
 
 A capture is only worth keeping if its `.json` sidecar is beside it. Several early ones have no
 sidecar and their settings are only recoverable from `findings.md`.

@@ -3063,7 +3063,7 @@ OPEN WORK
   yet found.
 
 - REVERB L/R CORRELATION RE-MEASURED ON HARDWARE 2026-09-06, AND TWO EARLIER NUMBERS FROM THE SAME
-  DAY WERE WRONG. New captures in ~/Documents/G2-Measurements/reverb/g_{small,medium,large,hall}_stereo
+  DAY WERE WRONG. New captures in /Volumes/ext-ssd/Captures/G2-Measurements/reverb/g_{small,medium,large,hall}_stereo
   (QU-24 at 48 kHz, patch in PatchTestFiles/ReverbMeasure.pch2).
 
   THE RESULT, and it is now confirmed by two independent captures on different interfaces at
@@ -3251,7 +3251,7 @@ OPEN WORK
   DARKER than the instrument although the measurements put it 2.6-3.6 dB BRIGHTER at 8 kHz. That
   disagreement between ear and measurement is the signal that tuning this structure further is not the
   way; the instrument's real topology is now known to be obtainable — see the entry above.
-  A/B FILES for listening are in ~/Documents/GitHub/G2Captures: listen_HARDWARE_hall122_WET.wav and
+  A/B FILES for listening are in /Volumes/ext-ssd/Captures/G2Captures: listen_HARDWARE_hall122_WET.wav and
   listen_ENGINE_hall122_WET.wav, same patch and settings.
 
 - THE REVERB'S TAIL WAS FAR TOO BRIGHT, AND THAT WAS THE REAL FAULT (2026-08-18). Owner said the
@@ -3434,7 +3434,7 @@ OPEN WORK
   cycle — two steady pitches alternating, i.e. doubling — where a sine glides smoothly through zero
   to a peak and back, which is vibrato by definition. Fixed by chorus_triangle(); CHORUS_SWEEP_S
   also went 0.0021 -> 0.00238.
-  Re-analysed OFFLINE from the three files in ~/Documents/G2 Captures/, with no G2 present, by
+  Re-analysed OFFLINE from the three files in /Volumes/ext-ssd/Captures/G2 Captures/, with no G2 present, by
   demodulating at the tone frequency so that |z|^2 reads out the comb argument directly. Where the
   phase swing is small the folded profile IS the LFO waveform, and the 32.7 Hz captures fold to a
   clean triangle (fitted rise fraction exactly 0.50). Fitting P + Q*cos(th0 + X*triangle) gives
@@ -6282,7 +6282,7 @@ PARTIALLY DONE / STILL OPEN:
 
   Method: a Pulse module's click through the Reverb, captured at 192 kHz with the dry click on a
   second output pair, both stereo outputs recorded. tools/capture.c + measure.py + analyse_ir.py; the
-  captures are in ~/Documents/G2-Measurements/reverb/ (about 8 GB, not in the repo). Delay lengths come
+  captures are in /Volumes/ext-ssd/Captures/G2-Measurements/reverb/ (about 8 GB, not in the repo). Delay lengths come
   from the tail's AUTOCORRELATION, not from peak-picking: a delay tank's early response is only sparse
   for a few arrivals and dense after that, so a peak list changes with the threshold and is fiction. A
   recirculating length shows as a lag the whole tail correlates at.
@@ -7700,7 +7700,7 @@ across the whole 1.2-5.3 ms range, which is not a noisy reading of one tap - it 
 picking whichever of SEVERAL taps is momentarily loudest. The "0.56 / 0.59 Hz modulation" it produced
 is therefore not trustworthy and is recorded only so nobody re-derives it and believes it. Doing this
 properly needs the full delay profile per impulse with persistent components followed across time,
-not an argmax. Capture kept at ~/Documents/G2-Measurements/chorus/ so the analysis can be redone
+not an argmax. Capture kept at /Volumes/ext-ssd/Captures/G2-Measurements/chorus/ so the analysis can be redone
 without re-occupying the hardware.
 
 STCHORUS: THE ENGINE HAS THE WRONG NUMBER OF TAPS (2026-09-07). Measured at Detune 20, Amount 127,
@@ -7789,7 +7789,7 @@ stay - they were measured correctly and are confirmed.
 WHAT IS STILL UNMEASURED: the LFO SHAPE. chorus_triangle() asserts a triangle, and this programme has
 only ever measured the split's period and extremes, never its trajectory between them. The 46 Hz
 trigger captures have 15+ samples per cycle at the fast end, so the shape is recoverable from
-~/Documents/G2-Measurements/chorus/fast_*.wav without re-occupying the hardware.
+/Volumes/ext-ssd/Captures/G2-Measurements/chorus/fast_*.wav without re-occupying the hardware.
 
 STCHORUS LFO SHAPE CONFIRMED AS A TRIANGLE (2026-09-07) - asserted since 2026-08-15, measured only
 now. 888 impulses at Detune 24 folded into one cycle: the split's flanks are straight (successive
@@ -7808,7 +7808,7 @@ FOLLOW-UP: tools/render only knows the reverb, so there is no engine-side render
 response to compare against the hardware captures the way analyse_ir.py does for the reverb. The
 verification above is arithmetic on the constants, not a render of the compiled code. Extending
 render.c with a chorus mode would close that, and the hardware captures to compare against are already
-on disk in ~/Documents/G2-Measurements/chorus/.
+on disk in /Volumes/ext-ssd/Captures/G2-Measurements/chorus/.
 
 THE CHORUS READ ITS DELAY LINE AT WHOLE SAMPLES (found by CT's ear 2026-09-07, immediately after the
 two-tap rebuild: "at maximum detune the G2's effect is much more pronounced"). Not a tuning error and
@@ -8378,7 +8378,7 @@ meter, and its value is a BAR rather than a level.
 
 OSCA IMPLEMENTED (2026-09-07). The engine covered two of the instrument's twelve oscillators - OscB
 and OscShpB - and OscA was the obvious third because its CAPTURES WERE ALREADY ON DISK
-(~/Documents/GitHub/G2Captures/osca/) from an earlier session and had never been used.
+(/Volumes/ext-ssd/Captures/G2Captures/osca/) from an earlier session and had never been used.
 
 It shares the oscillator DSP completely. What differs is only where its dials sit and what its Wave
 menu offers: no Shape and no FM section, so its parameters pack four indices tighter, and its

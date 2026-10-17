@@ -3,7 +3,7 @@
 What to capture on the hardware for the Reverb, what is already captured, and the traps that have
 each produced a confident wrong answer at least once. Written 2026-09-06.
 
-Captures live in `~/Documents/G2-Measurements/reverb/`. Every one has a `.json` sidecar recording
+Captures live in `/Volumes/ext-ssd/Captures/G2-Measurements/reverb/`. Every one has a `.json` sidecar recording
 period, repeats and the setting list — **read the sidecar, never infer the layout from the audio.**
 
 ## What is already on disk — do not re-capture these
@@ -36,7 +36,7 @@ Needs a long period so tails never overlap, and enough impulses to average.
 ```
 for r in 0 1 2 3; do
   ./tools/measure.py \
-    --out ~/Documents/G2-Measurements/reverb/g_${names[$r]}_stereo.wav \
+    --out /Volumes/ext-ssd/Captures/G2-Measurements/reverb/g_${names[$r]}_stereo.wav \
     --device "QU-24" \
     --loc VA --index 3 --sweep-mode 0 --values $r \
     --pre "VA 3 0 127" --pre "VA 3 1 64" --pre "VA 3 2 127" \
@@ -60,7 +60,7 @@ the cheap check: its tail is 2.9 s, so the period can be short.
 
 ```
 ./tools/measure.py \
-  --out ~/Documents/G2-Measurements/reverb/g_small_bright9.wav \
+  --out /Volumes/ext-ssd/Captures/G2-Measurements/reverb/g_small_bright9.wav \
   --device "QU-24" \
   --loc VA --index 3 --param 1 --values 0,16,32,48,64,80,96,112,127 \
   --pre-mode "VA 3 0 0" --pre "VA 3 0 127" --pre "VA 3 2 127" \

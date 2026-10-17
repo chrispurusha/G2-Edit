@@ -1762,7 +1762,7 @@ factor rather than being noisy — its own note says the gaps swell "once per ha
 reading that as a whole cycle is worth two of the four. That is not explained, only bounded.
 
 RE-ANALYSED FROM THE RETAINED CAPTURES, 2026-08-15, offline and with no G2 present. The three
-files in ~/Documents/G2 Captures/ were demodulated at the tone frequency: for a single input tone
+files in /Volumes/ext-ssd/Captures/G2 Captures/ were demodulated at the tone frequency: for a single input tone
 the module's output is dry + m*delayed, so |z|^2 of the demodulate is a direct read-out of the
 comb argument, and its modulation IS the LFO. What that settled, in order of importance:
 
